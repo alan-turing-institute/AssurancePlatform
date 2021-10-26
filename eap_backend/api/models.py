@@ -24,7 +24,6 @@ class TopLevelNormativeGoal(models.Model):
     def __str__(self):
         return self.name
 
-
 class Context(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
@@ -52,14 +51,14 @@ class Argument(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = models.IntegerField(default=0)
-    goal_id = models.ForeignKey(PropertyClaim, on_delete=models.CASCADE)
+    property_claim_id =  models.ManyToManyField(PropertyClaim)
 
 class EvidentialClaim(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = models.IntegerField(default=0)
-    goal_id = models.ForeignKey(Argument, on_delete=models.CASCADE)
+    argument_id = models.ForeignKey(Argument, on_delete=models.CASCADE)
 
 class Evidence(models.Model):
     name = models.CharField(max_length=200)
@@ -67,4 +66,4 @@ class Evidence(models.Model):
     long_description = models.CharField(max_length=3000)
     URL = models.CharField(max_length=3000)
     shape = models.IntegerField(default=0)
-    goal_id = models.ForeignKey(EvidentialClaim, on_delete=models.CASCADE)
+    evidential_claim_id = models.ManyToManyField(EvidentialClaim)
