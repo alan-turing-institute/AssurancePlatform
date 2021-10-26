@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import AssuranceCase, TopLevelNormativeGoal, Context, SystemDescription, PropertyClaim, EvidentialClaim, Evidence
+from .models import (
+    AssuranceCase,
+    TopLevelNormativeGoal,
+    Context,
+    SystemDescription,
+    PropertyClaim,
+    Argument,
+    EvidentialClaim,
+    Evidence
+)
 
 class AssuranceCaseSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -24,6 +33,11 @@ class SystemDescriptionSerializer(serializers.HyperlinkedModelSerializer):
 class PropertyClaimSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PropertyClaim
+        fields = ['name','short_description','long_description','shape']
+
+class ArgumentSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Argument
         fields = ['name','short_description','long_description','shape']
 
 class EvidentialClaimSerializer(serializers.HyperlinkedModelSerializer):
