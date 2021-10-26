@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AssuranceCase, TopLevelNormativeGoal
+from .models import AssuranceCase, TopLevelNormativeGoal, Context, SystemDescription, PropertyClaim, EvidentialClaim, Evidence
 
 class AssuranceCaseSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -11,27 +11,27 @@ class TopLevelNormativeGoalSerializer(serializers.HyperlinkedModelSerializer):
         model = TopLevelNormativeGoal
         fields = ['name','short_description','long_description','keywords','shape']
 
-class Context(serializers.HyperlinkedModelSerializer):
+class ContextSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = TopLevelNormativeGoal
+        model = Context
         fields = ['name','short_description','long_description','created_date','shape']
 
-class SystemDescription(serializers.HyperlinkedModelSerializer):
+class SystemDescriptionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = TopLevelNormativeGoal
+        model = SystemDescription
         fields = ['name','short_description','long_description','shape']
 
-class PropertyClaim(serializers.HyperlinkedModelSerializer):
+class PropertyClaimSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = TopLevelNormativeGoal
+        model = PropertyClaim
         fields = ['name','short_description','long_description','shape']
 
-class EvidentialClaim(serializers.HyperlinkedModelSerializer):
+class EvidentialClaimSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = TopLevelNormativeGoal
+        model = EvidentialClaim
         fields = ['name','short_description','long_description','shape']
 
-class Evidence(serializers.HyperlinkedModelSerializer):
+class EvidenceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = TopLevelNormativeGoal
+        model = Evidence
         fields = ['name','short_description','long_description','URL','shape']
