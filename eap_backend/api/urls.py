@@ -1,9 +1,18 @@
-from django.urls import path
-
+from django.urls import path, include
+from django.contrib.auth.models import User
+from rest_framework import routers
 from . import views
 
+# Routers provide an easy way of automatically determining the URL conf.
+#router = routers.DefaultRouter()
+#router.register(r'cases', views.AssuranceCaseViewSet)
+#router.register(r'goals', views.TopLevelNormativeGoalViewSet)
+
+
 urlpatterns = [
-    path('', views.index, name='index'),
-    path('case/<int:case_id>/', views.get_case, name='get_case'),
-    path('case/<str:name>/<str:description>/', views.make_case, name='make_case')
+    path('cases/', views.case_list),
+    path('cases/<int:pk>/', views.case_detail),
+    path('goals/', views.goal_list),
+    path('goals/<int:pk>/', views.goal_detail),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]
