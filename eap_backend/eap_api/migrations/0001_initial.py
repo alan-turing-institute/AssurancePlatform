@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('long_description', models.CharField(max_length=3000)),
                 ('keywords', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('assurance_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.assurancecase')),
+                ('assurance_case', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.assurancecase')),
             ],
         ),
         migrations.CreateModel(
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
                 ('short_description', models.CharField(max_length=1000)),
                 ('long_description', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.toplevelnormativegoal')),
+                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.toplevelnormativegoal')),
             ],
         ),
         migrations.CreateModel(
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ('short_description', models.CharField(max_length=1000)),
                 ('long_description', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.toplevelnormativegoal')),
+                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.toplevelnormativegoal')),
             ],
         ),
         migrations.CreateModel(
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
                 ('short_description', models.CharField(max_length=1000)),
                 ('long_description', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.argument')),
+                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.argument')),
             ],
         ),
         migrations.CreateModel(
@@ -85,7 +85,7 @@ class Migration(migrations.Migration):
                 ('long_description', models.CharField(max_length=3000)),
                 ('URL', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.evidentialclaim')),
+                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.evidentialclaim')),
             ],
         ),
         migrations.CreateModel(
@@ -96,12 +96,12 @@ class Migration(migrations.Migration):
                 ('short_description', models.CharField(max_length=1000)),
                 ('long_description', models.CharField(max_length=3000)),
                 ('shape', models.IntegerField(default=0)),
-                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.toplevelnormativegoal')),
+                ('goal_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.toplevelnormativegoal')),
             ],
         ),
         migrations.AddField(
             model_name='argument',
             name='goal_id',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.propertyclaim'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='eap_api.propertyclaim'),
         ),
     ]
