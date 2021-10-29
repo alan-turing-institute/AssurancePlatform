@@ -10,10 +10,10 @@ from . import views
 
 
 urlpatterns = [
-    path('cases/', views.case_list),
-    path('cases/<int:pk>/', views.case_detail),
-    path('goals/', views.goal_list),
-    path('goals/<int:pk>/', views.goal_detail),
+    path('cases/', views.case_list, name='case_list'),
+    path('cases/<int:pk>/', views.case_detail, name='case_detail'),
+    path('goals/', views.goal_list, name='goals'),
+    path('goals/<int:pk>/', views.goal_detail, name='goals/'),
     #path('contexts/', views.context_list),
     #path('contexts/<int:pk>/', views.context_detail),
     #path('descriptions/', views.description_list),
