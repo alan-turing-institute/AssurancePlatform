@@ -7,7 +7,7 @@ matrix:
       install:
         - pip install -r requirements.txt
       script:
-        - flake8
+    #    - flake8
         - sudo apt-get update
         - sudo apt-get install google-chrome-stable
         - sudo apt-get install chromium-browser
@@ -16,8 +16,8 @@ matrix:
 
     #     - sudo chmod a+x ./tests/chromedriver
     #     - coverage run --source=./app -m pytest
-    #   after_success:
-    #     - coveralls
+      after_success:
+        - coveralls
     # - language: node_js
     #   node_js: 
     #     - "node"
