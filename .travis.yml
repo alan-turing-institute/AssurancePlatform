@@ -6,17 +6,18 @@ matrix:
         - 3.8
       install:
         - pip install -r requirements.txt
+       script:
+        - flake8
+        - sudo apt-get update
+        - sudo apt-get install google-chrome-stable
+        - sudo apt-get install chromium-browser
         - cd eap_backend
         - coverage run manage.py test -v 2
-    #   script:
-    #     - flake8
-    #     - sudo apt-get update
-    #     - sudo apt-get install google-chrome-stable
-    #     - sudo apt-get install chromium-browser
+
     #     - sudo chmod a+x ./tests/chromedriver
     #     - coverage run --source=./app -m pytest
-    #   after_success:
-    #     - coveralls
+       after_success:
+         - coveralls
     # - language: node_js
     #   node_js: 
     #     - "node"
