@@ -6,7 +6,7 @@ matrix:
         - 3.8
       install:
         - pip install -r requirements.txt
-       script:
+      script:
         - flake8
         - sudo apt-get update
         - sudo apt-get install google-chrome-stable
@@ -16,8 +16,8 @@ matrix:
 
     #     - sudo chmod a+x ./tests/chromedriver
     #     - coverage run --source=./app -m pytest
-       after_success:
-         - coveralls
+    #   after_success:
+    #     - coveralls
     # - language: node_js
     #   node_js: 
     #     - "node"
