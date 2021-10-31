@@ -7,7 +7,7 @@ matrix:
       install:
         - pip install -r requirements.txt
         - cd eap_backend
-        - python coverage run manage.py test -v 2
+        - coverage run manage.py test -v 2
     #   script:
     #     - flake8
     #     - sudo apt-get update
