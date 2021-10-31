@@ -1,6 +1,5 @@
-[![Build Status](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform.svg?branch=MVP)](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform)
-
 # AssurancePlatform
+[![Build Status](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform.svg?branch=MVP)](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform)
 Project to facilitate creation of Assurance Cases
 
 ## Resources
