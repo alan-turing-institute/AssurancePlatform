@@ -4,10 +4,9 @@ from rest_framework.parsers import JSONParser
 from rest_framework import viewsets
 from rest_framework import permissions
 from .models import AssuranceCase, TopLevelNormativeGoal
-from .serializers import (
-    AssuranceCaseSerializer,
-    TopLevelNormativeGoalSerializer
-)
+from .serializers import AssuranceCaseSerializer, TopLevelNormativeGoalSerializer
+
+
 @csrf_exempt
 def case_list(request):
     """
@@ -24,6 +23,7 @@ def case_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def case_detail(request, pk):
@@ -66,6 +66,7 @@ def goal_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def goal_detail(request, pk):

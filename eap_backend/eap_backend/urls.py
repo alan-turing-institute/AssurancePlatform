@@ -1,5 +1,3 @@
-
-
 """eap_backend URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -20,5 +18,5 @@ from django.urls import include, path
 
 urlpatterns = [
     path("eap_api/", include("eap_api.urls")),
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 ]

@@ -11,7 +11,7 @@ from .models import (
     PropertyClaim,
     Argument,
     EvidentialClaim,
-    Evidence
+    Evidence,
 )
 from .serializers import (
     AssuranceCaseSerializer,
@@ -21,8 +21,10 @@ from .serializers import (
     PropertyClaimSerializer,
     ArgumentSerializer,
     EvidentialClaimSerializer,
-    EvidenceSerializer
+    EvidenceSerializer,
 )
+
+
 @csrf_exempt
 def case_list(request):
     """
@@ -39,6 +41,7 @@ def case_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def case_detail(request, pk):
@@ -82,6 +85,7 @@ def goal_list(request):
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
 
+
 @csrf_exempt
 def goal_detail(request, pk):
     """
@@ -123,6 +127,7 @@ def context_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def context_detail(request, pk):
@@ -166,6 +171,7 @@ def description_list(request):
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
 
+
 @csrf_exempt
 def description_detail(request, pk):
     """
@@ -207,6 +213,7 @@ def property_claim_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def property_claim_detail(request, pk):
@@ -250,6 +257,7 @@ def argument_list(request):
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
 
+
 @csrf_exempt
 def argument_detail(request, pk):
     """
@@ -292,6 +300,7 @@ def evidential_claim_list(request):
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
 
+
 @csrf_exempt
 def evidential_claim_detail(request, pk):
     """
@@ -332,6 +341,7 @@ def evidence_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def evidence_detail(request, pk):
