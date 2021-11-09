@@ -7,19 +7,10 @@ matrix:
       install:
         - pip install -r eap_backend/requirements.txt
       script:
-    #    - flake8
         - sudo apt-get update
         - sudo apt-get install google-chrome-stable
         - sudo apt-get install chromium-browser
         - cd eap_backend
         - coverage run manage.py test -v 2
-
-    #     - sudo chmod a+x ./tests/chromedriver
-    #     - coverage run --source=./app -m pytest
       after_success:
         - coveralls
-    # - language: node_js
-    #   node_js:
-    #     - "node"
-    #   script:
-    #     - npm run lint
