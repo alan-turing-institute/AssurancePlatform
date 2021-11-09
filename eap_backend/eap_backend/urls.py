@@ -19,6 +19,6 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("eap_api/", include("eap_api.urls")),
+    path("api/", include("eap_api.urls")),
     path('admin/', admin.site.urls),
 ]
