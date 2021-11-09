@@ -5,7 +5,7 @@ matrix:
         - 3.7
         - 3.8
       install:
-        - pip install -r requirements.txt
+        - pip install -r eap_backend/requirements.txt
       script:
     #    - flake8
         - sudo apt-get update
@@ -19,7 +19,7 @@ matrix:
       after_success:
         - coveralls
     # - language: node_js
-    #   node_js: 
+    #   node_js:
     #     - "node"
-    #   script: 
+    #   script:
     #     - npm run lint
