@@ -7,20 +7,24 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0001_initial'),
+        ("eap_api", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='assurancecase',
-            name='created_date',
-            field=models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now),
+            model_name="assurancecase",
+            name="created_date",
+            field=models.DateTimeField(
+                auto_now_add=True, default=django.utils.timezone.now
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='context',
-            name='created_date',
-            field=models.DateTimeField(auto_now_add=True, default=django.utils.timezone.now),
+            model_name="context",
+            name="created_date",
+            field=models.DateTimeField(
+                auto_now_add=True, default=django.utils.timezone.now
+            ),
             preserve_default=False,
         ),
     ]

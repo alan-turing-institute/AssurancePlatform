@@ -1,8 +1,9 @@
-''' from https://realpython.com/testing-in-django-part-1-best-practices-and-examples/
+""" from https://realpython.com/testing-in-django-part-1-best-practices-and-examples/
 https://www.bezkoder.com/django-rest-api/
-https://docs.djangoproject.com/en/3.2/topics/testing/tools/'''
+https://docs.djangoproject.com/en/3.2/topics/testing/tools/"""
 
 from django.test import TestCase
+from .constants_tests import TEST_AC_NAME, TEST_GOAL_NAME
 
 # Create your tests here.
 from eap_api.models import (
@@ -32,7 +33,6 @@ class AssuranceTestCase(TestCase):
         self.assertEqual(test_entry.description, test_description)
 
 
-
 class TopLevelNormativeGoalTestCase(TestCase):
     """
     creates a TopLevelNormativeGoal object and tests foreign key and
@@ -40,7 +40,7 @@ class TopLevelNormativeGoalTestCase(TestCase):
     """
     def create_test_entry(self, name, description, keywords):
         a_case = AssuranceCase.objects.create(
-            name="TestAC",
+            name=TEST_AC_NAME,
             description="test description"
         )
         return TopLevelNormativeGoal.objects.create(
@@ -68,11 +68,11 @@ class ContextTestCase(TestCase):
     """
     def create_test_entry(self, name, description):
         a_case = AssuranceCase.objects.create(
-            name="TestAC",
+            name=TEST_AC_NAME,
             description="test description"
         )
         a_goal = TopLevelNormativeGoal.objects.create(
-            name="TestGoal",
+            name=TEST_GOAL_NAME,
             short_description="test description",
             long_description="a test description",
             keywords="key",

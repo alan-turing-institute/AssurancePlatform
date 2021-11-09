@@ -22,8 +22,10 @@ class AssuranceCase(models.Model):
     shape = None
     def __str__(self):
         return self.name
+
     def was_published_recently(self):
         return self.created_date >= timezone.now() - datetime.timedelta(days=1)
+
 
 class TopLevelNormativeGoal(models.Model):
     name = models.CharField(max_length=200)
@@ -35,6 +37,7 @@ class TopLevelNormativeGoal(models.Model):
     def __str__(self):
         return self.name
 
+
 class Context(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
@@ -43,12 +46,14 @@ class Context(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
 
+
 class SystemDescription(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.DIAMOND
     goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+
 
 class PropertyClaim(models.Model):
     name = models.CharField(max_length=200)
@@ -57,6 +62,7 @@ class PropertyClaim(models.Model):
     shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
 
+
 class Argument(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
@@ -64,12 +70,14 @@ class Argument(models.Model):
     shape = Shape.ROUNDED_RECTANGLE
     property_claim =  models.ManyToManyField(PropertyClaim)
 
+
 class EvidentialClaim(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
     argument = models.ForeignKey(Argument, on_delete=models.CASCADE)
+
 
 class Evidence(models.Model):
     name = models.CharField(max_length=200)

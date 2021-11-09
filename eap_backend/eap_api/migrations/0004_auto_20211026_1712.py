@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0003_auto_20211026_1710'),
+        ("eap_api", "0003_auto_20211026_1710"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='argument',
-            name='property_claim_id',
+            model_name="argument",
+            name="property_claim_id",
         ),
         migrations.AddField(
-            model_name='argument',
-            name='property_claim_id',
-            field=models.ManyToManyField(to='eap_api.PropertyClaim'),
+            model_name="argument",
+            name="property_claim_id",
+            field=models.ManyToManyField(to="eap_api.PropertyClaim"),
         ),
     ]
