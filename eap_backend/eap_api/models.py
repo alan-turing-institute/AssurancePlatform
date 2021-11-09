@@ -41,35 +41,35 @@ class Context(models.Model):
     long_description = models.CharField(max_length=3000)
     shape = Shape.DIAMOND
     created_date = models.DateTimeField(auto_now_add=True)
-    goal_id = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
 
 class SystemDescription(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.DIAMOND
-    goal_id = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
 
 class PropertyClaim(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    goal_id = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
 
 class Argument(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    property_claim_id =  models.ManyToManyField(PropertyClaim)
+    property_claim =  models.ManyToManyField(PropertyClaim)
 
 class EvidentialClaim(models.Model):
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    argument_id = models.ForeignKey(Argument, on_delete=models.CASCADE)
+    argument = models.ForeignKey(Argument, on_delete=models.CASCADE)
 
 class Evidence(models.Model):
     name = models.CharField(max_length=200)
@@ -77,4 +77,4 @@ class Evidence(models.Model):
     long_description = models.CharField(max_length=3000)
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    evidential_claim_id = models.ManyToManyField(EvidentialClaim)
+    evidential_claim = models.ManyToManyField(EvidentialClaim)
