@@ -5,6 +5,7 @@ from .models import (
     Context,
     SystemDescription,
     PropertyClaim,
+    Argument,
     EvidentialClaim,
     Evidence,
 )
@@ -13,13 +14,13 @@ from .models import (
 class AssuranceCaseSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = AssuranceCase
-        fields = ["name", "description", "shape", "created_date"]
+        fields = ["name", "description", "created_date"]
 
 
 class TopLevelNormativeGoalSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = TopLevelNormativeGoal
-        fields = ["name", "short_description", "long_description", "keywords", "shape"]
+        fields = ["name", "short_description", "long_description", "keywords"]
 
 
 class ContextSerializer(serializers.HyperlinkedModelSerializer):
@@ -29,30 +30,33 @@ class ContextSerializer(serializers.HyperlinkedModelSerializer):
             "name",
             "short_description",
             "long_description",
-            "created_date",
-            "shape",
+            "created_date"
         ]
 
 
 class SystemDescriptionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = SystemDescription
-        fields = ["name", "short_description", "long_description", "shape"]
+        fields = ["name", "short_description", "long_description"]
 
 
 class PropertyClaimSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PropertyClaim
-        fields = ["name", "short_description", "long_description", "shape"]
+        fields = ["name", "short_description", "long_description"]
 
+class ArgumentSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Argument
+        fields = ["name", "short_description", "long_description"]
 
 class EvidentialClaimSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = EvidentialClaim
-        fields = ["name", "short_description", "long_description", "shape"]
+        fields = ["name", "short_description", "long_description"]
 
 
 class EvidenceSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Evidence
-        fields = ["name", "short_description", "long_description", "URL", "shape"]
+        fields = ["name", "short_description", "long_description", "URL"]
