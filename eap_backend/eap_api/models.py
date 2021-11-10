@@ -32,7 +32,9 @@ class TopLevelNormativeGoal(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     keywords = models.CharField(max_length=3000)
-    assurance_case = models.ForeignKey(AssuranceCase, on_delete=models.CASCADE)
+    assurance_case = models.ForeignKey(AssuranceCase,
+                                       related_name='goals',
+                                       on_delete=models.CASCADE)
     shape = Shape.RECTANGLE
     def __str__(self):
         return self.name
@@ -44,7 +46,9 @@ class Context(models.Model):
     long_description = models.CharField(max_length=3000)
     shape = Shape.DIAMOND
     created_date = models.DateTimeField(auto_now_add=True)
-    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal,
+                             related_name='context',
+                             on_delete=models.CASCADE)
 
 
 class SystemDescription(models.Model):
@@ -52,7 +56,9 @@ class SystemDescription(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.DIAMOND
-    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal,
+                             related_name='system_description',
+                             on_delete=models.CASCADE)
 
 
 class PropertyClaim(models.Model):

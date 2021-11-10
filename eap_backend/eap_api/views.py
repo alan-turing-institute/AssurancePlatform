@@ -70,6 +70,8 @@ def goal_list(request):
         return JsonResponse(serializer.data, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
+        assurance_case = AssuranceCase.objects.get(id=data["assurance_case_id"])
+        data["assurance_case"] = AssuranceCaseSerializer(assurance_case).data["id"]
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
