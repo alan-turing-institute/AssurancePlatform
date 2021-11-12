@@ -66,7 +66,9 @@ class PropertyClaim(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    goal = models.ForeignKey(TopLevelNormativeGoal, on_delete=models.CASCADE)
+    goal = models.ForeignKey(TopLevelNormativeGoal,
+                             related_name='property_claims',
+                             on_delete=models.CASCADE)
 
 
 class Argument(models.Model):
@@ -74,7 +76,8 @@ class Argument(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    property_claim =  models.ManyToManyField(PropertyClaim)
+    property_claim =  models.ManyToManyField(PropertyClaim,
+                                             related_name='arguments')
 
 
 class EvidentialClaim(models.Model):
@@ -82,7 +85,9 @@ class EvidentialClaim(models.Model):
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape.ROUNDED_RECTANGLE
-    argument = models.ForeignKey(Argument, on_delete=models.CASCADE)
+    argument = models.ForeignKey(Argument,
+                                 related_name='evidential_claims',
+                                 on_delete=models.CASCADE)
 
 
 class Evidence(models.Model):
@@ -91,4 +96,5 @@ class Evidence(models.Model):
     long_description = models.CharField(max_length=3000)
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    evidential_claim = models.ManyToManyField(EvidentialClaim)
+    evidential_claim = models.ManyToManyField(EvidentialClaim,
+                                              related_name='evidence')
