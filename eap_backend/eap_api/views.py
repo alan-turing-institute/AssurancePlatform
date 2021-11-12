@@ -3,7 +3,16 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import viewsets
 from rest_framework import permissions
-from .models import AssuranceCase, TopLevelNormativeGoal
+from .models import (
+    AssuranceCase,
+    TopLevelNormativeGoal,
+    Context,
+    SystemDescription,
+    PropertyClaim,
+    Argument,
+    EvidentialClaim,
+    Evidence
+)
 from .serializers import (
     AssuranceCaseSerializer,
     TopLevelNormativeGoalSerializer,
@@ -15,6 +24,24 @@ from .serializers import (
     EvidenceSerializer
 )
 
+def make_summary(serialized_data):
+    """
+    Take in a full serialized object, and return dict containing just
+    the id and the name
+
+    parameter: serialized_data, dict, or list of dicts
+    returns: dict, or list of dicts, containing just "name" and "id" key/values.
+    """
+    def summarize_one(data):
+        if not (isinstance(data, dict) and \
+                "id" in data.keys() and \
+                "name" in data.keys()):
+            raise RuntimeError("Expected dictionary containing name and id")
+        return {"name": data["name"], "id": data["id"]}
+    if isinstance(serialized_data, list):
+        return [summarize_one(sd) for sd in serialized_data]
+    else:
+        return summarize_one(serialized_data)
 
 @csrf_exempt
 def case_list(request):
@@ -24,13 +51,15 @@ def case_list(request):
     if request.method == "GET":
         cases = AssuranceCase.objects.all()
         serializer = AssuranceCaseSerializer(cases, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = AssuranceCaseSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
 
 
@@ -49,7 +78,7 @@ def case_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = AssuranceCaseSerializer(case, data=data)
+        serializer = AssuranceCaseSerializer(case, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -67,7 +96,8 @@ def goal_list(request):
     if request.method == "GET":
         goals = TopLevelNormativeGoal.objects.all()
         serializer = TopLevelNormativeGoalSerializer(goals, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         assurance_case = AssuranceCase.objects.get(id=data["assurance_case_id"])
@@ -75,7 +105,8 @@ def goal_list(request):
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
 
 
@@ -94,7 +125,7 @@ def goal_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(goal, data=data)
+        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -112,14 +143,17 @@ def context_list(request):
     if request.method == "GET":
         contexts = Context.objects.all()
         serializer = ContextSerializer(contexts, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = ContextSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def context_detail(request, pk):
@@ -136,7 +170,7 @@ def context_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = ContextSerializer(context, data=data)
+        serializer = ContextSerializer(context, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -154,14 +188,17 @@ def description_list(request):
     if request.method == "GET":
         descriptions = SystemDescription.objects.all()
         serializer = SystemDescriptionSerializer(descriptions, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = SystemDescriptionSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def description_detail(request, pk):
@@ -178,7 +215,7 @@ def description_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = SystemDescriptionSerializer(description, data=data)
+        serializer = SystemDescriptionSerializer(description, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -186,6 +223,7 @@ def description_detail(request, pk):
     elif request.method == "DELETE":
         description.delete()
         return HttpResponse(status=204)
+
 
 @csrf_exempt
 def property_claim_list(request):
@@ -195,14 +233,17 @@ def property_claim_list(request):
     if request.method == "GET":
         claims = PropertyClaim.objects.all()
         serializer = PropertyClaimSerializer(claims, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = PropertyClaimSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def property_claim_detail(request, pk):
@@ -219,7 +260,7 @@ def property_claim_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = PropertyClaimSerializer(claim, data=data)
+        serializer = PropertyClaimSerializer(claim, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -237,14 +278,17 @@ def argument_list(request):
     if request.method == "GET":
         arguments = Argument.objects.all()
         serializer = ArgumentSerializer(arguments, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = ArgumentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def argument_detail(request, pk):
@@ -261,7 +305,7 @@ def argument_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = ArgumentSerializer(argument, data=data)
+        serializer = ArgumentSerializer(argument, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -279,14 +323,17 @@ def evidential_claim_list(request):
     if request.method == "GET":
         evidential_claims = EvidentialClaim.objects.all()
         serializer = EvidentialClaimSerializer(evidential_claims, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = EvidentialClaimSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def evidential_claim_detail(request, pk):
@@ -303,7 +350,7 @@ def evidential_claim_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(evidential_claim, data=data)
+        serializer = EvidentialClaimSerializer(evidential_claim, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -321,19 +368,22 @@ def evidence_list(request):
     if request.method == "GET":
         evidences = Evidence.objects.all()
         serializer = EvidenceSerializer(evidences, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         serializer = EvidenceSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=201)
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+
 
 @csrf_exempt
 def evidence_detail(request, pk):
     """
-    Retrieve, update, or delete a Evidence, by primary key
+    Retrieve, update, or delete Evidence, by primary key
     """
     try:
         evidence = Evidence.objects.get(pk=pk)
@@ -345,7 +395,7 @@ def evidence_detail(request, pk):
         return JsonResponse(serializer.data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = EvidenceSerializer(evidence, data=data)
+        serializer = EvidenceSerializer(evidence, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
