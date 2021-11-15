@@ -117,18 +117,23 @@ def goal_detail(request, pk):
     """
     try:
         goal = TopLevelNormativeGoal.objects.get(pk=pk)
+        shape = goal.shape.name
     except TopLevelNormativeGoal.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = TopLevelNormativeGoalSerializer(goal)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         goal.delete()
@@ -162,18 +167,23 @@ def context_detail(request, pk):
     """
     try:
         context = Context.objects.get(pk=pk)
+        shape = context.shape.name
     except Context.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = ContextSerializer(context)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = ContextSerializer(context, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         context.delete()
@@ -207,18 +217,23 @@ def description_detail(request, pk):
     """
     try:
         description = SystemDescription.objects.get(pk=pk)
+        shape = description.shape.name
     except SystemDescription.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = SystemDescriptionSerializer(description)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = SystemDescriptionSerializer(description, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         description.delete()
@@ -252,18 +267,23 @@ def property_claim_detail(request, pk):
     """
     try:
         claim = PropertyClaim.objects.get(pk=pk)
+        shape = claim.shape.name
     except PropertyClaim.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = PropertyClaimSerializer(claim)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = PropertyClaimSerializer(claim, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
@@ -297,18 +317,23 @@ def argument_detail(request, pk):
     """
     try:
         argument = Argument.objects.get(pk=pk)
+        shape = argument.shape.name
     except Argument.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = ArgumentSerializer(argument)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = ArgumentSerializer(argument, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         argument.delete()
@@ -342,18 +367,23 @@ def evidential_claim_detail(request, pk):
     """
     try:
         evidential_claim = EvidentialClaim.objects.get(pk=pk)
+        shape = evidential_claim.shape.name
     except EvidentialClaim.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = EvidentialClaimSerializer(evidential_claim)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = EvidentialClaimSerializer(evidential_claim, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         evidential_claim.delete()
@@ -387,18 +417,23 @@ def evidence_detail(request, pk):
     """
     try:
         evidence = Evidence.objects.get(pk=pk)
+        shape = evidence.shape.name
     except Evidence.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
         serializer = EvidenceSerializer(evidence)
-        return JsonResponse(serializer.data)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = EvidenceSerializer(evidence, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data)
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         evidence.delete()
