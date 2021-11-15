@@ -18,15 +18,19 @@ from eap_api.models import (
 )
 
 class AssuranceTestCase(TestCase):
-    """ creates an AssuranceCase object and tested whether the created title
-        matches the expected title"""
+    """creates an AssuranceCase object and tests whether the created title
+    matches the expected title"""
 
-    def create_test_entry(self, name, description):
-        return AssuranceCase.objects.create(name=name, description=description)
+    def create_test_entry(
+        self, name=TEST_AC_NAME, description="test description", shape=0
+    ):
+        return AssuranceCase.objects.create(
+            name=name, description=description, shape=shape
+        )
 
     def test_assurance_creation(self):
         test_name = "TestAC1"
-        test_description="test description"
+        test_description = "test description"
         test_entry = self.create_test_entry(test_name, test_description)
         self.assertTrue(isinstance(test_entry, AssuranceCase))
         self.assertEqual(test_entry.name, test_name)
@@ -50,13 +54,10 @@ class TopLevelNormativeGoalTestCase(TestCase):
             assurance_case=a_case
         )
 
-    def test_goal_creation(self):
-        test_name = "TestGoal1"
-        test_entry = self.create_test_entry(name=test_name,
-                                            description="a test",
-                                            keywords="key,word")
+    def test_goal_creation(self, name=TEST_GOAL_NAME):
+        test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, TopLevelNormativeGoal))
-        self.assertEqual(test_entry.name, test_name)
+        self.assertEqual(test_entry.name, name)
         self.assertTrue(isinstance(test_entry.assurance_case,
                                    AssuranceCase))
 
