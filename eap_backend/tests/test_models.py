@@ -46,7 +46,7 @@ class AssuranceTestCase(TestCase):
 
     def test_assurance_creation(self):
         test_name = CASE_INFO["name"]
-        test_description=CASE_INFO["description"]
+        test_description = CASE_INFO["description"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, AssuranceCase))
         self.assertEqual(test_entry.name, test_name)
@@ -69,7 +69,7 @@ class TopLevelNormativeGoalTestCase(TestCase):
         test_keywords = GOAL_INFO["keywords"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, TopLevelNormativeGoal))
-        self.assertEqual(test_entry.name, name)
+        self.assertEqual(test_entry.name, test_name)
         self.assertTrue(isinstance(test_entry.assurance_case,
                                    AssuranceCase))
 

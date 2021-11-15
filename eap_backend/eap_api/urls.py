@@ -3,7 +3,14 @@ from django.contrib.auth.models import User
 from rest_framework import routers
 from . import views
 
+
 urlpatterns = [
+    path(
+        "home",
+        views.AssuranceView.as_view(),
+        name="home"
+
+    ),
     path(
         "cases/",
         views.case_list,

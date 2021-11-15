@@ -15,7 +15,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
     goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     class Meta:
         model = AssuranceCase
-        fields = ["id", "name", "description", "created_date", "goals"]
+        fields = ("id", "name", "description", "created_date", "goals")
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
@@ -25,7 +25,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     system_description = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     class Meta:
         model = TopLevelNormativeGoal
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -35,7 +35,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "assurance_case_id",
             "context",
             "system_description"
-        ]
+        )
 
 
 class ContextSerializer(serializers.ModelSerializer):
@@ -43,7 +43,7 @@ class ContextSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(source="goal", queryset=TopLevelNormativeGoal.objects.all(), write_only=True)
     class Meta:
         model = Context
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -51,7 +51,7 @@ class ContextSerializer(serializers.ModelSerializer):
             "created_date",
             "goal",
             "goal_id"
-        ]
+        )
 
 
 class SystemDescriptionSerializer(serializers.ModelSerializer):
@@ -59,14 +59,14 @@ class SystemDescriptionSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(source="goal", queryset=TopLevelNormativeGoal.objects.all(), write_only=True)
     class Meta:
         model = SystemDescription
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
             "long_description",
             "goal",
             "goal_id"
-        ]
+        )
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
@@ -79,7 +79,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     arguments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     class Meta:
         model = PropertyClaim
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -87,7 +87,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "goal",
             "goal_id",
             "arguments"
-        ]
+        )
 
 class ArgumentSerializer(serializers.ModelSerializer):
     property_claim = PropertyClaimSerializer(many=True, read_only=True)
@@ -102,7 +102,7 @@ class ArgumentSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Argument
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -110,7 +110,7 @@ class ArgumentSerializer(serializers.ModelSerializer):
             "property_claim",
             "property_claim_id",
             "evidential_claims"
-        ]
+        )
 
 class EvidentialClaimSerializer(serializers.ModelSerializer):
     argument = ArgumentSerializer(many=False, read_only=True)
@@ -125,7 +125,7 @@ class EvidentialClaimSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = EvidentialClaim
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -133,7 +133,7 @@ class EvidentialClaimSerializer(serializers.ModelSerializer):
             "argument",
             "argument_id",
             "evidence"
-        ]
+        )
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
@@ -146,7 +146,7 @@ class EvidenceSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Evidence
-        fields = [
+        fields = (
             "id",
             "name",
             "short_description",
@@ -154,4 +154,4 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "URL",
             "evidential_claim",
             "evidential_claim_id"
-        ]
+        )

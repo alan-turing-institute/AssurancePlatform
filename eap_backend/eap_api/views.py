@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import viewsets
 from rest_framework import permissions
+from rest_framework import generics
 from .models import (
     AssuranceCase,
     TopLevelNormativeGoal,
@@ -23,6 +24,14 @@ from .serializers import (
     EvidentialClaimSerializer,
     EvidenceSerializer
 )
+
+class AssuranceView (generics.ListCreateAPIView):# (generics.CreateAPIView)  (viewsets.ModelViewSet):
+    queryset = AssuranceCase.objects.all()
+    serializer_class = AssuranceCaseSerializer
+
+class DetailAssuranceView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = AssuranceCase.objects.all()
+    serializer_class = AssuranceCaseSerializer
 
 def make_summary(serialized_data):
     """
