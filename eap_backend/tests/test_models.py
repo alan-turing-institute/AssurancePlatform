@@ -38,15 +38,15 @@ from eap_api.models import (
 )
 
 class AssuranceTestCase(TestCase):
-    """ creates an AssuranceCase object and tested whether the created title
-        matches the expected title"""
+    """creates an AssuranceCase object and tests whether the created title
+    matches the expected title"""
 
     def create_test_entry(self):
         return AssuranceCase.objects.create(**CASE_INFO)
 
     def test_assurance_creation(self):
         test_name = CASE_INFO["name"]
-        test_description=CASE_INFO["description"]
+        test_description = CASE_INFO["description"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, AssuranceCase))
         self.assertEqual(test_entry.name, test_name)

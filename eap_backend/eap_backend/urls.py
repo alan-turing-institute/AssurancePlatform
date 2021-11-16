@@ -15,6 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from eap_api import views
+
 
 urlpatterns = [
     path("api/", include("eap_api.urls")),
