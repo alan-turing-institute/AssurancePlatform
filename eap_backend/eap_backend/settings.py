@@ -101,20 +101,27 @@ WSGI_APPLICATION = 'eap_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'HOST': os.environ["DBHOST"],
-        'NAME': os.environ["DBNAME"],
-        'USER': os.environ["DBUSER"],
-        'PASSWORD': os.environ["DBPASSWORD"]
-
-    }
-}
 ## use sqlite db for tests
 if 'test' in sys.argv or 'test_coverage' in sys.argv: #Covers regular testing and django-coverage
-    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
-    DATABASES['default']["NAME"] = BASE_DIR / "db.sqlite3"
+    DATABASES = {
+        'default' {
+            'ENGINE' : 'django.db.backends.sqlite3',
+            'NAME' : BASE_DIR / "db.sqlite3"
+            }
+    }
+else:
+    # use Postgres for production server, configured via environment vars
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'HOST': os.environ["DBHOST"],
+            'NAME': os.environ["DBNAME"],
+            'USER': os.environ["DBUSER"],
+            'PASSWORD': os.environ["DBPASSWORD"]
+
+        }
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
