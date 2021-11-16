@@ -15,12 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework import routers
 from eap_api import views
 
-
-#router = routers.DefaultRouter()
-#router.register(r'Assurance_Case', views.TodoView, '')
 
 urlpatterns = [
     path("api/", include("eap_api.urls")),

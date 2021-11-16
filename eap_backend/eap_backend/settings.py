@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    "eap_backend",
+    #"frontend.apps.FrontendConfig"
 ]
 
 MIDDLEWARE = [
