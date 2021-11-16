@@ -104,7 +104,7 @@ WSGI_APPLICATION = 'eap_backend.wsgi.application'
 ## use sqlite db for tests
 if 'test' in sys.argv or 'test_coverage' in sys.argv: #Covers regular testing and django-coverage
     DATABASES = {
-        'default' {
+        'default' : {
             'ENGINE' : 'django.db.backends.sqlite3',
             'NAME' : BASE_DIR / "db.sqlite3"
             }
