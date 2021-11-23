@@ -29,6 +29,10 @@ class AssuranceView (generics.ListCreateAPIView):# (generics.CreateAPIView)  (vi
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer
 
+class GoalsView (generics.ListCreateAPIView):# (generics.CreateAPIView)  (viewsets.ModelViewSet):
+    queryset = TopLevelNormativeGoal.objects.all()
+    serializer_class = TopLevelNormativeGoalSerializer
+
 class DetailAssuranceView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer

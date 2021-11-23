@@ -12,6 +12,12 @@ urlpatterns = [
 
     ),
     path(
+        "home_goals",
+        views.GoalsView.as_view(),
+        name="home"
+
+    ),
+    path(
         "cases/",
         views.case_list,
         name="case_list"
