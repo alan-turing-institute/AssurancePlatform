@@ -105,7 +105,9 @@ class CaseViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_case_detail_view_put(self):
         response_put = self.client.put(
@@ -157,7 +159,9 @@ class GoalViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_goal_detail_view_put(self):
         response_put = self.client.put(
@@ -211,7 +215,9 @@ class ContextViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_context_detail_view_put(self):
         response_put = self.client.put(
@@ -265,7 +271,9 @@ class DescriptionViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_description_detail_view_put(self):
         response_put = self.client.put(
@@ -323,14 +331,18 @@ class PropertyClaimViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
         response_get = self.client.get(
             reverse("property_claim_detail",
                     kwargs={"pk": self.pclaim2.pk}
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[1])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[1]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_property_claim_detail_view_put(self):
         response_put = self.client.put(
@@ -395,14 +407,18 @@ class ArgumentViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
         response_get = self.client.get(
             reverse("argument_detail",
                     kwargs={"pk": self.argument2.pk}
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[1])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[1]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_argument_detail_view_put(self):
         response_put = self.client.put(
@@ -467,7 +483,9 @@ class EvidentialClaimViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_evidential_claim_detail_view_put(self):
         response_put = self.client.put(
@@ -543,14 +561,18 @@ class EvidenceViewTest(TestCase):
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[0])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
         response_get = self.client.get(
             reverse("evidence_detail",
                     kwargs={"pk": self.evidence2.pk}
             )
         )
         self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data[1])
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[1]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
 
     def test_evidence_detail_view_put(self):
         response_put = self.client.put(
