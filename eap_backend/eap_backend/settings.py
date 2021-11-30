@@ -106,21 +106,28 @@ if 'test' in sys.argv or 'test_coverage' in sys.argv: #Covers regular testing an
     DATABASES = {
         'default' : {
             'ENGINE' : 'django.db.backends.sqlite3',
-            'NAME' : BASE_DIR / "db.sqlite3"
+            'NAME' : BASE_DIR / "testdb.sqlite3"
             }
     }
 else:
-    # use Postgres for production server, configured via environment vars
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'HOST': os.environ["DBHOST"],
-            'NAME': os.environ["DBNAME"],
-            'USER': os.environ["DBUSER"],
-            'PASSWORD': os.environ["DBPASSWORD"]
-
+    if not "DBHOST" in os.environ.keys():
+            DATABASES = {
+                'default' : {
+                    'ENGINE' : 'django.db.backends.sqlite3',
+                    'NAME' : BASE_DIR / "db.sqlite3"
+                }
+            }
+    else:
+        # use Postgres for production server, configured via environment vars
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'HOST': os.environ["DBHOST"],
+                'NAME': os.environ["DBNAME"],
+                'USER': os.environ["DBUSER"],
+                'PASSWORD': os.environ["DBPASSWORD"]
+            }
         }
-    }
 
 
 # Password validation
