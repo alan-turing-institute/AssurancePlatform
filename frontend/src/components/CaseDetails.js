@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import GoalDetails from "./GoalDetails.js"
 
 class CaseDetails extends Component {
  state = {
