@@ -1,20 +1,20 @@
 import React, {Component} from 'react';
 
-class Case_details extends Component {
+class CaseDetails extends Component {
  state = {
    json_response: []
  };
 
- url = 'http://127.0.0.1:8000/api/cases/'
+ url = 'http://localhost:8000/api/cases/'
 
 
-
+/*
  async componentDidMount() {
    try {
-    
+
     const res = await fetch(this.url + 1); // fetching the data from api, before the page loaded
      const json_response = await res.json(); //getting the json response
-     console.log(json_response) 
+     console.log(json_response)
      this.setState({
        json_response
      });
@@ -23,18 +23,18 @@ class Case_details extends Component {
      console.log(e);
    }
  }
+*/
 
-  
 
  render() {
-         
-    return (
-        <div>
-            <p>Data from parent is:{this.props.dataFromParent}</p>
-            
-        </div>
+
+     return (
+	 <li>
+             {this.props.acase.name}
+	     {this.props.acase.description}
+	 </li>
     );
  }
 }
 
-export default Case_details ;
+export default CaseDetails ;

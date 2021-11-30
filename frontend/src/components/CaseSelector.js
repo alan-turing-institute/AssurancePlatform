@@ -1,11 +1,11 @@
  import React, {Component} from 'react';
- import Case_details from './case.js'
+ //import CaseDetails from './CaseDetails.js'
 
- class App extends Component {
+ class CaseSelector extends Component {
   state = {
     json_response: []
   };
-  url = 'http://127.0.0.1:8000/api/cases'
+  url = 'http://localhost:8000/api/cases'
 
   async componentDidMount() {
     try {
@@ -22,32 +22,25 @@
 
 
   handleChange = (e) => {
-    const select_case = new Case_details();
-    console.log(select_case)
-
-    //var value = Case_details.state.json_response.filter(function(item) {
-      
-    //  return item.key == e.target.value
-    //})
-
-    //console.log(value[0].value);
+      this.setState({selectValue:e.target.value});
+      console.log("change in CaseSelector ",e.target.value);
+      this.props.handleChangeProps(e.target.value);
   }
 
 
   render() {
-    //console.log("type one:", this.state.json_response.length);
-    
+
     return (
       <div className="dropdown">
         <p>Select Assurance Case</p>
-              <select onChange={this.handleChange}>
+            <select onChange={this.handleChange} value={this.state.selectValue}>
                 {this.state.json_response.map(function(item){  return (
                   <option key={item.id} value={item.id}>{item.name}</option> )
                 })}
 
               </select>
-          
-              
+
+
         {/* {this.state.json_response.map((item, key) => (
           <div key={key}>
             <h1>{item.name}</h1>
@@ -59,4 +52,4 @@
   }
 }
 
-export default App;
+export default CaseSelector;
