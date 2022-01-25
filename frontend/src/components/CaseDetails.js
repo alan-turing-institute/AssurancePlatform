@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import GoalDetails from "./GoalDetails.js"
+//import GoalDetails from "./GoalDetails.js"
 
 class CaseDetails extends Component {
  state = {
@@ -31,8 +31,8 @@ class CaseDetails extends Component {
 
      return (
 	 <li>
-             {this.props.acase.name}
-	     {this.props.acase.description}
+      {this.props.acase.name}
+	    {this.props.acase.description}
 	 </li>
     );
  }

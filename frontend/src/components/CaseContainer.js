@@ -27,13 +27,12 @@ class CaseContainer extends Component {
     };
 
 
-
   render() {
 
     return (
       <div>
-            <CaseSelector selector handleChangeProps={this.handleChange} />
-	    <CaseDetails acase={this.state.assurance_case} />
+        <CaseSelector selector handleChangeProps={this.handleChange} />
+	      <CaseDetails acase={this.state.assurance_case} />
       </div>
       );
   }

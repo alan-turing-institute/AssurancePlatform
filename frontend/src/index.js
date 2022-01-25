@@ -3,13 +3,16 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import CaseContainer from './components/CaseContainer';
 import reportWebVitals from './reportWebVitals';
+import Mermaid_Chart from './components/mermaid';
 
-ReactDOM.render(
-  <React.StrictMode>
-    <CaseContainer />
-  </React.StrictMode>,
-  document.getElementById('main')
-);
+
+
+const dropdown_menus = document.getElementById("main");
+ReactDOM.render( <CaseContainer />, dropdown_menus); 
+
+const test_chart = document.getElementById("mermaid");
+ReactDOM.render(<Mermaid_Chart />, test_chart);
+
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

@@ -19,8 +19,6 @@
     }
   }
 
-
-
   handleChange = (e) => {
       this.setState({selectValue:e.target.value});
       console.log("change in CaseSelector ",e.target.value);
