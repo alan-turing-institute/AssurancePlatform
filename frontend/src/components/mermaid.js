@@ -68,15 +68,16 @@ class Mermaid_Chart extends React.Component {
     return (
       <div className="App">
         <p>{JSON.stringify(this.state)}</p>
-        <h1>react mermaid 2</h1>
+        <h1>react-mermaid</h1>
 
         <Mermaid
           chart={`graph TB; 
           A[${
           this.state.keywords.length > 0 ? this.state.keywords[0] : "Goal"
         }] --> B{Context}
-        A--> |keyword| E(<font color=white> System or Project Property Claim)
+        A--> |keyword| E(System or Project Property Claim)
         A--> D{System Description}
+        click D "http://www.github.com" "This is a tooltip for a link"
         E--> F(Argument)
         F--> G(Evidential Claim)
         G--> |${Similarity}| H[(Evidence)]
