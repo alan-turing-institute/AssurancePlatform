@@ -1,11 +1,18 @@
  import React, {Component} from 'react';
- //import CaseDetails from './CaseDetails.js'
+ //import { withRouter } from 'react-router' 
+ //import { useNavigate } from "react-router-dom";
+ import configData from "../config.json"
 
  class CaseSelector extends Component {
+
+  constructor(props) {
+    super(props)
+  }
+
   state = {
     json_response: []
   };
-  url = 'http://localhost:8000/api/cases'
+  url = `${configData.BASE_URL}/cases`
 
   async componentDidMount() {
     try {
@@ -20,9 +27,12 @@
   }
 
   handleChange = (e) => {
+    //let navigate = useNavigate();
       this.setState({selectValue:e.target.value});
       console.log("change in CaseSelector ",e.target.value);
-      this.props.handleChangeProps(e.target.value);
+      //this.props.router.push("/cases/"+e.target.value)
+      this.props.navigation.navigate("/cases/"+e.target.value)
+      //this.props.handleChangeProps(e.target.value);
   }
 
 
@@ -37,14 +47,6 @@
                 })}
 
               </select>
-
-
-        {/* {this.state.json_response.map((item, key) => (
-          <div key={key}>
-            <h1>{item.name}</h1>
-            <span>{item.description}</span>
-          </div>
-        ))} */}
       </div>
       );
   }
