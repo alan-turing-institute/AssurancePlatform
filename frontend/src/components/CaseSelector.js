@@ -1,55 +1,92 @@
- import React, {Component} from 'react';
- //import { withRouter } from 'react-router' 
- //import { useNavigate } from "react-router-dom";
- import configData from "../config.json"
+import React, {useState, useEffect} from 'react';
+import { useNavigate } from "react-router-dom";
+import configData from "../config.json"
 
- class CaseSelector extends Component {
-
-  constructor(props) {
-    super(props)
-  }
-
-  state = {
-    json_response: []
-  };
-  url = `${configData.BASE_URL}/cases`
-
-  async componentDidMount() {
-    try {
-      const res = await fetch(this.url); // fetching the data from api, before the page loaded
-      const json_response = await res.json(); //getting the json response
-      this.setState({
-        json_response
-      });
-    } catch (e) {
-      console.log(e);
+function CaseSelector() {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([
+    { label: "Loading ...", value: "" }
+  ]);
+  const [value, setValue] = useState("Select a case");
+  useEffect(() => {
+    let unmounted = false;
+    let url = `${configData.BASE_URL}/cases/`;
+    async function getCases() {
+      const response = await fetch(url);
+      const body = await response.json();
+      if (!unmounted) {
+        setItems(body.map(({ id, name }) => ( {id:id,  name: name })));
+        setLoading(false);
+      }
     }
+    getCases();
+    return () => {
+      unmounted = true;
+    };
+  }, []);
+  let navigate = useNavigate();
+  function handleChange(event) {
+    let caseId = event.currentTarget.value
+    setValue(caseId);
+    navigate("/cases/"+caseId)
   }
-
-  handleChange = (e) => {
-    //let navigate = useNavigate();
-      this.setState({selectValue:e.target.value});
-      console.log("change in CaseSelector ",e.target.value);
-      //this.props.router.push("/cases/"+e.target.value)
-      this.props.navigation.navigate("/cases/"+e.target.value)
-      //this.props.handleChangeProps(e.target.value);
-  }
-
-
-  render() {
-
-    return (
-      <div className="dropdown">
-        <p>Select Assurance Case</p>
-            <select onChange={this.handleChange} value={this.state.selectValue}>
-                {this.state.json_response.map(function(item){  return (
-                  <option key={item.id} value={item.id}>{item.name}</option> )
-                })}
-
-              </select>
-      </div>
-      );
-  }
+  
+  return (
+    <div className="dropdown">
+      <p>Select Assurance Case</p>
+      <select 
+      disabled={loading}
+      value={value}
+      onChange={handleChange} 
+      >
+        {items.map(({ id, name }) => (
+        <option key={id} value={id}>
+        {name}
+        </option>
+        ))}
+      </select>
+  </div>
+  );
 }
 
 export default CaseSelector;
+/*
+const CaseSelector = (props) => {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([
+    { id: "Loading ...", name: "" }
+  ]);
+  useEffect(() => {
+    async function getOptions() {
+      let url = `${configData.BASE_URL}/cases` 
+      const response = await fetch(url);
+      const body = await response.json();
+      setItems(body.results.map(({ name }) => ({ id: name, name: name })));
+    }
+    getOptions();
+  }, []);
+  
+
+  
+  return (
+    <div className="dropdown">
+      <p>Select Assurance Case</p>
+      <select>
+      {items.map(item => (
+        <option
+          key={item.id}
+          value={item.name}
+        >
+          {item.name}
+        </option>
+      ))}
+      </select>
+    </div>
+    );
+} 
+
+
+
+
+export default CaseSelector;
+*/
