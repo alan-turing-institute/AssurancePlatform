@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import configData from "../config.json"
 
@@ -11,11 +11,13 @@ function CaseSelector() {
   useEffect(() => {
     let unmounted = false;
     let url = `${configData.BASE_URL}/cases/`;
+    console.log(url);
     async function getCases() {
       const response = await fetch(url);
       const body = await response.json();
+      console.log(body);
       if (!unmounted) {
-        setItems(body.map(({ id, name }) => ( {id:id,  name: name })));
+        setItems(body.map(({ id, name }) => ({ id: id, name: name })));
         setLoading(false);
       }
     }
@@ -28,24 +30,24 @@ function CaseSelector() {
   function handleChange(event) {
     let caseId = event.currentTarget.value
     setValue(caseId);
-    navigate("/cases/"+caseId)
+    navigate("/cases/" + caseId)
   }
-  
+
   return (
     <div className="dropdown">
       <p>Select Assurance Case</p>
-      <select 
-      disabled={loading}
-      value={value}
-      onChange={handleChange} 
+      <select
+        disabled={loading}
+        value={value}
+        onChange={handleChange}
       >
         {items.map(({ id, name }) => (
-        <option key={id} value={id}>
-        {name}
-        </option>
+          <option key={id} value={id}>
+            {name}
+          </option>
         ))}
       </select>
-  </div>
+    </div>
   );
 }
 
@@ -58,16 +60,16 @@ const CaseSelector = (props) => {
   ]);
   useEffect(() => {
     async function getOptions() {
-      let url = `${configData.BASE_URL}/cases` 
+      let url = `${configData.BASE_URL}/cases`
       const response = await fetch(url);
       const body = await response.json();
       setItems(body.results.map(({ name }) => ({ id: name, name: name })));
     }
     getOptions();
   }, []);
-  
 
-  
+
+
   return (
     <div className="dropdown">
       <p>Select Assurance Case</p>
@@ -83,7 +85,7 @@ const CaseSelector = (props) => {
       </select>
     </div>
     );
-} 
+}
 
 
 
