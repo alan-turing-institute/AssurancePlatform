@@ -53,11 +53,11 @@ class CaseContainer extends Component {
 
   jsontoMermaid(in_json) {
 
-    let outputmd = "graph TB; \n";
+    let outputmd = "`graph TB; \n";
     outputmd += "A [" + in_json.goals[0]["name"] + "] \n";
     outputmd += "}] --> B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
     outputmd += "A-- > | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
-    outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n"
+    outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n`"
     //A--> D{System Description}
     //E--> F(Argument)
     //F--> G(Evidential Claim)
@@ -100,7 +100,7 @@ class CaseContainer extends Component {
                     <button onClick={() => resetTransform()}>x</button>
                   </div>
                   <TransformComponent>
-                    <Mermaid_Chart />
+                    <Mermaid_Chart chartmd={this.jsontoMermaid(input_json)} />
                     <div>Example text</div>
                   </TransformComponent>
                 </React.Fragment>

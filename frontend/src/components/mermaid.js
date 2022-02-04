@@ -82,15 +82,17 @@ class Mermaid_Chart extends React.Component {
     //console.log(this.jsontoMermaid(input_json));
     //console.log("json:", json);
     return (
-      <div className="App">
-        <p>{JSON.stringify(this.state)}</p>
-        <h1>react mermaid</h1>
+      console.log(this.props.chartmd);
+    <div className="App">
+      <p>{JSON.stringify(this.state)}</p>
+      <h1>react mermaid</h1>
 
 
 
-        <Mermaid
-          chart={
-            this.props.chartmd;
+      <Mermaid
+
+        chart={
+          this.props.chartmd;
           //     `graph TB;
           //   A[${this.state.//keywords.length > 0 ? this.state.keywords[0] : "Goal"
           //     }] --> B{Context}
@@ -100,10 +102,11 @@ class Mermaid_Chart extends React.Component {
           // F--> G(Evidential Claim)
           // G--> |${Similarity}| H[(Evidence)]
           // style A fill:#f9f, stroke:#333, stroke-width:3px,  padding:250px
+          //`
 
-        }
+          }
         />
-      </div>
+    </div>
     );
   }
 }
