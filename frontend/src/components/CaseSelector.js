@@ -11,11 +11,9 @@ function CaseSelector() {
   useEffect(() => {
     let unmounted = false;
     let url = `${configData.BASE_URL}/cases/`;
-    console.log(url);
     async function getCases() {
       const response = await fetch(url);
       const body = await response.json();
-      console.log(body);
       if (!unmounted) {
         setItems(body.map(({ id, name }) => ({ id: id, name: name })));
         setLoading(false);
