@@ -16,6 +16,9 @@ render() {
         <li> 
         <Link to="/case/new">Create a new case</Link>
         </li>
+        <li> 
+        <Link to="/goal/new">Create a new goal</Link>
+        </li>
     </div> 
   )  
 }

@@ -1,3 +1,13 @@
 {
-  "BASE_URL": "http://localhost:8000/api"  
+  "BASE_URL": "http://localhost:8000/api",
+  "navigation": {"TopLevelNormativeGoal":   {"api_ext": "goals",
+                                            "parent_name": "AssuranceCase",
+                                            "parent_api_ext": "cases"},
+                "Context":                  {"api_ext": "contexts",
+                                            "parent_name": "TopLevelNormativeGoal",
+                                            "parent_api_ext": "goals"},
+                "SystemDescription":       {"api_ext": "descriptions",
+                                                "parent_name": "TopLevelNormativeGoal",
+                                                "parent_api_ext": "goals"}
+                }
 }
