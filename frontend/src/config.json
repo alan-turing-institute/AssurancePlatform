@@ -1,13 +1,16 @@
 {
   "BASE_URL": "http://localhost:8000/api",
-  "navigation": {"TopLevelNormativeGoal":   {"api_ext": "goals",
+  "navigation": {"TopLevelNormativeGoal":   {"api_name": "goals",
                                             "parent_name": "AssuranceCase",
-                                            "parent_api_ext": "cases"},
-                "Context":                  {"api_ext": "contexts",
+                                            "parent_api_name": "cases",
+                                            "parent_db_name": "assurance_case_id"},
+                "Context":                  {"api_name": "contexts",
                                             "parent_name": "TopLevelNormativeGoal",
-                                            "parent_api_ext": "goals"},
-                "SystemDescription":       {"api_ext": "descriptions",
-                                                "parent_name": "TopLevelNormativeGoal",
-                                                "parent_api_ext": "goals"}
+                                            "parent_api_name": "goals",
+                                            "parent_db_name": "goal_id"},
+                "SystemDescription":       {"api_name": "descriptions",
+                                            "parent_name": "TopLevelNormativeGoal",
+                                            "parent_api_name": "goals",
+                                            "parent_db_name": "goal_id"}
                 }
 }
