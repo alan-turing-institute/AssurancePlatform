@@ -8,8 +8,6 @@ import configData from "../config.json"
 
 class CaseContainer extends Component {
 
- // caseId = useParams();
-
   state = {
 	  assurance_case: {
 	    id: 0,
