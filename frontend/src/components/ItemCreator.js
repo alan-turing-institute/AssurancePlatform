@@ -6,17 +6,40 @@ import configData from "../config.json"
 
 class ItemCreator extends React.Component {
 
-    state = {
-        name: "",
-        short_description: "",
-        long_description: "",
-        keywords: ""
+    constructor(props) {
+        super(props)
+        this.state = { 
+            name: "",
+            short_description: "",
+            long_description: "",
+            keywords: "",
+            parent_id: "",
+            possible_parents: [{0:"loading"}],
+            loading: true
+        }
+        this.url = `${configData.BASE_URL}/${this.props.type}/`;
     }
-    url = `${configData.BASE_URL}/${this.state.type}/`;
+
+    componentWillMount() {
+        let parent_url = `${configData.BASE_URL}/${configData.navigation[this.props.type]["parent_api_name"]}/`;
+        //let possible_parents = []
+        async function getParentChoices() {
+            const response = await fetch(parent_url);
+            const possible_parents = await response.json();
+            console.log("got parent stuff", possible_parents)
+            
+        }
+        getParentChoices();
+        this.state.possible_parents = [{id: "1", name:"a case"},{id: "2", name:"another case"}]
+       // this.setState((state, props) => ({possible_parents: possible_parents}));
+        this.state.loading = false;
+        console.log("at end of constructor, state is ", this.state)
+    }
+    
 
     onChange = e => {
           this.setState({
-              [e.target.name]: e.target.value
+             [e.target.name]: e.target.value 
           })
           console.log("state is now ",this.state);
       };
@@ -24,12 +47,20 @@ class ItemCreator extends React.Component {
 
     handleSubmit = e => {
         e.preventDefault()
+        let request_body = "{"
+        request_body += "id: "+this.state.id+", "
+        request_body += "name: "+this.state.name+", "
+        request_body += "short_description: "+this.state.short_description+", "
+        request_body += "long_description: "+this.state.long_description+", "
+        request_body += "keywords: "+this.state.keywords+", "
+        request_body += configData["navigation"][this.props.type]["parent_db_name"]+": "+this.state.parent_id
+        request_body += "}"
         const requestOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.state)
+            body: request_body
         };    
-        console.log("submit button pressed with state ",JSON.stringify(this.state))
+        console.log("submit button pressed with state ", request_body)
         let response = {};
 
         fetch(this.url, requestOptions)
@@ -40,6 +71,10 @@ class ItemCreator extends React.Component {
     }
 
     render() {
+
+
+
+        console.log("in render, state is ", this.state)
         return (
             <div>
             <h2>Create a new {this.props.type}</h2>
@@ -81,15 +116,16 @@ class ItemCreator extends React.Component {
                 />
                 </li>
                 <p>Select {configData["navigation"][this.props.type]["parent_name"]}</p>
-                <select 
-       //             disabled={loading}
-         //           value={value}
-           //         onChange={handleChange} 
-                    >
-                            <option value="first">first </option>
-                            <option value="second">second</option>
-                            <option value="third">third</option>
-                </select>
+                    <select 
+                        disabled={this.state.loading}
+                        onChange={this.handleChange} 
+                        value={this.state.selectValue}>
+                        {this.state.possible_parents.map(function(item){  return (
+                            <option key={item.id} value={item.id}>{item.name}</option> )
+                        })}
+
+                    </select>
+              
                 <button onClick={this.handleSubmit}>Submit</button>
             </form>
             </div>
