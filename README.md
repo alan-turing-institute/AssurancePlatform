@@ -43,6 +43,7 @@ You can check if all the requirements are installed properly using the command `
 
 14. Run the webapp ```npm start``` to view the app in your localhost:3000
 
+TIP: to raw view the database : ```http://localhost:8000/api/home```
 
 ## Resources
 - Article on ethical assurance methodology ([OneDrive Link](https://thealanturininstitute-my.sharepoint.com/:b:/g/personal/cburr_turing_ac_uk/EYHu_zD4Oq1Hmq8VGrJ_EsUBNrO1LGhpV2E9AaEUavioMQ?e=qCFKo2))
