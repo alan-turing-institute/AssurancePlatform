@@ -37,7 +37,7 @@ You can check if all the requirements are installed properly using the command `
 
 **Run the frontend**
 
-11. Open a new terminal while the backend is running and ```cd frontend```
+11. Open a new terminal while the backend is running and navigate to the frontend folder ```cd eapfrontend```
 
 12. Install npm dependencies: ```npm install```
 
