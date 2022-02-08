@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
-import { Grid, Box } from 'grommet';
+import { Grid, Box, DropButton, Menu, TextInput } from 'grommet';
 //import { withRouter } from "react-router";
 
 import CaseDetails from './CaseDetails.js'
@@ -53,11 +53,22 @@ class CaseContainer extends Component {
 
   jsontoMermaid(in_json) {
 
-    let outputmd = "`graph TB; \n";
-    outputmd += "A [" + in_json.goals[0]["name"] + "] \n";
-    outputmd += "}] --> B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
-    outputmd += "A-- > | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
-    outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n`"
+    let arrow = "-->"
+    let outputmd = "A [" + in_json.goals[0]["name"] + "]";
+    outputmd += arrow + "B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
+    outputmd += "A--> | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
+    outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n"
+
+    // A[${this.props.goals}] --> B{${this.props.context}}
+    // B:::cs
+    // A:::cs--> |key| E(${this.props.prop_claims})
+    // A--> D{${this.props.syst_descr}}
+    // D:::cs
+    // E:::cs--> F(Argument)
+    // F:::cs--> G(Evidential Claim)
+    // G:::cs--> |${Similarity}| H[(Evidence)]
+    // H:::cs
+
     //A--> D{System Description}
     //E--> F(Argument)
     //F--> G(Evidential Claim)
@@ -72,50 +83,131 @@ class CaseContainer extends Component {
 
     return (
       <div>
+
         <Grid
-          rows={['xxsmall', 'flex', 'xxsmall']}
-          columns={['flex', 'medium']}
-          gap="small"
+          rows={['3px', 'flex', 'xxsmall']} //{['xxsmall', 'flex', 'xxsmall']}
+          columns={['flex', "20%"]}
+          gap="medium"
           areas={[
-            { name: 'header', start: [0, 0], end: [1, 0] },
+            { name: 'header', start: [0, 0], end: [0, 0] },
             { name: 'main', start: [0, 1], end: [0, 1] },
             { name: 'right', start: [1, 1], end: [1, 1] },
             { name: 'footer', start: [0, 2], end: [1, 2] },
           ]}
         >
-          <Box gridArea="header" background="brand" >
-            <CaseDetails acase={this.state.assurance_case} />
+          <Box gridArea="header" background="#ffffff" >
+            {/* <CaseDetails acase={this.state.assurance_case} /> */}
           </Box>
-          <Box gridArea="main" background="light-2" >
+          {/* <Box gridArea="title" background="light-2" >
+            <h2>{input_json.name}</h2>
+          </Box> */}
+          {/* <div class="flex flex-wrap">
+
+            <div class="w-25pc h-1by1 pattern-dots-md slategray-lighter"></div>
+          </div> */}
+          <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
+
+            <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{input_json.name}</h2>  </Box>
             <TransformWrapper
               initialScale={1}
-              initialPositionX={200}
-              initialPositionY={100}
+              initialPositionX={25}
+              initialPositionY={40}
             >
               {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
                 <React.Fragment>
+                  <TransformComponent >
+                    <Mermaid_Chart
+                      chartmd={this.jsontoMermaid(input_json)}
+                      goals={input_json.goals[0]["name"]}
+                      context={input_json.goals[0]["context"][0]["name"]}
+                      prop_claims={input_json.goals[0]["property_claims"][0]["name"]}
+                      syst_descr={input_json.goals[0]["system_description"][0]["name"]}
+                      assurance_name={input_json.name}
+                    />
+                  </TransformComponent>
                   <div className="tools">
                     <button onClick={() => zoomIn()}>+</button>
                     <button onClick={() => zoomOut()}>-</button>
                     <button onClick={() => resetTransform()}>x</button>
                   </div>
-                  <TransformComponent>
-                    <Mermaid_Chart chartmd={this.jsontoMermaid(input_json)} />
-                    <div>Example text</div>
-                  </TransformComponent>
                 </React.Fragment>
               )}
             </TransformWrapper>
-
-
           </Box>
-          <Box direction="column" gap={'4px'} gridArea="right" background={{ color: "#ff0000" }}>
-            <Box width={"flex"} height={'30px'} background={{ color: "blue" }}> askdfjalksdjlakjldkfjald lak  </Box>
-            <Box width={"flex"} height={'30px'} background={{ color: "blue" }}> slkalskd</Box>
-          </Box>
-          <Box gridArea="footer" background="light-5" />
+          {/* {{ color: "#ff0000" }} */}
 
-        </Grid>
+          <Box direction="column" gap={'4px'} gridArea="right" background="light-2">
+            <Box width={"flex"} height={'50px'} background="light-2" ><h4> &nbsp; Blocks</h4></Box>
+            <Menu
+              label="Select Assurance Case"
+              items={[
+                { label: 'First Assurance Case', onClick: () => { } },
+                { label: 'Second Assurance Case', onClick: () => { } },
+              ]}
+            />
+            <DropButton
+              label="Add Goal"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2">
+                  <TextInput
+                    placeholder="Goal name"
+                  //value={value}
+                  //onChange={event => setValue(event.target.value)}
+                  />
+                  <TextInput
+                    placeholder="Goal description"
+                  />
+                </Box>
+              }
+            />
+            <DropButton
+              label="Add Context"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+            <DropButton
+              label="Add Property Claim"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+            <DropButton
+              label="Add System Description"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+            <DropButton
+              label="Add Argument"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+            <DropButton
+              label="Add Evidential Claim"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+            <DropButton
+              label="Add Evidence"
+              dropAlign={{ top: 'bottom', right: 'right' }}
+              dropContent={
+                <Box pad="large" background="light-2" />
+              }
+            />
+          </Box>
+
+          <Box gridArea="footer" background="light-5"> &copy; credits </Box>
+
+        </Grid >
 
 
       </div >
