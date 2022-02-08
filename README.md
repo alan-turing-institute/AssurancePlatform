@@ -29,7 +29,7 @@ You can check if all the requirements are installed properly using the command `
 
 **Run the backend**
 
-8. while in the eapbackend folder, run ```python manage.py test``` to test fucntions
+8. while in the eapbackend folder, run ```python manage.py test``` to test functions
 
 9. apply migrations ```python manage.py migrate```
 
