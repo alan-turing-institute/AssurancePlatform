@@ -6,6 +6,7 @@ import CaseCreator from './CaseCreator.js'
 import ItemCreator from './ItemCreator.js'
 import CaseSelector from './CaseSelector.js'
 import CaseContainer from './CaseContainer.js';
+import ItemEditor from './ItemEditor.js';
 const AllRoutes = () => (
     <Router>
         <Navigation />
@@ -16,6 +17,9 @@ const AllRoutes = () => (
             <Route path="/case/select" element={<CaseSelector/>} />
             <Route path ="/cases">
                 <Route path=":caseSlug" element={<CaseContainer/>} />
+            </Route>
+            <Route path ="/goal/edit">
+                <Route path=":itemSlug" element={<ItemEditor type="TopLevelNormativeGoal"/>} />
             </Route>
         </Routes>
     </Router>

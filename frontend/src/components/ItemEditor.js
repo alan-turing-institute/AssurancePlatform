@@ -1,50 +1,53 @@
 /* General function that can create any type of object apart from the top-level Case */
 
 import React, {useState, useEffect} from 'react';
+import { useParams } from "react-router-dom"
 import configData from "../config.json"
 
-function ItemCreator(props) {
+function ItemEditor(props) {
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState([
       { label: "Loading ...", value: "" }
     ]);
-    let parent_type = configData["navigation"][props.type]["parent_name"]
-    const [parentId, setParentId] = useState(1);
+   // let parent_type = configData["navigation"][props.type]["parent_name"]
     const [name, setName] = useState("Name")
     const [sdesc, setShortDesc] = useState("Short description")
     const [ldesc, setLongDesc] = useState("Long description")
     const [keywords, setKeywords] = useState("Keywords (comma-separated)")
     useEffect(() => {
         let unmounted = false;
-        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["parent_api_name"]}/`;
-        async function getParents() {
+        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.params.itemSlug}`;
+        async function getCurrent() {
             const response = await fetch(url);
             const body = await response.json();
+            console.log("in getCurrent got body",body)
             if (!unmounted) {
-                setItems(body.map(({ id, name }) => ({ id: id, name: name })));
-                 setLoading(false);
+                setItems(body);
+                setLoading(false);
             }
         }
-        getParents();
+        getCurrent();
         return () => {
             unmounted = true;
         };
     }, []);
 
     function handleChange(event) {
-      let parent = event.currentTarget.value
-      setParentId(parent);
+      //let parent = event.currentTarget.value
+     // setParentId(parent);
       
     }
 
+
+
     function handleSubmit(event) {
         event.preventDefault()
-        console.log("in handleSubmit, parentId is ",parentId)
-        createDBObject();
+        console.log("in handleSubmit, items are ",items)
+       /// editDBObject();
     }
 
-    function createDBObject() {
-        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/`
+    function editDBObject() {
+        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.params.itemSlug}`
         console.log("url is ",url)
 
         let request_body = {}
@@ -52,10 +55,10 @@ function ItemCreator(props) {
         request_body["short_description"] = sdesc;
         request_body["long_description"] = ldesc;
         request_body["keywords"] = keywords;
-        request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(parentId);
+        //request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(parentId);
        
         const requestOptions = {
-            method: 'POST',
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request_body)
         };   
@@ -69,58 +72,56 @@ function ItemCreator(props) {
         console.log("response was ", response);
     }
 
+    function setItem(key, value) {
+        items[key] = value
+    }
+
     return (
         <div className="dropdown">    
-            <h2>Create a new {props.type}</h2>
+            <h2>Edit {props.type} {props.params.itemSlug}</h2>
             <form>
                 <li>
                 <input 
                     type="text" 
-                    value={name}
+                    value={items.name}
+                    onChange= {e=> setItem("name",e.target.value)}
                     name="name"
-                    onChange={e => setName(e.target.value)}
                 />
                 </li>
                 <li>
                 <input 
                     type="text" 
-                    value={sdesc}
+                    value={items.short_description}
                     name="short_description"
-                    onChange={e => setShortDesc(e.target.value)}
+                    onChange= {e=> setItem("short_description",e.target.value)}
                 />
                 </li>
                 <li>
                 <input 
                     type="text" 
-                    value={ldesc}
+                    value={items.long_description}
                     name="long_description"
-                    onChange={e => setLongDesc(e.target.value)}
+                    onChange= {e=> setItem("long_description",e.target.value)}
                 />
                 </li>
                 <li>
                 <input 
                     type="text" 
-                    value={keywords}
+                    value={items.keywords}
                     name="keywords"
-                    onChange={e => setKeywords(e.target.value)}
+                    onChange= {e=> setItem("keywords",e.target.value)}
                 />
                 </li>
-          <p>Select parent {parent_type}</p>
-          <select 
-          disabled={loading}
-          value={parentId}
-          onChange={handleChange} 
-          >
-            {items.map(({ id, name }) => (
-            <option key={id} value={id}>
-            {name}
-            </option>
-            ))}
-          </select>
           <button onClick={e=>handleSubmit(e)}>Submit</button>
           </form>
       </div>
       );
 }
-    
-export default ItemCreator;
+
+export default (props) => (
+    <ItemEditor
+        {...props}
+        params={useParams()}
+    />
+);
+

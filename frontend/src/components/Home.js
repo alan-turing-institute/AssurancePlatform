@@ -19,6 +19,9 @@ render() {
         <li> 
         <Link to="/goal/new">Create a new goal</Link>
         </li>
+        <li> 
+        <Link to="/goal/edit/1">Edit a goal</Link>
+        </li>
     </div> 
   )  
 }
