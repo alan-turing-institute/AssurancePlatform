@@ -3,9 +3,6 @@ import React from "react"
 import mermaid from "mermaid"
 
 
-
-
-
 class Mermaid extends React.Component {
 
 
@@ -49,7 +46,7 @@ const keywords = [
   "Argument"
 ];
 
-class Mermaid_Chart extends React.Component {
+class MermaidChart extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -92,24 +89,12 @@ class Mermaid_Chart extends React.Component {
         {/* <h1>{this.props.assurance_name}</h1> */}
         <Mermaid
 
-          chart={
+          chart={this.props.chartmd}
             // `graph TB;
             // ${this.props.chartmd}`
-            `graph TB;
-              A[${this.props.goals}] --> B{${this.props.context}}
-            B:::cs
-            A:::cs--> |key| E(${this.props.prop_claims})
-            A--> D{${this.props.syst_descr}}
-            D:::cs
-            E:::cs--> F(Argument)
-            F:::cs--> G(Evidential Claim)
-            G:::cs--> |${Similarity}| H[(Evidence)]
-            H:::cs
-            classDef cs stroke-width:2px;
-            click A call callback("I am a tooltip") "Tooltip for a callback"
-            `
+            
 
-          }
+          
         />
         <p>{JSON.stringify(this.state)}</p>
         <p><span > ......................................
@@ -137,5 +122,5 @@ class Mermaid_Chart extends React.Component {
 // style A fill:#f9f, stroke:#333, stroke-width:3px,  padding:250px
 // `
 
-export default Mermaid_Chart;
+export default MermaidChart;
 
