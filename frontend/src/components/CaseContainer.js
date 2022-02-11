@@ -53,8 +53,63 @@ class CaseContainer extends Component {
 
 
   jsontoMermaid(in_json) {
+    let alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    let letterIndex = 0;
+    function getNextLetter() {
+      let nextLetter = alphabet[letterIndex]
+      letterIndex++;
+      return nextLetter;
+    }
 
-    let arrow = "-->"
+    function squareBox(text) {
+      return "["+text+"]"
+    }
+    function diamondBox(text) {
+      return "{"+text+"}"
+    }
+    function roundedBox(text) {
+      return "("+text+")"
+    }
+    function circleBox(text) {
+      return "(("+text+"))"
+    }
+    function dataBox(text) {
+      return "[("+text+")]"
+    }
+
+    let arrow = " --> "
+
+    let outputmd = "graph TB; \n"
+    for (let i=0; i< in_json.goals.length; i++ ) {
+      let goalLetter = getNextLetter()
+      outputmd += goalLetter + squareBox(in_json.goals[i]["name"]) 
+      let contextLetter = getNextLetter();
+      let descriptionLetter = getNextLetter();
+      outputmd += arrow + contextLetter + diamondBox(in_json.goals[i]["context"][0]["name"]) +"\n"
+    
+      for (let j=0; j < in_json.goals[i].property_claims.length; j++) {
+        let claimLetter = getNextLetter();
+        outputmd += goalLetter + arrow + claimLetter + roundedBox(in_json.goals[i].property_claims[j].name) + "\n"
+        for (let k=0; k < in_json.goals[i].property_claims[j].arguments.length; k++) {
+          let argumentLetter = getNextLetter();
+          outputmd += claimLetter + arrow + argumentLetter + roundedBox(in_json.goals[i].property_claims[j].arguments[k].name) +"\n"
+          for (let l=0; l < in_json.goals[i].property_claims[j].arguments[k].evidential_claims.length; l++) {
+            let evClaimLetter = getNextLetter();
+            outputmd += argumentLetter  + arrow + evClaimLetter + roundedBox(in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].name) +"\n"
+            for (let m=0; m < in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].evidence.length; m++) {
+              let evidenceLetter = getNextLetter();
+              outputmd += evClaimLetter + arrow + evidenceLetter + dataBox(in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].evidence[m].name) + "\n"
+            }
+          }
+        }
+      }
+      outputmd += goalLetter + arrow + descriptionLetter + diamondBox(in_json.goals[i]["system_description"][0]["name"]) +"\n"
+    }
+    
+    outputmd += " \n"
+    console.log("outputmd is ",outputmd)
+
+    
    // let outputmd = "A [" + in_json.goals[0]["name"] + "]";
    // outputmd += arrow + "B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
    // outputmd += "A--> | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
@@ -76,7 +131,8 @@ class CaseContainer extends Component {
     //G--> |${Similarity}| H[(Evidence)]
     //style A fill:#f9f, stroke:#333, stroke-width:3px,  padding:250px
     //  `
-    let outputmd = `graph TB;
+    /*
+    let output = `graph TB;
     A[Goal] --> B{Context}
   B:::cs
   A:::cs--> |key| E(Property Claim)
@@ -89,6 +145,7 @@ class CaseContainer extends Component {
   classDef cs stroke-width:2px;
   click A call callback("I am a tooltip") "Tooltip for a callback"
   `
+  */
     return (outputmd)
   }
 
