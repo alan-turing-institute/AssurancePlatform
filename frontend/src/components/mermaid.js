@@ -17,7 +17,7 @@ class Mermaid extends React.Component {
       flowchart: {
         useMaxWidth: true,
         htmlLabels: true,
-        curve: 'cardinal',
+        curve: 'natural', //d3 styles: http://bl.ocks.org/d3indepth/b6d4845973089bc1012dec1674d3aff8
       },
       themeVariables: {
         primaryColor: "#ffffff",

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Menu, TextInput } from 'grommet';
+import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
+import { grommet } from 'grommet/themes';
 //import { withRouter } from "react-router";
 
 import CaseDetails from './CaseDetails.js'
@@ -78,9 +79,26 @@ class CaseContainer extends Component {
     return (outputmd)
   }
 
+
+  Example() {
+    const [show, setShow] = "React.useState()";
+    return (
+      <Box>
+        <Button label="show" onClick={() => setShow(true)} />
+        {show && (
+          <Layer
+            onEsc={() => setShow(false)}
+            onClickOutside={() => setShow(false)}
+          >
+            <Button label="close" onClick={() => setShow(false)} />
+          </Layer>
+        )}
+      </Box>
+    );
+  }
+
   render() {
     console.log(this.jsontoMermaid(input_json));
-
     return (
       <div>
 
@@ -106,7 +124,7 @@ class CaseContainer extends Component {
             <div class="w-25pc h-1by1 pattern-dots-md slategray-lighter"></div>
           </div> */}
           <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
-
+            {/* {this.Example()} */}
             <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{input_json.name}</h2>  </Box>
             <TransformWrapper
               initialScale={1}
@@ -137,7 +155,9 @@ class CaseContainer extends Component {
           {/* {{ color: "#ff0000" }} */}
 
           <Box direction="column" gap={'4px'} gridArea="right" background="light-2">
-            <Box width={"flex"} height={'50px'} background="light-2" ><h4> &nbsp; Blocks</h4></Box>
+
+
+            <Box width={"flex"} height={'50px'} background="light-2" ><h4> &nbsp; Blocks </h4></Box>
             <Menu
               label="Select Assurance Case"
               items={[
@@ -203,12 +223,12 @@ class CaseContainer extends Component {
                 <Box pad="large" background="light-2" />
               }
             />
+
           </Box>
 
           <Box gridArea="footer" background="light-5"> &copy; credits </Box>
 
         </Grid >
-
 
       </div >
     );
