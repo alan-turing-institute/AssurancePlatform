@@ -87,6 +87,14 @@ class CaseContainer extends Component {
       let descriptionLetter = getNextLetter();
       outputmd += arrow + contextLetter + diamondBox(in_json.goals[i]["context"][0]["name"]) +"\n"
     
+      function addEvidence(evClaim, evLetter, outputmd) {
+        for (let i=0; i< evClaim.evidence.length; i++) {
+          let evidenceLetter = getNextLetter();
+          outputmd += evLetter + arrow + evidenceLetter + dataBox(evClaim.evidence[i].name) + "\n"
+        }
+        return outputmd;
+      }
+
       for (let j=0; j < in_json.goals[i].property_claims.length; j++) {
         let claimLetter = getNextLetter();
         outputmd += goalLetter + arrow + claimLetter + roundedBox(in_json.goals[i].property_claims[j].name) + "\n"
@@ -95,11 +103,9 @@ class CaseContainer extends Component {
           outputmd += claimLetter + arrow + argumentLetter + roundedBox(in_json.goals[i].property_claims[j].arguments[k].name) +"\n"
           for (let l=0; l < in_json.goals[i].property_claims[j].arguments[k].evidential_claims.length; l++) {
             let evClaimLetter = getNextLetter();
-            outputmd += argumentLetter  + arrow + evClaimLetter + roundedBox(in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].name) +"\n"
-            for (let m=0; m < in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].evidence.length; m++) {
-              let evidenceLetter = getNextLetter();
-              outputmd += evClaimLetter + arrow + evidenceLetter + dataBox(in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l].evidence[m].name) + "\n"
-            }
+            let evidentialClaim = in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l]
+            outputmd += argumentLetter  + arrow + evClaimLetter + roundedBox(evidentialClaim.name) +"\n"
+            outputmd = addEvidence(evidentialClaim, evClaimLetter, outputmd)
           }
         }
       }
