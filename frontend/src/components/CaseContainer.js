@@ -5,7 +5,7 @@ import { grommet } from 'grommet/themes';
 //import { withRouter } from "react-router";
 
 import CaseDetails from './CaseDetails.js'
-import Mermaid_Chart from './mermaid';
+import MermaidChart from './mermaid';
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
@@ -55,10 +55,10 @@ class CaseContainer extends Component {
   jsontoMermaid(in_json) {
 
     let arrow = "-->"
-    let outputmd = "A [" + in_json.goals[0]["name"] + "]";
-    outputmd += arrow + "B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
-    outputmd += "A--> | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
-    outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n"
+   // let outputmd = "A [" + in_json.goals[0]["name"] + "]";
+   // outputmd += arrow + "B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
+   // outputmd += "A--> | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
+   // outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n"
 
     // A[${this.props.goals}] --> B{${this.props.context}}
     // B:::cs
@@ -76,6 +76,19 @@ class CaseContainer extends Component {
     //G--> |${Similarity}| H[(Evidence)]
     //style A fill:#f9f, stroke:#333, stroke-width:3px,  padding:250px
     //  `
+    let outputmd = `graph TB;
+    A[Goal] --> B{Context}
+  B:::cs
+  A:::cs--> |key| E(Property Claim)
+  A--> D{System Description}
+  D:::cs
+  E:::cs--> F(Argument)
+  F:::cs--> G(Evidential Claim)
+  G:::cs--> |60%| H[(Evidence)]
+  H:::cs
+  classDef cs stroke-width:2px;
+  click A call callback("I am a tooltip") "Tooltip for a callback"
+  `
     return (outputmd)
   }
 
@@ -134,7 +147,7 @@ class CaseContainer extends Component {
               {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
                 <React.Fragment>
                   <TransformComponent >
-                    <Mermaid_Chart
+                    <MermaidChart
                       chartmd={this.jsontoMermaid(input_json)}
                       goals={input_json.goals[0]["name"]}
                       context={input_json.goals[0]["context"][0]["name"]}
