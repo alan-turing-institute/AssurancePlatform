@@ -15,9 +15,6 @@ var input_json = { "id": 1, "name": "My Case", "description": "first test case",
 
 class CaseContainer extends Component {
 
-  // caseId = useParams();
-
-
   state = {
     assurance_case: {
       id: 0,
@@ -79,41 +76,23 @@ class CaseContainer extends Component {
 
     let arrow = " --> "
 
-    function addEvidence(evClaim, evClaimLetter, outputmd) {
-      for (let i=0; i< evClaim.evidence.length; i++) {
-        let evidence = evClaim.evidence[i]
-        let evidenceLetter = getNextLetter();
-        outputmd += evClaimLetter + arrow + evidenceLetter + dataBox(evidence.name) + "\n"
+    /// Recursive function to go down the tree adding components
+    function addTree(thisType, parent, parentLetter, outputmd) {
+      let hierarchy = ["property_claims","arguments","evidential_claims","evidence"]
+      const thisIndex = hierarchy.findIndex(ind => ind === thisType);
+      let childType = "";
+      if (thisIndex <(hierarchy.length-1)) {
+        childType = hierarchy[thisIndex+1]
       }
-      return outputmd;
-    }
-
-    function addEvidentialClaims(argument, argLetter, outputmd) {
-      for (let i=0; i< argument.evidential_claims.length; i++) {
-        let evClaim = argument.evidential_claims[i]
-        let evClaimLetter = getNextLetter();
-        outputmd += argLetter + arrow + evClaimLetter + roundedBox(evClaim.name) + "\n"
-        outputmd = addEvidence(evClaim, evClaimLetter, outputmd)
-      }
-      return outputmd;
-    }
-
-    function addArguments(propClaim, propClaimLetter, outputmd) {
-      for (let i=0; i< propClaim.arguments.length; i++) {
-        let argument = propClaim.arguments[i]
-        let argLetter = getNextLetter();
-        outputmd += propClaimLetter + arrow + argLetter + roundedBox(argument.name) + "\n"
-        outputmd = addEvidentialClaims(argument, argLetter, outputmd)
-      }
-      return outputmd;
-    }
-
-    function addPropClaims(goal, goalLetter, outputmd) {
-      for (let i=0; i< goal.property_claims.length; i++) {
-        let propClaim = goal.property_claims[i]
-        let propClaimLetter = getNextLetter();
-        outputmd += goalLetter + arrow + propClaimLetter + roundedBox(propClaim.name) + "\n"
-        outputmd = addArguments(propClaim, propClaimLetter, outputmd)
+      for (let i=0; i< parent[thisType].length; i++) {
+        let thisObj = parent[thisType][i]
+        let thisObjLetter = getNextLetter();
+        if (thisType === "evidence") { /// different shaped box, and no children
+          outputmd += parentLetter + arrow + thisObjLetter + dataBox(thisObj.name) + "\n"
+        } else {
+          outputmd += parentLetter + arrow + thisObjLetter + roundedBox(thisObj.name) + "\n"
+          outputmd = addTree(childType, thisObj, thisObjLetter, outputmd)
+        }
       }
       return outputmd;
     }
@@ -128,57 +107,17 @@ class CaseContainer extends Component {
       /// Add a box for the Context - only one per goal
       let contextLetter = getNextLetter();
       outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) +"\n"
-      /// now start the nested process of adding PropertyClaims and descendents
-      outputmd = addPropClaims(goal, goalLetter, outputmd)
-
+      /// now start the recursive process of adding PropertyClaims and descendents
+      outputmd = addTree("property_claims", goal, goalLetter, outputmd)
       /// Add SystemDescription to the right of all the PropertyClaims and descendants
       let descriptionLetter = getNextLetter();
-      outputmd += goalLetter + arrow + descriptionLetter + diamondBox(in_json.goals[i]["system_description"][0]["name"]) +"\n"
+      outputmd += goalLetter + arrow + descriptionLetter + diamondBox(goal["system_description"][0]["name"]) +"\n"
     }
-    
     outputmd += " \n"
-    console.log("outputmd is ",outputmd)
+    //console.log("outputmd is ",outputmd)
 
-    
-   // let outputmd = "A [" + in_json.goals[0]["name"] + "]";
-   // outputmd += arrow + "B{" + in_json.goals[0]["context"][0]["name"] + "} \n";
-   // outputmd += "A--> | keyword | E(<font color=white>" + in_json.goals[0]["property_claims"][0]["name"] + ") \n"
-   // outputmd += "A--> D{" + in_json.goals[0]["system_description"][0]["name"] + "} \n"
-
-    // A[${this.props.goals}] --> B{${this.props.context}}
-    // B:::cs
-    // A:::cs--> |key| E(${this.props.prop_claims})
-    // A--> D{${this.props.syst_descr}}
-    // D:::cs
-    // E:::cs--> F(Argument)
-    // F:::cs--> G(Evidential Claim)
-    // G:::cs--> |${Similarity}| H[(Evidence)]
-    // H:::cs
-
-    //A--> D{System Description}
-    //E--> F(Argument)
-    //F--> G(Evidential Claim)
-    //G--> |${Similarity}| H[(Evidence)]
-    //style A fill:#f9f, stroke:#333, stroke-width:3px,  padding:250px
-    //  `
-    /*
-    let output = `graph TB;
-    A[Goal] --> B{Context}
-  B:::cs
-  A:::cs--> |key| E(Property Claim)
-  A--> D{System Description}
-  D:::cs
-  E:::cs--> F(Argument)
-  F:::cs--> G(Evidential Claim)
-  G:::cs--> |60%| H[(Evidence)]
-  H:::cs
-  classDef cs stroke-width:2px;
-  click A call callback("I am a tooltip") "Tooltip for a callback"
-  `
-  */
     return (outputmd)
   }
-
 
   Example() {
     const [show, setShow] = "React.useState()";
