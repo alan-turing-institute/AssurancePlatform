@@ -79,36 +79,60 @@ class CaseContainer extends Component {
 
     let arrow = " --> "
 
-    let outputmd = "graph TB; \n"
-    for (let i=0; i< in_json.goals.length; i++ ) {
-      let goalLetter = getNextLetter()
-      outputmd += goalLetter + squareBox(in_json.goals[i]["name"]) 
-      let contextLetter = getNextLetter();
-      let descriptionLetter = getNextLetter();
-      outputmd += arrow + contextLetter + diamondBox(in_json.goals[i]["context"][0]["name"]) +"\n"
-    
-      function addEvidence(evClaim, evLetter, outputmd) {
-        for (let i=0; i< evClaim.evidence.length; i++) {
-          let evidenceLetter = getNextLetter();
-          outputmd += evLetter + arrow + evidenceLetter + dataBox(evClaim.evidence[i].name) + "\n"
-        }
-        return outputmd;
+    function addEvidence(evClaim, evClaimLetter, outputmd) {
+      for (let i=0; i< evClaim.evidence.length; i++) {
+        let evidence = evClaim.evidence[i]
+        let evidenceLetter = getNextLetter();
+        outputmd += evClaimLetter + arrow + evidenceLetter + dataBox(evidence.name) + "\n"
       }
+      return outputmd;
+    }
 
-      for (let j=0; j < in_json.goals[i].property_claims.length; j++) {
-        let claimLetter = getNextLetter();
-        outputmd += goalLetter + arrow + claimLetter + roundedBox(in_json.goals[i].property_claims[j].name) + "\n"
-        for (let k=0; k < in_json.goals[i].property_claims[j].arguments.length; k++) {
-          let argumentLetter = getNextLetter();
-          outputmd += claimLetter + arrow + argumentLetter + roundedBox(in_json.goals[i].property_claims[j].arguments[k].name) +"\n"
-          for (let l=0; l < in_json.goals[i].property_claims[j].arguments[k].evidential_claims.length; l++) {
-            let evClaimLetter = getNextLetter();
-            let evidentialClaim = in_json.goals[i].property_claims[j].arguments[k].evidential_claims[l]
-            outputmd += argumentLetter  + arrow + evClaimLetter + roundedBox(evidentialClaim.name) +"\n"
-            outputmd = addEvidence(evidentialClaim, evClaimLetter, outputmd)
-          }
-        }
+    function addEvidentialClaims(argument, argLetter, outputmd) {
+      for (let i=0; i< argument.evidential_claims.length; i++) {
+        let evClaim = argument.evidential_claims[i]
+        let evClaimLetter = getNextLetter();
+        outputmd += argLetter + arrow + evClaimLetter + roundedBox(evClaim.name) + "\n"
+        outputmd = addEvidence(evClaim, evClaimLetter, outputmd)
       }
+      return outputmd;
+    }
+
+    function addArguments(propClaim, propClaimLetter, outputmd) {
+      for (let i=0; i< propClaim.arguments.length; i++) {
+        let argument = propClaim.arguments[i]
+        let argLetter = getNextLetter();
+        outputmd += propClaimLetter + arrow + argLetter + roundedBox(argument.name) + "\n"
+        outputmd = addEvidentialClaims(argument, argLetter, outputmd)
+      }
+      return outputmd;
+    }
+
+    function addPropClaims(goal, goalLetter, outputmd) {
+      for (let i=0; i< goal.property_claims.length; i++) {
+        let propClaim = goal.property_claims[i]
+        let propClaimLetter = getNextLetter();
+        outputmd += goalLetter + arrow + propClaimLetter + roundedBox(propClaim.name) + "\n"
+        outputmd = addArguments(propClaim, propClaimLetter, outputmd)
+      }
+      return outputmd;
+    }
+
+    let outputmd = "graph TB; \n"
+    /// Loop over all the goals in the AssuranceCase
+    for (let i=0; i< in_json.goals.length; i++ ) {
+      /// Add a box for the Goal itself
+      let goal = in_json.goals[i]
+      let goalLetter = getNextLetter()
+      outputmd += goalLetter + squareBox(goal["name"]) 
+      /// Add a box for the Context - only one per goal
+      let contextLetter = getNextLetter();
+      outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) +"\n"
+      /// now start the nested process of adding PropertyClaims and descendents
+      outputmd = addPropClaims(goal, goalLetter, outputmd)
+
+      /// Add SystemDescription to the right of all the PropertyClaims and descendants
+      let descriptionLetter = getNextLetter();
       outputmd += goalLetter + arrow + descriptionLetter + diamondBox(in_json.goals[i]["system_description"][0]["name"]) +"\n"
     }
     
