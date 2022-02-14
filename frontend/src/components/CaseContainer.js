@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
 import { grommet } from 'grommet/themes';
-//import { withRouter } from "react-router";
 
 import CaseDetails from './CaseDetails.js'
 import MermaidChart from './mermaid';
@@ -14,7 +13,6 @@ var input_json = { "id": 1, "name": "My Case", "description": "first test case",
 
 
 class CaseContainer extends Component {
-
   state = {
     assurance_case: {
       id: 0,
@@ -103,7 +101,7 @@ class CaseContainer extends Component {
       /// Add a box for the Goal itself
       let goal = in_json.goals[i]
       let goalLetter = getNextLetter()
-      outputmd += goalLetter + squareBox(goal["name"]) 
+      outputmd += goalLetter + squareBox(goal["name"])
       /// Add a box for the Context - only one per goal
       let contextLetter = getNextLetter();
       outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) +"\n"
