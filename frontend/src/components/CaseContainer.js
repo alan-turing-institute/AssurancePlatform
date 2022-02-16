@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
+import { grommet } from 'grommet/themes';
+import { FormSearch } from 'grommet-icons';
+import RoundLayer from './Layer.js';
 import MermaidChart from './mermaid';
 import configData from "../config.json";
 
@@ -62,32 +65,32 @@ class CaseContainer extends Component {
     }
 
     function squareBox(text) {
-      return "["+text+"]"
+      return "[" + text + "]"
     }
     function diamondBox(text) {
-      return "{"+text+"}"
+      return "{" + text + "}"
     }
     function roundedBox(text) {
-      return "("+text+")"
+      return "(" + text + ")"
     }
     function circleBox(text) {
-      return "(("+text+"))"
+      return "((" + text + "))"
     }
     function dataBox(text) {
-      return "[("+text+")]"
+      return "[(" + text + ")]"
     }
 
     let arrow = " --> "
 
     /// Recursive function to go down the tree adding components
     function addTree(thisType, parent, parentLetter, outputmd) {
-      let hierarchy = ["property_claims","arguments","evidential_claims","evidence"]
+      let hierarchy = ["property_claims", "arguments", "evidential_claims", "evidence"]
       const thisIndex = hierarchy.findIndex(ind => ind === thisType);
       let childType = "";
-      if (thisIndex <(hierarchy.length-1)) {
-        childType = hierarchy[thisIndex+1]
+      if (thisIndex < (hierarchy.length - 1)) {
+        childType = hierarchy[thisIndex + 1]
       }
-      for (let i=0; i< parent[thisType].length; i++) {
+      for (let i = 0; i < parent[thisType].length; i++) {
         let thisObj = parent[thisType][i]
         let thisObjLetter = getNextLetter();
         if (thisType === "evidence") { /// different shaped box, and no children
@@ -102,13 +105,14 @@ class CaseContainer extends Component {
 
     let outputmd = "graph TB; \n"
     /// Loop over all the goals in the AssuranceCase
-    for (let i=0; i< in_json.goals.length; i++ ) {
+    for (let i = 0; i < in_json.goals.length; i++) {
       /// Add a box for the Goal itself
       let goal = in_json.goals[i]
       let goalLetter = getNextLetter()
       outputmd += goalLetter + squareBox(goal["name"])
       /// Add a box for the Context - only one per goal
       let contextLetter = getNextLetter();
+
       if (goal["context"].length > 0 ) {
         outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) +"\n"
       }
@@ -125,8 +129,8 @@ class CaseContainer extends Component {
     return (outputmd)
   }
 
-  Example() {
-    const [show, setShow] = "React.useState()";
+  ExampleLayer() {
+    const [show, setShow] = "React.useState(0)";
     return (
       <Box>
         <Button label="show" onClick={() => setShow(true)} />
@@ -163,7 +167,19 @@ class CaseContainer extends Component {
             { name: 'footer', start: [0, 2], end: [1, 2] },
           ]}
         >
-    
+
+          <Box gridArea="header" background="#ffffff" >
+            {/* {this.ExampleLayer()} */}
+
+            {/* <CaseDetails acase={this.state.assurance_case} /> */}
+          </Box>
+          {/* <Box gridArea="title" background="light-2" >
+            <h2>{input_json.name}</h2>
+          </Box> */}
+          {/* <div class="flex flex-wrap">
+
+            <div class="w-25pc h-1by1 pattern-dots-md slategray-lighter"></div>
+          </div> */}
           <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
             {/* {this.Example()} */}
             <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>
@@ -201,6 +217,13 @@ class CaseContainer extends Component {
                 { label: 'Second Assurance Case', onClick: () => { } },
               ]}
             />
+            <Box direction="row" width={"flex"} height={'50px'} background="light-2" >
+              <Box width={"15%"} height={"flex"} background="light-2"><FormSearch color='plain' size='large' /></Box>
+              <Box width={"80%"} height={"flex"} background="light-2"><TextInput
+                placeholder="Search" /></Box>
+            </Box>
+
+
             <DropButton
               label="Add Goal"
               dropAlign={{ top: 'bottom', right: 'right' }}
