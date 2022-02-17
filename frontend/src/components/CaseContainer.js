@@ -121,6 +121,10 @@ class CaseContainer extends Component {
       if (goal["context"].length > 0) {
         outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) + "\n"
       }
+      //Add link to goal
+      outputmd += "click " + goalLetter + " call this.editLayer()" + "\n"
+
+
       /// now start the recursive process of adding PropertyClaims and descendents
       outputmd = addTree("property_claims", goal, goalLetter, outputmd)
       /// Add SystemDescription to the right of all the PropertyClaims and descendants
@@ -166,7 +170,6 @@ class CaseContainer extends Component {
 
             </Box>
           </Layer>
-
         )
         }
       </Box>
