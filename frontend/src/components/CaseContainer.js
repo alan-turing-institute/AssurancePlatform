@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
 import { grommet } from 'grommet/themes';
-import { FormSearch } from 'grommet-icons';
+import { FormSearch, AddCircle, Trash, StatusGood } from 'grommet-icons';
 
 import CaseDetails from './CaseDetails.js';
 import RoundLayer from './Layer.js';
@@ -153,7 +153,7 @@ class CaseContainer extends Component {
           ]}
         >
           <Box gridArea="header" background="#ffffff" >
-            {/* {this.ExampleLayer()} */}
+            {this.ExampleLayer()}
 
             {/* <CaseDetails acase={this.state.assurance_case} /> */}
           </Box>
@@ -217,7 +217,7 @@ class CaseContainer extends Component {
               label="Add Goal"
               dropAlign={{ top: 'bottom', right: 'right' }}
               dropContent={
-                <Box pad="large" background="light-2">
+                <Box pad="large" background="light-2" gap={'8px'}>
                   <TextInput
                     placeholder="Goal name"
                   //value={value}
@@ -226,6 +226,14 @@ class CaseContainer extends Component {
                   <TextInput
                     placeholder="Goal description"
                   />
+                  <Box direction="row" gap={"15px"}>
+                    <Box alignContent='start' width={"flex"}>
+                      <StatusGood color='green' size='medium' />
+                    </Box>
+                    <Box alignContent='end' width={"flex"}>
+                      <Trash color='plain' size='medium' />
+                    </Box>
+                  </Box>
                 </Box>
               }
             />
