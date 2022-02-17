@@ -2,18 +2,22 @@ import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
 import { grommet } from 'grommet/themes';
-import { FormSearch, AddCircle, Trash, StatusGood } from 'grommet-icons';
+import { FormSearch, AddCircle, Trash, StatusGood, FormClose } from 'grommet-icons';
+import { deepMerge } from 'grommet/utils';
+
 
 import RoundLayer from './Layer.js';
 import MermaidChart from './mermaid';
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import ItemEditor from './ItemEditor.js';
 
 class CaseContainer extends Component {
   constructor(props) {
     super(props)
     this.state = {
+      showlayer: false,
       loading: true,
       assurance_case: {
         id: 0,
@@ -130,22 +134,49 @@ class CaseContainer extends Component {
     return (outputmd)
   }
 
-  ExampleLayer() {
-    const [show, setShow] = "React.useState(0)";
-    return (
-      <Box>
-        <Button label="show" onClick={() => setShow(true)} />
-        {show && (
-          <Layer
-            onEsc={() => setShow(false)}
-            onClickOutside={() => setShow(false)}
-          >
-            <Button label="close" onClick={() => setShow(false)} />
-          </Layer>
-        )}
-      </Box>
-    );
+  setShow() {
+    this.setState({ showlayer: !this.state.showlayer })
   }
+
+
+  editLayer() {
+
+    return (
+      <Box >
+        <Button label="show" onClick={() => this.setShow()} />
+        {this.state.showlayer && (
+          <Layer
+            full="vertical"//"false"
+            position="right"//"bottom-left"
+            onEsc={() => this.setShow()}
+            onClickOutside={() => this.setShow()}
+          >
+            <Box
+
+              pad="medium"
+              gap="small"
+              width={{ min: 'medium' }}
+              height={{ min: 'small' }}
+              fill
+            >
+              <Button alignSelf="end" icon={<FormClose />} onClick={() => this.setShow()} />
+              <Box >
+                <ItemEditor type="TopLevelNormativeGoal" id="1" />
+              </Box>
+
+            </Box>
+          </Layer>
+
+        )
+        }
+      </Box>
+
+    );
+
+  }
+
+
+
 
   render() {
     if (this.state.loading) {
@@ -170,7 +201,7 @@ class CaseContainer extends Component {
           >
 
             <Box gridArea="header" background="#ffffff" >
-              {this.ExampleLayer()}
+              {this.editLayer()}
 
               {/* <CaseDetails acase={this.state.assurance_case} /> */}
             </Box>
