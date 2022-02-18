@@ -122,7 +122,7 @@ class CaseContainer extends Component {
         outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) + "\n"
       }
       //Add link to goal
-      outputmd += "click " + goalLetter + " call this.editLayer()" + "\n"
+      outputmd += "\n click " + goalLetter + " callback" + "\n"
 
 
       /// now start the recursive process of adding PropertyClaims and descendents
@@ -143,8 +143,8 @@ class CaseContainer extends Component {
   }
 
 
-  editLayer() {
-
+  editLayer(e) {
+    console.log("In editLayer ",e)
     return (
       <Box >
         <Button label="show" onClick={() => this.setShow()} />
@@ -203,18 +203,6 @@ class CaseContainer extends Component {
             ]}
           >
 
-            <Box gridArea="header" background="#ffffff" >
-              {this.editLayer()}
-
-              {/* <CaseDetails acase={this.state.assurance_case} /> */}
-            </Box>
-            {/* <Box gridArea="title" background="light-2" >
-            <h2>{input_json.name}</h2>
-          </Box> */}
-            {/* <div class="flex flex-wrap">
-
-            <div class="w-25pc h-1by1 pattern-dots-md slategray-lighter"></div>
-          </div> */}
             <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
               {/* {this.Example()} */}
               <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>
@@ -228,6 +216,7 @@ class CaseContainer extends Component {
                     <TransformComponent >
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
+                        editLayerFunc={(e) => this.editLayer(e)}
                       />
                     </TransformComponent>
                     <div className="tools">

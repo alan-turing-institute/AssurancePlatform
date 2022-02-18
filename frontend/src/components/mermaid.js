@@ -26,6 +26,7 @@ class Mermaid extends React.Component {
 
       }
     });
+    window.callback = e => this.props.editLayerFunc(e)
     mermaid.contentLoaded();
 
   }
@@ -78,17 +79,13 @@ class MermaidChart extends React.Component {
   render() {
     console.log(this.state.keyphrases);
     console.log("this.state", this.state);
-    //console.log(this.jsontoMermaid(input_json));
-    //console.log("json:", json);
-
-
     return (
 
       < div className="App" >
 
-        {/* <h1>{this.props.assurance_name}</h1> */}
+        
         <Mermaid
-
+          editLayerFunc={e => this.props.editLayerFunc(e)}
           chart={this.props.chartmd}
             // `graph TB;
             // ${this.props.chartmd}`
