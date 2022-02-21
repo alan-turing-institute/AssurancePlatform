@@ -5,7 +5,6 @@ import mermaid from "mermaid"
 
 class Mermaid extends React.Component {
 
-
   componentDidMount() {
     mermaid.initialize({
       theme: 'base',
@@ -28,16 +27,11 @@ class Mermaid extends React.Component {
     });
     window.callback = e => this.props.editLayerFunc(e)
     mermaid.contentLoaded();
-
   }
-
-
   render() {
     return <div className="mermaid">{this.props.chart}</div>;
   }
 }
-
-const Similarity = "60%";
 
 const keywords = [
   "Goal",
@@ -58,7 +52,6 @@ class MermaidChart extends React.Component {
 
   componentDidMount() {
 
-    //RESTAPI
     for (let kwrd of keywords) {
       if (kwrd.indexOf(" ") >= 0) {
         this.setState((prevState) => ({
@@ -80,27 +73,11 @@ class MermaidChart extends React.Component {
     console.log(this.state.keyphrases);
     console.log("this.state", this.state);
     return (
-
-      < div className="App" >
-
-        
+      <div className="App" >
         <Mermaid
           editLayerFunc={e => this.props.editLayerFunc(e)}
           chart={this.props.chartmd}
-            // `graph TB;
-            // ${this.props.chartmd}`
-            
-
-          
         />
-        <p>{JSON.stringify(this.state)}</p>
-        <p><span > ......................................
-          ...............................................................
-          ..............................................................
-          ..............................................................
-          ...............................................................
-          ...............................................................
-        </span></p>
       </div >
     );
   }
