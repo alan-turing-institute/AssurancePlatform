@@ -69,11 +69,24 @@ class CaseContainer extends Component {
       return nextLetter;
     }
 
+    function getNodeName(itemType,itemId) {
+      return itemType+"_"+itemId;
+    }
+
+    function makeBox(text, shape) {
+      if (shape === "square") return "[" + text + "]";
+      else if (shape === "diamond") return "{" + text + "}";
+      else if (shape === "rounded") return "(" + text + ")";
+      else if (shape === "circle") return "((" + text + "))";
+      else if (shape === "data") return "[(" + text + ")]";
+      else return "";
+    }
+
     function squareBox(text) {
-      return "[" + text + "]"
+      return 
     }
     function diamondBox(text) {
-      return "{" + text + "}"
+      return 
     }
     function roundedBox(text) {
       return "(" + text + ")"
@@ -88,67 +101,66 @@ class CaseContainer extends Component {
     let arrow = " --> "
 
     /// Recursive function to go down the tree adding components
-    function addTree(thisType, parent, parentLetter, outputmd) {
-      let hierarchy = ["property_claims", "arguments", "evidential_claims", "evidence"]
-      const thisIndex = hierarchy.findIndex(ind => ind === thisType);
-      let childType = "";
-      if (thisIndex < (hierarchy.length - 1)) {
-        childType = hierarchy[thisIndex + 1]
-      }
+    function addTree(itemType, parent, parentNode, outputmd) {
+      // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
+      let thisType = configData.navigation[itemType]["db_name"]
+      let boxShape = configData.navigation[itemType]["shape"]
+      //let hierarchy = ["property_claims", "arguments", "evidential_claims", "evidence"]
+     // const thisIndex = hierarchy.findIndex(ind => ind === thisType);
+     // let childType = "";
+     // if (thisIndex < (hierarchy.length - 1)) {
+      //  childType = hierarchy[thisIndex + 1]
+     // }
+      console.log("thisType is ", thisType, "parent is ", parent)
       for (let i = 0; i < parent[thisType].length; i++) {
         let thisObj = parent[thisType][i]
-        let thisObjLetter = getNextLetter();
-        if (thisType === "evidence") { /// different shaped box, and no children
-          outputmd += parentLetter + arrow + thisObjLetter + dataBox(thisObj.name) + "\n"
+        let thisNode = getNodeName(itemType, thisObj.id);
+        if (parentNode != null) {
+          outputmd += parentNode + arrow + thisNode + makeBox(thisObj.name, boxShape) + "\n"
         } else {
-          outputmd += parentLetter + arrow + thisObjLetter + roundedBox(thisObj.name) + "\n"
-          outputmd = addTree(childType, thisObj, thisObjLetter, outputmd)
+          outputmd += thisNode + makeBox(thisObj.name, boxShape) + "\n";
         }
+        // add a click link to the node
+        outputmd += "\n click " + thisNode + " callback" + "\n";
+        for (let j=0; j < configData.navigation[itemType]["children"].length; j++) {
+          let childType = configData.navigation[itemType]["children"][j]
+          outputmd = addTree(childType, thisObj, thisNode, outputmd)
+        }
+
       }
+      console.log(outputmd)
       return outputmd;
     }
 
     let outputmd = "graph TB; \n"
-    /// Loop over all the goals in the AssuranceCase
-    for (let i = 0; i < in_json.goals.length; i++) {
-      /// Add a box for the Goal itself
-      let goal = in_json.goals[i]
-      let goalLetter = getNextLetter()
-      outputmd += goalLetter + squareBox(goal["name"])
-      /// Add a box for the Context - only one per goal
-      let contextLetter = getNextLetter();
-
-      if (goal["context"].length > 0) {
-        outputmd += arrow + contextLetter + diamondBox(goal["context"][0]["name"]) + "\n"
-      }
-      //Add link to goal
-      outputmd += "\n click " + goalLetter + " callback" + "\n"
-
-
-      /// now start the recursive process of adding PropertyClaims and descendents
-      outputmd = addTree("property_claims", goal, goalLetter, outputmd)
-      /// Add SystemDescription to the right of all the PropertyClaims and descendants
-      let descriptionLetter = getNextLetter();
-      if (goal["system_description"].length > 0) {
-        outputmd += goalLetter + arrow + descriptionLetter + diamondBox(goal["system_description"][0]["name"]) + "\n"
-      }
-    }
-    outputmd += " \n"
-
+    outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd)
+  
     return (outputmd)
   }
 
-  setShow() {
-    this.setState({ showlayer: !this.state.showlayer })
+
+  showEditLayer(e) {
+    let chunks = e.split("_");
+    if (chunks.length === 2) {
+      let itemType = chunks[0];
+      let itemId = chunks[1];
+      this.setState({ showlayer: true })
+      this.setState({itemType: itemType, itemId: itemId})
+    }
+    console.log("in setShow ", this.state.showlayer, this.state.itemType, this.state.itemId)
+    
   }
 
+  hideEditLayer() {
+    this.setState({showlayer: false})
+  }
 
-  editLayer(e) {
-    console.log("In editLayer ",e)
+  editLayer(itemType, itemId) {
+    console.log("In editLayer", itemType, itemId)
+
     return (
       <Box >
-        <Button label="show" onClick={() => this.setShow()} />
-        {this.state.showlayer && (
+        
           <Layer
             full="vertical"//"false"
             position="right"//"bottom-left"
@@ -165,21 +177,15 @@ class CaseContainer extends Component {
             >
               <Button alignSelf="end" icon={<FormClose />} onClick={() => this.setShow()} />
               <Box >
-                <ItemEditor type="TopLevelNormativeGoal" id="1" />
+                <ItemEditor type={itemType} id={itemId} />
               </Box>
 
             </Box>
+            <Button label="hide" onClick={() => this.hideEditLayer()} />
           </Layer>
-        )
-        }
       </Box>
-
     );
-
   }
-
-
-
 
   render() {
     if (this.state.loading) {
@@ -202,7 +208,7 @@ class CaseContainer extends Component {
               { name: 'footer', start: [0, 2], end: [1, 2] },
             ]}
           >
-
+          {this.state.showlayer && this.editLayer(this.state.itemType, this.state.itemLayer)}
             <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
               {/* {this.Example()} */}
               <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>
@@ -216,7 +222,7 @@ class CaseContainer extends Component {
                     <TransformComponent >
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
-                        editLayerFunc={(e) => this.editLayer(e)}
+                        editLayerFunc={(e) => this.showEditLayer(e)}
                       />
                     </TransformComponent>
                     <div className="tools">

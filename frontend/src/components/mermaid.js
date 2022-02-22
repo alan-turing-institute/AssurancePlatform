@@ -70,8 +70,6 @@ class MermaidChart extends React.Component {
   }
 
   render() {
-    console.log(this.state.keyphrases);
-    console.log("this.state", this.state);
     return (
       <div className="App" >
         <Mermaid
