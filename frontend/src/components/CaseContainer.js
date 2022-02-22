@@ -136,7 +136,6 @@ class CaseContainer extends Component {
   }
 
   editLayer(itemType, itemId) {
-    console.log("In editLayer", itemType, itemId)
 
     return (
       <Box >
@@ -155,13 +154,12 @@ class CaseContainer extends Component {
               height={{ min: 'small' }}
               fill
             >
-              <Button alignSelf="end" icon={<FormClose />} onClick={() => this.setShow()} />
+              <Button alignSelf="end" icon={<FormClose />} onClick={() => this.hideEditLayer()} />
               <Box >
                 <ItemEditor type={itemType} id={itemId} />
               </Box>
 
             </Box>
-            <Button label="hide" onClick={() => this.hideEditLayer()} />
           </Layer>
       </Box>
     );
@@ -173,7 +171,6 @@ class CaseContainer extends Component {
         <div>loading</div>
       )
     } else {
-      console.log("In render, state is ", this.state)
       return (
         <div>
 
