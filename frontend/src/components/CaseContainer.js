@@ -82,22 +82,6 @@ class CaseContainer extends Component {
       else return "";
     }
 
-    function squareBox(text) {
-      return 
-    }
-    function diamondBox(text) {
-      return 
-    }
-    function roundedBox(text) {
-      return "(" + text + ")"
-    }
-    function circleBox(text) {
-      return "((" + text + "))"
-    }
-    function dataBox(text) {
-      return "[(" + text + ")]"
-    }
-
     let arrow = " --> "
 
     /// Recursive function to go down the tree adding components
@@ -105,12 +89,7 @@ class CaseContainer extends Component {
       // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
       let thisType = configData.navigation[itemType]["db_name"]
       let boxShape = configData.navigation[itemType]["shape"]
-      //let hierarchy = ["property_claims", "arguments", "evidential_claims", "evidence"]
-     // const thisIndex = hierarchy.findIndex(ind => ind === thisType);
-     // let childType = "";
-     // if (thisIndex < (hierarchy.length - 1)) {
-      //  childType = hierarchy[thisIndex + 1]
-     // }
+     
       console.log("thisType is ", thisType, "parent is ", parent)
       for (let i = 0; i < parent[thisType].length; i++) {
         let thisObj = parent[thisType][i]
@@ -144,11 +123,12 @@ class CaseContainer extends Component {
     if (chunks.length === 2) {
       let itemType = chunks[0];
       let itemId = chunks[1];
-      this.setState({ showlayer: true })
+      
       this.setState({itemType: itemType, itemId: itemId})
+      
     }
     console.log("in setShow ", this.state.showlayer, this.state.itemType, this.state.itemId)
-    
+    if (this.state.itemType && this.state.itemId) this.setState({ showlayer: true })
   }
 
   hideEditLayer() {
@@ -193,7 +173,7 @@ class CaseContainer extends Component {
         <div>loading</div>
       )
     } else {
-
+      console.log("In render, state is ", this.state)
       return (
         <div>
 
@@ -208,7 +188,7 @@ class CaseContainer extends Component {
               { name: 'footer', start: [0, 2], end: [1, 2] },
             ]}
           >
-          {this.state.showlayer && this.editLayer(this.state.itemType, this.state.itemLayer)}
+          { this.state.showlayer && this.state.itemType && this.state.itemId && this.editLayer(this.state.itemType, this.state.itemId)}
             <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
               {/* {this.Example()} */}
               <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>
