@@ -12,12 +12,14 @@ import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import ItemEditor from './ItemEditor.js';
+import ItemCreator from './ItemCreator.js'
 
 class CaseContainer extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      showlayer: false,
+      showEditLayer: false,
+      showCreateLayer: false,
       loading: true,
       assurance_case: {
         id: 0,
@@ -44,7 +46,7 @@ class CaseContainer extends Component {
     const res = await fetch(this.url + id);
     const json_response = await res.json()
 
-    console.log(json_response);
+   // console.log(json_response);
     this.setState({
       assurance_case: json_response
     });
@@ -60,7 +62,7 @@ class CaseContainer extends Component {
   }
 
   jsonToMermaid(in_json) {
-    console.log("in jsonToMermaid ", in_json)
+   // console.log("in jsonToMermaid ", in_json)
     let alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     let letterIndex = 0;
     function getNextLetter() {
@@ -83,14 +85,13 @@ class CaseContainer extends Component {
     }
 
     let arrow = " --> "
-
     /// Recursive function to go down the tree adding components
     function addTree(itemType, parent, parentNode, outputmd) {
       // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
       let thisType = configData.navigation[itemType]["db_name"]
       let boxShape = configData.navigation[itemType]["shape"]
      
-      console.log("thisType is ", thisType, "parent is ", parent)
+    //  console.log("thisType is ", thisType, "parent is ", parent)
       for (let i = 0; i < parent[thisType].length; i++) {
         let thisObj = parent[thisType][i]
         let thisNode = getNodeName(itemType, thisObj.id);
@@ -107,7 +108,7 @@ class CaseContainer extends Component {
         }
 
       }
-      console.log(outputmd)
+     // console.log(outputmd)
       return outputmd;
     }
 
@@ -124,30 +125,49 @@ class CaseContainer extends Component {
       let itemType = chunks[0];
       let itemId = chunks[1];
       
-      this.setState({itemType: itemType, itemId: itemId})
+      this.setState({editItemType: itemType, editItemId: itemId})
       
     }
-    console.log("in setShow ", this.state.showlayer, this.state.itemType, this.state.itemId)
-    if (this.state.itemType && this.state.itemId) this.setState({ showlayer: true })
+    if (this.state.editItemType && this.state.editItemId) this.setState({ showEditLayer: true })
+  }
+
+  showCreateLayer(itemType, parentId, event) {
+    console.log("in showCreateLayer", this, parentId)
+    event.preventDefault()
+    this.setState(
+      {createItemType: itemType, 
+      createItemParentId: parentId}
+    )
+    this.setState({ showCreateLayer: true})
   }
 
   hideEditLayer() {
-    this.setState({showlayer: false})
+    this.setState(
+      {showEditLayer: false,
+        editItemType: null,
+        editItemId: null
+      })
   }
 
-  editLayer(itemType, itemId) {
+  hideCreateLayer() {
+    this.setState(
+      {showCreateLayer: false,
+        createItemType: null,
+        createItemParentType: null,
+        createItemParentId: null
+      })
+  }
 
+  editLayer() {
     return (
       <Box >
-        
           <Layer
             full="vertical"//"false"
             position="right"//"bottom-left"
-            onEsc={() => this.setShow()}
-            onClickOutside={() => this.setShow()}
+            onEsc={() => this.hideEditLayer()}
+            onClickOutside={() => this.hideEditLayer()}
           >
             <Box
-
               pad="medium"
               gap="small"
               width={{ min: 'medium' }}
@@ -156,14 +176,46 @@ class CaseContainer extends Component {
             >
               <Button alignSelf="end" icon={<FormClose />} onClick={() => this.hideEditLayer()} />
               <Box >
-                <ItemEditor type={itemType} id={itemId} />
+                <ItemEditor 
+                  type={this.state.editItemType} 
+                  id={this.state.editItemId} 
+                  createItemLayer={this.showCreateLayer.bind(this)}/>
               </Box>
-
             </Box>
           </Layer>
       </Box>
     );
   }
+
+  createLayer() {
+    return (
+      <Box >
+          <Layer
+            full="false"
+            position="bottom-right"//"bottom-left"
+            onEsc={() => this.hideCreateLayer()}
+            onClickOutside={() => this.hideCreateLayer()}
+          >
+            <Box
+              pad="medium"
+              gap="small"
+              width={{ min: 'medium' }}
+              height={{ min: 'small' }}
+              fill
+            >
+              <Button alignSelf="end" icon={<FormClose />} onClick={() => this.hideCreateLayer()} />
+              <Box >
+                <ItemCreator 
+                type={this.state.createItemType} 
+                parentId={this.state.createItemParentId} 
+                />
+              </Box>
+            </Box>
+          </Layer>
+      </Box>
+    );
+  }
+
 
   render() {
     if (this.state.loading) {
@@ -185,7 +237,8 @@ class CaseContainer extends Component {
               { name: 'footer', start: [0, 2], end: [1, 2] },
             ]}
           >
-          { this.state.showlayer && this.state.itemType && this.state.itemId && this.editLayer(this.state.itemType, this.state.itemId)}
+          { this.state.showEditLayer && this.state.editItemType && this.state.editItemId && this.editLayer()}
+          { this.state.showCreateLayer && this.state.createItemType && this.state.createItemParentId && this.createLayer()}
             <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
               {/* {this.Example()} */}
               <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>

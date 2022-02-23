@@ -14,22 +14,7 @@ function ItemCreator(props) {
     const [sdesc, setShortDesc] = useState("Short description")
     const [ldesc, setLongDesc] = useState("Long description")
     const [keywords, setKeywords] = useState("Keywords (comma-separated)")
-    useEffect(() => {
-        let unmounted = false;
-        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["parent_api_name"]}/`;
-        async function getParents() {
-            const response = await fetch(url);
-            const body = await response.json();
-            if (!unmounted) {
-                setItems(body.map(({ id, name }) => ({ id: id, name: name })));
-                 setLoading(false);
-            }
-        }
-        getParents();
-        return () => {
-            unmounted = true;
-        };
-    }, []);
+    const [url, setURL] = useState("http://some-evidence.com")
 
     function handleChange(event) {
       let parent = event.currentTarget.value
@@ -44,15 +29,18 @@ function ItemCreator(props) {
     }
 
     function createDBObject() {
-        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/`
-        console.log("url is ",url)
+        let backendURL = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/`
+        console.log("url is ",backendURL)
 
         let request_body = {}
         request_body["name"] = name;
         request_body["short_description"] = sdesc;
         request_body["long_description"] = ldesc;
         request_body["keywords"] = keywords;
-        request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(parentId);
+        if (props.type === "Evidence") {
+            request_body["url"] = url;
+        }
+        request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(props.parentId);
        
         const requestOptions = {
             method: 'POST',
@@ -105,6 +93,16 @@ function ItemCreator(props) {
                     onChange={e => setKeywords(e.target.value)}
                 />
                 </li>
+                {(props.type === "Evidence") && 
+                    <li>
+                    <input 
+                    type="text" 
+                    value={url}
+                    name="keywords"
+                    onChange={e => setURL(e.target.value)}
+                            />
+                    </li>
+                }
           <p>Select parent {parent_type}</p>
           <select 
           disabled={loading}

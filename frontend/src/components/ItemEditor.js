@@ -42,7 +42,7 @@ function ItemEditor(props) {
 
     function handleSubmit(event) {
         event.preventDefault()
-        console.log("in handleSubmit, items are ", items)
+        console.log("in handleSubmit, items are ", event)
         /// editDBObject();
     }
 
@@ -113,6 +113,11 @@ function ItemEditor(props) {
                     />
                 </li>
                 <button onClick={e => handleSubmit(e)}>Submit</button>
+                <div>
+                {configData.navigation[props.type]["children"].map((childType,index) => (
+                <button onClick={(e) => props.createItemLayer(childType, props.id, e)}>Create new {childType}</button>
+                ))}
+                </div>
             </form>
         </div>
     );
