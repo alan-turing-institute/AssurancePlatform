@@ -14,6 +14,8 @@ function ItemEditor(props) {
     const [sdesc, setShortDesc] = useState("Short description")
     const [ldesc, setLongDesc] = useState("Long description")
     const [keywords, setKeywords] = useState("Keywords (comma-separated)")
+    const [url, setURL] = useState("http://some-evidence.com")
+
     useEffect(() => {
         let unmounted = false;
         let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.id}`;
@@ -38,24 +40,46 @@ function ItemEditor(props) {
 
     }
 
+    function handleDelete(event) {
+        console.log("in handleDelete ",props.type, props.id,event)
+        deleteDBObject();
+        props.updateView();
+    }
 
+    async function deleteDBObject() {
+        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.id}/`        
+        const requestOptions = {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        };
+        let response = {};
+        console.log("request options for delete are ",requestOptions)
+        fetch(url, requestOptions)
+            .then(response => response.json());
+
+        console.log("delete response was ", response);
+    }
 
     function handleSubmit(event) {
         event.preventDefault()
         console.log("in handleSubmit, items are ", event)
-        /// editDBObject();
+        editDBObject();
+        props.updateView();
     }
 
-    function editDBObject() {
-        let url = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.id}`
-        console.log("url is ", url)
+    async function editDBObject() {
+        let backendURL = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/${props.id}/`
+        console.log("url is ", backendURL)
 
         let request_body = {}
         request_body["name"] = name;
         request_body["short_description"] = sdesc;
         request_body["long_description"] = ldesc;
         request_body["keywords"] = keywords;
-        //request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(parentId);
+        if (props.type === "Evidence") {
+            request_body["URL"] = url;    
+        }
 
         const requestOptions = {
             method: 'PUT',
@@ -66,7 +90,7 @@ function ItemEditor(props) {
         console.log("submit button pressed with state ", JSON.stringify(request_body))
         let response = {};
 
-        fetch(url, requestOptions)
+        fetch(backendURL, requestOptions)
             .then(response => response.json());
 
         console.log("response was ", response);
@@ -112,11 +136,22 @@ function ItemEditor(props) {
                         onChange={e => setItem("keywords", e.target.value)}
                     />
                 </li>
+                {(props.type === "Evidence") && <li>
+                    <input
+                        type="text"
+                        value={items.URL}
+                        name="URL"
+                        onChange={e => setItem("URL", e.target.value)}
+                    />
+                </li>}
                 <button onClick={e => handleSubmit(e)}>Submit</button>
                 <div>
-                {configData.navigation[props.type]["children"].map((childType,index) => (
+                {configData.navigation[props.type]["children"].map((childType) => (
                 <button onClick={(e) => props.createItemLayer(childType, props.id, e)}>Create new {childType}</button>
                 ))}
+                </div>
+                <div>
+                    <button onClick={e => handleDelete(e)}>Delete</button>
                 </div>
             </form>
         </div>

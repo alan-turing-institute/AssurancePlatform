@@ -11,6 +11,7 @@ import MermaidChart from './mermaid';
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import CaseSelector from './CaseSelector.js'
 import ItemEditor from './ItemEditor.js';
 import ItemCreator from './ItemCreator.js'
 
@@ -58,19 +59,12 @@ class CaseContainer extends Component {
 
   componentDidMount() {
     const id = this.props.params.caseSlug;
+    this.setState({id:id})
     this.fetchData(id);
   }
 
   jsonToMermaid(in_json) {
-   // console.log("in jsonToMermaid ", in_json)
-    let alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    let letterIndex = 0;
-    function getNextLetter() {
-      let nextLetter = alphabet[letterIndex]
-      letterIndex++;
-      return nextLetter;
-    }
-
+    // Nodes in the flowchart will be named [TypeName]_[ID]
     function getNodeName(itemType,itemId) {
       return itemType+"_"+itemId;
     }
@@ -90,8 +84,7 @@ class CaseContainer extends Component {
       // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
       let thisType = configData.navigation[itemType]["db_name"]
       let boxShape = configData.navigation[itemType]["shape"]
-     
-    //  console.log("thisType is ", thisType, "parent is ", parent)
+      // loop over all objects of this type
       for (let i = 0; i < parent[thisType].length; i++) {
         let thisObj = parent[thisType][i]
         let thisNode = getNodeName(itemType, thisObj.id);
@@ -106,13 +99,13 @@ class CaseContainer extends Component {
           let childType = configData.navigation[itemType]["children"][j]
           outputmd = addTree(childType, thisObj, thisNode, outputmd)
         }
-
       }
      // console.log(outputmd)
       return outputmd;
     }
 
     let outputmd = "graph TB; \n"
+    // call the recursive addTree function, starting with the Goal as the top node
     outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd)
   
     return (outputmd)
@@ -129,6 +122,14 @@ class CaseContainer extends Component {
       
     }
     if (this.state.editItemType && this.state.editItemId) this.setState({ showEditLayer: true })
+  }
+
+  updateView() {
+    // render() will be called again anytime setState is called, which
+    // is done both by hideEditLayer() and hideCreateLayer()
+    this.hideEditLayer()
+    this.hideCreateLayer() 
+    console.log("in updateView")
   }
 
   showCreateLayer(itemType, parentId, event) {
@@ -153,7 +154,6 @@ class CaseContainer extends Component {
     this.setState(
       {showCreateLayer: false,
         createItemType: null,
-        createItemParentType: null,
         createItemParentId: null
       })
   }
@@ -179,7 +179,9 @@ class CaseContainer extends Component {
                 <ItemEditor 
                   type={this.state.editItemType} 
                   id={this.state.editItemId} 
-                  createItemLayer={this.showCreateLayer.bind(this)}/>
+                  createItemLayer={this.showCreateLayer.bind(this)}
+                  updateView={this.updateView.bind(this)}
+                />
               </Box>
             </Box>
           </Layer>
@@ -208,6 +210,7 @@ class CaseContainer extends Component {
                 <ItemCreator 
                 type={this.state.createItemType} 
                 parentId={this.state.createItemParentId} 
+                updateView={this.updateView.bind(this)}
                 />
               </Box>
             </Box>
@@ -270,86 +273,27 @@ class CaseContainer extends Component {
 
 
               <Box width={"flex"} height={'50px'} background="light-2" ><h4> &nbsp; Blocks </h4></Box>
-              <Menu
-                label="Select Assurance Case"
-                items={[
-                  { label: 'First Assurance Case', onClick: () => { } },
-                  { label: 'Second Assurance Case', onClick: () => { } },
-                ]}
-              />
+              < CaseSelector />
               <Box direction="row" width={"flex"} height={'50px'} background="light-2" >
                 <Box width={"15%"} height={"flex"} background="light-2"><FormSearch color='plain' size='large' /></Box>
                 <Box width={"80%"} height={"flex"} background="light-2"><TextInput
                   placeholder="Search" /></Box>
               </Box>
+              
 
-
+              
               <DropButton
-                label="Add Goal"
+                label="Add TopLevelNormativeGoal"
                 dropAlign={{ top: 'bottom', right: 'right' }}
                 dropContent={
-                  <Box pad="large" background="light-2" gap={'8px'}>
-                    <TextInput
-                      placeholder="Goal name"
-                    //value={value}
-                    //onChange={event => setValue(event.target.value)}
-                    />
-                    <TextInput
-                      placeholder="Goal description"
-                    />
-                    <Box direction="row" gap={"15px"}>
-                      <Box alignContent='start' width={"flex"}>
-                        <StatusGood color='green' size='medium' />
-                      </Box>
-                      <Box alignContent='end' width={"flex"}>
-                        <Trash color='plain' size='medium' />
-                      </Box>
-                    </Box>
-                  </Box>
+                  <ItemCreator 
+                  type="TopLevelNormativeGoal" 
+                  parentId={this.state.id} 
+                  updateView={this.updateView.bind(this)}
+                  />
                 }
               />
-              <DropButton
-                label="Add Context"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
-              <DropButton
-                label="Add Property Claim"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
-              <DropButton
-                label="Add System Description"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
-              <DropButton
-                label="Add Argument"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
-              <DropButton
-                label="Add Evidential Claim"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
-              <DropButton
-                label="Add Evidence"
-                dropAlign={{ top: 'bottom', right: 'right' }}
-                dropContent={
-                  <Box pad="large" background="light-2" />
-                }
-              />
+              
 
             </Box>
 

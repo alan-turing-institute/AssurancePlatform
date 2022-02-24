@@ -14,7 +14,7 @@ function ItemCreator(props) {
     const [sdesc, setShortDesc] = useState("Short description")
     const [ldesc, setLongDesc] = useState("Long description")
     const [keywords, setKeywords] = useState("Keywords (comma-separated)")
-    const [url, setURL] = useState("http://some-evidence.com")
+    const [url, setURL] = useState("www.some-evidence.com")
 
     function handleChange(event) {
       let parent = event.currentTarget.value
@@ -26,9 +26,11 @@ function ItemCreator(props) {
         event.preventDefault()
         console.log("in handleSubmit, parentId is ",parentId)
         createDBObject();
+        console.log("what is updateview?",props.updateView)
+        props.updateView();
     }
 
-    function createDBObject() {
+    async function createDBObject() {
         let backendURL = `${configData.BASE_URL}/${configData.navigation[props.type]["api_name"]}/`
         console.log("url is ",backendURL)
 
@@ -38,10 +40,14 @@ function ItemCreator(props) {
         request_body["long_description"] = ldesc;
         request_body["keywords"] = keywords;
         if (props.type === "Evidence") {
-            request_body["url"] = url;
+            request_body["URL"] = url;
         }
-        request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(props.parentId);
-       
+        console.log("creating a ",props.type, configData.navigation[props.type]["parent_relation"])
+        if (configData.navigation[props.type]["parent_relation"] === "many-to-many") {
+            request_body[configData["navigation"][props.type]["parent_db_name"]] = [parseInt(props.parentId)];
+        } else {
+            request_body[configData["navigation"][props.type]["parent_db_name"]] = parseInt(props.parentId);    
+        }
         const requestOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -51,7 +57,7 @@ function ItemCreator(props) {
         console.log("submit button pressed with state ",JSON.stringify(request_body))
         let response = {};
 
-        fetch(url, requestOptions)
+        fetch(backendURL, requestOptions)
         .then(response => response.json());
 
         console.log("response was ", response);
@@ -100,21 +106,9 @@ function ItemCreator(props) {
                     value={url}
                     name="keywords"
                     onChange={e => setURL(e.target.value)}
-                            />
+                    />
                     </li>
                 }
-          <p>Select parent {parent_type}</p>
-          <select 
-          disabled={loading}
-          value={parentId}
-          onChange={handleChange} 
-          >
-            {items.map(({ id, name }) => (
-            <option key={id} value={id}>
-            {name}
-            </option>
-            ))}
-          </select>
           <button onClick={e=>handleSubmit(e)}>Submit</button>
           </form>
       </div>
