@@ -7,7 +7,7 @@ import { deepMerge } from 'grommet/utils';
 
 
 import RoundLayer from './Layer.js';
-import MermaidChart from './mermaid';
+import MermaidChart from './Mermaid';
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
