@@ -16,12 +16,6 @@ class Home extends React.Component {
         <li>
           <Link to="/case/new">Create a new case</Link>
         </li>
-        <li>
-        <Link to="/goal/new">Create a new goal</Link>
-        </li>
-        <li>
-        <Link to="/goal/edit/1">Edit a goal</Link>
-        </li>
     </div>
     )
   }

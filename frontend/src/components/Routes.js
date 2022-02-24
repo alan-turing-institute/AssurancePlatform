@@ -13,13 +13,9 @@ const AllRoutes = () => (
         <Routes>
             <Route exact path="/" element={<Home/>} />
             <Route path="/case/new" element={<CaseCreator/>} />
-            <Route path="/goal/new" element={<ItemCreator type="TopLevelNormativeGoal"/>} />
             <Route path="/case/select" element={<CaseSelector/>} />
             <Route path ="/cases">
                 <Route path=":caseSlug" element={<CaseContainer/>} />
-            </Route>
-            <Route path ="/goal/edit">
-                <Route path=":itemSlug" element={<ItemEditor type="TopLevelNormativeGoal"/>} />
             </Route>
         </Routes>
     </Router>
