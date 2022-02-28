@@ -588,3 +588,78 @@ class EvidenceViewTest(TestCase):
         self.client.delete(url)
         response_get = self.client.get(reverse("evidence_list"))
         self.assertEqual(len(response_get.json()), 1)
+
+
+
+class FullCaseDetailViewTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        self.case = AssuranceCase.objects.create(
+            **CASE_INFO
+        )
+        self.goal = TopLevelNormativeGoal.objects.create(
+            **GOAL_INFO
+        )
+        self.description = SystemDescription.objects.create(
+            **DESCRIPTION_INFO
+        )
+        self.context = Context.objects.create(
+            **CONTEXT_INFO
+        )
+        self.pclaim = PropertyClaim.objects.create(
+            **PROPERTYCLAIM1_INFO
+        )
+        self.argument = Argument.objects.create(
+            **ARGUMENT1_INFO_NO_ID
+        )
+        self.argument.save()
+        self.argument.property_claim.set([self.pclaim])
+
+        self.eclaim = EvidentialClaim.objects.create(
+            **EVIDENTIALCLAIM1_INFO
+        )
+
+        self.evidence1 = Evidence.objects.create(
+            **EVIDENCE1_INFO_NO_ID
+        )
+        self.evidence1.save()
+        self.evidence1.evidential_claim.set([self.eclaim])
+        self.evidence2 = Evidence.objects.create(
+            **EVIDENCE2_INFO_NO_ID
+        )
+        self.evidence2.save()
+        self.evidence2.evidential_claim.set([self.eclaim])
+
+        # get data from DB
+        self.data = AssuranceCase.objects.all()
+        # convert it to JSON
+        self.serializer = AssuranceCaseSerializer(self.data, many=True)
+
+
+    def test_full_case_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("case_detail",
+                    kwargs={"pk": self.case.pk}
+            )
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
+        response_get = self.client.get(
+            reverse("case_detail",
+                    kwargs={"pk": self.case.pk}
+            )
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["name"], serializer_data["name"] )
+        # check we can go down the whole tree
+        self.assertEqual(len(response_data["goals"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["context"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["system_description"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["property_claims"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["property_claims"][0]["arguments"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["property_claims"][0]["arguments"][0]["evidential_claims"]), 1)
+        self.assertEqual(len(response_data["goals"][0]["property_claims"][0]["arguments"][0]["evidential_claims"][0]["evidence"]), 2)

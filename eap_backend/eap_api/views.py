@@ -25,11 +25,11 @@ from .serializers import (
     EvidenceSerializer
 )
 
-class AssuranceView (generics.ListCreateAPIView):# (generics.CreateAPIView)  (viewsets.ModelViewSet):
+class AssuranceView (generics.ListCreateAPIView):
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer
 
-class GoalsView (generics.ListCreateAPIView):# (generics.CreateAPIView)  (viewsets.ModelViewSet):
+class GoalsView (generics.ListCreateAPIView):
     queryset = TopLevelNormativeGoal.objects.all()
     serializer_class = TopLevelNormativeGoalSerializer
 
@@ -55,6 +55,55 @@ def make_summary(serialized_data):
         return [summarize_one(sd) for sd in serialized_data]
     else:
         return summarize_one(serialized_data)
+
+
+def get_json_tree(id_list, obj_type):
+    """
+    Recursive function for populating the full JSON data for goals, used
+    in the case_detail view (i.e. one API call returns the full case data).
+
+    Params
+    ======
+    id_list: list of object_ids from the parent serializer
+    obj_type: key of the json object (also a key of 'type_dict')
+
+    Returns
+    =======
+    objs: list of json objects
+    """
+    type_dict = {"goals": {"serializer": TopLevelNormativeGoalSerializer,
+                           "model": TopLevelNormativeGoal,
+                           "children": ["context","system_description","property_claims"] },
+                 "context": {"serializer": ContextSerializer,
+                             "model": Context,
+                             "children": []},
+                 "system_description": {"serializer": SystemDescriptionSerializer,
+                                        "model": SystemDescription,
+                                        "children": []},
+                 "property_claims": {"serializer": PropertyClaimSerializer,
+                                     "model": PropertyClaim,
+                                     "children": ["arguments"]},
+                 "arguments": {"serializer": ArgumentSerializer,
+                               "model": Argument,
+                               "children": ["evidential_claims"]},
+                 "evidential_claims": {"serializer": EvidentialClaimSerializer,
+                                       "model": EvidentialClaim,
+                                       "children": ["evidence"]},
+                 "evidence": {"serializer": EvidenceSerializer,
+                              "model": Evidence,
+                              "children": []}
+                 }
+    objs = []
+    for obj_id in id_list:
+        obj = type_dict[obj_type]["model"].objects.get(pk=obj_id)
+        obj_serializer = type_dict[obj_type]["serializer"](obj)
+        obj_data = obj_serializer.data
+        for child_type in type_dict[obj_type]["children"]:
+            child_list = obj_data[child_type]
+            obj_data[child_type] = get_json_tree(child_list, child_type)
+        objs.append(obj_data)
+    return objs
+
 
 @csrf_exempt
 def case_list(request):
@@ -88,7 +137,10 @@ def case_detail(request, pk):
 
     if request.method == "GET":
         serializer = AssuranceCaseSerializer(case)
-        return JsonResponse(serializer.data)
+        case_data = serializer.data
+        goals = get_json_tree(case_data["goals"],"goals")
+        case_data["goals"] = goals
+        return JsonResponse(case_data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
@@ -113,8 +165,8 @@ def goal_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        assurance_case = AssuranceCase.objects.get(id=data["assurance_case_id"])
-        data["assurance_case"] = AssuranceCaseSerializer(assurance_case).data["id"]
+        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
+        data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -137,6 +189,9 @@ def goal_detail(request, pk):
     if request.method == "GET":
         serializer = TopLevelNormativeGoalSerializer(goal)
         data = serializer.data
+        # replace IDs for children with full JSON objects
+        for key in ["context", "system_description", "property_claims"]:
+            data[key] = get_json_tree(data[key],key)
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":

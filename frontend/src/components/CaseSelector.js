@@ -1,53 +1,52 @@
- import React, {Component} from 'react';
- //import CaseDetails from './CaseDetails.js'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import configData from "../config.json"
 
- class CaseSelector extends Component {
-  state = {
-    json_response: []
-  };
-  url = 'http://localhost:8000/api/cases'
-
-  async componentDidMount() {
-    try {
-      const res = await fetch(this.url); // fetching the data from api, before the page loaded
-      const json_response = await res.json(); //getting the json response
-      this.setState({
-        json_response
-      });
-    } catch (e) {
-      console.log(e);
+function CaseSelector() {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([
+    { label: "Loading ...", value: "" }
+  ]);
+  const [value, setValue] = useState("Select a case");
+  useEffect(() => {
+    let unmounted = false;
+    let url = `${configData.BASE_URL}/cases/`;
+    async function getCases() {
+      const response = await fetch(url);
+      const body = await response.json();
+      if (!unmounted) {
+        setItems(body.map(({ id, name }) => ({ id: id, name: name })));
+        setLoading(false);
+      }
     }
+    getCases();
+    return () => {
+      unmounted = true;
+    };
+  }, []);
+  let navigate = useNavigate();
+  function handleChange(event) {
+    let caseId = event.currentTarget.value
+    setValue(caseId);
+    navigate("/cases/" + caseId)
   }
 
-  handleChange = (e) => {
-      this.setState({selectValue:e.target.value});
-      console.log("change in CaseSelector ",e.target.value);
-      this.props.handleChangeProps(e.target.value);
-  }
-
-
-  render() {
-
-    return (
-      <div className="dropdown">
-        <p>Select Assurance Case</p>
-            <select onChange={this.handleChange} value={this.state.selectValue}>
-                {this.state.json_response.map(function(item){  return (
-                  <option key={item.id} value={item.id}>{item.name}</option> )
-                })}
-
-              </select>
-
-
-        {/* {this.state.json_response.map((item, key) => (
-          <div key={key}>
-            <h1>{item.name}</h1>
-            <span>{item.description}</span>
-          </div>
-        ))} */}
-      </div>
-      );
-  }
+  return (
+    <div className="dropdown">
+      <p>Select Assurance Case</p>
+      <select
+        disabled={loading}
+        value={value}
+        onChange={handleChange}
+      >
+        {items.map(({ id, name }) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 export default CaseSelector;
