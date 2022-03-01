@@ -25,9 +25,12 @@ function ItemCreator(props) {
     function handleSubmit(event) {
         event.preventDefault()
         console.log("in handleSubmit, parentId is ",parentId)
-        createDBObject();
-        console.log("what is updateview?",props.updateView)
-        props.updateView();
+        const res = createDBObject();
+        console.log("db object created?",res)
+        return new Promise((resolve) => {
+            props.updateView(resolve);
+        });
+        //props.updateView();
     }
 
     async function createDBObject() {
@@ -61,6 +64,7 @@ function ItemCreator(props) {
         .then(response => response.json());
 
         console.log("response was ", response);
+        return response
     }
 
     return (

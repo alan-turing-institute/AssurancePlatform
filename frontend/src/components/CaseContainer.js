@@ -78,7 +78,7 @@ class CaseContainer extends Component {
       else return "";
     }
 
-    let arrow = " --> "
+    let arrow = " --- "
     /// Recursive function to go down the tree adding components
     function addTree(itemType, parent, parentNode, outputmd) {
       // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
@@ -127,9 +127,12 @@ class CaseContainer extends Component {
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
+    this.setState({loading: true});
     this.hideEditLayer()
     this.hideCreateLayer() 
+    this.fetchData(this.state.id);
     console.log("in updateView")
+    
   }
 
   showCreateLayer(itemType, parentId, event) {
@@ -270,9 +273,6 @@ class CaseContainer extends Component {
             {/* {{ color: "#ff0000" }} */}
 
             <Box direction="column" gap={'4px'} gridArea="right" background="light-2">
-
-
-              <Box width={"flex"} height={'50px'} background="light-2" ><h4> &nbsp; Blocks </h4></Box>
               < CaseSelector />
               <Box direction="row" width={"flex"} height={'50px'} background="light-2" >
                 <Box width={"15%"} height={"flex"} background="light-2"><FormSearch color='plain' size='large' /></Box>
