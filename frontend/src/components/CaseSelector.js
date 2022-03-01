@@ -25,14 +25,19 @@ function CaseSelector() {
     };
   }, []);
   let navigate = useNavigate();
+
   function handleChange(event) {
+    console.log("in CaseSelector handleChange ",event.currentTarget.value)
     let caseId = event.currentTarget.value
     setValue(caseId);
-    
     navigate("/cases/" + caseId);
-    
   }
 
+  let options = items.map(({ id, name }) => (
+    <option key={id} value={id}>
+      {name}
+    </option>
+  ))
   return (
     <div className="dropdown">
       <p>Select Assurance Case</p>
@@ -41,11 +46,8 @@ function CaseSelector() {
         value={value}
         onChange={handleChange}
       >
-        {items.map(({ id, name }) => (
-          <option key={id} value={id}>
-            {name}
-          </option>
-        ))}
+        <option value="">Select option</option>
+        {options}
       </select>
     </div>
   );
