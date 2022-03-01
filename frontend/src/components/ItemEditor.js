@@ -9,12 +9,6 @@ function ItemEditor(props) {
     const [items, setItems] = useState([
         { label: "Loading ...", value: "" }
     ]);
-    // let parent_type = configData["navigation"][props.type]["parent_name"]
-    const [name, setName] = useState("Name")
-    const [sdesc, setShortDesc] = useState("Short description")
-    const [ldesc, setLongDesc] = useState("Long description")
-    const [keywords, setKeywords] = useState("Keywords (comma-separated)")
-    const [url, setURL] = useState("http://some-evidence.com")
 
     useEffect(() => {
         let unmounted = false;
@@ -33,12 +27,6 @@ function ItemEditor(props) {
             unmounted = true;
         };
     }, []);
-
-    function handleChange(event) {
-        //let parent = event.currentTarget.value
-        // setParentId(parent);
-
-    }
 
     function handleDelete(event) {
         console.log("in handleDelete ",props.type, props.id,event)
@@ -73,12 +61,12 @@ function ItemEditor(props) {
         console.log("url is ", backendURL)
 
         let request_body = {}
-        request_body["name"] = name;
-        request_body["short_description"] = sdesc;
-        request_body["long_description"] = ldesc;
-        request_body["keywords"] = keywords;
+        request_body["name"] = items.name;
+        request_body["short_description"] = items.short_description;
+        request_body["long_description"] = items.long_description;
+        request_body["keywords"] = items.keywords;
         if (props.type === "Evidence") {
-            request_body["URL"] = url;    
+            request_body["URL"] = items.URL;    
         }
 
         const requestOptions = {
@@ -97,6 +85,7 @@ function ItemEditor(props) {
     }
 
     function setItem(key, value) {
+        console.log("in setItem", key, value)
         items[key] = value
     }
 
@@ -107,7 +96,7 @@ function ItemEditor(props) {
                 <li>
                     <input
                         type="text"
-                        value={items.name}
+                        placeholder={items.name}
                         onChange={e => setItem("name", e.target.value)}
                         name="name"
                     />
@@ -115,7 +104,7 @@ function ItemEditor(props) {
                 <li>
                     <input
                         type="text"
-                        value={items.short_description}
+                        placeholder={items.short_description}
                         name="short_description"
                         onChange={e => setItem("short_description", e.target.value)}
                     />
@@ -123,7 +112,7 @@ function ItemEditor(props) {
                 <li>
                     <input
                         type="text"
-                        value={items.long_description}
+                        placeholder={items.long_description}
                         name="long_description"
                         onChange={e => setItem("long_description", e.target.value)}
                     />
@@ -131,7 +120,7 @@ function ItemEditor(props) {
                 <li>
                     <input
                         type="text"
-                        value={items.keywords}
+                        placeholder={items.keywords}
                         name="keywords"
                         onChange={e => setItem("keywords", e.target.value)}
                     />
@@ -139,7 +128,7 @@ function ItemEditor(props) {
                 {(props.type === "Evidence") && <li>
                     <input
                         type="text"
-                        value={items.URL}
+                        placeholder={items.URL}
                         name="URL"
                         onChange={e => setItem("URL", e.target.value)}
                     />
