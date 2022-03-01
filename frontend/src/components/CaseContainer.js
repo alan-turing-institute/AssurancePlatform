@@ -34,15 +34,6 @@ class CaseContainer extends Component {
     }
 
     this.url = `${configData.BASE_URL}/cases/`;
-
-    console.log("In CaseContainer::constructor ");
-  };
-
-
-  handleChange = async (id) => {
-
-    console.log("change in CaseContainer ", this.url + id);
-
   };
 
   fetchData = async (id) => {
@@ -124,7 +115,6 @@ class CaseContainer extends Component {
     this.hideCreateLayer() 
     this.fetchData(this.state.id);
     console.log("in updateView")
-    
   }
 
   showViewLayer(e) {
@@ -353,10 +343,7 @@ class CaseContainer extends Component {
                   />
                 }
               />
-              
-
             </Box>
-
             <Box gridArea="footer" background="light-5"> &copy; credits </Box>
 
           </Grid >

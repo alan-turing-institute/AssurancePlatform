@@ -28,7 +28,9 @@ function CaseSelector() {
   function handleChange(event) {
     let caseId = event.currentTarget.value
     setValue(caseId);
-    navigate("/cases/" + caseId)
+    
+    navigate("/cases/" + caseId);
+    
   }
 
   return (
