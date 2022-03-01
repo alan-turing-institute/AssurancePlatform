@@ -12,6 +12,7 @@ import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import CaseSelector from './CaseSelector.js'
+import ItemViewer from './ItemViewer.js';
 import ItemEditor from './ItemEditor.js';
 import ItemCreator from './ItemCreator.js'
 
@@ -19,6 +20,7 @@ class CaseContainer extends Component {
   constructor(props) {
     super(props)
     this.state = {
+      showViewLayer: false,
       showEditLayer: false,
       showCreateLayer: false,
       loading: true,
@@ -47,7 +49,6 @@ class CaseContainer extends Component {
     const res = await fetch(this.url + id);
     const json_response = await res.json()
 
-   // console.log(json_response);
     this.setState({
       assurance_case: json_response
     });
@@ -64,6 +65,9 @@ class CaseContainer extends Component {
   }
 
   jsonToMermaid(in_json) {
+    // function to convert the JSON response from a GET request to the /cases/id
+    // API endpoint, into the markdown string required for Mermaid to render a flowchart.
+
     // Nodes in the flowchart will be named [TypeName]_[ID]
     function getNodeName(itemType,itemId) {
       return itemType+"_"+itemId;
@@ -111,28 +115,46 @@ class CaseContainer extends Component {
     return (outputmd)
   }
 
-
-  showEditLayer(e) {
-    let chunks = e.split("_");
-    if (chunks.length === 2) {
-      let itemType = chunks[0];
-      let itemId = chunks[1];
-      
-      this.setState({editItemType: itemType, editItemId: itemId})
-      
-    }
-    if (this.state.editItemType && this.state.editItemId) this.setState({ showEditLayer: true })
-  }
-
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
     this.setState({loading: true});
+    this.hideViewLayer()
     this.hideEditLayer()
     this.hideCreateLayer() 
     this.fetchData(this.state.id);
     console.log("in updateView")
     
+  }
+
+  showViewLayer(e) {
+    // use the name of the node to derive the type and id of the item that 
+    // was clicked on, and set the state accordingly.  
+    // This will cause a new layer, showing the details of the selected node,
+    // to appear (the ItemViewer component)
+    let chunks = e.split("_");
+    if (chunks.length === 2) {
+      let itemType = chunks[0];
+      let itemId = chunks[1];
+      
+      this.setState({itemType: itemType, itemId: itemId})
+    }
+    // Maybe this is unnecessary, to check that the itemType and itemId state is
+    // set, but need to make sure showViewLayer isn't set prematurely.
+    if (this.state.itemType && this.state.itemId) this.setState({ showViewLayer: true })
+  }
+
+  showEditLayer(itemType, itemId, event) {
+    console.log("in showEditLayer", this, itemId)
+    event.preventDefault()
+    // this should be redundant, as the itemId and itemType should already 
+    // be set when showViewLayer is called, but they can't do any harm..
+    this.setState(
+      {itemType: itemType, 
+      itemId: itemId}
+    )
+    this.hideViewLayer()
+    this.setState({ showEditLayer: true})
   }
 
   showCreateLayer(itemType, parentId, event) {
@@ -145,11 +167,17 @@ class CaseContainer extends Component {
     this.setState({ showCreateLayer: true})
   }
 
+  hideViewLayer() {
+    this.setState(
+      {showViewLayer: false}
+    )
+  }
+
   hideEditLayer() {
     this.setState(
       {showEditLayer: false,
-        editItemType: null,
-        editItemId: null
+        itemType: null,
+        itemId: null
       })
   }
 
@@ -159,6 +187,37 @@ class CaseContainer extends Component {
         createItemType: null,
         createItemParentId: null
       })
+  }
+
+  viewLayer() {
+    return (
+      <Box >
+          <Layer
+            full="vertical"
+            position="right"
+            onEsc={() => this.hideViewLayer()}
+            onClickOutside={() => this.hideViewLayer()}
+          >
+            <Box
+              pad="medium"
+              gap="small"
+              width={{ min: 'medium' }}
+              height={{ min: 'small' }}
+              fill
+            >
+              <Button alignSelf="end" icon={<FormClose />} onClick={() => this.hideViewLayer()} />
+              <Box >
+                <ItemViewer
+                type={this.state.itemType} 
+                id={this.state.itemId} 
+                editItemLayer={this.showEditLayer.bind(this)}
+                updateView={this.updateView.bind(this)}
+                />
+              </Box>
+            </Box>
+          </Layer>
+      </Box>
+    );
   }
 
   editLayer() {
@@ -180,8 +239,8 @@ class CaseContainer extends Component {
               <Button alignSelf="end" icon={<FormClose />} onClick={() => this.hideEditLayer()} />
               <Box >
                 <ItemEditor 
-                  type={this.state.editItemType} 
-                  id={this.state.editItemId} 
+                  type={this.state.itemType} 
+                  id={this.state.itemId} 
                   createItemLayer={this.showCreateLayer.bind(this)}
                   updateView={this.updateView.bind(this)}
                 />
@@ -224,6 +283,7 @@ class CaseContainer extends Component {
 
 
   render() {
+    // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return (
         <div>loading</div>
@@ -231,7 +291,6 @@ class CaseContainer extends Component {
     } else {
       return (
         <div>
-
           <Grid
             rows={['3px', 'flex', 'xxsmall']} //{['xxsmall', 'flex', 'xxsmall']}
             columns={['flex', "20%"]}
@@ -243,7 +302,8 @@ class CaseContainer extends Component {
               { name: 'footer', start: [0, 2], end: [1, 2] },
             ]}
           >
-          { this.state.showEditLayer && this.state.editItemType && this.state.editItemId && this.editLayer()}
+          { this.state.showViewLayer && this.state.itemType && this.state.itemId && this.viewLayer()}
+          { this.state.showEditLayer && this.state.itemType && this.state.itemId && this.editLayer()}
           { this.state.showCreateLayer && this.state.createItemType && this.state.createItemParentId && this.createLayer()}
             <Box gridArea="main" background={{ color: "white", size: "20px 20px", image: "radial-gradient(#999999 0.2%, transparent 10%)", height: "200px", width: "100%", repeat: "repeat-xy" }}>
               {/* {this.Example()} */}
@@ -258,7 +318,7 @@ class CaseContainer extends Component {
                     <TransformComponent >
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
-                        editLayerFunc={(e) => this.showEditLayer(e)}
+                        viewLayerFunc={(e) => this.showViewLayer(e)}
                       />
                     </TransformComponent>
                     <div className="tools">
