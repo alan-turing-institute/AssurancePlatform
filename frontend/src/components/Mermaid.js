@@ -25,7 +25,7 @@ class Mermaid extends React.Component {
 
       }
     });
-    window.callback = e => this.props.editLayerFunc(e)
+    window.callback = e => this.props.viewLayerFunc(e)
     mermaid.contentLoaded();
   }
   render() {
@@ -73,7 +73,7 @@ class MermaidChart extends React.Component {
     return (
       <div className="App" >
         <Mermaid
-          editLayerFunc={e => this.props.editLayerFunc(e)}
+          viewLayerFunc={e => this.props.viewLayerFunc(e)}
           chart={this.props.chartmd}
         />
       </div >
