@@ -3,10 +3,8 @@ import { BrowserRouter as Router, Route, Routes  } from 'react-router-dom';
 import Navigation from './Navigation.js';
 import Home from './Home.js';
 import CaseCreator from './CaseCreator.js'
-import ItemCreator from './ItemCreator.js'
 import CaseSelector from './CaseSelector.js'
 import CaseContainer from './CaseContainer.js';
-import ItemEditor from './ItemEditor.js';
 const AllRoutes = () => (
     <Router>
         <Navigation />
