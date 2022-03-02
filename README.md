@@ -4,7 +4,7 @@
 
 The purpose of this project is to provide a web interface to facilitate the creation of Assurance Cases.  The Assurance Cases are depicted as a flowchart, where Evidence, Arguments, and Claims are used to provide justification for an overall Goal.
 
-The web application consists of a database (Postgresql, or sqlite for testing), a backend API (using Python/Django), and a frontend (using React).  These three components can be run on a users machine for testing or development, or deployed on separate servers, e.g. on the cloud.
+The web application consists of a database (Postgresql, or sqlite for testing), a backend API (using Python/Django), and a frontend (using React).  These three components can be run on a user's machine for testing or development, or deployed on separate servers, e.g. on the cloud.
 
 ## Installation (for local running)
 
