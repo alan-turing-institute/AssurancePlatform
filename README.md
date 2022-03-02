@@ -8,7 +8,7 @@ The web application consists of a database (Postgresql, or sqlite for testing), 
 
 ## Installation (for local running)
 
-1. Download or clone the AssurancePlatform repository to your local machine or VM.
+1. Download or clone the AssurancePlatform repository to your local machine.
 
 **Set up and run the backend**
 
@@ -26,13 +26,13 @@ The web application consists of a database (Postgresql, or sqlite for testing), 
 
 8. Run the django tests: ```python manage.py test```
 
-9. run the API ```python manage.py runserver```.  By default, the API will use port 8000 on your localhost.
+9. run the API ```python manage.py runserver```.  By default, the API will use port 8000 on localhost.
 
 **Setup and run the frontend**
 
 10. Install [npm](https://www.npmjs.com/)
- * For Debian or Ubuntu-based Linux, ```sudo apt install nodejs; sudo apt install npm
- * For CentOS or Fedora-based Linux, ```sudo yum install nodejs npm
+ * For Debian or Ubuntu-based Linux, ```sudo apt install nodejs; sudo apt install npm```
+ * For CentOS or Fedora-based Linux, ```sudo yum install nodejs npm```
  * For OSX using homebrew, ```brew install npm```
  * For Windows, download and install from the official website.
 
