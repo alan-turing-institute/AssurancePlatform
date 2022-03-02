@@ -44,6 +44,13 @@ The web application consists of a database (Postgresql, or sqlite for testing), 
 
 14. Run the development server ```npm start``` - this will launch a browser tab pointing to the web app at `http://localhost:3000`
 
+## Further details on the backend
+
+Can be found [here](eap_backend/README.md)
+
+## API documentation
+
+Can be found [here](eap_backend/eap_api/API_docs.md)
 
 ## Resources
 - Article on ethical assurance methodology ([OneDrive Link](https://thealanturininstitute-my.sharepoint.com/:b:/g/personal/cburr_turing_ac_uk/EYHu_zD4Oq1Hmq8VGrJ_EsUBNrO1LGhpV2E9AaEUavioMQ?e=qCFKo2))
