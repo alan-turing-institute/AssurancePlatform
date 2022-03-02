@@ -55,6 +55,14 @@ class CaseContainer extends Component {
     this.fetchData(id);
   }
 
+  componentDidUpdate(prevProps) {
+    const id = this.props.params.caseSlug;
+    const oldId = prevProps.params.caseSlug;
+    if (id != oldId) {
+      this.setState({id:id}, this.updateView)
+    }
+  }
+
   jsonToMermaid(in_json) {
     // function to convert the JSON response from a GET request to the /cases/id
     // API endpoint, into the markdown string required for Mermaid to render a flowchart.
