@@ -1,70 +1,44 @@
-# Getting Started with Create React App
+# Assurance Platform frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The frontend web application for the Assurance Platform project was built using the [React](https://reactjs.org/) framework.
+Documentation on various npm and react commands can be found [here](react_info.md).
 
-## Available Scripts
+## Installing and running the code for development
 
-In the project directory, you can run:
+From this directory, run 
+```
+npm install
+```
+to install the required dependencies,
+```
+npm start
+``` 
+to run the development server (will open a browser tab at `localhost:3000`), and 
+```
+npm run test
+```
+to run the tests.
 
-### `npm start`
+## Mermaid
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+A crucial aspect of the Assurance Platform is the visualization of an assurance case, which we do using the [Mermaid](https://mermaid-js.github.io/mermaid/#/) package.   This takes some markdown text and displays it as a flowchart.  It is possible to experiment with Mermaid, interactively creating flowcharts via the live editor [https://mermaid.live/](https://mermaid.live/).
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Description of some components
 
-### `npm test`
+The react framework is based around *Components*, which can correspond to a webpage or an element on a webpage (such as a form or a chart).   The following Components in this codebase contribute to the Assurance Platform web app:
+* [CaseContainer](src/components/CaseContainer.js): this is the main "view" of an assurance case.  It contains several other components in different areas of the screen (these may or may not be visible, depending on the state variables that control whether some _layers_ are shown or not).  This class also contains the function that converts the JSON obtained from a GET request to the ```cases/<case_id>``` API endpoint, into the markdown string that is used by Mermaid.
+* [CaseSelector](src/components/CaseSelector.js). Essentially a drop-down menu that allows the user to select which case to load from the database.
+* [CaseCreator](src/components/CaseCreator.js). A form that allows a user to create a new AssuranceCase, and POSTs it to the API endpoint that then adds it to the database.
+* [ItemViewer](src/components/ItemViewer.js) Text view of any DB object other than an AssuranceCase (i.e. it could be a TopLevelNormativeGoal, Context, SystemDescription, PropertyClaim, Argument, EvidentialClaim, or Evidence).   The type of object to be displayed is passed to the component via the "type" prop.  The component itself is shown as a layer on CaseContainer when a node on the mermaid chart is clicked.
+* [ItemEditor](src/components/ItemEditor.js) The layer containing the ItemEditor component is shown when the "Edit" button on an ItemViewer is clicked.   This component allows the details of any DB object other than an AssuranceCase to be edited.
+* [ItemCreator](src/components/ItemCreator.js) This component is shown in the createLayer in CaseContainer, when a "Create a new XYZ" button is clicked on the ItemEditor.  It will create a new DB object of the specified type, which is a child of the object that was visible in the ItemEditor.
+* [Mermaid](src/components/Mermaid.js) This is the component that draws the actual chart.   The markdown for the chart is passed to the component via the `chartmd` prop.
+* [Home](src/components/Home.js) Very basic homescreen containing navigation options to the CaseCreator and CaseSelector.
+* [Routes](src/components/Routes.js) Define routes for the homepage, the CaseCreator, CaseSelector, and CaseContainer components.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Configuration
 
-### `npm run build`
+Several useful variables are defined in [config.json](src/config.json), including:
+* *BASE_URL*: this is the base URL for the backend, which by default is setup to look at a locally running Django backend on `localhost:8000`.   If you use a real deployment of the backend, change this variable accordingly.
+* *navigation* This defines the hierarchy of different types of objects, and how they can be accessed via the API.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
