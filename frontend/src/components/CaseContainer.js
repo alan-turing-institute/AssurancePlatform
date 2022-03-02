@@ -300,12 +300,11 @@ class CaseContainer extends Component {
               <Box width={"flex"} height={'30px'} >  <h2> &nbsp;{this.state.assurance_case.name}</h2>  </Box>
               <TransformWrapper
                 initialScale={1}
-                initialPositionX={25}
-                initialPositionY={40}
+                centerOnInit={true}
               >
                 {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
                   <React.Fragment>
-                    <TransformComponent >
+                    <TransformComponent wrapperStyle={{width: "100%"}}>
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
                         viewLayerFunc={(e) => this.showViewLayer(e)}
