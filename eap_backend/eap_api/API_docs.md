@@ -13,7 +13,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/cases/<int:case_id>`
 * A GET request will get the full JSON of the specified AssuranceCase and all its children: 
-    - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [SERIALIZED_GOAL]}`, where a "SERIALIZED_GOALS" is the same as the output of a GET request to `/goals/<int:goal_id>` (see below).
+    - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [SERIALIZED_GOAL]}`, where a "SERIALIZED_GOAL" is the same as the output of a GET request to `/goals/<int:goal_id>` (see below).
 * A PUT request will modify new AssuranceCase.  
     - Payload: Any key/value pair from the AssuranceCase schema
     - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [<int:goal_ids>]}`
