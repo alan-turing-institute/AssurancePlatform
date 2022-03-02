@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# secrets folder
+.secrets
+run.bat
+
 # Distribution / packaging
 .Python
 build/
@@ -37,6 +41,9 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Node
+node_modules/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -64,6 +71,9 @@ db.sqlite3-journal
 # Flask stuff:
 instance/
 .webassets-cache
+
+# Visual studio stuff: 
+.vscode/
 
 # Scrapy stuff:
 .scrapy
