@@ -1,4 +1,4 @@
-
+import { Box, Button, Form, FormField, Heading, TextInput } from 'grommet';
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 
@@ -39,24 +39,28 @@ function CaseCreator() {
     }
 
     return (
-        <div>
-        <h2>Create a new assurance case</h2>
-        <form>
-            <input 
-                type="text" 
-                placeholder={name} 
-                name="name"
-                onChange={onChange}
-            />
-            <input 
-                type="text" 
-                placeholder={description}
-                name="description"
-                onChange={onChange}
-            />
-            <button onClick={handleSubmit}>Submit</button>
-        </form>
-        </div>
+        <Box>
+          <Heading level={4}>Create a new assurance case</Heading>
+          <Form onSubmit={handleSubmit}>
+            <Box direction="row">
+              <FormField margin="xsmall">
+                <TextInput 
+                    placeholder={name} 
+                    name="name"
+                    onChange={onChange}
+                />
+              </FormField>
+              <FormField margin="xsmall">
+                <TextInput 
+                    placeholder={description}
+                    name="description"
+                    onChange={onChange}
+                />
+              </FormField>
+            </Box>
+            <Button type="submit" primary label="Submit" margin="xsmall"/>
+          </Form>
+        </Box>
     )
 }
 

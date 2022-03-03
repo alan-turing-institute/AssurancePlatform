@@ -1,3 +1,4 @@
+import { Box, Heading, Select} from 'grommet';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import configData from "../config.json"
@@ -26,30 +27,23 @@ function CaseSelector() {
   }, []);
   let navigate = useNavigate();
 
-  function handleChange(event) {
-    console.log("in CaseSelector handleChange ",event.currentTarget.value)
-    let caseId = event.currentTarget.value
-    setValue(caseId);
-    navigate("/cases/" + caseId);
+  function handleChange(option) {
+    const id = option.value.id;
+    setValue(id);
+    navigate("/cases/" + id);
   }
 
-  let options = items.map(({ id, name }) => (
-    <option key={id} value={id}>
-      {name}
-    </option>
-  ))
   return (
-    <div className="dropdown">
-      <p>Select Assurance Case</p>
-      <select
+    <Box width="medium" className="dropdown">
+      <Heading level={4}>Select Assurance Case</Heading>
+      <Select
         disabled={loading}
         value={value}
         onChange={handleChange}
-      >
-        <option value="">Select option</option>
-        {options}
-      </select>
-    </div>
+        options={items}
+        labelKey="name"
+      />
+    </Box>
   );
 }
 
