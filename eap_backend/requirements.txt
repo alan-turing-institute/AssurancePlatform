@@ -3,7 +3,7 @@ black==21.10b0
 certifi==2021.10.8
 click==8.0.3
 colorama==0.4.4
-coverage==6.0.2
+coverage==6.3.2
 Django==3.2.8
 django-cors-headers==3.10.0
 django-extensions==3.1.3
