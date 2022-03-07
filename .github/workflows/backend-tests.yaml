@@ -27,7 +27,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        parallel-finished: true
+      - uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.lcov
+          base-path: eap_backend
+          parallel-finished: true
