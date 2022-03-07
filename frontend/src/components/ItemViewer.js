@@ -1,5 +1,6 @@
 /* General function that can view any type of object apart from the top-level Case */
 
+import { Box, Button, Heading } from 'grommet';
 import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router-dom"
 import configData from "../config.json"
@@ -29,19 +30,19 @@ function ItemViewer(props) {
     }, []);
 
     return (
-        <div>
-            <h2>{props.type} {props.id}</h2>
-                <div><h4> Name </h4><p>{items.name}</p></div>
-                <div><h4> Short description </h4><p>{items.short_description}</p></div>
-                <div><h4> Long description </h4><p>{items.long_description}</p></div>
-                <div><h4> Keywords </h4><p>{items.keywords}</p></div>
-                {(props.type === "Evidence") && <div>
-                <h4> URL </h4><p>{items.URL}</p>
-                </div>}
-                <div> 
-                   <button onClick={(e) => props.editItemLayer(props.type, props.id, e)}>Edit</button>
-                </div>
-        </div>
+        <Box>
+            <Heading level={2}>{props.type} {props.id}</Heading>
+                <Box><Heading level={4}> Name </Heading><p>{items.name}</p></Box>
+                <Box><Heading level={4}> Short description </Heading><p>{items.short_description}</p></Box>
+                <Box><Heading level={4}> Long description </Heading><p>{items.long_description}</p></Box>
+                <Box><Heading level={4}> Keywords </Heading><p>{items.keywords}</p></Box>
+                {(props.type === "Evidence") && <Box>
+                <Heading level={4}> URL </Heading><p>{items.URL}</p>
+                </Box>}
+                <Box> 
+                   <Button onClick={(e) => props.editItemLayer(props.type, props.id, e)} label="Edit"/>
+                </Box>
+        </Box>
     );
 }
 

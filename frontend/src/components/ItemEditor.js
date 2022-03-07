@@ -1,5 +1,6 @@
 /* General function that can create any type of object apart from the top-level Case */
 
+import { Box, Button, Form, FormField, Heading, TextInput } from 'grommet';
 import React, { useState, useEffect } from 'react';
 import { useParams } from "react-router-dom"
 import configData from "../config.json"
@@ -90,60 +91,59 @@ function ItemEditor(props) {
     }
 
     return (
-        <div className="dropdown">
-            <h2>Edit {props.type} {props.id}</h2>
-            <form>
-                <li>
-                    <input
-                        type="text"
+        <Box className="dropdown">
+            <Heading level={3}>Edit {props.type} {props.id}</Heading>
+            <Form onSubmit={handleSubmit}>
+                <FormField>
+                    <TextInput
                         placeholder={items.name}
-                        onChange={e => setItem("name", e.target.value)}
                         name="name"
+                        onChange={e => setItem("name", e.target.value)}
                     />
-                </li>
-                <li>
-                    <input
-                        type="text"
+                </FormField>
+                <FormField>
+                    <TextInput
                         placeholder={items.short_description}
                         name="short_description"
                         onChange={e => setItem("short_description", e.target.value)}
                     />
-                </li>
-                <li>
-                    <input
-                        type="text"
+                </FormField>
+                <FormField>
+                    <TextInput
                         placeholder={items.long_description}
                         name="long_description"
                         onChange={e => setItem("long_description", e.target.value)}
                     />
-                </li>
-                <li>
-                    <input
-                        type="text"
+                </FormField>
+                <FormField>
+                    <TextInput
                         placeholder={items.keywords}
                         name="keywords"
                         onChange={e => setItem("keywords", e.target.value)}
                     />
-                </li>
-                {(props.type === "Evidence") && <li>
-                    <input
-                        type="text"
+                </FormField>
+                {(props.type === "Evidence") && <FormField>
+                    <TextInput
                         placeholder={items.URL}
                         name="URL"
                         onChange={e => setItem("URL", e.target.value)}
                     />
-                </li>}
-                <button onClick={e => handleSubmit(e)}>Submit</button>
-                <div>
-                {configData.navigation[props.type]["children"].map((childType) => (
-                <button onClick={(e) => props.createItemLayer(childType, props.id, e)}>Create new {childType}</button>
-                ))}
-                </div>
-                <div>
-                    <button onClick={e => handleDelete(e)}>Delete</button>
-                </div>
-            </form>
-        </div>
+                </FormField>}
+                <Button type="submit" label="Submit"/>
+            </Form>
+            <Box gap="small" pad={{top: "small"}} direction="row">
+            {configData.navigation[props.type]["children"].map((childType) => (
+            <Button
+              pad="small"
+              onClick={(e) => props.createItemLayer(childType, props.id, e)}
+              label={"Create new "+ childType}
+              />
+            ))}
+            </Box>
+            <Box pad={{top: "small"}}>
+                <Button onClick={e => handleDelete(e)} label="Delete"/>
+            </Box>
+        </Box>
     );
 }
 

@@ -1,5 +1,6 @@
 /* General function that can create any type of object apart from the top-level Case */
 
+import { Box, Button, Form, FormField, Heading, TextInput } from 'grommet';
 import React, {useState, useEffect} from 'react';
 import configData from "../config.json"
 
@@ -68,54 +69,49 @@ function ItemCreator(props) {
     }
 
     return (
-        <div className="dropdown">    
-            <h2>Create a new {props.type}</h2>
-            <form>
-                <li>
-                <input 
-                    type="text" 
-                    value={name}
-                    name="name"
-                    onChange={e => setName(e.target.value)}
-                />
-                </li>
-                <li>
-                <input 
-                    type="text" 
-                    value={sdesc}
-                    name="short_description"
-                    onChange={e => setShortDesc(e.target.value)}
-                />
-                </li>
-                <li>
-                <input 
-                    type="text" 
-                    value={ldesc}
-                    name="long_description"
-                    onChange={e => setLongDesc(e.target.value)}
-                />
-                </li>
-                <li>
-                <input 
-                    type="text" 
-                    value={keywords}
-                    name="keywords"
-                    onChange={e => setKeywords(e.target.value)}
-                />
-                </li>
-                {(props.type === "Evidence") && 
-                    <li>
-                    <input 
-                    type="text" 
-                    value={url}
-                    name="keywords"
-                    onChange={e => setURL(e.target.value)}
-                    />
-                    </li>
-                }
-          <button onClick={e=>handleSubmit(e)}>Submit</button>
-          </form>
-      </div>
+        <Box className="dropdown" pad="small">
+          <Heading level={3}>Create a new {props.type}</Heading>
+          <Form onSubmit={handleSubmit}>
+            <FormField>
+            <TextInput 
+              placeholder={name}
+              name="name"
+              onChange={e => setName(e.target.value)}
+            />
+            </FormField>
+            <FormField>
+            <TextInput 
+              placeholder={sdesc}
+              name="short_description"
+              onChange={e => setShortDesc(e.target.value)}
+            />
+            </FormField>
+            <FormField>
+            <TextInput 
+              placeholder={ldesc}
+              name="long_description"
+              onChange={e => setLongDesc(e.target.value)}
+            />
+            </FormField>
+            <FormField>
+            <TextInput 
+              placeholder={keywords}
+              name="keywords"
+              onChange={e => setKeywords(e.target.value)}
+            />
+            </FormField>
+            {(props.type === "Evidence") && 
+              <FormField>
+              <TextInput 
+                placeholder={url}
+                name="keywords"
+                onChange={e => setURL(e.target.value)}
+              />
+              </FormField>
+            }
+        <Button type="submit" primary label="Submit"/>
+        </Form>
+      </Box>
       );
 }
     

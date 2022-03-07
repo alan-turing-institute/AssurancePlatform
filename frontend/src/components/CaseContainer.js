@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Menu, TextInput, Layer, Button } from 'grommet';
+import { Grid, Box, DropButton, TextInput, Layer, Button } from 'grommet';
 import { grommet } from 'grommet/themes';
-import { FormSearch, AddCircle, Trash, StatusGood, FormClose } from 'grommet-icons';
+import { FormSearch, FormClose, ZoomIn, ZoomOut } from 'grommet-icons';
 import { deepMerge } from 'grommet/utils';
 
 
@@ -284,11 +284,11 @@ class CaseContainer extends Component {
     // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return (
-        <div>loading</div>
+        <Box>loading</Box>
       )
     } else {
       return (
-        <div>
+        <Box>
           <Grid
             rows={['3px', 'flex', 'xxsmall']} //{['xxsmall', 'flex', 'xxsmall']}
             columns={['flex', "20%"]}
@@ -318,29 +318,28 @@ class CaseContainer extends Component {
                         viewLayerFunc={(e) => this.showViewLayer(e)}
                       />
                     </TransformComponent>
-                    <div className="tools">
-                      <button onClick={() => zoomIn()}>+</button>
-                      <button onClick={() => zoomOut()}>-</button>
-                      <button onClick={() => resetTransform()}>x</button>
-                    </div>
+                    <Box className="tools" gap="xxsmall" direction="row">
+                      <Button secondary onClick={() => zoomIn()} icon=<ZoomIn/>/>
+                      <Button secondary onClick={() => zoomOut()} icon=<ZoomOut/>/>
+                      <Button secondary onClick={() => resetTransform()} icon=<FormClose/>/>
+                    </Box>
                   </React.Fragment>
                 )}
               </TransformWrapper>
             </Box>
             {/* {{ color: "#ff0000" }} */}
 
-            <Box direction="column" gap={'4px'} gridArea="right" background="light-2">
+            <Box direction="column" pad="small" gap="small" gridArea="right" background="light-2">
               < CaseSelector />
-              <Box direction="row" width={"flex"} height={'50px'} background="light-2" >
-                <Box width={"15%"} height={"flex"} background="light-2"><FormSearch color='plain' size='large' /></Box>
-                <Box width={"80%"} height={"flex"} background="light-2"><TextInput
-                  placeholder="Search" /></Box>
+              <Box direction="row" width={"flex"} height={'50px'}>
+                <FormSearch size='large' />
+                <TextInput placeholder="Search" />
               </Box>
               
 
               
               <DropButton
-                label="Add TopLevelNormativeGoal"
+                label="Add Goal"
                 dropAlign={{ top: 'bottom', right: 'right' }}
                 dropContent={
                   <ItemCreator 
@@ -351,11 +350,13 @@ class CaseContainer extends Component {
                 }
               />
             </Box>
-            <Box gridArea="footer" background="light-5"> &copy; credits </Box>
+            <Box gridArea="footer" background="light-5" pad="small">
+              &copy; credits
+            </Box>
 
           </Grid >
 
-        </div >
+        </Box>
       )
     }
   }
