@@ -11,13 +11,14 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: cd eap_backend
-      - run: pip install -r requirements.txt
+      - run: pip install -r eap_backend/requirements.txt
       - run: coverage run manage.py test -v 2
+        working-directory: eap-backend
       - uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           flag-name: run-python-${{ matrix.python-version }}
+          path-to-lcov: eap-backend/.coverage
           parallel: true
 
   finish:
