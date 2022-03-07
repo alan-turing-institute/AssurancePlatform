@@ -1,13 +1,11 @@
-import { Box, Heading, Select} from 'grommet';
-import React, { useState, useEffect } from 'react';
+import { Box, Heading, Select } from "grommet";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import configData from "../config.json"
+import configData from "../config.json";
 
 function CaseSelector() {
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([
-    { label: "Loading ...", value: "" }
-  ]);
+  const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
   const [value, setValue] = useState("Select a case");
   useEffect(() => {
     let unmounted = false;
