@@ -12,6 +12,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: cd eap_backend
+      - run: pip install -r requirements.txt
       - run: coverage run manage.py test -v 2
       - uses: coverallsapp/github-action@master
         with:
