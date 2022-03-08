@@ -25,10 +25,9 @@ function ItemCreator(props) {
     console.log("in handleSubmit, parentId is ", parentId);
     const res = createDBObject();
     console.log("db object created?", res);
-    return new Promise((resolve) => {
-      props.updateView(resolve);
+    return res.then((resolve) => {
+      props.updateView();
     });
-    //props.updateView();
   }
 
   async function createDBObject() {
