@@ -144,6 +144,7 @@ function ItemEditor(props) {
         {configData.navigation[props.type]["children"].map((childType) => (
           <Button
             pad="small"
+            key={childType}
             onClick={(e) => props.createItemLayer(childType, props.id, e)}
             label={"Create new " + childType}
           />
