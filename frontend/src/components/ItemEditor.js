@@ -31,8 +31,7 @@ function ItemEditor(props) {
 
   function handleDelete(event) {
     console.log("in handleDelete ", props.type, props.id, event);
-    deleteDBObject();
-    props.updateView();
+    deleteDBObject().then((resolve) => props.updateView());
   }
 
   async function deleteDBObject() {
