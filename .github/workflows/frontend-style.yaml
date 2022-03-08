@@ -3,8 +3,13 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   style:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
     steps:
       - uses: actions/checkout@v2
-      - uses: actionsx/prettier@v2
+      - uses: actions/setup-node@v2
         with:
-          args: --check .
+          node-version: '16'
+      - run: npm install
+      - run: npx prettier --check .

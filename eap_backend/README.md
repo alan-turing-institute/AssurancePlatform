@@ -1,5 +1,7 @@
 # The Ethical Assurance Platform backend
 
+[![Coverage Status](https://coveralls.io/repos/github/alan-turing-institute/AssurancePlatform/badge.svg?branch=main)](https://coveralls.io/github/alan-turing-institute/AssurancePlatform?branch=main)
+
 The backend is written in the [Django](https://docs.djangoproject.com/en/4.0/) framework.  Its main purpose is to provide an API, through which data can be written to, retrieved from, or edited in, a database.
 
 Documentation on the API endpoints can be found [here](eap_api/API_docs.md).
