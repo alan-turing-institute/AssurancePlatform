@@ -31,8 +31,7 @@ function ItemEditor(props) {
 
   function handleDelete(event) {
     console.log("in handleDelete ", props.type, props.id, event);
-    deleteDBObject();
-    props.updateView();
+    deleteDBObject().then((resolve) => props.updateView());
   }
 
   async function deleteDBObject() {
@@ -144,6 +143,7 @@ function ItemEditor(props) {
         {configData.navigation[props.type]["children"].map((childType) => (
           <Button
             pad="small"
+            key={childType}
             onClick={(e) => props.createItemLayer(childType, props.id, e)}
             label={"Create new " + childType}
           />
