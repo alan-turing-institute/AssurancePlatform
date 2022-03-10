@@ -15,6 +15,8 @@ import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
 
+import "./CaseContainer.css";
+
 class CaseContainer extends Component {
   constructor(props) {
     super(props);
@@ -101,7 +103,12 @@ class CaseContainer extends Component {
           outputmd += thisNode + makeBox(thisObj.name, boxShape) + "\n";
         }
         // add a click link to the node
-        outputmd += "\n click " + thisNode + " callback" + "\n";
+        outputmd +=
+          "\n click " +
+          thisNode +
+          ' callback "' +
+          thisObj.short_description +
+          '"\n';
         for (
           let j = 0;
           j < configData.navigation[itemType]["children"].length;
