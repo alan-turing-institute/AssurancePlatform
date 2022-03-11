@@ -27,7 +27,7 @@ function ItemViewer(props) {
     return () => {
       unmounted = true;
     };
-  }, []);
+  });
 
   return (
     <Box>

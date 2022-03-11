@@ -13,7 +13,7 @@ function CaseCreator() {
   let navigate = useNavigate();
 
   function onChange(event) {
-    if (event.target.name == "name") {
+    if (event.target.name === "name") {
       setName(event.target.value);
     } else {
       setDescription(event.target.value);
