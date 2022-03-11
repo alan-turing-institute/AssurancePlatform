@@ -1,6 +1,14 @@
 import React, { Component } from "react";
 import { useParams } from "react-router-dom";
-import { Grid, Box, DropButton, TextInput, Layer, Button } from "grommet";
+import {
+  Grid,
+  Box,
+  DropButton,
+  Heading,
+  TextInput,
+  Layer,
+  Button,
+} from "grommet";
 import { grommet } from "grommet/themes";
 import { FormSearch, FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { deepMerge } from "grommet/utils";
@@ -10,7 +18,6 @@ import MermaidChart from "./Mermaid";
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import CaseSelector from "./CaseSelector.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
@@ -303,13 +310,13 @@ class CaseContainer extends Component {
       return (
         <Box>
           <Grid
-            rows={["3px", "flex", "xxsmall"]} //{['xxsmall', 'flex', 'xxsmall']}
+            rows={["auto", "flex", "xxsmall"]}
             columns={["flex", "20%"]}
-            gap="medium"
+            gap="none"
             areas={[
-              { name: "header", start: [0, 0], end: [0, 0] },
-              { name: "main", start: [0, 1], end: [0, 1] },
-              { name: "right", start: [1, 1], end: [1, 1] },
+              { name: "header", start: [0, 0], end: [1, 0] },
+              { name: "main", start: [0, 1], end: [1, 1] },
+              { name: "topright", start: [1, 0], end: [1, 0] },
               { name: "footer", start: [0, 2], end: [1, 2] },
             ]}
           >
@@ -325,6 +332,40 @@ class CaseContainer extends Component {
               this.state.createItemType &&
               this.state.createItemParentId &&
               this.createLayer()}
+
+            <Box
+              gridArea="header"
+              pad={{
+                horizontal: "small",
+                top: "small",
+                bottom: "none",
+              }}
+            >
+              <Heading level={2}>{this.state.assurance_case.name}</Heading>
+            </Box>
+
+            <Box
+              direction="column"
+              pad={{
+                horizontal: "small",
+                top: "small",
+                bottom: "small",
+              }}
+              gridArea="topright"
+            >
+              <DropButton
+                label="Add Goal"
+                dropAlign={{ top: "bottom", right: "right" }}
+                dropContent={
+                  <ItemCreator
+                    type="TopLevelNormativeGoal"
+                    parentId={this.state.id}
+                    updateView={this.updateView.bind(this)}
+                  />
+                }
+              />
+            </Box>
+
             <Box
               gridArea="main"
               background={{
@@ -336,11 +377,6 @@ class CaseContainer extends Component {
                 repeat: "repeat-xy",
               }}
             >
-              {/* {this.Example()} */}
-              <Box width={"flex"} height={"30px"}>
-                {" "}
-                <h2> &nbsp;{this.state.assurance_case.name}</h2>{" "}
-              </Box>
               <TransformWrapper initialScale={1} centerOnInit={true}>
                 {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
                   <React.Fragment>
@@ -371,29 +407,7 @@ class CaseContainer extends Component {
                 )}
               </TransformWrapper>
             </Box>
-            {/* {{ color: "#ff0000" }} */}
 
-            <Box
-              direction="column"
-              pad="small"
-              gap="small"
-              gridArea="right"
-              background="light-2"
-            >
-              <CaseSelector />
-
-              <DropButton
-                label="Add Goal"
-                dropAlign={{ top: "bottom", right: "right" }}
-                dropContent={
-                  <ItemCreator
-                    type="TopLevelNormativeGoal"
-                    parentId={this.state.id}
-                    updateView={this.updateView.bind(this)}
-                  />
-                }
-              />
-            </Box>
             <Box gridArea="footer" background="light-5" pad="small">
               &copy; credits
             </Box>

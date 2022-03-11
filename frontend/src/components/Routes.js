@@ -12,7 +12,7 @@ const AllRoutes = () => (
       <Route exact path="/" element={<Home />} />
       <Route path="/case/new" element={<CaseCreator />} />
       <Route path="/case/select" element={<CaseSelector />} />
-      <Route path="/cases">
+      <Route path="/case">
         <Route path=":caseSlug" element={<CaseContainer />} />
       </Route>
     </Routes>
