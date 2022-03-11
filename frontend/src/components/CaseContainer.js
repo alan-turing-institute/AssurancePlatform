@@ -381,10 +381,6 @@ class CaseContainer extends Component {
               background="light-2"
             >
               <CaseSelector />
-              <Box direction="row" width={"flex"} height={"50px"}>
-                <FormSearch size="large" />
-                <TextInput placeholder="Search" />
-              </Box>
 
               <DropButton
                 label="Add Goal"
