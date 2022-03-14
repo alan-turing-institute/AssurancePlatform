@@ -1,6 +1,7 @@
 import { Box } from "grommet";
 import React from "react";
 import { NavLink } from "react-router-dom";
+import CaseSelector from "./CaseSelector.js";
 
 function Navigation() {
   return (
@@ -10,7 +11,8 @@ function Navigation() {
           <NavLink className="navbar-brand" to="/">
             Ethical Assurance Platform
           </NavLink>
-          <Box>
+          <Box gap="small" direction="row">
+            <CaseSelector />
             <ul className="navbar-nav ml-auto">
               <li className="nav-item">
                 <NavLink className="nav-link" to="/">

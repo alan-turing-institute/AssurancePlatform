@@ -1,4 +1,4 @@
-import { Box, Heading, Select } from "grommet";
+import { Box, Select } from "grommet";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import configData from "../config.json";
@@ -28,17 +28,17 @@ function CaseSelector() {
   function handleChange(option) {
     const id = option.value.id;
     setValue(id);
-    navigate("/cases/" + id);
+    navigate("/case/" + id);
   }
 
   return (
-    <Box width="medium" className="dropdown">
-      <Heading level={4}>Select Assurance Case</Heading>
+    <Box className="dropdown">
       <Select
         disabled={loading}
+        placeholder="Select or create a case"
         value={value}
         onChange={handleChange}
-        options={items}
+        options={[{ name: "Create new case", id: "new" }, ...items]}
         labelKey="name"
       />
     </Box>
