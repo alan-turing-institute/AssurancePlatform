@@ -1,67 +1,62 @@
-import React from "react"
+import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import configData from "../config.json"
+import configData from "../config.json";
 
-class CaseCreator extends React.Component {
+function CaseCreator() {
+  const [name, setName] = useState("Name");
+  const [description, setDescription] = useState("Description");
 
-    state = {
-        name: "",
-        description: "",
+  let url = `${configData.BASE_URL}/cases/`;
 
+  let navigate = useNavigate();
+
+  function onChange(event) {
+    if (event.target.name == "name") {
+      setName(event.target.value);
+    } else {
+      setDescription(event.target.value);
     }
-    url = `${configData.BASE_URL}/cases/`;
+  }
 
-    onChange = e => {
-        //  console.log("hello")
-          this.setState({
-              [e.target.name]: e.target.value
-          })
-          console.log("state is now ",this.state);
-      };
+  function handleSubmit(event) {
+    event.preventDefault();
+    let state = { name: name, description: description };
+    const requestOptions = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state),
+    };
 
+    console.log("submit button pressed with state ", JSON.stringify(state));
+    fetch(url, requestOptions)
+      .then((response) => response.json())
+      .then((json) => {
+        navigate("/cases/" + json.id);
+      });
+  }
 
-    handleSubmit = e => {
-        e.preventDefault()
-        const requestOptions = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.state)
-        };    
-        console.log("submit button pressed with state ",JSON.stringify(this.state))
-        let response = {};
-
-        fetch(this.url, requestOptions)
-        .then(response => response.json());
-
-        console.log("response was ", response);
-        //.then(data => this.setState({ postId: data.id }));
-    }
-
-    render() {
-        return (
-            <div>
-            <h2>Create a new assurance case</h2>
-            <form>
-                <input 
-                    type="text" 
-                    placeholder="Name" 
-                    value={this.state.name}
-                    name="name"
-                    onChange={this.onChange}
-                />
-                <input 
-                    type="text" 
-                    placeholder="Description" 
-                    value={this.state.description}
-                    name="description"
-                    onChange={this.onChange}
-                />
-                <button onClick={this.handleSubmit}>Submit</button>
-            </form>
-            </div>
-        )
-    }
-
+  return (
+    <Box>
+      <Heading level={4}>Create a new assurance case</Heading>
+      <Form onSubmit={handleSubmit}>
+        <Box direction="row">
+          <FormField margin="xsmall">
+            <TextInput placeholder={name} name="name" onChange={onChange} />
+          </FormField>
+          <FormField margin="xsmall">
+            <TextInput
+              placeholder={description}
+              name="description"
+              onChange={onChange}
+            />
+          </FormField>
+        </Box>
+        <Button type="submit" primary label="Submit" margin="xsmall" />
+      </Form>
+    </Box>
+  );
 }
 
 export default CaseCreator;

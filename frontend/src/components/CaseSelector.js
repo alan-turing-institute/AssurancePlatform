@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { Box, Select } from "grommet";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import configData from "../config.json"
+import configData from "../config.json";
 
 function CaseSelector() {
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([
-    { label: "Loading ...", value: "" }
-  ]);
+  const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
   const [value, setValue] = useState("Select a case");
   useEffect(() => {
     let unmounted = false;
@@ -25,27 +24,24 @@ function CaseSelector() {
     };
   }, []);
   let navigate = useNavigate();
-  function handleChange(event) {
-    let caseId = event.currentTarget.value
-    setValue(caseId);
-    navigate("/cases/" + caseId)
+
+  function handleChange(option) {
+    const id = option.value.id;
+    setValue(id);
+    navigate("/case/" + id);
   }
 
   return (
-    <div className="dropdown">
-      <p>Select Assurance Case</p>
-      <select
+    <Box className="dropdown">
+      <Select
         disabled={loading}
+        placeholder="Select or create a case"
         value={value}
         onChange={handleChange}
-      >
-        {items.map(({ id, name }) => (
-          <option key={id} value={id}>
-            {name}
-          </option>
-        ))}
-      </select>
-    </div>
+        options={[{ name: "Create new case", id: "new" }, ...items]}
+        labelKey="name"
+      />
+    </Box>
   );
 }
 

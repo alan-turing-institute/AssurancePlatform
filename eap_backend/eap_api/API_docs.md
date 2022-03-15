@@ -12,8 +12,8 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
     - returns `{name: <str:case_name>, id: <int:case_id>}`
 
 ### `/cases/<int:case_id>`
-* A GET request will get the details of the specified AssuranceCase: 
-    - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [<int:goal_ids>]}`
+* A GET request will get the full JSON of the specified AssuranceCase and all its children: 
+    - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [SERIALIZED_GOAL]}`, where a "SERIALIZED_GOAL" is the same as the output of a GET request to `/goals/<int:goal_id>` (see below).
 * A PUT request will modify new AssuranceCase.  
     - Payload: Any key/value pair from the AssuranceCase schema
     - returns `{name: <str:case_name>, id: <int:case_id>, description: <str:description>, created_date: <datetime:date>, goals: [<int:goal_ids>]}`
@@ -28,8 +28,8 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
     - returns `{name: <str:goal_name>, id: <int:goal_id>}`
 
 ### `/goals/<int:goal_id>`
-* A GET request will get the details of the specified TopLevelNormativeGoal: 
-    - returns `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, contexts: [<int:context_ids>], system_description: [<int:system_description_id>], assurance_case: <dict:serialized_assurance_case>, shape: <str:shape>}`
+* A GET request will get the full JSON containing details of the specified TopLevelNormativeGoal and all its children: 
+    - returns `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, contexts: [SERIALIZED_CONTEXT], system_description: [SERIALIZED_DESCRIPTION], property_claims: [SERIALIZED_CLAIM]`, where "SERIALIZED_CONTEXT" and "SERIALIZED_DESCRIPTION" are the same as the responses to GET requests to `/contexts/<int:context_id>` and `/descriptions/<int:desc_id>` respectively (see below), and "SERIALIZED_CLAIM" is the full nested JSON containing the details from a GET request to `propertyclaims/<int:claim_id>` and also the JSON from all its children.
 * A PUT request will modify the specified TopLevelNormativeGoal.  
     - Payload: Any key/value pair from the TopLevelNormativeGoal schema
     - returns `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>,  keywords: <str:keywords>, contexts: [<int:context_ids>], system_description: [<int:system_description_id>], assurance_case,: <dict:serialized_assurance_case>, shape: <str:shape>}`
@@ -45,7 +45,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/contexts/<int:context_id>`
 * A GET request will get the details of the specified Context: 
-    - returns `{name: <str:context_name>, id: <int:context_id>, short_description: <str:description>, long_description: <str:description>, goal: <dict:serialized_toplevelnormativegoal>, shape: <str:shape>}`
+    - returns `{name: <str:context_name>, id: <int:context_id>, short_description: <str:description>, long_description: <str:description>, created_date: <datetime:date>, shape: <str:shape>}`
 * A PUT request will modify the specified Context.  
     - Payload: dict containing any key/value pairs from the Context schema
     - returns `{name: <str:context_name>, id: <int:context_id>, short_description: <str:description>, long_description: <str:description>,   goal: <dict:serialized_toplevelnormativegoal>}`
@@ -61,10 +61,10 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/descriptions/<int:description_id>`
 * A GET request will get the details of the specified SystemDescription: 
-    - returns `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>, goal: <dict:serialized_toplevelnormativegoal>, shape: <str:shape>}`
+    - returns `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>, shape: <str:shape>}`
 * A PUT request will modify the specified SystemDescription.  
     - Payload: dict containing any key/value pairs from the SystemDescription schema
-    - returns `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>,   goal: <dict:serialized_toplevelnormativegoal>}`
+    - returns `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>}`
 * A DELETE request will delete the specified SystemDescription.
     - returns `[{name: <str:description_name>, id: <int:description_id>}, ...]` listing remaining SystemDescriptions
 
@@ -77,7 +77,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/propertyclaims/<int:claim_id>`
 * A GET request will get the details of the specified PropertyClaim: 
-    - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, goal: <dict:serialized_toplevelnormativegoal>, arguments: [<int:argument_id>], shape: <str:shape>}`
+    - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, arguments: [<int:argument_id>], shape: <str:shape>}`
 * A PUT request will modify the specified PropertyClaim.  
     - Payload: dict containing any key/value pairs from the PropertyClaim schema
     - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>,   goal: <dict:serialized_toplevelnormativegoal>}`
@@ -93,7 +93,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/arguments/<int:argument_id>`
 * A GET request will get the details of the specified Argument: 
-    - returns `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, property_claim: [<dict:serialized_propertyclaim>], evidential_claims: [<int:claim_ids>], shape: <str:shape>}`
+    - returns `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, evidential_claims: [<int:claim_ids>], shape: <str:shape>}`
 * A PUT request will modify the specified Argument.  
     - Payload: dict containing any key/value pairs from the Argument schema
     - returns `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>,   property_claim: [<dict:serialized_propertyclaim>]}`
@@ -109,7 +109,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/evidentialclaims/<int:claim_id>`
 * A GET request will get the details of the specified EvidentialClaim: 
-    - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, argument: <dict:serialized_argument>, evidence: [<int:evidence_id>], shape: <str:shape>}`
+    - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, evidence: [<int:evidence_id>], shape: <str:shape>}`
 * A PUT request will modify the specified EvidentialClaim.  
     - Payload: dict containing any key/value pairs from the EvidentialClaim schema
     - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>,   argument: <dict:serialized_argument>}`
@@ -125,7 +125,7 @@ If you deploy to e.g. Azure, it will be something like `https://<your-azure-app-
 
 ### `/evidence/<int:evidence_id>`
 * A GET request will get the details of the specified Evidence: 
-    - returns `{name: <str:evidence_name>, id: <int:evidence_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, evidential_claim: [<dict:serialized_evidentialclaim>], shape: <str:shape>}`
+    - returns `{name: <str:evidence_name>, id: <int:evidence_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, shape: <str:shape>}`
 * A PUT request will modify the specified Evidence.  
     - Payload: dict containing any key/value pairs from the Evidence schema
     - returns `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, evidential_claim: [<dict:serialized_evidentialclaim>]}`
