@@ -72,7 +72,7 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
-# Visual studio stuff: 
+# Visual studio stuff:
 .vscode/
 
 # Scrapy stuff:

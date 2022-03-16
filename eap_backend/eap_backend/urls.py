@@ -20,5 +20,5 @@ from eap_api import views
 
 urlpatterns = [
     path("api/", include("eap_api.urls")),
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 ]
