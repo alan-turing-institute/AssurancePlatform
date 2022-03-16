@@ -8,5 +8,4 @@ test('renders item creator layer', () => {
   render(<ItemCreator type="TopLevelNormativeGoal"/>);
   const textElement = screen.getByText(/TopLevelNormativeGoal/i);
   expect(textElement).toBeInTheDocument();
-  //expect(true);
 });
