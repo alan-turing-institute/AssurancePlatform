@@ -7,28 +7,40 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0008_auto_20211110_1329'),
+        ("eap_api", "0008_auto_20211110_1329"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='argument',
-            name='property_claim',
-            field=models.ManyToManyField(related_name='arguments', to='eap_api.PropertyClaim'),
+            model_name="argument",
+            name="property_claim",
+            field=models.ManyToManyField(
+                related_name="arguments", to="eap_api.PropertyClaim"
+            ),
         ),
         migrations.AlterField(
-            model_name='evidence',
-            name='evidential_claim',
-            field=models.ManyToManyField(related_name='evidence', to='eap_api.EvidentialClaim'),
+            model_name="evidence",
+            name="evidential_claim",
+            field=models.ManyToManyField(
+                related_name="evidence", to="eap_api.EvidentialClaim"
+            ),
         ),
         migrations.AlterField(
-            model_name='evidentialclaim',
-            name='argument',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='evidential_claims', to='eap_api.argument'),
+            model_name="evidentialclaim",
+            name="argument",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="evidential_claims",
+                to="eap_api.argument",
+            ),
         ),
         migrations.AlterField(
-            model_name='propertyclaim',
-            name='goal',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='property_claims', to='eap_api.toplevelnormativegoal'),
+            model_name="propertyclaim",
+            name="goal",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="property_claims",
+                to="eap_api.toplevelnormativegoal",
+            ),
         ),
     ]

@@ -6,40 +6,40 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0004_auto_20211026_1712'),
+        ("eap_api", "0004_auto_20211026_1712"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='argument',
-            name='shape',
+            model_name="argument",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='assurancecase',
-            name='shape',
+            model_name="assurancecase",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='context',
-            name='shape',
+            model_name="context",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='evidence',
-            name='shape',
+            model_name="evidence",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='evidentialclaim',
-            name='shape',
+            model_name="evidentialclaim",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='propertyclaim',
-            name='shape',
+            model_name="propertyclaim",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='systemdescription',
-            name='shape',
+            model_name="systemdescription",
+            name="shape",
         ),
         migrations.RemoveField(
-            model_name='toplevelnormativegoal',
-            name='shape',
+            model_name="toplevelnormativegoal",
+            name="shape",
         ),
     ]

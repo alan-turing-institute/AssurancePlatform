@@ -7,13 +7,17 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0006_auto_20211109_1855'),
+        ("eap_api", "0006_auto_20211109_1855"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='toplevelnormativegoal',
-            name='assurance_case',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='goals', to='eap_api.assurancecase'),
+            model_name="toplevelnormativegoal",
+            name="assurance_case",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="goals",
+                to="eap_api.assurancecase",
+            ),
         ),
     ]
