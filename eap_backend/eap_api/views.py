@@ -12,7 +12,7 @@ from .models import (
     PropertyClaim,
     Argument,
     EvidentialClaim,
-    Evidence
+    Evidence,
 )
 from .serializers import (
     AssuranceCaseSerializer,
@@ -22,20 +22,24 @@ from .serializers import (
     PropertyClaimSerializer,
     ArgumentSerializer,
     EvidentialClaimSerializer,
-    EvidenceSerializer
+    EvidenceSerializer,
 )
 
-class AssuranceView (generics.ListCreateAPIView):
+
+class AssuranceView(generics.ListCreateAPIView):
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer
 
-class GoalsView (generics.ListCreateAPIView):
+
+class GoalsView(generics.ListCreateAPIView):
     queryset = TopLevelNormativeGoal.objects.all()
     serializer_class = TopLevelNormativeGoalSerializer
+
 
 class DetailAssuranceView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer
+
 
 def make_summary(serialized_data):
     """
@@ -45,12 +49,14 @@ def make_summary(serialized_data):
     parameter: serialized_data, dict, or list of dicts
     returns: dict, or list of dicts, containing just "name" and "id" key/values.
     """
+
     def summarize_one(data):
-        if not (isinstance(data, dict) and \
-                "id" in data.keys() and \
-                "name" in data.keys()):
+        if not (
+            isinstance(data, dict) and "id" in data.keys() and "name" in data.keys()
+        ):
             raise RuntimeError("Expected dictionary containing name and id")
         return {"name": data["name"], "id": data["id"]}
+
     if isinstance(serialized_data, list):
         return [summarize_one(sd) for sd in serialized_data]
     else:
@@ -71,28 +77,39 @@ def get_json_tree(id_list, obj_type):
     =======
     objs: list of json objects
     """
-    type_dict = {"goals": {"serializer": TopLevelNormativeGoalSerializer,
-                           "model": TopLevelNormativeGoal,
-                           "children": ["context","system_description","property_claims"] },
-                 "context": {"serializer": ContextSerializer,
-                             "model": Context,
-                             "children": []},
-                 "system_description": {"serializer": SystemDescriptionSerializer,
-                                        "model": SystemDescription,
-                                        "children": []},
-                 "property_claims": {"serializer": PropertyClaimSerializer,
-                                     "model": PropertyClaim,
-                                     "children": ["arguments"]},
-                 "arguments": {"serializer": ArgumentSerializer,
-                               "model": Argument,
-                               "children": ["evidential_claims"]},
-                 "evidential_claims": {"serializer": EvidentialClaimSerializer,
-                                       "model": EvidentialClaim,
-                                       "children": ["evidence"]},
-                 "evidence": {"serializer": EvidenceSerializer,
-                              "model": Evidence,
-                              "children": []}
-                 }
+    type_dict = {
+        "goals": {
+            "serializer": TopLevelNormativeGoalSerializer,
+            "model": TopLevelNormativeGoal,
+            "children": ["context", "system_description", "property_claims"],
+        },
+        "context": {"serializer": ContextSerializer, "model": Context, "children": []},
+        "system_description": {
+            "serializer": SystemDescriptionSerializer,
+            "model": SystemDescription,
+            "children": [],
+        },
+        "property_claims": {
+            "serializer": PropertyClaimSerializer,
+            "model": PropertyClaim,
+            "children": ["arguments"],
+        },
+        "arguments": {
+            "serializer": ArgumentSerializer,
+            "model": Argument,
+            "children": ["evidential_claims"],
+        },
+        "evidential_claims": {
+            "serializer": EvidentialClaimSerializer,
+            "model": EvidentialClaim,
+            "children": ["evidence"],
+        },
+        "evidence": {
+            "serializer": EvidenceSerializer,
+            "model": Evidence,
+            "children": [],
+        },
+    }
     objs = []
     for obj_id in id_list:
         obj = type_dict[obj_type]["model"].objects.get(pk=obj_id)
@@ -138,7 +155,7 @@ def case_detail(request, pk):
     if request.method == "GET":
         serializer = AssuranceCaseSerializer(case)
         case_data = serializer.data
-        goals = get_json_tree(case_data["goals"],"goals")
+        goals = get_json_tree(case_data["goals"], "goals")
         case_data["goals"] = goals
         return JsonResponse(case_data)
     elif request.method == "PUT":
@@ -191,7 +208,7 @@ def goal_detail(request, pk):
         data = serializer.data
         # replace IDs for children with full JSON objects
         for key in ["context", "system_description", "property_claims"]:
-            data[key] = get_json_tree(data[key],key)
+            data[key] = get_json_tree(data[key], key)
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
@@ -446,7 +463,9 @@ def evidential_claim_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(evidential_claim, data=data, partial=True)
+        serializer = EvidentialClaimSerializer(
+            evidential_claim, data=data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
