@@ -1,4 +1,5 @@
-from django.http import HttpResponse, JsonResponse
+import json
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import viewsets
@@ -24,6 +25,64 @@ from .serializers import (
     EvidentialClaimSerializer,
     EvidenceSerializer,
 )
+
+TYPE_DICT = {
+    "assurance_case": {
+        "serializer": AssuranceCaseSerializer,
+        "model": AssuranceCase,
+        "children": ["goals"],
+        "fields": ("name", "description"),
+    },
+    "goals": {
+        "serializer": TopLevelNormativeGoalSerializer,
+        "model": TopLevelNormativeGoal,
+        "children": ["context", "system_description", "property_claims"],
+        "fields": ("name", "short_description", "long_description", "keywords"),
+        "parent_type": ("assurance_case", False),
+    },
+    "context": {
+        "serializer": ContextSerializer,
+        "model": Context,
+        "children": [],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_type": ("goal", False),
+    },
+    "system_description": {
+        "serializer": SystemDescriptionSerializer,
+        "model": SystemDescription,
+        "children": [],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_type": ("goal", False),
+    },
+    "property_claims": {
+        "serializer": PropertyClaimSerializer,
+        "model": PropertyClaim,
+        "children": ["arguments"],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_type": ("goal", False),
+    },
+    "arguments": {
+        "serializer": ArgumentSerializer,
+        "model": Argument,
+        "children": ["evidential_claims"],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_type": ("property_claim", True),
+    },
+    "evidential_claims": {
+        "serializer": EvidentialClaimSerializer,
+        "model": EvidentialClaim,
+        "children": ["evidence"],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_type": ("argument", False),
+    },
+    "evidence": {
+        "serializer": EvidenceSerializer,
+        "model": Evidence,
+        "children": [],
+        "fields": ("name", "short_description", "long_description", "URL"),
+        "parent_type": ("evidential_claim", True),
+    },
+}
 
 
 class AssuranceView(generics.ListCreateAPIView):
@@ -71,55 +130,74 @@ def get_json_tree(id_list, obj_type):
     Params
     ======
     id_list: list of object_ids from the parent serializer
-    obj_type: key of the json object (also a key of 'type_dict')
+    obj_type: key of the json object (also a key of 'TYPE_DICT')
 
     Returns
     =======
     objs: list of json objects
     """
-    type_dict = {
-        "goals": {
-            "serializer": TopLevelNormativeGoalSerializer,
-            "model": TopLevelNormativeGoal,
-            "children": ["context", "system_description", "property_claims"],
-        },
-        "context": {"serializer": ContextSerializer, "model": Context, "children": []},
-        "system_description": {
-            "serializer": SystemDescriptionSerializer,
-            "model": SystemDescription,
-            "children": [],
-        },
-        "property_claims": {
-            "serializer": PropertyClaimSerializer,
-            "model": PropertyClaim,
-            "children": ["arguments"],
-        },
-        "arguments": {
-            "serializer": ArgumentSerializer,
-            "model": Argument,
-            "children": ["evidential_claims"],
-        },
-        "evidential_claims": {
-            "serializer": EvidentialClaimSerializer,
-            "model": EvidentialClaim,
-            "children": ["evidence"],
-        },
-        "evidence": {
-            "serializer": EvidenceSerializer,
-            "model": Evidence,
-            "children": [],
-        },
-    }
     objs = []
     for obj_id in id_list:
-        obj = type_dict[obj_type]["model"].objects.get(pk=obj_id)
-        obj_serializer = type_dict[obj_type]["serializer"](obj)
+        obj = TYPE_DICT[obj_type]["model"].objects.get(pk=obj_id)
+        obj_serializer = TYPE_DICT[obj_type]["serializer"](obj)
         obj_data = obj_serializer.data
-        for child_type in type_dict[obj_type]["children"]:
+        for child_type in TYPE_DICT[obj_type]["children"]:
             child_list = obj_data[child_type]
             obj_data[child_type] = get_json_tree(child_list, child_type)
         objs.append(obj_data)
     return objs
+
+
+def save_json_tree(data, obj_type, parent_id=None):
+    """Recursively write items in an assurance case tree.
+
+    Create a new assurance case like the one described by data, including all
+    its items.
+
+    Params
+    ======
+    data: JSON for the assurance case and all its items. At the top level
+        includes the whole item tree, subtrees when recursing.
+    obj_type: Key of the json object (also a key of 'TYPE_DICT'). At the top
+        level this should be "assurance_case".
+    parent_id: None at the top level, id of the caller when recursing.
+
+    Returns
+    =======
+    objs: JsonResponse describing failure/success.
+    """
+    # Create the top object in data. Only include some of the fields from data,
+    # so that e.g. the new object gets a unique ID even if `data` specifies an
+    # ID.
+    this_data = {k: data[k] for k in TYPE_DICT[obj_type]["fields"]}
+    if parent_id is not None:
+        parent_type, plural = TYPE_DICT[obj_type]["parent_type"]
+        if plural:
+            parent_id = [parent_id]
+        this_data[parent_type + "_id"] = parent_id
+    serializer_class = TYPE_DICT[obj_type]["serializer"]
+    serializer = serializer_class(data=this_data)
+    if serializer.is_valid():
+        serializer.save()
+    else:
+        return JsonResponse(serializer.errors, status=400)
+
+    # Recurse into child types.
+    name = serializer.data["name"]
+    id = serializer.data["id"]
+    success_http_code = 201
+    child_types = TYPE_DICT[obj_type]["children"]
+    for child_type in child_types:
+        if child_type not in data:
+            continue
+        for child_data in data[child_type]:
+            retval = save_json_tree(child_data, child_type, parent_id=id)
+            # If one of the subcalls returns an error, return.
+            if retval.status_code != success_http_code:
+                return retval
+
+    summary = {"name": name, "id": id}
+    return JsonResponse(summary, status=success_http_code)
 
 
 @csrf_exempt
@@ -134,12 +212,7 @@ def case_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = AssuranceCaseSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            return JsonResponse(summary, status=201)
-        return JsonResponse(serializer.errors, status=400)
+        return save_json_tree(data, "assurance_case")
 
 
 @csrf_exempt

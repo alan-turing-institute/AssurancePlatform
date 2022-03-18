@@ -1,19 +1,8 @@
 import React, { Component } from "react";
 import { useParams } from "react-router-dom";
-import {
-  Grid,
-  Box,
-  DropButton,
-  Heading,
-  TextInput,
-  Layer,
-  Button,
-} from "grommet";
-import { grommet } from "grommet/themes";
-import { FormSearch, FormClose, ZoomIn, ZoomOut } from "grommet-icons";
-import { deepMerge } from "grommet/utils";
+import { Grid, Box, DropButton, Heading, Layer, Button } from "grommet";
+import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 
-import RoundLayer from "./Layer.js";
 import MermaidChart from "./Mermaid";
 import configData from "../config.json";
 
@@ -66,7 +55,7 @@ class CaseContainer extends Component {
   componentDidUpdate(prevProps) {
     const id = this.props.params.caseSlug;
     const oldId = prevProps.params.caseSlug;
-    if (id != oldId) {
+    if (id !== oldId) {
       this.setState({ id: id }, this.updateView);
     }
   }

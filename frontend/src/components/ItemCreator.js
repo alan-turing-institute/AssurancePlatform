@@ -1,24 +1,16 @@
 /* General function that can create any type of object apart from the top-level Case */
 
 import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import configData from "../config.json";
 
 function ItemCreator(props) {
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
-  let parent_type = configData["navigation"][props.type]["parent_name"];
   const [parentId, setParentId] = useState(1);
   const [name, setName] = useState("Name");
   const [sdesc, setShortDesc] = useState("Short description");
   const [ldesc, setLongDesc] = useState("Long description");
   const [keywords, setKeywords] = useState("Keywords (comma-separated)");
   const [url, setURL] = useState("www.some-evidence.com");
-
-  function handleChange(event) {
-    let parent = event.currentTarget.value;
-    setParentId(parent);
-  }
 
   function handleSubmit(event) {
     event.preventDefault();
