@@ -1,4 +1,9 @@
 {
   "presets": ["@babel/preset-env", "@babel/preset-react"],
-  "plugins": ["dynamic-import-node"]
+  "plugins": ["dynamic-import-node"],
+  "env": {
+    "test": {
+      "plugins": ["transform-require-context"]
+    }
+  }
 }
