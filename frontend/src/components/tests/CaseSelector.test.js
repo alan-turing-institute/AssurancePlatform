@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { Link } from "react-router-dom";
 import "regenerator-runtime/runtime";
 import CaseSelector from "../CaseSelector.js";
+import "@testing-library/jest-dom";
 
 const mockedUsedNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({
@@ -10,9 +11,21 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockedUsedNavigate,
 }));
 
-test("renders selector screen", () => {
-  //render(<CaseSelector />);
-  // const linkElement = screen.getByText(/Ethical Assurance Platform/i);
-  // expect(linkElement).toBeInTheDocument();
-  expect(true);
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () =>
+      Promise.resolve([
+        { id: 1, name: "Test case 1" },
+        { id: 2, name: "Test case 2" },
+      ]),
+  })
+);
+
+test("renders selector screen", async () => {
+  render(<CaseSelector />);
+  await waitFor(() =>
+    expect(
+      screen.getByPlaceholderText("Select or create a case")
+    ).toBeInTheDocument()
+  );
 });
