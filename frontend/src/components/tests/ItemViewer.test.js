@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
+import { act } from "react-dom/test-utils";
 import React from "react";
 import { Link } from "react-router-dom";
 import ItemViewer from "../ItemViewer.js";
@@ -19,7 +20,9 @@ global.fetch = jest.fn(() =>
   })
 );
 
-test("renders item viewer layer", async () => {
-  render(<ItemViewer type="TopLevelNormativeGoal" id="1" />);
-  //  await waitFor(() => expect(screen.findByText("Loading")).toBeInTheDocument());
+test("renders item viewer layer", () => {
+  act(() => {
+    render(<ItemViewer type="TopLevelNormativeGoal" id="1" />);
+  });
+  expect(screen.getByText("Name")).toBeInTheDocument();
 });
