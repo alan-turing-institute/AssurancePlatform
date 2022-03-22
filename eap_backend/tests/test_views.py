@@ -1,24 +1,6 @@
 from django.test import TestCase
-from django.urls import reverse, path
-from eap_api.views import (
-    case_list,
-    case_detail,
-    goal_list,
-    goal_detail,
-    context_list,
-    context_detail,
-    description_list,
-    description_detail,
-    property_claim_list,
-    property_claim_detail,
-    argument_list,
-    argument_detail,
-    evidential_claim_list,
-    evidential_claim_detail,
-    evidence_list,
-    evidence_detail,
-    make_summary,
-)
+from django.urls import reverse
+from eap_api.views import make_summary
 from eap_api.models import (
     AssuranceCase,
     TopLevelNormativeGoal,
@@ -52,9 +34,6 @@ from .constants_tests import (
     ARGUMENT1_INFO_NO_ID,
     ARGUMENT2_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
-    EVIDENTIALCLAIM2_INFO,
-    EVIDENTIALCLAIM3_INFO,
-    EVIDENTIALCLAIM4_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
@@ -84,7 +63,7 @@ class CaseViewTest(TestCase):
         )
         self.assertEqual(response_post.status_code, 201)
         self.assertEqual(response_post.json()["name"], post_data["name"])
-        ## check we now have two cases in the db
+        # check we now have two cases in the db
         response_get = self.client.get(reverse("case_list"))
         self.assertEqual(len(response_get.json()), 2)
 

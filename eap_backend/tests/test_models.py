@@ -9,20 +9,9 @@ from .constants_tests import (
     CONTEXT_INFO,
     DESCRIPTION_INFO,
     PROPERTYCLAIM1_INFO,
-    PROPERTYCLAIM2_INFO,
     ARGUMENT1_INFO_NO_ID,
-    ARGUMENT2_INFO,
     EVIDENTIALCLAIM1_INFO,
-    EVIDENTIALCLAIM2_INFO,
-    EVIDENTIALCLAIM3_INFO,
-    EVIDENTIALCLAIM4_INFO,
     EVIDENCE1_INFO_NO_ID,
-    EVIDENCE2_INFO,
-    EVIDENCE3_INFO,
-    EVIDENCE4_INFO,
-    EVIDENCE5_INFO,
-    EVIDENCE6_INFO,
-    EVIDENCE7_INFO,
 )
 
 # Create your tests here.
@@ -68,7 +57,6 @@ class TopLevelNormativeGoalTestCase(TestCase):
 
     def test_goal_creation(self):
         test_name = GOAL_INFO["name"]
-        test_keywords = GOAL_INFO["keywords"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, TopLevelNormativeGoal))
         self.assertEqual(test_entry.name, test_name)
@@ -121,33 +109,6 @@ class DescriptionTestCase(TestCase):
         test_desc = DESCRIPTION_INFO["short_description"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, SystemDescription))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
-        # test one-step relation
-        self.assertTrue(isinstance(test_entry.goal, TopLevelNormativeGoal))
-        # test two-step relation
-        self.assertTrue(isinstance(test_entry.goal.assurance_case, AssuranceCase))
-
-
-class PropertyClaimTestCase(TestCase):
-    """
-    creates a PropertyClaim object and tests foreign key and
-    whether the created title matches the expected title
-    """
-
-    def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
-        goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        goal.assurance_case = case
-        pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        pclaim.goal = goal
-        return pclaim
-
-    def test_property_claim_creation(self):
-        test_name = PROPERTYCLAIM1_INFO["name"]
-        test_desc = PROPERTYCLAIM1_INFO["short_description"]
-        test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, PropertyClaim))
         self.assertEqual(test_entry.name, test_name)
         self.assertEqual(test_entry.short_description, test_desc)
         # test one-step relation
