@@ -1,4 +1,4 @@
-name: Lint
+name: backend-style
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -13,9 +13,9 @@ jobs:
           architecture: x64
       - name: Install flake8
         run: pip install flake8
-      - name: Run flake8 --max-line-length 88
+      - name: Run flake8
+      - run: flake8 . --max-line-length 88
         working-directory: eap_backend
-        uses: suo/flake8-github-action@releases/v1
         with:
           checkName: 'flake8'
           github-token: ${{ secrets.GITHUB_TOKEN }}
