@@ -18,7 +18,7 @@ global.fetch = jest.fn(() =>
 );
 
 test("renders item editor layer", async () => {
-  render(<ItemEditor type="TopLevelNormativeGoal" id="0" />);
+  render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
   await waitFor(() =>
     expect(screen.getByPlaceholderText("Test goal")).toBeInTheDocument()
   );

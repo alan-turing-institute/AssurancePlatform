@@ -3,9 +3,8 @@ import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
 import { act } from "react-dom/test-utils";
 import React from "react";
-import { Link } from "react-router-dom";
-import ItemViewer from "../ItemViewer.js";
 import "@testing-library/jest-dom";
+import ItemViewer from "../ItemViewer.js";
 
 global.fetch = jest.fn(() =>
   Promise.resolve({
