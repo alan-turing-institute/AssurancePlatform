@@ -1,11 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { Link } from "react-router-dom";
 import Mermaid from "../Mermaid.js";
+import "regenerator-runtime/runtime";
+import "@testing-library/jest-dom";
 
-test("renders chart", () => {
-  render(<Mermaid />);
-  // const linkElement = screen.getByText(/Select an existing case/i);
-  //expect(linkElement).toBeInTheDocument();
-  expect(true);
+test("renders chart", async () => {
+  render(<Mermaid chartmd="graph TB;  A[TestGoal];" />);
+  /// not sure why the graph isn't rendering :(
+  await waitFor(() =>
+    expect(screen.getByText("Syntax error in graph")).toBeInTheDocument()
+  );
 });

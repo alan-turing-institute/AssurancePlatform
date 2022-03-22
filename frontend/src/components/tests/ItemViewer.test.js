@@ -1,13 +1,27 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
+import { act } from "react-dom/test-utils";
 import React from "react";
-import { Link } from "react-router-dom";
+import "@testing-library/jest-dom";
 import ItemViewer from "../ItemViewer.js";
 
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () =>
+      Promise.resolve({
+        id: 1,
+        name: "Test goal 1",
+        short_description: "Test short",
+        long_description: "Test long",
+        keywords: "Test keywords",
+      }),
+  })
+);
+
 test("renders item viewer layer", () => {
-  //render(<ItemViewer type="TopLevelNormativeGoal" id="1"/>);
-  //const textElement = screen.getByText(/TopLevelNormativeGoal/i);
-  //expect(textElement).toBeInTheDocument();
-  expect(true);
+  act(() => {
+    render(<ItemViewer type="TopLevelNormativeGoal" id="1" />);
+  });
+  expect(screen.getByText("Name")).toBeInTheDocument();
 });
