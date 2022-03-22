@@ -9,7 +9,6 @@ jobs:
   flake8:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
