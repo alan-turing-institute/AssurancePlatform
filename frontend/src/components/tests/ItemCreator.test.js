@@ -5,6 +5,6 @@ import ItemCreator from "../ItemCreator.js";
 
 test("renders item creator layer", () => {
   render(<ItemCreator type="TopLevelNormativeGoal" />);
-  const textElement = screen.getByText("TopLevelNormativeGoal");
+  const textElement = screen.getByText("Create a new TopLevelNormativeGoal");
   expect(textElement).toBeInTheDocument();
 });
