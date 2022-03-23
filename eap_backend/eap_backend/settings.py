@@ -99,7 +99,7 @@ WSGI_APPLICATION = "eap_backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-## use sqlite db for tests
+# use sqlite db for tests
 if (
     "test" in sys.argv or "test_coverage" in sys.argv
 ):  # Covers regular testing and django-coverage
@@ -110,7 +110,7 @@ if (
         }
     }
 else:
-    if not "DBHOST" in os.environ.keys():
+    if "DBHOST" not in os.environ.keys():
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.sqlite3",
