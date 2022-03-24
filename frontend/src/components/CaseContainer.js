@@ -1,3 +1,4 @@
+import { saveAs } from "file-saver";
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
@@ -55,6 +56,38 @@ class CaseContainer extends Component {
       method: "DELETE",
     };
     return fetch(backendURL, requestOptions);
+  }
+
+  async exportCurrentCase() {
+    const id = this.state.assurance_case.id;
+    const response = await fetch(this.url + id);
+    let json_response = await response.json();
+    const name = json_response["name"];
+    // Remove the `id` fields, since they are only meaningful to the backend, and might
+    // confuse it when importing the JSON exported here.
+    json_response = JSON.stringify(json_response);
+    json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
+    // Write to a file, which to the user shows as a download.
+    const blob = new Blob([json_response], {
+      type: "text/plain;charset=utf-8",
+    });
+    const now = new Date();
+    // Using a custom date format because the ones that Date offers are either very long
+    // or include characters not allowed in filenames on Windows.
+    const datestr =
+      now.getFullYear() +
+      "-" +
+      now.getMonth() +
+      "-" +
+      now.getDate() +
+      "T" +
+      now.getHours() +
+      "-" +
+      now.getMinutes() +
+      "-" +
+      now.getSeconds();
+    const filename = name + "-" + datestr + ".json";
+    saveAs(blob, filename);
   }
 
   componentDidMount() {
@@ -441,6 +474,11 @@ class CaseContainer extends Component {
                 label="Delete Case"
                 secondary
                 onClick={this.showConfirmDeleteLayer.bind(this)}
+              />
+              <Button
+                label="Export"
+                secondary
+                onClick={this.exportCurrentCase.bind(this)}
               />
               <DropButton
                 label="Add Goal"
