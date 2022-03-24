@@ -4,6 +4,12 @@ import React from "react";
 import "@testing-library/jest-dom";
 import CaseContainer from "../CaseContainer.js";
 
+const mockedUsedNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockedUsedNavigate,
+}));
+
 global.fetch = jest.fn(() =>
   Promise.resolve({
     json: () =>
@@ -20,6 +26,6 @@ test("renders loading screen", () => {
 test("renders case view", async () => {
   render(<CaseContainer id="1" />);
   await waitFor(() =>
-    expect(screen.getByText("Test case")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Test case")).toBeInTheDocument()
   );
 });
