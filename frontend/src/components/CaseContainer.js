@@ -1,12 +1,13 @@
 import React, { Component } from "react";
 import { useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Heading, Layer, Button } from "grommet";
+import { Grid, Box, DropButton, Layer, Button } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 
 import MermaidChart from "./Mermaid";
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
@@ -257,6 +258,21 @@ class CaseContainer extends Component {
     );
   }
 
+  submitCaseChange(field, value) {
+    // Send to the backend a PUT request, changing the `field` of the current case to be
+    // `value`.
+    const id = this.state.assurance_case.id;
+    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const changeObj = {};
+    changeObj[field] = value;
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changeObj),
+    };
+    fetch(backendURL, requestOptions);
+  }
+
   createLayer() {
     return (
       <Box>
@@ -324,13 +340,33 @@ class CaseContainer extends Component {
 
             <Box
               gridArea="header"
+              direction="column"
               pad={{
                 horizontal: "small",
                 top: "small",
                 bottom: "none",
               }}
             >
-              <Heading level={2}>{this.state.assurance_case.name}</Heading>
+              <EditableText
+                initialValue={this.state.assurance_case.name}
+                textsize="xlarge"
+                style={{
+                  height: 0,
+                  "margin-top": "0.4em",
+                }}
+                onSubmit={(value) => this.submitCaseChange("name", value)}
+              />
+              <EditableText
+                initialValue={this.state.assurance_case.description}
+                size="small"
+                style={{
+                  height: 0,
+                  "margin-top": "0.4em",
+                }}
+                onSubmit={(value) =>
+                  this.submitCaseChange("description", value)
+                }
+              />
             </Box>
 
             <Box
