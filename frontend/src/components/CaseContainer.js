@@ -1,12 +1,13 @@
 import React, { Component } from "react";
-import { useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Heading, Layer, Button } from "grommet";
+import { useNavigate, useParams } from "react-router-dom";
+import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 
 import MermaidChart from "./Mermaid";
 import configData from "../config.json";
 
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
@@ -20,6 +21,7 @@ class CaseContainer extends Component {
       showViewLayer: false,
       showEditLayer: false,
       showCreateLayer: false,
+      showConfirmDeleteLayer: false,
       loading: true,
       assurance_case: {
         id: 0,
@@ -45,6 +47,15 @@ class CaseContainer extends Component {
     });
     this.setState({ loading: false });
   };
+
+  deleteCurrentCase() {
+    const id = this.state.assurance_case.id;
+    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const requestOptions = {
+      method: "DELETE",
+    };
+    return fetch(backendURL, requestOptions);
+  }
 
   componentDidMount() {
     const id = this.props.params.caseSlug;
@@ -171,6 +182,11 @@ class CaseContainer extends Component {
     this.setState({ showCreateLayer: true });
   }
 
+  showConfirmDeleteLayer(event) {
+    event.preventDefault();
+    this.setState({ showConfirmDeleteLayer: true });
+  }
+
   hideViewLayer() {
     this.setState({ showViewLayer: false });
   }
@@ -184,6 +200,12 @@ class CaseContainer extends Component {
       showCreateLayer: false,
       createItemType: null,
       createItemParentId: null,
+    });
+  }
+
+  hideConfirmDeleteLayer() {
+    this.setState({
+      showConfirmDeleteLayer: false,
     });
   }
 
@@ -257,6 +279,21 @@ class CaseContainer extends Component {
     );
   }
 
+  submitCaseChange(field, value) {
+    // Send to the backend a PUT request, changing the `field` of the current case to be
+    // `value`.
+    const id = this.state.assurance_case.id;
+    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const changeObj = {};
+    changeObj[field] = value;
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changeObj),
+    };
+    fetch(backendURL, requestOptions);
+  }
+
   createLayer() {
     return (
       <Box>
@@ -283,6 +320,43 @@ class CaseContainer extends Component {
                 type={this.state.createItemType}
                 parentId={this.state.createItemParentId}
                 updateView={this.updateView.bind(this)}
+              />
+            </Box>
+          </Box>
+        </Layer>
+      </Box>
+    );
+  }
+  confirmDeleteLayer() {
+    return (
+      <Box>
+        <Layer
+          position="center"
+          onEsc={this.hideConfirmDeleteLayer.bind(this)}
+          onClickOutside={this.hideConfirmDeleteLayer.bind(this)}
+        >
+          <Box pad="medium" gap="small" fill>
+            <Text>Are you sure you want to permanently delete this case?</Text>
+            <Box direction="row" justify="end" fill={true}>
+              <Button
+                label="No"
+                margin="small"
+                onClick={this.hideConfirmDeleteLayer.bind(this)}
+              />
+              <Button
+                label="Yes"
+                margin="small"
+                onClick={() => {
+                  this.deleteCurrentCase().then((response) => {
+                    if (response.status === 204) {
+                      this.props.navigate("/");
+                    } else {
+                      // Something seems to have gone wrong.
+                      // TODO How should we handle this?
+                      this.hideConfirmDeleteLayer();
+                    }
+                  });
+                }}
               />
             </Box>
           </Box>
@@ -321,27 +395,53 @@ class CaseContainer extends Component {
               this.state.createItemType &&
               this.state.createItemParentId &&
               this.createLayer()}
+            {this.state.showConfirmDeleteLayer && this.confirmDeleteLayer()}
 
             <Box
               gridArea="header"
+              direction="column"
+              gap="small"
+              pad={{
+                horizontal: "small",
+                top: "medium",
+                bottom: "none",
+              }}
+            >
+              <EditableText
+                initialValue={this.state.assurance_case.name}
+                textsize="xlarge"
+                style={{
+                  height: 0,
+                }}
+                onSubmit={(value) => this.submitCaseChange("name", value)}
+              />
+              <EditableText
+                initialValue={this.state.assurance_case.description}
+                size="small"
+                style={{
+                  height: 0,
+                }}
+                onSubmit={(value) =>
+                  this.submitCaseChange("description", value)
+                }
+              />
+            </Box>
+
+            <Box
+              gridArea="topright"
+              direction="column"
+              gap="small"
               pad={{
                 horizontal: "small",
                 top: "small",
                 bottom: "none",
               }}
             >
-              <Heading level={2}>{this.state.assurance_case.name}</Heading>
-            </Box>
-
-            <Box
-              direction="column"
-              pad={{
-                horizontal: "small",
-                top: "small",
-                bottom: "small",
-              }}
-              gridArea="topright"
-            >
+              <Button
+                label="Delete Case"
+                secondary
+                onClick={this.showConfirmDeleteLayer.bind(this)}
+              />
               <DropButton
                 label="Add Goal"
                 dropAlign={{ top: "bottom", right: "right" }}
@@ -407,4 +507,6 @@ class CaseContainer extends Component {
   }
 }
 
-export default (props) => <CaseContainer {...props} params={useParams()} />;
+export default (props) => (
+  <CaseContainer {...props} params={useParams()} navigate={useNavigate()} />
+);
