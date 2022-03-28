@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^12.8.3",
     "babel-plugin-dynamic-import-node": "^2.3.3",
     "babel-plugin-transform-require-context": "^0.1.1",
+    "file-saver": "^2.0.5",
     "grommet": "^2.20.1",
     "grommet-icons": "^4.7.0",
     "jest-transform-stub": "^2.0.0",

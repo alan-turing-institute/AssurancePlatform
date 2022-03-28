@@ -1,5 +1,5 @@
 import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
 
@@ -9,6 +9,7 @@ function CaseCreator() {
   const [name, setName] = useState("Name");
   const [template, setTemplate] = useState("Template");
   const [description, setDescription] = useState("Description");
+  const fileInputRef = useRef(null);
 
   let baseURL = `${configData.BASE_URL}`;
 
@@ -22,17 +23,11 @@ function CaseCreator() {
     }
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    // Make a copy of the template.
-    const case_json = JSON.parse(JSON.stringify(template));
-    case_json["name"] = name;
-    case_json["short_description"] = description;
-
+  function postCaseJSON(json_str) {
     const requestOptions = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(case_json),
+      body: json_str,
     };
 
     fetch(baseURL + "/cases/", requestOptions)
@@ -40,6 +35,25 @@ function CaseCreator() {
       .then((json) => {
         navigate("/case/" + json.id);
       });
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    // Make a copy of the template.
+    const case_json = JSON.parse(JSON.stringify(template));
+    case_json["name"] = name;
+    case_json["short_description"] = description;
+    postCaseJSON(JSON.stringify(case_json));
+  }
+
+  function importCase(event) {
+    const file = fileInputRef.current.files[0];
+    const reader = new FileReader();
+    reader.readAsText(file);
+    reader.onloadend = () => {
+      const case_json = reader.result;
+      postCaseJSON(case_json);
+    };
   }
 
   return (
@@ -64,6 +78,22 @@ function CaseCreator() {
           <Button type="submit" primary label="Submit" margin="xsmall" />
         </Box>
       </Form>
+      <Box direction="column" margin={{ top: "medium" }} width="medium">
+        <Heading level={4}>Import an assurance case from file</Heading>
+        <Button
+          label="Import"
+          margin="xsmall"
+          onClick={(event) => fileInputRef.current.click()}
+        />
+        <input
+          // An invisible file selector input, that will be triggered by the import button.
+          type="file"
+          id="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={importCase}
+        />
+      </Box>
     </Box>
   );
 }
