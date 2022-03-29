@@ -28,6 +28,17 @@
   color: #61dafb;
 }
 
+.App-footer {
+  position: absolute;
+  width: 100%;
+  bottom: 0px;
+  color: #ffffff;
+  background-color: #888888;
+  padding-left: 20px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  height: 80px;
+}
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

@@ -534,10 +534,6 @@ class CaseContainer extends Component {
                 )}
               </TransformWrapper>
             </Box>
-
-            <Box gridArea="footer" background="light-5" pad="small">
-              &copy; credits
-            </Box>
           </Grid>
         </Box>
       );

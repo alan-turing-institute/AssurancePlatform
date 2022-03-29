@@ -1,4 +1,5 @@
 import React from "react";
+import "./App.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navigation from "./Navigation.js";
 import Home from "./Home.js";
@@ -16,6 +17,9 @@ const AllRoutes = () => (
         <Route path=":caseSlug" element={<CaseContainer />} />
       </Route>
     </Routes>
+    <div class="App-footer">
+      <p>&copy; The Alan Turing Institute</p>
+    </div>
   </Router>
 );
 
