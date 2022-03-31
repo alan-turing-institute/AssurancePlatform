@@ -404,16 +404,16 @@ class CaseContainer extends Component {
       return <Box>loading</Box>;
     } else {
       return (
-        <Box>
+        <Box fill>
           <Grid
-            rows={["auto", "flex", "xxsmall"]}
+            fill
+            rows={["auto", "flex"]}
             columns={["flex", "20%"]}
             gap="none"
             areas={[
               { name: "header", start: [0, 0], end: [1, 0] },
               { name: "main", start: [0, 1], end: [1, 1] },
               { name: "topright", start: [1, 0], end: [1, 0] },
-              { name: "footer", start: [0, 2], end: [1, 2] },
             ]}
           >
             {this.state.showViewLayer &&
@@ -495,6 +495,8 @@ class CaseContainer extends Component {
 
             <Box
               gridArea="main"
+              justify="end"
+              fill
               background={{
                 color: "white",
                 size: "20px 20px",
@@ -504,16 +506,28 @@ class CaseContainer extends Component {
                 repeat: "repeat-xy",
               }}
             >
-              <TransformWrapper initialScale={1} centerOnInit={true}>
+              <TransformWrapper
+                style={{ width: "100%", height: "100%" }}
+                initialScale={1}
+                centerOnInit={true}
+              >
                 {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
                   <React.Fragment>
-                    <TransformComponent wrapperStyle={{ width: "100%" }}>
+                    <TransformComponent
+                      contentStyle={{ width: "100%", height: "100%" }}
+                      wrapperStyle={{ width: "100%", height: "100%" }}
+                    >
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
                         viewLayerFunc={(e) => this.showViewLayer(e)}
                       />
                     </TransformComponent>
-                    <Box className="tools" gap="xxsmall" direction="row">
+                    <Box
+                      className="tools"
+                      gap="xxsmall"
+                      direction="row"
+                      justify="end"
+                    >
                       <Button
                         secondary
                         onClick={() => zoomIn()}
