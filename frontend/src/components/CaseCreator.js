@@ -42,7 +42,7 @@ function CaseCreator() {
     // Make a copy of the template.
     const case_json = JSON.parse(JSON.stringify(template));
     case_json["name"] = name;
-    case_json["short_description"] = description;
+    case_json["description"] = description;
     postCaseJSON(JSON.stringify(case_json));
   }
 
