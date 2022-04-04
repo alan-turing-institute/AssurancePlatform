@@ -6,7 +6,6 @@ import { useParams } from "react-router-dom";
 import configData from "../config.json";
 
 function ItemViewer(props) {
-  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
 
   useEffect(() => {
@@ -17,10 +16,8 @@ function ItemViewer(props) {
     async function getCurrent() {
       const response = await fetch(url);
       const body = await response.json();
-      console.log("in getCurrent got body", body);
-      if (!unmounted) {
+      if (!unmounted && items.id !== body.id) {
         setItems(body);
-        setLoading(false);
       }
     }
     getCurrent();
