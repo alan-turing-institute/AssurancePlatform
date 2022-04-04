@@ -61,4 +61,3 @@ Follow exactly the same process as for the backend webapp, but setting WEBSITES_
 At this stage, the only thing standing in our way is CORS (Cross-Origin Resource Sharing) - the backend won't respond to requests from unrecognised sources.
 To fix this, edit the file `eap_backend/eap_backend/settings.py` and in the "CORS_ORIGIN_WHITELIST", add `https://FRONTEND_WEBAPP_NAME.azurewebsites.net` to the list.
 Now, rebuild the backend docker image following the instructions above, push to dockerhub, and restart the backend webapp.
-
