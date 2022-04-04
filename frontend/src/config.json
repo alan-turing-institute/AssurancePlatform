@@ -35,8 +35,7 @@
       "api_name": "propertyclaims",
       "db_name": "property_claims",
       "parent_name": "TopLevelNormativeGoal",
-      "parent_api_name": "goals",
-      "parent_db_name": "goal_id",
+      "parent_db_name": "parent_id",
       "shape": "rounded",
       "children": ["Argument"],
       "parent_relation": "one-to-many"

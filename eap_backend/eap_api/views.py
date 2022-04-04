@@ -56,7 +56,7 @@ TYPE_DICT = {
         "model": PropertyClaim,
         "children": ["arguments"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("goal", False),
+        "parent_type": ("parent", False),
     },
     "arguments": {
         "serializer": ArgumentSerializer,
