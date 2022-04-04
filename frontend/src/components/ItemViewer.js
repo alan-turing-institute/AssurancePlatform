@@ -16,7 +16,7 @@ function ItemViewer(props) {
     async function getCurrent() {
       const response = await fetch(url);
       const body = await response.json();
-      if (!unmounted && (items.id !== body.id)) {
+      if (!unmounted && items.id !== body.id) {
         setItems(body);
       }
     }
