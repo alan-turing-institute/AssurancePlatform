@@ -98,6 +98,7 @@ class CaseContainer extends Component {
   componentDidMount() {
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
+    this.fetchData(id);
     this.timer = setInterval(() => this.fetchData(id), 2000);
   }
 
