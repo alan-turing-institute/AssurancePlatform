@@ -77,8 +77,19 @@ class SystemDescription(CaseItem):
 
 class PropertyClaim(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
-    parent = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="property_claims", on_delete=models.CASCADE
+    goal = models.ForeignKey(
+        TopLevelNormativeGoal,
+        null=True,
+        blank=True,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
+    )
+    property_claim = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
     )
     level = models.PositiveIntegerField()
 
@@ -90,6 +101,13 @@ class PropertyClaim(CaseItem):
             # doesn't have a level.
             parent_level = 0
         self.level = parent_level + 1
+        # TODO Is this the right place to assert these things?
+        has_goal_parent = bool(self.goal)
+        has_claim_parent = bool(self.property_claim)
+        if has_claim_parent and has_goal_parent:
+            raise ValueError("A PropertyClaim shouldn't have two parents.")
+        if not (has_claim_parent or has_goal_parent):
+            raise ValueError("A PropertyClaim should have a parent.")
         super().save(*args, **kwargs)
 
 

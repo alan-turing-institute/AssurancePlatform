@@ -144,7 +144,9 @@ function ItemEditor(props) {
           <Button
             pad="small"
             key={childType}
-            onClick={(e) => props.createItemLayer(childType, props.id, e)}
+            onClick={(e) =>
+              props.createItemLayer(childType, props.id, props.type, e)
+            }
             label={"Create new " + childType}
           />
         ))}

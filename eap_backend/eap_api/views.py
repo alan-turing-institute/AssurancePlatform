@@ -35,49 +35,49 @@ TYPE_DICT = {
         "model": TopLevelNormativeGoal,
         "children": ["context", "system_description", "property_claims"],
         "fields": ("name", "short_description", "long_description", "keywords"),
-        "parent_type": ("assurance_case", False),
+        "parent_types": [("assurance_case", False)],
     },
     "context": {
         "serializer": ContextSerializer,
         "model": Context,
         "children": [],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("goal", False),
+        "parent_types": [("goal", False)],
     },
     "system_description": {
         "serializer": SystemDescriptionSerializer,
         "model": SystemDescription,
         "children": [],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("goal", False),
+        "parent_types": [("goal", False)],
     },
     "property_claims": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["arguments"],
+        "children": ["arguments", "property_claims"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("parent", False),
+        "parent_types": [("goal", False), ("property_claim", False)],
     },
     "arguments": {
         "serializer": ArgumentSerializer,
         "model": Argument,
         "children": ["evidential_claims"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("property_claim", True),
+        "parent_types": [("property_claim", True)],
     },
     "evidential_claims": {
         "serializer": EvidentialClaimSerializer,
         "model": EvidentialClaim,
         "children": ["evidence"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_type": ("argument", False),
+        "parent_types": [("argument", False)],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
         "model": Evidence,
         "children": [],
         "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_type": ("evidential_claim", True),
+        "parent_types": [("evidential_claim", True)],
     },
 }
 
@@ -145,7 +145,7 @@ def get_json_tree(id_list, obj_type):
     return objs
 
 
-def save_json_tree(data, obj_type, parent_id=None):
+def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     """Recursively write items in an assurance case tree.
 
     Create a new assurance case like the one described by data, including all
@@ -167,11 +167,15 @@ def save_json_tree(data, obj_type, parent_id=None):
     # so that e.g. the new object gets a unique ID even if `data` specifies an
     # ID.
     this_data = {k: data[k] for k in TYPE_DICT[obj_type]["fields"]}
-    if parent_id is not None:
-        parent_type, plural = TYPE_DICT[obj_type]["parent_type"]
-        if plural:
-            parent_id = [parent_id]
-        this_data[parent_type + "_id"] = parent_id
+    if parent_id is not None and parent_type is not None:
+        for parent_type_tmp, plural in TYPE_DICT[obj_type]["parent_types"]:
+            # TODO This is silly. It's all because some parent_type names are written
+            # with a plural s in the end while others are not.
+            if parent_type not in parent_type_tmp:
+                continue
+            if plural:
+                parent_id = [parent_id]
+            this_data[parent_type_tmp + "_id"] = parent_id
     serializer_class = TYPE_DICT[obj_type]["serializer"]
     serializer = serializer_class(data=this_data)
     if serializer.is_valid():
@@ -188,7 +192,9 @@ def save_json_tree(data, obj_type, parent_id=None):
         if child_type not in data:
             continue
         for child_data in data[child_type]:
-            retval = save_json_tree(child_data, child_type, parent_id=id)
+            retval = save_json_tree(
+                child_data, child_type, parent_id=id, parent_type=obj_type
+            )
             # If one of the subcalls returns an error, return.
             if retval.status_code != success_http_code:
                 return retval

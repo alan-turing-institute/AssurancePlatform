@@ -34,10 +34,8 @@
     "PropertyClaim": {
       "api_name": "propertyclaims",
       "db_name": "property_claims",
-      "parent_name": "TopLevelNormativeGoal",
-      "parent_db_name": "parent_id",
       "shape": "rounded",
-      "children": ["Argument"],
+      "children": ["Argument", "PropertyClaim"],
       "parent_relation": "one-to-many"
     },
     "Argument": {

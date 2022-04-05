@@ -70,10 +70,21 @@ class SystemDescriptionSerializer(serializers.ModelSerializer):
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
-    parent_id = serializers.PrimaryKeyRelatedField(
-        source="parent", queryset=TopLevelNormativeGoal.objects.all(), write_only=True
+    goal_id = serializers.PrimaryKeyRelatedField(
+        source="goal",
+        queryset=TopLevelNormativeGoal.objects.all(),
+        write_only=True,
+        required=False,
     )
+    property_claim_id = serializers.PrimaryKeyRelatedField(
+        source="property_claim",
+        queryset=PropertyClaim.objects.all(),
+        write_only=True,
+        required=False,
+    )
+    level = serializers.IntegerField(read_only=True)
     arguments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = PropertyClaim
@@ -82,8 +93,11 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "name",
             "short_description",
             "long_description",
-            "parent_id",
+            "goal_id",
+            "property_claim_id",
+            "level",
             "arguments",
+            "property_claims",
         )
 
 
