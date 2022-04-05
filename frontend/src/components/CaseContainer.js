@@ -3,16 +3,15 @@ import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 import MermaidChart from "./Mermaid";
-import configData from "../config.json";
-
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
-
+import { jsonToMermaid } from "./utils.js";
+import configData from "../config.json";
 import "./CaseContainer.css";
 
 class CaseContainer extends Component {
@@ -48,7 +47,7 @@ class CaseContainer extends Component {
         assurance_case: json_response,
       });
       this.setState({
-        mermaid_md: this.jsonToMermaid(this.state.assurance_case),
+        mermaid_md: jsonToMermaid(this.state.assurance_case),
       });
       this.setState({ loading: false });
     }
@@ -115,71 +114,6 @@ class CaseContainer extends Component {
     }
   }
 
-  jsonToMermaid(in_json) {
-    // function to convert the JSON response from a GET request to the /cases/id
-    // API endpoint, into the markdown string required for Mermaid to render a flowchart.
-
-    // Nodes in the flowchart will be named [TypeName]_[ID]
-    function getNodeName(itemType, itemId) {
-      return itemType + "_" + itemId;
-    }
-
-    function makeBox(text, shape) {
-      if (shape === "square") return "[" + text + "]";
-      else if (shape === "diamond") return "{" + text + "}";
-      else if (shape === "rounded") return "(" + text + ")";
-      else if (shape === "circle") return "((" + text + "))";
-      else if (shape === "data") return "[(" + text + ")]";
-      else return "";
-    }
-
-    let arrow = " --- ";
-    /// Recursive function to go down the tree adding components
-    function addTree(itemType, parent, parentNode, outputmd) {
-      // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
-      let thisType = configData.navigation[itemType]["db_name"];
-      let boxShape = configData.navigation[itemType]["shape"];
-      // loop over all objects of this type
-      for (let i = 0; i < parent[thisType].length; i++) {
-        let thisObj = parent[thisType][i];
-        let thisNode = getNodeName(itemType, thisObj.id);
-        if (parentNode != null) {
-          outputmd +=
-            parentNode +
-            arrow +
-            thisNode +
-            makeBox(thisObj.name, boxShape) +
-            "\n";
-        } else {
-          outputmd += thisNode + makeBox(thisObj.name, boxShape) + "\n";
-        }
-        // add a click link to the node
-        outputmd +=
-          "\n click " +
-          thisNode +
-          ' callback "' +
-          thisObj.short_description +
-          '"\n';
-        for (
-          let j = 0;
-          j < configData.navigation[itemType]["children"].length;
-          j++
-        ) {
-          let childType = configData.navigation[itemType]["children"][j];
-          outputmd = addTree(childType, thisObj, thisNode, outputmd);
-        }
-      }
-      // console.log(outputmd)
-      return outputmd;
-    }
-
-    let outputmd = "graph TB; \n";
-    // call the recursive addTree function, starting with the Goal as the top node
-    outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd);
-
-    return outputmd;
-  }
-
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
@@ -209,7 +143,6 @@ class CaseContainer extends Component {
   }
 
   showEditLayer(itemType, itemId, event) {
-    console.log("in showEditLayer", this, itemId);
     event.preventDefault();
     // this should be redundant, as the itemId and itemType should already
     // be set when showViewLayer is called, but they can't do any harm..
@@ -219,7 +152,6 @@ class CaseContainer extends Component {
   }
 
   showCreateLayer(itemType, parentId, event) {
-    console.log("in showCreateLayer", this, parentId);
     event.preventDefault();
     this.setState({ createItemType: itemType, createItemParentId: parentId });
     this.setState({ showCreateLayer: true });
