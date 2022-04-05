@@ -39,14 +39,19 @@ class CaseContainer extends Component {
   fetchData = async (id) => {
     const res = await fetch(this.url + id);
     const json_response = await res.json();
-
-    this.setState({
-      assurance_case: json_response,
-    });
-    this.setState({
-      mermaid_md: this.jsonToMermaid(this.state.assurance_case),
-    });
-    this.setState({ loading: false });
+    if (
+      JSON.stringify(this.state.assurance_case) !==
+      JSON.stringify(json_response)
+    ) {
+      this.setState({ loading: true });
+      this.setState({
+        assurance_case: json_response,
+      });
+      this.setState({
+        mermaid_md: this.jsonToMermaid(this.state.assurance_case),
+      });
+      this.setState({ loading: false });
+    }
   };
 
   deleteCurrentCase() {
@@ -94,6 +99,12 @@ class CaseContainer extends Component {
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
     this.fetchData(id);
+    this.timer = setInterval(() => this.fetchData(id), 2000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    this.timer = null;
   }
 
   componentDidUpdate(prevProps) {
@@ -172,12 +183,11 @@ class CaseContainer extends Component {
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
-    this.setState({ loading: true });
+
     this.hideViewLayer();
     this.hideEditLayer();
     this.hideCreateLayer();
     this.fetchData(this.state.id);
-    console.log("in updateView");
   }
 
   showViewLayer(e) {
