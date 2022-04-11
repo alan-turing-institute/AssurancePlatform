@@ -8,7 +8,6 @@ const TYPE_NAME_TO_DB_TYPE_NAME = {
   AssuranceCase: "assurance_case_id",
   TopLevelNormativeGoal: "goal_id",
   PropertyClaim: "property_claim_id",
-  Argument: "argument_id",
   EvidentialClaim: "evidential_claim_id",
 };
 

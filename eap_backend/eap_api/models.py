@@ -111,15 +111,10 @@ class PropertyClaim(CaseItem):
         super().save(*args, **kwargs)
 
 
-class Argument(CaseItem):
-    shape = Shape.ROUNDED_RECTANGLE
-    property_claim = models.ManyToManyField(PropertyClaim, related_name="arguments")
-
-
 class EvidentialClaim(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
-    argument = models.ForeignKey(
-        Argument, related_name="evidential_claims", on_delete=models.CASCADE
+    property_claim = models.ManyToManyField(
+        PropertyClaim, related_name="evidential_claims"
     )
 
 

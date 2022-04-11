@@ -35,28 +35,18 @@
       "api_name": "propertyclaims",
       "db_name": "property_claims",
       "shape": "rounded",
-      "children": ["Argument", "PropertyClaim"],
+      "children": ["EvidentialClaim", "PropertyClaim"],
       "parent_relation": "one-to-many"
-    },
-    "Argument": {
-      "api_name": "arguments",
-      "db_name": "arguments",
-      "parent_name": "PropertyClaim",
-      "parent_api_name": "propertyclaims",
-      "parent_db_name": "property_claim_id",
-      "shape": "rounded",
-      "children": ["EvidentialClaim"],
-      "parent_relation": "many-to-many"
     },
     "EvidentialClaim": {
       "api_name": "evidentialclaims",
       "db_name": "evidential_claims",
-      "parent_name": "Argument",
-      "parent_api_name": "arguments",
-      "parent_db_name": "argument_id",
+      "parent_name": "PropertyClaim",
+      "parent_api_name": "property_claims",
+      "parent_db_name": "property_claim_id",
       "shape": "rounded",
       "children": ["Evidence"],
-      "parent_relation": "one-to-many"
+      "parent_relation": "many-to-many"
     },
     "Evidence": {
       "api_name": "evidence",

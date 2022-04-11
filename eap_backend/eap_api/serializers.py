@@ -5,7 +5,6 @@ from .models import (
     Context,
     SystemDescription,
     PropertyClaim,
-    Argument,
     EvidentialClaim,
     Evidence,
 )
@@ -83,7 +82,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         required=False,
     )
     level = serializers.IntegerField(read_only=True)
-    arguments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
@@ -96,35 +95,17 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "goal_id",
             "property_claim_id",
             "level",
-            "arguments",
+            "evidential_claims",
             "property_claims",
         )
 
 
-class ArgumentSerializer(serializers.ModelSerializer):
+class EvidentialClaimSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
         write_only=True,
         many=True,
-    )
-    evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-
-    class Meta:
-        model = Argument
-        fields = (
-            "id",
-            "name",
-            "short_description",
-            "long_description",
-            "property_claim_id",
-            "evidential_claims",
-        )
-
-
-class EvidentialClaimSerializer(serializers.ModelSerializer):
-    argument_id = serializers.PrimaryKeyRelatedField(
-        source="argument", queryset=Argument.objects.all(), write_only=True, many=False
     )
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
@@ -135,7 +116,7 @@ class EvidentialClaimSerializer(serializers.ModelSerializer):
             "name",
             "short_description",
             "long_description",
-            "argument_id",
+            "property_claim_id",
             "evidence",
         )
 

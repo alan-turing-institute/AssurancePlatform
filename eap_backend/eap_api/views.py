@@ -8,7 +8,6 @@ from .models import (
     Context,
     SystemDescription,
     PropertyClaim,
-    Argument,
     EvidentialClaim,
     Evidence,
 )
@@ -18,7 +17,6 @@ from .serializers import (
     ContextSerializer,
     SystemDescriptionSerializer,
     PropertyClaimSerializer,
-    ArgumentSerializer,
     EvidentialClaimSerializer,
     EvidenceSerializer,
 )
@@ -54,23 +52,16 @@ TYPE_DICT = {
     "property_claims": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["arguments", "property_claims"],
+        "children": ["evidential_claims", "property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
-    },
-    "arguments": {
-        "serializer": ArgumentSerializer,
-        "model": Argument,
-        "children": ["evidential_claims"],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("property_claim", True)],
     },
     "evidential_claims": {
         "serializer": EvidentialClaimSerializer,
         "model": EvidentialClaim,
         "children": ["evidence"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("argument", False)],
+        "parent_types": [("property_claim", True)],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
@@ -171,7 +162,10 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
         for parent_type_tmp, plural in TYPE_DICT[obj_type]["parent_types"]:
             # TODO This is silly. It's all because some parent_type names are written
             # with a plural s in the end while others are not.
-            if parent_type not in parent_type_tmp:
+            if (
+                parent_type not in parent_type_tmp
+                and parent_type_tmp not in parent_type
+            ):
                 continue
             if plural:
                 parent_id = [parent_id]
@@ -448,56 +442,6 @@ def property_claim_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
-        return HttpResponse(status=204)
-
-
-@csrf_exempt
-def argument_list(request):
-    """
-    List all arguments, or make a new argument
-    """
-    if request.method == "GET":
-        arguments = Argument.objects.all()
-        serializer = ArgumentSerializer(arguments, many=True)
-        summaries = make_summary(serializer.data)
-        return JsonResponse(summaries, safe=False)
-    elif request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = ArgumentSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            return JsonResponse(summary, status=201)
-        return JsonResponse(serializer.errors, status=400)
-
-
-@csrf_exempt
-def argument_detail(request, pk):
-    """
-    Retrieve, update, or delete a Argument, by primary key
-    """
-    try:
-        argument = Argument.objects.get(pk=pk)
-        shape = argument.shape.name
-    except Argument.DoesNotExist:
-        return HttpResponse(status=404)
-
-    if request.method == "GET":
-        serializer = ArgumentSerializer(argument)
-        data = serializer.data
-        data["shape"] = shape
-        return JsonResponse(data)
-    elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = ArgumentSerializer(argument, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
-            data["shape"] = shape
-            return JsonResponse(data)
-        return JsonResponse(serializer.errors, status=400)
-    elif request.method == "DELETE":
-        argument.delete()
         return HttpResponse(status=204)
 
 
