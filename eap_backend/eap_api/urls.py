@@ -29,5 +29,10 @@ urlpatterns = [
     ),
     path("evidence/", views.evidence_list, name="evidence_list"),
     path("evidence/<int:pk>/", views.evidence_detail, name="evidence_detail"),
+    path(
+        "parents/<str:item_type>/<int:pk>",
+        views.parents,
+        name="parents",
+    ),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]

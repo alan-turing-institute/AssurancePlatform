@@ -124,7 +124,8 @@ class CaseContainer extends Component {
 
     let arrow = " --- ";
     /// Recursive function to go down the tree adding components
-    function addTree(itemType, parent, parentNode, outputmd) {
+    function addTree(itemType, parent, parentNode, outputmd, visited) {
+      visited.push(JSON.stringify(parent));
       // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
       let thisType = configData.navigation[itemType]["db_name"];
       let boxShape = configData.navigation[itemType]["shape"];
@@ -149,22 +150,23 @@ class CaseContainer extends Component {
           ' callback "' +
           thisObj.short_description +
           '"\n';
-        for (
-          let j = 0;
-          j < configData.navigation[itemType]["children"].length;
-          j++
-        ) {
-          let childType = configData.navigation[itemType]["children"][j];
-          outputmd = addTree(childType, thisObj, thisNode, outputmd);
+        if (!visited.includes(JSON.stringify(thisObj))) {
+          for (
+            let j = 0;
+            j < configData.navigation[itemType]["children"].length;
+            j++
+          ) {
+            let childType = configData.navigation[itemType]["children"][j];
+            outputmd = addTree(childType, thisObj, thisNode, outputmd, visited);
+          }
         }
       }
-      // console.log(outputmd)
       return outputmd;
     }
 
     let outputmd = "graph TB; \n";
     // call the recursive addTree function, starting with the Goal as the top node
-    outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd);
+    outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
 
     return outputmd;
   }
@@ -307,6 +309,7 @@ class CaseContainer extends Component {
               <ItemEditor
                 type={this.state.itemType}
                 id={this.state.itemId}
+                caseId={this.state.assurance_case.id}
                 createItemLayer={this.showCreateLayer.bind(this)}
                 updateView={this.updateView.bind(this)}
               />
@@ -336,7 +339,7 @@ class CaseContainer extends Component {
     return (
       <Box>
         <Layer
-          full="false"
+          full={false}
           position="bottom-right" //"bottom-left"
           onEsc={() => this.hideCreateLayer()}
           onClickOutside={() => this.hideCreateLayer()}

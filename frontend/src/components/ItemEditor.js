@@ -3,10 +3,13 @@
 import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import ParentSelector from "./ParentSelector.js";
 import configData from "../config.json";
 
 function ItemEditor(props) {
   const [loading, setLoading] = useState(true);
+  const [parentToAdd, setParentToAdd] = useState();
+  const [parentToRemove, setParentToRemove] = useState();
   const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
 
   useEffect(() => {
@@ -89,6 +92,63 @@ function ItemEditor(props) {
     console.log("response was ", response);
   }
 
+  async function submitAddParent(event) {
+    if (parentToAdd === undefined) {
+      return;
+    }
+    const parentType = parentToAdd["type"];
+    const parentId = parentToAdd["id"];
+    const url = `${configData.BASE_URL}/${
+      configData.navigation[props.type]["api_name"]
+    }/${props.id}/`;
+    const response = await fetch(url);
+    const current = await response.json();
+    const idName = configData.navigation[parentType]["id_name"];
+    const currentParents = current[idName];
+
+    if (!currentParents.includes(parentId)) {
+      currentParents.push(parentId);
+      const requestOptions = {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(current),
+      };
+      await fetch(url, requestOptions);
+      props.updateView();
+    }
+  }
+
+  async function submitRemoveParent(event) {
+    if (parentToRemove === undefined) {
+      return;
+    }
+    const parentType = parentToRemove["type"];
+    const parentId = parentToRemove["id"];
+    const url = `${configData.BASE_URL}/${
+      configData.navigation[props.type]["api_name"]
+    }/${props.id}/`;
+    const response = await fetch(url);
+    const current = await response.json();
+    const idName = configData.navigation[parentType]["id_name"];
+    let currentParents = current[idName];
+
+    if (currentParents.includes(parentId)) {
+      currentParents = currentParents.filter((id) => id !== parentId);
+      if (currentParents.length < 1) {
+        alert("Can not remove the last parent of an item.");
+        return;
+      }
+      current[idName] = currentParents;
+      const requestOptions = {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(current),
+      };
+      await fetch(url, requestOptions);
+      props.updateView();
+    }
+  }
+
   function setItem(key, value) {
     console.log("in setItem", key, value);
     items[key] = value;
@@ -151,6 +211,37 @@ function ItemEditor(props) {
           />
         ))}
       </Box>
+      {configData.navigation[props.type]["parent_relation"] ===
+        "many-to-many" && (
+        <Box direction="row" gap="small" pad={{ top: "small" }}>
+          <ParentSelector
+            type={props.type}
+            id={props.id}
+            caseId={props.caseId}
+            value={parentToAdd}
+            setValue={setParentToAdd}
+            potential={true}
+          />
+          <Button onClick={(e) => submitAddParent(e)} label="Add parent" />
+        </Box>
+      )}
+      {configData.navigation[props.type]["parent_relation"] ===
+        "many-to-many" && (
+        <Box direction="row" gap="small" pad={{ top: "small" }}>
+          <ParentSelector
+            type={props.type}
+            id={props.id}
+            caseId={props.caseId}
+            value={parentToRemove}
+            setValue={setParentToRemove}
+            potential={false}
+          />
+          <Button
+            onClick={(e) => submitRemoveParent(e)}
+            label="Remove parent"
+          />
+        </Box>
+      )}
       <Box pad={{ top: "small" }}>
         <Button onClick={(e) => handleDelete(e)} label="Delete" />
       </Box>
