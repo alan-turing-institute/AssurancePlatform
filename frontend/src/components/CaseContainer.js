@@ -98,7 +98,7 @@ class CaseContainer extends Component {
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
     this.fetchData(id);
-    this.timer = setInterval(() => this.fetchData(id), 2000);
+    this.timer = setInterval(() => this.fetchData(id), 5000);
   }
 
   componentWillUnmount() {
