@@ -208,10 +208,14 @@ class CaseContainer extends Component {
     this.setState({ showEditLayer: true });
   }
 
-  showCreateLayer(itemType, parentId, event) {
+  showCreateLayer(itemType, parentId, parentType, event) {
     console.log("in showCreateLayer", this, parentId);
     event.preventDefault();
-    this.setState({ createItemType: itemType, createItemParentId: parentId });
+    this.setState({
+      createItemType: itemType,
+      createItemParentId: parentId,
+      createItemParentType: parentType,
+    });
     this.setState({ showCreateLayer: true });
   }
 
@@ -233,6 +237,7 @@ class CaseContainer extends Component {
       showCreateLayer: false,
       createItemType: null,
       createItemParentId: null,
+      createItemParentType: null,
     });
   }
 
@@ -352,6 +357,7 @@ class CaseContainer extends Component {
               <ItemCreator
                 type={this.state.createItemType}
                 parentId={this.state.createItemParentId}
+                parentType={this.state.createItemParentType}
                 updateView={this.updateView.bind(this)}
               />
             </Box>
@@ -427,6 +433,7 @@ class CaseContainer extends Component {
             {this.state.showCreateLayer &&
               this.state.createItemType &&
               this.state.createItemParentId &&
+              this.state.createItemParentType &&
               this.createLayer()}
             {this.state.showConfirmDeleteLayer && this.confirmDeleteLayer()}
 
@@ -487,6 +494,7 @@ class CaseContainer extends Component {
                   <ItemCreator
                     type="TopLevelNormativeGoal"
                     parentId={this.state.id}
+                    parentType="AssuranceCase"
                     updateView={this.updateView.bind(this)}
                   />
                 }

@@ -18,6 +18,23 @@ class Shape(Enum):
     CYLINDER = 3
 
 
+class CaseItem(models.Model):
+    """A class that all the assurance case items inherit from.
+
+    CaseItem is an abstract base class, meaning that it's not meant to have its own
+    table.
+    """
+
+    name = models.CharField(max_length=200)
+    short_description = models.CharField(max_length=1000)
+    long_description = models.CharField(max_length=3000)
+    shape = Shape
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
 class AssuranceCase(models.Model):
     name = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
@@ -31,10 +48,7 @@ class AssuranceCase(models.Model):
         return self.created_date >= timezone.now() - datetime.timedelta(days=1)
 
 
-class TopLevelNormativeGoal(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class TopLevelNormativeGoal(CaseItem):
     keywords = models.CharField(max_length=3000)
     assurance_case = models.ForeignKey(
         AssuranceCase, related_name="goals", on_delete=models.CASCADE
@@ -45,21 +59,14 @@ class TopLevelNormativeGoal(models.Model):
         return self.name
 
 
-class Context(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class Context(CaseItem):
     shape = Shape.DIAMOND
-    created_date = models.DateTimeField(auto_now_add=True)
     goal = models.ForeignKey(
         TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
     )
 
 
-class SystemDescription(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class SystemDescription(CaseItem):
     shape = Shape.DIAMOND
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
@@ -68,38 +75,55 @@ class SystemDescription(models.Model):
     )
 
 
-class PropertyClaim(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class PropertyClaim(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="property_claims", on_delete=models.CASCADE
+        TopLevelNormativeGoal,
+        null=True,
+        blank=True,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
     )
+    property_claim = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
+    )
+    level = models.PositiveIntegerField()
+
+    def save(self, *args, **kwargs):
+        try:
+            parent_level = self.parent.level
+        except AttributeError:
+            # If the parent is a TopLevelNormativeGoal rather than a PropertyClaim, it
+            # doesn't have a level.
+            parent_level = 0
+        self.level = parent_level + 1
+        # TODO Is this the right place to assert these things?
+        has_goal_parent = bool(self.goal)
+        has_claim_parent = bool(self.property_claim)
+        if has_claim_parent and has_goal_parent:
+            raise ValueError("A PropertyClaim shouldn't have two parents.")
+        if not (has_claim_parent or has_goal_parent):
+            raise ValueError("A PropertyClaim should have a parent.")
+        super().save(*args, **kwargs)
 
 
-class Argument(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class Argument(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     property_claim = models.ManyToManyField(PropertyClaim, related_name="arguments")
 
 
-class EvidentialClaim(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class EvidentialClaim(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     argument = models.ForeignKey(
         Argument, related_name="evidential_claims", on_delete=models.CASCADE
     )
 
 
-class Evidence(models.Model):
-    name = models.CharField(max_length=200)
-    short_description = models.CharField(max_length=1000)
-    long_description = models.CharField(max_length=3000)
+class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
     evidential_claim = models.ManyToManyField(EvidentialClaim, related_name="evidence")
