@@ -4,14 +4,6 @@ import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
 import React, { useState } from "react";
 import configData from "../config.json";
 
-const TYPE_NAME_TO_DB_TYPE_NAME = {
-  AssuranceCase: "assurance_case_id",
-  TopLevelNormativeGoal: "goal_id",
-  PropertyClaim: "property_claim_id",
-  Argument: "argument_id",
-  EvidentialClaim: "evidential_claim_id",
-};
-
 function ItemCreator(props) {
   const [parentId, setParentId] = useState(1);
   const [name, setName] = useState("Name");
@@ -52,13 +44,12 @@ function ItemCreator(props) {
     if (
       configData.navigation[props.type]["parent_relation"] === "many-to-many"
     ) {
-      request_body[TYPE_NAME_TO_DB_TYPE_NAME[props.parentType]] = [
+      request_body[configData.navigation[props.parentType]["id_name"]] = [
         parseInt(props.parentId),
       ];
     } else {
-      request_body[TYPE_NAME_TO_DB_TYPE_NAME[props.parentType]] = parseInt(
-        props.parentId
-      );
+      request_body[configData.navigation[props.parentType]["id_name"]] =
+        parseInt(props.parentId);
     }
     const requestOptions = {
       method: "POST",

@@ -1,3 +1,4 @@
+import warnings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
@@ -8,17 +9,16 @@ from .models import (
     Context,
     SystemDescription,
     PropertyClaim,
-    Argument,
     EvidentialClaim,
     Evidence,
 )
+from . import models
 from .serializers import (
     AssuranceCaseSerializer,
     TopLevelNormativeGoalSerializer,
     ContextSerializer,
     SystemDescriptionSerializer,
     PropertyClaimSerializer,
-    ArgumentSerializer,
     EvidentialClaimSerializer,
     EvidenceSerializer,
 )
@@ -30,7 +30,7 @@ TYPE_DICT = {
         "children": ["goals"],
         "fields": ("name", "description"),
     },
-    "goals": {
+    "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
         "children": ["context", "system_description", "property_claims"],
@@ -51,26 +51,19 @@ TYPE_DICT = {
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],
     },
-    "property_claims": {
+    "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["arguments", "property_claims"],
+        "children": ["evidential_claims", "property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
     },
-    "arguments": {
-        "serializer": ArgumentSerializer,
-        "model": Argument,
-        "children": ["evidential_claims"],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("property_claim", True)],
-    },
-    "evidential_claims": {
+    "evidential_claim": {
         "serializer": EvidentialClaimSerializer,
         "model": EvidentialClaim,
         "children": ["evidence"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("argument", False)],
+        "parent_types": [("property_claim", True)],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
@@ -80,6 +73,9 @@ TYPE_DICT = {
         "parent_types": [("evidential_claim", True)],
     },
 }
+# Pluralising the name of the type should be irrelevant.
+for k, v in tuple(TYPE_DICT.items()):
+    TYPE_DICT[k + "s"] = v
 
 
 class AssuranceView(generics.ListCreateAPIView):
@@ -95,6 +91,38 @@ class GoalsView(generics.ListCreateAPIView):
 class DetailAssuranceView(generics.RetrieveUpdateDestroyAPIView):
     queryset = AssuranceCase.objects.all()
     serializer_class = AssuranceCaseSerializer
+
+
+def get_case_id(item):
+    """Return the id of the case in which this item is. Works for all item types."""
+    # In some cases, when there's a ManyToManyField, instead of the parent item, we get
+    # an iterable that can potentially list all the parents. In that case, just pick the
+    # first.
+    if hasattr(item, "first"):
+        item = item.first()
+    if isinstance(item, models.AssuranceCase):
+        return item.id
+    for k, v in TYPE_DICT.items():
+        if isinstance(item, v["model"]):
+            for parent_type, _ in v["parent_types"]:
+                parent = getattr(item, parent_type)
+                if parent is not None:
+                    return get_case_id(parent)
+    # TODO This should probably be an error raise rather than a warning, but currently
+    # there are dead items in the database without parents which hit this branch.
+    msg = f"Can't figure out the case ID of {item}."
+    warnings.warn(msg)
+    return None
+
+
+def filter_by_case_id(items, request):
+    """Filter an iterable of case items, based on whether they are int he case specified
+    in the request query string.
+    """
+    if "case_id" in request.GET:
+        case_id = int(request.GET["case_id"])
+        items = [g for g in items if get_case_id(g) == case_id]
+    return items
 
 
 def make_summary(serialized_data):
@@ -171,7 +199,10 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
         for parent_type_tmp, plural in TYPE_DICT[obj_type]["parent_types"]:
             # TODO This is silly. It's all because some parent_type names are written
             # with a plural s in the end while others are not.
-            if parent_type not in parent_type_tmp:
+            if (
+                parent_type not in parent_type_tmp
+                and parent_type_tmp not in parent_type
+            ):
                 continue
             if plural:
                 parent_id = [parent_id]
@@ -253,6 +284,7 @@ def goal_list(request):
     """
     if request.method == "GET":
         goals = TopLevelNormativeGoal.objects.all()
+        goals = filter_by_case_id(goals, request)
         serializer = TopLevelNormativeGoalSerializer(goals, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -308,6 +340,7 @@ def context_list(request):
     """
     if request.method == "GET":
         contexts = Context.objects.all()
+        contexts = filter_by_case_id(contexts, request)
         serializer = ContextSerializer(contexts, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -358,6 +391,7 @@ def description_list(request):
     """
     if request.method == "GET":
         descriptions = SystemDescription.objects.all()
+        descriptions = filter_by_case_id(descriptions, request)
         serializer = SystemDescriptionSerializer(descriptions, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -408,6 +442,7 @@ def property_claim_list(request):
     """
     if request.method == "GET":
         claims = PropertyClaim.objects.all()
+        claims = filter_by_case_id(claims, request)
         serializer = PropertyClaimSerializer(claims, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -452,62 +487,13 @@ def property_claim_detail(request, pk):
 
 
 @csrf_exempt
-def argument_list(request):
-    """
-    List all arguments, or make a new argument
-    """
-    if request.method == "GET":
-        arguments = Argument.objects.all()
-        serializer = ArgumentSerializer(arguments, many=True)
-        summaries = make_summary(serializer.data)
-        return JsonResponse(summaries, safe=False)
-    elif request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = ArgumentSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            return JsonResponse(summary, status=201)
-        return JsonResponse(serializer.errors, status=400)
-
-
-@csrf_exempt
-def argument_detail(request, pk):
-    """
-    Retrieve, update, or delete a Argument, by primary key
-    """
-    try:
-        argument = Argument.objects.get(pk=pk)
-        shape = argument.shape.name
-    except Argument.DoesNotExist:
-        return HttpResponse(status=404)
-
-    if request.method == "GET":
-        serializer = ArgumentSerializer(argument)
-        data = serializer.data
-        data["shape"] = shape
-        return JsonResponse(data)
-    elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = ArgumentSerializer(argument, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
-            data["shape"] = shape
-            return JsonResponse(data)
-        return JsonResponse(serializer.errors, status=400)
-    elif request.method == "DELETE":
-        argument.delete()
-        return HttpResponse(status=204)
-
-
-@csrf_exempt
 def evidential_claim_list(request):
     """
     List all evidential_claims, or make a new evidential_claim
     """
     if request.method == "GET":
         evidential_claims = EvidentialClaim.objects.all()
+        evidential_claims = filter_by_case_id(evidential_claims, request)
         serializer = EvidentialClaimSerializer(evidential_claims, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -560,6 +546,7 @@ def evidence_list(request):
     """
     if request.method == "GET":
         evidences = Evidence.objects.all()
+        evidences = filter_by_case_id(evidences, request)
         serializer = EvidenceSerializer(evidences, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
@@ -601,3 +588,20 @@ def evidence_detail(request, pk):
     elif request.method == "DELETE":
         evidence.delete()
         return HttpResponse(status=204)
+
+
+@csrf_exempt
+def parents(request, item_type, pk):
+    """Return all the parents of an item."""
+    if request.method != "GET":
+        return HttpResponse(status=404)
+    item = TYPE_DICT[item_type]["model"].objects.get(pk=pk)
+    parent_types = TYPE_DICT[item_type]["parent_types"]
+    parents_data = []
+    for parent_type, many in parent_types:
+        serializer_class = TYPE_DICT[parent_type]["serializer"]
+        parent = getattr(item, parent_type)
+        if parent is None:
+            continue
+        parents_data += serializer_class(parent, many=many).data
+    return JsonResponse(parents_data, safe=False)
