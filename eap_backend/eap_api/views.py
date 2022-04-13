@@ -102,21 +102,17 @@ def get_case_id(item):
         item = item.first()
     if isinstance(item, models.AssuranceCase):
         return item.id
-    elif hasattr(item, "assurance_case") and item.assurance_case is not None:
-        return get_case_id(item.assurance_case)
-    elif hasattr(item, "goal") and item.goal is not None:
-        return get_case_id(item.goal)
-    elif hasattr(item, "property_claim") and item.property_claim is not None:
-        return get_case_id(item.property_claim)
-    elif hasattr(item, "evidential_claim") and item.evidential_claim is not None:
-        return get_case_id(item.evidential_claim)
-    else:
-        # TODO This should probably be an error raise rather than a warning, but
-        # currently there are dead items in the database without parents which hit this
-        # branch.
-        msg = f"Can't figure out the case ID of {item}."
-        warnings.warn(msg)
-        return None
+    for k, v in TYPE_DICT.items():
+        if isinstance(item, v["model"]):
+            for parent_type, _ in v["parent_types"]:
+                parent = getattr(item, parent_type)
+                if parent is not None:
+                    return get_case_id(parent)
+    # TODO This should probably be an error raise rather than a warning, but currently
+    # there are dead items in the database without parents which hit this branch.
+    msg = f"Can't figure out the case ID of {item}."
+    warnings.warn(msg)
+    return None
 
 
 def filter_by_case_id(items, request):
