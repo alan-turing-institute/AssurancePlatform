@@ -139,7 +139,7 @@ def get_json_tree(id_list, obj_type):
         obj_serializer = TYPE_DICT[obj_type]["serializer"](obj)
         obj_data = obj_serializer.data
         for child_type in TYPE_DICT[obj_type]["children"]:
-            child_list = obj_data[child_type]
+            child_list = sorted(obj_data[child_type])
             obj_data[child_type] = get_json_tree(child_list, child_type)
         objs.append(obj_data)
     return objs
