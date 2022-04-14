@@ -1,6 +1,6 @@
 {
   "BASE_URL": "http://localhost:8000/api",
-  "BOX_WIDTH": 25,
+  "BOX_NCHAR": 25,
   "navigation": {
     "TopLevelNormativeGoal": {
       "api_name": "goals",
