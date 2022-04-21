@@ -53,12 +53,14 @@ function ItemViewer(props) {
           <p>{items.URL}</p>
         </Box>
       )}
-      <Box>
-        <Button
-          onClick={(e) => props.editItemLayer(props.type, props.id, e)}
-          label="Edit"
-        />
-      </Box>
+      {props.editMode && (
+        <Box>
+          <Button
+            onClick={(e) => props.editItemLayer(props.type, props.id, e)}
+            label="Edit"
+          />
+        </Box>
+      )}
     </Box>
   );
 }

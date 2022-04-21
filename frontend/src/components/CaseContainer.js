@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { v4 as uuidv4 } from "uuid";
 
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";
@@ -99,11 +100,24 @@ class CaseContainer extends Component {
     this.setState({ id: id });
     this.fetchData(id);
     this.timer = setInterval(() => this.fetchData(id), 5000);
+    if (!window.sessionStorage.getItem("session_id")) {
+      let uuid = uuidv4();
+      console.log("generated uid ", uuid);
+      window.sessionStorage.setItem("session_id", uuid);
+    }
+    console.log(
+      "setting state.session_id to ",
+      window.sessionStorage.session_id
+    );
+    this.setState({ session_id: window.sessionStorage.session_id });
   }
 
   componentWillUnmount() {
     clearInterval(this.timer);
     this.timer = null;
+    if (this.state.assurance_case.lock_uuid == this.state.session_id) {
+      this.submitCaseChange("lock_uuid", null);
+    }
   }
 
   componentDidUpdate(prevProps) {
@@ -216,6 +230,7 @@ class CaseContainer extends Component {
                 id={this.state.itemId}
                 editItemLayer={this.showEditLayer.bind(this)}
                 updateView={this.updateView.bind(this)}
+                editMode={this.inEditMode()}
               />
             </Box>
           </Box>
@@ -347,6 +362,61 @@ class CaseContainer extends Component {
     );
   }
 
+  enableEditing() {
+    console.log("In enableEditing", this.state.assurance_case.lock_uuid);
+    if (!this.state.assurance_case.lock_uuid) {
+      console.log("setting lock_uuid to ", this.state.session_id);
+      this.submitCaseChange("lock_uuid", this.state.session_id);
+    } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
+      // override!
+      console.log("override enableEditing");
+    }
+    this.updateView();
+  }
+
+  disableEditing() {
+    console.log("In disableEditing", this.state.assurance_case.lock_uuid);
+    if (this.state.assurance_case.lock_uuid) {
+      this.submitCaseChange("lock_uuid", null);
+    }
+    this.updateView();
+  }
+
+  inEditMode() {
+    return this.state.assurance_case.lock_uuid === this.state.session_id;
+  }
+
+  getEditableControls() {
+    console.log(
+      "in getEditableControls ",
+      this.state.assurance_case.lock_uuid,
+      this.state.session_id
+    );
+    if (this.inEditMode()) {
+      return (
+        <Button
+          label="Disable edit mode"
+          secondary
+          onClick={this.disableEditing.bind(this)}
+        />
+      );
+    } else if (!this.state.assurance_case.lock_uuid) {
+      return (
+        <Button
+          label="Enable edit mode"
+          secondary
+          onClick={this.enableEditing.bind(this)}
+        />
+      );
+    } else {
+      return (
+        <Text color="#ff0000">
+          Someone else is currently editing this case.
+        </Text>
+      );
+    }
+  }
+
   render() {
     // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
@@ -408,6 +478,7 @@ class CaseContainer extends Component {
                   this.submitCaseChange("description", value)
                 }
               />
+              {this.getEditableControls()}
             </Box>
 
             <Box
@@ -420,28 +491,33 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
-              <Button
-                label="Delete Case"
-                secondary
-                onClick={this.showConfirmDeleteLayer.bind(this)}
-              />
+              {this.inEditMode() && (
+                <Button
+                  label="Delete Case"
+                  secondary
+                  onClick={this.showConfirmDeleteLayer.bind(this)}
+                />
+              )}
+
               <Button
                 label="Export"
                 secondary
                 onClick={this.exportCurrentCase.bind(this)}
               />
-              <DropButton
-                label="Add Goal"
-                dropAlign={{ top: "bottom", right: "right" }}
-                dropContent={
-                  <ItemCreator
-                    type="TopLevelNormativeGoal"
-                    parentId={this.state.id}
-                    parentType="AssuranceCase"
-                    updateView={this.updateView.bind(this)}
-                  />
-                }
-              />
+              {this.inEditMode() && (
+                <DropButton
+                  label="Add Goal"
+                  dropAlign={{ top: "bottom", right: "right" }}
+                  dropContent={
+                    <ItemCreator
+                      type="TopLevelNormativeGoal"
+                      parentId={this.state.id}
+                      parentType="AssuranceCase"
+                      updateView={this.updateView.bind(this)}
+                    />
+                  }
+                />
+              )}
             </Box>
 
             <Box

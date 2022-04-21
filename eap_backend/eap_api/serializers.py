@@ -22,7 +22,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "created_date",
-            "editable",
+            "lock_uuid",
             "goals",
         )
 
