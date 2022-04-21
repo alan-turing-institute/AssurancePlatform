@@ -16,7 +16,15 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AssuranceCase
-        fields = ("id", "type", "name", "description", "created_date", "goals")
+        fields = (
+            "id",
+            "type",
+            "name",
+            "description",
+            "created_date",
+            "editable",
+            "goals",
+        )
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):

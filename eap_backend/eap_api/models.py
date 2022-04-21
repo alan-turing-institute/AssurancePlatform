@@ -39,6 +39,7 @@ class AssuranceCase(models.Model):
     name = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
     created_date = models.DateTimeField(auto_now_add=True)
+    editable = models.BooleanField(default=True)
     shape = None
 
     def __str__(self):

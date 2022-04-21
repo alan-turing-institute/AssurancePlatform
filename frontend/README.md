@@ -5,15 +5,15 @@ Documentation on various npm and react commands can be found [here](react_info.m
 
 ## Installing and running the code for development
 
-From this directory, run 
+From this directory, run
 ```
 npm install
 ```
 to install the required dependencies,
 ```
 npm start
-``` 
-to run the development server (will open a browser tab at `localhost:3000`), and 
+```
+to run the development server (will open a browser tab at `localhost:3000`), and
 ```
 npm run test
 ```
@@ -41,4 +41,3 @@ The react framework is based around *Components*, which can correspond to a webp
 Several useful variables are defined in [config.json](src/config.json), including:
 * *BASE_URL*: this is the base URL for the backend, which by default is setup to look at a locally running Django backend on `localhost:8000`.   If you use a real deployment of the backend, change this variable accordingly.
 * *navigation* This defines the hierarchy of different types of objects, and how they can be accessed via the API.
-
