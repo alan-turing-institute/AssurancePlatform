@@ -1,6 +1,7 @@
 {
   "name": "Minimal",
   "description": "N/A",
+  "editable": true,
   "goals": [
     {
       "name": "Goal",

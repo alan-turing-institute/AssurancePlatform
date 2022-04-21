@@ -1,6 +1,14 @@
 /* General function that can create any type of object apart from the top-level Case */
 
-import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Heading,
+  Select,
+  TextInput,
+} from "grommet";
 import React, { useState } from "react";
 import configData from "../config.json";
 
@@ -10,6 +18,9 @@ function ItemCreator(props) {
   const [sdesc, setShortDesc] = useState("Short description");
   const [ldesc, setLongDesc] = useState("Long description");
   const [keywords, setKeywords] = useState("Keywords (comma-separated)");
+  const [claimType, setClaimType] = useState(
+    configData["property_claim_types"][0]
+  );
   const [url, setURL] = useState("www.some-evidence.com");
 
   function handleSubmit(event) {
@@ -33,9 +44,8 @@ function ItemCreator(props) {
     request_body["short_description"] = sdesc;
     request_body["long_description"] = ldesc;
     request_body["keywords"] = keywords;
-    if (props.type === "Evidence") {
-      request_body["URL"] = url;
-    }
+    if (props.type === "PropertyClaim") request_body["claim_type"] = claimType;
+    if (props.type === "Evidence") request_body["URL"] = url;
     console.log(
       "creating a ",
       props.type,
@@ -101,6 +111,16 @@ function ItemCreator(props) {
             onChange={(e) => setKeywords(e.target.value)}
           />
         </FormField>
+        {props.type === "PropertyClaim" && (
+          <FormField label="Claim type">
+            <Select
+              placeholder={claimType}
+              name="claim_type"
+              options={configData["property_claim_types"]}
+              onChange={(e) => setClaimType(e.target.value)}
+            />
+          </FormField>
+        )}
         {props.type === "Evidence" && (
           <FormField>
             <TextInput

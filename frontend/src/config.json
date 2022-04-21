@@ -1,6 +1,16 @@
 {
   "BASE_URL": "http://localhost:8000/api",
   "BOX_NCHAR": 25,
+  "property_claim_types": ["Project claim", "System claim"],
+  "mermaid_item_styleclasses": {
+    "classTopLevelNormativeGoal": "fill:#F4C095",
+    "classContext": "fill:#B56576",
+    "classSystemDescription": "fill:#B56576",
+    "classSystemClaim": "fill:#1B4965,color:#EEE",
+    "classProjectClaim": "fill:#80A1C1",
+    "classEvidentialClaim": "fill:#EBFFFF",
+    "classEvidence": "fill:#C0E4E4"
+  },
   "navigation": {
     "TopLevelNormativeGoal": {
       "api_name": "goals",

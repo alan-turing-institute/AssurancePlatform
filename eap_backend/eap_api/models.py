@@ -77,7 +77,16 @@ class SystemDescription(CaseItem):
 
 
 class PropertyClaim(CaseItem):
+    class ClaimType(models.TextChoices):
+        """Enum class for different types of property claims."""
+
+        SYSTEM = "System claim"
+        PROJECT = "Project claim"
+
     shape = Shape.ROUNDED_RECTANGLE
+    claim_type = models.CharField(
+        max_length=32, choices=ClaimType.choices, default=ClaimType.PROJECT
+    )
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
         null=True,
