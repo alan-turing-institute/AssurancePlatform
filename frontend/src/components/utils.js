@@ -35,6 +35,18 @@ function jsonToMermaid(in_json) {
     else return "";
   }
 
+  function addClasses(node, obj, type, outputmd) {
+    outputmd += "\nclass " + node + " blackBox;\n";
+    if (obj.claim_type === "Project claim") {
+      outputmd += "\nclass " + node + " classProjectClaim;\n";
+    } else if (obj.claim_type === "System claim") {
+      outputmd += "\nclass " + node + " classSystemClaim;\n";
+    } else {
+      outputmd += "\nclass " + node + " class" + type + ";\n";
+    }
+    return outputmd;
+  }
+
   let arrow = " --- ";
   /// Recursive function to go down the tree adding components
   function addTree(itemType, parent, parentNode, outputmd, visited) {
@@ -65,12 +77,7 @@ function jsonToMermaid(in_json) {
         thisObj.short_description +
         '"\n';
       // add style to the node
-      outputmd += "\nclass " + thisNode + " blackBox;\n";
-      if (thisObj.claim_type === "Project claim") {
-        outputmd += "\nclass " + thisNode + " projectClaim;\n";
-      } else if (thisObj.claim_type === "System claim") {
-        outputmd += "\nclass " + thisNode + " systemClaim;\n";
-      }
+      outputmd = addClasses(thisNode, thisObj, itemType, outputmd);
       if (!visited.includes(JSON.stringify(thisObj))) {
         for (
           let j = 0;
@@ -87,9 +94,11 @@ function jsonToMermaid(in_json) {
 
   let outputmd = "graph TB; \n";
   outputmd +=
-    "classDef blackBox fill:#E8E8E8,stroke:#333,stroke-width:3px,text-align:center; \n";
-  outputmd += "classDef projectClaim fill:#E3DAE8; \n";
-  outputmd += "classDef systemClaim fill:#DADFE8; \n";
+    "classDef blackBox stroke:#333,stroke-width:3px,text-align:center; \n";
+  const styleclasses = configData["mermaid_item_styleclasses"];
+  Object.keys(styleclasses).forEach((key) => {
+    outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
+  });
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
 
