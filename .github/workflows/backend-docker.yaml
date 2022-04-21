@@ -15,7 +15,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - cd eap_backend
-      - docker build -t turingassuranceplatform/eap_backend:test -f Dockerfile .
-      - docker push turingassuranceplatform/eap_backend:test
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - uses: actions/checkout@v3
+      - working-directory: eap_backend
+        run: docker build -t turingassuranceplatform/eap_backend:test -f Dockerfile .
+      - run: docker push turingassuranceplatform/eap_backend:test
