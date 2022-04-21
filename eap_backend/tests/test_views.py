@@ -51,7 +51,11 @@ class CaseViewTest(TestCase):
         self.serializer = AssuranceCaseSerializer(self.data, many=True)
 
     def test_case_list_view_post(self):
-        post_data = {"name": "newCASE", "description": "new description"}
+        post_data = {
+            "name": "newCASE",
+            "description": "new description",
+            "editable": True,
+        }
         response_post = self.client.post(
             reverse("case_list"),
             data=json.dumps(post_data),
