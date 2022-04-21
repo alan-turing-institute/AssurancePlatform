@@ -37,7 +37,8 @@ function jsonToMermaid(in_json) {
 
   let arrow = " --- ";
   /// Recursive function to go down the tree adding components
-  function addTree(itemType, parent, parentNode, outputmd) {
+  function addTree(itemType, parent, parentNode, outputmd, visited) {
+    visited.push(JSON.stringify(parent));
     // look up the 'API name', e.g. "goals" for "TopLevelNormativeGoal"
     let thisType = configData.navigation[itemType]["db_name"];
     let boxShape = configData.navigation[itemType]["shape"];
@@ -65,24 +66,32 @@ function jsonToMermaid(in_json) {
         '"\n';
       // add style to the node
       outputmd += "\nclass " + thisNode + " blackBox;\n";
-      for (
-        let j = 0;
-        j < configData.navigation[itemType]["children"].length;
-        j++
-      ) {
-        let childType = configData.navigation[itemType]["children"][j];
-        outputmd = addTree(childType, thisObj, thisNode, outputmd);
+      if (thisObj.claim_type === "Project claim") {
+        outputmd += "\nclass " + thisNode + " projectClaim;\n";
+      } else if (thisObj.claim_type === "System claim") {
+        outputmd += "\nclass " + thisNode + " systemClaim;\n";
+      }
+      if (!visited.includes(JSON.stringify(thisObj))) {
+        for (
+          let j = 0;
+          j < configData.navigation[itemType]["children"].length;
+          j++
+        ) {
+          let childType = configData.navigation[itemType]["children"][j];
+          outputmd = addTree(childType, thisObj, thisNode, outputmd, visited);
+        }
       }
     }
-    console.log(outputmd);
     return outputmd;
   }
 
   let outputmd = "graph TB; \n";
   outputmd +=
-    "classDef blackBox stroke:#333,stroke-width:3px,text-align:center; \n";
+    "classDef blackBox fill:#E8E8E8,stroke:#333,stroke-width:3px,text-align:center; \n";
+  outputmd += "classDef projectClaim fill:#E3DAE8; \n";
+  outputmd += "classDef systemClaim fill:#DADFE8; \n";
   // call the recursive addTree function, starting with the Goal as the top node
-  outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd);
+  outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
 
   return outputmd;
 }

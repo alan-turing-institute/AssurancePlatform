@@ -1,6 +1,14 @@
 /* General function that can create any type of object apart from the top-level Case */
 
-import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Heading,
+  Select,
+  TextInput,
+} from "grommet";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ParentSelector from "./ParentSelector.js";
@@ -70,6 +78,9 @@ function ItemEditor(props) {
     request_body["short_description"] = items.short_description;
     request_body["long_description"] = items.long_description;
     request_body["keywords"] = items.keywords;
+    if (props.type === "PropertyClaim") {
+      request_body["claim_type"] = items.claim_type;
+    }
     if (props.type === "Evidence") {
       request_body["URL"] = items.URL;
     }
@@ -189,6 +200,16 @@ function ItemEditor(props) {
               placeholder={items.URL}
               name="URL"
               onChange={(e) => setItem("URL", e.target.value)}
+            />
+          </FormField>
+        )}
+        {props.type === "PropertyClaim" && (
+          <FormField label="Claim type">
+            <Select
+              placeholder={items.claim_type}
+              name="claim_type"
+              options={configData["property_claim_types"]}
+              onChange={(e) => setItem("claim_type", e.target.value)}
             />
           </FormField>
         )}

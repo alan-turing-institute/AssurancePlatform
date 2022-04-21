@@ -101,6 +101,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         required=False,
     )
     level = serializers.IntegerField(read_only=True)
+    claim_type = serializers.CharField(default="Project claim")
     evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
@@ -116,6 +117,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "goal_id",
             "property_claim_id",
             "level",
+            "claim_type",
             "evidential_claims",
             "property_claims",
         )
