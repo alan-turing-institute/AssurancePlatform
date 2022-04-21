@@ -1,0 +1,21 @@
+name: backend-docker
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - cd eap_backend
+      - docker build -t turingassuranceplatform/eap_backend:test -f Dockerfile .
+      - docker push turingassuranceplatform/eap_backend:test
