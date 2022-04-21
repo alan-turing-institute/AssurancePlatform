@@ -10,7 +10,7 @@ The database itself can be any SQL-based technology - the most straightforward t
 * SQLite - this is the out-of-the-box default, useful for testing and development
 * Postgresql - see below for instructions on how to deploy this on Azure cloud.
 
-## Settings 
+## Settings
 
 Most useful settings are in the file [eap_backend/settings.py](eap_backend/settings.py).
 Some useful variables are:

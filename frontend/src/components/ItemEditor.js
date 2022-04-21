@@ -56,8 +56,7 @@ function ItemEditor(props) {
   function handleSubmit(event) {
     event.preventDefault();
     console.log("in handleSubmit, items are ", event);
-    editDBObject();
-    props.updateView();
+    editDBObject().then(() => props.updateView());
   }
 
   async function editDBObject() {
@@ -85,11 +84,7 @@ function ItemEditor(props) {
       "submit button pressed with state ",
       JSON.stringify(request_body)
     );
-    let response = {};
-
-    fetch(backendURL, requestOptions).then((response) => response.json());
-
-    console.log("response was ", response);
+    return fetch(backendURL, requestOptions);
   }
 
   async function submitAddParent(event) {
