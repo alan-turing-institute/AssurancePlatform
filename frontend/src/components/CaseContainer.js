@@ -54,6 +54,21 @@ class CaseContainer extends Component {
     }
   };
 
+  submitCaseChange(field, value) {
+    // Send to the backend a PUT request, changing the `field` of the current case to be
+    // `value`.
+    const id = this.state.assurance_case.id;
+    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const changeObj = {};
+    changeObj[field] = value;
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changeObj),
+    };
+    fetch(backendURL, requestOptions);
+  }
+
   deleteCurrentCase() {
     const id = this.state.assurance_case.id;
     const backendURL = `${configData.BASE_URL}/cases/${id}/`;
@@ -102,22 +117,31 @@ class CaseContainer extends Component {
     this.timer = setInterval(() => this.fetchData(id), 5000);
     if (!window.sessionStorage.getItem("session_id")) {
       let uuid = uuidv4();
-      console.log("generated uid ", uuid);
       window.sessionStorage.setItem("session_id", uuid);
     }
-    console.log(
-      "setting state.session_id to ",
-      window.sessionStorage.session_id
-    );
     this.setState({ session_id: window.sessionStorage.session_id });
+    // Activate the event listener to see when the browser/tab closes
+    this.setupBeforeUnloadListener();
   }
 
-  componentWillUnmount() {
+  cleanup() {
     clearInterval(this.timer);
     this.timer = null;
     if (this.state.assurance_case.lock_uuid == this.state.session_id) {
       this.submitCaseChange("lock_uuid", null);
     }
+  }
+
+  // Setup the `beforeunload` event listener to detect browser/tab closing
+  setupBeforeUnloadListener = () => {
+    window.addEventListener("beforeunload", (ev) => {
+      ev.preventDefault();
+      return this.cleanup();
+    });
+  };
+
+  componentWillUnmount() {
+    this.cleanup();
   }
 
   componentDidUpdate(prevProps) {
@@ -131,7 +155,6 @@ class CaseContainer extends Component {
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
-
     this.hideViewLayer();
     this.hideEditLayer();
     this.hideCreateLayer();
@@ -275,21 +298,6 @@ class CaseContainer extends Component {
     );
   }
 
-  submitCaseChange(field, value) {
-    // Send to the backend a PUT request, changing the `field` of the current case to be
-    // `value`.
-    const id = this.state.assurance_case.id;
-    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
-    const changeObj = {};
-    changeObj[field] = value;
-    const requestOptions = {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changeObj),
-    };
-    fetch(backendURL, requestOptions);
-  }
-
   createLayer() {
     return (
       <Box>
@@ -363,19 +371,22 @@ class CaseContainer extends Component {
   }
 
   enableEditing() {
-    console.log("In enableEditing", this.state.assurance_case.lock_uuid);
     if (!this.state.assurance_case.lock_uuid) {
-      console.log("setting lock_uuid to ", this.state.session_id);
       this.submitCaseChange("lock_uuid", this.state.session_id);
     } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
       // override!
-      console.log("override enableEditing");
+      if (
+        window.confirm(
+          "Are you sure?  You might be overwriting someone's work..."
+        )
+      ) {
+        this.submitCaseChange("lock_uuid", this.state.session_id);
+      }
     }
     this.updateView();
   }
 
   disableEditing() {
-    console.log("In disableEditing", this.state.assurance_case.lock_uuid);
     if (this.state.assurance_case.lock_uuid) {
       this.submitCaseChange("lock_uuid", null);
     }
@@ -387,11 +398,6 @@ class CaseContainer extends Component {
   }
 
   getEditableControls() {
-    console.log(
-      "in getEditableControls ",
-      this.state.assurance_case.lock_uuid,
-      this.state.session_id
-    );
     if (this.inEditMode()) {
       return (
         <Button
@@ -410,9 +416,21 @@ class CaseContainer extends Component {
       );
     } else {
       return (
-        <Text color="#ff0000">
-          Someone else is currently editing this case.
-        </Text>
+        <span>
+          <p>
+            <Text color="#ff0000">
+              Someone else is currently editing this case.
+            </Text>
+          </p>
+          <p>
+            <Button
+              label="Override - enable edit mode"
+              color="#ff0000"
+              secondary
+              onClick={this.enableEditing.bind(this)}
+            />
+          </p>
+        </span>
       );
     }
   }
