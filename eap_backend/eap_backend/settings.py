@@ -57,11 +57,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ORIGIN_WHITELIST = (
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://localhost:8080",
-)
+if "CORS_ORIGIN_WHITELIST" in os.environ.keys():
+    CORS_ORIGIN_WHITELIST = os.environ["CORS_ORIGIN_WHITELIST"].split(",")
+else:
+    CORS_ORIGIN_WHITELIST = (
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8080",
+    )
 
 ROOT_URLCONF = "eap_backend.urls"
 
