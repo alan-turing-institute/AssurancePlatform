@@ -1,4 +1,4 @@
-name: backend-docker
+name: frontend-docker
 
 on:
   push:
@@ -17,13 +17,13 @@ jobs:
       - uses: actions/checkout@v3
       - name: 'Build main'
         if: ${{ github.ref == 'refs/heads/main' }}
-        working-directory: eap_backend
+        working-directory: frontend
         run: |
-          docker build -t turingassuranceplatform/eap_backend:main -f Dockerfile .
-          docker push turingassuranceplatform/eap_backend:main
+          docker build -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
+          docker push turingassuranceplatform/eap_frontend:main
       - name: 'Build dev'
         if: ${{ github.ref == 'refs/heads/dev' }}
-        working-directory: eap_backend
+        working-directory: frontend
         run: |
-          docker build -t turingassuranceplatform/eap_backend:dev -f Dockerfile .
-          docker push turingassuranceplatform/eap_backend:dev
+          docker build -t turingassuranceplatform/eap_frontend:dev -f Dockerfile .
+          docker push turingassuranceplatform/eap_frontend:dev
