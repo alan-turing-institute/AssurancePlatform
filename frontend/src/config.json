@@ -1,5 +1,5 @@
 {
-  "BASE_URL": "http://localhost:8000/api",
+  "DEFAULT_BASE_URL": "http://localhost:8000/api",
   "BOX_NCHAR": 25,
   "navigation": {
     "TopLevelNormativeGoal": {
