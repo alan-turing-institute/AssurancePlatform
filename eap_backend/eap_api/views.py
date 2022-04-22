@@ -28,7 +28,7 @@ TYPE_DICT = {
         "serializer": AssuranceCaseSerializer,
         "model": AssuranceCase,
         "children": ["goals"],
-        "fields": ("name", "description", "editable"),
+        "fields": ("name", "description", "lock_uuid"),
     },
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
