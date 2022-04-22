@@ -19,11 +19,11 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: frontend
         run: |
-          docker build -t turingassuranceplatform/eap_frontend:main --build-arg REACT_APP_BASE_URL="https://turing-assuranceplatform-backend.azurewebsites.net/api" -f Dockerfile .
+          docker build -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:main
       - name: 'Build dev'
         if: ${{ github.ref == 'refs/heads/dev' }}
         working-directory: frontend
         run: |
-          docker build -t turingassuranceplatform/eap_frontend:dev --build-arg REACT_APP_BASE_URL="https://turing-assuranceplatform-backend.azurewebsites.net/api" -f Dockerfile .
+          docker build -t turingassuranceplatform/eap_frontend:dev -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:dev
