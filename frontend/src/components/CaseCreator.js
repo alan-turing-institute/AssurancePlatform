@@ -3,7 +3,7 @@ import React, { useRef, useState } from "react";
 import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
 
-import configData from "../config.json";
+import { getBaseURL } from "./utils.js";
 
 function CaseCreator() {
   const [name, setName] = useState("Name");
@@ -11,7 +11,7 @@ function CaseCreator() {
   const [description, setDescription] = useState("Description");
   const fileInputRef = useRef(null);
 
-  let baseURL = `${configData.BASE_URL}`;
+  let baseURL = `${getBaseURL()}`;
 
   let navigate = useNavigate();
 

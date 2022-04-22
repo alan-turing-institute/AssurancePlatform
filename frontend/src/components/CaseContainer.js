@@ -10,7 +10,7 @@ import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
-import { jsonToMermaid } from "./utils.js";
+import { getBaseURL, jsonToMermaid } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
 
@@ -32,7 +32,7 @@ class CaseContainer extends Component {
       mermaid_md: "graph TB; \n",
     };
 
-    this.url = `${configData.BASE_URL}/cases/`;
+    this.url = `${getBaseURL()}/cases/`;
   }
 
   fetchData = async (id) => {
@@ -55,7 +55,7 @@ class CaseContainer extends Component {
 
   deleteCurrentCase() {
     const id = this.state.assurance_case.id;
-    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const backendURL = `${getBaseURL()}/cases/${id}/`;
     const requestOptions = {
       method: "DELETE",
     };
@@ -258,7 +258,7 @@ class CaseContainer extends Component {
     // Send to the backend a PUT request, changing the `field` of the current case to be
     // `value`.
     const id = this.state.assurance_case.id;
-    const backendURL = `${configData.BASE_URL}/cases/${id}/`;
+    const backendURL = `${getBaseURL()}/cases/${id}/`;
     const changeObj = {};
     changeObj[field] = value;
     const requestOptions = {

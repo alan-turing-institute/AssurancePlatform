@@ -1,7 +1,7 @@
 import { Box, Select } from "grommet";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import configData from "../config.json";
+import { getBaseURL } from "./utils.js";
 
 function CaseSelector() {
   const [loading, setLoading] = useState(true);
@@ -9,7 +9,7 @@ function CaseSelector() {
   const [value, setValue] = useState("Select a case");
 
   async function getCases(unmounted) {
-    let url = `${configData.BASE_URL}/cases/`;
+    let url = `${getBaseURL()}/cases/`;
     const response = await fetch(url);
     const body = await response.json();
     if (!unmounted) {

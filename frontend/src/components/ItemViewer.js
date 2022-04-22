@@ -3,6 +3,7 @@
 import { Box, Button, Heading } from "grommet";
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemViewer(props) {
@@ -10,7 +11,7 @@ function ItemViewer(props) {
 
   useEffect(() => {
     let unmounted = false;
-    let url = `${configData.BASE_URL}/${
+    let url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}`;
     async function getCurrent() {
