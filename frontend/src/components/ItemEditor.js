@@ -12,6 +12,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ParentSelector from "./ParentSelector.js";
+import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemEditor(props) {
@@ -22,7 +23,7 @@ function ItemEditor(props) {
 
   useEffect(() => {
     let unmounted = false;
-    let url = `${configData.BASE_URL}/${
+    let url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}`;
     async function getCurrent() {
@@ -46,7 +47,7 @@ function ItemEditor(props) {
   }
 
   async function deleteDBObject() {
-    let url = `${configData.BASE_URL}/${
+    let url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
     const requestOptions = {
@@ -68,7 +69,7 @@ function ItemEditor(props) {
   }
 
   async function editDBObject() {
-    let backendURL = `${configData.BASE_URL}/${
+    let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
     console.log("url is ", backendURL);

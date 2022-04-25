@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "grommet";
 import React, { useState } from "react";
+import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemCreator(props) {
@@ -34,7 +35,7 @@ function ItemCreator(props) {
   }
 
   async function createDBObject() {
-    let backendURL = `${configData.BASE_URL}/${
+    let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/`;
     console.log("url is ", backendURL);

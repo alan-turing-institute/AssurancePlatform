@@ -2,6 +2,12 @@
 import { Test } from "grommet-icons";
 import configData from "../config.json";
 
+function getBaseURL() {
+  const envURL = process.env.REACT_APP_BASE_URL;
+  if (envURL !== undefined) return envURL;
+  return configData.DEFAULT_BASE_URL;
+}
+
 function sanitizeForMermaid(input_text) {
   let sanitizedText = input_text.replace(/[^a-z0-9 \.,_-]/gim, "");
   return sanitizedText.trim();
@@ -105,4 +111,4 @@ function jsonToMermaid(in_json) {
   return outputmd;
 }
 
-export { jsonToMermaid, sanitizeForMermaid };
+export { getBaseURL, jsonToMermaid, sanitizeForMermaid };
