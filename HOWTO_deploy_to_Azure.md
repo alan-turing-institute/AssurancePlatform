@@ -44,6 +44,7 @@ docker push DOCKER_USERNAME/eap_backend:latest
     * DBUSER=NAME_OF_THE_DATABASE_USER_YOU_JUST_CREATED@NAME_OF_THE_DATABASE
     * DBPASSWORD=THE_PASSWORD_FOR_THE_USER_YOU_JUST_MADE
 * Test that the backend is working (will take a few minutes to start up the first time) by going to https://BACKEND_WEBAPP_NAME.azurewebsites.net/api/cases and you should get an empty list.
+* You may also want to turn on Continuous deployment from the Deployment Center settings, to have Azure pull the latest container every time one is available.
 
 ### Create frontend docker image
 
