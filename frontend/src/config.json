@@ -2,6 +2,9 @@
   "DEFAULT_BASE_URL": "http://localhost:8000/api",
   "BOX_NCHAR": 25,
   "navigation": {
+    "AssuranceCase": {
+      "id_name": "assurance_case_id"
+    },
     "TopLevelNormativeGoal": {
       "api_name": "goals",
       "db_name": "goals",
