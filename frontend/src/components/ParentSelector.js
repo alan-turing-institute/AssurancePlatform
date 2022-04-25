@@ -1,6 +1,7 @@
 import { Select } from "grommet";
 import React, { Component } from "react";
 import { useParams } from "react-router-dom";
+import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 class ParentSelector extends Component {
@@ -19,7 +20,7 @@ class ParentSelector extends Component {
 
   async getCurrentParents() {
     const db_name = configData.navigation[this.props.type]["db_name"];
-    const url = `${configData.BASE_URL}/parents/${db_name}/${this.props.id}`;
+    const url = `${getBaseURL()}/parents/${db_name}/${this.props.id}`;
     const currentParents = [];
     await fetch(url)
       .then((response) => response.json())
@@ -35,7 +36,9 @@ class ParentSelector extends Component {
     for (let i = 0; i < parentNames.length; i++) {
       const parentName = parentNames[i];
       const parentApiName = parentApiNames[i];
-      const url = `${configData.BASE_URL}/${parentApiName}/?case_id=${this.props.caseId}`;
+      const url = `${getBaseURL()}/${parentApiName}/?case_id=${
+        this.props.caseId
+      }`;
       await fetch(url)
         .then((response) => response.json())
         .then((json) => {

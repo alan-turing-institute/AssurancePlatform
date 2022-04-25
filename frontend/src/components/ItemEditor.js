@@ -105,7 +105,7 @@ function ItemEditor(props) {
     }
     const parentType = parentToAdd["type"];
     const parentId = parentToAdd["id"];
-    const url = `${configData.BASE_URL}/${
+    const url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
     const response = await fetch(url);
@@ -131,7 +131,7 @@ function ItemEditor(props) {
     }
     const parentType = parentToRemove["type"];
     const parentId = parentToRemove["id"];
-    const url = `${configData.BASE_URL}/${
+    const url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
     const response = await fetch(url);
