@@ -12,6 +12,9 @@
     "classEvidence": "fill:#C0E4E4"
   },
   "navigation": {
+    "AssuranceCase": {
+      "id_name": "assurance_case_id"
+    },
     "TopLevelNormativeGoal": {
       "api_name": "goals",
       "db_name": "goals",
