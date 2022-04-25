@@ -1,7 +1,7 @@
 {
   "name": "Minimal",
   "description": "N/A",
-  "editable": true,
+  "lock_uuid": null,
   "goals": [
     {
       "name": "Goal",

@@ -54,7 +54,7 @@ class CaseViewTest(TestCase):
         post_data = {
             "name": "newCASE",
             "description": "new description",
-            "editable": True,
+            "lock_uuid": None,
         }
         response_post = self.client.post(
             reverse("case_list"),
