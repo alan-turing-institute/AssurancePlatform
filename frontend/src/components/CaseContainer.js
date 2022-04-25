@@ -66,7 +66,7 @@ class CaseContainer extends Component {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(changeObj),
     };
-    fetch(backendURL, requestOptions);
+    return fetch(backendURL, requestOptions);
   }
 
   deleteCurrentCase() {
@@ -158,7 +158,7 @@ class CaseContainer extends Component {
     this.hideViewLayer();
     this.hideEditLayer();
     this.hideCreateLayer();
-    this.fetchData(this.state.id);
+    return this.fetchData(this.state.id);
   }
 
   showViewLayer(e) {
@@ -372,7 +372,11 @@ class CaseContainer extends Component {
 
   enableEditing() {
     if (!this.state.assurance_case.lock_uuid) {
-      this.submitCaseChange("lock_uuid", this.state.session_id);
+      this.submitCaseChange("lock_uuid", this.state.session_id).then(
+        (response) => {
+          this.updateView();
+        }
+      );
     } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
       // override!
       if (
@@ -380,17 +384,21 @@ class CaseContainer extends Component {
           "Are you sure?  You might be overwriting someone's work..."
         )
       ) {
-        this.submitCaseChange("lock_uuid", this.state.session_id);
+        this.submitCaseChange("lock_uuid", this.state.session_id).then(
+          (response) => {
+            this.updateView();
+          }
+        );
       }
     }
-    this.updateView();
   }
 
   disableEditing() {
     if (this.state.assurance_case.lock_uuid) {
-      this.submitCaseChange("lock_uuid", null);
+      this.submitCaseChange("lock_uuid", null).then((response) => {
+        this.updateView();
+      });
     }
-    this.updateView();
   }
 
   inEditMode() {
