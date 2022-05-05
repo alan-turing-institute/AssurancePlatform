@@ -489,17 +489,11 @@ class CaseContainer extends Component {
               <EditableText
                 initialValue={this.state.assurance_case.name}
                 textsize="xlarge"
-                style={{
-                  height: 0,
-                }}
                 onSubmit={(value) => this.submitCaseChange("name", value)}
               />
               <EditableText
                 initialValue={this.state.assurance_case.description}
                 size="small"
-                style={{
-                  height: 0,
-                }}
                 onSubmit={(value) =>
                   this.submitCaseChange("description", value)
                 }
