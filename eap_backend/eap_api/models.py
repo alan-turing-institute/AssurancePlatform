@@ -105,7 +105,7 @@ class PropertyClaim(CaseItem):
 
     def save(self, *args, **kwargs):
         try:
-            parent_level = self.parent.level
+            parent_level = self.property_claim.level
         except AttributeError:
             # If the parent is a TopLevelNormativeGoal rather than a PropertyClaim, it
             # doesn't have a level.
