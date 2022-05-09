@@ -6,16 +6,16 @@
     "classTopLevelNormativeGoal": "fill:#ff424e,color:#FFF",
     "classContext": "fill:#D17E5A,color:#FFF",
     "classSystemDescription": "fill:#D17E5A,color:#FFF",
-    "classSystemClaim": "fill:#79a9b5,color:#FFF",
+    "classSystemClaim": "fill:#3ea572,color:#FFF",
     "classProjectClaim": "fill:#9db4e6,color:#FFF",
-    "classEvidentialClaim": "fill:#30875b,color:#FFF",
-    "classEvidence": "fill:#009249,color:#FFF",
+    "classEvidentialClaim": "fill:#57847f,color:#FFF",
+    "classEvidence": "fill:#155b53,color:#FFF",
     "classProjectClaimLevel1": "fill:#5986d7,color:#FFF",
     "classProjectClaimLevel2": "fill:#7a9ddd,color:#FFF",
     "classProjectClaimLevel3": "fill:#9db4e6,color:#FFF",
-    "classSystemClaimLevel1": "fill:#3d90a5,color:#FFF",
-    "classSystemClaimLevel2": "fill:#5a9cad,color:#FFF",
-    "classSystemClaimLevel3": "fill:#79a9b5,color:#FFF"
+    "classSystemClaimLevel1": "fill:#009249,color:#FFF",
+    "classSystemClaimLevel2": "fill:#24995e,color:#FFF",
+    "classSystemClaimLevel3": "fill:#3ea572,color:#FFF"
   },
   "navigation": {
     "AssuranceCase": {
