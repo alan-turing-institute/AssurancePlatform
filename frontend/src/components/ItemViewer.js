@@ -48,18 +48,26 @@ function ItemViewer(props) {
         <Heading level={4}> Keywords </Heading>
         <p>{items.keywords}</p>
       </Box>
+      {props.type === "PropertyClaim" && (
+        <Box>
+          <Heading level={4}> Claim type </Heading>
+          <p>{items.claim_type}</p>
+        </Box>
+      )}
       {props.type === "Evidence" && (
         <Box>
           <Heading level={4}> URL </Heading>
           <p>{items.URL}</p>
         </Box>
       )}
-      <Box>
-        <Button
-          onClick={(e) => props.editItemLayer(props.type, props.id, e)}
-          label="Edit"
-        />
-      </Box>
+      {props.editMode && (
+        <Box>
+          <Button
+            onClick={(e) => props.editItemLayer(props.type, props.id, e)}
+            label="Edit"
+          />
+        </Box>
+      )}
     </Box>
   );
 }

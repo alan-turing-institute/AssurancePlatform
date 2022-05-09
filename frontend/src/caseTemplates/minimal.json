@@ -1,6 +1,7 @@
 {
   "name": "Minimal",
   "description": "N/A",
+  "lock_uuid": null,
   "goals": [
     {
       "name": "Goal",
@@ -26,24 +27,17 @@
           "name": "Property claim",
           "short_description": "Short description",
           "long_description": "Long description",
-          "arguments": [
+          "evidential_claims": [
             {
-              "name": "Argument",
+              "name": "Evidential claim",
               "short_description": "Short description",
               "long_description": "Long description",
-              "evidential_claims": [
+              "evidence": [
                 {
-                  "name": "Evidential claim",
+                  "name": "Evidence",
                   "short_description": "Short description",
                   "long_description": "Long description",
-                  "evidence": [
-                    {
-                      "name": "Evidence",
-                      "short_description": "Short description",
-                      "long_description": "Long description",
-                      "URL": "www.some-evidence.com"
-                    }
-                  ]
+                  "URL": "www.some-evidence.com"
                 }
               ]
             }

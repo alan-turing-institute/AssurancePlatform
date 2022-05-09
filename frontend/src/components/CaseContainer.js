@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { v4 as uuidv4 } from "uuid";
 
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";
@@ -53,6 +54,21 @@ class CaseContainer extends Component {
     }
   };
 
+  submitCaseChange(field, value) {
+    // Send to the backend a PUT request, changing the `field` of the current case to be
+    // `value`.
+    const id = this.state.assurance_case.id;
+    const backendURL = `${getBaseURL()}/cases/${id}/`;
+    const changeObj = {};
+    changeObj[field] = value;
+    const requestOptions = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changeObj),
+    };
+    return fetch(backendURL, requestOptions);
+  }
+
   deleteCurrentCase() {
     const id = this.state.assurance_case.id;
     const backendURL = `${getBaseURL()}/cases/${id}/`;
@@ -99,11 +115,33 @@ class CaseContainer extends Component {
     this.setState({ id: id });
     this.fetchData(id);
     this.timer = setInterval(() => this.fetchData(id), 5000);
+    if (!window.sessionStorage.getItem("session_id")) {
+      let uuid = uuidv4();
+      window.sessionStorage.setItem("session_id", uuid);
+    }
+    this.setState({ session_id: window.sessionStorage.session_id });
+    // Activate the event listener to see when the browser/tab closes
+    this.setupBeforeUnloadListener();
   }
 
-  componentWillUnmount() {
+  cleanup() {
     clearInterval(this.timer);
     this.timer = null;
+    if (this.state.assurance_case.lock_uuid == this.state.session_id) {
+      this.submitCaseChange("lock_uuid", null);
+    }
+  }
+
+  // Setup the `beforeunload` event listener to detect browser/tab closing
+  setupBeforeUnloadListener = () => {
+    window.addEventListener("beforeunload", (ev) => {
+      ev.preventDefault();
+      return this.cleanup();
+    });
+  };
+
+  componentWillUnmount() {
+    this.cleanup();
   }
 
   componentDidUpdate(prevProps) {
@@ -117,11 +155,10 @@ class CaseContainer extends Component {
   updateView() {
     // render() will be called again anytime setState is called, which
     // is done both by hideEditLayer() and hideCreateLayer()
-
     this.hideViewLayer();
     this.hideEditLayer();
     this.hideCreateLayer();
-    this.fetchData(this.state.id);
+    return this.fetchData(this.state.id);
   }
 
   showViewLayer(e) {
@@ -151,9 +188,13 @@ class CaseContainer extends Component {
     this.setState({ showEditLayer: true });
   }
 
-  showCreateLayer(itemType, parentId, event) {
+  showCreateLayer(itemType, parentId, parentType, event) {
     event.preventDefault();
-    this.setState({ createItemType: itemType, createItemParentId: parentId });
+    this.setState({
+      createItemType: itemType,
+      createItemParentId: parentId,
+      createItemParentType: parentType,
+    });
     this.setState({ showCreateLayer: true });
   }
 
@@ -175,6 +216,7 @@ class CaseContainer extends Component {
       showCreateLayer: false,
       createItemType: null,
       createItemParentId: null,
+      createItemParentType: null,
     });
   }
 
@@ -211,6 +253,7 @@ class CaseContainer extends Component {
                 id={this.state.itemId}
                 editItemLayer={this.showEditLayer.bind(this)}
                 updateView={this.updateView.bind(this)}
+                editMode={this.inEditMode()}
               />
             </Box>
           </Box>
@@ -244,6 +287,7 @@ class CaseContainer extends Component {
               <ItemEditor
                 type={this.state.itemType}
                 id={this.state.itemId}
+                caseId={this.state.assurance_case.id}
                 createItemLayer={this.showCreateLayer.bind(this)}
                 updateView={this.updateView.bind(this)}
               />
@@ -254,26 +298,11 @@ class CaseContainer extends Component {
     );
   }
 
-  submitCaseChange(field, value) {
-    // Send to the backend a PUT request, changing the `field` of the current case to be
-    // `value`.
-    const id = this.state.assurance_case.id;
-    const backendURL = `${getBaseURL()}/cases/${id}/`;
-    const changeObj = {};
-    changeObj[field] = value;
-    const requestOptions = {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changeObj),
-    };
-    fetch(backendURL, requestOptions);
-  }
-
   createLayer() {
     return (
       <Box>
         <Layer
-          full="false"
+          full={false}
           position="bottom-right" //"bottom-left"
           onEsc={() => this.hideCreateLayer()}
           onClickOutside={() => this.hideCreateLayer()}
@@ -294,6 +323,7 @@ class CaseContainer extends Component {
               <ItemCreator
                 type={this.state.createItemType}
                 parentId={this.state.createItemParentId}
+                parentType={this.state.createItemParentType}
                 updateView={this.updateView.bind(this)}
               />
             </Box>
@@ -340,6 +370,79 @@ class CaseContainer extends Component {
     );
   }
 
+  enableEditing() {
+    if (!this.state.assurance_case.lock_uuid) {
+      this.submitCaseChange("lock_uuid", this.state.session_id).then(
+        (response) => {
+          this.updateView();
+        }
+      );
+    } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
+      // override!
+      if (
+        window.confirm(
+          "Are you sure?  You might be overwriting someone's work..."
+        )
+      ) {
+        this.submitCaseChange("lock_uuid", this.state.session_id).then(
+          (response) => {
+            this.updateView();
+          }
+        );
+      }
+    }
+  }
+
+  disableEditing() {
+    if (this.state.assurance_case.lock_uuid) {
+      this.submitCaseChange("lock_uuid", null).then((response) => {
+        this.updateView();
+      });
+    }
+  }
+
+  inEditMode() {
+    return this.state.assurance_case.lock_uuid === this.state.session_id;
+  }
+
+  getEditableControls() {
+    if (this.inEditMode()) {
+      return (
+        <Button
+          label="Disable edit mode"
+          secondary
+          onClick={this.disableEditing.bind(this)}
+        />
+      );
+    } else if (!this.state.assurance_case.lock_uuid) {
+      return (
+        <Button
+          label="Enable edit mode"
+          secondary
+          onClick={this.enableEditing.bind(this)}
+        />
+      );
+    } else {
+      return (
+        <span>
+          <p>
+            <Text color="#ff0000">
+              Someone else is currently editing this case.
+            </Text>
+          </p>
+          <p>
+            <Button
+              label="Override - enable edit mode"
+              color="#ff0000"
+              secondary
+              onClick={this.enableEditing.bind(this)}
+            />
+          </p>
+        </span>
+      );
+    }
+  }
+
   render() {
     // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
@@ -369,6 +472,7 @@ class CaseContainer extends Component {
             {this.state.showCreateLayer &&
               this.state.createItemType &&
               this.state.createItemParentId &&
+              this.state.createItemParentType &&
               this.createLayer()}
             {this.state.showConfirmDeleteLayer && this.confirmDeleteLayer()}
 
@@ -385,21 +489,18 @@ class CaseContainer extends Component {
               <EditableText
                 initialValue={this.state.assurance_case.name}
                 textsize="xlarge"
-                style={{
-                  height: 0,
-                }}
                 onSubmit={(value) => this.submitCaseChange("name", value)}
+                editMode={this.inEditMode()}
               />
               <EditableText
                 initialValue={this.state.assurance_case.description}
                 size="small"
-                style={{
-                  height: 0,
-                }}
                 onSubmit={(value) =>
                   this.submitCaseChange("description", value)
                 }
+                editMode={this.inEditMode()}
               />
+              {this.getEditableControls()}
             </Box>
 
             <Box
@@ -412,27 +513,33 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
-              <Button
-                label="Delete Case"
-                secondary
-                onClick={this.showConfirmDeleteLayer.bind(this)}
-              />
+              {this.inEditMode() && (
+                <Button
+                  label="Delete Case"
+                  secondary
+                  onClick={this.showConfirmDeleteLayer.bind(this)}
+                />
+              )}
+
               <Button
                 label="Export"
                 secondary
                 onClick={this.exportCurrentCase.bind(this)}
               />
-              <DropButton
-                label="Add Goal"
-                dropAlign={{ top: "bottom", right: "right" }}
-                dropContent={
-                  <ItemCreator
-                    type="TopLevelNormativeGoal"
-                    parentId={this.state.id}
-                    updateView={this.updateView.bind(this)}
-                  />
-                }
-              />
+              {this.inEditMode() && (
+                <DropButton
+                  label="Add Goal"
+                  dropAlign={{ top: "bottom", right: "right" }}
+                  dropContent={
+                    <ItemCreator
+                      type="TopLevelNormativeGoal"
+                      parentId={this.state.id}
+                      parentType="AssuranceCase"
+                      updateView={this.updateView.bind(this)}
+                    />
+                  }
+                />
+              )}
             </Box>
 
             <Box

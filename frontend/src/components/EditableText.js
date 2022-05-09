@@ -16,7 +16,7 @@ class EditableText extends Component {
   }
 
   onChange(event) {
-    this.setState({ value: event.target.value });
+    if (this.props.editMode) this.setState({ value: event.target.value });
   }
 
   onSubmit(event) {

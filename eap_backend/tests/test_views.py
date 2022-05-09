@@ -7,7 +7,6 @@ from eap_api.models import (
     Context,
     SystemDescription,
     PropertyClaim,
-    Argument,
     EvidentialClaim,
     Evidence,
 )
@@ -17,7 +16,6 @@ from eap_api.serializers import (
     ContextSerializer,
     SystemDescriptionSerializer,
     PropertyClaimSerializer,
-    ArgumentSerializer,
     EvidentialClaimSerializer,
     EvidenceSerializer,
 )
@@ -31,8 +29,6 @@ from .constants_tests import (
     PROPERTYCLAIM2_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. property_claim_id in the JSON
-    ARGUMENT1_INFO_NO_ID,
-    ARGUMENT2_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
@@ -55,7 +51,11 @@ class CaseViewTest(TestCase):
         self.serializer = AssuranceCaseSerializer(self.data, many=True)
 
     def test_case_list_view_post(self):
-        post_data = {"name": "newCASE", "description": "new description"}
+        post_data = {
+            "name": "newCASE",
+            "description": "new description",
+            "lock_uuid": None,
+        }
         response_post = self.client.post(
             reverse("case_list"),
             data=json.dumps(post_data),
@@ -286,76 +286,14 @@ class PropertyClaimViewTest(TestCase):
         self.assertEqual(len(response_get.json()), 1)
 
 
-class ArgumentViewTest(TestCase):
-    def setUp(self):
-        # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
-        self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        self.pclaim1 = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.argument1 = Argument.objects.create(**ARGUMENT1_INFO_NO_ID)
-        self.argument1.save()
-        self.argument1.property_claim.set([self.pclaim1])
-        self.argument2 = Argument.objects.create(**ARGUMENT2_INFO_NO_ID)
-        self.argument2.save()
-        self.argument2.property_claim.set([self.pclaim1])
-        self.update = {
-            "name": "Argument_updated",
-            "short_description": "description is updated",
-        }
-        # get data from DB
-        self.data = Argument.objects.all()
-        # convert it to JSON
-        self.serializer = ArgumentSerializer(self.data, many=True)
-
-    def test_argument_list_view_get(self):
-        response_get = self.client.get(reverse("argument_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
-        self.assertEqual(len(response_get.json()), 2)
-
-    def test_argument_detail_view_get(self):
-        response_get = self.client.get(
-            reverse("argument_detail", kwargs={"pk": self.argument1.pk})
-        )
-        self.assertEqual(response_get.status_code, 200)
-        response_data = response_get.json()
-        serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
-        response_get = self.client.get(
-            reverse("argument_detail", kwargs={"pk": self.argument2.pk})
-        )
-        self.assertEqual(response_get.status_code, 200)
-        response_data = response_get.json()
-        serializer_data = self.serializer.data[1]
-        self.assertEqual(response_data["name"], serializer_data["name"])
-
-    def test_argument_detail_view_put(self):
-        response_put = self.client.put(
-            reverse("argument_detail", kwargs={"pk": self.argument1.pk}),
-            data=json.dumps(self.update),
-            content_type="application/json",
-        )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
-
-    def test_argument_delete_with_standard_permission(self):
-        url = reverse("argument_detail", kwargs={"pk": self.argument1.pk})
-        self.client.delete(url)
-        response_get = self.client.get(reverse("argument_list"))
-        self.assertEqual(len(response_get.json()), 1)
-
-
 class EvidentialClaimViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.argument = Argument.objects.create(**ARGUMENT1_INFO_NO_ID)
-        self.argument.save()
-        self.argument.property_claim.set([self.pclaim])
-
         self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim.property_claim.set([self.pclaim])
 
         self.update = {
             "name": "TestEvidentialClaim_updated",
@@ -403,11 +341,8 @@ class EvidenceViewTest(TestCase):
         self.case = AssuranceCase.objects.create(**CASE_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.argument = Argument.objects.create(**ARGUMENT1_INFO_NO_ID)
-        self.argument.save()
-        self.argument.property_claim.set([self.pclaim])
-
         self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
@@ -471,11 +406,8 @@ class FullCaseDetailViewTest(TestCase):
         self.description = SystemDescription.objects.create(**DESCRIPTION_INFO)
         self.context = Context.objects.create(**CONTEXT_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.argument = Argument.objects.create(**ARGUMENT1_INFO_NO_ID)
-        self.argument.save()
-        self.argument.property_claim.set([self.pclaim])
-
         self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
@@ -510,21 +442,13 @@ class FullCaseDetailViewTest(TestCase):
         self.assertEqual(len(response_data["goals"][0]["system_description"]), 1)
         self.assertEqual(len(response_data["goals"][0]["property_claims"]), 1)
         self.assertEqual(
-            len(response_data["goals"][0]["property_claims"][0]["arguments"]), 1
+            len(response_data["goals"][0]["property_claims"][0]["evidential_claims"]), 1
         )
         self.assertEqual(
             len(
-                response_data["goals"][0]["property_claims"][0]["arguments"][0][
-                    "evidential_claims"
+                response_data["goals"][0]["property_claims"][0]["evidential_claims"][0][
+                    "evidence"
                 ]
-            ),
-            1,
-        )
-        self.assertEqual(
-            len(
-                response_data["goals"][0]["property_claims"][0]["arguments"][0][
-                    "evidential_claims"
-                ][0]["evidence"]
             ),
             2,
         )
