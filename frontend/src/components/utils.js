@@ -37,6 +37,10 @@ function jsonToMermaid(in_json) {
     else if (shape === "diamond") return "{" + text + "}";
     else if (shape === "rounded") return "(" + text + ")";
     else if (shape === "circle") return "((" + text + "))";
+    else if (shape === "hexagon") return "{{" + text + "}}";
+    else if (shape === "parallelogram-left") return "[\\" + text + "\\]";
+    else if (shape === "parallelogram-right") return "[/" + text + "/]";
+    else if (shape === "stadium") return "([" + text + "])";
     else if (shape === "data") return "[(" + text + ")]";
     else return "";
   }
@@ -49,6 +53,9 @@ function jsonToMermaid(in_json) {
       outputmd += "\nclass " + node + " classSystemClaim;\n";
     } else {
       outputmd += "\nclass " + node + " class" + type + ";\n";
+    }
+    if (obj.level !== undefined) {
+      outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
     }
     return outputmd;
   }

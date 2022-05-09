@@ -3,13 +3,16 @@
   "BOX_NCHAR": 25,
   "property_claim_types": ["Project claim", "System claim"],
   "mermaid_item_styleclasses": {
-    "classTopLevelNormativeGoal": "fill:#F4C095",
-    "classContext": "fill:#B56576",
-    "classSystemDescription": "fill:#B56576",
-    "classSystemClaim": "fill:#1B4965,color:#EEE",
-    "classProjectClaim": "fill:#80A1C1",
-    "classEvidentialClaim": "fill:#EBFFFF",
-    "classEvidence": "fill:#C0E4E4"
+    "classTopLevelNormativeGoal": "fill:#ff424e,color:#FFF",
+    "classContext": "fill:#009249,color:#FFF",
+    "classSystemDescription": "fill:#009249,color:#FFF",
+    "classSystemClaim": "fill:#9db4e6,color:#FFF",
+    "classProjectClaim": "fill:#9db4e6,color:#FFF",
+    "classEvidentialClaim": "fill:#4a8897,color:#FFF",
+    "classEvidence": "fill:#003e57,color:#FFF",
+    "classLevel1": "fill:#5986d7,color:#FFF",
+    "classLevel2": "fill:#7a9ddd,color:#FFF",
+    "classLevel3": "fill:#9db4e6,color:#FFF"
   },
   "navigation": {
     "AssuranceCase": {
@@ -22,7 +25,7 @@
       "parent_names": ["AssuranceCase"],
       "parent_api_names": ["cases"],
       "parent_db_names": ["assurance_case_id"],
-      "shape": "square",
+      "shape": "hexagon",
       "children": ["Context", "PropertyClaim", "SystemDescription"],
       "parent_relation": "one-to-many"
     },
@@ -32,7 +35,7 @@
       "parent_names": ["TopLevelNormativeGoal"],
       "parent_api_names": ["goals"],
       "parent_db_names": ["goal_id"],
-      "shape": "diamond",
+      "shape": "parallelogram-left",
       "children": [],
       "parent_relation": "one-to-many"
     },
@@ -42,7 +45,7 @@
       "parent_names": ["TopLevelNormativeGoal"],
       "parent_api_names": ["goals"],
       "parent_db_names": ["goal_id"],
-      "shape": "diamond",
+      "shape": "parallelogram-right",
       "children": [],
       "parent_relation": "one-to-many"
     },
@@ -64,7 +67,7 @@
       "parent_names": ["PropertyClaim"],
       "parent_api_names": ["propertyclaims"],
       "parent_db_names": ["property_claim_id"],
-      "shape": "rounded",
+      "shape": "stadium",
       "children": ["Evidence"],
       "parent_relation": "many-to-many"
     },
