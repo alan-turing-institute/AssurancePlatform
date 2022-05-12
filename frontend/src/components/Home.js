@@ -1,9 +1,52 @@
-import { Box, Heading, Text, Grid, Button } from "grommet";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Box, Heading, Text, Grid, Button } from "grommet";
+import Logout from "./Logout.js";
+
 class Home extends React.Component {
   handleChange() {
     console.log("hello");
+  }
+
+  getButtons() {
+    if (localStorage.getItem("token") != null) {
+      return (
+        <Box
+          gridArea="left"
+          direction="column"
+          gap="small"
+          pad={{
+            horizontal: "small",
+            top: "medium",
+            bottom: "large",
+          }}
+        >
+          <Button href="/case/new" justify="center" fill={false}>
+            Get started
+          </Button>
+          <Logout />
+        </Box>
+      );
+    } else {
+      return (
+        <Box
+          gridArea="left"
+          direction="column"
+          gap="small"
+          pad={{
+            horizontal: "small",
+            top: "medium",
+            bottom: "large",
+          }}
+        >
+          <Button href="/login" justify="center" fill={false}>
+            Login
+          </Button>
+          <Button href="/signup" justify="center" fill={false}>
+            Sign up
+          </Button>
+        </Box>
+      );
+    }
   }
 
   render() {
@@ -34,12 +77,7 @@ class Home extends React.Component {
               A tool to support the responsible design, development, and
               deployment of data-driven technologies.
             </Text>
-            <Button
-              href="/case/new"
-              label="Get Started"
-              justify="center"
-              fill={false}
-            ></Button>
+            {this.getButtons()}
           </Box>
           <Box gridArea="main" justify="end">
             <img
