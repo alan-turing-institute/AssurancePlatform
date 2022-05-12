@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getBaseURL } from "./utils.js";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -8,7 +9,7 @@ const Login = () => {
 
   useEffect(() => {
     if (localStorage.getItem("token") !== null) {
-      window.location.replace("http://localhost:3000/dashboard");
+      window.location.replace("http://localhost:3000/home");
     } else {
       setLoading(false);
     }
@@ -22,7 +23,7 @@ const Login = () => {
       password: password,
     };
 
-    fetch("http://127.0.0.1:8000/api/v1/users/auth/login/", {
+    fetch(`${getBaseURL()}/auth/login/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,7 +35,7 @@ const Login = () => {
         if (data.key) {
           localStorage.clear();
           localStorage.setItem("token", data.key);
-          window.location.replace("http://localhost:3000/dashboard");
+          window.location.replace("http://localhost:3000/home");
         } else {
           setEmail("");
           setPassword("");
