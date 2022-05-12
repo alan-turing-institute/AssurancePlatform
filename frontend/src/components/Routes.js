@@ -4,9 +4,12 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Box, Grid, Text } from "grommet";
 import Navigation from "./Navigation.js";
 import Home from "./Home.js";
+import Login from "./Login.js";
+import Signup from "./Signup.js";
 import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
+
 const AllRoutes = () => (
   <Router>
     <Grid
@@ -31,6 +34,8 @@ const AllRoutes = () => (
           <Route path="/case">
             <Route path=":caseSlug" element={<CaseContainer />} />
           </Route>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
         </Routes>
       </Box>
       <Box gridArea="footer" width="100%" background="dark-2" pad="small">
