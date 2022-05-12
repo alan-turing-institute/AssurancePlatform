@@ -3,6 +3,8 @@ from . import views
 
 
 urlpatterns = [
+    path("auth/", include("rest_auth.urls")),
+    path("auth/register/", include("rest_auth.registration.urls")),
     path("home", views.AssuranceView.as_view(), name="home"),
     path("home_goals", views.GoalsView.as_view(), name="home"),
     path("cases/", views.case_list, name="case_list"),

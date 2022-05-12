@@ -1,9 +1,15 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 import datetime
 from enum import Enum
 
 # Create your models here.
+
+
+class EAPUser(AbstractUser):
+    def __str__(self):
+        return self.email
 
 
 class Shape(Enum):
