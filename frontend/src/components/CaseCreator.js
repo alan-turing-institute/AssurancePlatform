@@ -26,7 +26,10 @@ function CaseCreator() {
   function postCaseJSON(json_str) {
     const requestOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
       body: json_str,
     };
 
