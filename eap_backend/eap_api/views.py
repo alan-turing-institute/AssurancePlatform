@@ -28,7 +28,7 @@ TYPE_DICT = {
         "serializer": AssuranceCaseSerializer,
         "model": AssuranceCase,
         "children": ["goals"],
-        "fields": ("name", "description", "lock_uuid"),
+        "fields": ("name", "description", "lock_uuid", "owner"),
     },
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
@@ -246,6 +246,7 @@ def case_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
+        data["owner"] = request.user.id
         return save_json_tree(data, "assurance_case")
 
 
@@ -259,6 +260,8 @@ def case_detail(request, pk):
     except AssuranceCase.DoesNotExist:
         return HttpResponse(status=404)
 
+    if case.owner and case.owner != request.user:
+        return HttpResponse(status=403)
     if request.method == "GET":
         serializer = AssuranceCaseSerializer(case)
         case_data = serializer.data
