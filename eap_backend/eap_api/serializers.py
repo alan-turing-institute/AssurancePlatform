@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import (
     AssuranceCase,
+    EAPUser,
     TopLevelNormativeGoal,
     Context,
     SystemDescription,
@@ -25,6 +26,12 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "lock_uuid",
             "goals",
         )
+
+
+class EAPUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EAPUser
+        fields = ("email", "last_login", "date_joined", "is_staff")
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
