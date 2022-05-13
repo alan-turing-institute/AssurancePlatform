@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Fragment } from "react";
-import { Button } from "grommet";
+import { Box, Button, Text } from "grommet";
 import { getBaseURL } from "./utils.js";
+import { useNavigate } from "react-router-dom";
 
 const Logout = (props) => {
   const [loading, setLoading] = useState(true);
@@ -23,7 +24,15 @@ const Logout = (props) => {
       });
   };
 
-  return <Button onClick={handleLogout}>Logout</Button>;
+  let navigate = useNavigate();
+
+  return (
+    <Box>
+      <Text>Are you sure you want to logout?</Text>
+      <Button onClick={handleLogout} label="Confirm logout" />
+      <Button onClick={() => navigate(-1)} label="Back" />
+    </Box>
+  );
 };
 
 export default Logout;
