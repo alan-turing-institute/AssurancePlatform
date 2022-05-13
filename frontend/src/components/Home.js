@@ -20,10 +20,13 @@ class Home extends React.Component {
             bottom: "large",
           }}
         >
-          <Button href="/case/new" justify="center" fill={false}>
-            Get started
-          </Button>
-          <Logout />
+          <Button
+            href="/case/new"
+            justify="center"
+            fill={false}
+            label="Get started!"
+          />
+          <Button href="/logout" justify="center" fill={false} label="Logout" />
         </Box>
       );
     } else {
@@ -38,12 +41,13 @@ class Home extends React.Component {
             bottom: "large",
           }}
         >
-          <Button href="/login" justify="center" fill={false}>
-            Login
-          </Button>
-          <Button href="/signup" justify="center" fill={false}>
-            Sign up
-          </Button>
+          <Button href="/login" justify="center" fill={false} label="Login" />
+          <Button
+            href="/signup"
+            justify="center"
+            fill={false}
+            label="Sign up"
+          />
         </Box>
       );
     }
