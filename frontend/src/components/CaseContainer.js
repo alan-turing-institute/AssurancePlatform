@@ -463,6 +463,9 @@ class CaseContainer extends Component {
     // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return <Box>loading</Box>;
+      // if not logged-in, redirect to login page
+    } else if (localStorage.getItem("token") == null) {
+      window.location.replace("/login");
     } else {
       return (
         <Box fill>
