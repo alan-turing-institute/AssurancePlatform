@@ -23,9 +23,16 @@ function ItemCreator(props) {
     configData["property_claim_types"][0]
   );
   const [url, setURL] = useState("www.some-evidence.com");
+  const [submitClicked, setSubmitClicked] = useState(false);
 
   function handleSubmit(event) {
     event.preventDefault();
+    // only do the submit actions once.
+    if (submitClicked) {
+      console.log("tried to submit more than once");
+      return null;
+    }
+    setSubmitClicked(true);
     console.log("in handleSubmit, parentId is ", parentId);
     const res = createDBObject();
     console.log("db object created?", res);
