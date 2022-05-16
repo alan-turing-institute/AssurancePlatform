@@ -60,6 +60,7 @@ function CaseCreator() {
   }
   if (localStorage.getItem("token") == null) {
     window.location.replace("/login");
+    return null;
   } else {
     return (
       // TODO The visual layout here is a bit ugly, could improve it.

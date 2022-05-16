@@ -466,6 +466,7 @@ class CaseContainer extends Component {
       // if not logged-in, redirect to login page
     } else if (localStorage.getItem("token") == null) {
       window.location.replace("/login");
+      return null;
     } else {
       return (
         <Box fill>
