@@ -23,10 +23,18 @@ function ItemCreator(props) {
     configData["property_claim_types"][0]
   );
   const [url, setURL] = useState("www.some-evidence.com");
+  const [submitClicked, setSubmitClicked] = useState(false);
 
   function handleSubmit(event) {
     event.preventDefault();
-    console.log("in handleSubmit, parentId is ", parentId);
+    // only do the submit actions once.
+    if (submitClicked) {
+      console.log("tried to submit more than once");
+      return null;
+    }
+    setSubmitClicked(true);
+    console.log("handleSubmitset parentId ", parentId);
+    console.log("submitClicked", submitClicked);
     const res = createDBObject();
     console.log("db object created?", res);
     return res.then((resolve) => {
@@ -64,7 +72,10 @@ function ItemCreator(props) {
     }
     const requestOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(request_body),
     };
 

@@ -37,7 +37,12 @@ class CaseContainer extends Component {
   }
 
   fetchData = async (id) => {
-    const res = await fetch(this.url + id);
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const res = await fetch(this.url + id, requestOptions);
     const json_response = await res.json();
     if (
       JSON.stringify(this.state.assurance_case) !==
@@ -63,7 +68,10 @@ class CaseContainer extends Component {
     changeObj[field] = value;
     const requestOptions = {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(changeObj),
     };
     return fetch(backendURL, requestOptions);
@@ -73,6 +81,9 @@ class CaseContainer extends Component {
     const id = this.state.assurance_case.id;
     const backendURL = `${getBaseURL()}/cases/${id}/`;
     const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
       method: "DELETE",
     };
     return fetch(backendURL, requestOptions);
@@ -80,7 +91,12 @@ class CaseContainer extends Component {
 
   async exportCurrentCase() {
     const id = this.state.assurance_case.id;
-    const response = await fetch(this.url + id);
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const response = await fetch(this.url + id, requestOptions);
     let json_response = await response.json();
     const name = json_response["name"];
     // Remove the `id` fields, since they are only meaningful to the backend, and might
@@ -424,7 +440,7 @@ class CaseContainer extends Component {
       );
     } else {
       return (
-        <span>
+        <Box>
           <p>
             <Text color="#ff0000">
               Someone else is currently editing this case.
@@ -438,7 +454,7 @@ class CaseContainer extends Component {
               onClick={this.enableEditing.bind(this)}
             />
           </p>
-        </span>
+        </Box>
       );
     }
   }
@@ -447,6 +463,10 @@ class CaseContainer extends Component {
     // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return <Box>loading</Box>;
+      // if not logged-in, redirect to login page
+    } else if (localStorage.getItem("token") == null) {
+      window.location.replace("/login");
+      return null;
     } else {
       return (
         <Box fill>
@@ -458,7 +478,7 @@ class CaseContainer extends Component {
             areas={[
               { name: "header", start: [0, 0], end: [1, 0] },
               { name: "main", start: [0, 1], end: [1, 1] },
-              { name: "topright", start: [1, 0], end: [1, 0] },
+              { name: "right", start: [1, 0], end: [1, 1] },
             ]}
           >
             {this.state.showViewLayer &&
@@ -500,11 +520,10 @@ class CaseContainer extends Component {
                 }
                 editMode={this.inEditMode()}
               />
-              {this.getEditableControls()}
             </Box>
 
             <Box
-              gridArea="topright"
+              gridArea="right"
               direction="column"
               gap="small"
               pad={{
@@ -513,6 +532,7 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
+              {this.getEditableControls()}
               {this.inEditMode() && (
                 <Button
                   label="Delete Case"
@@ -575,7 +595,7 @@ class CaseContainer extends Component {
                       className="tools"
                       gap="xxsmall"
                       direction="row"
-                      justify="end"
+                      justify="start"
                     >
                       <Button
                         secondary

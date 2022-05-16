@@ -27,7 +27,12 @@ function ItemEditor(props) {
       configData.navigation[props.type]["api_name"]
     }/${props.id}`;
     async function getCurrent() {
-      const response = await fetch(url);
+      const requestOptions = {
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+        },
+      };
+      const response = await fetch(url, requestOptions);
       const body = await response.json();
       console.log("in getCurrent got body", body);
       if (!unmounted) {
@@ -52,7 +57,10 @@ function ItemEditor(props) {
     }/${props.id}/`;
     const requestOptions = {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({}),
     };
     let response = {};
@@ -88,7 +96,10 @@ function ItemEditor(props) {
 
     const requestOptions = {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(request_body),
     };
 
@@ -117,7 +128,10 @@ function ItemEditor(props) {
       currentParents.push(parentId);
       const requestOptions = {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(current),
       };
       await fetch(url, requestOptions);
@@ -134,7 +148,12 @@ function ItemEditor(props) {
     const url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
-    const response = await fetch(url);
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const response = await fetch(url, requestOptions);
     const current = await response.json();
     const idName = configData.navigation[parentType]["id_name"];
     let currentParents = current[idName];
@@ -148,7 +167,10 @@ function ItemEditor(props) {
       current[idName] = currentParents;
       const requestOptions = {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(current),
       };
       await fetch(url, requestOptions);
