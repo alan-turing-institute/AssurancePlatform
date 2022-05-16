@@ -87,6 +87,7 @@ class Home extends React.Component {
             <img
               src="https://i.imgur.com/eHFzRO6.png"
               alt="Ethical Assurance flowchart"
+              height="100%"
             />
           </Box>
         </Grid>
