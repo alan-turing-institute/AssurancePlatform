@@ -15,7 +15,12 @@ function ItemViewer(props) {
       configData.navigation[props.type]["api_name"]
     }/${props.id}`;
     async function getCurrent() {
-      const response = await fetch(url);
+      const requestOptions = {
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+        },
+      };
+      const response = await fetch(url, requestOptions);
       const body = await response.json();
       if (!unmounted && items.id !== body.id) {
         setItems(body);
