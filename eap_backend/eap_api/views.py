@@ -130,8 +130,8 @@ def make_summary(serialized_data):
     Take in a full serialized object, and return dict containing just
     the id and the name
 
-    parameter: serialized_data, dict, or list of dicts
-    returns: dict, or list of dicts, containing just "name" and "id" key/values.
+    Parameter: serialized_data, dict, or list of dicts
+    Returns: dict, or list of dicts, containing just "name" and "id" key/values.
     """
 
     def summarize_one(data):
