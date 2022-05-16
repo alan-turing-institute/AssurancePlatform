@@ -33,7 +33,8 @@ function ItemCreator(props) {
       return null;
     }
     setSubmitClicked(true);
-    console.log("in handleSubmit, parentId is ", parentId);
+    console.log("handleSubmitset parentId ", parentId);
+    console.log("submitClicked", submitClicked);
     const res = createDBObject();
     console.log("db object created?", res);
     return res.then((resolve) => {
