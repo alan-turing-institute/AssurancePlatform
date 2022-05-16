@@ -49,8 +49,16 @@ function jsonToMermaid(in_json) {
     outputmd += "\nclass " + node + " blackBox;\n";
     if (obj.claim_type === "Project claim") {
       outputmd += "\nclass " + node + " classProjectClaim;\n";
+      if (obj.level !== undefined) {
+        outputmd +=
+          "\nclass " + node + " classProjectClaimLevel" + obj.level + ";\n";
+      }
     } else if (obj.claim_type === "System claim") {
       outputmd += "\nclass " + node + " classSystemClaim;\n";
+      if (obj.level !== undefined) {
+        outputmd +=
+          "\nclass " + node + " classSystemClaimLevel" + obj.level + ";\n";
+      }
     } else {
       outputmd += "\nclass " + node + " class" + type + ";\n";
     }
