@@ -25,6 +25,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "created_date",
             "lock_uuid",
             "goals",
+            "owner",
         )
 
 
