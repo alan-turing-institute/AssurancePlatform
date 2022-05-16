@@ -440,7 +440,7 @@ class CaseContainer extends Component {
       );
     } else {
       return (
-        <span>
+        <Box>
           <p>
             <Text color="#ff0000">
               Someone else is currently editing this case.
@@ -454,7 +454,7 @@ class CaseContainer extends Component {
               onClick={this.enableEditing.bind(this)}
             />
           </p>
-        </span>
+        </Box>
       );
     }
   }
@@ -478,7 +478,7 @@ class CaseContainer extends Component {
             areas={[
               { name: "header", start: [0, 0], end: [1, 0] },
               { name: "main", start: [0, 1], end: [1, 1] },
-              { name: "topright", start: [1, 0], end: [1, 0] },
+              { name: "right", start: [1, 0], end: [1, 1] },
             ]}
           >
             {this.state.showViewLayer &&
@@ -520,11 +520,10 @@ class CaseContainer extends Component {
                 }
                 editMode={this.inEditMode()}
               />
-              {this.getEditableControls()}
             </Box>
 
             <Box
-              gridArea="topright"
+              gridArea="right"
               direction="column"
               gap="small"
               pad={{
@@ -533,6 +532,7 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
+              {this.getEditableControls()}
               {this.inEditMode() && (
                 <Button
                   label="Delete Case"
@@ -595,7 +595,7 @@ class CaseContainer extends Component {
                       className="tools"
                       gap="xxsmall"
                       direction="row"
-                      justify="end"
+                      justify="start"
                     >
                       <Button
                         secondary
