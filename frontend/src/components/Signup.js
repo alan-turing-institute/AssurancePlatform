@@ -16,6 +16,7 @@ const Signup = () => {
   const [password2, setPassword2] = useState("");
   const [errors, setErrors] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorMessages, setErrorMessages] = useState([]);
 
   useEffect(() => {
     if (localStorage.getItem("token") !== null) {
@@ -54,15 +55,33 @@ const Signup = () => {
           setPassword2("");
           localStorage.clear();
           setErrors(true);
+          if (data.email) setErrorMessages([...errorMessages, ...data.email]);
+          if (data.password1)
+            setErrorMessages([...errorMessages, ...data.password1]);
+          if (data.password2)
+            setErrorMessages([...errorMessages, ...data.password2]);
+          if (data.non_field_errors)
+            setErrorMessages([...errorMessages, ...data.non_field_errors]);
+          console.log("Errors are", errorMessages);
         }
       });
   };
 
+  function displayErrors() {
+    if (errorMessages.length === 0) return null;
+    else
+      return (
+        <Box pad="small" width="medium">
+          <Text color="red">{errorMessages}</Text>
+        </Box>
+      );
+  }
+
   return (
-    <Box gap="medium" pad="medium" width="medium">
-      {loading === false && <Heading level={2}>Signup</Heading>}
+    <Box gap="medium" width="large" pad="small">
+      {loading === false && <Heading level={2}>Sign up</Heading>}
       {errors === true && (
-        <Heading level={2}>Cannot signup with provided credentials</Heading>
+        <Heading level={2}>Cannot sign up with provided credentials</Heading>
       )}
       <Form onSubmit={onSubmit}>
         <FormField htmlFor="email" label="Email address">
@@ -74,7 +93,11 @@ const Signup = () => {
             required
           />
         </FormField>
-        <FormField htmlFor="password1" label="Password">
+        <FormField
+          htmlFor="password1"
+          label="Password"
+          info="At least 8 characters"
+        >
           <TextInput
             name="password1"
             type="password"
@@ -92,7 +115,8 @@ const Signup = () => {
             required
           />
         </FormField>
-        <Button primary={true} type="submit" label="Signup" />
+        {displayErrors()}
+        <Button type="submit" label="Sign up" primary={true} />
       </Form>
     </Box>
   );
