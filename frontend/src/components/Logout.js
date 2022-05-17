@@ -27,10 +27,12 @@ const Logout = (props) => {
   let navigate = useNavigate();
 
   return (
-    <Box>
-      <Text>Are you sure you want to logout?</Text>
-      <Button onClick={handleLogout} label="Confirm logout" />
-      <Button onClick={() => navigate(-1)} label="Back" />
+    <Box pad="small" gap="xsmall" width="medium">
+      <Text color="red">Are you sure you want to logout?</Text>
+      <Box direction="row" width="medium" gap="xsmall">
+        <Button onClick={() => navigate(-1)} label="Back" />
+        <Button primary={true} onClick={handleLogout} label="Confirm logout" />
+      </Box>
     </Box>
   );
 };
