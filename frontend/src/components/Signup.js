@@ -55,14 +55,16 @@ const Signup = () => {
           setPassword2("");
           localStorage.clear();
           setErrors(true);
-          let errors = [];
-          if (data.email) errors = [...errors, ...data.email];
-          if (data.password1) errors = [...errors, ...data.password1];
-          if (data.password2) errors = [...errors, ...data.password2];
+          let currentErrors = [];
+          if (data.email) currentErrors = [...currentErrors, ...data.email];
+          if (data.password1)
+            currentErrors = [...currentErrors, ...data.password1];
+          if (data.password2)
+            currentErrors = [...currentErrors, ...data.password2];
           if (data.non_field_errors)
-            errors = [...errors, ...data.non_field_errors];
-          setErrorMessages(errors);
-          console.log("Errors are", errors);
+            currentErrors = [...currentErrors, ...data.non_field_errors];
+          setErrorMessages(currentErrors);
+          console.log("Errors are", currentErrors);
         }
       });
   };
