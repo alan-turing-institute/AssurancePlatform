@@ -22,6 +22,7 @@ test("renders loading screen", () => {
   fetch.mockResponseOnce(
     JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] })
   );
+  localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
   const textElement = screen.getByText("loading");
   expect(textElement).toBeInTheDocument();
@@ -31,6 +32,7 @@ test("renders case view", async () => {
   fetch.mockResponseOnce(
     JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] })
   );
+  localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
   await waitFor(() =>
     expect(screen.getByDisplayValue("Test case")).toBeInTheDocument()

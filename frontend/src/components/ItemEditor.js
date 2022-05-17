@@ -27,7 +27,12 @@ function ItemEditor(props) {
       configData.navigation[props.type]["api_name"]
     }/${props.id}`;
     async function getCurrent() {
-      const response = await fetch(url);
+      const requestOptions = {
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+        },
+      };
+      const response = await fetch(url, requestOptions);
       const body = await response.json();
       console.log("in getCurrent got body", body);
       if (!unmounted) {
@@ -52,7 +57,10 @@ function ItemEditor(props) {
     }/${props.id}/`;
     const requestOptions = {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({}),
     };
     let response = {};
@@ -88,7 +96,10 @@ function ItemEditor(props) {
 
     const requestOptions = {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(request_body),
     };
 
@@ -117,7 +128,10 @@ function ItemEditor(props) {
       currentParents.push(parentId);
       const requestOptions = {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(current),
       };
       await fetch(url, requestOptions);
@@ -134,7 +148,12 @@ function ItemEditor(props) {
     const url = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
-    const response = await fetch(url);
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const response = await fetch(url, requestOptions);
     const current = await response.json();
     const idName = configData.navigation[parentType]["id_name"];
     let currentParents = current[idName];
@@ -148,7 +167,10 @@ function ItemEditor(props) {
       current[idName] = currentParents;
       const requestOptions = {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(current),
       };
       await fetch(url, requestOptions);
@@ -158,9 +180,12 @@ function ItemEditor(props) {
 
   function setItem(key, value) {
     console.log("in setItem", key, value);
-    items[key] = value;
+    const newItems = { ...items };
+    newItems[key] = value;
+    setItems(newItems);
   }
 
+  if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
     <Box className="dropdown">
       <Heading level={3}>
@@ -169,28 +194,28 @@ function ItemEditor(props) {
       <Form onSubmit={handleSubmit}>
         <FormField>
           <TextInput
-            placeholder={items.name}
+            value={items.name}
             name="name"
             onChange={(e) => setItem("name", e.target.value)}
           />
         </FormField>
         <FormField>
           <TextInput
-            placeholder={items.short_description}
+            value={items.short_description}
             name="short_description"
             onChange={(e) => setItem("short_description", e.target.value)}
           />
         </FormField>
         <FormField>
           <TextInput
-            placeholder={items.long_description}
+            value={items.long_description}
             name="long_description"
             onChange={(e) => setItem("long_description", e.target.value)}
           />
         </FormField>
         <FormField>
           <TextInput
-            placeholder={items.keywords}
+            value={items.keywords}
             name="keywords"
             onChange={(e) => setItem("keywords", e.target.value)}
           />
@@ -198,7 +223,7 @@ function ItemEditor(props) {
         {props.type === "Evidence" && (
           <FormField>
             <TextInput
-              placeholder={items.URL}
+              value={items.URL}
               name="URL"
               onChange={(e) => setItem("URL", e.target.value)}
             />
@@ -207,7 +232,7 @@ function ItemEditor(props) {
         {props.type === "PropertyClaim" && (
           <FormField label="Claim type">
             <Select
-              placeholder={items.claim_type}
+              value={items.claim_type}
               name="claim_type"
               options={configData["property_claim_types"]}
               onChange={(e) => setItem("claim_type", e.target.value)}

@@ -1,9 +1,15 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 import datetime
 from enum import Enum
 
 # Create your models here.
+
+
+class EAPUser(AbstractUser):
+    def __str__(self):
+        return self.email
 
 
 class Shape(Enum):
@@ -40,6 +46,9 @@ class AssuranceCase(models.Model):
     description = models.CharField(max_length=1000)
     created_date = models.DateTimeField(auto_now_add=True)
     lock_uuid = models.CharField(max_length=50, default=None, null=True, blank=True)
+    owner = models.ForeignKey(
+        EAPUser, related_name="cases", on_delete=models.CASCADE, null=True
+    )
     shape = None
 
     def __str__(self):

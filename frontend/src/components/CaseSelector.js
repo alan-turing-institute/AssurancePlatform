@@ -10,7 +10,12 @@ function CaseSelector() {
 
   async function getCases(unmounted) {
     let url = `${getBaseURL()}/cases/`;
-    const response = await fetch(url);
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const response = await fetch(url, requestOptions);
     const body = await response.json();
     if (!unmounted) {
       setItems(body.map(({ id, name }) => ({ id: id, name: name })));
