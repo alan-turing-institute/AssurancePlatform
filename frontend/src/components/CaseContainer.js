@@ -155,7 +155,6 @@ class CaseContainer extends Component {
   // Setup the `beforeunload` event listener to detect browser/tab closing
   setupBeforeUnloadListener = () => {
     window.addEventListener("beforeunload", (ev) => {
-      ev.preventDefault();
       return this.cleanup();
     });
   };
