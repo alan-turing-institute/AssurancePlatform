@@ -1,6 +1,5 @@
 import React from "react";
-import { Box, Heading, Text, Grid, Button } from "grommet";
-import Logout from "./Logout.js";
+import { Box, Image, Text, Grid, Button } from "grommet";
 
 class Home extends React.Component {
   handleChange() {
@@ -84,7 +83,8 @@ class Home extends React.Component {
             {this.getButtons()}
           </Box>
           <Box gridArea="main" justify="end">
-            <img
+            <Image
+              fit="contain"
               src="https://i.imgur.com/eHFzRO6.png"
               alt="Ethical Assurance flowchart"
               height="100%"
