@@ -1,5 +1,13 @@
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Heading,
+  Text,
+  TextInput,
+} from "grommet";
 import React, { useState, useEffect } from "react";
-import { Box, Button, Form, Text, TextInput } from "grommet";
 import { getBaseURL } from "./utils.js";
 
 const Signup = () => {
@@ -47,14 +55,16 @@ const Signup = () => {
           setPassword2("");
           localStorage.clear();
           setErrors(true);
-          if (data.email) setErrorMessages([...errorMessages, ...data.email]);
+          let currentErrors = [];
+          if (data.email) currentErrors = [...currentErrors, ...data.email];
           if (data.password1)
-            setErrorMessages([...errorMessages, ...data.password1]);
+            currentErrors = [...currentErrors, ...data.password1];
           if (data.password2)
-            setErrorMessages([...errorMessages, ...data.password2]);
+            currentErrors = [...currentErrors, ...data.password2];
           if (data.non_field_errors)
-            setErrorMessages([...errorMessages, ...data.non_field_errors]);
-          console.log("Errors are", errorMessages);
+            currentErrors = [...currentErrors, ...data.non_field_errors];
+          setErrorMessages(currentErrors);
+          console.log("Errors are", currentErrors);
         }
       });
   };
@@ -70,43 +80,45 @@ const Signup = () => {
   }
 
   return (
-    <Box width="medium" pad="small">
-      {loading === false && <h1>Sign up</h1>}
-      {errors === true && <h2>Cannot signup with provided credentials</h2>}
+    <Box gap="medium" width="large" pad="small">
+      {loading === false && <Heading level={2}>Sign up</Heading>}
+      {errors === true && (
+        <Heading level={2}>Cannot sign up with provided credentials</Heading>
+      )}
       <Form onSubmit={onSubmit}>
-        <label htmlFor="email">Email address:</label> <br />
-        <TextInput
-          name="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />{" "}
-        <br />
-        <label htmlFor="password1">
-          Password (at least 8 characters, at least 2 types (uppercase,
-          lowercase, numeric, symbol)):
-        </label>{" "}
-        <br />
-        <TextInput
-          name="password1"
-          type="password"
-          value={password1}
-          onChange={(e) => setPassword1(e.target.value)}
-          required
-        />{" "}
-        <br />
-        <label htmlFor="password2">Confirm password:</label> <br />
-        <TextInput
-          name="password2"
-          type="password"
-          value={password2}
-          onChange={(e) => setPassword2(e.target.value)}
-          required
-        />{" "}
-        <br />
+        <FormField htmlFor="email" label="Email address">
+          <TextInput
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </FormField>
+        <FormField
+          htmlFor="password1"
+          label="Password"
+          info="At least 8 characters"
+        >
+          <TextInput
+            name="password1"
+            type="password"
+            value={password1}
+            onChange={(e) => setPassword1(e.target.value)}
+            required
+          />
+        </FormField>
+        <FormField htmlFor="password2" label="Confirm password">
+          <TextInput
+            name="password2"
+            type="password"
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            required
+          />
+        </FormField>
         {displayErrors()}
-        <Button type="submit" label="Signup" primary={true} />
+        <Button type="submit" label="Sign up" primary={true} />
       </Form>
     </Box>
   );
