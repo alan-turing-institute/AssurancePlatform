@@ -126,11 +126,15 @@ class CaseContainer extends Component {
     saveAs(blob, filename);
   }
 
+  fetchDataCurrentCase() {
+    return this.fetchData(this.props.params.caseSlug);
+  }
+
   componentDidMount() {
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
     this.fetchData(id);
-    this.timer = setInterval(() => this.fetchData(id), 5000);
+    this.timer = setInterval(this.fetchDataCurrentCase.bind(this), 5000);
     if (!window.sessionStorage.getItem("session_id")) {
       let uuid = uuidv4();
       window.sessionStorage.setItem("session_id", uuid);
