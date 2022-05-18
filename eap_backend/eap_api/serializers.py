@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import (
     AssuranceCase,
     EAPUser,
+    EAPGroup,
     TopLevelNormativeGoal,
     Context,
     SystemDescription,
@@ -29,10 +30,25 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
         )
 
 
+class EAPGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EAPGroup
+        fields = ("name", "owner", "user_set")
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
+    groups = EAPGroupSerializer(many=True)
+
     class Meta:
         model = EAPUser
-        fields = ("email", "last_login", "date_joined", "is_staff")
+        fields = (
+            "email",
+            "last_login",
+            "date_joined",
+            "is_staff",
+            "groups",
+            "owned_groups",
+        )
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):

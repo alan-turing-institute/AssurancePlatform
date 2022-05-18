@@ -4,6 +4,8 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import generics
 from .models import (
+    EAPUser,
+    EAPGroup,
     AssuranceCase,
     TopLevelNormativeGoal,
     Context,
@@ -14,6 +16,8 @@ from .models import (
 )
 from . import models
 from .serializers import (
+    EAPUserSerializer,
+    EAPGroupSerializer,
     AssuranceCaseSerializer,
     TopLevelNormativeGoalSerializer,
     ContextSerializer,
@@ -76,21 +80,6 @@ TYPE_DICT = {
 # Pluralising the name of the type should be irrelevant.
 for k, v in tuple(TYPE_DICT.items()):
     TYPE_DICT[k + "s"] = v
-
-
-class AssuranceView(generics.ListCreateAPIView):
-    queryset = AssuranceCase.objects.all()
-    serializer_class = AssuranceCaseSerializer
-
-
-class GoalsView(generics.ListCreateAPIView):
-    queryset = TopLevelNormativeGoal.objects.all()
-    serializer_class = TopLevelNormativeGoalSerializer
-
-
-class DetailAssuranceView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = AssuranceCase.objects.all()
-    serializer_class = AssuranceCaseSerializer
 
 
 def get_case_id(item):
@@ -232,6 +221,92 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
 
     summary = {"name": name, "id": id}
     return JsonResponse(summary, status=success_http_code)
+
+
+@csrf_exempt
+def user_list(request):
+    """
+    List all users, or make a new user
+    """
+    if request.method == "GET":
+        users = EAPUser.objects.all()
+        serializer = EAPUserSerializer(users, many=True)
+        return JsonResponse(serializer.data, safe=False)
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        serializer = EAPUserSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=201)
+        return JsonResponse(serializer.errors, status=400)
+
+
+@csrf_exempt
+def user_detail(request, pk):
+    """
+    Retrieve, update, or delete a User by primary key
+    """
+    try:
+        user = EAPUser.objects.get(pk=pk)
+    except EAPUser.DoesNotExist:
+        return HttpResponse(status=404)
+    if request.method == "GET":
+        serializer = EAPUserSerializer(user)
+        user_data = serializer.data
+        return JsonResponse(user_data)
+    elif request.method == "PUT":
+        data = JSONParser().parse(request)
+        serializer = EAPUserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data)
+        return JsonResponse(serializer.errors, status=400)
+    elif request.method == "DELETE":
+        user.delete()
+        return HttpResponse(status=204)
+
+
+@csrf_exempt
+def group_list(request):
+    """
+    List all group, or make a new group
+    """
+    if request.method == "GET":
+        groups = EAPGroup.objects.all()
+        serializer = EAPGroupSerializer(groups, many=True)
+        return JsonResponse(serializer.data, safe=False)
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        serializer = EAPGroupSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=201)
+        return JsonResponse(serializer.errors, status=400)
+
+
+@csrf_exempt
+def group_detail(request, pk):
+    """
+    Retrieve, update, or delete a Group by primary key
+    """
+    try:
+        group = EAPGroup.objects.get(pk=pk)
+    except EAPGroup.DoesNotExist:
+        return HttpResponse(status=404)
+    if request.method == "GET":
+        serializer = EAPGroupSerializer(group)
+        group_data = serializer.data
+        return JsonResponse(group_data)
+    elif request.method == "PUT":
+        data = JSONParser().parse(request)
+        serializer = EAPGroupSerializer(group, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data)
+        return JsonResponse(serializer.errors, status=400)
+    elif request.method == "DELETE":
+        group.delete()
+        return HttpResponse(status=204)
 
 
 @csrf_exempt
