@@ -12,6 +12,40 @@ from .models import (
 )
 
 
+class EAPUserSerializer(serializers.ModelSerializer):
+    all_groups = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
+    owned_groups = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
+
+    class Meta:
+        model = EAPUser
+        fields = (
+            "username",
+            "email",
+            "last_login",
+            "date_joined",
+            "is_staff",
+            "all_groups",
+            "owned_groups",
+        )
+
+
+class EAPGroupSerializer(serializers.ModelSerializer):
+    members = serializers.PrimaryKeyRelatedField(
+        source="member", many=True, queryset=EAPUser.objects.all()
+    )
+    owner_id = serializers.PrimaryKeyRelatedField(
+        source="owner", queryset=EAPUser.objects.all()
+    )
+
+    class Meta:
+        model = EAPGroup
+        fields = ("name", "owner_id", "members")
+
+
 class AssuranceCaseSerializer(serializers.ModelSerializer):
     goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="AssuranceCase", read_only=True)
@@ -27,27 +61,6 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "lock_uuid",
             "goals",
             "owner",
-        )
-
-
-class EAPGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EAPGroup
-        fields = ("name", "owner", "user_set")
-
-
-class EAPUserSerializer(serializers.ModelSerializer):
-    groups = EAPGroupSerializer(many=True)
-
-    class Meta:
-        model = EAPUser
-        fields = (
-            "email",
-            "last_login",
-            "date_joined",
-            "is_staff",
-            "groups",
-            "owned_groups",
         )
 
 

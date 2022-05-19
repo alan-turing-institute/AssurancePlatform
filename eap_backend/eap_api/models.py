@@ -4,22 +4,10 @@ from django.utils import timezone
 import datetime
 from enum import Enum
 
-# Create your models here.
+# Classes representing tables in the database for EAP app.
 
 
 class EAPUser(AbstractUser):
-    #    eapgroups = models.ManyToManyField(
-    #        blank=True,
-    #        help_text=(
-    #            "The groups this user belongs to. "
-    #            "A user will get all permissions granted to each of their "
-    #            "groups."
-    #        ),
-    #        related_name="user_set",
-    #        related_query_name="user",
-    #        to="eap_api.EAPGroup",
-    #        verbose_name="groups",
-    #    )
     def __str__(self):
         return self.email
 
@@ -28,11 +16,9 @@ class EAPGroup(models.Model):
     name = models.CharField(max_length=200)
     created_date = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(
-        EAPUser, related_name="owned_groups", on_delete=models.CASCADE, null=True
+        EAPUser, related_name="owned_groups", on_delete=models.CASCADE
     )
-    users = models.ForeignKey(
-        EAPUser, related_name="all_groups", on_delete=models.CASCADE, null=True
-    )
+    member = models.ManyToManyField(EAPUser, related_name="all_groups")
 
     def __str__(self):
         return self.name
