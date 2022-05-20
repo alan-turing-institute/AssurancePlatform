@@ -32,7 +32,7 @@ from .view_utils import (
     make_summary,
     get_json_tree,
     save_json_tree,
-    can_view_case,
+    get_case_permissions,
     get_allowed_cases,
     can_view_group,
     get_allowed_groups,
@@ -159,15 +159,19 @@ def case_detail(request, pk):
         case = AssuranceCase.objects.get(pk=pk)
     except AssuranceCase.DoesNotExist:
         return HttpResponse(status=404)
-    if not can_view_case(case, request.user):
+    permissions = get_case_permissions(case, request.user)
+    if not permissions:
         return HttpResponse(status=403)
     if request.method == "GET":
         serializer = AssuranceCaseSerializer(case)
         case_data = serializer.data
         goals = get_json_tree(case_data["goals"], "goals")
         case_data["goals"] = goals
+        case_data["permissions"] = permissions
         return JsonResponse(case_data)
     elif request.method == "PUT":
+        if permissions not in ["manage", "edit"]:
+            return HttpResponse(status=403)
         data = JSONParser().parse(request)
         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
         if serializer.is_valid():
@@ -175,6 +179,8 @@ def case_detail(request, pk):
             return JsonResponse(serializer.data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
+        if permissions not in ["manage", "edit"]:
+            return HttpResponse(status=403)
         case.delete()
         return HttpResponse(status=204)
 

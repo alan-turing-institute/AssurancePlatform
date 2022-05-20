@@ -219,9 +219,9 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     return JsonResponse(summary, status=success_http_code)
 
 
-def can_view_case(case, user):
+def get_case_permissions(case, user):
     """
-    See if the user is allowed to view the case.
+    See if the user is allowed to view or edit the case.
 
     Params:
     =======
@@ -230,35 +230,38 @@ def can_view_case(case, user):
 
     Returns:
     =======
-    True if case has no owner, user is owner, or there is overlap
-         between the user's groups and the owner's groups.
-    False otherwise.
+    string
+       "manage": if case has no owner or if user is owner
+       "edit": if user is a member of a group that has edit rights on the case
+       "view": if user is a member of a group that has view rights on the case
+    None otherwise.
     """
-    if not case.owner:
-        # case has no owner - anyone can view it
-        return True
-    if case.owner == user:
-        # owner can view their own case
-        return True
+    if (not case.owner) or (case.owner == user):
+        # case has no owner - anyone can view it, or user is owner
+        return "manage"
+
     # now check groups
     try:
-        case_groups = case.owner.all_groups.get_queryset()
         user_groups = user.all_groups.get_queryset()
+        edit_groups = case.edit_groups.get_queryset()
         # check intersection of two lists
-        if set(case_groups) & set(user_groups):
-            return True
+        if set(edit_groups) & set(user_groups):
+            return "edit"
+        view_groups = case.view_groups.get_queryset()
+        if set(view_groups) & set(user_groups):
+            return "view"
     except EAPGroup.DoesNotExist:
         # no group found for user or for case
         pass
     except AttributeError:
         # probably AnonymousUser
         pass
-    return False
+    return None
 
 
 def get_allowed_cases(user):
     """
-    get a list of AssuranceCases that the user is allowed to view.
+    get a list of AssuranceCases that the user is allowed to view or edit.
 
     Parameters:
     ===========
@@ -269,7 +272,8 @@ def get_allowed_cases(user):
     list of AssuranceCase instances.
     """
     all_cases = AssuranceCase.objects.all()
-    allowed_cases = [case for case in all_cases if can_view_case(case, user)]
+    # if get_case_permissions returns anything other than None, include in allowed_cases
+    allowed_cases = [case for case in all_cases if get_case_permissions(case, user)]
     return allowed_cases
 
 

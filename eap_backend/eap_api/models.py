@@ -61,8 +61,12 @@ class AssuranceCase(models.Model):
     owner = models.ForeignKey(
         EAPUser, related_name="cases", on_delete=models.CASCADE, null=True
     )
-    edit_groups = models.ManyToManyField(EAPGroup, related_name="editable_cases")
-    view_groups = models.ManyToManyField(EAPGroup, related_name="viewable_cases")
+    edit_groups = models.ManyToManyField(
+        EAPGroup, related_name="editable_cases", blank=True
+    )
+    view_groups = models.ManyToManyField(
+        EAPGroup, related_name="viewable_cases", blank=True
+    )
     shape = None
 
     def __str__(self):
