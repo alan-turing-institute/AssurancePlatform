@@ -1,9 +1,7 @@
-import warnings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
-from rest_framework import generics
 from .models import (
     EAPUser,
     EAPGroup,
@@ -15,7 +13,6 @@ from .models import (
     EvidentialClaim,
     Evidence,
 )
-from . import models
 from .serializers import (
     EAPUserSerializer,
     EAPGroupSerializer,
@@ -36,6 +33,7 @@ from .view_utils import (
     get_allowed_cases,
     can_view_group,
     get_allowed_groups,
+    TYPE_DICT,
 )
 
 
