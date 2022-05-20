@@ -1,6 +1,6 @@
+import warnings
 from django.http import JsonResponse
 from .models import (
-    EAPUser,
     EAPGroup,
     AssuranceCase,
     TopLevelNormativeGoal,
@@ -12,8 +12,6 @@ from .models import (
 )
 from . import models
 from .serializers import (
-    EAPUserSerializer,
-    EAPGroupSerializer,
     AssuranceCaseSerializer,
     TopLevelNormativeGoalSerializer,
     ContextSerializer,
