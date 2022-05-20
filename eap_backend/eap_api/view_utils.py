@@ -250,6 +250,9 @@ def can_view_case(case, user):
     except EAPGroup.DoesNotExist:
         # no group found for user or for case
         pass
+    except AttributeError:
+        # probably AnonymousUser
+        pass
     return False
 
 

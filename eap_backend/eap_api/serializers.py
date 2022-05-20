@@ -61,6 +61,8 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "lock_uuid",
             "goals",
             "owner",
+            "edit_groups",
+            "view_groups",
         )
 
 
