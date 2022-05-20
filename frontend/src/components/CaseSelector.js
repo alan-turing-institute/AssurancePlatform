@@ -17,7 +17,7 @@ function CaseSelector() {
     };
     const response = await fetch(url, requestOptions);
     const body = await response.json();
-    if (!unmounted) {
+    if (!unmounted && body.map != undefined) {
       setItems(body.map(({ id, name }) => ({ id: id, name: name })));
       setLoading(false);
     }

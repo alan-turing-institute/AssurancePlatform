@@ -33,6 +33,13 @@ function Navigation() {
               </li>
               {localStorage.getItem("token") != null && (
                 <li className="nav-item">
+                  <NavLink className="nav-link" to="/groups">
+                    Groups
+                  </NavLink>
+                </li>
+              )}
+              {localStorage.getItem("token") != null && (
+                <li className="nav-item">
                   <NavLink className="nav-link" to="/logout">
                     Logout
                   </NavLink>

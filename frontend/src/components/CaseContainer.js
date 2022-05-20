@@ -6,13 +6,13 @@ import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
 
+import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
 import { getBaseURL, jsonToMermaid } from "./utils.js";
-import configData from "../config.json";
 import "./CaseContainer.css";
 
 class CaseContainer extends Component {
@@ -23,6 +23,7 @@ class CaseContainer extends Component {
       showEditLayer: false,
       showCreateLayer: false,
       showConfirmDeleteLayer: false,
+      showCasePermissionLayer: false,
       loading: true,
       assurance_case: {
         id: 0,
@@ -51,6 +52,8 @@ class CaseContainer extends Component {
       this.setState({ loading: true });
       this.setState({
         assurance_case: json_response,
+        editGroupsStr: JSON.stringify(json_response.editGroups),
+        viewGroupsStr: JSON.stringify(json_response.viewGroups),
       });
       this.setState({
         mermaid_md: jsonToMermaid(this.state.assurance_case),
@@ -222,6 +225,11 @@ class CaseContainer extends Component {
     this.setState({ showConfirmDeleteLayer: true });
   }
 
+  showCasePermissionLayer(event) {
+    event.preventDefault();
+    this.setState({ showCasePermissionLayer: true });
+  }
+
   hideViewLayer() {
     this.setState({ showViewLayer: false });
   }
@@ -242,6 +250,12 @@ class CaseContainer extends Component {
   hideConfirmDeleteLayer() {
     this.setState({
       showConfirmDeleteLayer: false,
+    });
+  }
+
+  hideCasePermissionLayer() {
+    this.setState({
+      showCasePermissionLayer: false,
     });
   }
 
@@ -351,6 +365,7 @@ class CaseContainer extends Component {
       </Box>
     );
   }
+
   confirmDeleteLayer() {
     return (
       <Box>
@@ -383,6 +398,34 @@ class CaseContainer extends Component {
                 }}
               />
             </Box>
+          </Box>
+        </Layer>
+      </Box>
+    );
+  }
+
+  casePermissionLayer() {
+    return (
+      <Box>
+        <Layer
+          full="vertical"
+          position="right"
+          onEsc={() => this.hideCasePermissionLayer()}
+          onClickOutside={() => this.hideCasePermissionLayer()}
+        >
+          <Box
+            pad="medium"
+            gap="small"
+            width={{ min: "medium" }}
+            height={{ min: "small" }}
+            fill
+          >
+            <Button
+              alignSelf="end"
+              icon={<FormClose />}
+              onClick={() => this.hideCasePermissionLayer()}
+            />
+            <CasePermissionsManager case={this.state.assurance_case} />
           </Box>
         </Layer>
       </Box>
@@ -425,7 +468,9 @@ class CaseContainer extends Component {
   }
 
   getEditableControls() {
-    if (this.inEditMode()) {
+    if (this.state.assurance_case.permissions === "view") {
+      return null;
+    } else if (this.inEditMode()) {
       return (
         <Button
           label="Disable edit mode"
@@ -498,6 +543,7 @@ class CaseContainer extends Component {
               this.state.createItemParentType &&
               this.createLayer()}
             {this.state.showConfirmDeleteLayer && this.confirmDeleteLayer()}
+            {this.state.showCasePermissionLayer && this.casePermissionLayer()}
 
             <Box
               gridArea="header"
@@ -536,6 +582,13 @@ class CaseContainer extends Component {
               }}
             >
               {this.getEditableControls()}
+              {this.state.assurance_case.permissions === "manage" && (
+                <Button
+                  label="Manage case permissions"
+                  secondary
+                  onClick={this.showCasePermissionLayer.bind(this)}
+                />
+              )}
               {this.inEditMode() && (
                 <Button
                   label="Delete Case"

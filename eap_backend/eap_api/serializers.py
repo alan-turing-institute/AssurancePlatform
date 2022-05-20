@@ -45,7 +45,14 @@ class EAPGroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EAPGroup
-        fields = ("name", "owner_id", "members", "viewable_cases", "editable_cases")
+        fields = (
+            "id",
+            "name",
+            "owner_id",
+            "members",
+            "viewable_cases",
+            "editable_cases",
+        )
 
 
 class AssuranceCaseSerializer(serializers.ModelSerializer):
