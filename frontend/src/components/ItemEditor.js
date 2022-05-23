@@ -188,9 +188,7 @@ function ItemEditor(props) {
   if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
     <Box className="dropdown">
-      <Heading level={3}>
-        Edit {props.type} {props.id}
-      </Heading>
+      <Heading level={3}>Edit {props.type}</Heading>
       <Form onSubmit={handleSubmit}>
         <FormField>
           <TextInput
@@ -241,18 +239,7 @@ function ItemEditor(props) {
         )}
         <Button type="submit" label="Submit" />
       </Form>
-      <Box gap="small" pad={{ top: "small" }} direction="row">
-        {configData.navigation[props.type]["children"].map((childType) => (
-          <Button
-            pad="small"
-            key={childType}
-            onClick={(e) =>
-              props.createItemLayer(childType, props.id, props.type, e)
-            }
-            label={"Create new " + childType}
-          />
-        ))}
-      </Box>
+
       {configData.navigation[props.type]["parent_relation"] ===
         "many-to-many" && (
         <Box direction="row" gap="small" pad={{ top: "small" }}>

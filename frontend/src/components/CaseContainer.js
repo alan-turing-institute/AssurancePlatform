@@ -13,6 +13,7 @@ import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
 import { getBaseURL, jsonToMermaid } from "./utils.js";
+import configData from "../config.json";
 import "./CaseContainer.css";
 
 class CaseContainer extends Component {
@@ -183,26 +184,36 @@ class CaseContainer extends Component {
     return this.fetchData(this.state.id);
   }
 
-  showViewLayer(e) {
-    // use the name of the node to derive the type and id of the item that
-    // was clicked on, and set the state accordingly.
-    // This will cause a new layer, showing the details of the selected node,
-    // to appear (the ItemViewer component)
+  showViewOrEditLayer(e) {
     let chunks = e.split("_");
     if (chunks.length === 2) {
       let itemType = chunks[0];
       let itemId = chunks[1];
-
       this.setState({ itemType: itemType, itemId: itemId });
+      console.log("in showViewOrEditLayer, just set state");
+      if (this.inEditMode()) {
+        this.showEditLayer(itemType, itemId);
+      } else {
+        this.showViewLayer();
+      }
     }
+  }
+
+  showViewLayer() {
+    // use the name of the node to derive the type and id of the item that
+    // was clicked on, and set the state accordingly.
+    // This will cause a new layer, showing the details of the selected node,
+    // to appear (the ItemViewer component)
+    console.log("in showViewLayer");
     // Maybe this is unnecessary, to check that the itemType and itemId state is
     // set, but need to make sure showViewLayer isn't set prematurely.
     if (this.state.itemType && this.state.itemId)
-      this.setState({ showViewLayer: true });
+      console.log("in showViewLayer setting showviewlayer to true");
+    this.setState({ showViewLayer: true });
   }
 
-  showEditLayer(itemType, itemId, event) {
-    event.preventDefault();
+  showEditLayer(itemType, itemId) {
+    // event.preventDefault();
     // this should be redundant, as the itemId and itemType should already
     // be set when showViewLayer is called, but they can't do any harm..
     this.setState({ itemType: itemType, itemId: itemId });
@@ -260,11 +271,12 @@ class CaseContainer extends Component {
   }
 
   viewLayer() {
+    console.log("in viewLayer()");
     return (
       <Box>
         <Layer
-          full="vertical"
-          position="right"
+          full={false}
+          position="bottom-right"
           onEsc={() => this.hideViewLayer()}
           onClickOutside={() => this.hideViewLayer()}
         >
@@ -296,37 +308,37 @@ class CaseContainer extends Component {
   }
 
   editLayer() {
+    /// placeholder
+    //  <Layer
+    //full={false}
+    // position="bottom-right" //"bottom-left"
+    // onEsc={() => this.hideEditLayer()}
+    // onClickOutside={() => this.hideEditLayer()}
+    // >
     return (
       <Box>
-        <Layer
-          full="vertical" //"false"
-          position="right" //"bottom-left"
-          onEsc={() => this.hideEditLayer()}
-          onClickOutside={() => this.hideEditLayer()}
+        <Box
+          pad="small"
+          gap="small"
+          width={{ min: "medium" }}
+          height={{ min: "small" }}
+          fill
         >
-          <Box
-            pad="medium"
-            gap="small"
-            width={{ min: "medium" }}
-            height={{ min: "small" }}
-            fill
-          >
-            <Button
-              alignSelf="end"
-              icon={<FormClose />}
-              onClick={() => this.hideEditLayer()}
+          <Button
+            alignSelf="end"
+            icon={<FormClose />}
+            onClick={() => this.hideEditLayer()}
+          />
+          <Box>
+            <ItemEditor
+              type={this.state.itemType}
+              id={this.state.itemId}
+              caseId={this.state.assurance_case.id}
+              createItemLayer={this.showCreateLayer.bind(this)}
+              updateView={this.updateView.bind(this)}
             />
-            <Box>
-              <ItemEditor
-                type={this.state.itemType}
-                id={this.state.itemId}
-                caseId={this.state.assurance_case.id}
-                createItemLayer={this.showCreateLayer.bind(this)}
-                updateView={this.updateView.bind(this)}
-              />
-            </Box>
           </Box>
-        </Layer>
+        </Box>
       </Box>
     );
   }
@@ -409,7 +421,7 @@ class CaseContainer extends Component {
       <Box>
         <Layer
           full="vertical"
-          position="right"
+          position="bottom-right"
           onEsc={() => this.hideCasePermissionLayer()}
           onClickOutside={() => this.hideCasePermissionLayer()}
         >
@@ -471,18 +483,79 @@ class CaseContainer extends Component {
     if (this.state.assurance_case.permissions === "view") {
       return null;
     } else if (this.inEditMode()) {
-      return (
-        <Button
-          label="Disable edit mode"
-          secondary
-          onClick={this.disableEditing.bind(this)}
-        />
-      );
+      if (this.state.itemType && this.state.itemId) {
+        return (
+          <Box gap="small" pad={{ top: "small" }} direction="column">
+            {configData.navigation[this.state.itemType]["children"].map(
+              (childType) => (
+                <Button
+                  pad="small"
+                  key={childType}
+                  onClick={(e) =>
+                    this.showCreateLayer(
+                      childType,
+                      this.state.itemId,
+                      this.state.itemType,
+                      e
+                    )
+                  }
+                  label={"Create new " + childType}
+                />
+              )
+            )}
+          </Box>
+        );
+      } else {
+        return (
+          <Box>
+            <Button
+              label="Disable editor mode"
+              secondary
+              onClick={this.disableEditing.bind(this)}
+            />
+
+            {this.state.assurance_case.permissions === "manage" && (
+              <Button
+                label="Manage case permissions"
+                secondary
+                onClick={this.showCasePermissionLayer.bind(this)}
+              />
+            )}
+            {this.inEditMode() && (
+              <Button
+                label="Delete Case"
+                secondary
+                onClick={this.showConfirmDeleteLayer.bind(this)}
+              />
+            )}
+
+            <Button
+              label="Export"
+              secondary
+              onClick={this.exportCurrentCase.bind(this)}
+            />
+            {this.inEditMode() && (
+              <DropButton
+                label="Add Goal"
+                dropAlign={{ top: "bottom", right: "right" }}
+                dropContent={
+                  <ItemCreator
+                    type="TopLevelNormativeGoal"
+                    parentId={this.state.id}
+                    parentType="AssuranceCase"
+                    updateView={this.updateView.bind(this)}
+                  />
+                }
+              />
+            )}
+          </Box>
+        );
+      }
     } else if (!this.state.assurance_case.lock_uuid) {
       return (
         <Button
-          label="Enable edit mode"
-          secondary
+          label="Enable editor mode"
+          primary
           onClick={this.enableEditing.bind(this)}
         />
       );
@@ -520,13 +593,14 @@ class CaseContainer extends Component {
         <Box fill>
           <Grid
             fill
-            rows={["auto", "flex"]}
+            rows={["auto", "flex", "flex"]}
             columns={["flex", "20%"]}
             gap="none"
             areas={[
               { name: "header", start: [0, 0], end: [1, 0] },
-              { name: "main", start: [0, 1], end: [1, 1] },
-              { name: "right", start: [1, 0], end: [1, 1] },
+              { name: "main", start: [0, 1], end: [0, 2] },
+              { name: "top-right", start: [1, 1], end: [1, 1] },
+              { name: "bottom-right", start: [1, 2], end: [1, 2] },
             ]}
           >
             {this.state.showViewLayer &&
@@ -572,50 +646,16 @@ class CaseContainer extends Component {
             </Box>
 
             <Box
-              gridArea="right"
+              gridArea="top-right"
               direction="column"
               gap="small"
               pad={{
                 horizontal: "small",
                 top: "small",
-                bottom: "none",
+                bottom: "small",
               }}
             >
               {this.getEditableControls()}
-              {this.state.assurance_case.permissions === "manage" && (
-                <Button
-                  label="Manage case permissions"
-                  secondary
-                  onClick={this.showCasePermissionLayer.bind(this)}
-                />
-              )}
-              {this.inEditMode() && (
-                <Button
-                  label="Delete Case"
-                  secondary
-                  onClick={this.showConfirmDeleteLayer.bind(this)}
-                />
-              )}
-
-              <Button
-                label="Export"
-                secondary
-                onClick={this.exportCurrentCase.bind(this)}
-              />
-              {this.inEditMode() && (
-                <DropButton
-                  label="Add Goal"
-                  dropAlign={{ top: "bottom", right: "right" }}
-                  dropContent={
-                    <ItemCreator
-                      type="TopLevelNormativeGoal"
-                      parentId={this.state.id}
-                      parentType="AssuranceCase"
-                      updateView={this.updateView.bind(this)}
-                    />
-                  }
-                />
-              )}
             </Box>
 
             <Box
@@ -644,7 +684,7 @@ class CaseContainer extends Component {
                     >
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
-                        viewLayerFunc={(e) => this.showViewLayer(e)}
+                        viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
                       />
                     </TransformComponent>
                     <Box
