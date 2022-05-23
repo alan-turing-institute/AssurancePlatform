@@ -56,6 +56,10 @@ Can be found [here](eap_backend/README.md)
 
 Can be found [here](eap_backend/eap_api/API_docs.md)
 
+## Documentation on deploying the platform to Microsoft Azure cloud
+
+Can be found [here](HOWTO_deploy_to_Azure.md)
+
 ## Resources
 - Article on ethical assurance methodology ([OneDrive Link](https://thealanturininstitute-my.sharepoint.com/:b:/g/personal/cburr_turing_ac_uk/EYHu_zD4Oq1Hmq8VGrJ_EsUBNrO1LGhpV2E9AaEUavioMQ?e=qCFKo2))
 - [Uber Safety Case](https://uberatgresources.com/safetycase/gsn)
