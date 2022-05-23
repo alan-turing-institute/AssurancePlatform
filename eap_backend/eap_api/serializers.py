@@ -40,6 +40,8 @@ class EAPGroupSerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(
         source="owner", queryset=EAPUser.objects.all()
     )
+    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = EAPGroup
