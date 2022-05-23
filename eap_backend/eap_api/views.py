@@ -56,6 +56,7 @@ def user_list(request):
 
 
 @csrf_exempt
+@api_view(["GET", "PUT", "DELETE"])
 def user_detail(request, pk):
     """
     Retrieve, update, or delete a User by primary key
@@ -64,6 +65,8 @@ def user_detail(request, pk):
         user = EAPUser.objects.get(pk=pk)
     except EAPUser.DoesNotExist:
         return HttpResponse(status=404)
+    if request.user != user:
+        return HttpResponse(status=403)
     if request.method == "GET":
         serializer = EAPUserSerializer(user)
         user_data = serializer.data
@@ -86,11 +89,13 @@ def group_list(request):
     """
     List all group, or make a new group
     """
-
     if request.method == "GET":
-        groups = get_allowed_groups(request.user)
-        serializer = EAPGroupSerializer(groups, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        response_dict = {}
+        for level in ["owner", "member"]:
+            groups = get_allowed_groups(request.user, level)
+            serializer = EAPGroupSerializer(groups, many=True)
+            response_dict[level] = serializer.data
+        return JsonResponse(response_dict, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         data["owner_id"] = request.user.id
@@ -112,7 +117,7 @@ def group_detail(request, pk):
         group = EAPGroup.objects.get(pk=pk)
     except EAPGroup.DoesNotExist:
         return HttpResponse(status=404)
-    if not can_view_group(group, request.user):
+    if not can_view_group(group, request.user, "owner"):
         return HttpResponse(status=403)
     if request.method == "GET":
         serializer = EAPGroupSerializer(group)

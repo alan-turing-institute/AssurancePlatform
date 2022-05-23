@@ -275,36 +275,42 @@ def get_allowed_cases(user):
     return allowed_cases
 
 
-def can_view_group(group, user):
+def can_view_group(group, user, level="member"):
     """
-    See if the user is allowed to view the group.
+    See if the user is allowed to view the group, or if they own it
 
     Params:
     =======
     group: EAPGroup instance, as obtained from EAPGroup.objects.get(pk)
     user: EAPUser instance, as returned from request.user
+    level: str, either "member" or "owner", to select level of permission to view
 
     Returns:
     =======
-    True if user is owner of the group.
+    True if user is member / owner of the group.
     False otherwise.
     """
-    if group.owner and group.owner == user:
+    if level not in ["owner", "member"]:
+        raise RuntimeError("'level' parameter should be 'owner' or 'member'")
+    if level == "owner" and group.owner and group.owner == user:
+        return True
+    elif level == "member" and group in user.all_groups.get_queryset():
         return True
     return False
 
 
-def get_allowed_groups(user):
+def get_allowed_groups(user, level="member"):
     """
-    get a list of Groups that the user is allowed to view.
+    get a list of Groups that the user is allowed to view or that they own.
 
     Parameters:
     ===========
     user: EAPUser instance, as returned by request.user
+    level: str, either "member" or "owner", to select level of permission to view
 
     Returns:
     ========
-    list of EAPGroup instances.
+    list of EAPGroup instances in which the user is a member, or the owner
     """
     all_groups = EAPGroup.objects.all()
-    return [group for group in all_groups if can_view_group(group, user)]
+    return [group for group in all_groups if can_view_group(group, user, level)]
