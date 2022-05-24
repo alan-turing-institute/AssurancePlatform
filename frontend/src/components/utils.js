@@ -65,6 +65,7 @@ function jsonToMermaid(in_json) {
     if (obj.level !== undefined) {
       outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
     }
+
     return outputmd;
   }
 
@@ -110,6 +111,7 @@ function jsonToMermaid(in_json) {
         }
       }
     }
+    console.log("outputmd is ", outputmd);
     return outputmd;
   }
 
@@ -126,4 +128,29 @@ function jsonToMermaid(in_json) {
   return outputmd;
 }
 
-export { getBaseURL, jsonToMermaid, sanitizeForMermaid };
+function highlightNode(inputMarkdown, nodeType, nodeId) {
+  // add a classDef to the bottom of the markdown highlighting a node
+  inputMarkdown = removeHighlight(inputMarkdown);
+  inputMarkdown +=
+    "\nclass " + nodeType + "_" + nodeId + " classHighlighted;\n";
+  return inputMarkdown;
+}
+
+function removeHighlight(inputMarkdown) {
+  // remove last line of markdown if it contains highlight
+  let lines = inputMarkdown.split("\n");
+  let numLines = lines.length;
+  if (lines[numLines - 2].includes("classHighlighted")) {
+    lines.splice(numLines - 2, numLines - 1);
+    inputMarkdown = lines.join("\n");
+  }
+  return inputMarkdown;
+}
+
+export {
+  getBaseURL,
+  jsonToMermaid,
+  sanitizeForMermaid,
+  highlightNode,
+  removeHighlight,
+};

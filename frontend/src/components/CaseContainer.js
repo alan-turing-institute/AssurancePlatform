@@ -12,7 +12,12 @@ import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
-import { getBaseURL, jsonToMermaid } from "./utils.js";
+import {
+  getBaseURL,
+  jsonToMermaid,
+  highlightNode,
+  removeHighlight,
+} from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
 
@@ -190,7 +195,17 @@ class CaseContainer extends Component {
       let itemType = chunks[0];
       let itemId = chunks[1];
       this.setState({ itemType: itemType, itemId: itemId });
-      console.log("in showViewOrEditLayer, just set state");
+      this.setState({ loading: true });
+
+      this.setState({
+        mermaid_md: highlightNode(
+          this.state.mermaid_md,
+          this.state.itemType,
+          this.state.itemId
+        ),
+      });
+      console.log("setting highlight?");
+      this.setState({ loading: false });
       if (this.inEditMode()) {
         this.showEditLayer(itemType, itemId);
       } else {
@@ -217,7 +232,7 @@ class CaseContainer extends Component {
     // this should be redundant, as the itemId and itemType should already
     // be set when showViewLayer is called, but they can't do any harm..
     this.setState({ itemType: itemType, itemId: itemId });
-    this.hideViewLayer();
+    // this.hideViewLayer();
     this.setState({ showEditLayer: true });
   }
 
@@ -241,11 +256,23 @@ class CaseContainer extends Component {
     this.setState({ showCasePermissionLayer: true });
   }
 
+  resetHighlight() {
+    this.setState({ loading: true });
+    this.setState({
+      mermaid_md: removeHighlight(this.state.mermaid_md),
+    });
+    setTimeout(() => {
+      this.setState({ loading: false });
+    }, 100);
+  }
+
   hideViewLayer() {
+    this.resetHighlight();
     this.setState({ showViewLayer: false });
   }
 
   hideEditLayer() {
+    // this.resetHighlight();
     this.setState({ showEditLayer: false, itemType: null, itemId: null });
   }
 
