@@ -269,7 +269,7 @@ class CaseContainer extends Component {
   }
 
   hideEditLayer() {
-    // this.resetHighlight();
+    this.resetHighlight();
     this.setState({ showEditLayer: false, itemType: null, itemId: null });
   }
 
