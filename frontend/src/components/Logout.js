@@ -1,11 +1,9 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React from "react";
 import { Box, Button, Text } from "grommet";
 import { getBaseURL } from "./utils.js";
 import { useNavigate } from "react-router-dom";
 
 const Logout = (props) => {
-  const [loading, setLoading] = useState(true);
-
   const handleLogout = (e) => {
     e.preventDefault();
 

@@ -1,5 +1,4 @@
 // Useful functions used in CaseContainer component.
-import { Test } from "grommet-icons";
 import configData from "../config.json";
 
 function getBaseURL() {
@@ -9,7 +8,7 @@ function getBaseURL() {
 }
 
 function sanitizeForMermaid(input_text) {
-  let sanitizedText = input_text.replace(/[^a-z0-9 \.,_-]/gim, "");
+  let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
   return sanitizedText.trim();
 }
 

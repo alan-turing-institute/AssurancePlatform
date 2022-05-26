@@ -154,7 +154,7 @@ class CaseContainer extends Component {
   cleanup() {
     clearInterval(this.timer);
     this.timer = null;
-    if (this.state.assurance_case.lock_uuid == this.state.session_id) {
+    if (this.state.assurance_case.lock_uuid === this.state.session_id) {
       this.submitCaseChange("lock_uuid", null);
     }
   }
@@ -447,8 +447,8 @@ class CaseContainer extends Component {
         <Layer
           full="vertical"
           position="bottom-right"
-          onEsc={() => this.hideCasePermissionLayer()}
-          onClickOutside={() => this.hideCasePermissionLayer()}
+          onEsc={this.hideCasePermissionLayer.bind(this)}
+          onClickOutside={this.hideCasePermissionLayer.bind(this)}
         >
           <Box
             pad="medium"
