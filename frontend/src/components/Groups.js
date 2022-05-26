@@ -16,6 +16,7 @@ class Groups extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      userList: [],
       newGroupName: "",
       memberGroups: [],
       ownerGroups: [],
@@ -23,6 +24,18 @@ class Groups extends React.Component {
       groupToManage: null,
       managedGroupMemberStr: [],
     };
+  }
+
+  async getUsers() {
+    const requestOptions = {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+    };
+    const response = await fetch(`${getBaseURL()}/users/`, requestOptions);
+    const users = await response.json();
+    await this.setState({ userList: users });
   }
 
   async submitCreateGroup() {
@@ -64,6 +77,24 @@ class Groups extends React.Component {
     this.getGroups();
   }
 
+  userIdsToEmails(userIds) {
+    return userIds.map((userId) => {
+      for (let candidate of this.state.userList) {
+        if (candidate.id === userId) return candidate.email;
+      }
+      return null;
+    });
+  }
+
+  userEmailsToIds(userEmails) {
+    return userEmails.map((userEmail) => {
+      for (let candidate of this.state.userList) {
+        if (candidate.email === userEmail) return candidate.id;
+      }
+      return null;
+    });
+  }
+
   ownerGroupLine(group) {
     return (
       <Box
@@ -96,25 +127,40 @@ class Groups extends React.Component {
   }
 
   async modifyGroupMembers() {
+    let userEmails;
+    try {
+      userEmails = JSON.parse(this.state.managedGroupMemberStr);
+    } catch (e) {
+      alert("The list of user emails has to be valid JSON.");
+      return null;
+    }
+    const userIds = this.userEmailsToIds(userEmails);
+    if (userIds.includes(null)) {
+      alert("At least one of the user email addresses was not recognised.");
+      return null;
+    }
     const requestOptions = {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify({ members: this.state.managedGroupMemberStr }),
+      body: JSON.stringify({ members: userIds }),
     };
     await fetch(
       `${getBaseURL()}/groups/${this.state.groupToManage.id}/`,
       requestOptions
     );
     this.hideMemberManagementLayer();
+    this.getGroups();
   }
 
   showMemberManagementLayer(group) {
     this.setState({
       groupToManage: group,
-      managedGroupMemberStr: JSON.stringify(group.members),
+      managedGroupMemberStr: JSON.stringify(
+        this.userIdsToEmails(group.members)
+      ),
       showMemberManagementLayer: true,
     });
   }
@@ -129,6 +175,7 @@ class Groups extends React.Component {
 
   componentDidMount() {
     this.getGroups();
+    this.getUsers();
   }
 
   memberManagementLayer() {

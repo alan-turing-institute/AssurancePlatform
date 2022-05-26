@@ -23,6 +23,7 @@ class EAPUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = EAPUser
         fields = (
+            "id",
             "username",
             "email",
             "last_login",

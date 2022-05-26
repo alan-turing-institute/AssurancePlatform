@@ -58,8 +58,6 @@ class CaseContainer extends Component {
       this.setState({ loading: true });
       this.setState({
         assurance_case: json_response,
-        editGroupsStr: JSON.stringify(json_response.editGroups),
-        viewGroupsStr: JSON.stringify(json_response.viewGroups),
       });
       this.setState({
         mermaid_md: jsonToMermaid(this.state.assurance_case),
@@ -464,7 +462,9 @@ class CaseContainer extends Component {
               icon={<FormClose />}
               onClick={() => this.hideCasePermissionLayer()}
             />
-            <CasePermissionsManager case={this.state.assurance_case} />
+            <CasePermissionsManager
+              assurance_case={this.state.assurance_case}
+            />
           </Box>
         </Layer>
       </Box>

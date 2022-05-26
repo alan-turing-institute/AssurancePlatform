@@ -1,19 +1,12 @@
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
-import {
-  Box,
-  Button,
-  Form,
-  Heading,
-  RadioButtonGroup,
-  Text,
-  TextInput,
-} from "grommet";
+import { Box, Button, Form, Heading, RadioButtonGroup, Text } from "grommet";
 
 class CasePermissionsManager extends Component {
   constructor(props) {
     super(props);
+    this.permissions = {};
     this.state = {
       groups: [],
       editGroupsStr: "",
@@ -29,20 +22,49 @@ class CasePermissionsManager extends Component {
     };
     fetch(`${getBaseURL()}/groups/`, requestOptions)
       .then((response) => response.json())
-      .then((body) => {
-        this.setState({ groups: body.member });
+      .then((body) => this.setState({ groups: body.member }))
+      .then((e) => {
+        this.state.groups.forEach((group) => {
+          this.setGroupPermission(
+            group,
+            this.dialValue(group, this.props.assurance_case)
+          );
+        });
       });
   }
 
+  dialValue(group, assurance_case) {
+    if (assurance_case.id in group.editable_cases) return "Edit";
+    if (assurance_case.id in group.viewable_cases) return "View";
+    return "None";
+  }
+
+  setGroupPermission(group, value) {
+    const newState = {};
+    newState[`permission_${group.id}`] = value;
+    this.setState(newState);
+  }
+
+  getGroupPermission(group) {
+    return this.state[`permission_${group.id}`];
+  }
+
   groupDials(group) {
+    console.log(group);
     return (
-      <Box key={group.name} direction="row">
+      <Box key={group.id} direction="row">
         <Text>{group.name}</Text>
         <RadioButtonGroup
+          key={group.id}
           name={group.name}
           margin={{ left: "small" }}
           direction="row"
           options={["None", "View", "Edit"]}
+          value={this.getGroupPermission(group)}
+          onChange={(e) => {
+            console.log(e.target);
+            this.setGroupPermission(group, e.target.value);
+          }}
         />
       </Box>
     );
@@ -60,6 +82,7 @@ class CasePermissionsManager extends Component {
     );
   }
 }
+
 export default (props) => (
   <CasePermissionsManager
     {...props}
