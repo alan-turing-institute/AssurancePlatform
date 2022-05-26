@@ -12,6 +12,11 @@ function sanitizeForMermaid(input_text) {
   return sanitizedText.trim();
 }
 
+function removeArrayElement(array, element) {
+  // Remove from `array`, in place, the (first instance of?) `element`.
+  array.splice(array.indexOf(element), 1);
+}
+
 function jsonToMermaid(in_json) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
