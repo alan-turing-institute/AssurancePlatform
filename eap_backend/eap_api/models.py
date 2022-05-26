@@ -4,12 +4,24 @@ from django.utils import timezone
 import datetime
 from enum import Enum
 
-# Create your models here.
+# Classes representing tables in the database for EAP app.
 
 
 class EAPUser(AbstractUser):
     def __str__(self):
         return self.email
+
+
+class EAPGroup(models.Model):
+    name = models.CharField(max_length=200)
+    created_date = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        EAPUser, related_name="owned_groups", on_delete=models.CASCADE
+    )
+    member = models.ManyToManyField(EAPUser, related_name="all_groups")
+
+    def __str__(self):
+        return self.name
 
 
 class Shape(Enum):
@@ -48,6 +60,12 @@ class AssuranceCase(models.Model):
     lock_uuid = models.CharField(max_length=50, default=None, null=True, blank=True)
     owner = models.ForeignKey(
         EAPUser, related_name="cases", on_delete=models.CASCADE, null=True
+    )
+    edit_groups = models.ManyToManyField(
+        EAPGroup, related_name="editable_cases", blank=True
+    )
+    view_groups = models.ManyToManyField(
+        EAPGroup, related_name="viewable_cases", blank=True
     )
     shape = None
 

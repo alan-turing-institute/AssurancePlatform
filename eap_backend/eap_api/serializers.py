@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import (
     AssuranceCase,
     EAPUser,
+    EAPGroup,
     TopLevelNormativeGoal,
     Context,
     SystemDescription,
@@ -9,6 +10,50 @@ from .models import (
     EvidentialClaim,
     Evidence,
 )
+
+
+class EAPUserSerializer(serializers.ModelSerializer):
+    all_groups = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
+    owned_groups = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
+
+    class Meta:
+        model = EAPUser
+        fields = (
+            "id",
+            "username",
+            "email",
+            "last_login",
+            "date_joined",
+            "is_staff",
+            "all_groups",
+            "owned_groups",
+        )
+
+
+class EAPGroupSerializer(serializers.ModelSerializer):
+    members = serializers.PrimaryKeyRelatedField(
+        source="member", many=True, queryset=EAPUser.objects.all()
+    )
+    owner_id = serializers.PrimaryKeyRelatedField(
+        source="owner", queryset=EAPUser.objects.all()
+    )
+    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = EAPGroup
+        fields = (
+            "id",
+            "name",
+            "owner_id",
+            "members",
+            "viewable_cases",
+            "editable_cases",
+        )
 
 
 class AssuranceCaseSerializer(serializers.ModelSerializer):
@@ -26,13 +71,9 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "lock_uuid",
             "goals",
             "owner",
+            "edit_groups",
+            "view_groups",
         )
-
-
-class EAPUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EAPUser
-        fields = ("email", "last_login", "date_joined", "is_staff")
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):

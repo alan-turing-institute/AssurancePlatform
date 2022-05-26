@@ -15,7 +15,8 @@
     "classProjectClaimLevel3": "fill:#9db4e6,color:#FFF",
     "classSystemClaimLevel1": "fill:#009249,color:#FFF",
     "classSystemClaimLevel2": "fill:#24995e,color:#FFF",
-    "classSystemClaimLevel3": "fill:#3ea572,color:#FFF"
+    "classSystemClaimLevel3": "fill:#3ea572,color:#FFF",
+    "classHighlighted": "stroke:#FF0,stroke-width:4,fill:#7700bb,color:#FF0"
   },
   "navigation": {
     "AssuranceCase": {
