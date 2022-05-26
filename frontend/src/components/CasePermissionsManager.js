@@ -1,7 +1,9 @@
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
-import { Box, Button, Form, Heading, RadioButtonGroup, Text } from "grommet";
+import { Box, Button, Form, Heading, Text } from "grommet";
+import PermissionSelector from "./PermissionSelector.js";
+import { removeArrayElement } from "./utils.js";
 
 class CasePermissionsManager extends Component {
   constructor(props) {
@@ -34,8 +36,8 @@ class CasePermissionsManager extends Component {
   }
 
   dialValue(group, assurance_case) {
-    if (assurance_case.id in group.editable_cases) return "Edit";
-    if (assurance_case.id in group.viewable_cases) return "View";
+    if (group.editable_cases.includes(assurance_case.id)) return "Edit";
+    if (group.viewable_cases.includes(assurance_case.id)) return "View";
     return "None";
   }
 
@@ -49,33 +51,63 @@ class CasePermissionsManager extends Component {
     return this.state[`permission_${group.id}`];
   }
 
-  groupDials(group) {
-    console.log(group);
+  renderGroupDials(group) {
+    const initialValue = this.getGroupPermission(group);
+    if (initialValue === undefined)
+      return <Text key={group.id}>Loading permissions...</Text>;
     return (
       <Box key={group.id} direction="row">
         <Text>{group.name}</Text>
-        <RadioButtonGroup
-          key={group.id}
+        <PermissionSelector
           name={group.name}
-          margin={{ left: "small" }}
-          direction="row"
-          options={["None", "View", "Edit"]}
-          value={this.getGroupPermission(group)}
-          onChange={(e) => {
-            console.log(e.target);
-            this.setGroupPermission(group, e.target.value);
-          }}
+          initialValue={initialValue}
+          setValue={(value) => this.setGroupPermission(group, value)}
         />
       </Box>
     );
   }
 
+  async onSubmit(e) {
+    let editGroups = this.props.assurance_case.edit_groups;
+    let viewGroups = this.props.assurance_case.view_groups;
+    this.state.groups.forEach((group) => {
+      const permission = this.getGroupPermission(group);
+      const id = group.id;
+      if (permission === "View") {
+        if (!viewGroups.includes(id)) viewGroups.push(id);
+        if (editGroups.includes(id)) removeArrayElement(editGroups, id);
+      } else if (permission === "Edit") {
+        if (!editGroups.includes(id)) editGroups.push(id);
+        if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
+      } else if (permission === "None") {
+        if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
+        if (editGroups.includes(id)) removeArrayElement(editGroups, id);
+      }
+    });
+    const requestOptions = {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        view_groups: viewGroups,
+        edit_groups: editGroups,
+      }),
+    };
+    await fetch(
+      `${getBaseURL()}/cases/${this.props.assurance_case.id}/`,
+      requestOptions
+    );
+    this.props.afterSubmit();
+  }
+
   render() {
     return (
-      <Form>
+      <Form onSubmit={this.onSubmit.bind(this)}>
         <Heading level={3}>Group permissions</Heading>
         <Box pad="medium" gap="small" fill>
-          {this.state.groups.map(this.groupDials.bind(this))}
+          {this.state.groups.map(this.renderGroupDials.bind(this))}
           <Button type="submit" label="Submit" />
         </Box>
       </Form>

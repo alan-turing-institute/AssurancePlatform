@@ -464,6 +464,7 @@ class CaseContainer extends Component {
             />
             <CasePermissionsManager
               assurance_case={this.state.assurance_case}
+              afterSubmit={this.hideCasePermissionLayer.bind(this)}
             />
           </Box>
         </Layer>

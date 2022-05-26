@@ -149,8 +149,9 @@ function removeHighlight(inputMarkdown) {
 
 export {
   getBaseURL,
-  jsonToMermaid,
-  sanitizeForMermaid,
   highlightNode,
+  jsonToMermaid,
+  removeArrayElement,
   removeHighlight,
+  sanitizeForMermaid,
 };
