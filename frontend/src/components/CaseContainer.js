@@ -202,7 +202,6 @@ class CaseContainer extends Component {
           this.state.itemId
         ),
       });
-      console.log("setting highlight?");
       this.setState({ loading: false });
       if (this.inEditMode()) {
         this.showEditLayer(itemType, itemId);
@@ -296,59 +295,39 @@ class CaseContainer extends Component {
   }
 
   viewLayer() {
-    console.log("in viewLayer()");
     return (
-      <Box>
-        <Layer
-          full={false}
-          position="bottom-right"
-          onEsc={() => this.hideViewLayer()}
-          onClickOutside={() => this.hideViewLayer()}
-        >
-          <Box
-            pad="medium"
-            gap="small"
-            width={{ min: "medium" }}
-            height={{ min: "small" }}
-            fill
-          >
-            <Button
-              alignSelf="end"
-              icon={<FormClose />}
-              onClick={() => this.hideViewLayer()}
-            />
-            <Box>
-              <ItemViewer
-                type={this.state.itemType}
-                id={this.state.itemId}
-                editItemLayer={this.showEditLayer.bind(this)}
-                updateView={this.updateView.bind(this)}
-                editMode={this.inEditMode()}
-              />
-            </Box>
-          </Box>
-        </Layer>
+      <Box pad="small" gap="xsmall" height={{ min: "small" }} flex={false}>
+        <Button
+          alignSelf="end"
+          icon={<FormClose />}
+          onClick={() => this.hideViewLayer()}
+        />
+        <ItemViewer
+          type={this.state.itemType}
+          id={this.state.itemId}
+          editItemLayer={this.showEditLayer.bind(this)}
+          updateView={this.updateView.bind(this)}
+          editMode={this.inEditMode()}
+        />
       </Box>
     );
   }
 
   editLayer() {
     return (
-      <Box flex={false}>
-        <Box pad="small" gap="xsmall" height={{ min: "small" }} flex={false}>
-          <Button
-            alignSelf="end"
-            icon={<FormClose />}
-            onClick={() => this.hideEditLayer()}
-          />
-          <ItemEditor
-            type={this.state.itemType}
-            id={this.state.itemId}
-            caseId={this.state.assurance_case.id}
-            createItemLayer={this.showCreateLayer.bind(this)}
-            updateView={this.updateView.bind(this)}
-          />
-        </Box>
+      <Box pad="small" gap="xsmall" height={{ min: "small" }} flex={false}>
+        <Button
+          alignSelf="end"
+          icon={<FormClose />}
+          onClick={() => this.hideEditLayer()}
+        />
+        <ItemEditor
+          type={this.state.itemType}
+          id={this.state.itemId}
+          caseId={this.state.assurance_case.id}
+          createItemLayer={this.showCreateLayer.bind(this)}
+          updateView={this.updateView.bind(this)}
+        />
       </Box>
     );
   }
@@ -630,7 +609,7 @@ class CaseContainer extends Component {
           <Grid
             fill
             rows={["auto", "auto", "flex"]}
-            columns={["flex", "auto", "20%"]}
+            columns={["flex", "auto", "29%"]}
             gap="none"
             areas={[
               { name: "header", start: [0, 0], end: [1, 0] },
@@ -639,10 +618,6 @@ class CaseContainer extends Component {
               { name: "right", start: [2, 0], end: [2, 2] },
             ]}
           >
-            {this.state.showViewLayer &&
-              this.state.itemType &&
-              this.state.itemId &&
-              this.viewLayer()}
             {this.state.showCreateLayer &&
               this.state.createItemType &&
               this.state.createItemParentId &&
@@ -708,6 +683,10 @@ class CaseContainer extends Component {
             >
               {this.getEditableControls()}
               {this.getCreateButtons()}
+              {this.state.showViewLayer &&
+                this.state.itemType &&
+                this.state.itemId &&
+                this.viewLayer()}
               {this.state.showEditLayer &&
                 this.state.itemType &&
                 this.state.itemId &&
