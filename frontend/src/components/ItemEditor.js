@@ -187,7 +187,7 @@ function ItemEditor(props) {
 
   if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
-    <Box className="dropdown">
+    <Box>
       <Heading level={3}>Edit {props.type}</Heading>
       <Form onSubmit={handleSubmit}>
         <FormField>
@@ -272,7 +272,7 @@ function ItemEditor(props) {
         </Box>
       )}
       <Box pad={{ top: "small" }}>
-        <Button onClick={(e) => handleDelete(e)} label="Delete" />
+        <Button onClick={(e) => handleDelete(e)} label="Delete item" />
       </Box>
     </Box>
   );
