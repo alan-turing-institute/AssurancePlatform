@@ -65,7 +65,7 @@ function CaseCreator() {
     return (
       // TODO The visual layout here is a bit ugly, could improve it.
 
-      <Box margin="medium">
+      <Box margin="medium" overflow="auto">
         <Heading level={4}>Create a new assurance case</Heading>
         <Form onSubmit={handleSubmit}>
           <Box direction="column" width="medium">

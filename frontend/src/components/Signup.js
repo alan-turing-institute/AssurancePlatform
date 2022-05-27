@@ -80,7 +80,7 @@ const Signup = () => {
   }
 
   return (
-    <Box gap="medium" width="large" pad="small">
+    <Box width={{ max: "large" }} gap="medium" pad="medium" overflow="auto">
       {loading === false && <Heading level={2}>Sign up</Heading>}
       {errors === true && (
         <Heading level={2}>Cannot sign up with provided credentials</Heading>

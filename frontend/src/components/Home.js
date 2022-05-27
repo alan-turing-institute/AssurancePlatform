@@ -54,7 +54,7 @@ class Home extends React.Component {
 
   render() {
     return (
-      <Box fill margin="medium">
+      <Box fill pad="medium" overflow="auto">
         <Grid
           fill
           rows={["auto", "flex"]}

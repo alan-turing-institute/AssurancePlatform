@@ -212,9 +212,9 @@ class Groups extends React.Component {
 
   render() {
     return (
-      <Box pad="medium">
+      <Box pad="medium" overflow="auto">
         {this.state.showMemberManagementLayer && this.memberManagementLayer()}
-        <Box gap="small">
+        <Box gap="small" flex={false}>
           <Heading level={3}>Groups you own</Heading>
           <ul>
             {this.state.ownerGroups.map(this.ownerGroupLine.bind(this))}
@@ -237,7 +237,7 @@ class Groups extends React.Component {
             </li>
           </ul>
         </Box>
-        <Box gap="small" margin={{ top: "large" }}>
+        <Box gap="small" margin={{ top: "large" }} flex={false}>
           <Heading level={3}>Groups you are member of</Heading>
           <ul>
             {this.state.memberGroups.map(this.memberGroupLine.bind(this))}

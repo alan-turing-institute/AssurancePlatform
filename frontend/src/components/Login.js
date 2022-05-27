@@ -54,8 +54,8 @@ const Login = () => {
       });
   };
   return (
-    <Box>
-      <Box gap="medium" pad="medium" width="medium">
+    <Box overflow="auto">
+      <Box flex={false} gap="medium" pad="medium" width="medium">
         {loading === false && <Heading level={2}>Login</Heading>}
         {errors === true && (
           <Heading level={2}>Cannot log in with provided credentials</Heading>
@@ -84,7 +84,7 @@ const Login = () => {
           </Form>
         )}
       </Box>
-      <Box gap="small" pad="medium" width="medium">
+      <Box flex={false} gap="small" pad="medium" width="medium">
         <Text>Not already registered?</Text>
         <Button href="/signup/" label="Sign-up" />
       </Box>
