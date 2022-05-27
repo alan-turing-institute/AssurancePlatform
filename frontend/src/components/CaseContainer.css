@@ -1,4 +1,6 @@
 .mermaidTooltip {
+  left: 0px;
+  top: 0px;
   position: absolute;
   text-align: center;
   max-width: 200px;
