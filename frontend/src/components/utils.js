@@ -151,11 +151,24 @@ function removeHighlight(inputMarkdown) {
   return inputMarkdown;
 }
 
+function splitCommaSeparatedString(string) {
+  // Trim trailing comma if any.
+  if (string[string.length - 1] === ",")
+    string = string.substr(0, string.length - 1);
+  return string.replace(/\s/g, "").split(",");
+}
+
+function joinCommaSeparatedString(array) {
+  return array.join();
+}
+
 export {
   getBaseURL,
   highlightNode,
+  joinCommaSeparatedString,
   jsonToMermaid,
   removeArrayElement,
   removeHighlight,
   sanitizeForMermaid,
+  splitCommaSeparatedString,
 };
