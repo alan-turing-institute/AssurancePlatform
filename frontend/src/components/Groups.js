@@ -97,32 +97,27 @@ class Groups extends React.Component {
 
   ownerGroupLine(group) {
     return (
-      <Box
-        margin={{ left: "small" }}
-        key={group.id}
-        gap="small"
-        direction="row"
-      >
-        <Text>{group.name}</Text>
-        <Button
-          label="Manage members"
-          onClick={(e) => this.showMemberManagementLayer(group)}
-        />
-        <Button label="Delete" onClick={(e) => this.deleteGroup(group)} />
-      </Box>
+      <li>
+        <Box margin="xsmall" key={group.id} gap="small" direction="row">
+          <Heading level={4}>{group.name}</Heading>
+          <Button
+            label="Manage members"
+            alignSelf="end"
+            onClick={(e) => this.showMemberManagementLayer(group)}
+          />
+          <Button label="Delete" onClick={(e) => this.deleteGroup(group)} />
+        </Box>
+      </li>
     );
   }
 
   memberGroupLine(group) {
     return (
-      <Box
-        margin={{ left: "small" }}
-        key={group.id}
-        gap="small"
-        direction="row"
-      >
-        <Text>{group.name}</Text>
-      </Box>
+      <li>
+        <Box margin="xsmall" key={group.id} gap="small" direction="row">
+          <Heading level={4}>{group.name}</Heading>
+        </Box>
+      </li>
     );
   }
 
@@ -219,11 +214,11 @@ class Groups extends React.Component {
 
   render() {
     return (
-      <Box gap="medium" width="large" pad="small">
+      <Box gap="medium" width="large" pad="medium">
         {this.state.showMemberManagementLayer && this.memberManagementLayer()}
         <Box gap="small">
           <Heading level={3}>Groups you own</Heading>
-          {this.state.ownerGroups.map(this.ownerGroupLine.bind(this))}
+          <ul>{this.state.ownerGroups.map(this.ownerGroupLine.bind(this))}</ul>
           <Form onSubmit={this.submitCreateGroup.bind(this)}>
             <Box gap="small" direction="row">
               <FormField margin={{ left: "small" }}>
@@ -241,8 +236,12 @@ class Groups extends React.Component {
           </Form>
         </Box>
         <Box gap="small">
-          <Heading level={3}>Groups you are member of</Heading>
-          {this.state.memberGroups.map(this.memberGroupLine.bind(this))}
+          <Heading level={3} margin={{ top: "large" }}>
+            Groups you are member of
+          </Heading>
+          <ul>
+            {this.state.memberGroups.map(this.memberGroupLine.bind(this))}
+          </ul>
         </Box>
       </Box>
     );
