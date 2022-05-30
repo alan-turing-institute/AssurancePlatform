@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
 import { Box, Button, Form, Heading, Text } from "grommet";
+import CreateGroup from "./CreateGroup.js";
 import PermissionSelector from "./PermissionSelector.js";
 import { removeArrayElement } from "./utils.js";
 
@@ -16,7 +17,7 @@ class CasePermissionsManager extends Component {
     };
   }
 
-  componentDidMount() {
+  getGroups() {
     const requestOptions = {
       headers: {
         Authorization: `Token ${localStorage.getItem("token")}`,
@@ -33,6 +34,10 @@ class CasePermissionsManager extends Component {
           );
         });
       });
+  }
+
+  componentDidMount() {
+    this.getGroups();
   }
 
   dialValue(group, assurance_case) {
@@ -52,15 +57,15 @@ class CasePermissionsManager extends Component {
   }
 
   renderGroupDials(group) {
-    const initialValue = this.getGroupPermission(group);
-    if (initialValue === undefined)
+    const value = this.getGroupPermission(group);
+    if (value === undefined)
       return <Text key={group.id}>Loading permissions...</Text>;
     return (
       <Box key={group.id} direction="row">
         <Text>{group.name}</Text>
         <PermissionSelector
           name={group.name}
-          initialValue={initialValue}
+          value={value}
           setValue={(value) => this.setGroupPermission(group, value)}
         />
       </Box>
@@ -104,13 +109,19 @@ class CasePermissionsManager extends Component {
 
   render() {
     return (
-      <Form onSubmit={this.onSubmit.bind(this)}>
-        <Heading level={3}>Group permissions</Heading>
+      <Box>
+        <Form onSubmit={this.onSubmit.bind(this)}>
+          <Heading level={3}>Group permissions</Heading>
+          <Box pad="medium" gap="small" fill>
+            {this.state.groups.map(this.renderGroupDials.bind(this))}
+            <Button type="submit" label="Submit" />
+          </Box>
+        </Form>
         <Box pad="medium" gap="small" fill>
-          {this.state.groups.map(this.renderGroupDials.bind(this))}
-          <Button type="submit" label="Submit" />
+          <Heading level={4}>Create a new group</Heading>
+          <CreateGroup afterSubmit={this.getGroups.bind(this)} />
         </Box>
-      </Form>
+      </Box>
     );
   }
 }

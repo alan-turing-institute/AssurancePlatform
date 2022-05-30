@@ -50,19 +50,21 @@ class CaseContainer extends Component {
       },
     };
     const res = await fetch(this.url + id, requestOptions);
-    const json_response = await res.json();
-    if (
-      JSON.stringify(this.state.assurance_case) !==
-      JSON.stringify(json_response)
-    ) {
-      this.setState({ loading: true });
-      this.setState({
-        assurance_case: json_response,
-      });
-      this.setState({
-        mermaid_md: jsonToMermaid(this.state.assurance_case),
-      });
-      this.setState({ loading: false });
+    if (res.status === 200) {
+      const json_response = await res.json();
+      if (
+        JSON.stringify(this.state.assurance_case) !==
+        JSON.stringify(json_response)
+      ) {
+        this.setState({ loading: true });
+        this.setState({
+          assurance_case: json_response,
+        });
+        this.setState({
+          mermaid_md: jsonToMermaid(this.state.assurance_case),
+        });
+        this.setState({ loading: false });
+      }
     }
   };
 
