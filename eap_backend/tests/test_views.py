@@ -1,5 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
 from eap_api.views import make_summary
 from eap_api.models import (
     AssuranceCase,
@@ -458,7 +459,7 @@ class FullCaseDetailViewTest(TestCase):
         )
 
 
-class UserViewTest(TestCase):
+class UserViewNoAuthTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.user = EAPUser.objects.create(**USER1_INFO)
@@ -495,10 +496,143 @@ class UserViewTest(TestCase):
         self.assertEqual(len(response_get.json()), 1)
 
     def test_user_detail_view_get(self):
+        ## Shouldn't be able to do this without being logged in!
         response_get = self.client.get(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_user_detail_view_put(self):
+        ## Shouldn't be able to do this without being logged in!
+        response_get = self.client.put(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_user_detail_view_delete(self):
+        ## Shouldn't be able to do this without being logged in!
+        response_get = self.client.delete(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 403)
+
+
+class UserDetailViewWithAuthTest(TestCase):
+    def setUp(self):
+        # login
+        user = EAPUser.objects.create(**USER1_INFO)
+        token, created = Token.objects.get_or_create(user=user)
+        key = token.key
+        self.headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        self.update = {
+            "username": "user1_updated",
+            "password": "password is updated",
+        }
+
+    def test_user_detail_view_get(self):
+        client = Client(**self.headers)
+        response_get = client.get(
+            reverse("user_detail", kwargs={"pk": 1}), headers=self.headers
+        )
         self.assertEqual(response_get.status_code, 200)
-        response_data = response_get.json()
-        serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["username"], serializer_data["username"])
+        response_json = response_get.json()
+        self.assertEqual(response_json["username"], USER1_INFO["username"])
+
+    def test_user_detail_view_put(self):
+        client = Client(**self.headers)
+        response_put = client.put(
+            reverse("user_detail", kwargs={"pk": 1}),
+            headers=self.headers,
+            data=json.dumps(self.update),
+        )
+        self.assertEqual(response_put.status_code, 200)
+        response_json = response_put.json()
+        self.assertEqual(response_json["username"], self.update["username"])
+
+    def test_user_detail_view_delete(self):
+        client = Client(**self.headers)
+        response_delete = client.delete(
+            reverse("user_detail", kwargs={"pk": 1}),
+            headers=self.headers,
+        )
+        self.assertEqual(response_delete.status_code, 204)
+        self.assertEqual(len(EAPUser.objects.all()), 0)
+
+
+class GroupViewNoAuthTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        user = EAPUser.objects.create(**USER1_INFO)
+        user.save()
+        self.group = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user.id)
+        self.update = {
+            "name": "group1_updated",
+        }
+        # get data from DB
+        self.data = EAPGroup.objects.all()
+        # convert it to JSON
+        self.serializer = EAPGroupSerializer(self.data, many=True)
+
+    def test_group_list_view_post(self):
+        post_data = {
+            "name": "newGroup",
+        }
+        response_post = self.client.post(
+            reverse("group_list"),
+            data=json.dumps(post_data),
+            content_type="application/json",
+        )
+        # shouldn't be possible - no logged in user to assign as owner
+        self.assertEqual(response_post.status_code, 400)
+
+    def test_group_list_view_get(self):
+        response_get = self.client.get(
+            reverse("group_list"),
+            content_type="application/json",
+        )
+        # should get a status code 200, and dict with 2 empty lists
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertTrue(isinstance(response_json, dict))
+        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
+        self.assertEqual(len(response_json["owner"]), 0)
+        self.assertEqual(len(response_json["member"]), 0)
+
+    def test_group_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_group_detail_view_put(self):
+        response_put = self.client.put(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+            data=json.dumps(self.update),
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_put.status_code, 403)
+
+    def test_group_detail_view_delete(self):
+        response_delete = self.client.delete(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_delete.status_code, 403)
+
+
+class GroupViewWithAuthTest(TestCase):
+    def setUp(self):
+        # login
+        user = EAPUser.objects.create(**USER1_INFO)
+        user.save()
+        self.group = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user.id)
+        token, created = Token.objects.get_or_create(user=user)
+        key = token.key
+        self.headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        self.update = {
+            "name": "group1_updated",
+        }
