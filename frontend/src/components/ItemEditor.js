@@ -63,11 +63,7 @@ function ItemEditor(props) {
       },
       body: JSON.stringify({}),
     };
-    let response = {};
-    console.log("request options for delete are ", requestOptions);
-    fetch(url, requestOptions).then((response) => response.json());
-
-    console.log("delete response was ", response);
+    return fetch(url, requestOptions);
   }
 
   function handleSubmit(event) {

@@ -15,6 +15,7 @@ import {
   joinCommaSeparatedString,
   splitCommaSeparatedString,
 } from "./utils.js";
+import CreateGroup from "./CreateGroup.js";
 
 class Groups extends React.Component {
   constructor(props) {
@@ -40,21 +41,6 @@ class Groups extends React.Component {
     const response = await fetch(`${getBaseURL()}/users/`, requestOptions);
     const users = await response.json();
     await this.setState({ userList: users });
-  }
-
-  async submitCreateGroup() {
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ name: this.state.newGroupName }),
-    };
-
-    await fetch(`${getBaseURL()}/groups/`, requestOptions);
-    this.setState({ newGroupName: "" });
-    this.getGroups();
   }
 
   async getGroups() {
@@ -219,21 +205,7 @@ class Groups extends React.Component {
           <ul>
             {this.state.ownerGroups.map(this.ownerGroupLine.bind(this))}
             <li>
-              <Form onSubmit={this.submitCreateGroup.bind(this)}>
-                <Box gap="small" direction="row">
-                  <FormField margin={{ left: "small" }}>
-                    <TextInput
-                      plain={true}
-                      value={this.state.newGroupName}
-                      name="new-group-name"
-                      onChange={(e) =>
-                        this.setState({ newGroupName: e.target.value })
-                      }
-                    />
-                  </FormField>
-                  <Button type="submit" label="Create group" />
-                </Box>
-              </Form>
+              <CreateGroup afterSubmit={this.getGroups.bind(this)} />
             </li>
           </ul>
         </Box>
