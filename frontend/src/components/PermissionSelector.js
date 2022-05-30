@@ -5,14 +5,12 @@ import { Box, RadioButton } from "grommet";
 class PermissionSelector extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      value: props.initialValue,
-    };
   }
 
   render() {
     // Grommet also has an element called RadioButtonGroup, which should be perfect for
-    // this, but as of 2022-05-26 it's too buggy to use.
+    // this, but as of 2022-05-26 it's too buggy to use: Having more than one of them on
+    // the same page causes the onChange events of one to affect the others.
     return (
       <Box
         key={this.props.name}
@@ -23,7 +21,7 @@ class PermissionSelector extends Component {
         <RadioButton
           name={this.props.name}
           label="None"
-          checked={this.state.value === "None"}
+          checked={this.props.value === "None"}
           onChange={(e) => {
             if (e.target.checked) this.setState({ value: "None" });
             this.props.setValue("None");
@@ -32,7 +30,7 @@ class PermissionSelector extends Component {
         <RadioButton
           name={this.props.name}
           label="View"
-          checked={this.state.value === "View"}
+          checked={this.props.value === "View"}
           onChange={(e) => {
             if (e.target.checked) this.setState({ value: "View" });
             this.props.setValue("View");
@@ -41,7 +39,7 @@ class PermissionSelector extends Component {
         <RadioButton
           name={this.props.name}
           label="Edit"
-          checked={this.state.value === "Edit"}
+          checked={this.props.value === "Edit"}
           onChange={(e) => {
             if (e.target.checked) this.setState({ value: "Edit" });
             this.props.setValue("Edit");
