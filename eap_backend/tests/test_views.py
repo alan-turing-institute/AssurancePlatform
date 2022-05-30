@@ -626,13 +626,70 @@ class GroupViewNoAuthTest(TestCase):
 
 class GroupViewWithAuthTest(TestCase):
     def setUp(self):
-        # login
+        # login user1
         user = EAPUser.objects.create(**USER1_INFO)
         user.save()
         self.group = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user.id)
+        self.group.member.set([user.id])
         token, created = Token.objects.get_or_create(user=user)
         key = token.key
-        self.headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        # replace the client with the logged-in one.
+        self.client = Client(**headers)
+        self.post_data = {"name": "AnotherNewGroup"}
         self.update = {
             "name": "group1_updated",
         }
+
+    def test_group_list_view_get(self):
+        response_get = self.client.get(
+            reverse("group_list"),
+            content_type="application/json",
+        )
+        # should get a status code 200, and dict with 2 NON-empty lists
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertTrue(isinstance(response_json, dict))
+        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
+        self.assertEqual(len(response_json["owner"]), 1)
+        self.assertEqual(len(response_json["member"]), 1)
+
+    def test_group_list_view_post(self):
+        response_post = self.client.post(
+            reverse("group_list"),
+            data=json.dumps(self.post_data),
+            content_type="application/json",
+        )
+        self.assertEqual(response_post.status_code, 201)
+        response_json = response_post.json()
+        self.assertEqual(response_json["name"], self.post_data["name"])
+
+    def test_group_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertEqual(response_json["name"], GROUP1_INFO["name"])
+        self.assertTrue(response_json["members"], list)
+        self.assertEqual(len(response_json["members"]), 1)
+        self.assertEqual(response_json["members"][0], 1)
+
+    def test_group_detail_view_put(self):
+        response_put = self.client.put(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+            data=json.dumps(self.update),
+        )
+        self.assertEqual(response_put.status_code, 200)
+        response_json = response_put.json()
+        self.assertEqual(response_json["name"], self.update["name"])
+
+    def test_group_detail_view_delete(self):
+        response_delete = self.client.delete(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(response_delete.status_code, 204)
+        self.assertEqual(len(EAPGroup.objects.all()), 0)
