@@ -115,3 +115,7 @@ EVIDENCE7_INFO = {
     "URL": "http://evidence7.com",
     "evidential_claim_id": [4],
 }
+USER1_INFO = {"username": "testUser", "email": "test@user.com", "password": "pa55w0rd"}
+GROUP1_INFO = {
+    "name": "testGroup",
+}

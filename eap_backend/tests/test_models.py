@@ -11,6 +11,8 @@ from .constants_tests import (
     PROPERTYCLAIM1_INFO,
     EVIDENTIALCLAIM1_INFO,
     EVIDENCE1_INFO_NO_ID,
+    USER1_INFO,
+    GROUP1_INFO,
 )
 
 # Create your tests here.
@@ -22,6 +24,8 @@ from eap_api.models import (
     PropertyClaim,
     EvidentialClaim,
     Evidence,
+    EAPUser,
+    EAPGroup,
 )
 
 
@@ -232,3 +236,53 @@ class EvidenceCase(TestCase):
                 AssuranceCase,
             )
         )
+
+
+class UserCase(TestCase):
+    """
+    creates an EAPUser object
+    """
+
+    def create_test_entry(self):
+        return EAPUser.objects.create(**USER1_INFO)
+
+    def test_user_creation(self):
+        test_username = USER1_INFO["username"]
+        test_email = USER1_INFO["email"]
+        test_password = USER1_INFO["password"]
+        test_entry = self.create_test_entry()
+        self.assertTrue(isinstance(test_entry, EAPUser))
+        self.assertEqual(test_entry.username, test_username)
+        self.assertEqual(test_entry.email, test_email)
+        self.assertEqual(test_entry.password, test_password)
+
+
+class GroupCase(TestCase):
+    """
+    creates an EAPGroup object
+    """
+
+    def create_test_entry(self):
+        case = AssuranceCase.objects.create(**CASE_INFO)
+        user = EAPUser.objects.create(**USER1_INFO)
+        group = EAPGroup.objects.create(**GROUP1_INFO, owner=user)
+        group.editable_cases.set([case])
+        return group
+
+    def test_group_creation(self):
+        test_name = GROUP1_INFO["name"]
+        test_username = USER1_INFO["username"]
+        test_casename = CASE_INFO["name"]
+        test_entry = self.create_test_entry()
+        self.assertTrue(isinstance(test_entry, EAPGroup))
+        self.assertEqual(test_entry.name, test_name)
+        self.assertTrue(isinstance(test_entry.owner, EAPUser))
+        self.assertEqual(test_entry.owner.username, test_username)
+        self.assertEqual(len(test_entry.editable_cases.get_queryset()), 1)
+        self.assertTrue(
+            isinstance(test_entry.editable_cases.get_queryset()[0], AssuranceCase)
+        )
+        self.assertEqual(
+            test_entry.editable_cases.get_queryset()[0].name, test_casename
+        )
+        self.assertEqual(len(test_entry.viewable_cases.get_queryset()), 0)

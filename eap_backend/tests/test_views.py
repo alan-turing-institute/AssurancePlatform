@@ -9,6 +9,8 @@ from eap_api.models import (
     PropertyClaim,
     EvidentialClaim,
     Evidence,
+    EAPUser,
+    EAPGroup,
 )
 from eap_api.serializers import (
     AssuranceCaseSerializer,
@@ -18,6 +20,8 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     EvidentialClaimSerializer,
     EvidenceSerializer,
+    EAPUserSerializer,
+    EAPGroupSerializer,
 )
 import json
 from .constants_tests import (
@@ -27,9 +31,9 @@ from .constants_tests import (
     DESCRIPTION_INFO,
     PROPERTYCLAIM1_INFO,
     PROPERTYCLAIM2_INFO,
-    # for many-to-many relations, need to NOT have
-    # e.g. property_claim_id in the JSON
     EVIDENTIALCLAIM1_INFO,
+    USER1_INFO,
+    GROUP1_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
@@ -452,3 +456,49 @@ class FullCaseDetailViewTest(TestCase):
             ),
             2,
         )
+
+
+class UserViewTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        self.user = EAPUser.objects.create(**USER1_INFO)
+        self.update = {
+            "username": "user1_updated",
+            "password": "password is updated",
+        }
+        # get data from DB
+        self.data = EAPUser.objects.all()
+        # convert it to JSON
+        self.serializer = EAPUserSerializer(self.data, many=True)
+
+    def test_user_list_view_post(self):
+        post_data = {
+            "username": "newUser",
+            "email": "user@new.com",
+            "password": "paS5w0rd",
+        }
+        response_post = self.client.post(
+            reverse("user_list"),
+            data=json.dumps(post_data),
+            content_type="application/json",
+        )
+        self.assertEqual(response_post.status_code, 201)
+        self.assertEqual(response_post.json()["username"], post_data["username"])
+        # check we now have two cases in the db
+        response_get = self.client.get(reverse("user_list"))
+        self.assertEqual(len(response_get.json()), 2)
+
+    def test_user_list_view_get(self):
+        response_get = self.client.get(reverse("user_list"))
+        self.assertEqual(response_get.status_code, 200)
+        self.assertEqual(response_get.json(), self.serializer.data)
+        self.assertEqual(len(response_get.json()), 1)
+
+    def test_user_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        self.assertEqual(response_data["username"], serializer_data["username"])
