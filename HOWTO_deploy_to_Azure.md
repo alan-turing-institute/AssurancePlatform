@@ -20,7 +20,7 @@ postgres=> \q;
 
 ### Create backend docker image
 
-This step can be skipped if you are using a github Action to build the Docker image, as is currently (2022-04-25) dne for the `dev` and `main` branches.
+This step can be skipped if you are using a github Action to build the Docker image, as is currently done for the `dev` and `main` branches.
 
 * Install docker following instructions [here](https://docs.docker.com/engine/install/).
 * Change to the `eap_backend/` directory.
