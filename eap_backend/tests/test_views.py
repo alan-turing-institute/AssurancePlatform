@@ -27,8 +27,6 @@ from eap_api.serializers import (
 import json
 from .constants_tests import (
     CASE1_INFO,
-    CASE2_INFO,
-    CASE3_INFO,
     GOAL_INFO,
     CONTEXT_INFO,
     DESCRIPTION_INFO,
@@ -36,11 +34,7 @@ from .constants_tests import (
     PROPERTYCLAIM2_INFO,
     EVIDENTIALCLAIM1_INFO,
     USER1_INFO,
-    USER2_INFO,
-    USER3_INFO,
     GROUP1_INFO,
-    GROUP2_INFO,
-    GROUP3_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
@@ -699,60 +693,3 @@ class GroupViewWithAuthTest(TestCase):
         )
         self.assertEqual(response_delete.status_code, 204)
         self.assertEqual(len(EAPGroup.objects.all()), 0)
-
-
-class CasePermissionsTest(TestCase):
-    """
-    More sophisticated test, create a few cases, groups, users, and test
-    permissions.
-    user1 is owner of group1 and case1, and member of group2
-    user2 is owner of group2 and case2, and member of group3
-    user3 is owner of group3 and case3 and member of group1.
-    group1 has edit rights on case1 and view rights on case3
-    group2 has edit rights on case2
-    group3 has view rights on case3
-
-    """
-
-    def setUp(self):
-        # login user1
-        user1 = EAPUser.objects.create(**USER1_INFO)
-        user1.save()
-        user2 = EAPUser.objects.create(**USER2_INFO)
-        user2.save()
-        user3 = EAPUser.objects.create(**USER3_INFO)
-        user3.save()
-        group1 = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user1.id)
-        group1.member.set([user1.id, user3.id])
-        group2 = EAPGroup.objects.create(**GROUP2_INFO, owner_id=user2.id)
-        group2.member.set([user1.id, user2.id])
-        group3 = EAPGroup.objects.create(**GROUP3_INFO, owner_id=user3.id)
-        group3.member.set([user2.id, user3.id])
-        token1, created = Token.objects.get_or_create(user=user1)
-        token2, created = Token.objects.get_or_create(user=user2)
-        token3, created = Token.objects.get_or_create(user=user3)
-        # 3 different clients with 3 different logged-in users (seems messy...)
-        self.client1 = Client(HTTP_AUTHORIZATION="Token {}".format(token1.key))
-        self.client2 = Client(HTTP_AUTHORIZATION="Token {}".format(token2.key))
-        self.client3 = Client(HTTP_AUTHORIZATION="Token {}".format(token3.key))
-
-    def test_case1(self):
-        """
-        case1 is created by user1, and group1 has edit rights.
-        user1 and user3 (members of group1) should have edit rights on it.
-        user2 should not be able to see it.
-        """
-        # create the case
-        response_post = self.client1.post(
-            reverse("case_list"),
-            data=json.dumps(CASE1_INFO),
-            content_type="application/json",
-        )
-        self.assertEqual(response_post.status_code, 201)
-        # add group1 to edit groups
-        response_put = self.client1.put(
-            reverse("case_detail", kwargs={"pk": 1}),
-            data=json.dumps({"edit_groups": [1]}),
-            content_type="application/json",
-        )
-        self.assertEqual(response_put.status_code, 200)
