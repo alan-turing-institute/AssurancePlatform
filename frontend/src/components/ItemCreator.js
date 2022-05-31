@@ -42,7 +42,6 @@ function ItemCreator(props) {
     let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/`;
-    console.log("url is ", backendURL);
 
     let request_body = {};
     request_body["name"] = name;
@@ -51,11 +50,6 @@ function ItemCreator(props) {
     request_body["keywords"] = keywords;
     if (props.type === "PropertyClaim") request_body["claim_type"] = claimType;
     if (props.type === "Evidence") request_body["URL"] = url;
-    console.log(
-      "creating a ",
-      props.type,
-      configData.navigation[props.type]["parent_relation"]
-    );
     if (
       configData.navigation[props.type]["parent_relation"] === "many-to-many"
     ) {

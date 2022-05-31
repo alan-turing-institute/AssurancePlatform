@@ -34,7 +34,6 @@ function ItemEditor(props) {
       };
       const response = await fetch(url, requestOptions);
       const body = await response.json();
-      console.log("in getCurrent got body", body);
       if (!unmounted) {
         setItems(body);
         setLoading(false);
@@ -44,10 +43,9 @@ function ItemEditor(props) {
     return () => {
       unmounted = true;
     };
-  }, []);
+  }, [props.id, props.type]);
 
   function handleDelete(event) {
-    console.log("in handleDelete ", props.type, props.id, event);
     deleteDBObject().then((resolve) => props.updateView());
   }
 
@@ -68,7 +66,6 @@ function ItemEditor(props) {
 
   function handleSubmit(event) {
     event.preventDefault();
-    console.log("in handleSubmit, items are ", event);
     editDBObject().then(() => props.updateView());
   }
 
@@ -76,7 +73,6 @@ function ItemEditor(props) {
     let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
-    console.log("url is ", backendURL);
 
     let request_body = {};
     request_body["name"] = items.name;
@@ -98,11 +94,6 @@ function ItemEditor(props) {
       },
       body: JSON.stringify(request_body),
     };
-
-    console.log(
-      "submit button pressed with state ",
-      JSON.stringify(request_body)
-    );
     return fetch(backendURL, requestOptions);
   }
 
@@ -175,7 +166,6 @@ function ItemEditor(props) {
   }
 
   function setItem(key, value) {
-    console.log("in setItem", key, value);
     const newItems = { ...items };
     newItems[key] = value;
     setItems(newItems);

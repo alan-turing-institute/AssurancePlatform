@@ -218,12 +218,10 @@ class CaseContainer extends Component {
     // was clicked on, and set the state accordingly.
     // This will cause a new layer, showing the details of the selected node,
     // to appear (the ItemViewer component)
-    console.log("in showViewLayer");
     // Maybe this is unnecessary, to check that the itemType and itemId state is
     // set, but need to make sure showViewLayer isn't set prematurely.
     if (this.state.itemType && this.state.itemId)
-      console.log("in showViewLayer setting showviewlayer to true");
-    this.setState({ showViewLayer: true });
+      this.setState({ showViewLayer: true });
   }
 
   showEditLayer(itemType, itemId) {
