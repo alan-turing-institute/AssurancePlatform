@@ -14,7 +14,6 @@ import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemCreator(props) {
-  const [parentId, setParentId] = useState(1);
   const [name, setName] = useState("Name");
   const [sdesc, setShortDesc] = useState("Short description");
   const [ldesc, setLongDesc] = useState("Long description");
@@ -33,10 +32,7 @@ function ItemCreator(props) {
       return null;
     }
     setSubmitClicked(true);
-    console.log("handleSubmitset parentId ", parentId);
-    console.log("submitClicked", submitClicked);
     const res = createDBObject();
-    console.log("db object created?", res);
     return res.then((resolve) => {
       props.updateView();
     });

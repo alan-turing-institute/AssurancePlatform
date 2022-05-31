@@ -3,10 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Box, RadioButton } from "grommet";
 
 class PermissionSelector extends Component {
-  constructor(props) {
-    super(props);
-  }
-
   render() {
     // Grommet also has an element called RadioButtonGroup, which should be perfect for
     // this, but as of 2022-05-26 it's too buggy to use: Having more than one of them on
