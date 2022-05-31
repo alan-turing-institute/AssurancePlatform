@@ -43,7 +43,7 @@ function ItemEditor(props) {
     return () => {
       unmounted = true;
     };
-  }, []);
+  }, [props.id, props.type]);
 
   function handleDelete(event) {
     deleteDBObject().then((resolve) => props.updateView());
