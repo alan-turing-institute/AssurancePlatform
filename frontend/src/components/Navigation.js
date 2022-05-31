@@ -14,6 +14,13 @@ function Navigation() {
           <Box gap="small" direction="row">
             {localStorage.getItem("token") != null && <CaseSelector />}
             <ul className="navbar-nav ml-auto">
+              {localStorage.getItem("token") != null && (
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/groups">
+                    Groups
+                  </NavLink>
+                </li>
+              )}
               <li className="nav-item">
                 <a
                   className="nav-link"

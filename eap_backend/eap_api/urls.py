@@ -5,8 +5,10 @@ from . import views
 urlpatterns = [
     path("auth/", include("rest_auth.urls")),
     path("auth/register/", include("rest_auth.registration.urls")),
-    path("home", views.AssuranceView.as_view(), name="home"),
-    path("home_goals", views.GoalsView.as_view(), name="home"),
+    path("users/", views.user_list, name="user_list"),
+    path("users/<int:pk>/", views.user_detail, name="user_detail"),
+    path("groups/", views.group_list, name="group_list"),
+    path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
     path("goals/", views.goal_list, name="goal_list"),

@@ -34,7 +34,6 @@ function ItemEditor(props) {
       };
       const response = await fetch(url, requestOptions);
       const body = await response.json();
-      console.log("in getCurrent got body", body);
       if (!unmounted) {
         setItems(body);
         setLoading(false);
@@ -44,10 +43,9 @@ function ItemEditor(props) {
     return () => {
       unmounted = true;
     };
-  }, []);
+  }, [props.id, props.type]);
 
   function handleDelete(event) {
-    console.log("in handleDelete ", props.type, props.id, event);
     deleteDBObject().then((resolve) => props.updateView());
   }
 
@@ -63,16 +61,11 @@ function ItemEditor(props) {
       },
       body: JSON.stringify({}),
     };
-    let response = {};
-    console.log("request options for delete are ", requestOptions);
-    fetch(url, requestOptions).then((response) => response.json());
-
-    console.log("delete response was ", response);
+    return fetch(url, requestOptions);
   }
 
   function handleSubmit(event) {
     event.preventDefault();
-    console.log("in handleSubmit, items are ", event);
     editDBObject().then(() => props.updateView());
   }
 
@@ -80,7 +73,6 @@ function ItemEditor(props) {
     let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/${props.id}/`;
-    console.log("url is ", backendURL);
 
     let request_body = {};
     request_body["name"] = items.name;
@@ -102,11 +94,6 @@ function ItemEditor(props) {
       },
       body: JSON.stringify(request_body),
     };
-
-    console.log(
-      "submit button pressed with state ",
-      JSON.stringify(request_body)
-    );
     return fetch(backendURL, requestOptions);
   }
 
@@ -179,7 +166,6 @@ function ItemEditor(props) {
   }
 
   function setItem(key, value) {
-    console.log("in setItem", key, value);
     const newItems = { ...items };
     newItems[key] = value;
     setItems(newItems);
@@ -187,10 +173,8 @@ function ItemEditor(props) {
 
   if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
-    <Box className="dropdown">
-      <Heading level={3}>
-        Edit {props.type} {props.id}
-      </Heading>
+    <Box>
+      <Heading level={3}>Edit {props.type}</Heading>
       <Form onSubmit={handleSubmit}>
         <FormField>
           <TextInput
@@ -241,18 +225,7 @@ function ItemEditor(props) {
         )}
         <Button type="submit" label="Submit" />
       </Form>
-      <Box gap="small" pad={{ top: "small" }} direction="row">
-        {configData.navigation[props.type]["children"].map((childType) => (
-          <Button
-            pad="small"
-            key={childType}
-            onClick={(e) =>
-              props.createItemLayer(childType, props.id, props.type, e)
-            }
-            label={"Create new " + childType}
-          />
-        ))}
-      </Box>
+
       {configData.navigation[props.type]["parent_relation"] ===
         "many-to-many" && (
         <Box direction="row" gap="small" pad={{ top: "small" }}>
@@ -285,10 +258,10 @@ function ItemEditor(props) {
         </Box>
       )}
       <Box pad={{ top: "small" }}>
-        <Button onClick={(e) => handleDelete(e)} label="Delete" />
+        <Button onClick={(e) => handleDelete(e)} label="Delete item" />
       </Box>
     </Box>
   );
 }
-
+// eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => <ItemEditor {...props} params={useParams()} />;

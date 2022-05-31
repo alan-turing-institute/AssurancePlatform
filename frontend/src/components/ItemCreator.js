@@ -14,7 +14,6 @@ import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemCreator(props) {
-  const [parentId, setParentId] = useState(1);
   const [name, setName] = useState("Name");
   const [sdesc, setShortDesc] = useState("Short description");
   const [ldesc, setLongDesc] = useState("Long description");
@@ -33,10 +32,7 @@ function ItemCreator(props) {
       return null;
     }
     setSubmitClicked(true);
-    console.log("handleSubmitset parentId ", parentId);
-    console.log("submitClicked", submitClicked);
     const res = createDBObject();
-    console.log("db object created?", res);
     return res.then((resolve) => {
       props.updateView();
     });
@@ -46,7 +42,6 @@ function ItemCreator(props) {
     let backendURL = `${getBaseURL()}/${
       configData.navigation[props.type]["api_name"]
     }/`;
-    console.log("url is ", backendURL);
 
     let request_body = {};
     request_body["name"] = name;
@@ -55,11 +50,6 @@ function ItemCreator(props) {
     request_body["keywords"] = keywords;
     if (props.type === "PropertyClaim") request_body["claim_type"] = claimType;
     if (props.type === "Evidence") request_body["URL"] = url;
-    console.log(
-      "creating a ",
-      props.type,
-      configData.navigation[props.type]["parent_relation"]
-    );
     if (
       configData.navigation[props.type]["parent_relation"] === "many-to-many"
     ) {

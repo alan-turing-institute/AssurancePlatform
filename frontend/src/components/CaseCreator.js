@@ -65,7 +65,7 @@ function CaseCreator() {
     return (
       // TODO The visual layout here is a bit ugly, could improve it.
 
-      <Box>
+      <Box margin="medium" overflow="auto">
         <Heading level={4}>Create a new assurance case</Heading>
         <Form onSubmit={handleSubmit}>
           <Box direction="column" width="medium">
@@ -86,7 +86,9 @@ function CaseCreator() {
           </Box>
         </Form>
         <Box direction="column" margin={{ top: "medium" }} width="medium">
-          <Heading level={4}>Import an assurance case from file</Heading>
+          <Heading level={4} margin={{ top: "medium" }}>
+            Import an assurance case from file
+          </Heading>
           <Button
             label="Import"
             margin="xsmall"

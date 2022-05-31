@@ -11,7 +11,7 @@ import React, { useState, useEffect } from "react";
 import { getBaseURL } from "./utils.js";
 
 const Signup = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password1, setPassword1] = useState("");
   const [password2, setPassword2] = useState("");
   const [errors, setErrors] = useState(false);
@@ -30,7 +30,7 @@ const Signup = () => {
     e.preventDefault();
 
     const user = {
-      email: email,
+      username: username,
       password1: password1,
       password2: password2,
     };
@@ -50,13 +50,14 @@ const Signup = () => {
           console.log("Setting localstorage token to be ", data.key);
           window.location.replace("/");
         } else {
-          setEmail("");
+          setUsername("");
           setPassword1("");
           setPassword2("");
           localStorage.clear();
           setErrors(true);
           let currentErrors = [];
-          if (data.email) currentErrors = [...currentErrors, ...data.email];
+          if (data.username)
+            currentErrors = [...currentErrors, ...data.username];
           if (data.password1)
             currentErrors = [...currentErrors, ...data.password1];
           if (data.password2)
@@ -80,18 +81,18 @@ const Signup = () => {
   }
 
   return (
-    <Box gap="medium" width="large" pad="small">
+    <Box width={{ max: "large" }} gap="medium" pad="medium" overflow="auto">
       {loading === false && <Heading level={2}>Sign up</Heading>}
       {errors === true && (
         <Heading level={2}>Cannot sign up with provided credentials</Heading>
       )}
       <Form onSubmit={onSubmit}>
-        <FormField htmlFor="email" label="Email address">
+        <FormField htmlFor="username" label="User name">
           <TextInput
-            name="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
           />
         </FormField>

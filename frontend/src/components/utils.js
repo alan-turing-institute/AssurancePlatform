@@ -1,5 +1,4 @@
 // Useful functions used in CaseContainer component.
-import { Test } from "grommet-icons";
 import configData from "../config.json";
 
 function getBaseURL() {
@@ -9,8 +8,13 @@ function getBaseURL() {
 }
 
 function sanitizeForMermaid(input_text) {
-  let sanitizedText = input_text.replace(/[^a-z0-9 \.,_-]/gim, "");
+  let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
   return sanitizedText.trim();
+}
+
+function removeArrayElement(array, element) {
+  // Remove from `array`, in place, the (first instance of?) `element`.
+  array.splice(array.indexOf(element), 1);
 }
 
 function jsonToMermaid(in_json) {
@@ -65,6 +69,7 @@ function jsonToMermaid(in_json) {
     if (obj.level !== undefined) {
       outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
     }
+
     return outputmd;
   }
 
@@ -126,4 +131,43 @@ function jsonToMermaid(in_json) {
   return outputmd;
 }
 
-export { getBaseURL, jsonToMermaid, sanitizeForMermaid };
+function highlightNode(inputMarkdown, nodeType, nodeId) {
+  // add a classDef to the bottom of the markdown highlighting a node
+  inputMarkdown = removeHighlight(inputMarkdown);
+  inputMarkdown +=
+    "\nclass " + nodeType + "_" + nodeId + " classHighlighted;\n";
+  return inputMarkdown;
+}
+
+function removeHighlight(inputMarkdown) {
+  // remove last line of markdown if it contains highlight
+  let lines = inputMarkdown.split("\n");
+  let numLines = lines.length;
+  if (lines[numLines - 2].includes("classHighlighted")) {
+    lines.splice(numLines - 2, numLines - 1);
+    inputMarkdown = lines.join("\n");
+  }
+  return inputMarkdown;
+}
+
+function splitCommaSeparatedString(string) {
+  // Trim trailing comma if any.
+  if (string[string.length - 1] === ",")
+    string = string.substr(0, string.length - 1);
+  return string.replace(/\s/g, "").split(",");
+}
+
+function joinCommaSeparatedString(array) {
+  return array.join();
+}
+
+export {
+  getBaseURL,
+  highlightNode,
+  joinCommaSeparatedString,
+  jsonToMermaid,
+  removeArrayElement,
+  removeHighlight,
+  sanitizeForMermaid,
+  splitCommaSeparatedString,
+};

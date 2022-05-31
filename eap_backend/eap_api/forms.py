@@ -5,7 +5,7 @@ from .models import EAPUser
 class EAPUserCreationForm(UserCreationForm):
     class Meta:
         model = EAPUser
-        fields = ("email",)
+        fields = ("username",)
 
 
 class EAPUserChangeForm(UserChangeForm):

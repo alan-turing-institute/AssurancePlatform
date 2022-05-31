@@ -1,5 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
 from eap_api.views import make_summary
 from eap_api.models import (
     AssuranceCase,
@@ -9,6 +10,8 @@ from eap_api.models import (
     PropertyClaim,
     EvidentialClaim,
     Evidence,
+    EAPUser,
+    EAPGroup,
 )
 from eap_api.serializers import (
     AssuranceCaseSerializer,
@@ -18,18 +21,20 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     EvidentialClaimSerializer,
     EvidenceSerializer,
+    EAPUserSerializer,
+    EAPGroupSerializer,
 )
 import json
 from .constants_tests import (
-    CASE_INFO,
+    CASE1_INFO,
     GOAL_INFO,
     CONTEXT_INFO,
     DESCRIPTION_INFO,
     PROPERTYCLAIM1_INFO,
     PROPERTYCLAIM2_INFO,
-    # for many-to-many relations, need to NOT have
-    # e.g. property_claim_id in the JSON
     EVIDENTIALCLAIM1_INFO,
+    USER1_INFO,
+    GROUP1_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
@@ -40,7 +45,7 @@ from .constants_tests import (
 class CaseViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case1 = AssuranceCase.objects.create(**CASE_INFO)
+        self.case1 = AssuranceCase.objects.create(**CASE1_INFO)
         self.update = {
             "name": "TestAC_updated",
             "description": "description is updated",
@@ -101,7 +106,7 @@ class CaseViewTest(TestCase):
 class GoalViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.update = {
             "name": "TestGoal_updated",
@@ -145,7 +150,7 @@ class GoalViewTest(TestCase):
 class ContextViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.context = Context.objects.create(**CONTEXT_INFO)
         self.update = {
@@ -190,7 +195,7 @@ class ContextViewTest(TestCase):
 class DescriptionViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.description = SystemDescription.objects.create(**DESCRIPTION_INFO)
         self.update = {
@@ -235,7 +240,7 @@ class DescriptionViewTest(TestCase):
 class PropertyClaimViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim1 = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         self.pclaim2 = PropertyClaim.objects.create(**PROPERTYCLAIM2_INFO)
@@ -289,7 +294,7 @@ class PropertyClaimViewTest(TestCase):
 class EvidentialClaimViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
@@ -338,7 +343,7 @@ class EvidentialClaimViewTest(TestCase):
 class EvidenceViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
@@ -401,7 +406,7 @@ class EvidenceViewTest(TestCase):
 class FullCaseDetailViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE_INFO)
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.description = SystemDescription.objects.create(**DESCRIPTION_INFO)
         self.context = Context.objects.create(**CONTEXT_INFO)
@@ -452,3 +457,239 @@ class FullCaseDetailViewTest(TestCase):
             ),
             2,
         )
+
+
+class UserViewNoAuthTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        self.user = EAPUser.objects.create(**USER1_INFO)
+        self.update = {
+            "username": "user1_updated",
+            "password": "password is updated",
+        }
+        # get data from DB
+        self.data = EAPUser.objects.all()
+        # convert it to JSON
+        self.serializer = EAPUserSerializer(self.data, many=True)
+
+    def test_user_list_view_post(self):
+        post_data = {
+            "username": "newUser",
+            "email": "user@new.com",
+            "password": "paS5w0rd",
+        }
+        response_post = self.client.post(
+            reverse("user_list"),
+            data=json.dumps(post_data),
+            content_type="application/json",
+        )
+        self.assertEqual(response_post.status_code, 201)
+        self.assertEqual(response_post.json()["username"], post_data["username"])
+        # check we now have two cases in the db
+        response_get = self.client.get(reverse("user_list"))
+        self.assertEqual(len(response_get.json()), 2)
+
+    def test_user_list_view_get(self):
+        response_get = self.client.get(reverse("user_list"))
+        self.assertEqual(response_get.status_code, 200)
+        self.assertEqual(response_get.json(), self.serializer.data)
+        self.assertEqual(len(response_get.json()), 1)
+
+    def test_user_detail_view_get(self):
+        # Shouldn't be able to do this without being logged in!
+        response_get = self.client.get(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_user_detail_view_put(self):
+        # Shouldn't be able to do this without being logged in!
+        response_get = self.client.put(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_user_detail_view_delete(self):
+        # Shouldn't be able to do this without being logged in!
+        response_get = self.client.delete(
+            reverse("user_detail", kwargs={"pk": self.user.pk})
+        )
+        self.assertEqual(response_get.status_code, 403)
+
+
+class UserDetailViewWithAuthTest(TestCase):
+    def setUp(self):
+        # login
+        user = EAPUser.objects.create(**USER1_INFO)
+        token, created = Token.objects.get_or_create(user=user)
+        key = token.key
+        self.headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        self.update = {
+            "username": "user1_updated",
+            "password": "password is updated",
+        }
+
+    def test_user_detail_view_get(self):
+        client = Client(**self.headers)
+        response_get = client.get(
+            reverse("user_detail", kwargs={"pk": 1}), headers=self.headers
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertEqual(response_json["username"], USER1_INFO["username"])
+
+    def test_user_detail_view_put(self):
+        client = Client(**self.headers)
+        response_put = client.put(
+            reverse("user_detail", kwargs={"pk": 1}),
+            headers=self.headers,
+            data=json.dumps(self.update),
+        )
+        self.assertEqual(response_put.status_code, 200)
+        response_json = response_put.json()
+        self.assertEqual(response_json["username"], self.update["username"])
+
+    def test_user_detail_view_delete(self):
+        client = Client(**self.headers)
+        response_delete = client.delete(
+            reverse("user_detail", kwargs={"pk": 1}),
+            headers=self.headers,
+        )
+        self.assertEqual(response_delete.status_code, 204)
+        self.assertEqual(len(EAPUser.objects.all()), 0)
+
+
+class GroupViewNoAuthTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        user = EAPUser.objects.create(**USER1_INFO)
+        user.save()
+        self.group = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user.id)
+        self.update = {
+            "name": "group1_updated",
+        }
+        # get data from DB
+        self.data = EAPGroup.objects.all()
+        # convert it to JSON
+        self.serializer = EAPGroupSerializer(self.data, many=True)
+
+    def test_group_list_view_post(self):
+        post_data = {
+            "name": "newGroup",
+        }
+        response_post = self.client.post(
+            reverse("group_list"),
+            data=json.dumps(post_data),
+            content_type="application/json",
+        )
+        # shouldn't be possible - no logged in user to assign as owner
+        self.assertEqual(response_post.status_code, 400)
+
+    def test_group_list_view_get(self):
+        response_get = self.client.get(
+            reverse("group_list"),
+            content_type="application/json",
+        )
+        # should get a status code 200, and dict with 2 empty lists
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertTrue(isinstance(response_json, dict))
+        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
+        self.assertEqual(len(response_json["owner"]), 0)
+        self.assertEqual(len(response_json["member"]), 0)
+
+    def test_group_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_get.status_code, 403)
+
+    def test_group_detail_view_put(self):
+        response_put = self.client.put(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+            data=json.dumps(self.update),
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_put.status_code, 403)
+
+    def test_group_detail_view_delete(self):
+        response_delete = self.client.delete(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        # shouldn't be allowed
+        self.assertEqual(response_delete.status_code, 403)
+
+
+class GroupViewWithAuthTest(TestCase):
+    def setUp(self):
+        # login user1
+        user = EAPUser.objects.create(**USER1_INFO)
+        user.save()
+        self.group = EAPGroup.objects.create(**GROUP1_INFO, owner_id=user.id)
+        self.group.member.set([user.id])
+        token, created = Token.objects.get_or_create(user=user)
+        key = token.key
+        headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        # replace the client with the logged-in one.
+        self.client = Client(**headers)
+        self.post_data = {"name": "AnotherNewGroup"}
+        self.update = {
+            "name": "group1_updated",
+        }
+
+    def test_group_list_view_get(self):
+        response_get = self.client.get(
+            reverse("group_list"),
+            content_type="application/json",
+        )
+        # should get a status code 200, and dict with 2 NON-empty lists
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertTrue(isinstance(response_json, dict))
+        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
+        self.assertEqual(len(response_json["owner"]), 1)
+        self.assertEqual(len(response_json["member"]), 1)
+
+    def test_group_list_view_post(self):
+        response_post = self.client.post(
+            reverse("group_list"),
+            data=json.dumps(self.post_data),
+            content_type="application/json",
+        )
+        self.assertEqual(response_post.status_code, 201)
+        response_json = response_post.json()
+        self.assertEqual(response_json["name"], self.post_data["name"])
+
+    def test_group_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(response_get.status_code, 200)
+        response_json = response_get.json()
+        self.assertEqual(response_json["name"], GROUP1_INFO["name"])
+        self.assertTrue(response_json["members"], list)
+        self.assertEqual(len(response_json["members"]), 1)
+        self.assertEqual(response_json["members"][0], 1)
+
+    def test_group_detail_view_put(self):
+        response_put = self.client.put(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+            data=json.dumps(self.update),
+        )
+        self.assertEqual(response_put.status_code, 200)
+        response_json = response_put.json()
+        self.assertEqual(response_json["name"], self.update["name"])
+
+    def test_group_detail_view_delete(self):
+        response_delete = self.client.delete(
+            reverse("group_detail", kwargs={"pk": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(response_delete.status_code, 204)
+        self.assertEqual(len(EAPGroup.objects.all()), 0)
