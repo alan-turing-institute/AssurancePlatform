@@ -17,7 +17,7 @@ class EAPUserAdmin(UserAdmin):
     add_form = EAPUserCreationForm
     form = EAPUserChangeForm
     model = EAPUser
-    list_display = ["email"]
+    list_display = ["username"]
 
 
 # Register your models here.

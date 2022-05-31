@@ -11,7 +11,7 @@ import {
 import { getBaseURL } from "./utils.js";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ const Login = () => {
     e.preventDefault();
 
     const user = {
-      email: email,
+      username: username,
       password: password,
     };
 
@@ -46,7 +46,7 @@ const Login = () => {
           localStorage.setItem("token", data.key);
           window.location.replace("/");
         } else {
-          setEmail("");
+          setUsername("");
           setPassword("");
           localStorage.clear();
           setErrors(true);
@@ -62,13 +62,13 @@ const Login = () => {
         )}
         {loading === false && (
           <Form onSubmit={onSubmit}>
-            <FormField htmlFor="email" label="Email address">
+            <FormField htmlFor="username" label="User name">
               <TextInput
-                name="email"
-                type="email"
-                value={email}
+                name="username"
+                type="text"
+                value={username}
                 required
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </FormField>
             <FormField htmlFor="password" label="Password">
