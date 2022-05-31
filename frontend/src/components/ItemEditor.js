@@ -273,5 +273,5 @@ function ItemEditor(props) {
     </Box>
   );
 }
-
+// eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => <ItemEditor {...props} params={useParams()} />;

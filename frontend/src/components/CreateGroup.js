@@ -45,6 +45,7 @@ class CreateGroup extends React.Component {
   }
 }
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => (
   <CreateGroup {...props} params={useParams()} navigate={useNavigate()} />
 );
