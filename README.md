@@ -6,6 +6,15 @@ The purpose of this project is to provide a web interface to facilitate the crea
 
 The web application consists of a database (Postgresql, or sqlite for testing), a backend API (using Python/Django), and a frontend (using React).  These three components can be run on a user's machine for testing or development, or deployed on separate servers, e.g. on the cloud.
 
+
+## Local running via docker / docker-compose
+(if you would rather install and run the software on your machine, skip to the section below).
+1. Clone the AssurancePlatform repository to your local machine, and cd to the main `AssurancePlatform` directory.
+2. ```docker-compose up```
+3. Navigate to `http://localhost:3000`.
+4. When you would like to stop, open a new terminal, navigate to the `AssurancePlatform` directory, and run ```docker-compose down```.
+
+
 ## Installation (for local running)
 
 1. Download or clone the AssurancePlatform repository to your local machine.
