@@ -67,19 +67,19 @@ class Groups extends React.Component {
     this.getGroups();
   }
 
-  userIdsToEmails(userIds) {
+  userIdsToNames(userIds) {
     return userIds.map((userId) => {
       for (let candidate of this.state.userList) {
-        if (candidate.id === userId) return candidate.email;
+        if (candidate.id === userId) return candidate.username;
       }
       return null;
     });
   }
 
-  userEmailsToIds(userEmails) {
-    return userEmails.map((userEmail) => {
+  userNamesToIds(userNames) {
+    return userNames.map((userName) => {
       for (let candidate of this.state.userList) {
-        if (candidate.email === userEmail) return candidate.id;
+        if (candidate.username === userName) return candidate.id;
       }
       return null;
     });
@@ -111,13 +111,13 @@ class Groups extends React.Component {
   }
 
   async modifyGroupMembers() {
-    const userEmails = splitCommaSeparatedString(
+    const userNames = splitCommaSeparatedString(
       this.state.managedGroupMemberStr
     );
-    const userIds = this.userEmailsToIds(userEmails);
+    const userIds = this.userNamesToIds(userNames);
     if (userIds.includes(null)) {
       alert(
-        "At least one of the user email addresses was not recognised. The input should be a comma-separated list of emails of existing users."
+        "At least one of the user names was not recognised. The input should be a comma-separated list of user name of existing users."
       );
       return null;
     }
@@ -141,7 +141,7 @@ class Groups extends React.Component {
     this.setState({
       groupToManage: group,
       managedGroupMemberStr: joinCommaSeparatedString(
-        this.userIdsToEmails(group.members)
+        this.userIdsToNames(group.members)
       ),
       showMemberManagementLayer: true,
     });
