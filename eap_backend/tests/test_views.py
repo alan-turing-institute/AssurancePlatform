@@ -496,21 +496,21 @@ class UserViewNoAuthTest(TestCase):
         self.assertEqual(len(response_get.json()), 1)
 
     def test_user_detail_view_get(self):
-        ## Shouldn't be able to do this without being logged in!
+        # Shouldn't be able to do this without being logged in!
         response_get = self.client.get(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
         self.assertEqual(response_get.status_code, 403)
 
     def test_user_detail_view_put(self):
-        ## Shouldn't be able to do this without being logged in!
+        # Shouldn't be able to do this without being logged in!
         response_get = self.client.put(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
         self.assertEqual(response_get.status_code, 403)
 
     def test_user_detail_view_delete(self):
-        ## Shouldn't be able to do this without being logged in!
+        # Shouldn't be able to do this without being logged in!
         response_get = self.client.delete(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )

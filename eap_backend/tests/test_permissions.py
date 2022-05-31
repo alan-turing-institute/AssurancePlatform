@@ -3,14 +3,8 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 import json
 from eap_api.models import (
-    AssuranceCase,
     EAPUser,
     EAPGroup,
-)
-from eap_api.serializers import (
-    AssuranceCaseSerializer,
-    EAPUserSerializer,
-    EAPGroupSerializer,
 )
 
 from .constants_tests import (
