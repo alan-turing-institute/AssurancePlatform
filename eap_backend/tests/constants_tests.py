@@ -2,7 +2,13 @@
 Dictionaries to be used in tests
 """
 
-CASE_INFO = {"name": "My Case", "description": "first test case"}
+CASE1_INFO = {"name": "First Case", "description": "first test case", "lock_uuid": None}
+CASE2_INFO = {
+    "name": "Second Case",
+    "description": "second test case",
+    "lock_uuid": None,
+}
+CASE3_INFO = {"name": "Third Case", "description": "third test case", "lock_uuid": None}
 GOAL_INFO = {
     "name": "The Goal",
     "short_description": "we should do this",
@@ -114,4 +120,28 @@ EVIDENCE7_INFO = {
     "long_description": "Description of that evidence",
     "URL": "http://evidence7.com",
     "evidential_claim_id": [4],
+}
+USER1_INFO = {
+    "username": "testUser1",
+    "email": "test1@user.com",
+    "password": "pa55w0rd531",
+}
+USER2_INFO = {
+    "username": "testUser2",
+    "email": "test2@user.com",
+    "password": "pa55w0rd642",
+}
+USER3_INFO = {
+    "username": "testUser3",
+    "email": "test3@user.com",
+    "password": "567pa55w0rd",
+}
+GROUP1_INFO = {
+    "name": "testGroup1",
+}
+GROUP2_INFO = {
+    "name": "testGroup2",
+}
+GROUP3_INFO = {
+    "name": "testGroup3",
 }

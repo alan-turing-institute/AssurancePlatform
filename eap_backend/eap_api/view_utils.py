@@ -292,6 +292,9 @@ def can_view_group(group, user, level="member"):
     """
     if level not in ["owner", "member"]:
         raise RuntimeError("'level' parameter should be 'owner' or 'member'")
+    if not hasattr(user, "all_groups"):
+        # probably AnonymousUser
+        return False
     if level == "owner" and group.owner and group.owner == user:
         return True
     elif level == "member" and group in user.all_groups.get_queryset():
