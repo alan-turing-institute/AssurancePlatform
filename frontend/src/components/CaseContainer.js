@@ -757,6 +757,7 @@ class CaseContainer extends Component {
   }
 }
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => (
   <CaseContainer {...props} params={useParams()} navigate={useNavigate()} />
 );
