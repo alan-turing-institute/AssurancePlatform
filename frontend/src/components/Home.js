@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Image, Text, Grid, Button } from "grommet";
+import mockup_diagram from "../images/mockup-diagram.png";
 
 class Home extends React.Component {
   handleChange() {
@@ -85,7 +86,7 @@ class Home extends React.Component {
           <Box gridArea="main" justify="end">
             <Image
               fit="contain"
-              src="https://i.imgur.com/eHFzRO6.png"
+              src={mockup_diagram}
               alt="Ethical Assurance flowchart"
               height="100%"
             />
