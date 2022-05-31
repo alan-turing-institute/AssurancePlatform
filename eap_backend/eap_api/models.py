@@ -9,7 +9,7 @@ from enum import Enum
 
 class EAPUser(AbstractUser):
     def __str__(self):
-        return self.email
+        return self.username
 
 
 class EAPGroup(models.Model):
