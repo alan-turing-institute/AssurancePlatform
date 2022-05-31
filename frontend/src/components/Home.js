@@ -3,10 +3,6 @@ import { Box, Image, Text, Grid, Button } from "grommet";
 import mockup_diagram from "../images/mockup-diagram.png";
 
 class Home extends React.Component {
-  handleChange() {
-    console.log("hello");
-  }
-
   getButtons() {
     if (localStorage.getItem("token") != null) {
       return (
