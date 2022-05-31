@@ -16,7 +16,6 @@ const Logout = (props) => {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
         localStorage.clear();
         window.location.replace("/login/");
       });

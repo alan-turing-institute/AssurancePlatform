@@ -115,7 +115,6 @@ function jsonToMermaid(in_json) {
         }
       }
     }
-    console.log("outputmd is ", outputmd);
     return outputmd;
   }
 
