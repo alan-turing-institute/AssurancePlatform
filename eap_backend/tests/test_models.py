@@ -4,7 +4,7 @@ https://docs.djangoproject.com/en/3.2/topics/testing/tools/"""
 
 from django.test import TestCase
 from .constants_tests import (
-    CASE_INFO,
+    CASE1_INFO,
     GOAL_INFO,
     CONTEXT_INFO,
     DESCRIPTION_INFO,
@@ -34,11 +34,11 @@ class AssuranceTestCase(TestCase):
     matches the expected title"""
 
     def create_test_entry(self):
-        return AssuranceCase.objects.create(**CASE_INFO)
+        return AssuranceCase.objects.create(**CASE1_INFO)
 
     def test_assurance_creation(self):
-        test_name = CASE_INFO["name"]
-        test_description = CASE_INFO["description"]
+        test_name = CASE1_INFO["name"]
+        test_description = CASE1_INFO["description"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, AssuranceCase))
         self.assertEqual(test_entry.name, test_name)
@@ -52,7 +52,7 @@ class TopLevelNormativeGoalTestCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         return goal
@@ -72,7 +72,7 @@ class ContextTestCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         context = Context.objects.create(**CONTEXT_INFO)
@@ -99,7 +99,7 @@ class DescriptionTestCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         desc = SystemDescription.objects.create(**DESCRIPTION_INFO)
@@ -126,7 +126,7 @@ class PropertyClaimTestCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
@@ -153,7 +153,7 @@ class EvidentialClaimTestCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
@@ -191,7 +191,7 @@ class EvidenceCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
@@ -263,7 +263,7 @@ class GroupCase(TestCase):
     """
 
     def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE_INFO)
+        case = AssuranceCase.objects.create(**CASE1_INFO)
         user = EAPUser.objects.create(**USER1_INFO)
         group = EAPGroup.objects.create(**GROUP1_INFO, owner=user)
         group.editable_cases.set([case])
@@ -272,7 +272,7 @@ class GroupCase(TestCase):
     def test_group_creation(self):
         test_name = GROUP1_INFO["name"]
         test_username = USER1_INFO["username"]
-        test_casename = CASE_INFO["name"]
+        test_casename = CASE1_INFO["name"]
         test_entry = self.create_test_entry()
         self.assertTrue(isinstance(test_entry, EAPGroup))
         self.assertEqual(test_entry.name, test_name)
