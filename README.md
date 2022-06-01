@@ -69,6 +69,10 @@ Can be found [here](eap_backend/eap_api/API_docs.md)
 
 Can be found [here](HOWTO_deploy_to_Azure.md)
 
+## Instructions on how to reset the database
+
+Can be found [here](HOWTO_reset_the_database.md)
+
 ## Resources
 - Article on ethical assurance methodology ([OneDrive Link](https://thealanturininstitute-my.sharepoint.com/:b:/g/personal/cburr_turing_ac_uk/EYHu_zD4Oq1Hmq8VGrJ_EsUBNrO1LGhpV2E9AaEUavioMQ?e=qCFKo2))
 - [Uber Safety Case](https://uberatgresources.com/safetycase/gsn)
