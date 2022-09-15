@@ -5,4 +5,5 @@ RUN npm install
 RUN npm run build
 RUN npm install serve -g
 # run the npm run build command again at runtime, in order to pick up the REACT_APP_BASE_URL environment var
-CMD npm run build && serve -s build
+RUN ["chmod","+x","build_and_run.sh"]
+ENTRYPOINT ["./build_and_run.sh"]
