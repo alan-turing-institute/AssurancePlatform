@@ -59,10 +59,16 @@ docker push DOCKER_USERNAME/eap_frontend:latest
 
 ### Create frontend webapp
 
-Follow exactly the same process as for the backend webapp, but setting WEBSITES_PORT to 3000 and leaving out the DBNAME etc. variables.
+Follow exactly the same process as for the backend webapp, but when it comes to adding settings in the "Configuration" page: 
+* No need to set the DBNAME etc. variables.
+* set WEBSITES_PORT to 3000
+* set REACT_APP_BASE_URL to https://BACKEND_WEBAPP_NAME.azurewebsites.net/api
 
 ### Nearly there...
 
 At this stage, the only thing standing in our way is CORS (Cross-Origin Resource Sharing).
-To fix this, go back to the Configuration panel of the backend server, where you previously set the port to be 8000, and create a new environment variable "CORS_ORIGIN_WHITELIST" with the value `http://localhost:3000,https://FRONTEND_WEBAPP_NAME.azurewebsites.net`. Remember to click save, and restart the backend.
-Check the frontend web site to see that everything works.
+To fix this, go back to the Configuration panel of the backend server, where you previously set the port to be 8000, and create a new environment variable "CORS_ORIGIN_WHITELIST" with the value `http://localhost:3000,https://FRONTEND_WEBAPP_NAME.azurewebsites.net`. 
+Remember to click save.
+Then, under the "API" heading in the left sidebar, click on "CORS", tick the box labelled "Enable Access-Control-Allow-Credentials", and put `https://FRONTEND_WEBAPP_NAME.azurewebsites.net` into the "Allowed Origins" box. 
+Click "Save" here again, and restart the backend webapp from the "Overview" page.
+Wait a few seconds, then check the frontend web site to see that everything works.
