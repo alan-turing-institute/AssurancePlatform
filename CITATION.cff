@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Barlow"
+  given-names: "Nick"
+- family-names: "Hauru"
+  given-names: "Markus"
+- family-names: "Burr"
+  given-names: "Christopher"
+  orcid: "https://orcid.org/0000-0003-0386-8182"
+title: "Assurance Platform"
+version: 1.0.0
+date-released: 2022-09-23
+url: "https://github.com/alan-turing-institute/AssurancePlatform"
