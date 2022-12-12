@@ -27,6 +27,11 @@ function jsonToMermaid(in_json) {
   }
 
   function makeBox(text, shape) {
+    // check if string starts with a number, and if so, prepend a space
+    // to avoid getting a weird unicode character instead
+    if (text.match(/^\d/)) {
+      text = " " + text + " ";
+    }
     if (text.length > configData["BOX_NCHAR"]) {
       text = text.substring(0, configData["BOX_NCHAR"] - 3) + "...";
     } else {

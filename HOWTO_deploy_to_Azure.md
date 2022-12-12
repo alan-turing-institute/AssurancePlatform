@@ -8,19 +8,19 @@ Instructions based on those [here.](https://docs.microsoft.com/en-us/azure/postg
 
 * In the [Azure portal](https://portal.azure.com) click "+ Create a New Resource", and select "Azure Database for PostgreSQL", and click "Create".  A "Single Server" should be sufficient.
 * Select your Subscription, Resource Group (creating one if desired), and Region, and then choose a "Server name", "Admin username", and "Password".   Make sure you keep note of these!
-* Configure a firewall rule to allow your local machine to connect to the database server: from the overview page of the Resource, click on "Connection Security" on the left sidebar, then click "+ Add current client IP address", and save.  Also ensure that "Allow access to Azure services" is set to "Yes".
+* Configure a firewall rule to allow your local machine to connect to the database server: from the overview page of the Resource, click on "Connection Security" on the left sidebar, then click "+ Add current client IP address", and save.  Also ensure that "Allow access to Azure services" is set to "Yes".  You may also need to disable "Enforce SSL connection" to be able to connect via psql.
 
-* Use `psql` to connect to Postgres, and create the "eap" database.  There are instructions for installing psql on various OSs [here](https://www.timescale.com/blog/how-to-install-psql-on-mac-ubuntu-debian-windows/)
+* Use `psql` to connect to Postgres, and create the "eap" database.  For Mac/homebrew you should be able to install this via `brew install postgresql`.
 ```
 psql --host=SERVER_NAME.postgres.database.azure.com --port=5432 --username=ADMIN_USERNAME@SERVER_NAME --dbname=postgres
 postgres=> CREATE DATABASE eap;
 postgres=> \c eap;
-postgres=> \q;
+postgres=> \q
 ```
 
 ### Create backend docker image
 
-This step can be skipped if you are using a github Action to build the Docker image, as is currently (2022-04-25) dne for the `dev` and `main` branches.
+This step can be skipped if you are using a github Action to build the Docker image, as is currently done for the `dev` and `main` branches.
 
 * Install docker following instructions [here](https://docs.docker.com/engine/install/).
 * Change to the `eap_backend/` directory.
@@ -48,7 +48,7 @@ docker push DOCKER_USERNAME/eap_backend:latest
 
 ### Create frontend docker image
 
-This step can be skipped if you are using a github Action to build the Docker image, as is currently (2022-04-25) dne for the `dev` and `main` branches.
+This step can be skipped if you are using a github Action to build the Docker image, as is currently done for the `dev` and `main` branches.
 
 * Change to the `frontend` directory.
 * Build and push the docker image:
