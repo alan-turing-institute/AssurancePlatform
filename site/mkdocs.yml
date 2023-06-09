@@ -1,7 +1,7 @@
-site_name: Trustworthy and Ethical Assurance Platform
+site_name: SAFE-D Assurance Platform
 site_url: https://alan-turing-institute.github.io/AssurancePlatform
 site_description: >-
-  Documentation to support the use of the Trustworthy and Ethical Assurance Methodology and Platform
+  Documentation to support the use of the SAFE-D Assurance Methodology and Platform
 
 repo_name: alan-turing-institute/AssurancePlatform
 repo_url: https://github.com/alan-turing-institute/AssurancePlatform
@@ -83,7 +83,6 @@ markdown_extensions:
   - attr_list
   - def_list
   - footnotes
-  - meta
   - md_in_html
   - toc:
       permalink: true
