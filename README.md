@@ -6,7 +6,7 @@
 
 ## About this Repository 🗂
 
-This repository contains the code and documentation for the SAFE-D Assurance platform—a web application for building trustworthy and ethical assurance cases, developed by researchers at the [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm).
+This repository contains the code and documentation for the SAFE-D Assurance platform—an application for building trustworthy and ethical assurance cases, developed by researchers at the [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm).
 
 To view the documentation site, please go to [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
 
@@ -24,9 +24,12 @@ The SAFE-D Assurance platform brings these elements together in a usable and acc
 
 ## Installation Instructions 💻
 
-To view the installation instructions, please visit our documentation site: [https://alan-turing-institute.github.io/AssurancePlatform/installation.html](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
+The SAFE-D Assurance application can be run locally or deployed on your own server or a cloud-based service (e.g. Azure).
+To view the different installation instructions, please visit our documentation site: [https://alan-turing-institute.github.io/AssurancePlatform/installation.html](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
 
 ## Further Resources 📚
+
+The following resources provide additional information about the SAFE-D Assurance framework and methodology:
 
 - Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
 - Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute. [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
