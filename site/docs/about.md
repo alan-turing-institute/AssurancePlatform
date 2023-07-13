@@ -17,17 +17,10 @@ developing and communicating assurance cases.
 
 ![A stylised illustration of an assurance case.](assets/images/assurance-case-large.png)
 
-The whole purpose of an assurance case is to provide confidence and demonstrate
-to stakeholders, including regulators and customers, that a system is acceptably
-safe or secure for its intended use. As such, the structrue of an assurance case
-is important, and it should be developed in such a way that facilitates
-communication and review by stakehodlers or third parties. For instance, using
-clear and accessible terminology to assist those who need to understand and
-evaluate the assurance argument. To support this structured, assurance cases are
-often organized into a modular, hierarchical structure (e.g higher-level claims
-supported by lower-level sub-claims), and standardised approaches, such as Goal
-Structuring Notation (GSN), exist to allow complex arguments to be broken down
-and understood more easily.
+
+The whole purpose of an assurance case is to provide confidence and demonstrate to stakeholders, including regulators and customers, that a system is acceptably safe or secure for its intended use.
+As such, the structure of an assurance case is important, and it should be developed in such a way that facilitates communication and review by stakeholders or third parties. For instance, using clear and accessible terminology to assist those who need to understand and evaluate the assurance argument.
+To support this, assurance cases are often organized into a modular, hierarchical structure (e.g higher-level claims supported by lower-level sub-claims), and standardised approaches, such as Goal Structuring Notation (GSN), exist to allow complex arguments to be broken down and understood more easily.
 
 ## Our Platform
 
