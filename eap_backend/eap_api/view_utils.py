@@ -1,24 +1,26 @@
 import warnings
+
 from django.http import JsonResponse
-from .models import (
-    EAPGroup,
-    AssuranceCase,
-    TopLevelNormativeGoal,
-    Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
-    Evidence,
-)
+
 from . import models
+from .models import (
+    AssuranceCase,
+    Context,
+    EAPGroup,
+    Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
+)
 from .serializers import (
     AssuranceCaseSerializer,
-    TopLevelNormativeGoalSerializer,
     ContextSerializer,
-    SystemDescriptionSerializer,
-    PropertyClaimSerializer,
-    EvidentialClaimSerializer,
     EvidenceSerializer,
+    EvidentialClaimSerializer,
+    PropertyClaimSerializer,
+    SystemDescriptionSerializer,
+    TopLevelNormativeGoalSerializer,
 )
 
 TYPE_DICT = {
@@ -85,7 +87,7 @@ def get_case_id(item):
         item = item.first()
     if isinstance(item, models.AssuranceCase):
         return item.id
-    for k, v in TYPE_DICT.items():
+    for _k, v in TYPE_DICT.items():
         if isinstance(item, v["model"]):
             for parent_type, _ in v["parent_types"]:
                 parent = getattr(item, parent_type)
@@ -118,10 +120,9 @@ def make_summary(serialized_data):
     """
 
     def summarize_one(data):
-        if not (
-            isinstance(data, dict) and "id" in data.keys() and "name" in data.keys()
-        ):
-            raise RuntimeError("Expected dictionary containing name and id")
+        if not (isinstance(data, dict) and "id" in data and "name" in data):
+            msg = "Expected dictionary containing name and id"
+            raise RuntimeError(msg)
         return {"name": data["name"], "id": data["id"]}
 
     if isinstance(serialized_data, list):
@@ -271,8 +272,7 @@ def get_allowed_cases(user):
     """
     all_cases = AssuranceCase.objects.all()
     # if get_case_permissions returns anything other than None, include in allowed_cases
-    allowed_cases = [case for case in all_cases if get_case_permissions(case, user)]
-    return allowed_cases
+    return [case for case in all_cases if get_case_permissions(case, user)]
 
 
 def can_view_group(group, user, level="member"):
@@ -291,7 +291,8 @@ def can_view_group(group, user, level="member"):
     False otherwise.
     """
     if level not in ["owner", "member"]:
-        raise RuntimeError("'level' parameter should be 'owner' or 'member'")
+        msg = "'level' parameter should be 'owner' or 'member'"
+        raise RuntimeError(msg)
     if not hasattr(user, "all_groups"):
         # probably AnonymousUser
         return False

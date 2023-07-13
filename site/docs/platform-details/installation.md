@@ -5,15 +5,18 @@
     A demo version of the assurance platform is available at [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
     Please note that all data is removed on a regular basis.
 
-To run the platform locally, please follow these instructions according to your preferred setup:
+To run the platform locally, please follow these instructions according to your
+preferred setup:
 
 ## Docker Install
 
 !!! warning "Knowledge of Docker"
 
-    The following instructions assume prior knowledge of Docker and docker-compose. 
+    The following instructions assume prior knowledge of Docker and docker-compose.
 
-- Clone the [Assurance Platform repository](https://github.com/alan-turing-institute/AssurancePlatform) to your local machine.
+- Clone the
+  [Assurance Platform repository](https://github.com/alan-turing-institute/AssurancePlatform)
+  to your local machine.
 
 ```shell
 git clone https://github.com/alan-turing-institute/AssurancePlatform.git
@@ -31,8 +34,10 @@ cd AssurancePlatform/
 docker compose pull && docker compose up
 ```
 
-- At this point, you can open the site in your browser: [http://localhost:3000](http://localhost:3000)
-- When you would like to stop, open a new terminal, navigate to the `AssurancePlatform` directory, and run ```docker compose down```.
+- At this point, you can open the site in your browser:
+  [http://localhost:3000](http://localhost:3000)
+- When you would like to stop, open a new terminal, navigate to the
+  `AssurancePlatform` directory, and run `docker compose down`.
 
 ## Local Install
 
@@ -74,11 +79,12 @@ cd eap_backend
 pip install -r requirements.txt
 ```
 
-- Setup the database (this will create a local sqlite file by default): 
+- Setup the database (this will create a local sqlite file by default):
 
 ```shell
 python manage.py migrate
 ```
+
 - Run the django tests:
 
 ```shell
@@ -96,12 +102,15 @@ python manage.py runserver
 ### Setup and run the frontend
 
 - Install [npm](https://www.npmjs.com/)
-    - For Debian or Ubuntu-based Linux, ```sudo apt install nodejs; sudo apt install npm```
-    - For CentOS or Fedora-based Linux, ```sudo yum install nodejs npm```
-    - For OSX using homebrew, ```brew install npm```
-    - For Windows, download and install from the official website.
 
-- Open a new terminal while the backend is running and navigate to the frontend folder:
+  - For Debian or Ubuntu-based Linux,
+    `sudo apt install nodejs; sudo apt install npm`
+  - For CentOS or Fedora-based Linux, `sudo yum install nodejs npm`
+  - For OSX using homebrew, `brew install npm`
+  - For Windows, download and install from the official website.
+
+- Open a new terminal while the backend is running and navigate to the frontend
+  folder:
 
 ```shell
 cd frontend
@@ -114,7 +123,7 @@ npm install
 ```
 
 - Run the react tests:
- 
+
 ```shell
 npm run test
 ```
@@ -125,4 +134,5 @@ npm run test
 npm start
 ```
 
-- This will launch a browser tab pointing to the web app at `http://localhost:3000`.
+- This will launch a browser tab pointing to the web app at
+  `http://localhost:3000`.

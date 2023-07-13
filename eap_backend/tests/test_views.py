@@ -1,44 +1,46 @@
-from django.test import TestCase, Client
+import json
+
+from django.test import Client, TestCase
 from django.urls import reverse
-from rest_framework.authtoken.models import Token
-from eap_api.views import make_summary
 from eap_api.models import (
     AssuranceCase,
-    TopLevelNormativeGoal,
     Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
-    Evidence,
-    EAPUser,
     EAPGroup,
+    EAPUser,
+    Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
 )
 from eap_api.serializers import (
     AssuranceCaseSerializer,
-    TopLevelNormativeGoalSerializer,
     ContextSerializer,
-    SystemDescriptionSerializer,
-    PropertyClaimSerializer,
-    EvidentialClaimSerializer,
-    EvidenceSerializer,
-    EAPUserSerializer,
     EAPGroupSerializer,
+    EAPUserSerializer,
+    EvidenceSerializer,
+    EvidentialClaimSerializer,
+    PropertyClaimSerializer,
+    SystemDescriptionSerializer,
+    TopLevelNormativeGoalSerializer,
 )
-import json
+from eap_api.views import make_summary
+from rest_framework.authtoken.models import Token
+
 from .constants_tests import (
     CASE1_INFO,
-    GOAL_INFO,
     CONTEXT_INFO,
     DESCRIPTION_INFO,
-    PROPERTYCLAIM1_INFO,
-    PROPERTYCLAIM2_INFO,
-    EVIDENTIALCLAIM1_INFO,
-    USER1_INFO,
-    GROUP1_INFO,
     # for many-to-many relations, need to NOT have
     # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
     EVIDENCE2_INFO_NO_ID,
+    EVIDENTIALCLAIM1_INFO,
+    GOAL_INFO,
+    GROUP1_INFO,
+    PROPERTYCLAIM1_INFO,
+    PROPERTYCLAIM2_INFO,
+    USER1_INFO,
 )
 
 
@@ -66,25 +68,25 @@ class CaseViewTest(TestCase):
             data=json.dumps(post_data),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
-        self.assertEqual(response_post.json()["name"], post_data["name"])
+        assert response_post.status_code == 201
+        assert response_post.json()["name"] == post_data["name"]
         # check we now have two cases in the db
         response_get = self.client.get(reverse("case_list"))
-        self.assertEqual(len(response_get.json()), 2)
+        assert len(response_get.json()) == 2
 
     def test_case_list_view_get(self):
         response_get = self.client.get(reverse("case_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
 
     def test_case_detail_view_get(self):
         response_get = self.client.get(
             reverse("case_detail", kwargs={"pk": self.case1.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_case_detail_view_put(self):
         response_put = self.client.put(
@@ -92,15 +94,15 @@ class CaseViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_case_delete_with_standard_permission(self):
         url = reverse("case_detail", kwargs={"pk": self.case1.pk})
         self.client.delete(url)
 
         response_get = self.client.get(reverse("case_list"))
-        self.assertEqual(len(response_get.json()), 0)
+        assert len(response_get.json()) == 0
 
 
 class GoalViewTest(TestCase):
@@ -119,17 +121,17 @@ class GoalViewTest(TestCase):
 
     def test_goal_list_view_get(self):
         response_get = self.client.get(reverse("goal_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
 
     def test_goal_detail_view_get(self):
         response_get = self.client.get(
             reverse("goal_detail", kwargs={"pk": self.goal.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_goal_detail_view_put(self):
         response_put = self.client.put(
@@ -137,14 +139,14 @@ class GoalViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_goal_delete_with_standard_permission(self):
         url = reverse("goal_detail", kwargs={"pk": self.goal.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("goal_list"))
-        self.assertEqual(len(response_get.json()), 0)
+        assert len(response_get.json()) == 0
 
 
 class ContextViewTest(TestCase):
@@ -164,17 +166,17 @@ class ContextViewTest(TestCase):
 
     def test_context_list_view_get(self):
         response_get = self.client.get(reverse("context_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
 
     def test_context_detail_view_get(self):
         response_get = self.client.get(
             reverse("context_detail", kwargs={"pk": self.context.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_context_detail_view_put(self):
         response_put = self.client.put(
@@ -182,14 +184,14 @@ class ContextViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_context_delete_with_standard_permission(self):
         url = reverse("context_detail", kwargs={"pk": self.context.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("context_list"))
-        self.assertEqual(len(response_get.json()), 0)
+        assert len(response_get.json()) == 0
 
 
 class DescriptionViewTest(TestCase):
@@ -209,17 +211,17 @@ class DescriptionViewTest(TestCase):
 
     def test_description_list_view_get(self):
         response_get = self.client.get(reverse("description_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
 
     def test_description_detail_view_get(self):
         response_get = self.client.get(
             reverse("description_detail", kwargs={"pk": self.description.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_description_detail_view_put(self):
         response_put = self.client.put(
@@ -227,14 +229,14 @@ class DescriptionViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_description_delete_with_standard_permission(self):
         url = reverse("description_detail", kwargs={"pk": self.description.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("description_list"))
-        self.assertEqual(len(response_get.json()), 0)
+        assert len(response_get.json()) == 0
 
 
 class PropertyClaimViewTest(TestCase):
@@ -255,25 +257,25 @@ class PropertyClaimViewTest(TestCase):
 
     def test_property_claim_list_view_get(self):
         response_get = self.client.get(reverse("property_claim_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
-        self.assertEqual(len(response_get.json()), 2)
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
+        assert len(response_get.json()) == 2
 
     def test_property_claim_detail_view_get(self):
         response_get = self.client.get(
             reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
         response_get = self.client.get(
             reverse("property_claim_detail", kwargs={"pk": self.pclaim2.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[1]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_property_claim_detail_view_put(self):
         response_put = self.client.put(
@@ -281,14 +283,14 @@ class PropertyClaimViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_property_claim_delete_with_standard_permission(self):
         url = reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("property_claim_list"))
-        self.assertEqual(len(response_get.json()), 1)
+        assert len(response_get.json()) == 1
 
 
 class EvidentialClaimViewTest(TestCase):
@@ -311,18 +313,18 @@ class EvidentialClaimViewTest(TestCase):
 
     def test_evidential_claim_list_view_get(self):
         response_get = self.client.get(reverse("evidential_claim_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
-        self.assertEqual(len(response_get.json()), 1)
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
+        assert len(response_get.json()) == 1
 
     def test_evidential_claim_detail_view_get(self):
         response_get = self.client.get(
             reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_evidential_claim_detail_view_put(self):
         response_put = self.client.put(
@@ -330,14 +332,14 @@ class EvidentialClaimViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_evidential_claim_delete_with_standard_permission(self):
         url = reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("evidential_claim_list"))
-        self.assertEqual(len(response_get.json()), 0)
+        assert len(response_get.json()) == 0
 
 
 class EvidenceViewTest(TestCase):
@@ -367,25 +369,25 @@ class EvidenceViewTest(TestCase):
 
     def test_evidence_list_view_get(self):
         response_get = self.client.get(reverse("evidence_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), make_summary(self.serializer.data))
-        self.assertEqual(len(response_get.json()), 2)
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
+        assert len(response_get.json()) == 2
 
     def test_evidence_detail_view_get(self):
         response_get = self.client.get(
             reverse("evidence_detail", kwargs={"pk": self.evidence1.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
         response_get = self.client.get(
             reverse("evidence_detail", kwargs={"pk": self.evidence2.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[1]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
 
     def test_evidence_detail_view_put(self):
         response_put = self.client.put(
@@ -393,14 +395,14 @@ class EvidenceViewTest(TestCase):
             data=json.dumps(self.update),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
-        self.assertEqual(response_put.json()["name"], self.update["name"])
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
 
     def test_evidence_delete_with_standard_permission(self):
         url = reverse("evidence_detail", kwargs={"pk": self.evidence1.pk})
         self.client.delete(url)
         response_get = self.client.get(reverse("evidence_list"))
-        self.assertEqual(len(response_get.json()), 1)
+        assert len(response_get.json()) == 1
 
 
 class FullCaseDetailViewTest(TestCase):
@@ -430,32 +432,33 @@ class FullCaseDetailViewTest(TestCase):
         response_get = self.client.get(
             reverse("case_detail", kwargs={"pk": self.case.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
         response_get = self.client.get(
             reverse("case_detail", kwargs={"pk": self.case.pk})
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
-        self.assertEqual(response_data["name"], serializer_data["name"])
+        assert response_data["name"] == serializer_data["name"]
         # check we can go down the whole tree
-        self.assertEqual(len(response_data["goals"]), 1)
-        self.assertEqual(len(response_data["goals"][0]["context"]), 1)
-        self.assertEqual(len(response_data["goals"][0]["system_description"]), 1)
-        self.assertEqual(len(response_data["goals"][0]["property_claims"]), 1)
-        self.assertEqual(
-            len(response_data["goals"][0]["property_claims"][0]["evidential_claims"]), 1
+        assert len(response_data["goals"]) == 1
+        assert len(response_data["goals"][0]["context"]) == 1
+        assert len(response_data["goals"][0]["system_description"]) == 1
+        assert len(response_data["goals"][0]["property_claims"]) == 1
+        assert (
+            len(response_data["goals"][0]["property_claims"][0]["evidential_claims"])
+            == 1
         )
-        self.assertEqual(
+        assert (
             len(
                 response_data["goals"][0]["property_claims"][0]["evidential_claims"][0][
                     "evidence"
                 ]
-            ),
-            2,
+            )
+            == 2
         )
 
 
@@ -483,38 +486,38 @@ class UserViewNoAuthTest(TestCase):
             data=json.dumps(post_data),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
-        self.assertEqual(response_post.json()["username"], post_data["username"])
+        assert response_post.status_code == 201
+        assert response_post.json()["username"] == post_data["username"]
         # check we now have two cases in the db
         response_get = self.client.get(reverse("user_list"))
-        self.assertEqual(len(response_get.json()), 2)
+        assert len(response_get.json()) == 2
 
     def test_user_list_view_get(self):
         response_get = self.client.get(reverse("user_list"))
-        self.assertEqual(response_get.status_code, 200)
-        self.assertEqual(response_get.json(), self.serializer.data)
-        self.assertEqual(len(response_get.json()), 1)
+        assert response_get.status_code == 200
+        assert response_get.json() == self.serializer.data
+        assert len(response_get.json()) == 1
 
     def test_user_detail_view_get(self):
         # Shouldn't be able to do this without being logged in!
         response_get = self.client.get(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
-        self.assertEqual(response_get.status_code, 403)
+        assert response_get.status_code == 403
 
     def test_user_detail_view_put(self):
         # Shouldn't be able to do this without being logged in!
         response_get = self.client.put(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
-        self.assertEqual(response_get.status_code, 403)
+        assert response_get.status_code == 403
 
     def test_user_detail_view_delete(self):
         # Shouldn't be able to do this without being logged in!
         response_get = self.client.delete(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
-        self.assertEqual(response_get.status_code, 403)
+        assert response_get.status_code == 403
 
 
 class UserDetailViewWithAuthTest(TestCase):
@@ -523,7 +526,7 @@ class UserDetailViewWithAuthTest(TestCase):
         user = EAPUser.objects.create(**USER1_INFO)
         token, created = Token.objects.get_or_create(user=user)
         key = token.key
-        self.headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        self.headers = {"HTTP_AUTHORIZATION": f"Token {key}"}
         self.update = {
             "username": "user1_updated",
             "password": "password is updated",
@@ -534,9 +537,9 @@ class UserDetailViewWithAuthTest(TestCase):
         response_get = client.get(
             reverse("user_detail", kwargs={"pk": 1}), headers=self.headers
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_json = response_get.json()
-        self.assertEqual(response_json["username"], USER1_INFO["username"])
+        assert response_json["username"] == USER1_INFO["username"]
 
     def test_user_detail_view_put(self):
         client = Client(**self.headers)
@@ -545,9 +548,9 @@ class UserDetailViewWithAuthTest(TestCase):
             headers=self.headers,
             data=json.dumps(self.update),
         )
-        self.assertEqual(response_put.status_code, 200)
+        assert response_put.status_code == 200
         response_json = response_put.json()
-        self.assertEqual(response_json["username"], self.update["username"])
+        assert response_json["username"] == self.update["username"]
 
     def test_user_detail_view_delete(self):
         client = Client(**self.headers)
@@ -555,8 +558,8 @@ class UserDetailViewWithAuthTest(TestCase):
             reverse("user_detail", kwargs={"pk": 1}),
             headers=self.headers,
         )
-        self.assertEqual(response_delete.status_code, 204)
-        self.assertEqual(len(EAPUser.objects.all()), 0)
+        assert response_delete.status_code == 204
+        assert len(EAPUser.objects.all()) == 0
 
 
 class GroupViewNoAuthTest(TestCase):
@@ -583,7 +586,7 @@ class GroupViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         # shouldn't be possible - no logged in user to assign as owner
-        self.assertEqual(response_post.status_code, 400)
+        assert response_post.status_code == 400
 
     def test_group_list_view_get(self):
         response_get = self.client.get(
@@ -591,12 +594,12 @@ class GroupViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         # should get a status code 200, and dict with 2 empty lists
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_json = response_get.json()
-        self.assertTrue(isinstance(response_json, dict))
-        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
-        self.assertEqual(len(response_json["owner"]), 0)
-        self.assertEqual(len(response_json["member"]), 0)
+        assert isinstance(response_json, dict)
+        assert {"owner", "member"} == set(response_json.keys())
+        assert len(response_json["owner"]) == 0
+        assert len(response_json["member"]) == 0
 
     def test_group_detail_view_get(self):
         response_get = self.client.get(
@@ -604,7 +607,7 @@ class GroupViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         # shouldn't be allowed
-        self.assertEqual(response_get.status_code, 403)
+        assert response_get.status_code == 403
 
     def test_group_detail_view_put(self):
         response_put = self.client.put(
@@ -613,7 +616,7 @@ class GroupViewNoAuthTest(TestCase):
             data=json.dumps(self.update),
         )
         # shouldn't be allowed
-        self.assertEqual(response_put.status_code, 403)
+        assert response_put.status_code == 403
 
     def test_group_detail_view_delete(self):
         response_delete = self.client.delete(
@@ -621,7 +624,7 @@ class GroupViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         # shouldn't be allowed
-        self.assertEqual(response_delete.status_code, 403)
+        assert response_delete.status_code == 403
 
 
 class GroupViewWithAuthTest(TestCase):
@@ -633,7 +636,7 @@ class GroupViewWithAuthTest(TestCase):
         self.group.member.set([user.id])
         token, created = Token.objects.get_or_create(user=user)
         key = token.key
-        headers = {"HTTP_AUTHORIZATION": "Token {}".format(key)}
+        headers = {"HTTP_AUTHORIZATION": f"Token {key}"}
         # replace the client with the logged-in one.
         self.client = Client(**headers)
         self.post_data = {"name": "AnotherNewGroup"}
@@ -647,12 +650,12 @@ class GroupViewWithAuthTest(TestCase):
             content_type="application/json",
         )
         # should get a status code 200, and dict with 2 NON-empty lists
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_json = response_get.json()
-        self.assertTrue(isinstance(response_json, dict))
-        self.assertTrue(set(["owner", "member"]) == set(response_json.keys()))
-        self.assertEqual(len(response_json["owner"]), 1)
-        self.assertEqual(len(response_json["member"]), 1)
+        assert isinstance(response_json, dict)
+        assert {"owner", "member"} == set(response_json.keys())
+        assert len(response_json["owner"]) == 1
+        assert len(response_json["member"]) == 1
 
     def test_group_list_view_post(self):
         response_post = self.client.post(
@@ -660,21 +663,21 @@ class GroupViewWithAuthTest(TestCase):
             data=json.dumps(self.post_data),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
+        assert response_post.status_code == 201
         response_json = response_post.json()
-        self.assertEqual(response_json["name"], self.post_data["name"])
+        assert response_json["name"] == self.post_data["name"]
 
     def test_group_detail_view_get(self):
         response_get = self.client.get(
             reverse("group_detail", kwargs={"pk": 1}),
             content_type="application/json",
         )
-        self.assertEqual(response_get.status_code, 200)
+        assert response_get.status_code == 200
         response_json = response_get.json()
-        self.assertEqual(response_json["name"], GROUP1_INFO["name"])
-        self.assertTrue(response_json["members"], list)
-        self.assertEqual(len(response_json["members"]), 1)
-        self.assertEqual(response_json["members"][0], 1)
+        assert response_json["name"] == GROUP1_INFO["name"]
+        assert response_json["members"], list
+        assert len(response_json["members"]) == 1
+        assert response_json["members"][0] == 1
 
     def test_group_detail_view_put(self):
         response_put = self.client.put(
@@ -682,14 +685,14 @@ class GroupViewWithAuthTest(TestCase):
             content_type="application/json",
             data=json.dumps(self.update),
         )
-        self.assertEqual(response_put.status_code, 200)
+        assert response_put.status_code == 200
         response_json = response_put.json()
-        self.assertEqual(response_json["name"], self.update["name"])
+        assert response_json["name"] == self.update["name"]
 
     def test_group_detail_view_delete(self):
         response_delete = self.client.delete(
             reverse("group_detail", kwargs={"pk": 1}),
             content_type="application/json",
         )
-        self.assertEqual(response_delete.status_code, 204)
-        self.assertEqual(len(EAPGroup.objects.all()), 0)
+        assert response_delete.status_code == 204
+        assert len(EAPGroup.objects.all()) == 0
