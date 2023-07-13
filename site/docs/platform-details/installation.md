@@ -58,7 +58,7 @@ git clone https://github.com/alan-turing-institute/AssurancePlatform.git
 - Create a new Python environment
 
 ```shell
-conda create --name eapenv
+conda create --name eapenv python=3.8 -y
 ```
 
 - Activate your new virtual environment
@@ -79,13 +79,13 @@ cd eap_backend
 pip install -r requirements.txt
 ```
 
-- Setup the database (this will create a local sqlite file by default):
+- Set up the database (this will create a local SQLite file by default):
 
 ```shell
 python manage.py migrate
 ```
 
-- Run the django tests:
+- Run the Django tests:
 
 ```shell
 python manage.py test
@@ -106,7 +106,7 @@ python manage.py runserver
   - For Debian or Ubuntu-based Linux,
     `sudo apt install nodejs; sudo apt install npm`
   - For CentOS or Fedora-based Linux, `sudo yum install nodejs npm`
-  - For OSX using homebrew, `brew install npm`
+  - For OSX using Homebrew, `brew install npm`
   - For Windows, download and install from the official website.
 
 - Open a new terminal while the backend is running and navigate to the frontend
@@ -136,3 +136,11 @@ npm start
 
 - This will launch a browser tab pointing to the web app at
   `http://localhost:3000`.
+
+- If you get an SSL error, run the following commands and try again:
+
+```shell
+npm update
+npm audit fix --force
+npm i react-scripts@latest
+```
