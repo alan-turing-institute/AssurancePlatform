@@ -1,16 +1,17 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+
+from .forms import EAPUserChangeForm, EAPUserCreationForm
 from .models import (
     AssuranceCase,
-    EAPUser,
-    TopLevelNormativeGoal,
     Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
+    EAPUser,
     Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
 )
-from .forms import EAPUserChangeForm, EAPUserCreationForm
 
 
 class EAPUserAdmin(UserAdmin):

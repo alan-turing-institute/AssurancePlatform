@@ -1,39 +1,40 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
 from rest_framework.decorators import api_view
+from rest_framework.parsers import JSONParser
+
 from .models import (
-    EAPUser,
-    EAPGroup,
     AssuranceCase,
-    TopLevelNormativeGoal,
     Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
+    EAPGroup,
+    EAPUser,
     Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
 )
 from .serializers import (
-    EAPUserSerializer,
-    EAPGroupSerializer,
     AssuranceCaseSerializer,
-    TopLevelNormativeGoalSerializer,
     ContextSerializer,
-    SystemDescriptionSerializer,
-    PropertyClaimSerializer,
-    EvidentialClaimSerializer,
+    EAPGroupSerializer,
+    EAPUserSerializer,
     EvidenceSerializer,
+    EvidentialClaimSerializer,
+    PropertyClaimSerializer,
+    SystemDescriptionSerializer,
+    TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
-    filter_by_case_id,
-    make_summary,
-    get_json_tree,
-    save_json_tree,
-    get_case_permissions,
-    get_allowed_cases,
-    can_view_group,
-    get_allowed_groups,
     TYPE_DICT,
+    can_view_group,
+    filter_by_case_id,
+    get_allowed_cases,
+    get_allowed_groups,
+    get_case_permissions,
+    get_json_tree,
+    make_summary,
+    save_json_tree,
 )
 
 
@@ -53,6 +54,7 @@ def user_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -81,6 +83,7 @@ def user_detail(request, pk):
     elif request.method == "DELETE":
         user.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -105,6 +108,7 @@ def group_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -133,6 +137,7 @@ def group_detail(request, pk):
     elif request.method == "DELETE":
         group.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -150,6 +155,7 @@ def case_list(request):
         data = JSONParser().parse(request)
         data["owner"] = request.user.id
         return save_json_tree(data, "assurance_case")
+    return None
 
 
 @csrf_exempt
@@ -186,6 +192,7 @@ def case_detail(request, pk):
             return HttpResponse(status=403)
         case.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -209,6 +216,7 @@ def goal_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -242,6 +250,7 @@ def goal_detail(request, pk):
     elif request.method == "DELETE":
         goal.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -263,6 +272,7 @@ def context_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -293,6 +303,7 @@ def context_detail(request, pk):
     elif request.method == "DELETE":
         context.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -314,6 +325,7 @@ def description_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -344,6 +356,7 @@ def description_detail(request, pk):
     elif request.method == "DELETE":
         description.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -365,6 +378,7 @@ def property_claim_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -395,6 +409,7 @@ def property_claim_detail(request, pk):
     elif request.method == "DELETE":
         claim.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -416,6 +431,7 @@ def evidential_claim_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -448,6 +464,7 @@ def evidential_claim_detail(request, pk):
     elif request.method == "DELETE":
         evidential_claim.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt
@@ -469,6 +486,7 @@ def evidence_list(request):
             summary = make_summary(serializer.data)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
+    return None
 
 
 @csrf_exempt
@@ -499,6 +517,7 @@ def evidence_detail(request, pk):
     elif request.method == "DELETE":
         evidence.delete()
         return HttpResponse(status=204)
+    return None
 
 
 @csrf_exempt

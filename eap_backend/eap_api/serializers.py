@@ -1,14 +1,15 @@
 from rest_framework import serializers
+
 from .models import (
     AssuranceCase,
-    EAPUser,
-    EAPGroup,
-    TopLevelNormativeGoal,
     Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
+    EAPGroup,
+    EAPUser,
     Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
 )
 
 

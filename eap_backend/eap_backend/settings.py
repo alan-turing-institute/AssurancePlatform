@@ -64,7 +64,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-if "CORS_ORIGIN_WHITELIST" in os.environ.keys():
+if "CORS_ORIGIN_WHITELIST" in os.environ:
     CORS_ORIGIN_WHITELIST = os.environ["CORS_ORIGIN_WHITELIST"].split(",")
 else:
     CORS_ORIGIN_WHITELIST = (

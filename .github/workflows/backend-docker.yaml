@@ -15,13 +15,13 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - uses: actions/checkout@v3
-      - name: 'Build main'
+      - name: "Build main"
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: eap_backend
         run: |
           docker build -t turingassuranceplatform/eap_backend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_backend:main
-      - name: 'Build dev'
+      - name: "Build dev"
         if: ${{ github.ref == 'refs/heads/dev' }}
         working-directory: eap_backend
         run: |

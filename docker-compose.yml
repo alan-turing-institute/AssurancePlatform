@@ -1,22 +1,20 @@
-version: '3'
+version: "3"
 services:
-
   eap_frontend:
     image: turingassuranceplatform/eap_frontend:main
     depends_on:
-    - eap_backend
+      - eap_backend
     ports:
-     - "3000:3000"
+      - "3000:3000"
     networks:
-    - eap_nw
+      - eap_nw
 
   eap_backend:
     image: turingassuranceplatform/eap_backend:main
     ports:
-     - "8000:8000"
+      - "8000:8000"
     networks:
-    - eap_nw
-
+      - eap_nw
 
 networks:
   eap_nw:

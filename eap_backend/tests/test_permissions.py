@@ -1,22 +1,23 @@
-from django.test import TestCase, Client
-from django.urls import reverse
-from rest_framework.authtoken.models import Token
 import json
+
+from django.test import Client, TestCase
+from django.urls import reverse
 from eap_api.models import (
-    EAPUser,
     EAPGroup,
+    EAPUser,
 )
+from rest_framework.authtoken.models import Token
 
 from .constants_tests import (
     CASE1_INFO,
     CASE2_INFO,
     CASE3_INFO,
-    USER1_INFO,
-    USER2_INFO,
-    USER3_INFO,
     GROUP1_INFO,
     GROUP2_INFO,
     GROUP3_INFO,
+    USER1_INFO,
+    USER2_INFO,
+    USER3_INFO,
 )
 
 
@@ -51,9 +52,9 @@ class CasePermissionsTest(TestCase):
         token2, created = Token.objects.get_or_create(user=user2)
         token3, created = Token.objects.get_or_create(user=user3)
         # 3 different clients with 3 different logged-in users (seems messy...)
-        self.client1 = Client(HTTP_AUTHORIZATION="Token {}".format(token1.key))
-        self.client2 = Client(HTTP_AUTHORIZATION="Token {}".format(token2.key))
-        self.client3 = Client(HTTP_AUTHORIZATION="Token {}".format(token3.key))
+        self.client1 = Client(HTTP_AUTHORIZATION=f"Token {token1.key}")
+        self.client2 = Client(HTTP_AUTHORIZATION=f"Token {token2.key}")
+        self.client3 = Client(HTTP_AUTHORIZATION=f"Token {token3.key}")
 
     def test_case1(self):
         """
@@ -67,34 +68,34 @@ class CasePermissionsTest(TestCase):
             data=json.dumps(CASE1_INFO),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
+        assert response_post.status_code == 201
         # add group1 to edit groups
         response_put = self.client1.put(
             reverse("case_detail", kwargs={"pk": 1}),
             data=json.dumps({"edit_groups": [1]}),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
+        assert response_put.status_code == 200
         # user1 and user3 should now be able to see it via case_list, user2 should not.
         get_list1 = self.client1.get(reverse("case_list"))
-        self.assertEqual(get_list1.status_code, 200)
-        self.assertEqual(len(get_list1.json()), 1)
+        assert get_list1.status_code == 200
+        assert len(get_list1.json()) == 1
         get_list2 = self.client2.get(reverse("case_list"))
-        self.assertEqual(get_list2.status_code, 200)
-        self.assertEqual(len(get_list2.json()), 0)
+        assert get_list2.status_code == 200
+        assert len(get_list2.json()) == 0
         get_list3 = self.client3.get(reverse("case_list"))
-        self.assertEqual(get_list3.status_code, 200)
-        self.assertEqual(len(get_list3.json()), 1)
+        assert get_list3.status_code == 200
+        assert len(get_list3.json()) == 1
         # user1 and user3 should now be able to see it via case_detail, user2 should not.
         get_detail1 = self.client1.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail1.status_code, 200)
+        assert get_detail1.status_code == 200
         get_detail2 = self.client2.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail2.status_code, 403)
+        assert get_detail2.status_code == 403
         get_detail3 = self.client3.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail3.status_code, 200)
+        assert get_detail3.status_code == 200
         # user3 should be able to delete it.
         delete_detail3 = self.client3.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail3.status_code, 204)
+        assert delete_detail3.status_code == 204
 
     def test_case2(self):
         """
@@ -109,37 +110,37 @@ class CasePermissionsTest(TestCase):
             data=json.dumps(CASE2_INFO),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
+        assert response_post.status_code == 201
         # add group2 to view groups
         response_put = self.client2.put(
             reverse("case_detail", kwargs={"pk": 1}),
             data=json.dumps({"view_groups": [2]}),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
+        assert response_put.status_code == 200
         # user1 and user2 should now be able to see it via case_list, user3 should not.
         get_list1 = self.client1.get(reverse("case_list"))
-        self.assertEqual(get_list1.status_code, 200)
-        self.assertEqual(len(get_list1.json()), 1)
+        assert get_list1.status_code == 200
+        assert len(get_list1.json()) == 1
         get_list2 = self.client2.get(reverse("case_list"))
-        self.assertEqual(get_list2.status_code, 200)
-        self.assertEqual(len(get_list2.json()), 1)
+        assert get_list2.status_code == 200
+        assert len(get_list2.json()) == 1
         get_list3 = self.client3.get(reverse("case_list"))
-        self.assertEqual(get_list3.status_code, 200)
-        self.assertEqual(len(get_list3.json()), 0)
+        assert get_list3.status_code == 200
+        assert len(get_list3.json()) == 0
         # user1 and user2 should now be able to see it via case_detail, user3 should not.
         get_detail1 = self.client1.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail1.status_code, 200)
+        assert get_detail1.status_code == 200
         get_detail2 = self.client2.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail2.status_code, 200)
+        assert get_detail2.status_code == 200
         get_detail3 = self.client3.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail3.status_code, 403)
+        assert get_detail3.status_code == 403
         # user1 should not be able to delete it.
         delete_detail1 = self.client1.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail1.status_code, 403)
+        assert delete_detail1.status_code == 403
         # user2 should be able to delete it.
         delete_detail2 = self.client2.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail2.status_code, 204)
+        assert delete_detail2.status_code == 204
 
     def test_case3(self):
         """
@@ -154,37 +155,37 @@ class CasePermissionsTest(TestCase):
             data=json.dumps(CASE3_INFO),
             content_type="application/json",
         )
-        self.assertEqual(response_post.status_code, 201)
+        assert response_post.status_code == 201
         # add groups 1 and 3 to view groups
         response_put = self.client3.put(
             reverse("case_detail", kwargs={"pk": 1}),
             data=json.dumps({"view_groups": [1, 3]}),
             content_type="application/json",
         )
-        self.assertEqual(response_put.status_code, 200)
+        assert response_put.status_code == 200
         # user1, user2 and user3 should now be able to see it via case_list
         get_list1 = self.client1.get(reverse("case_list"))
-        self.assertEqual(get_list1.status_code, 200)
-        self.assertEqual(len(get_list1.json()), 1)
+        assert get_list1.status_code == 200
+        assert len(get_list1.json()) == 1
         get_list2 = self.client2.get(reverse("case_list"))
-        self.assertEqual(get_list2.status_code, 200)
-        self.assertEqual(len(get_list2.json()), 1)
+        assert get_list2.status_code == 200
+        assert len(get_list2.json()) == 1
         get_list3 = self.client3.get(reverse("case_list"))
-        self.assertEqual(get_list3.status_code, 200)
-        self.assertEqual(len(get_list3.json()), 1)
+        assert get_list3.status_code == 200
+        assert len(get_list3.json()) == 1
         # user1, user2, and user3 should now be able to see it via case_detail
         get_detail1 = self.client1.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail1.status_code, 200)
+        assert get_detail1.status_code == 200
         get_detail2 = self.client2.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail2.status_code, 200)
+        assert get_detail2.status_code == 200
         get_detail3 = self.client3.get(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(get_detail3.status_code, 200)
+        assert get_detail3.status_code == 200
         # user1 should not be able to delete it.
         delete_detail1 = self.client1.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail1.status_code, 403)
+        assert delete_detail1.status_code == 403
         # user2 should not be able to delete it.
         delete_detail2 = self.client2.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail2.status_code, 403)
+        assert delete_detail2.status_code == 403
         # user3 should be able to delete it.
         delete_detail3 = self.client3.delete(reverse("case_detail", kwargs={"pk": 1}))
-        self.assertEqual(delete_detail3.status_code, 204)
+        assert delete_detail3.status_code == 204
