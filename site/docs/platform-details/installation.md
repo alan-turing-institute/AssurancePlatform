@@ -136,3 +136,11 @@ npm start
 
 - This will launch a browser tab pointing to the web app at
   `http://localhost:3000`.
+
+- If you get an SSL error, run the following commands and try again:
+
+```shell
+npm update
+npm audit fix --force
+npm i react-scripts@latest
+```
