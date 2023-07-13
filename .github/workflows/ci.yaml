@@ -7,6 +7,20 @@ on:
 permissions:
   contents: write
 jobs:
+  pre-commit:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --hook-stage manual --all-files
+
   deploy:
     runs-on: ubuntu-latest
     if: github.event.repository.fork == false
