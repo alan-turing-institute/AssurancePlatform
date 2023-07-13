@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
