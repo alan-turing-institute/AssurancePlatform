@@ -14,6 +14,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-transform-stub": "^2.0.0",
     "mermaid": "^8.13.10",
+    "neatjson": "^0.10.6",
     "pattern.css": "^1.0.0",
     "prettier": "^2.5.1",
     "react": "^17.0.2",

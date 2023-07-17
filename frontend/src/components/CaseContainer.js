@@ -5,6 +5,7 @@ import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
+import { neatJSON } from "neatjson";
 
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
@@ -110,7 +111,7 @@ class CaseContainer extends Component {
     const name = json_response["name"];
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
-    json_response = JSON.stringify(json_response);
+    json_response = neatJSON(json_response);
     json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
     // Write to a file, which to the user shows as a download.
     const blob = new Blob([json_response], {
