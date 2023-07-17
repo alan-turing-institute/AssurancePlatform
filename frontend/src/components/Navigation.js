@@ -24,7 +24,7 @@ function Navigation() {
               <li className="nav-item">
                 <a
                   className="nav-link"
-                  href="https://github.com/alan-turing-institute/AssurancePlatform"
+                  href="https://alan-turing-institute.github.io/AssurancePlatform/"
                 >
                   Docs
                   <span className="sr-only">(current)</span>

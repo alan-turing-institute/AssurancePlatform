@@ -13,8 +13,7 @@ information about the following:
 - How do you install and deploy the SAFE-D Assurance platform?
 - How do you use the SAFE-D Assurance platform and methodology?
 
-![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/building-an-assurance-case.png){
-width=50% }
+![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/building-an-assurance-case.png)
 
 !!! warning "Under Construction 🚧"
 

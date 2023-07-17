@@ -1,6 +1,6 @@
 # Deploying the Assurance Platform on Microsoft Azure Cloud
 
-!!! info "Azure Deployment
+!!! info "Azure Deployment"
 
     The following procedure makes use of Docker, Azure Webapps, and Azure Database for Postgresql.
     These instructions make use of the Azure Portal.
@@ -36,7 +36,7 @@ postgres=> \q
 
 ## Create backend docker image
 
-This step can be skipped if you are using a github Action to build the Docker
+This step can be skipped if you are using a GitHub Action to build the Docker
 image, as is currently done for the `dev` and `main` branches.
 
 - Install docker following instructions
@@ -74,7 +74,7 @@ docker push DOCKER_USERNAME/eap_backend:latest
   - DBPASSWORD=THE_PASSWORD_FOR_THE_USER_YOU_JUST_MADE
 - Test that the backend is working (will take a few minutes to start up the
   first time) by going to
-  https://BACKEND_WEBAPP_NAME.azurewebsites.net/api/cases and you should get an
+  https://BACKEND_WEBAPP_NAME.azurewebsites.net/api/cases, and you should get an
   empty list.
 - You may also want to turn on Continuous deployment from the Deployment Center
   settings, to have Azure pull the latest container every time one is available.
@@ -120,5 +120,5 @@ labelled "Enable Access-Control-Allow-Credentials", and put
 Click "Save" here again, and restart the backend webapp from the "Overview"
 page.
 
-Wait a few seconds, then check the frontend web site to see that everything
+Wait a few seconds, then check the frontend website to see that everything
 works.
