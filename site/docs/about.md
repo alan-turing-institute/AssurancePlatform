@@ -2,7 +2,7 @@
 
 The Trustworthy and Ethical Assurance platform, or Assurance Platform for short,
 is an open-source tool that has been designed and developed by researchers at
-the Alan Turing Insitute and University of York to support the process of
+the Alan Turing Institute and University of York to support the process of
 developing and communicating assurance cases.
 
 !!! question "What is an assurance case?"
@@ -24,7 +24,7 @@ is important, and it should be developed in such a way that facilitates
 communication and review by stakeholders or third parties. For instance, using
 clear and accessible terminology to assist those who need to understand and
 evaluate the assurance argument. To support this, assurance cases are often
-organized into a modular, hierarchical structure (e.g higher-level claims
+organized into a modular, hierarchical structure (e.g. higher-level claims
 supported by lower-level sub-claims), and standardised approaches, such as Goal
 Structuring Notation (GSN), exist to allow complex arguments to be broken down
 and understood more easily.
