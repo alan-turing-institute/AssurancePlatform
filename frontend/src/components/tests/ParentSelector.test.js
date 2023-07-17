@@ -16,7 +16,7 @@ global.fetch = jest.fn(() =>
           name: "EvidentialClaim 1",
         },
       ]),
-  })
+  }),
 );
 
 test("renders parent selector layer", () => {

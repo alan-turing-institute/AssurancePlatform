@@ -30,7 +30,7 @@ class CasePermissionsManager extends Component {
         this.state.groups.forEach((group) => {
           this.setGroupPermission(
             group,
-            this.dialValue(group, this.props.assurance_case)
+            this.dialValue(group, this.props.assurance_case),
           );
         });
       });
@@ -102,7 +102,7 @@ class CasePermissionsManager extends Component {
     };
     await fetch(
       `${getBaseURL()}/cases/${this.props.assurance_case.id}/`,
-      requestOptions
+      requestOptions,
     );
     this.props.afterSubmit();
   }

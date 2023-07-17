@@ -202,7 +202,7 @@ class CaseContainer extends Component {
         mermaid_md: highlightNode(
           this.state.mermaid_md,
           this.state.itemType,
-          this.state.itemId
+          this.state.itemId,
         ),
       });
       this.setState({ loading: false });
@@ -442,19 +442,19 @@ class CaseContainer extends Component {
       this.submitCaseChange("lock_uuid", this.state.session_id).then(
         (response) => {
           this.updateView();
-        }
+        },
       );
     } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
       // override!
       if (
         window.confirm(
-          "Are you sure?  You might be overwriting someone's work..."
+          "Are you sure?  You might be overwriting someone's work...",
         )
       ) {
         this.submitCaseChange("lock_uuid", this.state.session_id).then(
           (response) => {
             this.updateView();
-          }
+          },
         );
       }
     }
@@ -499,7 +499,7 @@ class CaseContainer extends Component {
             childType,
             this.state.itemId,
             this.state.itemType,
-            e
+            e,
           )
         }
         label={"Create " + childType}
@@ -522,7 +522,7 @@ class CaseContainer extends Component {
           {this.state.itemType &&
             this.state.itemId &&
             configData.navigation[this.state.itemType]["children"].map(
-              this.getCreateSubItemButton.bind(this)
+              this.getCreateSubItemButton.bind(this),
             )}
         </Box>
       );

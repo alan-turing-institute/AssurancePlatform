@@ -112,12 +112,12 @@ class Groups extends React.Component {
 
   async modifyGroupMembers() {
     const userNames = splitCommaSeparatedString(
-      this.state.managedGroupMemberStr
+      this.state.managedGroupMemberStr,
     );
     const userIds = this.userNamesToIds(userNames);
     if (userIds.includes(null)) {
       alert(
-        "At least one of the user names was not recognised. The input should be a comma-separated list of user name of existing users."
+        "At least one of the user names was not recognised. The input should be a comma-separated list of user name of existing users.",
       );
       return null;
     }
@@ -131,7 +131,7 @@ class Groups extends React.Component {
     };
     await fetch(
       `${getBaseURL()}/groups/${this.state.groupToManage.id}/`,
-      requestOptions
+      requestOptions,
     );
     this.hideMemberManagementLayer();
     this.getGroups();
@@ -141,7 +141,7 @@ class Groups extends React.Component {
     this.setState({
       groupToManage: group,
       managedGroupMemberStr: joinCommaSeparatedString(
-        this.userIdsToNames(group.members)
+        this.userIdsToNames(group.members),
       ),
       showMemberManagementLayer: true,
     });

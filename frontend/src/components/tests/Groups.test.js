@@ -24,7 +24,7 @@ global.fetch = jest.fn(() =>
           },
         ],
       }),
-  })
+  }),
 );
 const mockedUsedNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({
