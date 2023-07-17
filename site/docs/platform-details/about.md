@@ -36,15 +36,16 @@ to run the tests.
 
 A crucial aspect of the Assurance Platform is the visualization of an assurance
 case, which we do using the [Mermaid](https://mermaid-js.github.io/mermaid/#/)
-package. This takes some markdown text and displays it as a flowchart. It is
+package. This takes some Markdown text and displays it as a flowchart. It is
 possible to experiment with Mermaid, interactively creating flowcharts via the
 live editor [https://mermaid.live/](https://mermaid.live/).
 
 ### Description of some components
 
-The react framework is based around _Components_, which can correspond to a
-webpage or an element on a webpage (such as a form or a chart). The following
-Components in this codebase contribute to the Assurance Platform web app:
+The [React framework](http://react.dev) is based around _Components_, which can
+correspond to a webpage or an element on a webpage (such as a form or a chart).
+The following Components in this codebase contribute to the Assurance Platform
+web app:
 
 - [CaseContainer](src/components/CaseContainer.js): this is the main "view" of
   an assurance case. It contains several other components in different areas of
