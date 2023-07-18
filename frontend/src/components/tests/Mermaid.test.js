@@ -11,6 +11,6 @@ test("renders chart", async () => {
   render(<Mermaid chartmd="graph TB;  A[TestGoal];" />);
   /// not sure why the graph isn't rendering :(
   await waitFor(() =>
-    expect(screen.getByText("Syntax error in graph")).toBeInTheDocument()
+    expect(screen.getByText("Syntax error in graph")).toBeInTheDocument(),
   );
 });

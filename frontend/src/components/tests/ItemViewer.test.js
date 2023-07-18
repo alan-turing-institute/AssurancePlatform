@@ -19,7 +19,7 @@ global.fetch = jest.fn(() =>
         long_description: "Test long",
         keywords: "Test keywords",
       }),
-  })
+  }),
 );
 
 test("renders item viewer layer", () => {
