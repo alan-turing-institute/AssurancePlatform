@@ -1,4 +1,4 @@
-FROM node:16.14.2-slim
+FROM node:20.3.1-slim
 COPY . /frontend
 WORKDIR /frontend
 RUN npm install
