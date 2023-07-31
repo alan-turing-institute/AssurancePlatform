@@ -21,6 +21,21 @@
         "ideas",
         "test"
       ]
+    },
+    {
+      "login": "mhauru",
+      "name": "Markus Hauru",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5229876?v=4",
+      "profile": "http://mhauru.org",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "design",
+        "example",
+        "ideas",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
