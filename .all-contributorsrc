@@ -60,9 +60,53 @@
         "doc",
         "design",
         "example",
+        "ideas"
+      ]
+    },
+    {
+      "login": "chrisdburr",
+      "name": "Christopher Burr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/63010234?v=4",
+      "profile": "https://github.com/chrisdburr",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "design",
+        "example",
         "ideas",
         "test",
         "review"
+        "talk",
+        "userTesting",
+        "research",
+        "promotion",
+        "projectManagement"
+      ]
+    },
+    {
+      "login": "cassgvp",
+      "name": "Cassandra Gould van Praag",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43407869?v=4",
+      "profile": "https://www.turing.ac.uk/research/harnessing-power-digital-twins/turing-research-and-innovation-cluster-digital-twins",
+      "contributions": [
+        "ideas",
+        "review",
+        "projectManagement",
+        "question",
+        "design"
+      ]
+    }
+      "login": "kallewesterling",
+      "name": "Kalle Westerling",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7298727?v=4",
+      "profile": "http://www.westerling.nu",
+      "contributions": [
+        "ideas",
+        "review",
+        "projectManagement",
+        "question",
+        "code"
       ]
     }
   ],
