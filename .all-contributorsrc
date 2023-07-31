@@ -67,6 +67,19 @@
         "promotion",
         "projectManagement"
       ]
+    },
+    {
+      "login": "kallewesterling",
+      "name": "Kalle Westerling",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7298727?v=4",
+      "profile": "http://www.westerling.nu",
+      "contributions": [
+        "ideas",
+        "review",
+        "projectManagement",
+        "question",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
