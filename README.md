@@ -1,6 +1,9 @@
 # SAFE-D Assurance Platform
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+
 [![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
@@ -64,7 +67,6 @@ Assurance framework and methodology:
 - Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental
   Healthcare. The Alan Turing Institute.
   [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
-
 
 ## Contributors
 
