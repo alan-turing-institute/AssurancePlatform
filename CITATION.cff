@@ -21,6 +21,7 @@ authors:
     family-names: Hughes
     email: ahughes@turing.ac.uk
     affiliation: The Alan Turing Institute
+    orcid: "http://orcid.org/0000-0002-4572-5828"
   - given-names: Kalle
     family-names: Westerling
     affiliation: The Alan Turing Institute
@@ -30,6 +31,15 @@ authors:
   - given-names: Christopher
     family-names: Burr
     affiliation: The Alan Turing Institute
+    orcid: "https://orcid.org/0000-0003-0386-8182"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.8198986
+    description: Zenodo Release
+  - type: url
+    value: >-
+      https://github.com/alan-turing-institute/AssurancePlatform
+    description: GitHub page
+url: 'https://github.com/alan-turing-institute/AssurancePlatform'
 version: 1.0.0
-date-released: 2022-09-23
-url: "https://github.com/alan-turing-institute/AssurancePlatform"
+date-released: '2022-09-23'
