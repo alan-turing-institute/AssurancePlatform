@@ -36,6 +36,18 @@
         "ideas",
         "test"
       ]
+    },
+    {
+      "login": "AoifeHughes",
+      "name": "Aoife Hughes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10923695?v=4",
+      "profile": "https://github.com/AoifeHughes",
+      "contributions": [
+        "bug",
+        "code",
+        "ideas",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
