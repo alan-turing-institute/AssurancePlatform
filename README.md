@@ -1,4 +1,7 @@
 # SAFE-D Assurance Platform
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
@@ -66,6 +69,20 @@ Assurance framework and methodology:
 ## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nbarlowATI"><img src="https://avatars.githubusercontent.com/u/33832774?v=4?s=100" width="100px;" alt="nbarlowATI"/><br /><sub><b>nbarlowATI</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3AnbarlowATI" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Code">💻</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Documentation">📖</a> <a href="#design-nbarlowATI" title="Design">🎨</a> <a href="#example-nbarlowATI" title="Examples">💡</a> <a href="#ideas-nbarlowATI" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Tests">⚠️</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 
