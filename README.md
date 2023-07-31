@@ -4,7 +4,7 @@
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform.svg?branch=MVP)](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform)
-
+[![All Contributors](https://img.shields.io/github/all-contributors/projectOwner/projectName?color=ee8449&style=flat-square)](#contributors)
 ![A stylised illustration of a project team building an assurance case](hero.png)
 
 ## About this Repository 🗂
@@ -61,3 +61,15 @@ Assurance framework and methodology:
 - Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental
   Healthcare. The Alan Turing Institute.
   [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
