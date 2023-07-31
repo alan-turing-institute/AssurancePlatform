@@ -48,6 +48,25 @@
         "ideas",
         "test"
       ]
+    },
+    {
+      "login": "chrisdburr",
+      "name": "Christopher Burr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/63010234?v=4",
+      "profile": "https://github.com/chrisdburr",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "design",
+        "example",
+        "ideas",
+        "talk",
+        "userTesting",
+        "research",
+        "promotion",
+        "projectManagement"
+      ]
     }
   ],
   "contributorsPerLine": 7,
