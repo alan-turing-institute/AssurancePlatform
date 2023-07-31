@@ -48,6 +48,21 @@
         "ideas",
         "test"
       ]
+    },
+    {
+      "login": "entopia",
+      "name": "Flora",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4749503?v=4",
+      "profile": "https://www.turing.ac.uk/people/researchers/flora-roumpani",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "design",
+        "example",
+        "ideas",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
