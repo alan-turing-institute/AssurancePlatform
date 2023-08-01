@@ -1,14 +1,46 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+title: Assurance Platform
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
 authors:
-- family-names: "Barlow"
-  given-names: "Nick"
-- family-names: "Hauru"
-  given-names: "Markus"
-- family-names: "Burr"
-  given-names: "Christopher"
-  orcid: "https://orcid.org/0000-0003-0386-8182"
-title: "Assurance Platform"
+  - given-names: Flora
+    family-names: Roumpani
+    affiliation: The Alan Turing Institute
+  - given-names: Nick
+    family-names: Barlow
+    affiliation: The Alan Turing Institute
+  - given-names: Markus
+    family-names: Hauru
+    affiliation: The Alan Turing Institute
+  - given-names: Aoife
+    family-names: Hughes
+    email: ahughes@turing.ac.uk
+    affiliation: The Alan Turing Institute
+    orcid: "http://orcid.org/0000-0002-4572-5828"
+  - given-names: Kalle
+    family-names: Westerling
+    affiliation: The Alan Turing Institute
+    orcid: "http://orcid.org/0000-0002-2014-332X"
+  - given-names: Cassandra
+    family-names: Gould Van Bragg
+    affiliation: The Alan Turing Institute
+  - given-names: Christopher
+    family-names: Burr
+    affiliation: The Alan Turing Institute
+    orcid: "https://orcid.org/0000-0003-0386-8182"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.8198986
+    description: Zenodo Release
+  - type: url
+    value: >-
+      https://github.com/alan-turing-institute/AssurancePlatform
+    description: GitHub page
+url: 'https://github.com/alan-turing-institute/AssurancePlatform'
 version: 1.0.0
-date-released: 2022-09-23
-url: "https://github.com/alan-turing-institute/AssurancePlatform"
+date-released: '2022-09-23'

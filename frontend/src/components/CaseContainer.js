@@ -109,9 +109,9 @@ class CaseContainer extends Component {
     const response = await fetch(this.url + id, requestOptions);
     let json_response = await response.json();
     const name = json_response["name"];
+    json_response = neatJSON(json_response);
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
-    json_response = neatJSON(json_response);
     json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
     // Write to a file, which to the user shows as a download.
     const blob = new Blob([json_response], {
