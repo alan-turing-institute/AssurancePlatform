@@ -8,6 +8,7 @@ import Login from "./Login.js";
 import Signup from "./Signup.js";
 import Logout from "./Logout.js";
 import Groups from "./Groups.js";
+import Reset from "./Reset.js";
 import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
@@ -40,6 +41,7 @@ const AllRoutes = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/reset" element={<Reset />} />
         </Routes>
       </Box>
       <Box gridArea="footer" width="100%" background="dark-2" pad="small">

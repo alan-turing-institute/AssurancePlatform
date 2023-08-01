@@ -85,6 +85,10 @@ const Login = () => {
         )}
       </Box>
       <Box flex={false} gap="small" pad="medium" width="medium">
+        <Text>Forgot password?</Text>
+        <Button href="/reset/" label="Reset password" />
+      </Box> 
+      <Box flex={false} gap="small" pad="medium" width="medium">
         <Text>Not already registered?</Text>
         <Button href="/signup/" label="Sign-up" />
       </Box>
