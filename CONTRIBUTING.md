@@ -30,10 +30,10 @@ All forms of contribution can be made through the following mechanisms:
 - Opening a thread for discussion
 
 Before doing work or opening a pull request, it would be worth checking our
-projects page to see how the contribution may align or conflict with proposed
+projects' page to see how the contribution may align or conflict with proposed
 work.
 
-Before raising an issue, please check the open and closed issues to avoid
+When raising an issue, please check the open and closed issues to avoid
 duplication.
 
 Before opening a new thread for discussion, please check for existing threads
@@ -41,7 +41,12 @@ that cover the same or similar points to avoid duplication.
 
 ### Contributing to our Code
 
-_To be written._
+Please remember to enable `pre-commit` and run it before any push or PR.
+
+```bash
+pre-commit install
+pre-commit run a--all-files
+```
 
 ### Contributing to the Documentation
 
@@ -69,30 +74,33 @@ improvements to the code base). If you are unsure of whether a more substantive
 contribution is likely to be accepted (e.g. new section), please feel free to
 reach out in advance (e.g. open a new issue or discussion).
 
-### Support with Community Building
-
-_To be added._
-
 ## Recognising Contributions
 
-_To be added._
+We welcome and recognise all kinds of contributions, from fixing small errors,
+to developing documentation, maintaining the project infrastructure, writing
+chapters or reviewing existing resources. The _Assurance Platform_ repository
+follows the [all-contributors][all-contributors] specifications. The
+all-contributors bot usage is described
+[here](https://allcontributors.org/docs/en/bot/usage). You can see a list of
+current contributors
+[here](https://github.com/alan-turing-institute/AssurancePlatform#contributors).
+😍
 
-<!-- We welcome and recognise all kinds of contributions, from fixing small errors, to developing documentation, maintaining the project infrastructure, writing chapters or reviewing existing resources.
-The *Assurance Platform* repository follows the [all-contributors][all-contributors] specifications.
-The all-contributors bot usage is described [here](https://allcontributors.org/docs/en/bot/usage).
-You can see a list of current contributors [here](https://github.com/alan-turing-institute/turing-commons#contributors-). 😍
-
-To add yourself or someone else as a contributor, comment on [this issue](https://github.com/alan-turing-institute/turing-commons/issues/16) using the following statement:
+To add yourself or someone else as a contributor, comment on
+[this issue](https://github.com/alan-turing-institute/AssurancePlatform/issues/187)
+using the following statement:
 
 ```
 @all-contributors please add <username> for <contributions>
 ```
 
-You will need to edit this accordingly following the instructions on [the @all-contributors guide](https://allcontributors.org/docs/en/bot/usage), including the relevant contribution type. See [Emoji Key (Contribution Types Reference)](https://allcontributors.org/docs/en/emoji-key) for a list of valid `<contribution>` types.
-The bot will then create a Pull Request to add the contributor and reply with the pull request details.
+You will need to edit this accordingly following the instructions on
+[the @all-contributors guide](https://allcontributors.org/docs/en/bot/usage),
+including the relevant contribution type. See
+[Emoji Key (Contribution Types Reference)](https://allcontributors.org/docs/en/emoji-key)
+for a list of valid `<contribution>` types. The bot will then create a Pull
+Request to add the contributor and reply with the pull request details.
 
 **PLEASE NOTE: Only one contributor can be added with the bot at a time!**
 
 [all-contributors]: https://github.com/kentcdodds/all-contributors#emoji-key
-
--->
