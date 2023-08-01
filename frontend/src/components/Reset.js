@@ -28,7 +28,7 @@ const Reset = () => {
     e.preventDefault();
 
     const user = {
-      email: email
+      email: email,
     };
 
     fetch(`${getBaseURL()}/auth/register/`, {
@@ -50,8 +50,7 @@ const Reset = () => {
           localStorage.clear();
           setErrors(true);
           let currentErrors = [];
-          if (data.email)
-            currentErrors = [...currentErrors, ...data.email];
+          if (data.email) currentErrors = [...currentErrors, ...data.email];
           if (data.non_field_errors)
             currentErrors = [...currentErrors, ...data.non_field_errors];
           setErrorMessages(currentErrors);
@@ -73,9 +72,7 @@ const Reset = () => {
   return (
     <Box width={{ max: "large" }} gap="medium" pad="medium" overflow="auto">
       {loading === false && <Heading level={2}>Reset password</Heading>}
-      {errors === true && (
-        <Heading level={2}>Something went wrong</Heading>
-      )}
+      {errors === true && <Heading level={2}>Something went wrong</Heading>}
       <Form onSubmit={onSubmit}>
         <FormField htmlFor="email" label="Email address">
           <TextInput
