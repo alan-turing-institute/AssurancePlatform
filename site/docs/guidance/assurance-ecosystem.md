@@ -23,4 +23,7 @@ However, there is a growing marketplace of independent assurance providers who o
 This is a helpful starting point for gaining some purchase on the complex set of interacting roles and responsibilities that collectively make up what is admittedly a hard to delineate assurance ecosystem.
 Rather than trying to build a map of this ecosystem, we can instead focus on some of the typical roles and responsibilities that the different actors have.
 
-<!-- add a table of actors and their roles and responsibilities -->
+<!-- add a table of actors and their roles and responsibilities (see https://cdeiuk.github.io/ai-assurance-guide/needs-and-responsibilities#ai-supply-chain) 
+
+To what extent does the TEA methodology and platform align with the CDEI's 5 elements of assurance: https://cdeiuk.github.io/ai-assurance-guide/five-elements
+-->
