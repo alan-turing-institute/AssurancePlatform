@@ -13,43 +13,51 @@
 
 ## About this Repository 🗂
 
-This repository contains the code and documentation for the Trustworthy and Ethical Assurance (TEA)
-platform—an application for building trustworthy and ethical assurance cases,
-developed by researchers at the
-[Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm) and [University of York](https://www.york.ac.uk/assuring-autonomy/).
+This repository contains the code and documentation for the Trustworthy and
+Ethical Assurance (TEA) platform—an application for building trustworthy and
+ethical assurance cases, developed by researchers at the
+[Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
+and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
 
 ## What is Trustworthy and Ethical Assurance? 🤝
 
-> Trustworthy and ethical assurance is a methodology and procedure for developing a structured
-> argument, which provides reviewable (and contestable) assurance that a set of
-> claims about a normative goal of a data-driven technology are warranted given
-> the available evidence.
+> Trustworthy and ethical assurance is a methodology and procedure for
+> developing a structured argument, which provides reviewable (and contestable)
+> assurance that a set of claims about a normative goal of a data-driven
+> technology are warranted given the available evidence.
 
 The following elements are central to this methodology and procedure:
 
-- **The SAFE-D Principles**: a set of five operationalisable principles—Sustainability, Accountability, Fairness, Explainability, Data Stewardship—that have been carefully designed and refined to address real-world challenges associated with the design, development, and deployment of data-driven technologies.
-- **Assurance Cases**: the documented argument that communicates the basis for how and why a goal has been achieved.
-- **Argument Patterns**: starting templates for building assurance cases. They identify the types of claims (or, the sets of reasons) that need to be established to justify the associated top-level normative goal.
+- **The SAFE-D Principles**: a set of five operationalisable
+  principles—Sustainability, Accountability, Fairness, Explainability, Data
+  Stewardship—that have been carefully designed and refined to address
+  real-world challenges associated with the design, development, and deployment
+  of data-driven technologies.
+- **Assurance Cases**: the documented argument that communicates the basis for
+  how and why a goal has been achieved.
+- **Argument Patterns**: starting templates for building assurance cases. They
+  identify the types of claims (or, the sets of reasons) that need to be
+  established to justify the associated top-level normative goal.
 
-The Trustworthy and Ethical Assurance platform brings these elements together in a usable and
-accessible manner, and helps project teams to provide trustworthy and
-justifiable assurance about the processes they undertook when designing,
+The Trustworthy and Ethical Assurance platform brings these elements together in
+a usable and accessible manner, and helps project teams to provide trustworthy
+and justifiable assurance about the processes they undertook when designing,
 developing, and deploying their technology or system.
 
 ## Installation Instructions 💻
 
-The Trustworthy and Ethical Assurance application can be run locally or deployed on your own
-server or a cloud-based service (e.g. Azure). To view the different installation
-instructions, please visit our documentation site:
+The Trustworthy and Ethical Assurance application can be run locally or deployed
+on your own server or a cloud-based service (e.g. Azure). To view the different
+installation instructions, please visit our documentation site:
 [https://alan-turing-institute.github.io/AssurancePlatform/installation.html](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
 
 ## Further Resources 📚
 
-The following resources provide additional information about the Trustworthy and Ethical
-Assurance framework and methodology:
+The following resources provide additional information about the Trustworthy and
+Ethical Assurance framework and methodology:
 
 - Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the
   responsible design, development, and deployment of data-driven technologies.
