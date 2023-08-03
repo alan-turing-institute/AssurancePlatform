@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
@@ -14,12 +17,12 @@ global.fetch = jest.fn(() =>
         long_description: "long",
         keywords: "key",
       }),
-  })
+  }),
 );
 
 test("renders item editor layer", async () => {
   render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
   await waitFor(() =>
-    expect(screen.getByDisplayValue("Test goal")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Test goal")).toBeInTheDocument(),
   );
 });

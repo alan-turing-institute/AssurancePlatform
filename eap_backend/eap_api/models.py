@@ -1,8 +1,9 @@
+import datetime
+from enum import Enum
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
-import datetime
-from enum import Enum
 
 # Classes representing tables in the database for EAP app.
 
@@ -142,9 +143,11 @@ class PropertyClaim(CaseItem):
         has_goal_parent = bool(self.goal)
         has_claim_parent = bool(self.property_claim)
         if has_claim_parent and has_goal_parent:
-            raise ValueError("A PropertyClaim shouldn't have two parents.")
+            msg = "A PropertyClaim shouldn't have two parents."
+            raise ValueError(msg)
         if not (has_claim_parent or has_goal_parent):
-            raise ValueError("A PropertyClaim should have a parent.")
+            msg = "A PropertyClaim should have a parent."
+            raise ValueError(msg)
         super().save(*args, **kwargs)
 
 

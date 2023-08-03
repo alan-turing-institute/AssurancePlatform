@@ -5,6 +5,7 @@ import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
+import { neatJSON } from "neatjson";
 
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
@@ -108,9 +109,9 @@ class CaseContainer extends Component {
     const response = await fetch(this.url + id, requestOptions);
     let json_response = await response.json();
     const name = json_response["name"];
+    json_response = neatJSON(json_response);
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
-    json_response = JSON.stringify(json_response);
     json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
     // Write to a file, which to the user shows as a download.
     const blob = new Blob([json_response], {
@@ -201,7 +202,7 @@ class CaseContainer extends Component {
         mermaid_md: highlightNode(
           this.state.mermaid_md,
           this.state.itemType,
-          this.state.itemId
+          this.state.itemId,
         ),
       });
       this.setState({ loading: false });
@@ -441,19 +442,19 @@ class CaseContainer extends Component {
       this.submitCaseChange("lock_uuid", this.state.session_id).then(
         (response) => {
           this.updateView();
-        }
+        },
       );
     } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
       // override!
       if (
         window.confirm(
-          "Are you sure?  You might be overwriting someone's work..."
+          "Are you sure?  You might be overwriting someone's work...",
         )
       ) {
         this.submitCaseChange("lock_uuid", this.state.session_id).then(
           (response) => {
             this.updateView();
-          }
+          },
         );
       }
     }
@@ -498,7 +499,7 @@ class CaseContainer extends Component {
             childType,
             this.state.itemId,
             this.state.itemType,
-            e
+            e,
           )
         }
         label={"Create " + childType}
@@ -521,7 +522,7 @@ class CaseContainer extends Component {
           {this.state.itemType &&
             this.state.itemId &&
             configData.navigation[this.state.itemType]["children"].map(
-              this.getCreateSubItemButton.bind(this)
+              this.getCreateSubItemButton.bind(this),
             )}
         </Box>
       );

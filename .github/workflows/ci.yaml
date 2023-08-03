@@ -1,12 +1,35 @@
 name: ci
 on:
+  workflow_dispatch:
+  pull_request:
   push:
     branches:
-      - master
       - main
+      - develop
+  release:
+    types:
+      - published
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
+  pre-commit:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --hook-stage manual --all-files
+
   deploy:
     runs-on: ubuntu-latest
     if: github.event.repository.fork == false
@@ -22,11 +45,13 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install git+https://${GH_TOKEN}@github.com/squidfunk/mkdocs-material-insiders.git
+      - run:
+          pip install
+          git+https://${GH_TOKEN}@github.com/squidfunk/mkdocs-material-insiders.git
       - name: Build and Deploy
         working-directory: ./site
         run: |
           mkdocs build
           mkdocs gh-deploy --force
 env:
-  GH_TOKEN: ${{ secrets.GH_TOKEN }} 
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}

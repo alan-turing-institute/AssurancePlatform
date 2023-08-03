@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import "regenerator-runtime/runtime";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
@@ -21,7 +24,7 @@ global.fetch = jest.fn(() =>
           },
         ],
       }),
-  })
+  }),
 );
 const mockedUsedNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({

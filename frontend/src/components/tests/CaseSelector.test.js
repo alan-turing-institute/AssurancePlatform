@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import "regenerator-runtime/runtime";
@@ -17,14 +20,14 @@ global.fetch = jest.fn(() =>
         { id: 1, name: "Test case 1" },
         { id: 2, name: "Test case 2" },
       ]),
-  })
+  }),
 );
 
 test("renders selector screen", async () => {
   render(<CaseSelector />);
   await waitFor(() =>
     expect(
-      screen.getByPlaceholderText("Select or create a case")
-    ).toBeInTheDocument()
+      screen.getByPlaceholderText("Select or create a case"),
+    ).toBeInTheDocument(),
   );
 });

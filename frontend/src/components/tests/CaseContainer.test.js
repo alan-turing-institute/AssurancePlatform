@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import "regenerator-runtime/runtime";
 import React from "react";
@@ -20,7 +23,7 @@ beforeEach(() => {
 
 test("renders loading screen", () => {
   fetch.mockResponseOnce(
-    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] })
+    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] }),
   );
   localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
@@ -30,11 +33,11 @@ test("renders loading screen", () => {
 
 test("renders case view", async () => {
   fetch.mockResponseOnce(
-    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] })
+    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] }),
   );
   localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
   await waitFor(() =>
-    expect(screen.getByDisplayValue("Test case")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Test case")).toBeInTheDocument(),
   );
 });

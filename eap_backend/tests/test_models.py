@@ -3,29 +3,30 @@ https://www.bezkoder.com/django-rest-api/
 https://docs.djangoproject.com/en/3.2/topics/testing/tools/"""
 
 from django.test import TestCase
-from .constants_tests import (
-    CASE1_INFO,
-    GOAL_INFO,
-    CONTEXT_INFO,
-    DESCRIPTION_INFO,
-    PROPERTYCLAIM1_INFO,
-    EVIDENTIALCLAIM1_INFO,
-    EVIDENCE1_INFO_NO_ID,
-    USER1_INFO,
-    GROUP1_INFO,
-)
 
 # Create your tests here.
 from eap_api.models import (
     AssuranceCase,
-    TopLevelNormativeGoal,
     Context,
-    SystemDescription,
-    PropertyClaim,
-    EvidentialClaim,
-    Evidence,
-    EAPUser,
     EAPGroup,
+    EAPUser,
+    Evidence,
+    EvidentialClaim,
+    PropertyClaim,
+    SystemDescription,
+    TopLevelNormativeGoal,
+)
+
+from .constants_tests import (
+    CASE1_INFO,
+    CONTEXT_INFO,
+    DESCRIPTION_INFO,
+    EVIDENCE1_INFO_NO_ID,
+    EVIDENTIALCLAIM1_INFO,
+    GOAL_INFO,
+    GROUP1_INFO,
+    PROPERTYCLAIM1_INFO,
+    USER1_INFO,
 )
 
 
@@ -40,9 +41,9 @@ class AssuranceTestCase(TestCase):
         test_name = CASE1_INFO["name"]
         test_description = CASE1_INFO["description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, AssuranceCase))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.description, test_description)
+        assert isinstance(test_entry, AssuranceCase)
+        assert test_entry.name == test_name
+        assert test_entry.description == test_description
 
 
 class TopLevelNormativeGoalTestCase(TestCase):
@@ -60,9 +61,9 @@ class TopLevelNormativeGoalTestCase(TestCase):
     def test_goal_creation(self):
         test_name = GOAL_INFO["name"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, TopLevelNormativeGoal))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertTrue(isinstance(test_entry.assurance_case, AssuranceCase))
+        assert isinstance(test_entry, TopLevelNormativeGoal)
+        assert test_entry.name == test_name
+        assert isinstance(test_entry.assurance_case, AssuranceCase)
 
 
 class ContextTestCase(TestCase):
@@ -83,13 +84,13 @@ class ContextTestCase(TestCase):
         test_name = CONTEXT_INFO["name"]
         test_desc = CONTEXT_INFO["short_description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, Context))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
+        assert isinstance(test_entry, Context)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
         # test one-step relation
-        self.assertTrue(isinstance(test_entry.goal, TopLevelNormativeGoal))
+        assert isinstance(test_entry.goal, TopLevelNormativeGoal)
         # test two-step relation
-        self.assertTrue(isinstance(test_entry.goal.assurance_case, AssuranceCase))
+        assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
 class DescriptionTestCase(TestCase):
@@ -110,13 +111,13 @@ class DescriptionTestCase(TestCase):
         test_name = DESCRIPTION_INFO["name"]
         test_desc = DESCRIPTION_INFO["short_description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, SystemDescription))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
+        assert isinstance(test_entry, SystemDescription)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
         # test one-step relation
-        self.assertTrue(isinstance(test_entry.goal, TopLevelNormativeGoal))
+        assert isinstance(test_entry.goal, TopLevelNormativeGoal)
         # test two-step relation
-        self.assertTrue(isinstance(test_entry.goal.assurance_case, AssuranceCase))
+        assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
 class PropertyClaimTestCase(TestCase):
@@ -137,13 +138,13 @@ class PropertyClaimTestCase(TestCase):
         test_name = PROPERTYCLAIM1_INFO["name"]
         test_desc = PROPERTYCLAIM1_INFO["short_description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, PropertyClaim))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
+        assert isinstance(test_entry, PropertyClaim)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
         # test one-step relation
-        self.assertTrue(isinstance(test_entry.goal, TopLevelNormativeGoal))
+        assert isinstance(test_entry.goal, TopLevelNormativeGoal)
         # test two-step relation
-        self.assertTrue(isinstance(test_entry.goal.assurance_case, AssuranceCase))
+        assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
 class EvidentialClaimTestCase(TestCase):
@@ -166,21 +167,18 @@ class EvidentialClaimTestCase(TestCase):
         test_name = EVIDENTIALCLAIM1_INFO["name"]
         test_desc = EVIDENTIALCLAIM1_INFO["short_description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, EvidentialClaim))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
+        assert isinstance(test_entry, EvidentialClaim)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
         # test one-step relation
-        self.assertTrue(isinstance(test_entry.property_claim.all()[0], PropertyClaim))
+        assert isinstance(test_entry.property_claim.all()[0], PropertyClaim)
         # test two-step relation
-        self.assertTrue(
-            isinstance(test_entry.property_claim.all()[0].goal, TopLevelNormativeGoal)
+        assert isinstance(
+            test_entry.property_claim.all()[0].goal, TopLevelNormativeGoal
         )
         # test three-step relation
-        self.assertTrue(
-            isinstance(
-                test_entry.property_claim.all()[0].goal.assurance_case,
-                AssuranceCase,
-            )
+        assert isinstance(
+            test_entry.property_claim.all()[0].goal.assurance_case, AssuranceCase
         )
 
 
@@ -206,35 +204,26 @@ class EvidenceCase(TestCase):
         test_name = EVIDENCE1_INFO_NO_ID["name"]
         test_desc = EVIDENCE1_INFO_NO_ID["short_description"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, Evidence))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertEqual(test_entry.short_description, test_desc)
+        assert isinstance(test_entry, Evidence)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
         # test one-step relation
-        self.assertTrue(
-            isinstance(test_entry.evidential_claim.all()[0], EvidentialClaim)
-        )
+        assert isinstance(test_entry.evidential_claim.all()[0], EvidentialClaim)
         # test two-step relation
-        self.assertTrue(
-            isinstance(
-                test_entry.evidential_claim.all()[0].property_claim.all()[0],
-                PropertyClaim,
-            )
+        assert isinstance(
+            test_entry.evidential_claim.all()[0].property_claim.all()[0], PropertyClaim
         )
         # test three-step relation
-        self.assertTrue(
-            isinstance(
-                test_entry.evidential_claim.all()[0].property_claim.all()[0].goal,
-                TopLevelNormativeGoal,
-            )
+        assert isinstance(
+            test_entry.evidential_claim.all()[0].property_claim.all()[0].goal,
+            TopLevelNormativeGoal,
         )
         # test four-step relation
-        self.assertTrue(
-            isinstance(
-                test_entry.evidential_claim.all()[0]
-                .property_claim.all()[0]
-                .goal.assurance_case,
-                AssuranceCase,
-            )
+        assert isinstance(
+            test_entry.evidential_claim.all()[0]
+            .property_claim.all()[0]
+            .goal.assurance_case,
+            AssuranceCase,
         )
 
 
@@ -251,10 +240,10 @@ class UserCase(TestCase):
         test_email = USER1_INFO["email"]
         test_password = USER1_INFO["password"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, EAPUser))
-        self.assertEqual(test_entry.username, test_username)
-        self.assertEqual(test_entry.email, test_email)
-        self.assertEqual(test_entry.password, test_password)
+        assert isinstance(test_entry, EAPUser)
+        assert test_entry.username == test_username
+        assert test_entry.email == test_email
+        assert test_entry.password == test_password
 
 
 class GroupCase(TestCase):
@@ -274,15 +263,11 @@ class GroupCase(TestCase):
         test_username = USER1_INFO["username"]
         test_casename = CASE1_INFO["name"]
         test_entry = self.create_test_entry()
-        self.assertTrue(isinstance(test_entry, EAPGroup))
-        self.assertEqual(test_entry.name, test_name)
-        self.assertTrue(isinstance(test_entry.owner, EAPUser))
-        self.assertEqual(test_entry.owner.username, test_username)
-        self.assertEqual(len(test_entry.editable_cases.get_queryset()), 1)
-        self.assertTrue(
-            isinstance(test_entry.editable_cases.get_queryset()[0], AssuranceCase)
-        )
-        self.assertEqual(
-            test_entry.editable_cases.get_queryset()[0].name, test_casename
-        )
-        self.assertEqual(len(test_entry.viewable_cases.get_queryset()), 0)
+        assert isinstance(test_entry, EAPGroup)
+        assert test_entry.name == test_name
+        assert isinstance(test_entry.owner, EAPUser)
+        assert test_entry.owner.username == test_username
+        assert len(test_entry.editable_cases.get_queryset()) == 1
+        assert isinstance(test_entry.editable_cases.get_queryset()[0], AssuranceCase)
+        assert test_entry.editable_cases.get_queryset()[0].name == test_casename
+        assert len(test_entry.viewable_cases.get_queryset()) == 0

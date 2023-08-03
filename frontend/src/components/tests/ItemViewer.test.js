@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
@@ -16,7 +19,7 @@ global.fetch = jest.fn(() =>
         long_description: "Test long",
         keywords: "Test keywords",
       }),
-  })
+  }),
 );
 
 test("renders item viewer layer", () => {

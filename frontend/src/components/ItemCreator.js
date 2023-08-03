@@ -19,7 +19,7 @@ function ItemCreator(props) {
   const [ldesc, setLongDesc] = useState("Long description");
   const [keywords, setKeywords] = useState("Keywords (comma-separated)");
   const [claimType, setClaimType] = useState(
-    configData["property_claim_types"][0]
+    configData["property_claim_types"][0],
   );
   const [url, setURL] = useState("www.some-evidence.com");
   const [submitClicked, setSubmitClicked] = useState(false);
@@ -71,7 +71,7 @@ function ItemCreator(props) {
 
     console.log(
       "submit button pressed with state ",
-      JSON.stringify(request_body)
+      JSON.stringify(request_body),
     );
     let response = {};
 

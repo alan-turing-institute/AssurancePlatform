@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import "regenerator-runtime/runtime";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
@@ -13,7 +16,7 @@ global.fetch = jest.fn(() =>
           name: "EvidentialClaim 1",
         },
       ]),
-  })
+  }),
 );
 
 test("renders parent selector layer", () => {
