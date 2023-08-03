@@ -134,7 +134,7 @@ nav:
   - Home: index.md
   - About: about.md
   - Guidance:
-    - Intro: guidance/index.md
+      - Intro: guidance/index.md
   - Platform Details:
       - About: platform-details/about.md
       - Installation Instructions: platform-details/installation.md
