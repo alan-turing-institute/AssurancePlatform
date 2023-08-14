@@ -110,10 +110,48 @@ class CaseContainer extends Component {
     let json_response = await response.json();
     const name = json_response["name"];
     json_response = neatJSON(json_response);
+
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
     json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
     // Write to a file, which to the user shows as a download.
+    const blob = new Blob([json_response], {
+      type: "text/plain;charset=utf-8",
+    });
+    const now = new Date();
+    // Using a custom date format because the ones that Date offers are either very long
+    // or include characters not allowed in filenames on Windows.
+    const datestr =
+      now.getFullYear() +
+      "-" +
+      now.getMonth() +
+      "-" +
+      now.getDate() +
+      "T" +
+      now.getHours() +
+      "-" +
+      now.getMinutes() +
+      "-" +
+      now.getSeconds();
+    const filename = name + "-" + datestr + ".json";
+    saveAs(blob, filename);
+  }
+
+  async exportCurrentCaseAsMD() {
+    const id = this.state.assurance_case.id;
+    const requestOptions = {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("token")}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      body: JSON.stringify({ data: this.state.mermaid_md }),
+    };
+    const response = await fetch(this.url + id + "/", requestOptions);
+    let json_response = await response.json();
+    const name = json_response["name"];
+
     const blob = new Blob([json_response], {
       type: "text/plain;charset=utf-8",
     });
@@ -664,9 +702,14 @@ class CaseContainer extends Component {
               }}
             >
               <Button
-                label="Export"
+                label="Export JSON"
                 secondary
                 onClick={this.exportCurrentCase.bind(this)}
+              />
+              <Button
+                label="Export Image"
+                secondary
+                onClick={this.exportCurrentCaseAsMD.bind(this)}
               />
             </Box>
 

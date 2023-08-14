@@ -192,6 +192,9 @@ def case_detail(request, pk):
             return HttpResponse(status=403)
         case.delete()
         return HttpResponse(status=204)
+    elif request.method == "POST":
+        res = request.GET["data"]
+        print(res)
     return None
 
 
