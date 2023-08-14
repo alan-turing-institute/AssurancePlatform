@@ -149,12 +149,8 @@ class CaseContainer extends Component {
       body: JSON.stringify({ data: this.state.mermaid_md }),
     };
     const response = await fetch(this.url + id + "/", requestOptions);
-    let json_response = await response.json();
-    const name = json_response["name"];
+    let png_response = await response.blob();
 
-    const blob = new Blob([json_response], {
-      type: "text/plain;charset=utf-8",
-    });
     const now = new Date();
     // Using a custom date format because the ones that Date offers are either very long
     // or include characters not allowed in filenames on Windows.
@@ -170,8 +166,8 @@ class CaseContainer extends Component {
       now.getMinutes() +
       "-" +
       now.getSeconds();
-    const filename = name + "-" + datestr + ".json";
-    saveAs(blob, filename);
+    const filename = id + "-" + datestr + ".png";
+    saveAs(png_response, filename);
   }
 
   fetchDataCurrentCase() {
