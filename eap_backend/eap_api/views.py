@@ -198,11 +198,11 @@ def case_detail(request, pk):
     elif request.method == "POST":
         res = request.data["data"]
         fn = "tmp.mdd"
-        with Path.open(fn, "w") as f:
+        with Path(fn).open("w") as f:
             f.write(res)
         subprocess.run(["mmdc", f"-i{fn}", f"-o{fn}.png"], capture_output=True)
-        Path.unlink(fn)
-        with Path.open(f"{fn}.png", "rb") as fh:
+        Path(fn).unlink()
+        with Path(f"{fn}.png").open("rb") as fh:
             response = HttpResponse(fh.read(), content_type="image/png")
             response["Content-Disposition"] = "inline; filename=img.png"
             return response
