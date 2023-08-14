@@ -123,7 +123,7 @@ if (
         }
     }
 else:
-    if "DBHOST" not in os.environ.keys():
+    if "DBHOST" not in os.environ:
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.sqlite3",
