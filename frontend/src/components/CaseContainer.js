@@ -166,7 +166,7 @@ class CaseContainer extends Component {
       now.getMinutes() +
       "-" +
       now.getSeconds();
-    const filename = id + "-" + datestr + ".png";
+    const filename = id + "-" + datestr + ".svg";
     saveAs(png_response, filename);
   }
 
