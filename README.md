@@ -22,9 +22,10 @@ and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
 
-### Quickstart install instructions 
+### Quickstart install instructions
 
-To get started quickly with installing this platform vist [https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
+To get started quickly with installing this platform vist
+[https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
 
 ## What is Trustworthy and Ethical Assurance? 🤝
 
