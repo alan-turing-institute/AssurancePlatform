@@ -1,3 +1,6 @@
+import subprocess
+from pathlib import Path
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
@@ -192,6 +195,22 @@ def case_detail(request, pk):
             return HttpResponse(status=403)
         case.delete()
         return HttpResponse(status=204)
+    elif request.method == "POST":
+        res = request.data["data"]
+        fn = f"tmp{pk}.mdd"
+        with Path(fn).open("w") as f:
+            f.write(res)
+        subprocess.run(
+            ["mmdc", f"-i{fn}", f"-o{fn}.svg", "-w", "2000", "-H", "2000"],
+            capture_output=True,
+        )
+        Path(fn).unlink()
+        with Path(f"{fn}.svg").open("rb") as fh:
+            response = HttpResponse(fh.read(), content_type="image/svg")
+        Path(f"{fn}.svg").unlink()
+        response["Content-Disposition"] = "inline; filename=img.svg"
+        return response
+
     return None
 
 

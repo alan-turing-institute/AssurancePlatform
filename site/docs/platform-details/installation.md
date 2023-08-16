@@ -97,6 +97,13 @@ python manage.py test
 python manage.py runserver
 ```
 
+- To be able to export SVG images from the frontend, you will need to install
+  the following (`npm` instructions are part of the front end setup below):
+
+```shell
+npm install -g @mermaid-js/mermaid-cli
+```
+
 - At this point, the backend is ready and needs to be connected to the frontend.
 
 ### Setup and run the frontend
