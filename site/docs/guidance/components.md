@@ -11,12 +11,18 @@ tags:
 
     In this section we will look at the core elements of an assurance case and how they relate to one another.
 
-There are many ways to construct an assurance case and several standards exist to help users adopt shared practices and ways of working.
-For instance, the [Goal Structuring Notation](https://scsc.uk/r141C:1?t=1) (GSN) has thorough and comprehensive documentation for building assurance cases that align with their
+There are many ways to construct an assurance case and several standards exist
+to help users adopt shared practices and ways of working. For instance, the
+[Goal Structuring Notation](https://scsc.uk/r141C:1?t=1) (GSN) has thorough and
+comprehensive documentation for building assurance cases that align with their
 community standard.
 
-Trustworthy and Ethical Assurance is inspired by GSN's form of argument-based assurance, but aims to simplify the process of developing an argument and the evidence that justifies it, in order to make the process more accessible for a wider community of stakeholders and users.
-The trade-off is that assurance cases developed using our platform are _less expressive_ than others but (hopefully) easier to understand.
+Trustworthy and Ethical Assurance is inspired by GSN's form of argument-based
+assurance, but aims to simplify the process of developing an argument and the
+evidence that justifies it, in order to make the process more accessible for a
+wider community of stakeholders and users. The trade-off is that assurance cases
+developed using our platform are _less expressive_ than others but (hopefully)
+easier to understand.
 
 !!! warning "A Note on Terminology"
 
@@ -46,15 +52,18 @@ There are two types of claims:
 
 #### Goal Claims
 
-A _goal claim_ serves to direct the process of developing an assurance case towards some value or principle that is desirable or significant.
-For instance, it may be important to communicate how a product is 'Sustainable', how an algorithmic decision-making system is 'Explainable', or how the deployment of
-some service is 'Fair'.
-The type of goal chosen will determine and constrain the set of lower-level property claims and evidence that are _relevant_ and _necessary_ for the overall assurance case.
-As such, a goal claim should be the first element to be established.
-However, like all elements, it can be iteratively revised and refined as the assurance process develops.
+A _goal claim_ serves to direct the process of developing an assurance case
+towards some value or principle that is desirable or significant. For instance,
+it may be important to communicate how a product is 'Sustainable', how an
+algorithmic decision-making system is 'Explainable', or how the deployment of
+some service is 'Fair'. The type of goal chosen will determine and constrain the
+set of lower-level property claims and evidence that are _relevant_ and
+_necessary_ for the overall assurance case. As such, a goal claim should be the
+first element to be established. However, like all elements, it can be
+iteratively revised and refined as the assurance process develops.
 
-Because a goal claim for will be _high-level_, it will not have the necessary specificity to link directly to evidence.
-Consider the following example.
+Because a goal claim for will be _high-level_, it will not have the necessary
+specificity to link directly to evidence. Consider the following example.
 
 ```mermaid
 graph TD
@@ -62,14 +71,19 @@ graph TD
   The outputs of our system are *explainable*.`"];
 ```
 
-Here, _explainable_ is a broad goal that is insufficiently specified, and many questions could remain:
+Here, _explainable_ is a broad goal that is insufficiently specified, and many
+questions could remain:
 
 - Who are the outputs explainable to? Experts or lay people?
-- What techniques have been used to allow users to interpret the outputs of the system?
-- Who is able to access information about how the system was designed if they are not satisfied with an automated explanation?
-- How have you assessed the validity of the information presented to support explanations? Is there a level of uncertainty that needs to be communicated?
+- What techniques have been used to allow users to interpret the outputs of the
+  system?
+- Who is able to access information about how the system was designed if they
+  are not satisfied with an automated explanation?
+- How have you assessed the validity of the information presented to support
+  explanations? Is there a level of uncertainty that needs to be communicated?
 
-Resolving questions such as these requires the use of additional elements, including lower-level _property claims_.
+Resolving questions such as these requires the use of additional elements,
+including lower-level _property claims_.
 
 !!! info "Multiple Goals and Modular Arguments"
 
@@ -77,18 +91,22 @@ Resolving questions such as these requires the use of additional elements, inclu
 
 #### Property Claim(s)
 
-Goal claims need to be succinct and accessible to set a clear vision or target for the argument.
-However, this comes at the cost of _specificity_.
-For instance, what does it mean to deploy a service in a fair manner, or to develop an explainable system?
-Property claims help to answer such questions.
+Goal claims need to be succinct and accessible to set a clear vision or target
+for the argument. However, this comes at the cost of _specificity_. For
+instance, what does it mean to deploy a service in a fair manner, or to develop
+an explainable system? Property claims help to answer such questions.
 
 In one respect, property claims can be treated as lower-level goal claims[^gsn].
-That is, when formulated they represent more specific aspirations that also need to be established and justified.
-However, an assurance case may have only one goal claim[^modularity], but will likely have many property claims.
+That is, when formulated they represent more specific aspirations that also need
+to be established and justified. However, an assurance case may have only one
+goal claim[^modularity], but will likely have many property claims.
 
-Collectively, the property claims serve to establish the central argument for how the goal claim has been established by detailing properties of a project or the system that help justify why the top-level goal has been sufficiently established.
-That is, they are the additional premises that support the conclusion of the argument (i.e. the top-level goal claim).
-Consider the following example.
+Collectively, the property claims serve to establish the central argument for
+how the goal claim has been established by detailing properties of a project or
+the system that help justify why the top-level goal has been sufficiently
+established. That is, they are the additional premises that support the
+conclusion of the argument (i.e. the top-level goal claim). Consider the
+following example.
 
 [^gsn]:
     In the GSN standard, all claims are treated as goals and no distinction is
@@ -112,10 +130,13 @@ graph TD
   Clear and accessible documentation is available.`"];
 ```
 
-Identifying the necessary and sufficient set of property claims needed to support an argument can be challenging[^resources].
-Developing and defining a _strategy_ can be a useful way to add supporting structure to an argument.
+Identifying the necessary and sufficient set of property claims needed to
+support an argument can be challenging[^resources]. Developing and defining a
+_strategy_ can be a useful way to add supporting structure to an argument.
 
-[^resources]: The TEA platform has a wide-range of tools and resources for supporting this reflective and deliberative process. See [here](#).
+[^resources]:
+    The TEA platform has a wide-range of tools and resources for supporting this
+    reflective and deliberative process. See [here](#).
 
 ### Strategy
 
