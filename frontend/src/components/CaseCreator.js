@@ -1,4 +1,13 @@
-import { Box, Button, Form, FormField, Heading, TextInput } from "grommet";
+import {
+  Box,
+  Button,
+  Form,
+  FormField,
+  Heading,
+  TextInput,
+  Layer,
+} from "grommet";
+import { FormClose } from "grommet-icons";
 import React, { useRef, useState } from "react";
 import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +19,25 @@ function CaseCreator() {
   const [template, setTemplate] = useState("Template");
   const [description, setDescription] = useState("Description");
   const fileInputRef = useRef(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [url, setUrl] = useState("");
+  const [jsonContent, setJsonContent] = useState(null);
+
+  const fetchJson = async () => {
+    try {
+      const response = await fetch(url);
+      const jsonText = await response.text();
+      try {
+        const jsonObject = JSON.parse(jsonText);
+        setJsonContent(jsonObject);
+      } catch (error) {
+        console.error("Error parsing JSON:", error);
+      }
+    } catch (error) {
+      console.error("Error fetching JSON:", error);
+    }
+    setShowDialog(false);
+  };
 
   let baseURL = `${getBaseURL()}`;
 
@@ -94,6 +122,37 @@ function CaseCreator() {
             margin="xsmall"
             onClick={(event) => fileInputRef.current.click()}
           />
+          <Heading level={4} margin={{ top: "medium" }}>
+            Import an assurance case from URL
+          </Heading>
+
+          <Button
+            label="Load JSON from URL"
+            onClick={() => setShowDialog(true)}
+          />
+          {showDialog && (
+            <Layer
+              onEsc={() => setShowDialog(false)}
+              onClickOutside={() => setShowDialog(false)}
+            >
+              <Box pad="medium" gap="small" width="medium">
+                <Box direction="row" justify="end">
+                  <Button
+                    icon={<FormClose />}
+                    onClick={() => setShowDialog(false)}
+                  />
+                </Box>
+                <TextInput
+                  placeholder="Enter URL"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                />
+                <Button label="Fetch JSON" onClick={fetchJson} />
+              </Box>
+            </Layer>
+          )}
+          {jsonContent && postCaseJSON(JSON.stringify(jsonContent, null, 2))}
+
           <input
             // An invisible file selector input, that will be triggered by the import button.
             type="file"
