@@ -11,7 +11,7 @@ import { FormClose } from "grommet-icons";
 import React, { useRef, useState } from "react";
 import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
-
+import "regenerator-runtime/runtime";
 import { getBaseURL } from "./utils.js";
 
 function CaseCreator() {
