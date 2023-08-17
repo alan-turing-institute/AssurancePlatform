@@ -37,7 +37,6 @@ function CaseCreator() {
       console.error("Error fetching JSON:", error);
     }
     setShowDialog(false);
-    postCaseJSON(jsonContent);
   };
 
   let baseURL = `${getBaseURL()}`;
@@ -152,11 +151,7 @@ function CaseCreator() {
               </Box>
             </Layer>
           )}
-          {jsonContent && (
-            <Box margin="medium">
-              <pre>{JSON.stringify(jsonContent, null, 2)}</pre>
-            </Box>
-          )}
+          {jsonContent && postCaseJSON(JSON.stringify(jsonContent, null, 2))}
 
           <input
             // An invisible file selector input, that will be triggered by the import button.
