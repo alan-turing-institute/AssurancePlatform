@@ -146,7 +146,10 @@ class CaseContainer extends Component {
         "Content-Type": "application/json",
       },
       method: "POST",
-      body: JSON.stringify({ data: this.state.mermaid_md }),
+      body: JSON.stringify({
+        data: this.state.mermaid_md,
+        json: this.state.assurance_case,
+      }),
     };
     const response = await fetch(this.url + id + "/", requestOptions);
     let png_response = await response.blob();

@@ -1,4 +1,5 @@
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from django.http import HttpResponse, JsonResponse
@@ -197,6 +198,7 @@ def case_detail(request, pk):
         return HttpResponse(status=204)
     elif request.method == "POST":
         res = request.data["data"]
+        json = request.data["json"]
         fn = f"tmp{pk}.mdd"
         with Path(fn).open("w") as f:
             f.write(res)
@@ -205,6 +207,20 @@ def case_detail(request, pk):
             capture_output=True,
         )
         Path(fn).unlink()
+
+        tree = ET.parse(f"{fn}.svg")
+        root = tree.getroot()
+
+        metadata_element = ET.Element("metadata")
+
+        for key, value in json.items():
+            element = ET.Element(str(key))
+            element.text = str(value)
+            metadata_element.append(element)
+
+        root.append(metadata_element)
+        tree.write(f"{fn}.svg")
+
         with Path(f"{fn}.svg").open("rb") as fh:
             response = HttpResponse(fh.read(), content_type="image/svg")
         Path(f"{fn}.svg").unlink()
