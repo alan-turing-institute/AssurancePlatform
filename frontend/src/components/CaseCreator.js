@@ -37,6 +37,7 @@ function CaseCreator() {
       console.error("Error fetching JSON:", error);
     }
     setShowDialog(false);
+    postCaseJSON(jsonContent);
   };
 
   let baseURL = `${getBaseURL()}`;
