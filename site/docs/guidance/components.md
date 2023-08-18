@@ -1,5 +1,4 @@
 ---
-status: draft
 tags:
   - assurance
   - core elements
@@ -297,11 +296,11 @@ P1["`**P1**`"];
 
     The TEA platform restricts a user's ability to add invalid support links between elements. However, for clarity, the following support links are valid:
 
-        - Goal Claim to Strategy
-        - Goal Claim to Property Claim
-        - Strategy to Property Claim
-        - Property Claim to Property Claim
-        - Property Claim to Evidence
+    - Goal Claim to Strategy
+    - Goal Claim to Property Claim
+    - Strategy to Property Claim
+    - Property Claim to Property Claim
+    - Property Claim to Evidence
 
 ### Context Links
 
@@ -328,6 +327,6 @@ Some examples of contextual information that could be added include:
 
     The TEA platform restricts a user's ability to add invalid context links between elements. However, for clarity, the following context links are valid:
 
-        - Goal Claim to Context
-        - Property Claim to Context
-        - Strategy to Context
+    - Goal Claim to Context
+    - Property Claim to Context
+    - Strategy to Context

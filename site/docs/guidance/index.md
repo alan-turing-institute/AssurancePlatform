@@ -1,5 +1,4 @@
 ---
-status: draft
 tags:
   - assurance
   - trust
@@ -7,6 +6,8 @@ tags:
 ---
 
 # What is Trustworthy and Ethical Assurance?
+
+![An illustration showing various arms extending different components of trust represented abstractly with icons for security, time, code, and certification.](../assets/images/trust.png)
 
 Assurance is about building trust.
 

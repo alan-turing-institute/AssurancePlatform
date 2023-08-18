@@ -135,6 +135,7 @@ nav:
   - About: about.md
   - Guidance:
       - Intro: guidance/index.md
+      - Components of an Assurance Case: guidance/components.md
   - Platform Details:
       - About: platform-details/about.md
       - Installation Instructions: platform-details/installation.md
