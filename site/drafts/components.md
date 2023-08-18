@@ -11,8 +11,9 @@ tags:
 
     In this section we will look at the core elements of an assurance case and how they relate to one another.
 
-There are many ways to construct an assurance case and several standards exist to help users adopt shared practices and ways of working.
-For instance, the [Goal Structuring Notation](https://scsc.uk/r141C:1?t=1) (GSN) has thorough and
+There are many ways to construct an assurance case and several standards exist
+to help users adopt shared practices and ways of working. For instance, the
+[Goal Structuring Notation](https://scsc.uk/r141C:1?t=1) (GSN) has thorough and
 comprehensive documentation for building assurance cases that align with their
 community standard.
 
@@ -139,11 +140,15 @@ _strategy_ can be a useful way to add supporting structure to an argument.
 
 ### Strategy
 
-Understanding how a goal claim is jointly supported and specified by the constituent property claims can be challenging without additional structure.
+Understanding how a goal claim is jointly supported and specified by the
+constituent property claims can be challenging without additional structure.
 This is where strategy elements can be useful.
 
-A strategy element in an assurance case makes explicit the reasoning or approach used to _decompose_ a high-level goal claim into more specific property claims.
-From the perspective of the team building the assurance case, strategy elements outline how the team plan to demonstrate that a certain goal or claim is met by breaking it up into sub-arguments.
+A strategy element in an assurance case makes explicit the reasoning or approach
+used to _decompose_ a high-level goal claim into more specific property claims.
+From the perspective of the team building the assurance case, strategy elements
+outline how the team plan to demonstrate that a certain goal or claim is met by
+breaking it up into sub-arguments.
 
 Let's consider our running example again.
 
@@ -155,7 +160,7 @@ Let's consider our running example again.
 graph TD
 
 G1["`**G1**
-Our system is *explainable* to users.`"]; 
+Our system is *explainable* to users.`"];
 G1 --> S1 & S2 & S3;
 S1[/"`**S1**
 Provide clear rationales for system design and behaviour`"/];
@@ -180,24 +185,45 @@ P6["`**P6**
 ...`"];
 ```
 
-There are several benefits to making the over-arching argument's strategy explicit:
+There are several benefits to making the over-arching argument's strategy
+explicit:
 
-- **Guiding the argument**: during iterative development, the set of strategy elements serve as placeholders that the project team can use to break down the complex task of decomposing goals. And, during communication, they can serve as a clear roadmap to help other stakeholders understand and follow their reasoning.
-- **Facilitating engagement and evaluation**: external reviewers or stakeholders may wish to engage with or evaluate an assurance case, at different stages of development (e.g. during project development or compliance/auditing of the system). Understanding the strategy chosen by the project team is can help wider stakeholders assess whether the presented evidence is sufficient, if there are gaps in the argument, and, ultimately, help the project team and wider community develop more robust standards and best practices.
-- **Clarifying case relationships**: strategy elements can connect multiple elements, such as goal claims to more detailed property claims. Leveraging this hierarchical structure ensures that all claims are supported by well-thought-out process of reasoning and deliberation, and can also help a project team identify relevant evidence to ground the overarching argument.
+- **Guiding the argument**: during iterative development, the set of strategy
+  elements serve as placeholders that the project team can use to break down the
+  complex task of decomposing goals. And, during communication, they can serve
+  as a clear roadmap to help other stakeholders understand and follow their
+  reasoning.
+- **Facilitating engagement and evaluation**: external reviewers or stakeholders
+  may wish to engage with or evaluate an assurance case, at different stages of
+  development (e.g. during project development or compliance/auditing of the
+  system). Understanding the strategy chosen by the project team is can help
+  wider stakeholders assess whether the presented evidence is sufficient, if
+  there are gaps in the argument, and, ultimately, help the project team and
+  wider community develop more robust standards and best practices.
+- **Clarifying case relationships**: strategy elements can connect multiple
+  elements, such as goal claims to more detailed property claims. Leveraging
+  this hierarchical structure ensures that all claims are supported by
+  well-thought-out process of reasoning and deliberation, and can also help a
+  project team identify relevant evidence to ground the overarching argument.
 
 Let's now turn to consider evidence in more detail.
 
 ### Evidence
 
-Evidence is what grounds an assurance case.
-Whereas goal claims orient and direct an argument, strategies help scaffold the logic of an argument, and property claims help specify and establish an argument, evidence is what provides the basis for trusting the validity of the case as a whole.
+Evidence is what grounds an assurance case. Whereas goal claims orient and
+direct an argument, strategies help scaffold the logic of an argument, and
+property claims help specify and establish an argument, evidence is what
+provides the basis for trusting the validity of the case as a whole.
 
-The types of evidence that need to be communicated will depend on the claims being put forward.
-For instance, if a claim is made about the attitudes of users towards some system, then findings from a workshop or survey that explored these attitudes may be needed.
-Alternatively, if the claim is about a model's performance exceeding some threshold, then evidence about the test will be needed (e.g. benchmarking scores and methodology).
+The types of evidence that need to be communicated will depend on the claims
+being put forward. For instance, if a claim is made about the attitudes of users
+towards some system, then findings from a workshop or survey that explored these
+attitudes may be needed. Alternatively, if the claim is about a model's
+performance exceeding some threshold, then evidence about the test will be
+needed (e.g. benchmarking scores and methodology).
 
-Let's look at the section of our running example that addresses the following strategy:
+Let's look at the section of our running example that addresses the following
+strategy:
 
 ```mermaid
 graph TD
@@ -205,13 +231,14 @@ S1[/"`**S1**
 Provide clear rationales for system design and behaviour`"/];
 ```
 
-We can expand the set of property claims for this strategy and consider what sorts of evidence may be suitable.
+We can expand the set of property claims for this strategy and consider what
+sorts of evidence may be suitable.
 
 ```mermaid
 graph TD
 
 G1["`**G1**
-Our system is *explainable* to users.`"]; 
+Our system is *explainable* to users.`"];
 G1 --> S1;
 S1[/"`**S1**
 Provide clear rationales for system behaviour`"/];
@@ -233,20 +260,26 @@ Documentation explaining design and implementation uncertainty estimation featur
 
 ```
 
-Similar to a legal case, where evidence needs to be admissible, relevant, and reliable, there are also standards for which types of evidence are appropriate in a given context.
-In some cases, technical standards may exist that can help bolster the trustworthiness of an argument, by allowing a project team to show how their actions adhere to standards set by an external community.
-In other cases, consensus may only emerge through the communication and evaluation of the evidence itself.
+Similar to a legal case, where evidence needs to be admissible, relevant, and
+reliable, there are also standards for which types of evidence are appropriate
+in a given context. In some cases, technical standards may exist that can help
+bolster the trustworthiness of an argument, by allowing a project team to show
+how their actions adhere to standards set by an external community. In other
+cases, consensus may only emerge through the communication and evaluation of the
+evidence itself.
 
 !!! info "Community Building"
 
     A key ambition of the TEA Platform is to help scaffold and support a flourishing community of practice that can drive forward the development of standards for evidence. For instance, as the repository of shared assurance cases grows, the community will be able to identify which forms of evidence others are using to justify arguments in different domains or use cases.
 
-One final element remains to discuss: context. And, as many philosophers are keen to point out, a lot can depend on the context.
+One final element remains to discuss: context. And, as many philosophers are
+keen to point out, a lot can depend on the context.
 
 ## Context
 
 There are various types of context statements that can be added to the core
-elements of an assurance case. For instance, consider the following two examples:
+elements of an assurance case. For instance, consider the following two
+examples:
 
 **Example 1**
 
@@ -274,7 +307,9 @@ C2(["`**C2**
 The system will be **accessible remotely** via a smartphone app.`"]);
 ```
 
-We leave it as a reflective exercise to the reader to consider how the two different contexts will shape the types of claims, strategies, and evidence that a project team would need to establish in the respective assurance cases.
+We leave it as a reflective exercise to the reader to consider how the two
+different contexts will shape the types of claims, strategies, and evidence that
+a project team would need to establish in the respective assurance cases.
 
 ## Links
 
@@ -282,8 +317,9 @@ There are two types of links that are used in Trustworthy and Ethical Assurance.
 
 ### Support Links
 
-The primary link used in Trustworthy and Ethical assurance cases is a _support link_.
-These links represent a uni-directional relationship between two elements, such that the parent element is _supported by_ the child element.
+The primary link used in Trustworthy and Ethical assurance cases is a _support
+link_. These links represent a uni-directional relationship between two
+elements, such that the parent element is _supported by_ the child element.
 
 They are rendered as follows:
 
