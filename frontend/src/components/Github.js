@@ -12,7 +12,7 @@ import {
 import LoginGithub from "react-login-github";
 import github from "./github.png";
 
-function Github() {
+const Github = () => {
   function onSuccess(e) {
     fetch("http://127.0.0.1:8000/github/", {
       method: "POST",
@@ -61,6 +61,6 @@ function Github() {
       </div>
     </Box>
   );
-}
+};
 
 export default Github;
