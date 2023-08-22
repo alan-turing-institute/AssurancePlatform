@@ -4,8 +4,12 @@ from pathlib import Path
 
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import api_view
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import (
     AssuranceCase,
@@ -23,6 +27,7 @@ from .serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
+    GithubSocialAuthSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
@@ -509,3 +514,17 @@ def strategy_detail(request, pk):
         strategy.delete()
         return HttpResponse(status=204)
     return None
+@permission_classes((AllowAny,))
+class GithubSocialAuthView(GenericAPIView):
+    serializer_class = GithubSocialAuthSerializer
+
+    def post(self, request):
+        """
+        POST with "auth_token"
+        Send an access token from GitHub to get user information
+        """
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = (serializer.validated_data)["auth_token"]
+        return Response(data, status=status.HTTP_200_OK)
