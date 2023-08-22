@@ -12,6 +12,7 @@ import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
 import WorkInProcessBanner from "./WorkInProcessBanner"; // Import the banner component
+import Github from "./Github.js";
 
 const AllRoutes = () => (
   <Router>
@@ -42,6 +43,7 @@ const AllRoutes = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/github" element={<Github />} />
         </Routes>
       </Box>
       <Box gridArea="footer" width="100%" background="dark-2" pad="small">
