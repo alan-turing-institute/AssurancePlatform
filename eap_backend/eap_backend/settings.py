@@ -68,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 if "CORS_ORIGIN_WHITELIST" in os.environ:
@@ -78,6 +79,7 @@ else:
         "http://localhost:8000",
         "http://localhost:8080",
     )
+CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = "eap_backend.urls"
 
