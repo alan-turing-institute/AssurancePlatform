@@ -26,6 +26,12 @@ SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Keys needed for OAuth
+GITHUB_CLIENT_ID = 0
+GITHUB_CLIENT_SECRET = 0
+REDIRECT_URI = "http://localhost:3000/login"
+
+
 ALLOWED_HOSTS = ["*"]
 
 
