@@ -1,20 +1,12 @@
-import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Form,
-  FormField,
-  Heading,
-  Text,
-  TextInput,
-} from "grommet";
+import React from "react";
+import { Box } from "grommet";
 
 import LoginGithub from "react-login-github";
 import github from "./github.png";
 
 const Github = () => {
   function onSuccess(e) {
-    fetch("http://127.0.0.1:8000/github/", {
+    fetch("http://127.0.0.1:8000/api/github/", {
       method: "POST",
       body: JSON.stringify({ auth_token: e.code }),
       headers: {
@@ -36,7 +28,7 @@ const Github = () => {
     <Box overflow="auto">
       <div className="Github">
         <LoginGithub
-          clientId="Github client Id"
+          clientId="0cd5a829deef2e8d3a12"
           onSuccess={onSuccess}
           onFailure={onFailure}
           className="github"

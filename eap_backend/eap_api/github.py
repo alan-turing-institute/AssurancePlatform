@@ -22,6 +22,7 @@ class Github:
             url = "https://github.com/login/oauth/access_token?client_id={}&client_secret={}&code={}".format(
                 settings.CLIENT_ID, settings.CLIENT_SECRET, auth_token
             )
+            print(url)
             req = requests.urlopen(url)
             reply = req.read()
             access_token = (reply.decode("utf-8").split("&"))[0][13:]
