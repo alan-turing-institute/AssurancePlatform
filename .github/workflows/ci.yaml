@@ -47,7 +47,7 @@ jobs:
             mkdocs-material-
       - run:
           pip install
-          git+https://${GH_TOKEN}@github.com/context_processorssquidfunk/mkdocs-material.git
+          git+https://${GH_TOKEN}@github.com/squidfunk/mkdocs-material.git
       - name: Build and Deploy
         working-directory: ./site
         run: |
