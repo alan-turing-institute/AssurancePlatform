@@ -80,28 +80,6 @@ will be something like `https://<your-azure-app-name>.azurewebsites.net/api`.
   - returns `[{name: <str:context_name>, id: <int:context_id>}, ...]` listing
     remaining Contexts
 
-### `/descriptions/`
-
-- A GET request will list the available SystemDescriptions:
-  - returns `[{name: <str:description_name>, id: <int:description_id>}, ...]`
-- A POST request will create a new SystemDescription.
-  - Payload:
-    `{name: <str:description_name>, short_description: <str:description>, long_description : <str:description>, goal_id: <int:goal_id>}`
-  - returns `{name: <str:description_name>, id: <int:description_id>}`
-
-### `/descriptions/<int:description_id>`
-
-- A GET request will get the details of the specified SystemDescription:
-  - returns
-    `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>, shape: <str:shape>}`
-- A PUT request will modify the specified SystemDescription.
-  - Payload: dict containing any key/value pairs from the SystemDescription
-    schema
-  - returns
-    `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>}`
-- A DELETE request will delete the specified SystemDescription.
-  - returns `[{name: <str:description_name>, id: <int:description_id>}, ...]`
-    listing remaining SystemDescriptions
 
 ### `/propertyclaims/`
 
