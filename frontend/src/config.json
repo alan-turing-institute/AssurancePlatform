@@ -42,7 +42,7 @@
       "children": [],
       "parent_relation": "one-to-many"
     },
-   
+
     "PropertyClaim": {
       "api_name": "propertyclaims",
       "db_name": "property_claims",

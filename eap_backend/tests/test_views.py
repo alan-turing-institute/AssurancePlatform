@@ -191,7 +191,6 @@ class ContextViewTest(TestCase):
         assert len(response_get.json()) == 0
 
 
-
 class PropertyClaimViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested

@@ -19,7 +19,6 @@ from eap_api.models import (
 from .constants_tests import (
     CASE1_INFO,
     CONTEXT_INFO,
-    DESCRIPTION_INFO,
     EVIDENCE1_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
@@ -90,7 +89,6 @@ class ContextTestCase(TestCase):
         assert isinstance(test_entry.goal, TopLevelNormativeGoal)
         # test two-step relation
         assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
-
 
 
 class PropertyClaimTestCase(TestCase):

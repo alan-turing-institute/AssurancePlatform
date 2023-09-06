@@ -95,9 +95,6 @@ class Context(CaseItem):
     )
 
 
-
-
-
 class PropertyClaim(CaseItem):
     class ClaimType(models.TextChoices):
         """Enum class for different types of property claims."""

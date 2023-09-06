@@ -54,10 +54,10 @@ Components in this codebase contribute to the Assurance Platform web app:
   to the database.
 - [ItemViewer](src/components/ItemViewer.js) Text view of any DB object other
   than an AssuranceCase (i.e. it could be a TopLevelNormativeGoal, Context,
-   PropertyClaim, Argument, EvidentialClaim, or Evidence). The
-  type of object to be displayed is passed to the component via the "type" prop.
-  The component itself is shown as a layer on CaseContainer when a node on the
-  mermaid chart is clicked.
+  PropertyClaim, Argument, EvidentialClaim, or Evidence). The type of object to
+  be displayed is passed to the component via the "type" prop. The component
+  itself is shown as a layer on CaseContainer when a node on the mermaid chart
+  is clicked.
 - [ItemEditor](src/components/ItemEditor.js) The layer containing the ItemEditor
   component is shown when the "Edit" button on an ItemViewer is clicked. This
   component allows the details of any DB object other than an AssuranceCase to

@@ -196,7 +196,6 @@ class Migration(migrations.Migration):
                 "abstract": False,
             },
         ),
-       
         migrations.CreateModel(
             name="PropertyClaim",
             fields=[

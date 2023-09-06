@@ -42,7 +42,6 @@ TYPE_DICT = {
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],
     },
-
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,

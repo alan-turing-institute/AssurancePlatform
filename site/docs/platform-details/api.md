@@ -81,7 +81,6 @@ example, it will be something like
   - returns `[{name: <str:context_name>, id: <int:context_id>}, ...]` listing
     remaining Contexts
 
-
 ## `/propertyclaims/`
 
 - A GET request will list the available PropertyClaims:

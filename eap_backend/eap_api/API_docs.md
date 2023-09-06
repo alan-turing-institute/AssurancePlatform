@@ -80,7 +80,6 @@ will be something like `https://<your-azure-app-name>.azurewebsites.net/api`.
   - returns `[{name: <str:context_name>, id: <int:context_id>}, ...]` listing
     remaining Contexts
 
-
 ### `/propertyclaims/`
 
 - A GET request will list the available PropertyClaims:

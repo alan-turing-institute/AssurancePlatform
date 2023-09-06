@@ -118,8 +118,6 @@ class ContextSerializer(serializers.ModelSerializer):
         )
 
 
-
-
 class PropertyClaimSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
         source="goal",
