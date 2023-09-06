@@ -95,13 +95,7 @@ class Context(CaseItem):
     )
 
 
-class SystemDescription(CaseItem):
-    shape = Shape.DIAMOND
-    goal = models.ForeignKey(
-        TopLevelNormativeGoal,
-        related_name="system_description",
-        on_delete=models.CASCADE,
-    )
+
 
 
 class PropertyClaim(CaseItem):

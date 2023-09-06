@@ -13,7 +13,6 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     SystemDescription,
     TopLevelNormativeGoal,
@@ -269,7 +268,7 @@ def goal_detail(request, pk):
         serializer = TopLevelNormativeGoalSerializer(goal)
         data = serializer.data
         # replace IDs for children with full JSON objects
-        for key in ["context", "system_description", "property_claims"]:
+        for key in ["context",  "property_claims"]:
             data[key] = get_json_tree(data[key], key)
         data["shape"] = shape
         return JsonResponse(data)
@@ -448,19 +447,19 @@ def property_claim_detail(request, pk):
 
 
 @csrf_exempt
-def evidential_claim_list(request):
+def context_list(request):
     """
-    List all evidential_claims, or make a new evidential_claim
+    List all contexts, or make a new context
     """
     if request.method == "GET":
-        evidential_claims = EvidentialClaim.objects.all()
-        evidential_claims = filter_by_case_id(evidential_claims, request)
-        serializer = EvidentialClaimSerializer(evidential_claims, many=True)
+        context = Context.objects.all()
+        context = filter_by_case_id(context, request)
+        serializer = EvidentialClaimSerializer(context, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(data=data)
+        serializer = ContextSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)

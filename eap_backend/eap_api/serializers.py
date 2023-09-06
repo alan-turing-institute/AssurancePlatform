@@ -82,7 +82,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    system_description = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
@@ -97,7 +96,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "keywords",
             "assurance_case_id",
             "context",
-            "system_description",
             "property_claims",
         )
 

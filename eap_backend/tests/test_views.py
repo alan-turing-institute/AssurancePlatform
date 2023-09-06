@@ -446,7 +446,6 @@ class FullCaseDetailViewTest(TestCase):
         # check we can go down the whole tree
         assert len(response_data["goals"]) == 1
         assert len(response_data["goals"][0]["context"]) == 1
-        assert len(response_data["goals"][0]["system_description"]) == 1
         assert len(response_data["goals"][0]["property_claims"]) == 1
         assert (
             len(response_data["goals"][0]["property_claims"][0]["evidential_claims"])

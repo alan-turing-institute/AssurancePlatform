@@ -33,7 +33,7 @@ TYPE_DICT = {
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
-        "children": ["context", "system_description", "property_claims"],
+        "children": ["context", "property_claims"],
         "fields": ("name", "short_description", "long_description", "keywords"),
         "parent_types": [("assurance_case", False)],
     },
@@ -44,13 +44,7 @@ TYPE_DICT = {
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],
     },
-    "system_description": {
-        "serializer": SystemDescriptionSerializer,
-        "model": SystemDescription,
-        "children": [],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False)],
-    },
+
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,

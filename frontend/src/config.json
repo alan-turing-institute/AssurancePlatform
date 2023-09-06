@@ -43,16 +43,7 @@
       "children": [],
       "parent_relation": "one-to-many"
     },
-    "SystemDescription": {
-      "api_name": "descriptions",
-      "db_name": "system_description",
-      "parent_names": ["TopLevelNormativeGoal"],
-      "parent_api_names": ["goals"],
-      "parent_db_names": ["goal_id"],
-      "shape": "parallelogram-right",
-      "children": [],
-      "parent_relation": "one-to-many"
-    },
+   
     "PropertyClaim": {
       "api_name": "propertyclaims",
       "db_name": "property_claims",
