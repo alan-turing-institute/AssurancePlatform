@@ -16,10 +16,10 @@ GOAL_INFO = {
     "keywords": "key",
     "assurance_case_id": 1,
 }
-CONTEXT_INFO = {
-    "name": "Context",
-    "short_description": "context for The Goal",
-    "long_description": "A longer description of the context",
+STRATEGY_INFO = {
+    "name": "Strategy",
+    "short_description": "strategy for The Goal",
+    "long_description": "A longer description of the strategy",
     "goal_id": 1,
 }
 

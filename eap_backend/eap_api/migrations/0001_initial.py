@@ -335,7 +335,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="Context",
+            name="Strategy",
             fields=[
                 (
                     "id",
@@ -354,7 +354,7 @@ class Migration(migrations.Migration):
                     "goal",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="context",
+                        related_name="strategy",
                         to="eap_api.toplevelnormativegoal",
                     ),
                 ),

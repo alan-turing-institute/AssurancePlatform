@@ -2,12 +2,12 @@ from rest_framework import serializers
 
 from .models import (
     AssuranceCase,
-    Context,
     EAPGroup,
     EAPUser,
     Evidence,
     EvidentialClaim,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 
@@ -80,7 +80,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     assurance_case_id = serializers.PrimaryKeyRelatedField(
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
-    context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    strategy = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
@@ -94,19 +94,19 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "long_description",
             "keywords",
             "assurance_case_id",
-            "context",
+            "strategy",
             "property_claims",
         )
 
 
-class ContextSerializer(serializers.ModelSerializer):
+class StrategySerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
         source="goal", queryset=TopLevelNormativeGoal.objects.all()
     )
-    type = serializers.CharField(default="Context", read_only=True)
+    type = serializers.CharField(default="Strategy", read_only=True)
 
     class Meta:
-        model = Context
+        model = Strategy
         fields = (
             "id",
             "type",

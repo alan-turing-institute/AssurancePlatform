@@ -7,23 +7,23 @@ from django.test import TestCase
 # Create your tests here.
 from eap_api.models import (
     AssuranceCase,
-    Context,
     EAPGroup,
     EAPUser,
     Evidence,
     EvidentialClaim,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 
 from .constants_tests import (
     CASE1_INFO,
-    CONTEXT_INFO,
     EVIDENCE1_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
+    STRATEGY_INFO,
     USER1_INFO,
 )
 
@@ -64,9 +64,9 @@ class TopLevelNormativeGoalTestCase(TestCase):
         assert isinstance(test_entry.assurance_case, AssuranceCase)
 
 
-class ContextTestCase(TestCase):
+class StrategyTestCase(TestCase):
     """
-    creates a Context object and tests foreign key and
+    creates a Strategy object and tests foreign key and
     whether the created title matches the expected title
     """
 
@@ -74,15 +74,15 @@ class ContextTestCase(TestCase):
         case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
-        context = Context.objects.create(**CONTEXT_INFO)
-        context.goal = goal
-        return context
+        strategy = Strategy.objects.create(**STRATEGY_INFO)
+        strategy.goal = goal
+        return strategy
 
-    def test_context_creation(self):
-        test_name = CONTEXT_INFO["name"]
-        test_desc = CONTEXT_INFO["short_description"]
+    def test_strategy_creation(self):
+        test_name = STRATEGY_INFO["name"]
+        test_desc = STRATEGY_INFO["short_description"]
         test_entry = self.create_test_entry()
-        assert isinstance(test_entry, Context)
+        assert isinstance(test_entry, Strategy)
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation

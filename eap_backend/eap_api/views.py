@@ -9,22 +9,22 @@ from rest_framework.parsers import JSONParser
 
 from .models import (
     AssuranceCase,
-    Context,
     EAPGroup,
     EAPUser,
     Evidence,
     EvidentialClaim,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
-    ContextSerializer,
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
     EvidentialClaimSerializer,
     PropertyClaimSerializer,
+    StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
@@ -267,7 +267,7 @@ def goal_detail(request, pk):
         serializer = TopLevelNormativeGoalSerializer(goal)
         data = serializer.data
         # replace IDs for children with full JSON objects
-        for key in ["context", "property_claims"]:
+        for key in ["strategy", "property_claims"]:
             data[key] = get_json_tree(data[key], key)
         data["shape"] = shape
         return JsonResponse(data)
@@ -287,19 +287,19 @@ def goal_detail(request, pk):
 
 
 @csrf_exempt
-def context_list(request):
+def strategy_list(request):
     """
-    List all contexts, or make a new context
+    List all strategies, or make a new strategy
     """
     if request.method == "GET":
-        contexts = Context.objects.all()
-        contexts = filter_by_case_id(contexts, request)
-        serializer = ContextSerializer(contexts, many=True)
+        strategies = Strategy.objects.all()
+        strategies = filter_by_case_id(strategies, request)
+        serializer = StrategySerializer(strategies, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = ContextSerializer(data=data)
+        serializer = StrategySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
@@ -309,24 +309,24 @@ def context_list(request):
 
 
 @csrf_exempt
-def context_detail(request, pk):
+def strategy_detail(request, pk):
     """
-    Retrieve, update, or delete a Context, by primary key
+    Retrieve, update, or delete a Strategy, by primary key
     """
     try:
-        context = Context.objects.get(pk=pk)
-        shape = context.shape.name
-    except Context.DoesNotExist:
+        strategy = Strategy.objects.get(pk=pk)
+        shape = strategy.shape.name
+    except Strategy.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        serializer = ContextSerializer(context)
+        serializer = StrategySerializer(strategy)
         data = serializer.data
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = ContextSerializer(context, data=data, partial=True)
+        serializer = StrategySerializer(strategy, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -334,7 +334,7 @@ def context_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        context.delete()
+        strategy.delete()
         return HttpResponse(status=204)
     return None
 

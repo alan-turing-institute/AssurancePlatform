@@ -13,8 +13,8 @@ urlpatterns = [
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
     path("goals/", views.goal_list, name="goal_list"),
     path("goals/<int:pk>/", views.goal_detail, name="goal_detail"),
-    path("contexts/", views.context_list, name="context_list"),
-    path("contexts/<int:pk>/", views.context_detail, name="context_detail"),
+    path("strategies/", views.strategy_list, name="strategy_list"),
+    path("strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"),
     path("propertyclaims/", views.property_claim_list, name="property_claim_list"),
     path(
         "propertyclaims/<int:pk>/",

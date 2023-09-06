@@ -5,19 +5,19 @@ from django.http import JsonResponse
 from . import models
 from .models import (
     AssuranceCase,
-    Context,
     EAPGroup,
     Evidence,
     EvidentialClaim,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
-    ContextSerializer,
     EvidenceSerializer,
     EvidentialClaimSerializer,
     PropertyClaimSerializer,
+    StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
 
@@ -31,13 +31,13 @@ TYPE_DICT = {
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
-        "children": ["context", "property_claims"],
+        "children": ["strategy", "property_claims"],
         "fields": ("name", "short_description", "long_description", "keywords"),
         "parent_types": [("assurance_case", False)],
     },
-    "context": {
-        "serializer": ContextSerializer,
-        "model": Context,
+    "strategy": {
+        "serializer": StrategySerializer,
+        "model": Strategy,
         "children": [],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],

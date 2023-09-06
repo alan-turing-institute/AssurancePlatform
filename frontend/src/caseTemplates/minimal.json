@@ -8,9 +8,9 @@
       "short_description": "Short description",
       "long_description": "Long description",
       "keywords": "Keywords (comma-separated)",
-      "context": [
+      "strategy": [
         {
-          "name": "Context",
+          "name": "Strategy",
           "short_description": "Short description",
           "long_description": "Long description"
         }

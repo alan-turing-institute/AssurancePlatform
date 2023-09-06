@@ -88,10 +88,10 @@ class TopLevelNormativeGoal(CaseItem):
         return self.name
 
 
-class Context(CaseItem):
+class Strategy(CaseItem):
     shape = Shape.DIAMOND
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
+        TopLevelNormativeGoal, related_name="strategy", on_delete=models.CASCADE
     )
 
 
