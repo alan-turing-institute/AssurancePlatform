@@ -5,7 +5,6 @@
   "mermaid_item_styleclasses": {
     "classTopLevelNormativeGoal": "fill:#ff424e,color:#FFF",
     "classContext": "fill:#D17E5A,color:#FFF",
-    "classSystemDescription": "fill:#D17E5A,color:#FFF",
     "classSystemClaim": "fill:#3ea572,color:#FFF",
     "classProjectClaim": "fill:#9db4e6,color:#FFF",
     "classEvidentialClaim": "fill:#57847f,color:#FFF",
@@ -30,7 +29,7 @@
       "parent_api_names": ["cases"],
       "parent_db_names": ["assurance_case_id"],
       "shape": "hexagon",
-      "children": ["Context", "PropertyClaim", "SystemDescription"],
+      "children": ["Context", "PropertyClaim"],
       "parent_relation": "one-to-many"
     },
     "Context": {

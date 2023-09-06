@@ -10,7 +10,6 @@ from .models import (
     Evidence,
     EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
     TopLevelNormativeGoal,
 )
 from .serializers import (
@@ -19,7 +18,6 @@ from .serializers import (
     EvidenceSerializer,
     EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    SystemDescriptionSerializer,
     TopLevelNormativeGoalSerializer,
 )
 

@@ -8,7 +8,6 @@ from .models import (
     Evidence,
     EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
     TopLevelNormativeGoal,
 )
 
@@ -119,22 +118,6 @@ class ContextSerializer(serializers.ModelSerializer):
         )
 
 
-class SystemDescriptionSerializer(serializers.ModelSerializer):
-    goal_id = serializers.PrimaryKeyRelatedField(
-        source="goal", queryset=TopLevelNormativeGoal.objects.all()
-    )
-    type = serializers.CharField(default="SystemDescription", read_only=True)
-
-    class Meta:
-        model = SystemDescription
-        fields = (
-            "id",
-            "type",
-            "name",
-            "short_description",
-            "long_description",
-            "goal_id",
-        )
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
