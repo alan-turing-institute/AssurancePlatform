@@ -7,10 +7,10 @@ from django.test import TestCase
 # Create your tests here.
 from eap_api.models import (
     AssuranceCase,
+    Context,
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -118,9 +118,9 @@ class PropertyClaimTestCase(TestCase):
         assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
-class EvidentialClaimTestCase(TestCase):
+class ContextTestCase(TestCase):
     """
-    creates an EvidentialClaim object and tests foreign key and
+    creates an Context object and tests foreign key and
     whether the created title matches the expected title
     """
 
@@ -130,15 +130,15 @@ class EvidentialClaimTestCase(TestCase):
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         pclaim.goal = goal
-        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
+        eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
         eclaim.property_claim.set([pclaim])
         return eclaim
 
-    def test_evidential_claim_creation(self):
+    def test_context_creation(self):
         test_name = EVIDENTIALCLAIM1_INFO["name"]
         test_desc = EVIDENTIALCLAIM1_INFO["short_description"]
         test_entry = self.create_test_entry()
-        assert isinstance(test_entry, EvidentialClaim)
+        assert isinstance(test_entry, Context)
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
@@ -165,10 +165,10 @@ class EvidenceCase(TestCase):
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         pclaim.goal = goal
-        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
+        eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
         eclaim.property_claim.set([pclaim])
         evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
-        evidence.evidential_claim.set([eclaim])
+        evidence.context.set([eclaim])
         return evidence
 
     def test_evidence_creation(self):
@@ -179,21 +179,19 @@ class EvidenceCase(TestCase):
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
-        assert isinstance(test_entry.evidential_claim.all()[0], EvidentialClaim)
+        assert isinstance(test_entry.context.all()[0], Context)
         # test two-step relation
         assert isinstance(
-            test_entry.evidential_claim.all()[0].property_claim.all()[0], PropertyClaim
+            test_entry.context.all()[0].property_claim.all()[0], PropertyClaim
         )
         # test three-step relation
         assert isinstance(
-            test_entry.evidential_claim.all()[0].property_claim.all()[0].goal,
+            test_entry.context.all()[0].property_claim.all()[0].goal,
             TopLevelNormativeGoal,
         )
         # test four-step relation
         assert isinstance(
-            test_entry.evidential_claim.all()[0]
-            .property_claim.all()[0]
-            .goal.assurance_case,
+            test_entry.context.all()[0].property_claim.all()[0].goal.assurance_case,
             AssuranceCase,
         )
 

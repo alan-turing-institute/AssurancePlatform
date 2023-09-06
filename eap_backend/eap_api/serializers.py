@@ -2,10 +2,10 @@ from rest_framework import serializers
 
 from .models import (
     AssuranceCase,
+    Context,
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -131,7 +131,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     )
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -147,22 +147,22 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claim_id",
             "level",
             "claim_type",
-            "evidential_claims",
+            "context",
             "property_claims",
         )
 
 
-class EvidentialClaimSerializer(serializers.ModelSerializer):
+class ContextSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
         many=True,
     )
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(default="EvidentialClaim", read_only=True)
+    type = serializers.CharField(default="Context", read_only=True)
 
     class Meta:
-        model = EvidentialClaim
+        model = Context
         fields = (
             "id",
             "type",
@@ -175,9 +175,9 @@ class EvidentialClaimSerializer(serializers.ModelSerializer):
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
-    evidential_claim_id = serializers.PrimaryKeyRelatedField(
-        source="evidential_claim",
-        queryset=EvidentialClaim.objects.all(),
+    context_id = serializers.PrimaryKeyRelatedField(
+        source="context",
+        queryset=Context.objects.all(),
         many=True,
     )
     type = serializers.CharField(default="Evidence", read_only=True)
@@ -191,5 +191,5 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "short_description",
             "long_description",
             "URL",
-            "evidential_claim_id",
+            "context_id",
         )

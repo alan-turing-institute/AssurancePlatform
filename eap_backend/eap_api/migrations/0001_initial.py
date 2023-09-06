@@ -250,7 +250,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="EvidentialClaim",
+            name="Context",
             fields=[
                 (
                     "id",
@@ -268,7 +268,7 @@ class Migration(migrations.Migration):
                 (
                     "property_claim",
                     models.ManyToManyField(
-                        related_name="evidential_claims", to="eap_api.PropertyClaim"
+                        related_name="context", to="eap_api.PropertyClaim"
                     ),
                 ),
             ],
@@ -294,9 +294,9 @@ class Migration(migrations.Migration):
                 ("created_date", models.DateTimeField(auto_now_add=True)),
                 ("URL", models.CharField(max_length=3000)),
                 (
-                    "evidential_claim",
+                    "context",
                     models.ManyToManyField(
-                        related_name="evidence", to="eap_api.EvidentialClaim"
+                        related_name="evidence", to="eap_api.Context"
                     ),
                 ),
             ],

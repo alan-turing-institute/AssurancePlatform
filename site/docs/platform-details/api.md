@@ -116,7 +116,7 @@ example, it will be something like
 
 - A GET request will get the details of the specified Argument:
   - returns
-    `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, evidential_claims: [<int:claim_ids>], shape: <str:shape>}`
+    `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, context: [<int:claim_ids>], shape: <str:shape>}`
 - A PUT request will modify the specified Argument.
   - Payload: dict containing any key/value pairs from the Argument schema
   - returns
@@ -125,27 +125,27 @@ example, it will be something like
   - returns `[{name: <str:argument_name>, id: <int:argument_id>}, ...]` listing
     remaining Arguments
 
-## `/evidentialclaims/`
+## `/contexts/`
 
-- A GET request will list the available EvidentialClaims:
+- A GET request will list the available Contexts:
   - returns `[{name: <str:claim_name>, id: <int:claim_id>}, ...]`
 - A POST request will create a new PropertyClaim.
   - Payload:
     `{name: <str:claim_name>, short_description: <str:description>, long_description : <str:description>, argument_id: <int:argument_id>}`
   - returns `{name: <str:claim_name>, id: <int:claim_id>}`
 
-## `/evidentialclaims/<int:claim_id>`
+## `/contexts/<int:claim_id>`
 
-- A GET request will get the details of the specified EvidentialClaim:
+- A GET request will get the details of the specified Context:
   - returns
     `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, evidence: [<int:evidence_id>], shape: <str:shape>}`
-- A PUT request will modify the specified EvidentialClaim.
-  - Payload: dict containing any key/value pairs from the EvidentialClaim schema
+- A PUT request will modify the specified Context.
+  - Payload: dict containing any key/value pairs from the Context schema
   - returns
     `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, argument: <dict:serialized_argument>}`
-- A DELETE request will delete the specified EvidentialClaim.
+- A DELETE request will delete the specified Context.
   - returns `[{name: <str:claim_name>, id: <int:claim_id>}, ...]` listing
-    remaining EvidentialClaims
+    remaining Contexts
 
 ## `/evidence/`
 
@@ -164,7 +164,7 @@ example, it will be something like
 - A PUT request will modify the specified Evidence.
   - Payload: dict containing any key/value pairs from the Evidence schema
   - returns
-    `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, evidential_claim: [<dict:serialized_evidentialclaim>]}`
+    `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, context: [<dict:serialized_context>]}`
 - A DELETE request will delete the specified Evidence.
   - returns `[{name: <str:evidence_name>, id: <int:evidence_id>}, ...]` listing
     remaining Evidence

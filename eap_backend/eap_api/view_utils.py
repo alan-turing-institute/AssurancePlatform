@@ -5,17 +5,17 @@ from django.http import JsonResponse
 from . import models
 from .models import (
     AssuranceCase,
+    Context,
     EAPGroup,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
+    ContextSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
@@ -45,13 +45,13 @@ TYPE_DICT = {
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["evidential_claims", "property_claims"],
+        "children": ["context", "property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
     },
-    "evidential_claim": {
-        "serializer": EvidentialClaimSerializer,
-        "model": EvidentialClaim,
+    "context": {
+        "serializer": ContextSerializer,
+        "model": Context,
         "children": ["evidence"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("property_claim", True)],
@@ -61,7 +61,7 @@ TYPE_DICT = {
         "model": Evidence,
         "children": [],
         "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_types": [("evidential_claim", True)],
+        "parent_types": [("context", True)],
     },
 }
 # Pluralising the name of the type should be irrelevant.

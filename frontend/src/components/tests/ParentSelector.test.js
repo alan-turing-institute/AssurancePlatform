@@ -13,7 +13,7 @@ global.fetch = jest.fn(() =>
       Promise.resolve([
         {
           id: 1,
-          name: "EvidentialClaim 1",
+          name: "Context 1",
         },
       ]),
   }),

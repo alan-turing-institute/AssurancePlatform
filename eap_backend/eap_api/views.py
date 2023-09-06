@@ -9,20 +9,20 @@ from rest_framework.parsers import JSONParser
 
 from .models import (
     AssuranceCase,
+    Context,
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
+    ContextSerializer,
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
@@ -393,19 +393,19 @@ def property_claim_detail(request, pk):
 
 
 @csrf_exempt
-def evidential_claim_list(request):
+def context_list(request):
     """
-    List all evidential_claims, or make a new evidential_claim
+    List all context, or make a new context
     """
     if request.method == "GET":
-        evidential_claims = EvidentialClaim.objects.all()
-        evidential_claims = filter_by_case_id(evidential_claims, request)
-        serializer = EvidentialClaimSerializer(evidential_claims, many=True)
+        context = Context.objects.all()
+        context = filter_by_case_id(context, request)
+        serializer = ContextSerializer(context, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(data=data)
+        serializer = ContextSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
@@ -415,26 +415,24 @@ def evidential_claim_list(request):
 
 
 @csrf_exempt
-def evidential_claim_detail(request, pk):
+def context_detail(request, pk):
     """
-    Retrieve, update, or delete a EvidentialClaim, by primary key
+    Retrieve, update, or delete a Context, by primary key
     """
     try:
-        evidential_claim = EvidentialClaim.objects.get(pk=pk)
-        shape = evidential_claim.shape.name
-    except EvidentialClaim.DoesNotExist:
+        context = Context.objects.get(pk=pk)
+        shape = context.shape.name
+    except Context.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        serializer = EvidentialClaimSerializer(evidential_claim)
+        serializer = ContextSerializer(context)
         data = serializer.data
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(
-            evidential_claim, data=data, partial=True
-        )
+        serializer = ContextSerializer(context, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -442,7 +440,7 @@ def evidential_claim_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        evidential_claim.delete()
+        context.delete()
         return HttpResponse(status=204)
     return None
 

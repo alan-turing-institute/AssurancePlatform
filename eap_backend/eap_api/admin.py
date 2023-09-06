@@ -4,9 +4,9 @@ from django.contrib.auth.admin import UserAdmin
 from .forms import EAPUserChangeForm, EAPUserCreationForm
 from .models import (
     AssuranceCase,
+    Context,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -27,5 +27,5 @@ admin.site.register(EAPUser, EAPUserAdmin)
 admin.site.register(TopLevelNormativeGoal)
 admin.site.register(Strategy)
 admin.site.register(PropertyClaim)
-admin.site.register(EvidentialClaim)
+admin.site.register(Context)
 admin.site.register(Evidence)
