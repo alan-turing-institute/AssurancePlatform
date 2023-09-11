@@ -7,7 +7,7 @@
 
 if [ -n "$REACT_APP_BASE_URL" ]; then
     echo "REACT_APP_BASE_URL set to $REACT_APP_BASE_URL"
-else    
+else
     echo "REACT_APP_BASE_URL not set"
     REACT_APP_BASE_URL="http://localhost:8000/api"
 fi
