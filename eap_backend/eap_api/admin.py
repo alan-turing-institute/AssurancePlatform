@@ -7,7 +7,6 @@ from .models import (
     Context,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -27,5 +26,4 @@ admin.site.register(EAPUser, EAPUserAdmin)
 admin.site.register(TopLevelNormativeGoal)
 admin.site.register(Context)
 admin.site.register(PropertyClaim)
-admin.site.register(EvidentialClaim)
 admin.site.register(Evidence)
