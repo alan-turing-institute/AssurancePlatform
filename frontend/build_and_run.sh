@@ -5,9 +5,7 @@
 ## 'npm run build' has been run, so we substitute the env var value in
 ## place of the default URL in the built javascript file :-/
 
-if [ -n "$REACT_APP_BASE_URL" ]; then
-    echo "REACT_APP_BASE_URL set to $REACT_APP_BASE_URL"
-else
+if [-z "$REACT_APP_BASE_URL"]; then
     echo "REACT_APP_BASE_URL not set"
     REACT_APP_BASE_URL="http://localhost:8000/api"
 fi
