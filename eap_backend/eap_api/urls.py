@@ -21,14 +21,6 @@ urlpatterns = [
         views.property_claim_detail,
         name="property_claim_detail",
     ),
-    path(
-        "evidentialclaims/", views.evidential_claim_list, name="evidential_claim_list"
-    ),
-    path(
-        "evidentialclaims/<int:pk>/",
-        views.evidential_claim_detail,
-        name="evidential_claim_detail",
-    ),
     path("evidence/", views.evidence_list, name="evidence_list"),
     path("evidence/<int:pk>/", views.evidence_detail, name="evidence_detail"),
     path(

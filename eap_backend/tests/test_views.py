@@ -8,7 +8,6 @@ from eap_api.models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -18,7 +17,6 @@ from eap_api.serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -29,10 +27,8 @@ from .constants_tests import (
     CASE1_INFO,
     CONTEXT_INFO,
     # for many-to-many relations, need to NOT have
-    # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
     EVIDENCE2_INFO_NO_ID,
-    EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
@@ -245,70 +241,19 @@ class PropertyClaimViewTest(TestCase):
         assert len(response_get.json()) == 1
 
 
-class EvidentialClaimViewTest(TestCase):
-    def setUp(self):
-        # Mock Entries to be modified and tested
-        self.case = AssuranceCase.objects.create(**CASE1_INFO)
-        self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
-        self.eclaim.property_claim.set([self.pclaim])
-
-        self.update = {
-            "name": "TestEvidentialClaim_updated",
-            "short_description": "description is updated",
-        }
-        # get data from DB
-        self.data = EvidentialClaim.objects.all()
-        # convert it to JSON
-        self.serializer = EvidentialClaimSerializer(self.data, many=True)
-
-    def test_evidential_claim_list_view_get(self):
-        response_get = self.client.get(reverse("evidential_claim_list"))
-        assert response_get.status_code == 200
-        assert response_get.json() == make_summary(self.serializer.data)
-        assert len(response_get.json()) == 1
-
-    def test_evidential_claim_detail_view_get(self):
-        response_get = self.client.get(
-            reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
-        )
-        assert response_get.status_code == 200
-        response_data = response_get.json()
-        serializer_data = self.serializer.data[0]
-        assert response_data["name"] == serializer_data["name"]
-
-    def test_evidential_claim_detail_view_put(self):
-        response_put = self.client.put(
-            reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk}),
-            data=json.dumps(self.update),
-            content_type="application/json",
-        )
-        assert response_put.status_code == 200
-        assert response_put.json()["name"] == self.update["name"]
-
-    def test_evidential_claim_delete_with_standard_permission(self):
-        url = reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
-        self.client.delete(url)
-        response_get = self.client.get(reverse("evidential_claim_list"))
-        assert len(response_get.json()) == 0
-
-
 class EvidenceViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
-        self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
-        self.evidence1.evidential_claim.set([self.eclaim])
+        self.evidence1.property_claim.set([self.pclaim])
         self.evidence2 = Evidence.objects.create(**EVIDENCE2_INFO_NO_ID)
         self.evidence2.save()
-        self.evidence2.evidential_claim.set([self.eclaim])
+        self.evidence2.property_claim.set([self.pclaim])
 
         self.update = {
             "name": "Evidence_updated",
@@ -364,15 +309,11 @@ class FullCaseDetailViewTest(TestCase):
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.context = Context.objects.create(**CONTEXT_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
-        self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
-        self.evidence1.evidential_claim.set([self.eclaim])
         self.evidence2 = Evidence.objects.create(**EVIDENCE2_INFO_NO_ID)
         self.evidence2.save()
-        self.evidence2.evidential_claim.set([self.eclaim])
 
         # get data from DB
         self.data = AssuranceCase.objects.all()
@@ -398,18 +339,6 @@ class FullCaseDetailViewTest(TestCase):
         assert len(response_data["goals"]) == 1
         assert len(response_data["goals"][0]["context"]) == 1
         assert len(response_data["goals"][0]["property_claims"]) == 1
-        assert (
-            len(response_data["goals"][0]["property_claims"][0]["evidential_claims"])
-            == 1
-        )
-        assert (
-            len(
-                response_data["goals"][0]["property_claims"][0]["evidential_claims"][0][
-                    "evidence"
-                ]
-            )
-            == 2
-        )
 
 
 class UserViewNoAuthTest(TestCase):

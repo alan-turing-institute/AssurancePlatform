@@ -11,7 +11,6 @@ from eap_api.models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -20,7 +19,6 @@ from .constants_tests import (
     CASE1_INFO,
     CONTEXT_INFO,
     EVIDENCE1_INFO_NO_ID,
-    EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
@@ -118,41 +116,6 @@ class PropertyClaimTestCase(TestCase):
         assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
-class EvidentialClaimTestCase(TestCase):
-    """
-    creates an EvidentialClaim object and tests foreign key and
-    whether the created title matches the expected title
-    """
-
-    def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE1_INFO)
-        goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        goal.assurance_case = case
-        pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        pclaim.goal = goal
-        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
-        eclaim.property_claim.set([pclaim])
-        return eclaim
-
-    def test_evidential_claim_creation(self):
-        test_name = EVIDENTIALCLAIM1_INFO["name"]
-        test_desc = EVIDENTIALCLAIM1_INFO["short_description"]
-        test_entry = self.create_test_entry()
-        assert isinstance(test_entry, EvidentialClaim)
-        assert test_entry.name == test_name
-        assert test_entry.short_description == test_desc
-        # test one-step relation
-        assert isinstance(test_entry.property_claim.all()[0], PropertyClaim)
-        # test two-step relation
-        assert isinstance(
-            test_entry.property_claim.all()[0].goal, TopLevelNormativeGoal
-        )
-        # test three-step relation
-        assert isinstance(
-            test_entry.property_claim.all()[0].goal.assurance_case, AssuranceCase
-        )
-
-
 class EvidenceCase(TestCase):
     """
     creates an Evidence object and tests foreign key and
@@ -165,10 +128,8 @@ class EvidenceCase(TestCase):
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         pclaim.goal = goal
-        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
-        eclaim.property_claim.set([pclaim])
         evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
-        evidence.evidential_claim.set([eclaim])
+        evidence.property_claim.set([pclaim])
         return evidence
 
     def test_evidence_creation(self):
@@ -179,23 +140,6 @@ class EvidenceCase(TestCase):
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
-        assert isinstance(test_entry.evidential_claim.all()[0], EvidentialClaim)
-        # test two-step relation
-        assert isinstance(
-            test_entry.evidential_claim.all()[0].property_claim.all()[0], PropertyClaim
-        )
-        # test three-step relation
-        assert isinstance(
-            test_entry.evidential_claim.all()[0].property_claim.all()[0].goal,
-            TopLevelNormativeGoal,
-        )
-        # test four-step relation
-        assert isinstance(
-            test_entry.evidential_claim.all()[0]
-            .property_claim.all()[0]
-            .goal.assurance_case,
-            AssuranceCase,
-        )
 
 
 class UserCase(TestCase):

@@ -250,33 +250,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="EvidentialClaim",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=200)),
-                ("short_description", models.CharField(max_length=1000)),
-                ("long_description", models.CharField(max_length=3000)),
-                ("created_date", models.DateTimeField(auto_now_add=True)),
-                (
-                    "property_claim",
-                    models.ManyToManyField(
-                        related_name="evidential_claims", to="eap_api.PropertyClaim"
-                    ),
-                ),
-            ],
-            options={
-                "abstract": False,
-            },
-        ),
-        migrations.CreateModel(
             name="Evidence",
             fields=[
                 (
@@ -294,9 +267,9 @@ class Migration(migrations.Migration):
                 ("created_date", models.DateTimeField(auto_now_add=True)),
                 ("URL", models.CharField(max_length=3000)),
                 (
-                    "evidential_claim",
+                    "property_claim",
                     models.ManyToManyField(
-                        related_name="evidence", to="eap_api.EvidentialClaim"
+                        related_name="property", to="eap_api.PropertyClaim"
                     ),
                 ),
             ],

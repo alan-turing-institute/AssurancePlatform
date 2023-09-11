@@ -8,7 +8,6 @@ from .models import (
     Context,
     EAPGroup,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -16,7 +15,6 @@ from .serializers import (
     AssuranceCaseSerializer,
     ContextSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -45,23 +43,16 @@ TYPE_DICT = {
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["evidential_claims", "property_claims"],
+        "children": ["property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
-    },
-    "evidential_claim": {
-        "serializer": EvidentialClaimSerializer,
-        "model": EvidentialClaim,
-        "children": ["evidence"],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("property_claim", True)],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
         "model": Evidence,
         "children": [],
         "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_types": [("evidential_claim", True)],
+        "parent_types": [("property_claim", True)],
     },
 }
 # Pluralising the name of the type should be irrelevant.

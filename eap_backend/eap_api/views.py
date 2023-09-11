@@ -13,7 +13,6 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -23,7 +22,6 @@ from .serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -388,61 +386,6 @@ def property_claim_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
-        return HttpResponse(status=204)
-    return None
-
-
-@csrf_exempt
-def evidential_claim_list(request):
-    """
-    List all evidential_claims, or make a new evidential_claim
-    """
-    if request.method == "GET":
-        evidential_claims = EvidentialClaim.objects.all()
-        evidential_claims = filter_by_case_id(evidential_claims, request)
-        serializer = EvidentialClaimSerializer(evidential_claims, many=True)
-        summaries = make_summary(serializer.data)
-        return JsonResponse(summaries, safe=False)
-    elif request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            return JsonResponse(summary, status=201)
-        return JsonResponse(serializer.errors, status=400)
-    return None
-
-
-@csrf_exempt
-def evidential_claim_detail(request, pk):
-    """
-    Retrieve, update, or delete a EvidentialClaim, by primary key
-    """
-    try:
-        evidential_claim = EvidentialClaim.objects.get(pk=pk)
-        shape = evidential_claim.shape.name
-    except EvidentialClaim.DoesNotExist:
-        return HttpResponse(status=404)
-
-    if request.method == "GET":
-        serializer = EvidentialClaimSerializer(evidential_claim)
-        data = serializer.data
-        data["shape"] = shape
-        return JsonResponse(data)
-    elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = EvidentialClaimSerializer(
-            evidential_claim, data=data, partial=True
-        )
-        if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
-            data["shape"] = shape
-            return JsonResponse(data)
-        return JsonResponse(serializer.errors, status=400)
-    elif request.method == "DELETE":
-        evidential_claim.delete()
         return HttpResponse(status=204)
     return None
 

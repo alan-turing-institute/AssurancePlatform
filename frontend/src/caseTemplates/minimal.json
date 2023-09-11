@@ -19,22 +19,7 @@
         {
           "name": "Property claim",
           "short_description": "Short description",
-          "long_description": "Long description",
-          "evidential_claims": [
-            {
-              "name": "Evidential claim",
-              "short_description": "Short description",
-              "long_description": "Long description",
-              "evidence": [
-                {
-                  "name": "Evidence",
-                  "short_description": "Short description",
-                  "long_description": "Long description",
-                  "URL": "www.some-evidence.com"
-                }
-              ]
-            }
-          ]
+          "long_description": "Long description"
         }
       ]
     }

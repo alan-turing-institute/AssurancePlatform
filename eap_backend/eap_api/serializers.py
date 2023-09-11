@@ -6,7 +6,6 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
     TopLevelNormativeGoal,
 )
@@ -131,7 +130,6 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     )
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -147,37 +145,14 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claim_id",
             "level",
             "claim_type",
-            "evidential_claims",
             "property_claims",
         )
 
 
-class EvidentialClaimSerializer(serializers.ModelSerializer):
+class EvidenceSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
-        many=True,
-    )
-    evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(default="EvidentialClaim", read_only=True)
-
-    class Meta:
-        model = EvidentialClaim
-        fields = (
-            "id",
-            "type",
-            "name",
-            "short_description",
-            "long_description",
-            "property_claim_id",
-            "evidence",
-        )
-
-
-class EvidenceSerializer(serializers.ModelSerializer):
-    evidential_claim_id = serializers.PrimaryKeyRelatedField(
-        source="evidential_claim",
-        queryset=EvidentialClaim.objects.all(),
         many=True,
     )
     type = serializers.CharField(default="Evidence", read_only=True)
@@ -191,5 +166,5 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "short_description",
             "long_description",
             "URL",
-            "evidential_claim_id",
+            "property_claim_id",
         )

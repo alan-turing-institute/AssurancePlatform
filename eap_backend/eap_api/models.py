@@ -142,14 +142,7 @@ class PropertyClaim(CaseItem):
         super().save(*args, **kwargs)
 
 
-class EvidentialClaim(CaseItem):
-    shape = Shape.ROUNDED_RECTANGLE
-    property_claim = models.ManyToManyField(
-        PropertyClaim, related_name="evidential_claims"
-    )
-
-
 class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    evidential_claim = models.ManyToManyField(EvidentialClaim, related_name="evidence")
+    property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")
