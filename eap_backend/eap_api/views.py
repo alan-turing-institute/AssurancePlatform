@@ -15,7 +15,6 @@ from .models import (
     Evidence,
     EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
     TopLevelNormativeGoal,
 )
 from .serializers import (
@@ -26,7 +25,6 @@ from .serializers import (
     EvidenceSerializer,
     EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    SystemDescriptionSerializer,
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
@@ -269,7 +267,7 @@ def goal_detail(request, pk):
         serializer = TopLevelNormativeGoalSerializer(goal)
         data = serializer.data
         # replace IDs for children with full JSON objects
-        for key in ["context", "system_description", "property_claims"]:
+        for key in ["context", "property_claims"]:
             data[key] = get_json_tree(data[key], key)
         data["shape"] = shape
         return JsonResponse(data)
@@ -337,59 +335,6 @@ def context_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         context.delete()
-        return HttpResponse(status=204)
-    return None
-
-
-@csrf_exempt
-def description_list(request):
-    """
-    List all descriptions, or make a new description
-    """
-    if request.method == "GET":
-        descriptions = SystemDescription.objects.all()
-        descriptions = filter_by_case_id(descriptions, request)
-        serializer = SystemDescriptionSerializer(descriptions, many=True)
-        summaries = make_summary(serializer.data)
-        return JsonResponse(summaries, safe=False)
-    elif request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = SystemDescriptionSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            return JsonResponse(summary, status=201)
-        return JsonResponse(serializer.errors, status=400)
-    return None
-
-
-@csrf_exempt
-def description_detail(request, pk):
-    """
-    Retrieve, update, or delete a SystemDescription, by primary key
-    """
-    try:
-        description = SystemDescription.objects.get(pk=pk)
-        shape = description.shape.name
-    except SystemDescription.DoesNotExist:
-        return HttpResponse(status=404)
-
-    if request.method == "GET":
-        serializer = SystemDescriptionSerializer(description)
-        data = serializer.data
-        data["shape"] = shape
-        return JsonResponse(data)
-    elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = SystemDescriptionSerializer(description, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
-            data["shape"] = shape
-            return JsonResponse(data)
-        return JsonResponse(serializer.errors, status=400)
-    elif request.method == "DELETE":
-        description.delete()
         return HttpResponse(status=204)
     return None
 

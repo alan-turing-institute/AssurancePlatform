@@ -13,14 +13,12 @@ from eap_api.models import (
     Evidence,
     EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
     TopLevelNormativeGoal,
 )
 
 from .constants_tests import (
     CASE1_INFO,
     CONTEXT_INFO,
-    DESCRIPTION_INFO,
     EVIDENCE1_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
@@ -85,33 +83,6 @@ class ContextTestCase(TestCase):
         test_desc = CONTEXT_INFO["short_description"]
         test_entry = self.create_test_entry()
         assert isinstance(test_entry, Context)
-        assert test_entry.name == test_name
-        assert test_entry.short_description == test_desc
-        # test one-step relation
-        assert isinstance(test_entry.goal, TopLevelNormativeGoal)
-        # test two-step relation
-        assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
-
-
-class DescriptionTestCase(TestCase):
-    """
-    creates a Context object and tests foreign key and
-    whether the created title matches the expected title
-    """
-
-    def create_test_entry(self):
-        case = AssuranceCase.objects.create(**CASE1_INFO)
-        goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        goal.assurance_case = case
-        desc = SystemDescription.objects.create(**DESCRIPTION_INFO)
-        desc.goal = goal
-        return desc
-
-    def test_description_creation(self):
-        test_name = DESCRIPTION_INFO["name"]
-        test_desc = DESCRIPTION_INFO["short_description"]
-        test_entry = self.create_test_entry()
-        assert isinstance(test_entry, SystemDescription)
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation

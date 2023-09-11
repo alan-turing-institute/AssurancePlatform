@@ -8,7 +8,6 @@ from .models import (
     Evidence,
     EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
     TopLevelNormativeGoal,
 )
 
@@ -82,7 +81,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    system_description = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
@@ -97,7 +95,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "keywords",
             "assurance_case_id",
             "context",
-            "system_description",
             "property_claims",
         )
 
@@ -117,24 +114,6 @@ class ContextSerializer(serializers.ModelSerializer):
             "short_description",
             "long_description",
             "created_date",
-            "goal_id",
-        )
-
-
-class SystemDescriptionSerializer(serializers.ModelSerializer):
-    goal_id = serializers.PrimaryKeyRelatedField(
-        source="goal", queryset=TopLevelNormativeGoal.objects.all()
-    )
-    type = serializers.CharField(default="SystemDescription", read_only=True)
-
-    class Meta:
-        model = SystemDescription
-        fields = (
-            "id",
-            "type",
-            "name",
-            "short_description",
-            "long_description",
             "goal_id",
         )
 

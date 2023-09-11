@@ -22,12 +22,7 @@ CONTEXT_INFO = {
     "long_description": "A longer description of the context",
     "goal_id": 1,
 }
-DESCRIPTION_INFO = {
-    "name": "Description",
-    "short_description": "A short description of the system",
-    "long_description": "a much longer description of the system",
-    "goal_id": 1,
-}
+
 PROPERTYCLAIM1_INFO = {
     "name": "PropertyClaim 1",
     "short_description": "Goal 1 should be x",

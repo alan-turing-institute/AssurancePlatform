@@ -197,35 +197,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="SystemDescription",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=200)),
-                ("short_description", models.CharField(max_length=1000)),
-                ("long_description", models.CharField(max_length=3000)),
-                ("created_date", models.DateTimeField(auto_now_add=True)),
-                (
-                    "goal",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="system_description",
-                        to="eap_api.toplevelnormativegoal",
-                    ),
-                ),
-            ],
-            options={
-                "abstract": False,
-            },
-        ),
-        migrations.CreateModel(
             name="PropertyClaim",
             fields=[
                 (
