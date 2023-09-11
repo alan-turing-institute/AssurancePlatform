@@ -13,8 +13,9 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
+    EvidentialClaim,
     PropertyClaim,
-    Strategy,
+    SystemDescription,
     TopLevelNormativeGoal,
 )
 from .serializers import (
@@ -23,8 +24,9 @@ from .serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
+    EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    StrategySerializer,
+    SystemDescriptionSerializer,
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
@@ -267,7 +269,7 @@ def goal_detail(request, pk):
         serializer = TopLevelNormativeGoalSerializer(goal)
         data = serializer.data
         # replace IDs for children with full JSON objects
-        for key in ["strategy", "property_claims"]:
+        for key in ["context", "system_description", "property_claims"]:
             data[key] = get_json_tree(data[key], key)
         data["shape"] = shape
         return JsonResponse(data)
@@ -287,19 +289,19 @@ def goal_detail(request, pk):
 
 
 @csrf_exempt
-def strategy_list(request):
+def context_list(request):
     """
-    List all strategies, or make a new strategy
+    List all contexts, or make a new context
     """
     if request.method == "GET":
-        strategies = Strategy.objects.all()
-        strategies = filter_by_case_id(strategies, request)
-        serializer = StrategySerializer(strategies, many=True)
+        contexts = Context.objects.all()
+        contexts = filter_by_case_id(contexts, request)
+        serializer = ContextSerializer(contexts, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = StrategySerializer(data=data)
+        serializer = ContextSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
@@ -309,24 +311,24 @@ def strategy_list(request):
 
 
 @csrf_exempt
-def strategy_detail(request, pk):
+def context_detail(request, pk):
     """
-    Retrieve, update, or delete a Strategy, by primary key
+    Retrieve, update, or delete a Context, by primary key
     """
     try:
-        strategy = Strategy.objects.get(pk=pk)
-        shape = strategy.shape.name
-    except Strategy.DoesNotExist:
+        context = Context.objects.get(pk=pk)
+        shape = context.shape.name
+    except Context.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        serializer = StrategySerializer(strategy)
+        serializer = ContextSerializer(context)
         data = serializer.data
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = StrategySerializer(strategy, data=data, partial=True)
+        serializer = ContextSerializer(context, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -334,7 +336,60 @@ def strategy_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        strategy.delete()
+        context.delete()
+        return HttpResponse(status=204)
+    return None
+
+
+@csrf_exempt
+def description_list(request):
+    """
+    List all descriptions, or make a new description
+    """
+    if request.method == "GET":
+        descriptions = SystemDescription.objects.all()
+        descriptions = filter_by_case_id(descriptions, request)
+        serializer = SystemDescriptionSerializer(descriptions, many=True)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        serializer = SystemDescriptionSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
+        return JsonResponse(serializer.errors, status=400)
+    return None
+
+
+@csrf_exempt
+def description_detail(request, pk):
+    """
+    Retrieve, update, or delete a SystemDescription, by primary key
+    """
+    try:
+        description = SystemDescription.objects.get(pk=pk)
+        shape = description.shape.name
+    except SystemDescription.DoesNotExist:
+        return HttpResponse(status=404)
+
+    if request.method == "GET":
+        serializer = SystemDescriptionSerializer(description)
+        data = serializer.data
+        data["shape"] = shape
+        return JsonResponse(data)
+    elif request.method == "PUT":
+        data = JSONParser().parse(request)
+        serializer = SystemDescriptionSerializer(description, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            data = serializer.data
+            data["shape"] = shape
+            return JsonResponse(data)
+        return JsonResponse(serializer.errors, status=400)
+    elif request.method == "DELETE":
+        description.delete()
         return HttpResponse(status=204)
     return None
 
@@ -393,19 +448,19 @@ def property_claim_detail(request, pk):
 
 
 @csrf_exempt
-def context_list(request):
+def evidential_claim_list(request):
     """
-    List all context, or make a new context
+    List all evidential_claims, or make a new evidential_claim
     """
     if request.method == "GET":
-        context = Context.objects.all()
-        context = filter_by_case_id(context, request)
-        serializer = ContextSerializer(context, many=True)
+        evidential_claims = EvidentialClaim.objects.all()
+        evidential_claims = filter_by_case_id(evidential_claims, request)
+        serializer = EvidentialClaimSerializer(evidential_claims, many=True)
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        serializer = ContextSerializer(data=data)
+        serializer = EvidentialClaimSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
@@ -415,24 +470,26 @@ def context_list(request):
 
 
 @csrf_exempt
-def context_detail(request, pk):
+def evidential_claim_detail(request, pk):
     """
-    Retrieve, update, or delete a Context, by primary key
+    Retrieve, update, or delete a EvidentialClaim, by primary key
     """
     try:
-        context = Context.objects.get(pk=pk)
-        shape = context.shape.name
-    except Context.DoesNotExist:
+        evidential_claim = EvidentialClaim.objects.get(pk=pk)
+        shape = evidential_claim.shape.name
+    except EvidentialClaim.DoesNotExist:
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        serializer = ContextSerializer(context)
+        serializer = EvidentialClaimSerializer(evidential_claim)
         data = serializer.data
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = ContextSerializer(context, data=data, partial=True)
+        serializer = EvidentialClaimSerializer(
+            evidential_claim, data=data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -440,7 +497,7 @@ def context_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        context.delete()
+        evidential_claim.delete()
         return HttpResponse(status=204)
     return None
 

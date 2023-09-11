@@ -8,8 +8,9 @@ from eap_api.models import (
     EAPGroup,
     EAPUser,
     Evidence,
+    EvidentialClaim,
     PropertyClaim,
-    Strategy,
+    SystemDescription,
     TopLevelNormativeGoal,
 )
 from eap_api.serializers import (
@@ -18,8 +19,9 @@ from eap_api.serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
+    EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    StrategySerializer,
+    SystemDescriptionSerializer,
     TopLevelNormativeGoalSerializer,
 )
 from eap_api.views import make_summary
@@ -27,8 +29,10 @@ from rest_framework.authtoken.models import Token
 
 from .constants_tests import (
     CASE1_INFO,
+    CONTEXT_INFO,
+    DESCRIPTION_INFO,
     # for many-to-many relations, need to NOT have
-    # e.g. context_id in the JSON
+    # e.g. evidential_claim_id in the JSON
     EVIDENCE1_INFO_NO_ID,
     EVIDENCE2_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
@@ -36,7 +40,6 @@ from .constants_tests import (
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
     PROPERTYCLAIM2_INFO,
-    STRATEGY_INFO,
     USER1_INFO,
 )
 
@@ -146,48 +149,93 @@ class GoalViewTest(TestCase):
         assert len(response_get.json()) == 0
 
 
-class StrategyViewTest(TestCase):
+class ContextViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        self.strategy = Strategy.objects.create(**STRATEGY_INFO)
+        self.context = Context.objects.create(**CONTEXT_INFO)
         self.update = {
-            "name": "TestStrategy_updated",
+            "name": "TestContext_updated",
             "short_description": "description is updated",
         }
         # get data from DB
-        self.data = Strategy.objects.all()
+        self.data = Context.objects.all()
         # convert it to JSON
-        self.serializer = StrategySerializer(self.data, many=True)
+        self.serializer = ContextSerializer(self.data, many=True)
 
-    def test_strategy_list_view_get(self):
-        response_get = self.client.get(reverse("strategy_list"))
+    def test_context_list_view_get(self):
+        response_get = self.client.get(reverse("context_list"))
         assert response_get.status_code == 200
         assert response_get.json() == make_summary(self.serializer.data)
 
-    def test_strategy_detail_view_get(self):
+    def test_context_detail_view_get(self):
         response_get = self.client.get(
-            reverse("strategy_detail", kwargs={"pk": self.strategy.pk})
+            reverse("context_detail", kwargs={"pk": self.context.pk})
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
 
-    def test_strategy_detail_view_put(self):
+    def test_context_detail_view_put(self):
         response_put = self.client.put(
-            reverse("strategy_detail", kwargs={"pk": self.strategy.pk}),
+            reverse("context_detail", kwargs={"pk": self.context.pk}),
             data=json.dumps(self.update),
             content_type="application/json",
         )
         assert response_put.status_code == 200
         assert response_put.json()["name"] == self.update["name"]
 
-    def test_strategy_delete_with_standard_permission(self):
-        url = reverse("strategy_detail", kwargs={"pk": self.strategy.pk})
+    def test_context_delete_with_standard_permission(self):
+        url = reverse("context_detail", kwargs={"pk": self.context.pk})
         self.client.delete(url)
-        response_get = self.client.get(reverse("strategy_list"))
+        response_get = self.client.get(reverse("context_list"))
+        assert len(response_get.json()) == 0
+
+
+class DescriptionViewTest(TestCase):
+    def setUp(self):
+        # Mock Entries to be modified and tested
+        self.case = AssuranceCase.objects.create(**CASE1_INFO)
+        self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        self.description = SystemDescription.objects.create(**DESCRIPTION_INFO)
+        self.update = {
+            "name": "TestDescription_updated",
+            "short_description": "description is updated",
+        }
+        # get data from DB
+        self.data = SystemDescription.objects.all()
+        # convert it to JSON
+        self.serializer = SystemDescriptionSerializer(self.data, many=True)
+
+    def test_description_list_view_get(self):
+        response_get = self.client.get(reverse("description_list"))
+        assert response_get.status_code == 200
+        assert response_get.json() == make_summary(self.serializer.data)
+
+    def test_description_detail_view_get(self):
+        response_get = self.client.get(
+            reverse("description_detail", kwargs={"pk": self.description.pk})
+        )
+        assert response_get.status_code == 200
+        response_data = response_get.json()
+        serializer_data = self.serializer.data[0]
+        assert response_data["name"] == serializer_data["name"]
+
+    def test_description_detail_view_put(self):
+        response_put = self.client.put(
+            reverse("description_detail", kwargs={"pk": self.description.pk}),
+            data=json.dumps(self.update),
+            content_type="application/json",
+        )
+        assert response_put.status_code == 200
+        assert response_put.json()["name"] == self.update["name"]
+
+    def test_description_delete_with_standard_permission(self):
+        url = reverse("description_detail", kwargs={"pk": self.description.pk})
+        self.client.delete(url)
+        response_get = self.client.get(reverse("description_list"))
         assert len(response_get.json()) == 0
 
 
@@ -245,52 +293,52 @@ class PropertyClaimViewTest(TestCase):
         assert len(response_get.json()) == 1
 
 
-class ContextViewTest(TestCase):
+class EvidentialClaimViewTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
         self.eclaim.property_claim.set([self.pclaim])
 
         self.update = {
-            "name": "TestContext_updated",
+            "name": "TestEvidentialClaim_updated",
             "short_description": "description is updated",
         }
         # get data from DB
-        self.data = Context.objects.all()
+        self.data = EvidentialClaim.objects.all()
         # convert it to JSON
-        self.serializer = ContextSerializer(self.data, many=True)
+        self.serializer = EvidentialClaimSerializer(self.data, many=True)
 
-    def test_context_list_view_get(self):
-        response_get = self.client.get(reverse("context_list"))
+    def test_evidential_claim_list_view_get(self):
+        response_get = self.client.get(reverse("evidential_claim_list"))
         assert response_get.status_code == 200
         assert response_get.json() == make_summary(self.serializer.data)
         assert len(response_get.json()) == 1
 
-    def test_context_detail_view_get(self):
+    def test_evidential_claim_detail_view_get(self):
         response_get = self.client.get(
-            reverse("context_detail", kwargs={"pk": self.eclaim.pk})
+            reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
 
-    def test_context_detail_view_put(self):
+    def test_evidential_claim_detail_view_put(self):
         response_put = self.client.put(
-            reverse("context_detail", kwargs={"pk": self.eclaim.pk}),
+            reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk}),
             data=json.dumps(self.update),
             content_type="application/json",
         )
         assert response_put.status_code == 200
         assert response_put.json()["name"] == self.update["name"]
 
-    def test_context_delete_with_standard_permission(self):
-        url = reverse("context_detail", kwargs={"pk": self.eclaim.pk})
+    def test_evidential_claim_delete_with_standard_permission(self):
+        url = reverse("evidential_claim_detail", kwargs={"pk": self.eclaim.pk})
         self.client.delete(url)
-        response_get = self.client.get(reverse("context_list"))
+        response_get = self.client.get(reverse("evidential_claim_list"))
         assert len(response_get.json()) == 0
 
 
@@ -300,15 +348,15 @@ class EvidenceViewTest(TestCase):
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
         self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
-        self.evidence1.context.set([self.eclaim])
+        self.evidence1.evidential_claim.set([self.eclaim])
         self.evidence2 = Evidence.objects.create(**EVIDENCE2_INFO_NO_ID)
         self.evidence2.save()
-        self.evidence2.context.set([self.eclaim])
+        self.evidence2.evidential_claim.set([self.eclaim])
 
         self.update = {
             "name": "Evidence_updated",
@@ -362,17 +410,18 @@ class FullCaseDetailViewTest(TestCase):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        self.strategy = Strategy.objects.create(**STRATEGY_INFO)
+        self.description = SystemDescription.objects.create(**DESCRIPTION_INFO)
+        self.context = Context.objects.create(**CONTEXT_INFO)
         self.pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
+        self.eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
         self.eclaim.property_claim.set([self.pclaim])
 
         self.evidence1 = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         self.evidence1.save()
-        self.evidence1.context.set([self.eclaim])
+        self.evidence1.evidential_claim.set([self.eclaim])
         self.evidence2 = Evidence.objects.create(**EVIDENCE2_INFO_NO_ID)
         self.evidence2.save()
-        self.evidence2.context.set([self.eclaim])
+        self.evidence2.evidential_claim.set([self.eclaim])
 
         # get data from DB
         self.data = AssuranceCase.objects.all()
@@ -396,12 +445,16 @@ class FullCaseDetailViewTest(TestCase):
         assert response_data["name"] == serializer_data["name"]
         # check we can go down the whole tree
         assert len(response_data["goals"]) == 1
-        assert len(response_data["goals"][0]["strategy"]) == 1
+        assert len(response_data["goals"][0]["context"]) == 1
+        assert len(response_data["goals"][0]["system_description"]) == 1
         assert len(response_data["goals"][0]["property_claims"]) == 1
-        assert len(response_data["goals"][0]["property_claims"][0]["context"]) == 1
+        assert (
+            len(response_data["goals"][0]["property_claims"][0]["evidential_claims"])
+            == 1
+        )
         assert (
             len(
-                response_data["goals"][0]["property_claims"][0]["context"][0][
+                response_data["goals"][0]["property_claims"][0]["evidential_claims"][0][
                     "evidence"
                 ]
             )

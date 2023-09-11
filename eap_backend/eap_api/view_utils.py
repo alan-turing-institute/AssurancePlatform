@@ -8,16 +8,18 @@ from .models import (
     Context,
     EAPGroup,
     Evidence,
+    EvidentialClaim,
     PropertyClaim,
-    Strategy,
+    SystemDescription,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
     ContextSerializer,
     EvidenceSerializer,
+    EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    StrategySerializer,
+    SystemDescriptionSerializer,
     TopLevelNormativeGoalSerializer,
 )
 
@@ -31,13 +33,20 @@ TYPE_DICT = {
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
-        "children": ["strategy", "property_claims"],
+        "children": ["context", "system_description", "property_claims"],
         "fields": ("name", "short_description", "long_description", "keywords"),
         "parent_types": [("assurance_case", False)],
     },
-    "strategy": {
-        "serializer": StrategySerializer,
-        "model": Strategy,
+    "context": {
+        "serializer": ContextSerializer,
+        "model": Context,
+        "children": [],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_types": [("goal", False)],
+    },
+    "system_description": {
+        "serializer": SystemDescriptionSerializer,
+        "model": SystemDescription,
         "children": [],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],
@@ -45,13 +54,13 @@ TYPE_DICT = {
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["context", "property_claims"],
+        "children": ["evidential_claims", "property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
     },
-    "context": {
-        "serializer": ContextSerializer,
-        "model": Context,
+    "evidential_claim": {
+        "serializer": EvidentialClaimSerializer,
+        "model": EvidentialClaim,
         "children": ["evidence"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("property_claim", True)],
@@ -61,7 +70,7 @@ TYPE_DICT = {
         "model": Evidence,
         "children": [],
         "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_types": [("context", True)],
+        "parent_types": [("evidential_claim", True)],
     },
 }
 # Pluralising the name of the type should be irrelevant.

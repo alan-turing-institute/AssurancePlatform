@@ -44,9 +44,9 @@ example, it will be something like
 - A GET request will get the full JSON containing details of the specified
   TopLevelNormativeGoal and all its children:
   - returns
-    `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, strategies: [SERIALIZED_STRATEGY],  property_claims: [SERIALIZED_CLAIM]`,
-    where "SERIALIZED_STRATEGY" and "SERIALIZED_DESCRIPTION" are the same as the
-    responses to GET requests to `/strategies/<int:strategy_id>` and
+    `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, contexts: [SERIALIZED_CONTEXT], system_description: [SERIALIZED_DESCRIPTION], property_claims: [SERIALIZED_CLAIM]`,
+    where "SERIALIZED_CONTEXT" and "SERIALIZED_DESCRIPTION" are the same as the
+    responses to GET requests to `/contexts/<int:context_id>` and
     `/descriptions/<int:desc_id>` respectively (see below), and
     "SERIALIZED_CLAIM" is the full nested JSON containing the details from a GET
     request to `propertyclaims/<int:claim_id>` and also the JSON from all its
@@ -54,32 +54,55 @@ example, it will be something like
 - A PUT request will modify the specified TopLevelNormativeGoal.
   - Payload: Any key/value pair from the TopLevelNormativeGoal schema
   - returns
-    `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, strategies: [<int:strategy_ids>],  assurance_case,: <dict:serialized_assurance_case>, shape: <str:shape>}`
+    `{name: <str:goal_name>, id: <int:goal_id>, short_description: <str:description>, long_description: <str:description>, keywords: <str:keywords>, contexts: [<int:context_ids>], system_description: [<int:system_description_id>], assurance_case,: <dict:serialized_assurance_case>, shape: <str:shape>}`
 - A DELETE request will delete the specified TopLevelNormativeGoal.
   - returns `[{name: <str:goal_name>, id: <int:goal_id>}, ...]` listing
     remaining TopLevelNormativeGoals
 
-## `/strategies/`
+## `/contexts/`
 
-- A GET request will list the available Strategies:
-  - returns `[{name: <str:strategy_name>, id: <int:strategy_id>}, ...]`
-- A POST request will create a new Strategy.
+- A GET request will list the available Contexts:
+  - returns `[{name: <str:context_name>, id: <int:context_id>}, ...]`
+- A POST request will create a new Context.
   - Payload:
-    `{name: <str:strategy_name>, short_description: <str:description>, long_description : <str:description>, goal_id: <int:goal_id>}`
-  - returns `{name: <str:strategy_name>, id: <int:strategy_id>}`
+    `{name: <str:context_name>, short_description: <str:description>, long_description : <str:description>, goal_id: <int:goal_id>}`
+  - returns `{name: <str:context_name>, id: <int:context_id>}`
 
-## `/strategies/<int:strategy_id>`
+## `/contexts/<int:context_id>`
 
-- A GET request will get the details of the specified Strategy:
+- A GET request will get the details of the specified Context:
   - returns
-    `{name: <str:strategy_name>, id: <int:strategy_id>, short_description: <str:description>, long_description: <str:description>, created_date: <datetime:date>, shape: <str:shape>}`
-- A PUT request will modify the specified Strategy.
-  - Payload: dict containing any key/value pairs from the Strategy schema
+    `{name: <str:context_name>, id: <int:context_id>, short_description: <str:description>, long_description: <str:description>, created_date: <datetime:date>, shape: <str:shape>}`
+- A PUT request will modify the specified Context.
+  - Payload: dict containing any key/value pairs from the Context schema
   - returns
-    `{name: <str:strategy_name>, id: <int:strategy_id>, short_description: <str:description>, long_description: <str:description>, goal: <dict:serialized_toplevelnormativegoal>}`
-- A DELETE request will delete the specified Strategy.
-  - returns `[{name: <str:strategy_name>, id: <int:strategy_id>}, ...]` listing
-    remaining Strategies
+    `{name: <str:context_name>, id: <int:context_id>, short_description: <str:description>, long_description: <str:description>, goal: <dict:serialized_toplevelnormativegoal>}`
+- A DELETE request will delete the specified Context.
+  - returns `[{name: <str:context_name>, id: <int:context_id>}, ...]` listing
+    remaining Contexts
+
+## `/descriptions/`
+
+- A GET request will list the available SystemDescriptions:
+  - returns `[{name: <str:description_name>, id: <int:description_id>}, ...]`
+- A POST request will create a new SystemDescription.
+  - Payload:
+    `{name: <str:description_name>, short_description: <str:description>, long_description : <str:description>, goal_id: <int:goal_id>}`
+  - returns `{name: <str:description_name>, id: <int:description_id>}`
+
+## `/descriptions/<int:description_id>`
+
+- A GET request will get the details of the specified SystemDescription:
+  - returns
+    `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>, shape: <str:shape>}`
+- A PUT request will modify the specified SystemDescription.
+  - Payload: dict containing any key/value pairs from the SystemDescription
+    schema
+  - returns
+    `{name: <str:description_name>, id: <int:description_id>, short_description: <str:description>, long_description: <str:description>}`
+- A DELETE request will delete the specified SystemDescription.
+  - returns `[{name: <str:description_name>, id: <int:description_id>}, ...]`
+    listing remaining SystemDescriptions
 
 ## `/propertyclaims/`
 
@@ -116,7 +139,7 @@ example, it will be something like
 
 - A GET request will get the details of the specified Argument:
   - returns
-    `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, context: [<int:claim_ids>], shape: <str:shape>}`
+    `{name: <str:argument_name>, id: <int:argument_id>, short_description: <str:description>, long_description: <str:description>, evidential_claims: [<int:claim_ids>], shape: <str:shape>}`
 - A PUT request will modify the specified Argument.
   - Payload: dict containing any key/value pairs from the Argument schema
   - returns
@@ -125,27 +148,27 @@ example, it will be something like
   - returns `[{name: <str:argument_name>, id: <int:argument_id>}, ...]` listing
     remaining Arguments
 
-## `/contexts/`
+## `/evidentialclaims/`
 
-- A GET request will list the available Contexts:
+- A GET request will list the available EvidentialClaims:
   - returns `[{name: <str:claim_name>, id: <int:claim_id>}, ...]`
 - A POST request will create a new PropertyClaim.
   - Payload:
     `{name: <str:claim_name>, short_description: <str:description>, long_description : <str:description>, argument_id: <int:argument_id>}`
   - returns `{name: <str:claim_name>, id: <int:claim_id>}`
 
-## `/contexts/<int:claim_id>`
+## `/evidentialclaims/<int:claim_id>`
 
-- A GET request will get the details of the specified Context:
+- A GET request will get the details of the specified EvidentialClaim:
   - returns
     `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, evidence: [<int:evidence_id>], shape: <str:shape>}`
-- A PUT request will modify the specified Context.
-  - Payload: dict containing any key/value pairs from the Context schema
+- A PUT request will modify the specified EvidentialClaim.
+  - Payload: dict containing any key/value pairs from the EvidentialClaim schema
   - returns
     `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, argument: <dict:serialized_argument>}`
-- A DELETE request will delete the specified Context.
+- A DELETE request will delete the specified EvidentialClaim.
   - returns `[{name: <str:claim_name>, id: <int:claim_id>}, ...]` listing
-    remaining Contexts
+    remaining EvidentialClaims
 
 ## `/evidence/`
 
@@ -164,7 +187,7 @@ example, it will be something like
 - A PUT request will modify the specified Evidence.
   - Payload: dict containing any key/value pairs from the Evidence schema
   - returns
-    `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, context: [<dict:serialized_context>]}`
+    `{name: <str:claim_name>, id: <int:claim_id>, short_description: <str:description>, long_description: <str:description>, URL: <str:url>, evidential_claim: [<dict:serialized_evidentialclaim>]}`
 - A DELETE request will delete the specified Evidence.
   - returns `[{name: <str:evidence_name>, id: <int:evidence_id>}, ...]` listing
     remaining Evidence

@@ -11,19 +11,21 @@ from eap_api.models import (
     EAPGroup,
     EAPUser,
     Evidence,
+    EvidentialClaim,
     PropertyClaim,
-    Strategy,
+    SystemDescription,
     TopLevelNormativeGoal,
 )
 
 from .constants_tests import (
     CASE1_INFO,
+    CONTEXT_INFO,
+    DESCRIPTION_INFO,
     EVIDENCE1_INFO_NO_ID,
     EVIDENTIALCLAIM1_INFO,
     GOAL_INFO,
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
-    STRATEGY_INFO,
     USER1_INFO,
 )
 
@@ -64,9 +66,9 @@ class TopLevelNormativeGoalTestCase(TestCase):
         assert isinstance(test_entry.assurance_case, AssuranceCase)
 
 
-class StrategyTestCase(TestCase):
+class ContextTestCase(TestCase):
     """
-    creates a Strategy object and tests foreign key and
+    creates a Context object and tests foreign key and
     whether the created title matches the expected title
     """
 
@@ -74,15 +76,42 @@ class StrategyTestCase(TestCase):
         case = AssuranceCase.objects.create(**CASE1_INFO)
         goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         goal.assurance_case = case
-        strategy = Strategy.objects.create(**STRATEGY_INFO)
-        strategy.goal = goal
-        return strategy
+        context = Context.objects.create(**CONTEXT_INFO)
+        context.goal = goal
+        return context
 
-    def test_strategy_creation(self):
-        test_name = STRATEGY_INFO["name"]
-        test_desc = STRATEGY_INFO["short_description"]
+    def test_context_creation(self):
+        test_name = CONTEXT_INFO["name"]
+        test_desc = CONTEXT_INFO["short_description"]
         test_entry = self.create_test_entry()
-        assert isinstance(test_entry, Strategy)
+        assert isinstance(test_entry, Context)
+        assert test_entry.name == test_name
+        assert test_entry.short_description == test_desc
+        # test one-step relation
+        assert isinstance(test_entry.goal, TopLevelNormativeGoal)
+        # test two-step relation
+        assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
+
+
+class DescriptionTestCase(TestCase):
+    """
+    creates a Context object and tests foreign key and
+    whether the created title matches the expected title
+    """
+
+    def create_test_entry(self):
+        case = AssuranceCase.objects.create(**CASE1_INFO)
+        goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        goal.assurance_case = case
+        desc = SystemDescription.objects.create(**DESCRIPTION_INFO)
+        desc.goal = goal
+        return desc
+
+    def test_description_creation(self):
+        test_name = DESCRIPTION_INFO["name"]
+        test_desc = DESCRIPTION_INFO["short_description"]
+        test_entry = self.create_test_entry()
+        assert isinstance(test_entry, SystemDescription)
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
@@ -118,9 +147,9 @@ class PropertyClaimTestCase(TestCase):
         assert isinstance(test_entry.goal.assurance_case, AssuranceCase)
 
 
-class ContextTestCase(TestCase):
+class EvidentialClaimTestCase(TestCase):
     """
-    creates an Context object and tests foreign key and
+    creates an EvidentialClaim object and tests foreign key and
     whether the created title matches the expected title
     """
 
@@ -130,15 +159,15 @@ class ContextTestCase(TestCase):
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         pclaim.goal = goal
-        eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
+        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
         eclaim.property_claim.set([pclaim])
         return eclaim
 
-    def test_context_creation(self):
+    def test_evidential_claim_creation(self):
         test_name = EVIDENTIALCLAIM1_INFO["name"]
         test_desc = EVIDENTIALCLAIM1_INFO["short_description"]
         test_entry = self.create_test_entry()
-        assert isinstance(test_entry, Context)
+        assert isinstance(test_entry, EvidentialClaim)
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
@@ -165,10 +194,10 @@ class EvidenceCase(TestCase):
         goal.assurance_case = case
         pclaim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         pclaim.goal = goal
-        eclaim = Context.objects.create(**EVIDENTIALCLAIM1_INFO)
+        eclaim = EvidentialClaim.objects.create(**EVIDENTIALCLAIM1_INFO)
         eclaim.property_claim.set([pclaim])
         evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
-        evidence.context.set([eclaim])
+        evidence.evidential_claim.set([eclaim])
         return evidence
 
     def test_evidence_creation(self):
@@ -179,19 +208,21 @@ class EvidenceCase(TestCase):
         assert test_entry.name == test_name
         assert test_entry.short_description == test_desc
         # test one-step relation
-        assert isinstance(test_entry.context.all()[0], Context)
+        assert isinstance(test_entry.evidential_claim.all()[0], EvidentialClaim)
         # test two-step relation
         assert isinstance(
-            test_entry.context.all()[0].property_claim.all()[0], PropertyClaim
+            test_entry.evidential_claim.all()[0].property_claim.all()[0], PropertyClaim
         )
         # test three-step relation
         assert isinstance(
-            test_entry.context.all()[0].property_claim.all()[0].goal,
+            test_entry.evidential_claim.all()[0].property_claim.all()[0].goal,
             TopLevelNormativeGoal,
         )
         # test four-step relation
         assert isinstance(
-            test_entry.context.all()[0].property_claim.all()[0].goal.assurance_case,
+            test_entry.evidential_claim.all()[0]
+            .property_claim.all()[0]
+            .goal.assurance_case,
             AssuranceCase,
         )
 

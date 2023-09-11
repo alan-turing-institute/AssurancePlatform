@@ -8,9 +8,9 @@
       "short_description": "Short description",
       "long_description": "Long description",
       "keywords": "Keywords (comma-separated)",
-      "strategy": [
+      "context": [
         {
-          "name": "Strategy",
+          "name": "Context",
           "short_description": "Short description",
           "long_description": "Long description"
         }
@@ -20,9 +20,9 @@
           "name": "Property claim",
           "short_description": "Short description",
           "long_description": "Long description",
-          "context": [
+          "evidential_claims": [
             {
-              "name": "Context",
+              "name": "Evidential claim",
               "short_description": "Short description",
               "long_description": "Long description",
               "evidence": [

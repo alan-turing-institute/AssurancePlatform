@@ -16,13 +16,18 @@ GOAL_INFO = {
     "keywords": "key",
     "assurance_case_id": 1,
 }
-STRATEGY_INFO = {
-    "name": "Strategy",
-    "short_description": "strategy for The Goal",
-    "long_description": "A longer description of the strategy",
+CONTEXT_INFO = {
+    "name": "Context",
+    "short_description": "context for The Goal",
+    "long_description": "A longer description of the context",
     "goal_id": 1,
 }
-
+DESCRIPTION_INFO = {
+    "name": "Description",
+    "short_description": "A short description of the system",
+    "long_description": "a much longer description of the system",
+    "goal_id": 1,
+}
 PROPERTYCLAIM1_INFO = {
     "name": "PropertyClaim 1",
     "short_description": "Goal 1 should be x",
@@ -36,38 +41,38 @@ PROPERTYCLAIM2_INFO = {
     "goal_id": 1,
 }
 EVIDENTIALCLAIM1_INFO = {
-    "name": "Context 1",
-    "short_description": "A short description of the first context",
-    "long_description": "A longer description of the first context",
+    "name": "Evidential Claim 1",
+    "short_description": "A short description of the first evidential claim",
+    "long_description": "A longer description of the first evidential claim",
 }
 EVIDENTIALCLAIM2_INFO = {
-    "name": "Context 2",
-    "short_description": "A short description of the second context",
-    "long_description": "A longer description of the second context",
+    "name": "Evidential Claim 2",
+    "short_description": "A short description of the second evidential claim",
+    "long_description": "A longer description of the second evidential claim",
 }
 EVIDENTIALCLAIM3_INFO = {
-    "name": "Context 3",
-    "short_description": "A short description of the third context",
-    "long_description": "A longer description of the third context",
+    "name": "Evidential Claim 3",
+    "short_description": "A short description of the third evidential claim",
+    "long_description": "A longer description of the third evidential claim",
 }
 EVIDENTIALCLAIM4_INFO = {
-    "name": "Context 4",
-    "short_description": "A short description of the fourth context",
-    "long_description": "A longer description of the fourth context",
+    "name": "Evidential Claim 4",
+    "short_description": "A short description of the fourth evidential claim",
+    "long_description": "A longer description of the fourth evidential claim",
 }
 EVIDENCE1_INFO = {
     "name": "Evidence 1",
     "short_description": "Some evidence to support claim 1",
     "long_description": "Description of that evidence",
     "URL": "http://evidence1.com",
-    "context_id": [1],
+    "evidential_claim_id": [1],
 }
 EVIDENCE2_INFO = {
     "name": "Evidence 2",
     "short_description": "Some more evidence to support claim 1",
     "long_description": "Description of that evidence",
     "URL": "http://evidence2.com",
-    "context_id": [1],
+    "evidential_claim_id": [1],
 }
 EVIDENCE1_INFO_NO_ID = {
     "name": "Evidence 1",
@@ -86,35 +91,35 @@ EVIDENCE3_INFO = {
     "short_description": "Some evidence to support claim 2",
     "long_description": "Description of that evidence",
     "URL": "http://evidence3.com",
-    "context_id": [2],
+    "evidential_claim_id": [2],
 }
 EVIDENCE4_INFO = {
     "name": "Evidence 4",
     "short_description": "Some more evidence to support claim 2",
     "long_description": "Description of that evidence",
     "URL": "http://evidence4.com",
-    "context_id": [2],
+    "evidential_claim_id": [2],
 }
 EVIDENCE5_INFO = {
     "name": "Evidence 5",
     "short_description": "Some evidence to support claim 3",
     "long_description": "Description of that evidence",
     "URL": "http://evidence5.com",
-    "context_id": [3],
+    "evidential_claim_id": [3],
 }
 EVIDENCE6_INFO = {
     "name": "Evidence 6",
     "short_description": "Some more evidence to support claim 3",
     "long_description": "Description of that evidence",
     "URL": "http://evidence6.com",
-    "context_id": [3],
+    "evidential_claim_id": [3],
 }
 EVIDENCE7_INFO = {
     "name": "Evidence 7",
     "short_description": "Some more evidence to support claim 4",
     "long_description": "Description of that evidence",
     "URL": "http://evidence7.com",
-    "context_id": [4],
+    "evidential_claim_id": [4],
 }
 USER1_INFO = {
     "username": "testUser1",

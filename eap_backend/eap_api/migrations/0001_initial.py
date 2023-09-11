@@ -197,6 +197,35 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
+            name="SystemDescription",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("short_description", models.CharField(max_length=1000)),
+                ("long_description", models.CharField(max_length=3000)),
+                ("created_date", models.DateTimeField(auto_now_add=True)),
+                (
+                    "goal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="system_description",
+                        to="eap_api.toplevelnormativegoal",
+                    ),
+                ),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
+        migrations.CreateModel(
             name="PropertyClaim",
             fields=[
                 (
@@ -250,7 +279,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="Context",
+            name="EvidentialClaim",
             fields=[
                 (
                     "id",
@@ -268,7 +297,7 @@ class Migration(migrations.Migration):
                 (
                     "property_claim",
                     models.ManyToManyField(
-                        related_name="context", to="eap_api.PropertyClaim"
+                        related_name="evidential_claims", to="eap_api.PropertyClaim"
                     ),
                 ),
             ],
@@ -294,9 +323,9 @@ class Migration(migrations.Migration):
                 ("created_date", models.DateTimeField(auto_now_add=True)),
                 ("URL", models.CharField(max_length=3000)),
                 (
-                    "context",
+                    "evidential_claim",
                     models.ManyToManyField(
-                        related_name="evidence", to="eap_api.Context"
+                        related_name="evidence", to="eap_api.EvidentialClaim"
                     ),
                 ),
             ],
@@ -335,7 +364,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name="Strategy",
+            name="Context",
             fields=[
                 (
                     "id",
@@ -354,7 +383,7 @@ class Migration(migrations.Migration):
                     "goal",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="strategy",
+                        related_name="context",
                         to="eap_api.toplevelnormativegoal",
                     ),
                 ),

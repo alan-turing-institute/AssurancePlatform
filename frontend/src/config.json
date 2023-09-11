@@ -4,10 +4,11 @@
   "property_claim_types": ["Project claim", "System claim"],
   "mermaid_item_styleclasses": {
     "classTopLevelNormativeGoal": "fill:#ff424e,color:#FFF",
-    "classStrategy": "fill:#D17E5A,color:#FFF",
+    "classContext": "fill:#D17E5A,color:#FFF",
+    "classSystemDescription": "fill:#D17E5A,color:#FFF",
     "classSystemClaim": "fill:#3ea572,color:#FFF",
     "classProjectClaim": "fill:#9db4e6,color:#FFF",
-    "classContext": "fill:#57847f,color:#FFF",
+    "classEvidentialClaim": "fill:#57847f,color:#FFF",
     "classEvidence": "fill:#155b53,color:#FFF",
     "classProjectClaimLevel1": "fill:#5986d7,color:#FFF",
     "classProjectClaimLevel2": "fill:#7a9ddd,color:#FFF",
@@ -29,12 +30,12 @@
       "parent_api_names": ["cases"],
       "parent_db_names": ["assurance_case_id"],
       "shape": "hexagon",
-      "children": ["Strategy", "PropertyClaim"],
+      "children": ["Context", "PropertyClaim", "SystemDescription"],
       "parent_relation": "one-to-many"
     },
-    "Strategy": {
-      "api_name": "strategies",
-      "db_name": "strategy",
+    "Context": {
+      "api_name": "contexts",
+      "db_name": "context",
       "parent_names": ["TopLevelNormativeGoal"],
       "parent_api_names": ["goals"],
       "parent_db_names": ["goal_id"],
@@ -42,7 +43,16 @@
       "children": [],
       "parent_relation": "one-to-many"
     },
-
+    "SystemDescription": {
+      "api_name": "descriptions",
+      "db_name": "system_description",
+      "parent_names": ["TopLevelNormativeGoal"],
+      "parent_api_names": ["goals"],
+      "parent_db_names": ["goal_id"],
+      "shape": "parallelogram-right",
+      "children": [],
+      "parent_relation": "one-to-many"
+    },
     "PropertyClaim": {
       "api_name": "propertyclaims",
       "db_name": "property_claims",
@@ -51,13 +61,13 @@
       "parent_api_names": ["goals", "propertyclaims"],
       "parent_db_names": ["goal_id", "property_claim_id"],
       "shape": "rounded",
-      "children": ["Context", "PropertyClaim"],
+      "children": ["EvidentialClaim", "PropertyClaim"],
       "parent_relation": "one-to-many"
     },
-    "Context": {
-      "api_name": "contexts",
-      "db_name": "context",
-      "id_name": "context_id",
+    "EvidentialClaim": {
+      "api_name": "evidentialclaims",
+      "db_name": "evidential_claims",
+      "id_name": "evidential_claim_id",
       "parent_names": ["PropertyClaim"],
       "parent_api_names": ["propertyclaims"],
       "parent_db_names": ["property_claim_id"],
@@ -68,9 +78,9 @@
     "Evidence": {
       "api_name": "evidence",
       "db_name": "evidence",
-      "parent_names": ["Context"],
-      "parent_api_names": ["contexts"],
-      "parent_db_names": ["context_id"],
+      "parent_names": ["EvidentialClaim"],
+      "parent_api_names": ["evidentialclaims"],
+      "parent_db_names": ["evidential_claim_id"],
       "shape": "data",
       "children": [],
       "parent_relation": "many-to-many"

@@ -88,10 +88,19 @@ class TopLevelNormativeGoal(CaseItem):
         return self.name
 
 
-class Strategy(CaseItem):
+class Context(CaseItem):
     shape = Shape.DIAMOND
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="strategy", on_delete=models.CASCADE
+        TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
+    )
+
+
+class SystemDescription(CaseItem):
+    shape = Shape.DIAMOND
+    goal = models.ForeignKey(
+        TopLevelNormativeGoal,
+        related_name="system_description",
+        on_delete=models.CASCADE,
     )
 
 
@@ -142,12 +151,14 @@ class PropertyClaim(CaseItem):
         super().save(*args, **kwargs)
 
 
-class Context(CaseItem):
+class EvidentialClaim(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
-    property_claim = models.ManyToManyField(PropertyClaim, related_name="context")
+    property_claim = models.ManyToManyField(
+        PropertyClaim, related_name="evidential_claims"
+    )
 
 
 class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    context = models.ManyToManyField(Context, related_name="evidence")
+    evidential_claim = models.ManyToManyField(EvidentialClaim, related_name="evidence")

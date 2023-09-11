@@ -7,8 +7,9 @@ from .models import (
     Context,
     EAPUser,
     Evidence,
+    EvidentialClaim,
     PropertyClaim,
-    Strategy,
+    SystemDescription,
     TopLevelNormativeGoal,
 )
 
@@ -25,7 +26,8 @@ class EAPUserAdmin(UserAdmin):
 admin.site.register(AssuranceCase)
 admin.site.register(EAPUser, EAPUserAdmin)
 admin.site.register(TopLevelNormativeGoal)
-admin.site.register(Strategy)
-admin.site.register(PropertyClaim)
 admin.site.register(Context)
+admin.site.register(SystemDescription)
+admin.site.register(PropertyClaim)
+admin.site.register(EvidentialClaim)
 admin.site.register(Evidence)
