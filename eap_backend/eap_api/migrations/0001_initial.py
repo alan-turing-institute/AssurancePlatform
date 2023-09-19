@@ -269,7 +269,7 @@ class Migration(migrations.Migration):
                 (
                     "property_claim",
                     models.ManyToManyField(
-                        related_name="property", to="eap_api.PropertyClaim"
+                        related_name="property_claims", to="eap_api.PropertyClaim"
                     ),
                 ),
             ],

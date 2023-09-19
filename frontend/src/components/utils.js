@@ -86,6 +86,7 @@ function jsonToMermaid(in_json) {
     let thisType = configData.navigation[itemType]["db_name"];
     let boxShape = configData.navigation[itemType]["shape"];
     // loop over all objects of this type
+    // here is the issue, evidence not being set as having proper parents! 
     for (let i = 0; i < parent[thisType].length; i++) {
       let thisObj = parent[thisType][i];
       let thisNode = getNodeName(itemType, thisObj.id);
