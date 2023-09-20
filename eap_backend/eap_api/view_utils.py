@@ -43,7 +43,7 @@ TYPE_DICT = {
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["property_claims"],
+        "children": ["property_claims", "evidence"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False), ("property_claim", False)],
     },
