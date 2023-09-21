@@ -210,6 +210,7 @@ def case_detail(request, pk):
         subprocess.run(
             ["mmdc", f"-i{fn}", f"-o{fn}.svg", "-w", "2000", "-H", "2000"],
             capture_output=True,
+            check=True,
         )
         Path(fn).unlink()
 
