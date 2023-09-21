@@ -13,6 +13,7 @@ import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
 import WorkInProcessBanner from "./WorkInProcessBanner"; // Import the banner component
 import Github from "./Github.js";
+import WorkInProcessBanner from "./WorkInProcessBanner"; // Import the banner component
 
 const AllRoutes = () => (
   <Router>
