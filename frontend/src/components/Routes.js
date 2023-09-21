@@ -11,9 +11,11 @@ import Groups from "./Groups.js";
 import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
+import WorkInProcessBanner from "./WorkInProcessBanner"; // Import the banner component
 
 const AllRoutes = () => (
   <Router>
+    <WorkInProcessBanner /> {/* Display the banner at the very top */}
     <Grid
       rows={["auto", "flex", "auto"]}
       columns={["fill"]}
