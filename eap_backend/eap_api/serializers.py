@@ -131,6 +131,12 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    # Added the evidence field to display associated Evidence instances
+    evidence = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, source="property_claim.evidence_set"
+    )
+
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
     class Meta:
@@ -146,6 +152,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "level",
             "claim_type",
             "property_claims",
+            "evidence",  # Include the evidence field in the serialized output
         )
 
 
