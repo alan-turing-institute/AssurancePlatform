@@ -132,10 +132,8 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     claim_type = serializers.CharField(default="Project claim")
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
-    # Added the evidence field to display associated Evidence instances
-    evidence = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True, source="property_claim.evidence_set"
-    )
+    # Use SerializerMethodField to handle the possibility of property_claim being None
+    evidence = serializers.SerializerMethodField()
 
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -152,8 +150,15 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "level",
             "claim_type",
             "property_claims",
-            "evidence",  # Include the evidence field in the serialized output
+            "evidence",
         )
+
+    # Define the method to get the evidence
+    def get_evidence(self, obj):
+        # Check if property_claim exists and has an evidence_set
+        if obj.property_claim and hasattr(obj.property_claim, "evidence_set"):
+            return [evidence.id for evidence in obj.property_claim.evidence_set.all()]
+        return []
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
