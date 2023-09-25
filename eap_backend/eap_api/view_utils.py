@@ -16,6 +16,7 @@ from .serializers import (
     ContextSerializer,
     EvidenceSerializer,
     PropertyClaimSerializer,
+    StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
 
@@ -45,7 +46,18 @@ TYPE_DICT = {
         "model": PropertyClaim,
         "children": ["property_claims", "evidence"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False), ("property_claim", False)],
+        "parent_types": [
+            ("goal", False),
+            ("property_claim", False),
+            ("strategy", False),
+        ],
+    },
+    "strategy": {
+        "serializer": StrategySerializer,
+        "model": models.Strategy,
+        "children": ["property_claims"],
+        "fields": ("name", "short_description", "long_description"),
+        "parent_types": [("goal", False)],
     },
     "evidence": {
         "serializer": EvidenceSerializer,

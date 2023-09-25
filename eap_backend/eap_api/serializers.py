@@ -7,6 +7,7 @@ from .models import (
     EAPUser,
     Evidence,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 
@@ -172,3 +173,9 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "URL",
             "property_claim_id",
         )
+
+
+class StrategySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Strategy
+        fields = ("id", "name", "short_description", "long_description", "goal")

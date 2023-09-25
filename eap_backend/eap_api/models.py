@@ -95,6 +95,18 @@ class Context(CaseItem):
     )
 
 
+class Strategy(CaseItem):
+    shape = Shape.ROUNDED_RECTANGLE
+    goal = models.ForeignKey(
+        TopLevelNormativeGoal, related_name="strategies", on_delete=models.CASCADE
+    )
+    short_description = models.CharField(max_length=1000, null=True, blank=True)
+    long_description = models.CharField(max_length=3000, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class PropertyClaim(CaseItem):
     class ClaimType(models.TextChoices):
         """Enum class for different types of property claims."""
@@ -120,25 +132,33 @@ class PropertyClaim(CaseItem):
         related_name="property_claims",
         on_delete=models.CASCADE,
     )
+
+    strategy = models.ForeignKey(
+        Strategy,
+        null=True,
+        blank=True,
+        related_name="strategy",
+        on_delete=models.CASCADE,
+    )
+
     level = models.PositiveIntegerField()
 
     def save(self, *args, **kwargs):
+        parent_count = sum(
+            [bool(self.goal), bool(self.strategy), bool(self.property_claim)]
+        )
+
+        if parent_count != 1:
+            msg = "A PropertyClaim should have exactly one parent."
+            raise ValueError(msg)
+
         try:
             parent_level = self.property_claim.level
         except AttributeError:
-            # If the parent is a TopLevelNormativeGoal rather than a PropertyClaim, it
-            # doesn't have a level.
             parent_level = 0
+
         self.level = parent_level + 1
-        # TODO Is this the right place to assert these things?
-        has_goal_parent = bool(self.goal)
-        has_claim_parent = bool(self.property_claim)
-        if has_claim_parent and has_goal_parent:
-            msg = "A PropertyClaim shouldn't have two parents."
-            raise ValueError(msg)
-        if not (has_claim_parent or has_goal_parent):
-            msg = "A PropertyClaim should have a parent."
-            raise ValueError(msg)
+
         super().save(*args, **kwargs)
 
 
