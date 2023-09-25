@@ -12,7 +12,7 @@ From this directory, run
 npm install
 ```
 
-to install the required dependencies,
+and then to install the required dependencies,
 
 ```
 npm start
