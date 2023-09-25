@@ -133,8 +133,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     # Use SerializerMethodField to handle the possibility of property_claim being None
-    evidence = serializers.SerializerMethodField()
-
+    evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
     class Meta:
@@ -152,13 +151,6 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claims",
             "evidence",
         )
-
-    # Define the method to get the evidence
-    def get_evidence(self, obj):
-        # Check if property_claim exists and has an evidence_set
-        if obj.property_claim and hasattr(obj.property_claim, "evidence_set"):
-            return [evidence.id for evidence in obj.property_claim.evidence_set.all()]
-        return []
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
