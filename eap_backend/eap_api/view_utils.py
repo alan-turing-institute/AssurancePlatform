@@ -30,7 +30,7 @@ TYPE_DICT = {
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
-        "children": ["context", "property_claims"],
+        "children": ["context", "property_claims", "strategies"],
         "fields": ("name", "short_description", "long_description", "keywords"),
         "parent_types": [("assurance_case", False)],
     },
@@ -57,7 +57,9 @@ TYPE_DICT = {
         "model": models.Strategy,
         "children": ["property_claims"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False)],
+        "parent_types": [
+            ("goal", False),
+        ],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
@@ -69,7 +71,7 @@ TYPE_DICT = {
 }
 # Pluralising the name of the type should be irrelevant.
 for k, v in tuple(TYPE_DICT.items()):
-    TYPE_DICT[k + "s"] = v
+    TYPE_DICT[k + "s"] = v if not k.endswith("y") else k[:-1] + "ies"
 
 
 def get_case_id(item):

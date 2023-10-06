@@ -82,6 +82,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
     class Meta:
@@ -96,6 +97,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "assurance_case_id",
             "context",
             "property_claims",
+            "strategies",
         )
 
 
@@ -129,6 +131,12 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         queryset=PropertyClaim.objects.all(),
         required=False,
     )
+    strategy = serializers.PrimaryKeyRelatedField(
+        source="strategy",
+        queryset=Strategy.objects.all(),
+        required=False,
+    )
+
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -176,6 +184,15 @@ class EvidenceSerializer(serializers.ModelSerializer):
 
 
 class StrategySerializer(serializers.ModelSerializer):
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
     class Meta:
         model = Strategy
-        fields = ("id", "name", "short_description", "long_description", "goal")
+        fields = (
+            "id",
+            "name",
+            "short_description",
+            "long_description",
+            "goal",
+            "property_claims",
+        )

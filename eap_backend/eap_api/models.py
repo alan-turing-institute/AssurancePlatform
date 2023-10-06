@@ -137,7 +137,7 @@ class PropertyClaim(CaseItem):
         Strategy,
         null=True,
         blank=True,
-        related_name="strategy",
+        related_name="strategies",
         on_delete=models.CASCADE,
     )
 
