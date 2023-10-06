@@ -95,28 +95,29 @@ building and sharing an assurance case can be more involved. As such, a
 significant element of the TEA platform is the user guidance and documentation
 that helps establish best practices and enhance the capabilities of teams.
 
-Our user guidance and documentation is continuously evolving, and the following tables provides an overview of what is currently available.[^gh_issues]
+Our user guidance and documentation is continuously evolving, and the following
+tables provides an overview of what is currently available.[^gh_issues]
 
 #### Introductory Resources and User Guidance
 
-| Title | Description | Type |
-| --- | ------- | ---- |
-| What is Trustworthy and Ethical Assurance? | A general introduction to trustworthy and ethical assurance as an ethical concept, rather than the methodology. | `Introductory Resource` |
-| The Assurance Ecosystem—A Brief Overview | An overview of the assurance ecosystem, including key actors, responsibilites, and challenges. | `Introductory Resource` |
-| An Introduction to Argument-Based Assurance | A simple introduction to argument-based assurance, including its history and motivation. | `Introductory Resource` |
-| Operationalising Ethical Principles—Putting TEA into Practice | How to operationalise ethical principles | `User Guidance` |
-| TEA and the Project Lifecycle | How to embed trustworthy and ethical assurance over the course of a project's lifecycle | `User Guidance` |
-| The Role of Standards | An introduction to standards as they apply to trustworthy and ethical assurance. | `User Guidance` |
-| Open Challenges in Assurance | An overview of open challenges and research questions, including links to further resources. | `User Guidance` |
+| Title                                                         | Description                                                                                                     | Type                    |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| What is Trustworthy and Ethical Assurance?                    | A general introduction to trustworthy and ethical assurance as an ethical concept, rather than the methodology. | `Introductory Resource` |
+| The Assurance Ecosystem—A Brief Overview                      | An overview of the assurance ecosystem, including key actors, responsibilites, and challenges.                  | `Introductory Resource` |
+| An Introduction to Argument-Based Assurance                   | A simple introduction to argument-based assurance, including its history and motivation.                        | `Introductory Resource` |
+| Operationalising Ethical Principles—Putting TEA into Practice | How to operationalise ethical principles                                                                        | `User Guidance`         |
+| TEA and the Project Lifecycle                                 | How to embed trustworthy and ethical assurance over the course of a project's lifecycle                         | `User Guidance`         |
+| The Role of Standards                                         | An introduction to standards as they apply to trustworthy and ethical assurance.                                | `User Guidance`         |
+| Open Challenges in Assurance                                  | An overview of open challenges and research questions, including links to further resources.                    | `User Guidance`         |
 
 #### Technical Documentation
 
-| Title | Description |
-| --- | ----- |
-| About the Platform | An overview of the technical details of the platform. |
-| Installation | Instructions on how to install the platform locally. |
-| Cloud Deployment | Instructions for deploying the platform to a cloud environment, such as Azure. |
-| API Details | Details of the platform's API. |
+| Title              | Description                                                                    |
+| ------------------ | ------------------------------------------------------------------------------ |
+| About the Platform | An overview of the technical details of the platform.                          |
+| Installation       | Instructions on how to install the platform locally.                           |
+| Cloud Deployment   | Instructions for deploying the platform to a cloud environment, such as Azure. |
+| API Details        | Details of the platform's API.                                                 |
 
 [^gh_issues]:
     You can also see our GitHub issues for further details of other modules or
