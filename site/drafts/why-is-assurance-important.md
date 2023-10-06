@@ -1,8 +1,8 @@
-— status: draft tags:
-
-- assurance
-- trust —
-
+---
+status: draft
+tags: 
+  - Introductory Resource
+---
 # Why is Assurance Important?
 
 Data-driven technologies, such as artificial intelligence, have a complex
