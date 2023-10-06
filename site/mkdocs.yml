@@ -119,9 +119,19 @@ markdown_extensions:
 nav:
   - Home: index.md
   - About: about.md
+  - Introductory Resources:
+      - About this Section: introductory-resources/index.md
+      - What is Trustworthy and Ethical Assurance: introductory-resources/what-is-tea.md
+      - The Assurance Ecosystem: introductory-resources/assurance-ecosystem.md
+      - An Introduction to Argument-Based Assurance: introductory-resources/argument-based-assurance.md
+      - Open Challenges in Trustworthy and Ethical Assurance: introductory-resources/open-challenges.md
   - User Guidance:
-      - Intro: guidance/index.md
+      - About this Section: guidance/index.md
       - Components of an Assurance Case: guidance/components.md
+      - Operationalising Ethical Principles: guidance/operationalising-ethics.md
+      - TEA and the Project Lifecycle: guidance/tea-project-lifecycle.md
+      - The Role of Standards in TEA: guidance/standards.md
+      - A Case Study: guidance/case-study.md
   - Platform Details:
       - About: platform-details/about.md
       - Installation Instructions: platform-details/installation.md
