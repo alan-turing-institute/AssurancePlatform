@@ -1,6 +1,6 @@
 CairoSVG>=2.5.2
 mkdocs-glightbox>=0.2.0
 mkdocs-material>=9.1.14
+mkdocs-table-reader-plugin>=2.0.1
 # Requirements for additional plugins
 pillow>=9.2.0
-mkdocs-table-reader-plugin>=2.0.1
