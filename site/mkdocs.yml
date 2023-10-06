@@ -57,23 +57,9 @@ theme:
 
 # Plugins
 plugins:
-  #   - blog:
-  #       post_date_format: medium
-  #       post_url_date_format: YYYY/MM/dd
-  #       post_url_format: "{slug}"
-  #       post_readtime: true
-  #   - glightbox:
-  #       touchNavigation: true
-  #       loop: false
-  #       effect: zoom
-  #       width: 100%
-  #       height: auto
-  #       zoomable: true
-  #       draggable: true
-  - search:
-      separator: "[\\s\\-,:!=\\[\\]()\"/]+|\\.(?!\\d)|&[lg]t;|(?!\\b)(?=[A-Z][a-z])"
+  - search
+  - table-reader
   - tags
-  # - social (disabled when running locally due to library issues)
 
 # Customization
 
