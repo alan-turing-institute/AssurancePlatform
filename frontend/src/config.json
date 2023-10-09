@@ -29,7 +29,7 @@
       "parent_api_names": ["cases"],
       "parent_db_names": ["assurance_case_id"],
       "shape": "hexagon",
-      "children": ["Context", "PropertyClaim"],
+      "children": ["Context", "PropertyClaim", "Strategy"],
       "parent_relation": "one-to-many"
     },
     "Context": {
@@ -64,6 +64,17 @@
       "shape": "data",
       "children": [],
       "parent_relation": "many-to-many"
+    },
+    "Strategy": {
+      "api_name": "strategies",
+      "db_name": "strategies",
+      "id_name": "strategy_id",
+      "parent_names": ["TopLevelNormativeGoal"],
+      "parent_api_names": ["goals"],
+      "parent_db_names": ["goal_id"],
+      "shape": "diamond",
+      "children": ["PropertyClaim"],
+      "parent_relation": "one-to-many"
     }
   }
 }

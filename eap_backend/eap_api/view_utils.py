@@ -9,6 +9,7 @@ from .models import (
     EAPGroup,
     Evidence,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
@@ -54,7 +55,7 @@ TYPE_DICT = {
     },
     "strategy": {
         "serializer": StrategySerializer,
-        "model": models.Strategy,
+        "model": Strategy,
         "children": ["property_claims"],
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [
@@ -71,7 +72,7 @@ TYPE_DICT = {
 }
 # Pluralising the name of the type should be irrelevant.
 for k, v in tuple(TYPE_DICT.items()):
-    TYPE_DICT[k + "s"] = v if not k.endswith("y") else k[:-1] + "ies"
+    TYPE_DICT[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
 
 
 def get_case_id(item):
@@ -150,6 +151,7 @@ def get_json_tree(id_list, obj_type):
             child_list = sorted(obj_data[child_type])
             obj_data[child_type] = get_json_tree(child_list, child_type)
         objs.append(obj_data)
+
     return objs
 
 

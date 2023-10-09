@@ -131,7 +131,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         queryset=PropertyClaim.objects.all(),
         required=False,
     )
-    strategy = serializers.PrimaryKeyRelatedField(
+    strategy_id = serializers.PrimaryKeyRelatedField(
         source="strategy",
         queryset=Strategy.objects.all(),
         required=False,
@@ -159,6 +159,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "claim_type",
             "property_claims",
             "evidence",
+            "strategy_id",
         )
 
 
@@ -184,6 +185,12 @@ class EvidenceSerializer(serializers.ModelSerializer):
 
 
 class StrategySerializer(serializers.ModelSerializer):
+    goal_id = serializers.PrimaryKeyRelatedField(
+        source="goal",
+        queryset=TopLevelNormativeGoal.objects.all(),
+        required=False,
+    )
+
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
@@ -193,6 +200,6 @@ class StrategySerializer(serializers.ModelSerializer):
             "name",
             "short_description",
             "long_description",
-            "goal",
+            "goal_id",
             "property_claims",
         )

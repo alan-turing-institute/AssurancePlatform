@@ -132,12 +132,11 @@ class PropertyClaim(CaseItem):
         related_name="property_claims",
         on_delete=models.CASCADE,
     )
-
     strategy = models.ForeignKey(
         Strategy,
         null=True,
         blank=True,
-        related_name="strategies",
+        related_name="property_claims",
         on_delete=models.CASCADE,
     )
 

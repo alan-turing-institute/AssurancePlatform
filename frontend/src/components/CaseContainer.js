@@ -526,19 +526,6 @@ class CaseContainer extends Component {
     );
   }
 
-  getCreateStrategyButton() {
-    return (
-      <Button
-        secondary
-        margin="xsmall"
-        label="Create Strategy"
-        onClick={() =>
-          this.showCreateLayer("Strategy", this.state.assurance_case.id, "Goal")
-        }
-      />
-    );
-  }
-
   getCreateSubItemButton(childType) {
     return (
       <Button
@@ -569,7 +556,6 @@ class CaseContainer extends Component {
           flex={false}
         >
           {this.getCreateGoalButton()}
-          {this.getCreateStrategyButton()},
           {this.state.itemType &&
             this.state.itemId &&
             configData.navigation[this.state.itemType]["children"].map(

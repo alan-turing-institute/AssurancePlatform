@@ -22,8 +22,8 @@ function ItemCreator(props) {
     configData["property_claim_types"][0],
   );
   const [url, setURL] = useState("www.some-evidence.com");
-  const [parentType, setParentType] = useState("Strategy"); // default to "Strategy"
   const [submitClicked, setSubmitClicked] = useState(false);
+  const [parentType, setParentType] = useState("Strategy"); // default to "Strategy"
 
   function handleSubmit(event) {
     event.preventDefault();

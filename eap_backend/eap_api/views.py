@@ -14,6 +14,7 @@ from .models import (
     EAPUser,
     Evidence,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
@@ -23,6 +24,7 @@ from .serializers import (
     EAPUserSerializer,
     EvidenceSerializer,
     PropertyClaimSerializer,
+    StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
@@ -459,3 +461,51 @@ def parents(request, item_type, pk):
             continue
         parents_data += serializer_class(parent, many=many).data
     return JsonResponse(parents_data, safe=False)
+
+
+@csrf_exempt
+def strategies_list(request):
+    """
+    List all strategies, or make a new strategy
+    """
+    if request.method == "GET":
+        strategies = Strategy.objects.all()
+        strategies = filter_by_case_id(strategies, request)
+        serializer = StrategySerializer(strategies, many=True)
+        summaries = make_summary(serializer.data)
+        return JsonResponse(summaries, safe=False)
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        serializer = StrategySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary, status=201)
+        return JsonResponse(serializer.errors, status=400)
+    return None
+
+
+@csrf_exempt
+def strategy_detail(request, pk):
+    try:
+        strategy = Strategy.objects.get(pk=pk)
+    except Strategy.DoesNotExist:
+        return HttpResponse(status=404)
+
+    if request.method == "GET":
+        serializer = StrategySerializer(strategy)
+        return JsonResponse(serializer.data)
+
+    elif request.method == "PUT":
+        data = JSONParser().parse(request)
+        serializer = StrategySerializer(strategy, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            summary = make_summary(serializer.data)
+            return JsonResponse(summary)
+        return JsonResponse(serializer.errors, status=400)
+
+    elif request.method == "DELETE":
+        strategy.delete()
+        return HttpResponse(status=204)
+    return None
