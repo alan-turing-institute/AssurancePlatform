@@ -38,7 +38,7 @@
       "parent_names": ["TopLevelNormativeGoal"],
       "parent_api_names": ["goals"],
       "parent_db_names": ["goal_id"],
-      "shape": "parallelogram-left",
+      "shape": "stadium",
       "children": [],
       "parent_relation": "one-to-many"
     },
@@ -72,7 +72,7 @@
       "parent_names": ["TopLevelNormativeGoal"],
       "parent_api_names": ["goals"],
       "parent_db_names": ["goal_id"],
-      "shape": "diamond",
+      "shape": "parallelogram-left",
       "children": ["PropertyClaim"],
       "parent_relation": "one-to-many"
     }

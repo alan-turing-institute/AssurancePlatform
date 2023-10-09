@@ -35,6 +35,7 @@ class Shape(Enum):
     DIAMOND = 1
     ROUNDED_RECTANGLE = 2
     CYLINDER = 3
+    PARALLELOGRAM = 4
 
 
 class CaseItem(models.Model):
@@ -89,7 +90,7 @@ class TopLevelNormativeGoal(CaseItem):
 
 
 class Context(CaseItem):
-    shape = Shape.DIAMOND
+    shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
         TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
     )
@@ -114,7 +115,7 @@ class PropertyClaim(CaseItem):
         SYSTEM = "System claim"
         PROJECT = "Project claim"
 
-    shape = Shape.ROUNDED_RECTANGLE
+    shape = Shape.RECTANGLE
     claim_type = models.CharField(
         max_length=32, choices=ClaimType.choices, default=ClaimType.PROJECT
     )

@@ -182,9 +182,10 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
             # TODO This is silly. It's all because some parent_type names are written
             # with a plural s in the end while others are not.
             if (
-                parent_type not in parent_type_tmp
-                and parent_type_tmp not in parent_type
+                parent_type[:-1] not in parent_type_tmp[:-1]
+                and parent_type_tmp[:-1] not in parent_type[:-1]
             ):
+                print(parent_type, parent_type_tmp)
                 continue
             if plural:
                 parent_id = [parent_id]
