@@ -27,8 +27,8 @@ SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g
 DEBUG = True
 
 # Keys needed for OAuth
-GITHUB_CLIENT_ID = 0
-GITHUB_CLIENT_SECRET = 0
+GITHUB_CLIENT_ID = "0cd5a829deef2e8d3a12"
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
 

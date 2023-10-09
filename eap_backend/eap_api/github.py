@@ -18,9 +18,10 @@ class Github:
         """
         validate method Queries the GitHub URL to fetch the user info
         """
+
         try:
             url = "https://github.com/login/oauth/access_token?client_id={}&client_secret={}&code={}".format(
-                settings.CLIENT_ID, settings.CLIENT_SECRET, auth_token
+                settings.GITHUB_CLIENT_ID, settings.GITHUB_CLIENT_SECRET, auth_token
             )
             print(url)
             req = requests.urlopen(url)
@@ -50,7 +51,7 @@ def register_social_user(provider, email):
             new_user = EAPUser.objects.get(email=email)
 
             registered_user = EAPUser.objects.get(email=email)
-            registered_user.check_password(settings.SOCIAL_SECRET)
+            registered_user.check_password(settings.GITHUB_CLIENT_SECRET)
 
             Token.objects.filter(user=registered_user).delete()
             Token.objects.create(user=registered_user)
@@ -71,13 +72,17 @@ def register_social_user(provider, email):
             )
 
     else:
-        user = {"username": email, "email": email, "password": settings.SOCIAL_SECRET}
+        user = {
+            "username": email,
+            "email": email,
+            "password": settings.GITHUB_CLIENT_SECRET,
+        }
         user = EAPUser.objects.create_user(**user)
         user.is_active = True
         user.auth_provider = provider
         user.save()
         new_user = EAPUser.objects.get(email=email)
-        new_user.check_password(settings.SOCIAL_SECRET)
+        new_user.check_password(settings.GITHUB_CLIENT_SECRET)
         Token.objects.create(user=new_user)
         new_token = list(Token.objects.filter(user_id=new_user).values("key"))
         return {
