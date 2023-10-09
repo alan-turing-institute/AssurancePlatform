@@ -705,11 +705,12 @@ class CaseContainer extends Component {
                 secondary
                 onClick={this.exportCurrentCase.bind(this)}
               />
-              <Button
+              {/* Turning this off for now as requires more obtuse backend */}
+              {/* <Button
                 label="Export Image"
                 secondary
                 onClick={this.exportCurrentCaseAsMD.bind(this)}
-              />
+              /> */}
             </Box>
 
             <Box
