@@ -23,7 +23,6 @@ class Github:
             url = "https://github.com/login/oauth/access_token?client_id={}&client_secret={}&code={}".format(
                 settings.GITHUB_CLIENT_ID, settings.GITHUB_CLIENT_SECRET, auth_token
             )
-            print(url)
             req = requests.urlopen(url)
             reply = req.read()
             access_token = (reply.decode("utf-8").split("&"))[0][13:]
@@ -45,7 +44,6 @@ class Github:
 
 def register_social_user(provider, email):
     filtered_user_by_email = EAPUser.objects.filter(email=email)
-
     if filtered_user_by_email.exists():
         if provider == filtered_user_by_email[0].auth_provider:
             new_user = EAPUser.objects.get(email=email)
@@ -62,7 +60,7 @@ def register_social_user(provider, email):
             return {
                 "username": registered_user.username,
                 "email": registered_user.email,
-                "tokens": str(new_token[0]["key"]),
+                "token": str(new_token[0]["key"]),
             }
 
         else:
@@ -75,7 +73,8 @@ def register_social_user(provider, email):
         user = {
             "username": email,
             "email": email,
-            "password": settings.GITHUB_CLIENT_SECRET,
+            "password": settings.GITHUB_CLIENT_SECRET,  # Dummy password for now
+            "auth_provider": "github",
         }
         user = EAPUser.objects.create_user(**user)
         user.is_active = True
@@ -88,5 +87,5 @@ def register_social_user(provider, email):
         return {
             "email": new_user.email,
             "username": new_user.username,
-            "tokens": str(new_token[0]["key"]),
+            "token": str(new_token[0]["key"]),
         }

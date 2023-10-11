@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "grommet";
 import { getBaseURL } from "./utils.js";
+import Github from "./Github.js";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -88,6 +89,8 @@ const Login = () => {
         <Text>Not already registered?</Text>
         <Button href="/signup/" label="Sign-up" />
       </Box>
+
+      <Github />
     </Box>
   );
 };

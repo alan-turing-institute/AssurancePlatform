@@ -39,5 +39,5 @@ urlpatterns = [
         name="parents",
     ),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-    path("github/", views.GithubSocialAuthView.as_view()),
+    path("auth/github/", views.GithubSocialAuthView.as_view()),
 ]
