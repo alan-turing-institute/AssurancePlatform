@@ -31,5 +31,5 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("strategies/", views.strategies_list, name="strategies_list"),
     path("strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"),
-    path("github/", views.GithubSocialAuthView.as_view()),
+    path("auth/github/", views.GithubSocialAuthView.as_view()),
 ]

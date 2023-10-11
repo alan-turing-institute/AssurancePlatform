@@ -1,12 +1,12 @@
 import React from "react";
-import { Box } from "grommet";
-
+import { Box, Button } from "grommet";
+import { getBaseURL } from "./utils.js";
 import LoginGithub from "react-login-github";
 import github from "./github.png";
 
 const Github = () => {
   function onSuccess(e) {
-    fetch("http://127.0.0.1:8000/api/github/", {
+    fetch(`${getBaseURL()}/auth/github/`, {
       method: "POST",
       body: JSON.stringify({ auth_token: e.code }),
       headers: {
@@ -15,8 +15,17 @@ const Github = () => {
     })
       .then((res) => res.json())
       .then((response) => {
-        document.getElementById("email_id").innerText = response["email"];
-        document.getElementById("auth_token").innerText = response["tokens"];
+        // Assuming your backend returns the token with a key "token"
+        const token = response["token"];
+        if (token) {
+          localStorage.setItem("token", token);
+          window.location.replace("/");
+        } else {
+          console.error("Token not found in response");
+        }
+      })
+      .catch((error) => {
+        console.error("Error during GitHub authentication:", error);
       });
   }
 
@@ -25,31 +34,26 @@ const Github = () => {
   }
 
   return (
-    <Box overflow="auto">
+    <Box overflow="auto" gap="medium" pad="medium">
       <div className="Github">
         <LoginGithub
           clientId="0cd5a829deef2e8d3a12"
           onSuccess={onSuccess}
           onFailure={onFailure}
-          className="github"
         >
-          <img
-            src={github}
-            alt="Sign in with github"
-            className="github-image"
-          ></img>
-          <h2 className="github-name">Sign in with github</h2>
+          {/* Using Grommet's Button for styling */}
+          <Button
+            label="Sign in with GitHub"
+            icon={
+              <img
+                src={github}
+                alt="GitHub Logo"
+                style={{ width: "24px", height: "24px" }}
+              />
+            }
+            primary={true}
+          />
         </LoginGithub>
-        <div className="show-user_info">
-          <div>
-            <label className="info">Email Id:</label>
-            <label id="email_id"></label>
-          </div>
-          <div>
-            <label className="info">Auth token:</label>
-            <label id="auth_token"></label>
-          </div>
-        </div>
       </div>
     </Box>
   );
