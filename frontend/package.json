@@ -19,6 +19,8 @@
     "prettier": "^2.5.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-github-login": "^1.0.3",
+    "react-login-github": "^1.0.8",
     "react-mermaid2": "^0.1.4",
     "react-router-dom": "^6.2.1",
     "react-scripts": "^5.0.1",
@@ -26,7 +28,8 @@
     "regenerator-runtime": "^0.13.11",
     "styled-components": "^5.3.3",
     "uuid": "^8.3.2",
-    "web-vitals": "^1.1.2"
+    "web-vitals": "^1.1.2",
+    "webpack": "^5.88.2"
   },
   "jest": {
     "moduleNameMapper": {

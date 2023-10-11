@@ -136,3 +136,6 @@ dmypy.json
 .pyre/
 
 .DS_Store
+
+*.env
+DO_NOT_COMMIT

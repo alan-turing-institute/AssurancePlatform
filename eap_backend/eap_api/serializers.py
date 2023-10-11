@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .github import Github, register_social_user
 from .models import (
     AssuranceCase,
     Context,
@@ -11,6 +12,23 @@ from .models import (
     SystemDescription,
     TopLevelNormativeGoal,
 )
+
+
+class GithubSocialAuthSerializer(serializers.Serializer):
+    """Handles serialization of GitHub related data"""
+
+    auth_token = serializers.CharField()
+
+    def validate_auth_token(self, auth_token):
+        user_data = Github.validate(auth_token)
+
+        try:
+            email = user_data["email"]
+            provider = "github"
+        except Exception:
+            msg = "The token is invalid or expired. Please login again."
+            raise Exception from serializers.ValidationError(msg)
+        return register_social_user(provider=provider, email=email)
 
 
 class EAPUserSerializer(serializers.ModelSerializer):

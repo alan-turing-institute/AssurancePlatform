@@ -26,6 +26,12 @@ SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Keys needed for OAuth
+GITHUB_CLIENT_ID = "0cd5a829deef2e8d3a12"
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+REDIRECT_URI = "http://localhost:3000/login"
+
+
 ALLOWED_HOSTS = ["*"]
 
 
@@ -62,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 if "CORS_ORIGIN_WHITELIST" in os.environ:
@@ -72,6 +79,7 @@ else:
         "http://localhost:8000",
         "http://localhost:8080",
     )
+CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = "eap_backend.urls"
 
