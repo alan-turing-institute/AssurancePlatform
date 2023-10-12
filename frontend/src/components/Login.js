@@ -81,7 +81,10 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </FormField>
-            <Button type="submit" label="Login" primary={true} />
+            <Box direction="row" gap="medium">
+              <Button type="submit" label="Login" primary={true} />
+              <Github />
+            </Box>
           </Form>
         )}
       </Box>
@@ -89,8 +92,6 @@ const Login = () => {
         <Text>Not already registered?</Text>
         <Button href="/signup/" label="Sign-up" />
       </Box>
-
-      <Github />
     </Box>
   );
 };

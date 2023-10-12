@@ -1,21 +1,31 @@
 import React from "react";
 import { Box, Button } from "grommet";
 import { getBaseURL } from "./utils.js";
-import LoginGithub from "react-login-github";
 import github from "./github.png";
 
 const Github = () => {
-  function onSuccess(e) {
+  const GITHUB_CLIENT_ID = "0cd5a829deef2e8d3a12";
+  const GITHUB_REDIRECT_URI = window.location.origin; // assuming you're redirecting back to the current origin
+  const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}`;
+
+  function handleGitHubLogin() {
+    window.location.href = GITHUB_AUTH_URL;
+  }
+
+  // Assuming your server is redirecting back with the "code" parameter in the URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
+
+  if (code) {
     fetch(`${getBaseURL()}/auth/github/`, {
       method: "POST",
-      body: JSON.stringify({ auth_token: e.code }),
+      body: JSON.stringify({ auth_token: code }),
       headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
     })
       .then((res) => res.json())
       .then((response) => {
-        // Assuming your backend returns the token with a key "token"
         const token = response["token"];
         if (token) {
           localStorage.setItem("token", token);
@@ -29,33 +39,19 @@ const Github = () => {
       });
   }
 
-  function onFailure(e) {
-    alert(e);
-  }
-
   return (
-    <Box overflow="auto" gap="medium" pad="medium">
-      <div className="Github">
-        <LoginGithub
-          clientId="0cd5a829deef2e8d3a12"
-          onSuccess={onSuccess}
-          onFailure={onFailure}
-        >
-          {/* Using Grommet's Button for styling */}
-          <Button
-            label="Sign in with GitHub"
-            icon={
-              <img
-                src={github}
-                alt="GitHub Logo"
-                style={{ width: "24px", height: "24px" }}
-              />
-            }
-            primary={true}
-          />
-        </LoginGithub>
-      </div>
-    </Box>
+    <Button
+      label="Sign in with GitHub"
+      icon={
+        <img
+          src={github}
+          alt="GitHub Logo"
+          style={{ width: "24px", height: "24px" }}
+        />
+      }
+      primary={true}
+      onClick={handleGitHubLogin}
+    />
   );
 };
 
