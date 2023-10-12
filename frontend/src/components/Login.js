@@ -89,8 +89,9 @@ const Login = () => {
         <Text>Not already registered?</Text>
         <Button href="/signup/" label="Sign-up" />
       </Box>
-
-      <Github />
+      <Box flex={false} gap="small" pad="medium" width="medium">
+        <Github />
+      </Box>
     </Box>
   );
 };
