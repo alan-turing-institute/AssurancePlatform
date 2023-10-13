@@ -37,6 +37,7 @@ class Shape(Enum):
     DIAMOND = 1
     ROUNDED_RECTANGLE = 2
     CYLINDER = 3
+    PARALLELOGRAM = 4
 
 
 class CaseItem(models.Model):
@@ -91,19 +92,22 @@ class TopLevelNormativeGoal(CaseItem):
 
 
 class Context(CaseItem):
-    shape = Shape.DIAMOND
+    shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
         TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
     )
 
 
-class SystemDescription(CaseItem):
-    shape = Shape.DIAMOND
+class Strategy(CaseItem):
+    shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
-        TopLevelNormativeGoal,
-        related_name="system_description",
-        on_delete=models.CASCADE,
+        TopLevelNormativeGoal, related_name="strategies", on_delete=models.CASCADE
     )
+    short_description = models.CharField(max_length=1000, null=True, blank=True)
+    long_description = models.CharField(max_length=3000, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 
 class PropertyClaim(CaseItem):
@@ -113,7 +117,7 @@ class PropertyClaim(CaseItem):
         SYSTEM = "System claim"
         PROJECT = "Project claim"
 
-    shape = Shape.ROUNDED_RECTANGLE
+    shape = Shape.RECTANGLE
     claim_type = models.CharField(
         max_length=32, choices=ClaimType.choices, default=ClaimType.PROJECT
     )
@@ -131,36 +135,36 @@ class PropertyClaim(CaseItem):
         related_name="property_claims",
         on_delete=models.CASCADE,
     )
+    strategy = models.ForeignKey(
+        Strategy,
+        null=True,
+        blank=True,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
+    )
+
     level = models.PositiveIntegerField()
 
     def save(self, *args, **kwargs):
+        parent_count = sum(
+            [bool(self.goal), bool(self.strategy), bool(self.property_claim)]
+        )
+
+        if parent_count != 1:
+            msg = "A PropertyClaim should have exactly one parent."
+            raise ValueError(msg)
+
         try:
             parent_level = self.property_claim.level
         except AttributeError:
-            # If the parent is a TopLevelNormativeGoal rather than a PropertyClaim, it
-            # doesn't have a level.
             parent_level = 0
+
         self.level = parent_level + 1
-        # TODO Is this the right place to assert these things?
-        has_goal_parent = bool(self.goal)
-        has_claim_parent = bool(self.property_claim)
-        if has_claim_parent and has_goal_parent:
-            msg = "A PropertyClaim shouldn't have two parents."
-            raise ValueError(msg)
-        if not (has_claim_parent or has_goal_parent):
-            msg = "A PropertyClaim should have a parent."
-            raise ValueError(msg)
+
         super().save(*args, **kwargs)
-
-
-class EvidentialClaim(CaseItem):
-    shape = Shape.ROUNDED_RECTANGLE
-    property_claim = models.ManyToManyField(
-        PropertyClaim, related_name="evidential_claims"
-    )
 
 
 class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    evidential_claim = models.ManyToManyField(EvidentialClaim, related_name="evidence")
+    property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")

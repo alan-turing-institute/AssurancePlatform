@@ -48,6 +48,7 @@ jobs:
       - run:
           pip install
           git+https://${GH_TOKEN}@github.com/squidfunk/mkdocs-material.git
+          mkdocs-table-reader-plugin
       - name: Build and Deploy
         working-directory: ./site
         run: |

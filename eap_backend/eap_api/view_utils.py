@@ -8,18 +8,16 @@ from .models import (
     Context,
     EAPGroup,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
     ContextSerializer,
     EvidenceSerializer,
-    EvidentialClaimSerializer,
     PropertyClaimSerializer,
-    SystemDescriptionSerializer,
+    StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
 
@@ -33,7 +31,7 @@ TYPE_DICT = {
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
-        "children": ["context", "system_description", "property_claims"],
+        "children": ["context", "property_claims", "strategies"],
         "fields": ("name", "short_description", "long_description", "keywords"),
         "parent_types": [("assurance_case", False)],
     },
@@ -44,38 +42,37 @@ TYPE_DICT = {
         "fields": ("name", "short_description", "long_description"),
         "parent_types": [("goal", False)],
     },
-    "system_description": {
-        "serializer": SystemDescriptionSerializer,
-        "model": SystemDescription,
-        "children": [],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False)],
-    },
     "property_claim": {
         "serializer": PropertyClaimSerializer,
         "model": PropertyClaim,
-        "children": ["evidential_claims", "property_claims"],
+        "children": ["property_claims", "evidence"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False), ("property_claim", False)],
+        "parent_types": [
+            ("goal", False),
+            ("property_claim", False),
+            ("strategy", False),
+        ],
     },
-    "evidential_claim": {
-        "serializer": EvidentialClaimSerializer,
-        "model": EvidentialClaim,
-        "children": ["evidence"],
+    "strategy": {
+        "serializer": StrategySerializer,
+        "model": Strategy,
+        "children": ["property_claims"],
         "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("property_claim", True)],
+        "parent_types": [
+            ("goal", False),
+        ],
     },
     "evidence": {
         "serializer": EvidenceSerializer,
         "model": Evidence,
         "children": [],
         "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_types": [("evidential_claim", True)],
+        "parent_types": [("property_claim", True)],
     },
 }
 # Pluralising the name of the type should be irrelevant.
 for k, v in tuple(TYPE_DICT.items()):
-    TYPE_DICT[k + "s"] = v
+    TYPE_DICT[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
 
 
 def get_case_id(item):
@@ -154,6 +151,7 @@ def get_json_tree(id_list, obj_type):
             child_list = sorted(obj_data[child_type])
             obj_data[child_type] = get_json_tree(child_list, child_type)
         objs.append(obj_data)
+
     return objs
 
 
@@ -184,9 +182,10 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
             # TODO This is silly. It's all because some parent_type names are written
             # with a plural s in the end while others are not.
             if (
-                parent_type not in parent_type_tmp
-                and parent_type_tmp not in parent_type
+                parent_type[:-1] not in parent_type_tmp[:-1]
+                and parent_type_tmp[:-1] not in parent_type[:-1]
             ):
+                print(parent_type, parent_type_tmp)
                 continue
             if plural:
                 parent_id = [parent_id]

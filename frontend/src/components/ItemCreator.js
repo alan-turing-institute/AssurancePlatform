@@ -23,10 +23,10 @@ function ItemCreator(props) {
   );
   const [url, setURL] = useState("www.some-evidence.com");
   const [submitClicked, setSubmitClicked] = useState(false);
+  const [parentType, setParentType] = useState("Strategy"); // default to "Strategy"
 
   function handleSubmit(event) {
     event.preventDefault();
-    // only do the submit actions once.
     if (submitClicked) {
       console.log("tried to submit more than once");
       return null;
@@ -48,8 +48,18 @@ function ItemCreator(props) {
     request_body["short_description"] = sdesc;
     request_body["long_description"] = ldesc;
     request_body["keywords"] = keywords;
-    if (props.type === "PropertyClaim") request_body["claim_type"] = claimType;
-    if (props.type === "Evidence") request_body["URL"] = url;
+
+    if (props.type === "PropertyClaim") {
+      request_body["claim_type"] = claimType;
+      // Adjust based on selected parentType for PropertyClaim
+      request_body[parentType.toLowerCase()] = parseInt(props.parentId);
+    } else if (props.type === "Evidence") {
+      request_body["URL"] = url;
+    } else if (props.type === "Strategy") {
+      // adjust for strategy
+      request_body["goal"] = parseInt(props.parentId);
+    }
+
     if (
       configData.navigation[props.type]["parent_relation"] === "many-to-many"
     ) {
@@ -60,12 +70,10 @@ function ItemCreator(props) {
       request_body[configData.navigation[props.parentType]["id_name"]] =
         parseInt(props.parentId);
     }
+
     const requestOptions = {
       method: "POST",
-      headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request_body),
     };
 
@@ -113,6 +121,16 @@ function ItemCreator(props) {
             onChange={(e) => setKeywords(e.target.value)}
           />
         </FormField>
+        {props.type === "PropertyClaim" && (
+          <FormField label="Parent type">
+            <Select
+              placeholder={parentType}
+              name="parent_type"
+              options={["Strategy", "TopLevelNormativeGoal", "PropertyClaim"]}
+              onChange={(e) => setParentType(e.target.value)}
+            />
+          </FormField>
+        )}
         {props.type === "PropertyClaim" && (
           <FormField label="Claim type">
             <Select

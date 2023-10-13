@@ -7,9 +7,8 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
-    EvidentialClaim,
     PropertyClaim,
-    SystemDescription,
+    Strategy,
     TopLevelNormativeGoal,
 )
 
@@ -100,8 +99,8 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    system_description = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
     class Meta:
@@ -115,8 +114,8 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "keywords",
             "assurance_case_id",
             "context",
-            "system_description",
             "property_claims",
+            "strategies",
         )
 
 
@@ -139,24 +138,6 @@ class ContextSerializer(serializers.ModelSerializer):
         )
 
 
-class SystemDescriptionSerializer(serializers.ModelSerializer):
-    goal_id = serializers.PrimaryKeyRelatedField(
-        source="goal", queryset=TopLevelNormativeGoal.objects.all()
-    )
-    type = serializers.CharField(default="SystemDescription", read_only=True)
-
-    class Meta:
-        model = SystemDescription
-        fields = (
-            "id",
-            "type",
-            "name",
-            "short_description",
-            "long_description",
-            "goal_id",
-        )
-
-
 class PropertyClaimSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
         source="goal",
@@ -168,10 +149,18 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         queryset=PropertyClaim.objects.all(),
         required=False,
     )
+    strategy_id = serializers.PrimaryKeyRelatedField(
+        source="strategy",
+        queryset=Strategy.objects.all(),
+        required=False,
+    )
+
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    evidential_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    # Use SerializerMethodField to handle the possibility of property_claim being None
+    evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
     class Meta:
@@ -186,37 +175,16 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claim_id",
             "level",
             "claim_type",
-            "evidential_claims",
             "property_claims",
-        )
-
-
-class EvidentialClaimSerializer(serializers.ModelSerializer):
-    property_claim_id = serializers.PrimaryKeyRelatedField(
-        source="property_claim",
-        queryset=PropertyClaim.objects.all(),
-        many=True,
-    )
-    evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(default="EvidentialClaim", read_only=True)
-
-    class Meta:
-        model = EvidentialClaim
-        fields = (
-            "id",
-            "type",
-            "name",
-            "short_description",
-            "long_description",
-            "property_claim_id",
             "evidence",
+            "strategy_id",
         )
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
-    evidential_claim_id = serializers.PrimaryKeyRelatedField(
-        source="evidential_claim",
-        queryset=EvidentialClaim.objects.all(),
+    property_claim_id = serializers.PrimaryKeyRelatedField(
+        source="property_claim",
+        queryset=PropertyClaim.objects.all(),
         many=True,
     )
     type = serializers.CharField(default="Evidence", read_only=True)
@@ -230,5 +198,26 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "short_description",
             "long_description",
             "URL",
-            "evidential_claim_id",
+            "property_claim_id",
+        )
+
+
+class StrategySerializer(serializers.ModelSerializer):
+    goal_id = serializers.PrimaryKeyRelatedField(
+        source="goal",
+        queryset=TopLevelNormativeGoal.objects.all(),
+        required=False,
+    )
+
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Strategy
+        fields = (
+            "id",
+            "name",
+            "short_description",
+            "long_description",
+            "goal_id",
+            "property_claims",
         )

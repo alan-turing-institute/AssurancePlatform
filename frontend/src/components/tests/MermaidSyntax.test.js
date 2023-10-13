@@ -19,8 +19,8 @@ test("Simple JSON translation", () => {
         short_description: "short",
         long_description: "long",
         context: [],
-        system_description: [],
         property_claims: [],
+        strategies: [],
       },
     ],
   };
@@ -46,8 +46,8 @@ test("jsonToMermaid sanitizes goal name", () => {
         short_description: "short",
         long_description: "long",
         context: [],
-        system_description: [],
         property_claims: [],
+        strategies: [],
       },
     ],
   };
