@@ -514,6 +514,7 @@ def strategy_detail(request, pk):
         strategy.delete()
         return HttpResponse(status=204)
     return None
+
 @permission_classes((AllowAny,))
 class GithubSocialAuthView(GenericAPIView):
     serializer_class = GithubSocialAuthSerializer
