@@ -137,3 +137,4 @@ nav:
       - Installation Instructions: platform-details/installation.md
       - API Documentation: platform-details/api.md
       - Azure Deployment: platform-details/azure.md
+      - GiHub OAuth: platform-details/github.md
