@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Button } from "grommet";
+import { Button } from "grommet";
 import { getBaseURL } from "./utils.js";
 import github from "./github.png";
 
