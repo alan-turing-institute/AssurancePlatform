@@ -39,7 +39,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "jest",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "prestart": "echo REACT_APP_GIT_COMMIT=$(git rev-parse HEAD) > .env && echo REACT_APP_GIT_COMMIT_DATE=$(git log -1 --format=%cd) >> .env"
   },
   "eslintConfig": {
     "extends": [

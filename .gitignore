@@ -139,3 +139,4 @@ dmypy.json
 
 *.env
 DO_NOT_COMMIT
+frontend/.env

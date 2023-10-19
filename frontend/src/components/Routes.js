@@ -44,8 +44,19 @@ const AllRoutes = () => (
           <Route path="/groups" element={<Groups />} />
         </Routes>
       </Box>
-      <Box gridArea="footer" width="100%" background="dark-2" pad="small">
+      <Box
+        gridArea="footer"
+        width="100%"
+        background="dark-2"
+        pad="small"
+        direction="row"
+        justify="between"
+      >
         <Text>&copy; The Alan Turing Institute</Text>
+        <Text>
+          Git Commit Version: {process.env.REACT_APP_GIT_COMMIT} (
+          {process.env.REACT_APP_GIT_COMMIT_DATE})
+        </Text>
       </Box>
     </Grid>
   </Router>
