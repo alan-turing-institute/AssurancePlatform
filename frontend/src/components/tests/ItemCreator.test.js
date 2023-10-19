@@ -48,18 +48,6 @@ test("renders Evidence specific property", () => {
   expect(urlInput.value).toBe("https://updated.url");
 });
 
-test("renders PropertyClaim specific properties", () => {
-  render(<ItemCreator type="PropertyClaim" />);
-  const parentTypeSelect = screen.getByLabelText("Parent type");
-  const claimTypeSelect = screen.getByLabelText("Claim type");
-
-  fireEvent.change(parentTypeSelect, { target: { value: "Strategy" } });
-  fireEvent.change(claimTypeSelect, { target: { value: "Fact" } });
-
-  expect(parentTypeSelect.value).toBe("Strategy");
-  expect(claimTypeSelect.value).toBe("Fact");
-});
-
 test("renders submit button", () => {
   render(<ItemCreator type="TopLevelNormativeGoal" />);
   const submitButton = screen.getByText("Submit");

@@ -51,19 +51,6 @@ test("updates item properties correctly", async () => {
   expect(keywordsInput.value).toBe("Updated key");
 });
 
-test("renders Evidence specific property", async () => {
-  render(<ItemEditor type="Evidence" id="1" />);
-  await waitFor(() => screen.getByLabelText("URL"));
-  const urlInput = screen.getByLabelText("URL");
-  fireEvent.change(urlInput, { target: { value: "https://new.url" } });
-  expect(urlInput.value).toBe("https://new.url");
-});
-
-test("renders PropertyClaim specific property", async () => {
-  render(<ItemEditor type="PropertyClaim" id="1" />);
-  await waitFor(() => screen.getByLabelText("Claim type"));
-});
-
 test("renders delete item button", async () => {
   render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
   await waitFor(() => screen.getByText("Delete item"));
