@@ -4,6 +4,7 @@
 import "regenerator-runtime/runtime";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import { fireEvent } from "@testing-library/react";
 import React from "react";
 import CreateGroup from "../CreateGroup.js";
 
@@ -19,3 +20,9 @@ test("renders group creator layer", () => {
   const button = screen.getByText("Create group");
   expect(button).toBeInTheDocument();
 });
+
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({}),
+  }),
+);

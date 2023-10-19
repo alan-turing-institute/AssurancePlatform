@@ -57,23 +57,27 @@ const Login = () => {
   return (
     <Box overflow="auto">
       <Box flex={false} gap="medium" pad="medium" width="medium">
-        {loading === false && <Heading level={2}>Login</Heading>}
+        {loading === false && <Heading level={2}>Login to platform</Heading>}
         {errors === true && (
           <Heading level={2}>Cannot log in with provided credentials</Heading>
         )}
         {loading === false && (
           <Form onSubmit={onSubmit}>
-            <FormField htmlFor="username" label="User name">
+            <FormField label="User name" htmlFor="usernameInput">
               <TextInput
+                id="usernameInput"
                 name="username"
                 type="text"
                 value={username}
-                required
                 onChange={(e) => setUsername(e.target.value)}
+                required
               />
             </FormField>
-            <FormField htmlFor="password" label="Password">
+            <FormField label="Password" htmlFor="passwordInput">
+              {" "}
+              {/* Added htmlFor value */}
               <TextInput
+                id="passwordInput"
                 name="password"
                 type="password"
                 value={password}

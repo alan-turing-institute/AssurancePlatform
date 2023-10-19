@@ -82,13 +82,14 @@ const Signup = () => {
 
   return (
     <Box width={{ max: "large" }} gap="medium" pad="medium" overflow="auto">
-      {loading === false && <Heading level={2}>Sign up</Heading>}
+      {loading === false && <Heading level={2}>Sign up for an account</Heading>}
       {errors === true && (
         <Heading level={2}>Cannot sign up with provided credentials</Heading>
       )}
       <Form onSubmit={onSubmit}>
-        <FormField htmlFor="username" label="User name">
+        <FormField label="User name" htmlFor="usernameInput">
           <TextInput
+            id="usernameInput"
             name="username"
             type="text"
             value={username}
@@ -97,11 +98,12 @@ const Signup = () => {
           />
         </FormField>
         <FormField
-          htmlFor="password1"
           label="Password"
           info="At least 8 characters"
+          htmlFor="password1Input"
         >
           <TextInput
+            id="password1Input"
             name="password1"
             type="password"
             value={password1}
@@ -109,8 +111,9 @@ const Signup = () => {
             required
           />
         </FormField>
-        <FormField htmlFor="password2" label="Confirm password">
+        <FormField label="Confirm password" htmlFor="password2Input">
           <TextInput
+            id="password2Input"
             name="password2"
             type="password"
             value={password2}
