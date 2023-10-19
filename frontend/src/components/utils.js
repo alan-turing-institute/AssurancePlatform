@@ -149,7 +149,11 @@ function removeHighlight(inputMarkdown) {
   // remove last line of markdown if it contains highlight
   let lines = inputMarkdown.split("\n");
   let numLines = lines.length;
-  if (lines[numLines - 2].includes("classHighlighted")) {
+  if (
+    numLines >= 2 &&
+    lines[numLines - 2] &&
+    lines[numLines - 2].includes("classHighlighted")
+  ) {
     lines.splice(numLines - 2, numLines - 1);
     inputMarkdown = lines.join("\n");
   }

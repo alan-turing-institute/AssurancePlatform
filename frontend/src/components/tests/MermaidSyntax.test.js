@@ -12,6 +12,8 @@ import {
   removeHighlight,
   splitCommaSeparatedString,
   joinCommaSeparatedString,
+  jsonToMermaid,
+  sanitizeForMermaid,
 } from "../utils.js";
 
 test("Simple JSON translation", () => {

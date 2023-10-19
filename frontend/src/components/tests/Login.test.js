@@ -6,15 +6,19 @@ import React from "react";
 import "@testing-library/jest-dom";
 import Login from "../Login.js";
 
-// Mock fetch and localStorage
+// Mock fetch and localStorage methods
 global.fetch = jest.fn(() =>
   Promise.resolve({ json: () => Promise.resolve({}) }),
 );
-global.localStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  clear: jest.fn(),
-};
+
+Object.defineProperty(window, "localStorage", {
+  value: {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    clear: jest.fn(),
+  },
+  writable: true,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
