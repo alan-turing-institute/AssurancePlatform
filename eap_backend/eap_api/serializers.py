@@ -91,6 +91,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "owner",
             "edit_groups",
             "view_groups",
+            "color_profile",
         )
 
 

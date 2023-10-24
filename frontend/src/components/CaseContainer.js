@@ -6,6 +6,7 @@ import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
 import { neatJSON } from "neatjson";
+import { Select } from "grommet";
 
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
@@ -37,16 +38,20 @@ class CaseContainer extends Component {
         name: "",
         description: "",
         goals: [],
+        color_profile: "default",
       },
       mermaid_md: "graph TB; \n",
-      colors: "default",
     };
 
     this.url = `${getBaseURL()}/cases/`;
   }
 
-  handleProfileChange = (colors) => {
-    this.setState({ colors: colors });
+  handleProfileChange = (color) => {
+    this.submitCaseChange("color_profile", color).then((response) => {
+      if (response.status === 200) {
+        this.updateView();
+      }
+    });
   };
 
   fetchData = async (id) => {
@@ -72,6 +77,9 @@ class CaseContainer extends Component {
         this.setState({ loading: false });
       }
     }
+
+    // log the contents of assurance case
+    console.log(this.state.assurance_case);
   };
 
   submitCaseChange(field, value) {
@@ -549,6 +557,27 @@ class CaseContainer extends Component {
     );
   }
 
+  getProfileSelector() {
+    if (this.state.assurance_case.permissions === "view") {
+      return null;
+    } else if (this.inEditMode()) {
+      return (
+        <Box>
+          <label>Select Case color profile</label>
+          <Select
+            value={this.state.assurance_case.color_profile}
+            options={Object.keys(configData.mermaid_styles)}
+            onChange={({ option }) => this.handleProfileChange(option)}
+            labelKey={(option) =>
+              option.charAt(0).toUpperCase() + option.slice(1)
+            }
+            valueKey={(option) => option}
+          />
+        </Box>
+      );
+    }
+  }
+
   getCreateButtons() {
     if (this.state.assurance_case.permissions === "view") {
       return null;
@@ -705,17 +734,6 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
-              <select
-                value={this.state.colors}
-                onChange={(e) => this.handleProfileChange(e.target.value)}
-              >
-                {Object.keys(configData.mermaid_styles).map((profile) => (
-                  <option key={profile} value={profile}>
-                    {profile.charAt(0).toUpperCase() + profile.slice(1)}
-                  </option>
-                ))}
-              </select>
-
               <Button
                 label="Export JSON"
                 secondary
@@ -742,6 +760,7 @@ class CaseContainer extends Component {
               }}
             >
               {this.getEditableControls()}
+              {this.getProfileSelector()}
               {this.getCreateButtons()}
               {this.state.showViewLayer &&
                 this.state.itemType &&
