@@ -3,19 +3,20 @@
   "BOX_NCHAR": 25,
   "property_claim_types": ["Project claim", "System claim"],
   "mermaid_item_styleclasses": {
-    "classTopLevelNormativeGoal": "fill:#ff424e,color:#FFF",
-    "classContext": "fill:#D17E5A,color:#FFF",
-    "classSystemClaim": "fill:#3ea572,color:#FFF",
-    "classProjectClaim": "fill:#9db4e6,color:#FFF",
-    "classEvidentialClaim": "fill:#57847f,color:#FFF",
-    "classEvidence": "fill:#155b53,color:#FFF",
-    "classProjectClaimLevel1": "fill:#5986d7,color:#FFF",
-    "classProjectClaimLevel2": "fill:#7a9ddd,color:#FFF",
-    "classProjectClaimLevel3": "fill:#9db4e6,color:#FFF",
-    "classSystemClaimLevel1": "fill:#009249,color:#FFF",
-    "classSystemClaimLevel2": "fill:#24995e,color:#FFF",
-    "classSystemClaimLevel3": "fill:#3ea572,color:#FFF",
-    "classHighlighted": "stroke:#FF0,stroke-width:4,fill:#7700bb,color:#FF0"
+    "classTopLevelNormativeGoal": "fill:#94cbec,color:#FFF",
+    "classContext": "fill:#7e2954,color:#FFF",
+    "classSystemClaim": "fill:#9f4a96,color:#FFF",
+    "classProjectClaim": "fill:#2e2585,color:#FFF",
+    "classEvidentialClaim": "fill:#5da899,color:#FFF",
+    "classEvidence": "fill:#337538,color:#FFF",
+    "classProjectClaimLevel1": "fill:#2e2585,color:#FFF",
+    "classProjectClaimLevel2": "fill:#2e2585,color:#FFF",
+    "classProjectClaimLevel3": "fill:#2e2585,color:#FFF",
+    "classSystemClaimLevel1": "fill:#dccd7d,color:#FFF",
+    "classSystemClaimLevel2": "fill:#c26a77,color:#FFF",
+    "classSystemClaimLevel3": "fill:#dddddd,color:#FFF",
+    "classHighlighted": "stroke:#FF0,stroke-width:4,fill:#7700bb,color:#FF0",
+    "classStrategy": "fill:#5da899,color:#FFF"
   },
   "navigation": {
     "AssuranceCase": {

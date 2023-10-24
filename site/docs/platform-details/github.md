@@ -26,7 +26,7 @@
    - Here, you'll find two important pieces of information: the `Client ID` and the `Client Secret`. Both are essential for integrating your application with GitHub OAuth.
    - **Important**: The `Client Secret` is only displayed once. Make sure to copy and save it securely. If you lose it, you'll need to reset it, which could disrupt any services using the current secret.
 
-### Setting up GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in eap_backend/settings.py
+## Setting up GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in eap_backend/settings.py
 
 1. **Navigate to Your Project**:
    - Navigate to the directory where your `eap_backend/settings.py` file is located.
