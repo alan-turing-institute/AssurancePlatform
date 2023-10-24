@@ -5,7 +5,7 @@ import github from "./github.png";
 
 const Github = () => {
   const GITHUB_CLIENT_ID = "0cd5a829deef2e8d3a12";
-  const GITHUB_REDIRECT_URI = "http://localhost:3000/login";
+  const GITHUB_REDIRECT_URI = "http://assuranceplatform.azurewebsites.net/login";
   const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&scope=user:email,repo,public_repo`;
 
   function handleGitHubLogin() {
