@@ -2,13 +2,24 @@
 Dictionaries to be used in tests
 """
 
-CASE1_INFO = {"name": "First Case", "description": "first test case", "lock_uuid": None}
+CASE1_INFO = {
+    "name": "First Case",
+    "description": "first test case",
+    "lock_uuid": None,
+    "color_profile": "default",
+}
 CASE2_INFO = {
     "name": "Second Case",
     "description": "second test case",
     "lock_uuid": None,
+    "color_profile": "default",
 }
-CASE3_INFO = {"name": "Third Case", "description": "third test case", "lock_uuid": None}
+CASE3_INFO = {
+    "name": "Third Case",
+    "description": "third test case",
+    "lock_uuid": None,
+    "color_profile": "default",
+}
 GOAL_INFO = {
     "name": "The Goal",
     "short_description": "we should do this",

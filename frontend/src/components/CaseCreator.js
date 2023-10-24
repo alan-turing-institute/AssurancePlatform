@@ -74,6 +74,7 @@ function CaseCreator() {
     const case_json = JSON.parse(JSON.stringify(template));
     case_json["name"] = name;
     case_json["description"] = description;
+    case_json["color_profile"] = "default";
     postCaseJSON(JSON.stringify(case_json));
   }
 

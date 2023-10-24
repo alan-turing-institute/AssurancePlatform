@@ -72,6 +72,7 @@ class AssuranceCase(models.Model):
         EAPGroup, related_name="viewable_cases", blank=True
     )
     shape = None
+    color_profile = models.CharField(max_length=200, default="default")
 
     def __str__(self):
         return self.name

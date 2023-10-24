@@ -21,6 +21,7 @@ test("Simple JSON translation", () => {
     id: 1,
     name: "Test case",
     description: "",
+    color_profile: "default",
     goals: [
       {
         id: 1,
@@ -48,6 +49,7 @@ test("jsonToMermaid sanitizes goal name", () => {
     id: 1,
     name: "Test case",
     description: "",
+    color_profile: "default",
     goals: [
       {
         id: 1,

@@ -20,7 +20,6 @@ function removeArrayElement(array, element) {
 function jsonToMermaid(in_json) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
-
   // Nodes in the flowchart will be named [TypeName]_[ID]
   function getNodeName(itemType, itemId) {
     return itemType + "_" + itemId;
@@ -127,13 +126,14 @@ function jsonToMermaid(in_json) {
   let outputmd = "graph TB; \n";
   outputmd +=
     "classDef blackBox stroke:#333,stroke-width:3px,text-align:center; \n";
-  const styleclasses = configData["mermaid_item_styleclasses"];
+  const styleclasses = configData["mermaid_styles"][in_json["color_profile"]];
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
-
+  // output the length of the Mermaid string
+  console.log("Mermaid string length: " + outputmd.length);
   return outputmd;
 }
 
