@@ -92,8 +92,7 @@ function CaseCreator() {
           const metadataStr = svgElement.getAttribute("data-metadata");
           try {
             const metadataJSON = JSON.parse(metadataStr);
-            // Here you can handle the extracted metadata as needed
-            console.log(metadataJSON);
+            postCaseJSON(metadataJSON);
           } catch (err) {
             console.error("Error parsing metadata:", err);
           }
