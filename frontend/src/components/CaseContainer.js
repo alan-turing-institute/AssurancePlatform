@@ -7,6 +7,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
 import { neatJSON } from "neatjson";
 import { Select } from "grommet";
+import SVGDownloader from "./SVGDownloader.js";
 
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
@@ -24,6 +25,7 @@ import configData from "../config.json";
 import "./CaseContainer.css";
 
 class CaseContainer extends Component {
+  svgDownloader = new SVGDownloader();
   constructor(props) {
     super(props);
     this.state = {
@@ -41,6 +43,7 @@ class CaseContainer extends Component {
         color_profile: "default",
       },
       mermaid_md: "graph TB; \n",
+      metadata: null,
     };
 
     this.url = `${getBaseURL()}/cases/`;
@@ -112,7 +115,7 @@ class CaseContainer extends Component {
     return fetch(backendURL, requestOptions);
   }
 
-  async exportCurrentCase() {
+  async getCurrentCaseAsJSON() {
     const id = this.state.assurance_case.id;
     const requestOptions = {
       headers: {
@@ -121,14 +124,18 @@ class CaseContainer extends Component {
     };
     const response = await fetch(this.url + id, requestOptions);
     let json_response = await response.json();
-    const name = json_response["name"];
     json_response = neatJSON(json_response);
-
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
     json_response = json_response.replaceAll(/"id":\d+(,)?/g, "");
+    return json_response;
+  }
+
+  async exportCurrentCase() {
+    const metadata = await this.getCurrentCaseAsJSON();
+    const name = metadata["name"];
     // Write to a file, which to the user shows as a download.
-    const blob = new Blob([json_response], {
+    const blob = new Blob([metadata], {
       type: "text/plain;charset=utf-8",
     });
     const now = new Date();
@@ -150,40 +157,9 @@ class CaseContainer extends Component {
     saveAs(blob, filename);
   }
 
-  async exportCurrentCaseAsMD() {
-    const id = this.state.assurance_case.id;
-    const requestOptions = {
-      headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-      body: JSON.stringify({
-        data: this.state.mermaid_md,
-        json: this.state.assurance_case,
-      }),
-    };
-    const response = await fetch(this.url + id + "/", requestOptions);
-    let png_response = await response.blob();
-
-    const now = new Date();
-    // Using a custom date format because the ones that Date offers are either very long
-    // or include characters not allowed in filenames on Windows.
-    const datestr =
-      now.getFullYear() +
-      "-" +
-      now.getMonth() +
-      "-" +
-      now.getDate() +
-      "T" +
-      now.getHours() +
-      "-" +
-      now.getMinutes() +
-      "-" +
-      now.getSeconds();
-    const filename = id + "-" + datestr + ".svg";
-    saveAs(png_response, filename);
+  async exportCurrentCaseAsSVG() {
+    const metadata = await this.getCurrentCaseAsJSON();
+    this.svgDownloader.handleDownloadSVG(metadata);
   }
 
   fetchDataCurrentCase() {
@@ -739,12 +715,12 @@ class CaseContainer extends Component {
                 secondary
                 onClick={this.exportCurrentCase.bind(this)}
               />
-              {/* Turning this off for now as requires more obtuse backend */}
-              {/* <Button
-                label="Export Image"
+
+              <Button
+                label="Export SVG"
                 secondary
-                onClick={this.exportCurrentCaseAsMD.bind(this)}
-              /> */}
+                onClick={this.exportCurrentCaseAsSVG.bind(this)}
+              />
             </Box>
 
             <Box

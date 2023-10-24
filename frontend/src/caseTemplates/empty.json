@@ -2,5 +2,6 @@
   "name": "Empty",
   "description": "N/A",
   "lock_uuid": null,
-  "goals": []
+  "goals": [],
+  "color_profile": "default"
 }
