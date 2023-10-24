@@ -1,6 +1,3 @@
-import xml.etree.ElementTree as ET
-from pathlib import Path
-
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -63,7 +60,6 @@ def user_list(request):
     return None
 
 
-
 @csrf_exempt
 @api_view(["GET"])
 def self_detail(request):
@@ -82,6 +78,7 @@ def self_detail(request):
         user_data = serializer.data
         return JsonResponse(user_data)
     return None
+
 
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE", "POST"])

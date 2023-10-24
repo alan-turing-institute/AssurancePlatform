@@ -171,19 +171,18 @@ function joinCommaSeparatedString(array) {
   return array.join();
 }
 
-async function getSelfUser(){
-    const requestOptions = {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-    };
+async function getSelfUser() {
+  const requestOptions = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${localStorage.getItem("token")}`,
+    },
+  };
 
-    const response = await fetch(`${getBaseURL()}/user/`, requestOptions);
-    const user = await response.json();
-    return user
+  const response = await fetch(`${getBaseURL()}/user/`, requestOptions);
+  const user = await response.json();
+  return user;
 }
-
 
 export {
   getBaseURL,
@@ -194,5 +193,5 @@ export {
   removeHighlight,
   sanitizeForMermaid,
   splitCommaSeparatedString,
-  getSelfUser
+  getSelfUser,
 };
