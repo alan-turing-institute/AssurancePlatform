@@ -17,7 +17,7 @@ function removeArrayElement(array, element) {
   array.splice(array.indexOf(element), 1);
 }
 
-function jsonToMermaid(in_json) {
+function jsonToMermaid(in_json, colours = "default") {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
 
@@ -127,7 +127,7 @@ function jsonToMermaid(in_json) {
   let outputmd = "graph TB; \n";
   outputmd +=
     "classDef blackBox stroke:#333,stroke-width:3px,text-align:center; \n";
-  const styleclasses = configData["mermaid_item_styleclasses"];
+  const styleclasses = configData["mermaid_styles"][colours];
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });

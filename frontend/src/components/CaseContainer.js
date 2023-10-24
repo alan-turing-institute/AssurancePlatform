@@ -39,10 +39,15 @@ class CaseContainer extends Component {
         goals: [],
       },
       mermaid_md: "graph TB; \n",
+      colors: "default",
     };
 
     this.url = `${getBaseURL()}/cases/`;
   }
+
+  handleProfileChange = (colors) => {
+    this.setState({ colors: colors });
+  };
 
   fetchData = async (id) => {
     const requestOptions = {
@@ -700,6 +705,17 @@ class CaseContainer extends Component {
                 bottom: "none",
               }}
             >
+              <select
+                value={this.state.colors}
+                onChange={(e) => this.handleProfileChange(e.target.value)}
+              >
+                {Object.keys(configData.mermaid_styles).map((profile) => (
+                  <option key={profile} value={profile}>
+                    {profile.charAt(0).toUpperCase() + profile.slice(1)}
+                  </option>
+                ))}
+              </select>
+
               <Button
                 label="Export JSON"
                 secondary
