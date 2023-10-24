@@ -21,6 +21,7 @@ function CaseSelector() {
       setItems(body.map(({ id, name }) => ({ id: id, name: name })));
       setLoading(false);
     }
+    
   }
 
   useEffect(() => {
