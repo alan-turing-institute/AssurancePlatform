@@ -53,10 +53,7 @@ const AllRoutes = () => (
         justify="between"
       >
         <Text>&copy; The Alan Turing Institute</Text>
-        <Text>
-          Git Commit Version: {process.env.REACT_APP_GIT_COMMIT} (
-          {process.env.REACT_APP_GIT_COMMIT_DATE})
-        </Text>
+        <Text>Last updated: {process.env.REACT_APP_GIT_COMMIT_DATE}</Text>
       </Box>
     </Grid>
   </Router>

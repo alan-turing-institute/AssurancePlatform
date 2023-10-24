@@ -1,6 +1,4 @@
-import json
-import urllib.request as requests
-
+import requests
 from django.conf import settings
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import AuthenticationFailed
@@ -18,28 +16,32 @@ class Github:
         """
         validate method Queries the GitHub URL to fetch the user info
         """
+        # Get Access Token
+        url = "https://github.com/login/oauth/access_token"
+        params = {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+            "code": auth_token,
+        }
+        headers = {"Accept": "application/json"}
+        response = requests.post(url, headers=headers, params=params)
+        response.raise_for_status()  # Will raise an error if not a 2XX response
+        access_token = response.json().get("access_token")
 
-        try:
-            url = "https://github.com/login/oauth/access_token?client_id={}&client_secret={}&code={}".format(
-                settings.GITHUB_CLIENT_ID, settings.GITHUB_CLIENT_SECRET, auth_token
-            )
-            req = requests.urlopen(url)
-            reply = req.read()
-            access_token = (reply.decode("utf-8").split("&"))[0][13:]
-            headers = {
-                "Authorization": f"token {access_token}",
-                "content-type": "application/json",
-                "Access-Control-Expose-Headers": "ETag, Link, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval",
-            }
-            user_info_url = "https://api.github.com/user/emails"
-            req = requests.Request(user_info_url, headers=headers)
-            response = requests.urlopen(req)
-            response = response.read()
-            data = response.decode("utf-8")
-            user_info = json.loads(data)
-            return user_info[0]
-        except Exception:
-            return "The token is either invalid or has expired"
+        # Get User Emails
+        user_info_url = "https://api.github.com/user/emails"
+        headers = {
+            "Authorization": f"token {access_token}",
+            "content-type": "application/json",
+        }
+        response = requests.get(user_info_url, headers=headers)
+        if response.status_code != 200:
+            print(response.json())
+            response.raise_for_status()
+
+        response.raise_for_status()
+        user_info = response.json()
+        return user_info[0]
 
 
 def register_social_user(provider, email):
