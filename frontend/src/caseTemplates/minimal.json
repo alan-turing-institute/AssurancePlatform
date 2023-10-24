@@ -2,6 +2,7 @@
   "name": "Minimal",
   "description": "N/A",
   "lock_uuid": null,
+  "color_profile": "default",
   "goals": [
     {
       "name": "Goal",

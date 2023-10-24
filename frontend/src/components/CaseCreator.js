@@ -81,12 +81,32 @@ function CaseCreator() {
   function importCase(event) {
     const file = fileInputRef.current.files[0];
     const reader = new FileReader();
-    reader.readAsText(file);
+
     reader.onloadend = () => {
-      const case_json = reader.result;
-      postCaseJSON(case_json);
+      if (file.type === "image/svg+xml") {
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(reader.result, "image/svg+xml");
+        const svgElement = svgDoc.querySelector("svg");
+
+        if (svgElement && svgElement.hasAttribute("data-metadata")) {
+          const metadataStr = svgElement.getAttribute("data-metadata");
+          try {
+            const metadataJSON = JSON.parse(metadataStr);
+            postCaseJSON(metadataJSON);
+          } catch (err) {
+            console.error("Error parsing metadata:", err);
+          }
+        }
+      } else {
+        // If not an SVG, proceed as before
+        const case_json = reader.result;
+        postCaseJSON(case_json);
+      }
     };
+
+    reader.readAsText(file);
   }
+
   if (localStorage.getItem("token") == null) {
     window.location.replace("/login");
     return null;
