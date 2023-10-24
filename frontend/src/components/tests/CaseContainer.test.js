@@ -23,7 +23,13 @@ beforeEach(() => {
 
 test("renders loading screen", () => {
   fetch.mockResponseOnce(
-    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] }),
+    JSON.stringify({
+      id: 1,
+      name: "Test case",
+      description: "",
+      goals: [],
+      color_profile: "default",
+    }),
   );
   localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
@@ -33,7 +39,13 @@ test("renders loading screen", () => {
 
 test("renders case view", async () => {
   fetch.mockResponseOnce(
-    JSON.stringify({ id: 1, name: "Test case", description: "", goals: [] }),
+    JSON.stringify({
+      id: 1,
+      name: "Test case",
+      description: "",
+      goals: [],
+      color_profile: "default",
+    }),
   );
   localStorage.setItem("token", "dummy");
   render(<CaseContainer id="1" />);
