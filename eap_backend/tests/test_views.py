@@ -55,6 +55,7 @@ class CaseViewTest(TestCase):
             "name": "newCASE",
             "description": "new description",
             "lock_uuid": None,
+            "color_profile": "default",
         }
         response_post = self.client.post(
             reverse("case_list"),
