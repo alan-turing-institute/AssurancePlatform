@@ -77,6 +77,7 @@ class EAPGroupSerializer(serializers.ModelSerializer):
 class AssuranceCaseSerializer(serializers.ModelSerializer):
     goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="AssuranceCase", read_only=True)
+    color_profile = serializers.CharField(default="default")
 
     class Meta:
         model = AssuranceCase
