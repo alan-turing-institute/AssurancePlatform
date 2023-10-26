@@ -116,6 +116,7 @@ where you previously set the port to be 8000, and create a new environment
 variable "CORS_ORIGIN_WHITELIST" with the value
 `http://localhost:3000,https://FRONTEND_WEBAPP_NAME.azurewebsites.net`.
 
+
 !!! warning "Save"
 
     Remember to click save.
@@ -129,3 +130,25 @@ page.
 
 Wait a few seconds, then check the frontend website to see that everything
 works.
+
+## Accessing and Modifying the Django Admin Page
+
+Django's built-in admin interface is a powerful tool to make changes to your database, including deleting content. Here's how to access and use it:
+
+1. **Accessing the Admin Page**:
+    - Navigate to `https://BACKEND_WEBAPP_NAME.azurewebsites.net/admin`. This is the default location for the Django admin site.
+    - You will be prompted to login. Use the `SUPERUSER_USERNAME` and `SUPERUSER_PASSWORD` you set up previously.
+
+2. **Navigating the Interface**:
+    - Once logged in, you'll see a dashboard listing all the available models (database tables).
+    - Clicking on a model will show you a list of all its entries.
+
+3. **Modifying Content**:
+    - To edit an entry, click on its name or the edit icon beside it.
+    - To delete an entry, select the checkbox beside it and choose the "Delete" action from the dropdown at the bottom of the list. Confirm the deletion in the next screen.
+
+4. **Logging Out**:
+    - Always remember to log out after you're done making changes. You can do this by clicking the "Log out" link in the top right corner of the page.
+
+!!! warning "Caution"
+    Always be cautious when making changes in the admin interface, especially when deleting content. There's no undo button for deleted data!
