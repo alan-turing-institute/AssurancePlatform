@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { Box, TextInput, List, Button, Image, Text } from "grommet";
+import { Search, Document, Image as ImageIcon } from "grommet-icons";
 
 const GitHub = () => {
   const [repositories, setRepositories] = useState([]);
   const [selectedRepoFiles, setSelectedRepoFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileContent, setFileContent] = useState(null);
 
   useEffect(() => {
-    // not to be confused with our API token
     const token = localStorage.getItem("access_token");
-
     if (token) {
       fetch("https://api.github.com/user/repos", {
         headers: {
@@ -41,6 +43,8 @@ const GitHub = () => {
         .then((response) => response.json())
         .then((files) => {
           setSelectedRepoFiles(files);
+          setSelectedFile(null);
+          setFileContent(null);
         })
         .catch((error) => {
           console.error("Error fetching repo files:", error);
@@ -48,42 +52,90 @@ const GitHub = () => {
     }
   };
 
+  const handleFileClick = (file) => {
+    setSelectedFile(file);
+    if (
+      file.type === "file" &&
+      (file.name.endsWith(".json") || file.name.endsWith(".svg"))
+    ) {
+      fetch(file.download_url)
+        .then((response) => response.text())
+        .then((content) => {
+          setFileContent(content);
+        })
+        .catch((error) => {
+          console.error("Error fetching file content:", error);
+        });
+    }
+  };
+
   if (loading) {
-    return <div>Loading repositories...</div>;
+    return (
+      <Box align="center" justify="center" fill>
+        <Text>Loading repositories...</Text>
+      </Box>
+    );
   }
 
-  console.log(repositories);
   const filteredRepos = repositories.filter((repo) =>
     repo.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
-    <div>
-      <h2>Your GitHub Repositories</h2>
-      <input
-        type="text"
-        placeholder="Search Repositories..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-      <ul>
-        {filteredRepos.map((repo) => (
-          <li key={repo.id} onClick={() => handleRepoClick(repo.full_name)}>
-            {repo.name}
-          </li>
-        ))}
-      </ul>
-      {selectedRepoFiles.length > 0 && (
-        <div>
-          <h3>Files in selected repository:</h3>
-          <ul>
-            {selectedRepoFiles.map((file, index) => (
-              <li key={index}>{file.name}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <Box pad="medium" gap="medium" direction="row" fill>
+      <Box gap="small" basis="1/3">
+        <Box
+          direction="row"
+          align="center"
+          gap="small"
+          margin={{ bottom: "medium" }}
+        >
+          <Search />
+          <TextInput
+            placeholder="Search Repositories..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </Box>
+        <Box overflow="auto" flex>
+          <List
+            data={filteredRepos}
+            primaryKey="name"
+            onClickItem={({ item }) => handleRepoClick(item.full_name)}
+          />
+        </Box>
+      </Box>
+      <Box gap="small" basis="1/3">
+        <Text weight="bold">Files in selected repository:</Text>
+        <Box overflow="auto" flex>
+          <List
+            data={selectedRepoFiles}
+            primaryKey="name"
+            onClickItem={({ item }) => handleFileClick(item)}
+          />
+        </Box>
+      </Box>
+      <Box gap="small" basis="1/3">
+        {selectedFile && selectedFile.name.endsWith(".json") && (
+          <Button label="Import as Case" />
+        )}
+        {selectedFile && selectedFile.name.endsWith(".svg") && (
+          <>
+            <Button label="Import as Case" />
+            <Image src={selectedFile.download_url} />
+          </>
+        )}
+        {selectedFile &&
+          !(
+            selectedFile.name.endsWith(".svg") ||
+            selectedFile.name.endsWith(".json")
+          ) && (
+            <Text>
+              <Document size="large" /> Select a JSON or SVG file to preview.
+            </Text>
+          )}
+      </Box>
+    </Box>
   );
 };
 
