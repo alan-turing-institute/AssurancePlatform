@@ -52,6 +52,38 @@
       "classSystemClaimLevel3": "fill:#FFF,color:#000",
       "classHighlighted": "stroke:#000,stroke-width:5,fill:#FFF,color:#000",
       "classStrategy": "fill:#FFF,color:#000"
+    },
+    "high-contrast": {
+      "classTopLevelNormativeGoal": "fill:#000,color:#FFF",
+      "classContext": "fill:#FFF,color:#000",
+      "classSystemClaim": "fill:#000,color:#FFF",
+      "classProjectClaim": "fill:#FFF,color:#000",
+      "classEvidentialClaim": "fill:#000,color:#FFF",
+      "classEvidence": "fill:#FFF,color:#000",
+      "classProjectClaimLevel1": "fill:#FFF,color:#000",
+      "classProjectClaimLevel2": "fill:#000,color:#FFF",
+      "classProjectClaimLevel3": "fill:#FFF,color:#000",
+      "classSystemClaimLevel1": "fill:#000,color:#FFF",
+      "classSystemClaimLevel2": "fill:#FFF,color:#000",
+      "classSystemClaimLevel3": "fill:#000,color:#FFF",
+      "classHighlighted": "stroke:#000,stroke-width:5,fill:#FFF,color:#000",
+      "classStrategy": "fill:#000,color:#FFF"
+    },
+    "monochrome": {
+      "classTopLevelNormativeGoal": "fill:#CCC,color:#000",
+      "classContext": "fill:#AAA,color:#000",
+      "classSystemClaim": "fill:#CCC,color:#000",
+      "classProjectClaim": "fill:#AAA,color:#000",
+      "classEvidentialClaim": "fill:#CCC,color:#000",
+      "classEvidence": "fill:#AAA,color:#000",
+      "classProjectClaimLevel1": "fill:#AAA,color:#000",
+      "classProjectClaimLevel2": "fill:#CCC,color:#000",
+      "classProjectClaimLevel3": "fill:#AAA,color:#000",
+      "classSystemClaimLevel1": "fill:#CCC,color:#000",
+      "classSystemClaimLevel2": "fill:#AAA,color:#000",
+      "classSystemClaimLevel3": "fill:#CCC,color:#000",
+      "classHighlighted": "stroke:#000,stroke-width:5,fill:#AAA,color:#000",
+      "classStrategy": "fill:#CCC,color:#000"
     }
   },
   "navigation": {
