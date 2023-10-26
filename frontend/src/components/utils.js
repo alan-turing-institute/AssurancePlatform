@@ -7,6 +7,12 @@ function getBaseURL() {
   return configData.DEFAULT_BASE_URL;
 }
 
+function getClientID() {
+  const envGithubClient = process.env.GITHUB_CLIENT_ID;
+  if (envGithubClient !== undefined) return envGithubClient;
+  return configData.DEFAULT_GITHUB_CLIENT_ID;
+}
+
 function sanitizeForMermaid(input_text) {
   let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
   return sanitizedText.trim();
@@ -186,6 +192,7 @@ async function getSelfUser() {
 
 export {
   getBaseURL,
+  getClientID,
   highlightNode,
   joinCommaSeparatedString,
   jsonToMermaid,
