@@ -203,44 +203,62 @@ const GitHub = () => {
     }
   };
 
-  const handleRepoClick = (repoName) => {
+  const handleRepoClick = async (repoName) => {
     setCurrentPath("/"); // Reset the path when switching repositories
     setSelectedRepoFullName(repoName);
-    fetchRepoContentsByPath("/");
-    fetchRepoBranches(repoName);
-  };
 
-  const fetchRepoBranches = (repoName) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch(`https://api.github.com/repos/${repoName}/branches`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((branches) => {
-          setBranches(branches.map((branch) => branch.name));
-          setSelectedBranch("main");
-        })
-        .catch((error) => {
-          console.error("Error fetching repo branches:", error);
-        });
+    try {
+      await fetchRepoBranches(repoName);
+      await fetchRepoContentsByPath("/", repoName); // Pass the repoName as an argument here
+    } catch (error) {
+      console.error("Error in handleRepoClick:", error);
     }
   };
 
-  const fetchRepoContentsByPath = (path) => {
+  const fetchRepoBranches = async (repoName) => {
     const token = localStorage.getItem("access_token");
+    if (!token) {
+      console.error("Access token not available");
+      return;
+    }
 
-    if (token) {
-      fetch(
-        `https://api.github.com/repos/${selectedRepoFullName}/contents${path}`,
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${repoName}/branches`,
         {
           headers: {
             Authorization: `token ${token}`,
           },
         },
-      )
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch branches. HTTP Status: ${response.status}`,
+        );
+      }
+
+      const branches = await response.json();
+
+      if (!Array.isArray(branches)) {
+        throw new Error("Invalid response structure for branches.");
+      }
+
+      setBranches(branches.map((branch) => branch.name));
+      setSelectedBranch("main");
+    } catch (error) {
+      console.error("Error fetching repo branches:", error);
+    }
+  };
+
+  const fetchRepoContentsByPath = (path, repoName = selectedRepoFullName) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      fetch(`https://api.github.com/repos/${repoName}/contents${path}`, {
+        headers: {
+          Authorization: `token ${token}`,
+        },
+      })
         .then((response) => response.json())
         .then((contents) => {
           if (Array.isArray(contents)) {
@@ -293,8 +311,8 @@ const GitHub = () => {
   );
 
   return (
-    <Box pad="medium">
-      <Grid columns={["flex", "flex", "flex"]} gap="medium">
+    <Box pad="small">
+      <Grid columns={["flex", "flex", "flex"]} gap="small">
         <Box>
           <Box direction="row" gap="small">
             <TextInput
@@ -340,6 +358,7 @@ const GitHub = () => {
                   <Text>{currentPath}</Text>
                 </>
               )}
+              <Text>Branch:</Text>
               <Select
                 options={branches}
                 value={selectedBranch}
