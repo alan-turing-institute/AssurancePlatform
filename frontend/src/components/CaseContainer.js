@@ -533,6 +533,7 @@ class CaseContainer extends Component {
     );
   }
 
+
   getCreateButtons() {
     if (this.state.assurance_case.permissions === "view") {
       return null;
@@ -568,17 +569,17 @@ class CaseContainer extends Component {
           />
 
           <Box>
-            <label>Select Case color profile</label>
-            <Select
-              value={this.state.assurance_case.color_profile}
-              options={Object.keys(configData.mermaid_styles)}
-              onChange={({ option }) => this.handleProfileChange(option)}
-              labelKey={(option) =>
-                option.charAt(0).toUpperCase() + option.slice(1)
-              }
-              valueKey={(option) => option}
-            />
-          </Box>
+          <label>Select Case color profile</label>
+          <Select
+            value={this.state.assurance_case.color_profile}
+            options={Object.keys(configData.mermaid_styles)}
+            onChange={({ option }) => this.handleProfileChange(option)}
+            labelKey={(option) =>
+              option.charAt(0).toUpperCase() + option.slice(1)
+            }
+            valueKey={(option) => option}
+          />
+        </Box>
 
           <Box flex={false}>
             <Grid
@@ -738,6 +739,7 @@ class CaseContainer extends Component {
                 this.state.itemId &&
                 this.editLayer()}
             </Box>
+
 
             <Box
               gridArea="main"
