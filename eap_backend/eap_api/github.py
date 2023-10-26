@@ -42,7 +42,7 @@ class Github:
 
         response.raise_for_status()
         user_info = response.json()
-        return user_info[0]
+        return user_info[0], access_token
 
 
 def register_social_user(provider, email):
