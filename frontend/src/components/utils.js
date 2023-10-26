@@ -13,6 +13,12 @@ function getClientID() {
   return configData.DEFAULT_GITHUB_CLIENT_ID;
 }
 
+function getRedirectURI() {
+  const envRedirectURI = process.env.GITHUB_REDIRECT_URI;
+  if (envRedirectURI !== undefined) return envRedirectURI;
+  return configData.DEFAULT_GITHUB_REDIRECT_URI;
+}
+
 function sanitizeForMermaid(input_text) {
   let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
   return sanitizedText.trim();
@@ -193,6 +199,7 @@ async function getSelfUser() {
 export {
   getBaseURL,
   getClientID,
+  getRedirectURI,
   highlightNode,
   joinCommaSeparatedString,
   jsonToMermaid,

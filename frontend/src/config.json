@@ -1,6 +1,7 @@
 {
   "DEFAULT_BASE_URL": "http://localhost:8000/api",
-  "DEFAULT_GITHUB_CLIENT_ID": "0cd5a829deef2e8d3a12",
+  "DEFAULT_GITHUB_CLIENT_ID": "c2c9c84887b1bf94d80b",
+  "DEFAULT_GITHUB_REDIRECT_URI": "http://localhost:8000/api/auth/github",
   "BOX_NCHAR": 25,
   "property_claim_types": ["Project claim", "System claim"],
   "mermaid_styles": {

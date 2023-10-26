@@ -2,13 +2,11 @@ import React from "react";
 import { Button } from "grommet";
 import { getBaseURL } from "./utils.js";
 import github from "./github.png";
-import {getClientID} from "./utils.js";
+import {getClientID, getRedirectURI} from "./utils.js";
 
 const Github = () => {
   const GITHUB_CLIENT_ID = getClientID();
-  
-  const GITHUB_REDIRECT_URI =
-    "http://assuranceplatform.azurewebsites.net/login";
+  const GITHUB_REDIRECT_URI = getRedirectURI();
   const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&scope=user:email,repo,public_repo`;
 
   function handleGitHubLogin() {
