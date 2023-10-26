@@ -23,6 +23,7 @@ const GitHub = () => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState("");
   const [currentPath, setCurrentPath] = useState("/");
+  const [selectedRepoFullName, setSelectedRepoFullName] = useState("");
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -143,6 +144,7 @@ const GitHub = () => {
   };
 
   const handleRepoClick = (repoName) => {
+    setSelectedRepoFullName(repoName);
     const token = localStorage.getItem("access_token");
     if (token) {
       fetch(`https://api.github.com/repos/${repoName}/contents`, {
@@ -164,7 +166,7 @@ const GitHub = () => {
     const token = localStorage.getItem("access_token");
     if (token) {
       fetch(
-        `https://api.github.com/repos/${selectedOrg.login}/contents${path}`,
+        `https://api.github.com/repos/${selectedRepoFullName}/contents${path}`,
         {
           headers: {
             Authorization: `token ${token}`,
@@ -245,10 +247,13 @@ const GitHub = () => {
         </Box>
 
         <Box height="medium" overflow="auto">
-          <Box direction="row" align="center" gap="small">
-            <Button label=".. go up" onClick={handleGoUp} />
-            <Text>{currentPath}</Text>
-          </Box>
+          {currentPath !== "/" && (
+            <Box direction="row" align="center" gap="small">
+              <Button label=".. go up" onClick={handleGoUp} />
+              <Text>{currentPath}</Text>
+            </Box>
+          )}
+
           <List
             data={selectedRepoFiles}
             primaryKey="name"
