@@ -56,7 +56,7 @@ const AllRoutes = () => (
       >
         <Text>&copy; The Alan Turing Institute</Text>
         <a href="https://github.com/alan-turing-institute/AssurancePlatform">
-          Github Repository
+          GitHub Repository
         </a>
         <Text>Last updated: {process.env.REACT_APP_GIT_COMMIT_DATE}</Text>
       </Box>

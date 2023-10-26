@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Box, TextInput, List, Image, Button, Select, Grid } from "grommet";
+import {
+  Box,
+  TextInput,
+  List,
+  Image,
+  Button,
+  Select,
+  Grid,
+  Text,
+} from "grommet";
 import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
@@ -12,13 +21,13 @@ const GitHub = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  const [githubUsername, setGithubUsername] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [currentPath, setCurrentPath] = useState("/");
 
   useEffect(() => {
     const fetchInitialData = async () => {
       const userGithubHandle = await getSelfUser()["username"];
       setSelectedOrg({ login: userGithubHandle || "Your Profile" });
-
       const token = localStorage.getItem("access_token");
 
       if (token) {
@@ -46,9 +55,61 @@ const GitHub = () => {
     fetchInitialData();
   }, []);
 
+  const handleFileOrFolderClick = (item) => {
+    if (item.type === "dir") {
+      const newPath =
+        currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`;
+      setCurrentPath(newPath);
+      fetchRepoContentsByPath(newPath);
+    } else {
+      setSelectedFile(item);
+    }
+  };
+
+  const handleAddInput = () => {
+    if (isRepositoryURL(inputValue)) {
+      const matches = inputValue.match(
+        /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/,
+      );
+      const username = matches[1];
+      const repoName = matches[2];
+      fetchSingleRepo(username, repoName);
+    } else {
+      fetchUserRepos(inputValue);
+      setSelectedOrg({ login: inputValue });
+    }
+    setInputValue("");
+  };
+
+  const handleOrgChange = ({ option }) => {
+    setSelectedOrg(option);
+    if (option) {
+      fetchReposForOrg(option.login);
+    }
+  };
+
+  const isRepositoryURL = (value) => {
+    const regex = /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/;
+    return regex.test(value);
+  };
+
+  const fetchSingleRepo = (username, repoName) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      fetch(`https://api.github.com/repos/${username}/${repoName}`, {
+        headers: {
+          Authorization: `token ${token}`,
+        },
+      })
+        .then((response) => response.json())
+        .then((repo) => {
+          setRepositories((prevRepos) => [...prevRepos, repo]);
+        });
+    }
+  };
+
   const fetchUserRepos = (username) => {
     const token = localStorage.getItem("access_token");
-
     if (token) {
       fetch(`https://api.github.com/users/${username}/repos`, {
         headers: {
@@ -62,15 +123,8 @@ const GitHub = () => {
     }
   };
 
-  const handleAddGithubUser = () => {
-    fetchUserRepos(githubUsername);
-    setSelectedOrg({ login: githubUsername });
-    setGithubUsername("");
-  };
-
   const fetchReposForOrg = (orgLogin) => {
     const token = localStorage.getItem("access_token");
-
     if (token) {
       fetch(`https://api.github.com/orgs/${orgLogin}/repos`, {
         headers: {
@@ -85,13 +139,6 @@ const GitHub = () => {
           );
           setRepositories(filteredRepos);
         });
-    }
-  };
-
-  const handleOrgChange = ({ option }) => {
-    setSelectedOrg(option);
-    if (option) {
-      fetchReposForOrg(option.login);
     }
   };
 
@@ -111,6 +158,38 @@ const GitHub = () => {
           console.error("Error fetching repo files:", error);
         });
     }
+  };
+
+  const fetchRepoContentsByPath = (path) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      fetch(
+        `https://api.github.com/repos/${selectedOrg.login}/contents${path}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+          },
+        },
+      )
+        .then((response) => response.json())
+        .then((contents) => {
+          setSelectedRepoFiles(contents);
+        })
+        .catch((error) => {
+          console.error("Error fetching repo contents by path:", error);
+        });
+    }
+  };
+
+  const handleGoUp = () => {
+    const pathSegments = currentPath
+      .split("/")
+      .filter((segment) => segment.trim() !== "");
+    pathSegments.pop();
+    const newPath =
+      pathSegments.length === 0 ? "/" : `/${pathSegments.join("/")}`;
+    setCurrentPath(newPath);
+    fetchRepoContentsByPath(newPath);
   };
 
   const handleImportClick = async () => {
@@ -137,11 +216,11 @@ const GitHub = () => {
         <Box>
           <Box direction="row" gap="small">
             <TextInput
-              placeholder="GitHub Username"
-              value={githubUsername}
-              onChange={(e) => setGithubUsername(e.target.value)}
+              placeholder="GitHub Username or Repository URL"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
-            <Button label="Add" onClick={handleAddGithubUser} />
+            <Button label="Add" onClick={handleAddInput} />
           </Box>
           <Select
             placeholder="Select organization or user"
@@ -166,10 +245,14 @@ const GitHub = () => {
         </Box>
 
         <Box height="medium" overflow="auto">
+          <Box direction="row" align="center" gap="small">
+            <Button label=".. go up" onClick={handleGoUp} />
+            <Text>{currentPath}</Text>
+          </Box>
           <List
             data={selectedRepoFiles}
             primaryKey="name"
-            onClickItem={({ item }) => setSelectedFile(item)}
+            onClickItem={({ item }) => handleFileOrFolderClick(item)}
           />
         </Box>
 
