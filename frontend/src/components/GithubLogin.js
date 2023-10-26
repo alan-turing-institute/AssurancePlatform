@@ -27,8 +27,10 @@ const GithubLogin = () => {
       .then((res) => res.json())
       .then((response) => {
         const token = response["token"];
+        const access_token = response["access_token"];
         if (token) {
           localStorage.setItem("token", token);
+          localStorage.setItem("access_token", access_token);
           window.location.replace("/");
         } else {
           console.error("Token not found in response");

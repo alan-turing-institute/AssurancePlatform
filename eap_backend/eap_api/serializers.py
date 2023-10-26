@@ -27,7 +27,7 @@ class GithubSocialAuthSerializer(serializers.Serializer):
             msg = "The token is invalid or expired. Please login again."
             raise Exception from serializers.ValidationError(msg)
         user_info = register_social_user(provider=provider, email=email)
-        user_data["access_token"] = access_token
+        user_info["access_token"] = access_token
         return user_info
 
 
