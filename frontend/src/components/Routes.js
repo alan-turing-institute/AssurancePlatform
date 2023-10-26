@@ -20,7 +20,7 @@ const AllRoutes = () => (
     <Grid
       rows={["auto", "flex", "auto"]}
       columns={["fill"]}
-      height="full"
+      height="100vh"
       gap="none"
       areas={[
         { name: "nav", start: [0, 0], end: [0, 0] },
@@ -31,7 +31,7 @@ const AllRoutes = () => (
       <Box gridArea="nav">
         <Navigation />
       </Box>
-      <Box gridArea="main">
+      <Box gridArea="main" overflow="auto">
         <Routes>
           <Route exact path="/" element={<Home />} />
           <Route path="/case/new" element={<CaseCreator />} />

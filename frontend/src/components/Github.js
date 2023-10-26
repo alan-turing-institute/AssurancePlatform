@@ -311,9 +311,9 @@ const GitHub = () => {
   );
 
   return (
-    <Box pad="small">
-      <Grid columns={["flex", "flex", "flex"]} gap="small">
-        <Box>
+    <Box pad="small" flex="grow" overflow={{ vertical: "scroll" }}>
+      <Grid columns={["1fr", "1fr", "1fr"]} gap="small" fill>
+        <Box flex="grow" overflow={{ vertical: "scroll" }}>
           <Box direction="row" gap="small">
             <TextInput
               placeholder="GitHub Username or Repository URL"
@@ -335,7 +335,7 @@ const GitHub = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Box height="medium" overflow="auto">
+          <Box flex overflow="hidden">
             <List
               data={filteredRepos}
               primaryKey="name"
@@ -344,7 +344,7 @@ const GitHub = () => {
           </Box>
         </Box>
 
-        <Box height="medium">
+        <Box flex="grow" overflow={{ vertical: "auto" }}>
           {selectedRepoFullName && (
             <Box
               direction="row"
@@ -371,7 +371,7 @@ const GitHub = () => {
             </Box>
           )}
 
-          <Box overflow="auto" flex={true}>
+          <Box flex overflow="auto">
             <List
               data={selectedRepoFiles}
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
@@ -395,7 +395,7 @@ const GitHub = () => {
           </Box>
         </Box>
 
-        <Box>
+        <Box flex="grow" overflow={{ vertical: "auto" }}>
           {selectedFile && (
             <Box>
               {selectedFile.name.endsWith(".svg") && (
@@ -406,7 +406,7 @@ const GitHub = () => {
                 <Button label="Import as Case" onClick={handleImportClick} />
               )}
               {selectedFile.name.endsWith(".json") && (
-                <Box height="medium" overflow="auto">
+                <Box flex overflow="auto">
                   <pre>
                     <code
                       dangerouslySetInnerHTML={{
