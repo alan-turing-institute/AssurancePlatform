@@ -206,19 +206,25 @@ const GitHub = () => {
   const handleRepoClick = (repoName) => {
     setCurrentPath("/"); // Reset the path when switching repositories
     setSelectedRepoFullName(repoName);
+    fetchRepoContentsByPath("/");
+    fetchRepoBranches(repoName);
+  };
+
+  const fetchRepoBranches = (repoName) => {
     const token = localStorage.getItem("access_token");
     if (token) {
-      fetch(`https://api.github.com/repos/${repoName}/contents`, {
+      fetch(`https://api.github.com/repos/${repoName}/branches`, {
         headers: {
           Authorization: `token ${token}`,
         },
       })
         .then((response) => response.json())
-        .then((files) => {
-          setSelectedRepoFiles(files);
+        .then((branches) => {
+          setBranches(branches.map((branch) => branch.name));
+          setSelectedBranch("main");
         })
         .catch((error) => {
-          console.error("Error fetching repo files:", error);
+          console.error("Error fetching repo branches:", error);
         });
     }
   };
@@ -339,7 +345,7 @@ const GitHub = () => {
                 value={selectedBranch}
                 onChange={({ option }) => {
                   setSelectedBranch(option);
-                  // Make sure to re-fetch the data for the new branch if needed
+                  fetchRepoContentsByPath(currentPath);
                 }}
                 plain={true}
               />
@@ -350,6 +356,22 @@ const GitHub = () => {
             <List
               data={selectedRepoFiles}
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
+              primaryKey="path"
+              children={(item) => (
+                <Box
+                  direction="row"
+                  gap="small"
+                  background={
+                    selectedFile && selectedFile.path === item.path
+                      ? "lightgray"
+                      : "transparent"
+                  }
+                >
+                  <Text>
+                    {item.type === "dir" ? "📁" : "📄"} {item.name}
+                  </Text>
+                </Box>
+              )}
             />
           </Box>
         </Box>
