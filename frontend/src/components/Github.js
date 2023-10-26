@@ -376,10 +376,7 @@ const GitHub = () => {
               data={selectedRepoFiles}
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
               children={(item) => (
-                <Box
-                  direction="row"
-                  gap="small"
-                >
+                <Box direction="row" gap="small">
                   <Text>
                     {item.type === "dir" ? "📁" : "📄"} {item.name}
                   </Text>
