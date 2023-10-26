@@ -375,16 +375,11 @@ const GitHub = () => {
             <List
               data={selectedRepoFiles}
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
-              primaryKey="path"
               children={(item) => (
                 <Box
                   direction="row"
                   gap="small"
-                  background={
-                    selectedFile && selectedFile.path === item.path
-                      ? "lightgray"
-                      : "transparent"
-                  }
+                  background={selectedFile ? "lightgray" : "transparent"}
                 >
                   <Text>
                     {item.type === "dir" ? "📁" : "📄"} {item.name}
