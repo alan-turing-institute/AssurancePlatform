@@ -26,6 +26,10 @@ const GitHub = () => {
   const [inputValue, setInputValue] = useState("");
   const [currentPath, setCurrentPath] = useState("/");
   const [selectedRepoFullName, setSelectedRepoFullName] = useState("");
+  const [lastModified, setLastModified] = useState(null);
+  const [lastModifiedBy, setLastModifiedBy] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("main");
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -68,9 +72,32 @@ const GitHub = () => {
       setCurrentPath(newPath);
       fetchRepoContentsByPath(newPath);
     } else {
+      if (item.type === "file") {
+        fetchFileCommitHistory(item.path);
+      }
       setSelectedFile(item);
       if (item.name.endsWith(".json")) {
         fetchFileContent(item.download_url);
+      }
+    }
+  };
+
+  const fetchFileCommitHistory = async (path) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      const response = await fetch(
+        `https://api.github.com/repos/${selectedRepoFullName}/commits?path=${path}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+          },
+        },
+      );
+      const commits = await response.json();
+      if (commits && commits.length > 0) {
+        const lastCommit = commits[0];
+        setLastModified(lastCommit.commit.committer.date);
+        setLastModifiedBy(lastCommit.commit.committer.name);
       }
     }
   };
@@ -294,15 +321,28 @@ const GitHub = () => {
         </Box>
 
         <Box height="medium">
-          {currentPath !== "/" && (
+          {selectedRepoFullName && (
             <Box
               direction="row"
               align="center"
               gap="small"
               margin={{ bottom: "small" }}
             >
-              <Button label=".. go up" onClick={handleGoUp} />
-              <Text>{currentPath}</Text>
+              {currentPath !== "/" && (
+                <>
+                  <Button label=".. go up" onClick={handleGoUp} />
+                  <Text>{currentPath}</Text>
+                </>
+              )}
+              <Select
+                options={branches}
+                value={selectedBranch}
+                onChange={({ option }) => {
+                  setSelectedBranch(option);
+                  // Make sure to re-fetch the data for the new branch if needed
+                }}
+                plain={true}
+              />
             </Box>
           )}
 
@@ -335,11 +375,10 @@ const GitHub = () => {
                   </pre>
                 </Box>
               )}
-
-              {selectedFile.last_modified && (
+              {lastModified && (
                 <Text>
-                  Last Modified: {selectedFile.last_modified} by{" "}
-                  {selectedFile.last_modified_by}
+                  Last Modified: {new Date(lastModified).toLocaleString()} by{" "}
+                  {lastModifiedBy}
                 </Text>
               )}
             </Box>
