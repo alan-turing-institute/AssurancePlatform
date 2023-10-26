@@ -12,20 +12,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
-const normalizeData = (data) => {
-  if (!data || typeof data !== "object") {
-    return {
-      name: "N/A",
-      type: "N/A",
-    };
-  }
-  return {
-    ...data,
-    name: data.name || "N/A",
-    type: data.type || "N/A",
-  };
-};
-
 const GitHub = () => {
   const [selectedOrg, setSelectedOrg] = useState({});
   const [organizations, setOrganizations] = useState([]);
@@ -74,23 +60,13 @@ const GitHub = () => {
   }, []);
 
   const handleFileOrFolderClick = (item) => {
-    // Normalize the item first
-    const normalizedItem = normalizeData(item);
-
-    if (!normalizedItem.type || !normalizedItem.name) {
-      console.error("Invalid item:", normalizedItem);
-      return;
-    }
-
-    if (normalizedItem.type === "dir") {
+    if (item.type === "dir") {
       const newPath =
-        currentPath === "/"
-          ? `/${normalizedItem.name}`
-          : `${currentPath}/${normalizedItem.name}`;
+        currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`;
       setCurrentPath(newPath);
       fetchRepoContentsByPath(newPath);
     } else {
-      setSelectedFile(normalizedItem);
+      setSelectedFile(item);
     }
   };
 
@@ -104,9 +80,7 @@ const GitHub = () => {
       }
       const repo = await response.json();
       setRepositories((prevRepos) => [...prevRepos, repo]);
-    } catch (error) {
-      console.error("Error fetching specific repo:", error);
-    }
+    } catch (error) {}
   };
 
   const handleAddInput = () => {
@@ -186,6 +160,7 @@ const GitHub = () => {
   };
 
   const handleRepoClick = (repoName) => {
+    setCurrentPath("/"); // Reset the path when switching repositories
     setSelectedRepoFullName(repoName);
     const token = localStorage.getItem("access_token");
     if (token) {
@@ -206,6 +181,7 @@ const GitHub = () => {
 
   const fetchRepoContentsByPath = (path) => {
     const token = localStorage.getItem("access_token");
+
     if (token) {
       fetch(
         `https://api.github.com/repos/${selectedRepoFullName}/contents${path}`,
@@ -217,7 +193,6 @@ const GitHub = () => {
       )
         .then((response) => response.json())
         .then((contents) => {
-          console.log("Selected Repo Files:", selectedRepoFiles);
           if (Array.isArray(contents)) {
             setSelectedRepoFiles(contents);
           } else if (
@@ -317,7 +292,6 @@ const GitHub = () => {
           <Box overflow="auto" flex={true}>
             <List
               data={selectedRepoFiles}
-              primaryKey="name"
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
             />
           </Box>
