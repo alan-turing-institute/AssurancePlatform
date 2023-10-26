@@ -72,6 +72,11 @@ docker push DOCKER_USERNAME/eap_backend:latest
   - DBHOST=NAME_OF_THE_DATABASE_YOU_JUST_CREATED.postgres.database.azure.com
   - DBUSER=NAME_OF_THE_DATABASE_USER_YOU_JUST_CREATED@NAME_OF_THE_DATABASE
   - DBPASSWORD=THE_PASSWORD_FOR_THE_USER_YOU_JUST_MADE
+  - SUPERUSER_USERNAME=NAME_OF_THE_SUPERUSER_YOU_WANT_TO_CREATE
+  - SUPERUSER_PASSWORD=THE_PASSWORD_FOR_THE_SUPERUSER_YOU_JUST_MADE
+  - SUPERUSER_EMAIL=EMAIL_ADDRESS_FOR_THE_SUPERUSER_YOU_JUST_MADE
+  - GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID
+  - GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET
 - Test that the backend is working (will take a few minutes to start up the
   first time) by going to
   https://BACKEND_WEBAPP_NAME.azurewebsites.net/api/cases, and you should get an
@@ -100,6 +105,8 @@ adding settings in the "Configuration" page:
 - No need to set the DBNAME etc. variables.
 - set WEBSITES_PORT to 3000
 - set REACT_APP_BASE_URL to https://BACKEND_WEBAPP_NAME.azurewebsites.net/api
+- GITHUB_CLIENT_ID should be the same as for the backend webapp.
+- GITHUB_REDIRECT_URI should be https://FRONTEND_WEBAPP_NAME/login
 
 ## Nearly there...
 
