@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import hljs from "highlight.js";
+import "highlight.js/styles/default.css";
 import {
   Box,
   TextInput,
@@ -67,6 +69,9 @@ const GitHub = () => {
       fetchRepoContentsByPath(newPath);
     } else {
       setSelectedFile(item);
+      if (item.name.endsWith(".json")) {
+        fetchFileContent(item.download_url);
+      }
     }
   };
 
@@ -156,6 +161,18 @@ const GitHub = () => {
           );
           setRepositories(filteredRepos);
         });
+    }
+  };
+
+  const [fileContent, setFileContent] = useState("");
+
+  const fetchFileContent = async (url) => {
+    try {
+      const response = await fetch(url);
+      const textContent = await response.text();
+      setFileContent(textContent);
+    } catch (error) {
+      console.error("Error fetching file content:", error);
     }
   };
 
@@ -306,6 +323,24 @@ const GitHub = () => {
               {(selectedFile.name.endsWith(".json") ||
                 selectedFile.name.endsWith(".svg")) && (
                 <Button label="Import as Case" onClick={handleImportClick} />
+              )}
+              {selectedFile.name.endsWith(".json") && (
+                <Box height="medium" overflow="auto">
+                  <pre>
+                    <code
+                      dangerouslySetInnerHTML={{
+                        __html: hljs.highlight("json", fileContent).value,
+                      }}
+                    ></code>
+                  </pre>
+                </Box>
+              )}
+
+              {selectedFile.last_modified && (
+                <Text>
+                  Last Modified: {selectedFile.last_modified} by{" "}
+                  {selectedFile.last_modified_by}
+                </Text>
               )}
             </Box>
           )}
