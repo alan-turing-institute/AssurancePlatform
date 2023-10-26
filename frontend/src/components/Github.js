@@ -12,6 +12,20 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
+const normalizeData = (data) => {
+  if (!data || typeof data !== "object") {
+    return {
+      name: "N/A",
+      type: "N/A",
+    };
+  }
+  return {
+    ...data,
+    name: data.name || "N/A",
+    type: data.type || "N/A",
+  };
+};
+
 const GitHub = () => {
   const [selectedOrg, setSelectedOrg] = useState({});
   const [organizations, setOrganizations] = useState([]);
@@ -50,6 +64,9 @@ const GitHub = () => {
         const repos = await reposResponse.json();
         setRepositories(repos);
       }
+
+      fetchSpecificRepo();
+
       setLoading(false);
     };
 
@@ -57,18 +74,38 @@ const GitHub = () => {
   }, []);
 
   const handleFileOrFolderClick = (item) => {
-    if (!item || !item.type || !item.name) {
-      console.error("Invalid item:", item);
+    // Normalize the item first
+    const normalizedItem = normalizeData(item);
+
+    if (!normalizedItem.type || !normalizedItem.name) {
+      console.error("Invalid item:", normalizedItem);
       return;
     }
 
-    if (item.type === "dir") {
+    if (normalizedItem.type === "dir") {
       const newPath =
-        currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`;
+        currentPath === "/"
+          ? `/${normalizedItem.name}`
+          : `${currentPath}/${normalizedItem.name}`;
       setCurrentPath(newPath);
       fetchRepoContentsByPath(newPath);
     } else {
-      setSelectedFile(item);
+      setSelectedFile(normalizedItem);
+    }
+  };
+
+  const fetchSpecificRepo = async () => {
+    try {
+      const repoURL =
+        "https://api.github.com/repos/alan-turing-institute/AssurancePlatform";
+      const response = await fetch(repoURL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const repo = await response.json();
+      setRepositories((prevRepos) => [...prevRepos, repo]);
+    } catch (error) {
+      console.error("Error fetching specific repo:", error);
     }
   };
 
@@ -180,10 +217,19 @@ const GitHub = () => {
       )
         .then((response) => response.json())
         .then((contents) => {
+          console.log("Selected Repo Files:", selectedRepoFiles);
           if (Array.isArray(contents)) {
             setSelectedRepoFiles(contents);
+          } else if (
+            contents &&
+            typeof contents === "object" &&
+            contents.name
+          ) {
+            // Checks if it's a single file object
+            setSelectedRepoFiles([contents]); // Convert the single file object into an array
           } else {
-            console.error("Unexpected content structure:", contents);
+            console.warn("The folder is empty or there's an error:", contents);
+            setSelectedRepoFiles([]); // set to an empty array
           }
         })
         .catch((error) => {
@@ -255,19 +301,26 @@ const GitHub = () => {
           </Box>
         </Box>
 
-        <Box height="medium" overflow="auto">
+        <Box height="medium">
           {currentPath !== "/" && (
-            <Box direction="row" align="center" gap="small">
+            <Box
+              direction="row"
+              align="center"
+              gap="small"
+              margin={{ bottom: "small" }}
+            >
               <Button label=".. go up" onClick={handleGoUp} />
               <Text>{currentPath}</Text>
             </Box>
           )}
 
-          <List
-            data={selectedRepoFiles}
-            primaryKey="name"
-            onClickItem={({ item }) => handleFileOrFolderClick(item)}
-          />
+          <Box overflow="auto" flex={true}>
+            <List
+              data={selectedRepoFiles}
+              primaryKey="name"
+              onClickItem={({ item }) => handleFileOrFolderClick(item)}
+            />
+          </Box>
         </Box>
 
         <Box>
