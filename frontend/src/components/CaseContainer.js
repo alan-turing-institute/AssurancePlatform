@@ -740,6 +740,7 @@ class CaseContainer extends Component {
                 this.editLayer()}
             </Box>
 
+
             <Box
               gridArea="main"
               justify="end"
