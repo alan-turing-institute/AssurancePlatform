@@ -76,7 +76,7 @@
         "example",
         "ideas",
         "test",
-        "review"
+        "review",
         "talk",
         "userTesting",
         "research",
@@ -96,7 +96,8 @@
         "question",
         "design"
       ]
-    }
+    },
+    {
       "login": "kallewesterling",
       "name": "Kalle Westerling",
       "avatar_url": "https://avatars.githubusercontent.com/u/7298727?v=4",
