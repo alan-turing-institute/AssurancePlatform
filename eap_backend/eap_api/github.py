@@ -23,6 +23,7 @@ class Github:
             "client_secret": settings.GITHUB_CLIENT_SECRET,
             "code": auth_token,
         }
+        print(params)
         headers = {"Accept": "application/json"}
         response = requests.post(url, headers=headers, params=params)
         response.raise_for_status()  # Will raise an error if not a 2XX response
