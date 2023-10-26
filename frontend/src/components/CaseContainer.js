@@ -533,26 +533,6 @@ class CaseContainer extends Component {
     );
   }
 
-  getProfileSelector() {
-    if (this.state.assurance_case.permissions === "view") {
-      return null;
-    } else if (this.inEditMode()) {
-      return (
-        <Box>
-          <label>Select Case color profile</label>
-          <Select
-            value={this.state.assurance_case.color_profile}
-            options={Object.keys(configData.mermaid_styles)}
-            onChange={({ option }) => this.handleProfileChange(option)}
-            labelKey={(option) =>
-              option.charAt(0).toUpperCase() + option.slice(1)
-            }
-            valueKey={(option) => option}
-          />
-        </Box>
-      );
-    }
-  }
 
   getCreateButtons() {
     if (this.state.assurance_case.permissions === "view") {
@@ -587,6 +567,19 @@ class CaseContainer extends Component {
             secondary
             onClick={this.disableEditing.bind(this)}
           />
+
+          <Box>
+          <label>Select Case color profile</label>
+          <Select
+            value={this.state.assurance_case.color_profile}
+            options={Object.keys(configData.mermaid_styles)}
+            onChange={({ option }) => this.handleProfileChange(option)}
+            labelKey={(option) =>
+              option.charAt(0).toUpperCase() + option.slice(1)
+            }
+            valueKey={(option) => option}
+          />
+        </Box>
 
           <Box flex={false}>
             <Grid
@@ -736,7 +729,6 @@ class CaseContainer extends Component {
               }}
             >
               {this.getEditableControls()}
-              {this.getProfileSelector()}
               {this.getCreateButtons()}
               {this.state.showViewLayer &&
                 this.state.itemType &&
@@ -747,6 +739,7 @@ class CaseContainer extends Component {
                 this.state.itemId &&
                 this.editLayer()}
             </Box>
+
 
             <Box
               gridArea="main"
