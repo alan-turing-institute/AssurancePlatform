@@ -8,11 +8,12 @@ import {
   Layer,
 } from "grommet";
 import { FormClose } from "grommet-icons";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
 import "regenerator-runtime/runtime";
 import { getBaseURL } from "./utils.js";
+import { useLocation } from "react-router-dom";
 
 function CaseCreator() {
   const [name, setName] = useState("Name");
@@ -22,6 +23,18 @@ function CaseCreator() {
   const [showDialog, setShowDialog] = useState(false);
   const [url, setUrl] = useState("");
   const [jsonContent, setJsonContent] = useState(null);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if fileContent is passed in the location state
+    if (location.state && location.state.fileContent) {
+      const fileContent = location.state.fileContent;
+      // Here, you would call the function you use to handle the file import.
+      // For example:
+      postCaseJSON(fileContent);
+    }
+  }, [location]);
 
   const fetchJson = async () => {
     try {

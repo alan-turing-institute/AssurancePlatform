@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path("auth/", include("rest_auth.urls")),
     path("auth/register/", include("rest_auth.registration.urls")),
+    path("user/", views.self_detail, name="self_detail"),
     path("users/", views.user_list, name="user_list"),
     path("users/<int:pk>/", views.user_detail, name="user_detail"),
     path("groups/", views.group_list, name="group_list"),

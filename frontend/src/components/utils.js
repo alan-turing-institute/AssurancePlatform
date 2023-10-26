@@ -7,6 +7,18 @@ function getBaseURL() {
   return configData.DEFAULT_BASE_URL;
 }
 
+function getClientID() {
+  const envGithubClient = process.env.GITHUB_CLIENT_ID;
+  if (envGithubClient !== undefined) return envGithubClient;
+  return configData.DEFAULT_GITHUB_CLIENT_ID;
+}
+
+function getRedirectURI() {
+  const envRedirectURI = process.env.GITHUB_REDIRECT_URI;
+  if (envRedirectURI !== undefined) return envRedirectURI;
+  return configData.DEFAULT_GITHUB_REDIRECT_URI;
+}
+
 function sanitizeForMermaid(input_text) {
   let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
   return sanitizedText.trim();
@@ -171,8 +183,23 @@ function joinCommaSeparatedString(array) {
   return array.join();
 }
 
+async function getSelfUser() {
+  const requestOptions = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${localStorage.getItem("token")}`,
+    },
+  };
+
+  const response = await fetch(`${getBaseURL()}/user/`, requestOptions);
+  const user = await response.json();
+  return user;
+}
+
 export {
   getBaseURL,
+  getClientID,
+  getRedirectURI,
   highlightNode,
   joinCommaSeparatedString,
   jsonToMermaid,
@@ -180,4 +207,5 @@ export {
   removeHighlight,
   sanitizeForMermaid,
   splitCommaSeparatedString,
+  getSelfUser,
 };

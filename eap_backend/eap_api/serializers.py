@@ -19,15 +19,16 @@ class GithubSocialAuthSerializer(serializers.Serializer):
     auth_token = serializers.CharField()
 
     def validate_auth_token(self, auth_token):
-        user_data = Github.validate(auth_token)
-
+        github_username, email, access_token = Github.validate(auth_token)
         try:
-            email = user_data["email"]
+            email = email["email"]
             provider = "github"
         except Exception:
             msg = "The token is invalid or expired. Please login again."
             raise Exception from serializers.ValidationError(msg)
-        return register_social_user(provider=provider, email=email)
+        user_info = register_social_user(provider, email, github_username)
+        user_info["access_token"] = access_token
+        return user_info
 
 
 class EAPUserSerializer(serializers.ModelSerializer):

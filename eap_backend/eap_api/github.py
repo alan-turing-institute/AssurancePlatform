@@ -28,23 +28,28 @@ class Github:
         response.raise_for_status()  # Will raise an error if not a 2XX response
         access_token = response.json().get("access_token")
 
-        # Get User Emails
-        user_info_url = "https://api.github.com/user/emails"
+        # Get User Info (Including the GitHub username)
+        user_info_url = "https://api.github.com/user"
         headers = {
             "Authorization": f"token {access_token}",
             "content-type": "application/json",
         }
         response = requests.get(user_info_url, headers=headers)
         if response.status_code != 200:
-            print(response.json())
             response.raise_for_status()
+        github_username = response.json().get("login")
 
-        response.raise_for_status()
-        user_info = response.json()
-        return user_info[0]
+        # Assuming you still want to fetch user emails
+        user_emails_url = "https://api.github.com/user/emails"
+        response = requests.get(user_emails_url, headers=headers)
+        if response.status_code != 200:
+            response.raise_for_status()
+        user_emails = response.json()
+
+        return github_username, user_emails[0], access_token
 
 
-def register_social_user(provider, email):
+def register_social_user(provider, email, username):
     filtered_user_by_email = EAPUser.objects.filter(email=email)
     if filtered_user_by_email.exists():
         if provider == filtered_user_by_email[0].auth_provider:
@@ -73,7 +78,7 @@ def register_social_user(provider, email):
 
     else:
         user = {
-            "username": email,
+            "username": username,
             "email": email,
             "password": settings.GITHUB_CLIENT_SECRET,  # Dummy password for now
             "auth_provider": "github",

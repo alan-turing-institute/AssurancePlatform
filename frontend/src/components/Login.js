@@ -9,7 +9,7 @@ import {
   TextInput,
 } from "grommet";
 import { getBaseURL } from "./utils.js";
-import Github from "./Github.js";
+import Github from "./GithubLogin.js";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -45,6 +45,7 @@ const Login = () => {
         if (data.key) {
           localStorage.clear();
           localStorage.setItem("token", data.key);
+          localStorage.setItem("username", username);
           window.location.replace("/");
         } else {
           setUsername("");

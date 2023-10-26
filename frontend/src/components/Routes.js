@@ -8,6 +8,7 @@ import Login from "./Login.js";
 import Signup from "./Signup.js";
 import Logout from "./Logout.js";
 import Groups from "./Groups.js";
+import Github from "./Github.js";
 import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
@@ -42,6 +43,7 @@ const AllRoutes = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/groups" element={<Groups />} />
+          <Route path="/github" element={<Github />} />
         </Routes>
       </Box>
       <Box
@@ -53,6 +55,9 @@ const AllRoutes = () => (
         justify="between"
       >
         <Text>&copy; The Alan Turing Institute</Text>
+        <a href="https://github.com/alan-turing-institute/AssurancePlatform">
+          GitHub Repository
+        </a>
         <Text>Last updated: {process.env.REACT_APP_GIT_COMMIT_DATE}</Text>
       </Box>
     </Grid>

@@ -1,7 +1,3 @@
-import subprocess
-import xml.etree.ElementTree as ET
-from pathlib import Path
-
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
@@ -65,8 +61,28 @@ def user_list(request):
 
 
 @csrf_exempt
-@api_view(["GET", "PUT", "DELETE"])
-def user_detail(request, pk):
+@api_view(["GET"])
+def self_detail(request):
+    """
+    Retrieve, update, or delete a User by primary key
+    """
+    pk = request.user.id
+    try:
+        user = EAPUser.objects.get(pk=pk)
+    except EAPUser.DoesNotExist:
+        return HttpResponse(status=404)
+    if request.user != user:
+        return HttpResponse(status=403)
+    if request.method == "GET":
+        serializer = EAPUserSerializer(user)
+        user_data = serializer.data
+        return JsonResponse(user_data)
+    return None
+
+
+@csrf_exempt
+@api_view(["GET", "PUT", "DELETE", "POST"])
+def user_detail(request, pk=None):
     """
     Retrieve, update, or delete a User by primary key
     """
@@ -199,37 +215,6 @@ def case_detail(request, pk):
             return HttpResponse(status=403)
         case.delete()
         return HttpResponse(status=204)
-    elif request.method == "POST":
-        res = request.data["data"]
-        json = request.data["json"]
-        fn = f"tmp{pk}.mdd"
-        with Path(fn).open("w") as f:
-            f.write(res)
-        subprocess.run(
-            ["mmdc", f"-i{fn}", f"-o{fn}.svg", "-w", "2000", "-H", "2000"],
-            capture_output=True,
-            check=True,
-        )
-        Path(fn).unlink()
-
-        tree = ET.parse(f"{fn}.svg")
-        root = tree.getroot()
-
-        metadata_element = ET.Element("metadata")
-
-        for key, value in json.items():
-            element = ET.Element(str(key))
-            element.text = str(value)
-            metadata_element.append(element)
-
-        root.append(metadata_element)
-        tree.write(f"{fn}.svg")
-
-        with Path(f"{fn}.svg").open("rb") as fh:
-            response = HttpResponse(fh.read(), content_type="image/svg")
-        Path(f"{fn}.svg").unlink()
-        response["Content-Disposition"] = "inline; filename=img.svg"
-        return response
 
     return None
 
