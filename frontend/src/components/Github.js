@@ -379,7 +379,6 @@ const GitHub = () => {
                 <Box
                   direction="row"
                   gap="small"
-                  background={selectedFile ? "lightgray" : "transparent"}
                 >
                   <Text>
                     {item.type === "dir" ? "📁" : "📄"} {item.name}
