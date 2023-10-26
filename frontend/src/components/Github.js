@@ -57,6 +57,11 @@ const GitHub = () => {
   }, []);
 
   const handleFileOrFolderClick = (item) => {
+    if (!item || !item.type || !item.name) {
+      console.error("Invalid item:", item);
+      return;
+    }
+
     if (item.type === "dir") {
       const newPath =
         currentPath === "/" ? `/${item.name}` : `${currentPath}/${item.name}`;
@@ -175,7 +180,11 @@ const GitHub = () => {
       )
         .then((response) => response.json())
         .then((contents) => {
-          setSelectedRepoFiles(contents);
+          if (Array.isArray(contents)) {
+            setSelectedRepoFiles(contents);
+          } else {
+            console.error("Unexpected content structure:", contents);
+          }
         })
         .catch((error) => {
           console.error("Error fetching repo contents by path:", error);
