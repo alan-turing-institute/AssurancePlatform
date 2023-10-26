@@ -72,6 +72,11 @@ docker push DOCKER_USERNAME/eap_backend:latest
   - DBHOST=NAME_OF_THE_DATABASE_YOU_JUST_CREATED.postgres.database.azure.com
   - DBUSER=NAME_OF_THE_DATABASE_USER_YOU_JUST_CREATED@NAME_OF_THE_DATABASE
   - DBPASSWORD=THE_PASSWORD_FOR_THE_USER_YOU_JUST_MADE
+  - SUPERUSER_USERNAME=NAME_OF_THE_SUPERUSER_YOU_WANT_TO_CREATE
+  - SUPERUSER_PASSWORD=THE_PASSWORD_FOR_THE_SUPERUSER_YOU_JUST_MADE
+  - SUPERUSER_EMAIL=EMAIL_ADDRESS_FOR_THE_SUPERUSER_YOU_JUST_MADE
+  - GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID
+  - GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET
 - Test that the backend is working (will take a few minutes to start up the
   first time) by going to
   https://BACKEND_WEBAPP_NAME.azurewebsites.net/api/cases, and you should get an
@@ -100,6 +105,8 @@ adding settings in the "Configuration" page:
 - No need to set the DBNAME etc. variables.
 - set WEBSITES_PORT to 3000
 - set REACT_APP_BASE_URL to https://BACKEND_WEBAPP_NAME.azurewebsites.net/api
+- GITHUB_CLIENT_ID should be the same as for the backend webapp.
+- GITHUB_REDIRECT_URI should be https://FRONTEND_WEBAPP_NAME/login
 
 ## Nearly there...
 
@@ -108,6 +115,7 @@ Sharing). To fix this, go back to the Configuration panel of the backend server,
 where you previously set the port to be 8000, and create a new environment
 variable "CORS_ORIGIN_WHITELIST" with the value
 `http://localhost:3000,https://FRONTEND_WEBAPP_NAME.azurewebsites.net`.
+
 
 !!! warning "Save"
 
@@ -122,3 +130,25 @@ page.
 
 Wait a few seconds, then check the frontend website to see that everything
 works.
+
+## Accessing and Modifying the Django Admin Page
+
+Django's built-in admin interface is a powerful tool to make changes to your database, including deleting content. Here's how to access and use it:
+
+1. **Accessing the Admin Page**:
+    - Navigate to `https://BACKEND_WEBAPP_NAME.azurewebsites.net/admin`. This is the default location for the Django admin site.
+    - You will be prompted to login. Use the `SUPERUSER_USERNAME` and `SUPERUSER_PASSWORD` you set up previously.
+
+2. **Navigating the Interface**:
+    - Once logged in, you'll see a dashboard listing all the available models (database tables).
+    - Clicking on a model will show you a list of all its entries.
+
+3. **Modifying Content**:
+    - To edit an entry, click on its name or the edit icon beside it.
+    - To delete an entry, select the checkbox beside it and choose the "Delete" action from the dropdown at the bottom of the list. Confirm the deletion in the next screen.
+
+4. **Logging Out**:
+    - Always remember to log out after you're done making changes. You can do this by clicking the "Log out" link in the top right corner of the page.
+
+!!! warning "Caution"
+    Always be cautious when making changes in the admin interface, especially when deleting content. There's no undo button for deleted data!
