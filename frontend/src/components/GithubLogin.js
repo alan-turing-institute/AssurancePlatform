@@ -4,7 +4,7 @@ import { getBaseURL } from "./utils.js";
 import github from "./github.png";
 import { getClientID, getRedirectURI } from "./utils.js";
 
-const Github = () => {
+const GithubLogin = () => {
   const GITHUB_CLIENT_ID = getClientID();
   const GITHUB_REDIRECT_URI = getRedirectURI();
   const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&scope=user:email,repo,public_repo`;
@@ -55,4 +55,4 @@ const Github = () => {
   );
 };
 
-export default Github;
+export default GithubLogin;

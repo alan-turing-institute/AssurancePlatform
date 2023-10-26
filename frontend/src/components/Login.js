@@ -9,7 +9,7 @@ import {
   TextInput,
 } from "grommet";
 import { getBaseURL } from "./utils.js";
-import Github from "./Github.js";
+import Github from "./GithubLogin.js";
 
 const Login = () => {
   const [username, setUsername] = useState("");
