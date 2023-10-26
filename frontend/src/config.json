@@ -6,20 +6,20 @@
   "property_claim_types": ["Project claim", "System claim"],
   "mermaid_styles": {
     "default": {
-      "classTopLevelNormativeGoal": "fill:#94cbec,color:#FFF",
-      "classContext": "fill:#7e2954,color:#FFF",
-      "classSystemClaim": "fill:#9f4a96,color:#FFF",
-      "classProjectClaim": "fill:#2e2585,color:#FFF",
-      "classEvidentialClaim": "fill:#5da899,color:#FFF",
-      "classEvidence": "fill:#337538,color:#FFF",
-      "classProjectClaimLevel1": "fill:#2e2585,color:#FFF",
-      "classProjectClaimLevel2": "fill:#2e2585,color:#FFF",
-      "classProjectClaimLevel3": "fill:#2e2585,color:#FFF",
-      "classSystemClaimLevel1": "fill:#dccd7d,color:#FFF",
-      "classSystemClaimLevel2": "fill:#c26a77,color:#FFF",
-      "classSystemClaimLevel3": "fill:#dddddd,color:#FFF",
-      "classHighlighted": "stroke:#FF0,stroke-width:4,fill:#7700bb,color:#FF0",
-      "classStrategy": "fill:#5da899,color:#FFF"
+      "classTopLevelNormativeGoal": "fill:#638cb0,color:#FFF",
+      "classContext": "fill:#6b2650,color:#FFF",
+      "classSystemClaim": "fill:#8a3d85,color:#FFF",
+      "classProjectClaim": "fill:#1d1b75,color:#FFF",
+      "classEvidentialClaim": "fill:#4c8a79,color:#FFF",
+      "classEvidence": "fill:#235428,color:#FFF",
+      "classProjectClaimLevel1": "fill:#1d1b75,color:#FFF",
+      "classProjectClaimLevel2": "fill:#1d1b75,color:#FFF",
+      "classProjectClaimLevel3": "fill:#1d1b75,color:#FFF",
+      "classSystemClaimLevel1": "fill:#ccb86d,color:#FFF",
+      "classSystemClaimLevel2": "fill:#b25968,color:#FFF",
+      "classSystemClaimLevel3": "fill:#cccccc,color:#FFF",
+      "classHighlighted": "stroke:#FF0,stroke-width:4,fill:#6f00a0,color:#FF0",
+      "classStrategy": "fill:#4c8a79,color:#FFF"
     },
     "inverted": {
       "classTopLevelNormativeGoal": "fill:#6B3413,color:#94cbec",
@@ -52,6 +52,38 @@
       "classSystemClaimLevel3": "fill:#FFF,color:#000",
       "classHighlighted": "stroke:#000,stroke-width:5,fill:#FFF,color:#000",
       "classStrategy": "fill:#FFF,color:#000"
+    },
+    "high-contrast": {
+      "classTopLevelNormativeGoal": "fill:#000,color:#FFF",
+      "classContext": "fill:#FFF,color:#000",
+      "classSystemClaim": "fill:#000,color:#FFF",
+      "classProjectClaim": "fill:#FFF,color:#000",
+      "classEvidentialClaim": "fill:#000,color:#FFF",
+      "classEvidence": "fill:#FFF,color:#000",
+      "classProjectClaimLevel1": "fill:#FFF,color:#000",
+      "classProjectClaimLevel2": "fill:#000,color:#FFF",
+      "classProjectClaimLevel3": "fill:#FFF,color:#000",
+      "classSystemClaimLevel1": "fill:#000,color:#FFF",
+      "classSystemClaimLevel2": "fill:#FFF,color:#000",
+      "classSystemClaimLevel3": "fill:#000,color:#FFF",
+      "classHighlighted": "stroke:#000,stroke-width:5,fill:#FFF,color:#000",
+      "classStrategy": "fill:#000,color:#FFF"
+    },
+    "monochrome": {
+      "classTopLevelNormativeGoal": "fill:#CCC,color:#000",
+      "classContext": "fill:#AAA,color:#000",
+      "classSystemClaim": "fill:#CCC,color:#000",
+      "classProjectClaim": "fill:#AAA,color:#000",
+      "classEvidentialClaim": "fill:#CCC,color:#000",
+      "classEvidence": "fill:#AAA,color:#000",
+      "classProjectClaimLevel1": "fill:#AAA,color:#000",
+      "classProjectClaimLevel2": "fill:#CCC,color:#000",
+      "classProjectClaimLevel3": "fill:#AAA,color:#000",
+      "classSystemClaimLevel1": "fill:#CCC,color:#000",
+      "classSystemClaimLevel2": "fill:#AAA,color:#000",
+      "classSystemClaimLevel3": "fill:#CCC,color:#000",
+      "classHighlighted": "stroke:#000,stroke-width:5,fill:#AAA,color:#000",
+      "classStrategy": "fill:#CCC,color:#000"
     }
   },
   "navigation": {
