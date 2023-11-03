@@ -158,6 +158,42 @@ While not specifically designed to address ethical principles, the following
 diagram from the CDEI's Assurance Guide can help elucidate some of the reasons
 why trustworthy and ethical assurance can be challenging.
 
+<!--  rewrite following summary
+
+1. **Unobservable versus Observable**:
+   - Unobservable aspects refer to elements that cannot be directly seen or measured but might have implications, like potential societal harms from AI systems.
+   - Observable aspects are those that can be directly seen, measured, or experienced, like testing the accuracy of an AI system against a clear standard.
+
+2. **Subjective versus Objective**:
+   - Subjective aspects involve personal judgments or opinions, like deciding which definition of fairness to apply in assessing an AI system.
+   - Objective aspects refer to measurable, factual bases that do not rely on personal feelings or interpretations, like measuring false positive or false negative rates.
+
+3. **Ambiguous versus Explicit**:
+   - Ambiguous aspects lack clarity or are open to multiple interpretations, requiring more judgement for assurance. For instance, qualitative assessments of societal impacts or algorithmic bias.
+   - Explicit aspects are clear, defined, and often quantifiable, like the accuracy of an algorithm against a specific metric.
+
+4. **Uncertain versus Certain**:
+   - Uncertain aspects are characterized by doubt and unpredictability, like the potential broader societal impacts from AI deployment.
+   - Certain aspects are clear and definite, allowing for more definitive assurance.
+
+Now, regarding the assurance of ethical principles for AI:
+
+1. **Unobservable versus Observable**:
+   - Ethical principles often concern values and norms, which might be unobservable directly. However, their operationalization could be observable through specific metrics or indicators, albeit imperfectly.
+
+2. **Subjective versus Objective**:
+   - Ethical principles are fundamentally subjective as they're rooted in societal values, cultural norms, and individual beliefs. However, once a consensus is reached on certain ethical standards, their application can be approached in a more objective manner through established metrics.
+
+3. **Ambiguous versus Explicit**:
+   - Ethical principles can be ambiguous due to differing interpretations and context-dependent nuances. Over time, through discourse and standardization, they may become more explicit, although some level of ambiguity is likely to remain.
+
+4. **Uncertain versus Certain**:
+   - The impact and effectiveness of applying ethical principles are often uncertain due to the complex, dynamic nature of AI and its interaction with society. However, certain ethical benchmarks or standards can provide a level of certainty in evaluation.
+
+The application of ethical principles in AI governance involves navigating these dimensions to ensure that the AI systems are developed and deployed responsibly. The challenge lies in translating abstract ethical principles into concrete practices and metrics for evaluation while acknowledging and addressing the inherent subjectivity, ambiguity, and uncertainty involved in ethical considerations.
+
+-->
+
 ![](../assets/images/subject-matter.png) _Figure 3. A graphic showing the four
 dimensions of assurance subject matter: unobservable/observable,
 subjective/objective, ambiguous/explicit, uncertain/certain._
