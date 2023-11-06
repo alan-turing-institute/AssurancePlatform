@@ -32,6 +32,27 @@ const GitHub = () => {
   const [selectedBranch, setSelectedBranch] = useState("");
   const [repoContentsLoading, setRepoContentsLoading] = useState(false);
 
+  // Effect to fetch repository contents when branch or repository changes
+  useEffect(() => {
+    const fetchContents = async () => {
+      if (selectedRepoFullName && selectedBranch) {
+        setRepoContentsLoading(true);
+        await fetchRepoContentsByPath(
+          currentPath,
+          selectedRepoFullName,
+          selectedBranch,
+        );
+        setRepoContentsLoading(false);
+      }
+    };
+
+    fetchContents();
+  }, [selectedBranch, selectedRepoFullName, currentPath]);
+
+  const handleBranchChange = ({ option }) => {
+    setSelectedBranch(option);
+  };
+
   useEffect(() => {
     const fetchInitialData = async () => {
       const userGithubHandle = await getSelfUser()["username"];
@@ -369,13 +390,7 @@ const GitHub = () => {
               <Select
                 options={branches}
                 value={selectedBranch}
-                onChange={({ option }) => {
-                  setSelectedBranch(option);
-                  setRepoContentsLoading(true); // Indicate loading new content
-                  fetchRepoContentsByPath(currentPath).finally(() => {
-                    setRepoContentsLoading(false); // Reset loading state once content is fetched
-                  });
-                }}
+                onChange={handleBranchChange}
                 plain={true}
               />
             </Box>
