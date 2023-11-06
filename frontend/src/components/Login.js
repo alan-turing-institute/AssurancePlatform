@@ -7,6 +7,7 @@ import {
   Heading,
   Text,
   TextInput,
+  Spinner,
 } from "grommet";
 import { getBaseURL } from "./utils.js";
 import Github from "./GithubLogin.js";
@@ -15,19 +16,17 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("token") !== null) {
       window.location.replace("/");
-    } else {
-      setLoading(false);
     }
   }, []);
 
   const onSubmit = (e) => {
     e.preventDefault();
-
+    setLoading(true);
     const user = {
       username: username,
       password: password,
@@ -42,6 +41,7 @@ const Login = () => {
     })
       .then((res) => res.json())
       .then((data) => {
+        setLoading(false); // Set loading to false when the login process is completed
         if (data.key) {
           localStorage.clear();
           localStorage.setItem("token", data.key);
@@ -53,50 +53,66 @@ const Login = () => {
           localStorage.clear();
           setErrors(true);
         }
+      })
+      .catch(() => {
+        setLoading(false); // Also set loading to false when there is an error
       });
   };
+
   return (
-    <Box overflow="auto">
-      <Box flex={false} gap="medium" pad="medium" width="medium">
-        {loading === false && <Heading level={2}>Login to platform</Heading>}
-        {errors === true && (
-          <Heading level={2}>Cannot log in with provided credentials</Heading>
-        )}
-        {loading === false && (
+    <Box fill align="center" justify="center">
+      {loading ? (
+        <Box align="center" justify="center">
+          <Spinner size="medium" />
+          <Text size="xlarge" margin="small">
+            Loading...
+          </Text>
+        </Box>
+      ) : (
+        <Box width="medium" pad="medium" gap="medium">
+          <Heading level={2}>Login to platform</Heading>
+          {errors && (
+            <Text color="status-critical" textAlign="center">
+              Cannot log in with provided credentials
+            </Text>
+          )}
           <Form onSubmit={onSubmit}>
-            <FormField label="User name" htmlFor="usernameInput">
+            <FormField
+              label="User name"
+              htmlFor="username-input"
+              name="username"
+            >
               <TextInput
-                id="usernameInput"
+                id="username-input"
                 name="username"
-                type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
+                onChange={(event) => setUsername(event.target.value)}
               />
             </FormField>
-            <FormField label="Password" htmlFor="passwordInput">
-              {" "}
-              {/* Added htmlFor value */}
+            <FormField
+              label="Password"
+              htmlFor="password-input"
+              name="password"
+            >
               <TextInput
-                id="passwordInput"
+                id="password-input"
                 name="password"
                 type="password"
                 value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
               />
             </FormField>
-            <Box direction="row" gap="medium">
-              <Button type="submit" label="Login" primary={true} />
-              <Github />
+            <Box direction="row" gap="medium" justify="between">
+              <Button type="submit" label="Login" primary />
             </Box>
           </Form>
-        )}
-      </Box>
-      <Box flex={false} gap="small" pad="medium" width="medium">
-        <Text>Not already registered?</Text>
-        <Button href="/signup/" label="Sign-up" />
-      </Box>
+          <Github setLoading={setLoading} />
+          <Box align="center" margin={{ top: "medium" }}>
+            <Text>Not already registered?</Text>
+            <Button href="/signup/" label="Sign-up" />
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

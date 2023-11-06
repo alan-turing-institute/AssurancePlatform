@@ -29,7 +29,29 @@ const GitHub = () => {
   const [lastModified, setLastModified] = useState(null);
   const [lastModifiedBy, setLastModifiedBy] = useState(null);
   const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState("main");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [repoContentsLoading, setRepoContentsLoading] = useState(false);
+
+  // Effect to fetch repository contents when branch or repository changes
+  useEffect(() => {
+    const fetchContents = async () => {
+      if (selectedRepoFullName && selectedBranch) {
+        setRepoContentsLoading(true);
+        await fetchRepoContentsByPath(
+          currentPath,
+          selectedRepoFullName,
+          selectedBranch,
+        );
+        setRepoContentsLoading(false);
+      }
+    };
+
+    fetchContents();
+  }, [selectedBranch, selectedRepoFullName, currentPath]);
+
+  const handleBranchChange = ({ option }) => {
+    setSelectedBranch(option);
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -120,12 +142,13 @@ const GitHub = () => {
       const matches = inputValue.match(
         /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/,
       );
-      const username = matches[1];
-      const repoName = matches[2];
-      fetchSingleRepo(username, repoName);
+      if (matches && matches.length >= 3) {
+        const username = matches[1];
+        const repoName = matches[2];
+        fetchSingleRepo(username, repoName);
+      }
     } else {
-      fetchUserRepos(inputValue);
-      setSelectedOrg({ login: inputValue });
+      console.error("Invalid GitHub repository URL");
     }
     setInputValue("");
   };
@@ -245,39 +268,52 @@ const GitHub = () => {
       }
 
       setBranches(branches.map((branch) => branch.name));
-      setSelectedBranch("main");
+
+      // Set the selectedBranch to default if none has been selected
+      if (branches.length > 0) {
+        const defaultBranch =
+          branches.find((branch) => branch.name === "main") || branches[0];
+        setSelectedBranch(defaultBranch.name);
+      } else {
+        console.error("No branches found for this repository.");
+      }
     } catch (error) {
       console.error("Error fetching repo branches:", error);
     }
   };
 
-  const fetchRepoContentsByPath = (path, repoName = selectedRepoFullName) => {
+  const fetchRepoContentsByPath = async (
+    path,
+    repoName = selectedRepoFullName,
+    branch = selectedBranch,
+  ) => {
     const token = localStorage.getItem("access_token");
+    const branchQuery = branch ? `?ref=${branch}` : ""; // Handle the case where no branch is selected
     if (token) {
-      fetch(`https://api.github.com/repos/${repoName}/contents${path}`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((contents) => {
-          if (Array.isArray(contents)) {
-            setSelectedRepoFiles(contents);
-          } else if (
-            contents &&
-            typeof contents === "object" &&
-            contents.name
-          ) {
-            // Checks if it's a single file object
-            setSelectedRepoFiles([contents]); // Convert the single file object into an array
-          } else {
-            console.warn("The folder is empty or there's an error:", contents);
-            setSelectedRepoFiles([]); // set to an empty array
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching repo contents by path:", error);
-        });
+      setRepoContentsLoading(true); // Start loading
+      try {
+        const response = await fetch(
+          `https://api.github.com/repos/${repoName}/contents${path}${branchQuery}`,
+          {
+            headers: {
+              Authorization: `token ${token}`,
+            },
+          },
+        );
+        const contents = await response.json();
+        if (Array.isArray(contents)) {
+          setSelectedRepoFiles(contents);
+        } else if (contents && typeof contents === "object" && contents.name) {
+          setSelectedRepoFiles([contents]); // Convert the single file object into an array
+        } else {
+          console.warn("The folder is empty or there's an error:", contents);
+          setSelectedRepoFiles([]); // Set to an empty array
+        }
+      } catch (error) {
+        console.error("Error fetching repo contents by path:", error);
+      } finally {
+        setRepoContentsLoading(false); // End loading
+      }
     }
   };
 
@@ -316,20 +352,12 @@ const GitHub = () => {
         <Box flex="grow" overflow={{ vertical: "scroll" }}>
           <Box direction="row" gap="small">
             <TextInput
-              placeholder="GitHub Username or Repository URL"
+              placeholder="GitHub Repository URL"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
             />
             <Button label="Add" onClick={handleAddInput} />
           </Box>
-          <Select
-            placeholder="Select organization or user"
-            options={[{ login: selectedOrg.login }, ...organizations]}
-            labelKey="login"
-            valueKey="login"
-            onChange={handleOrgChange}
-            value={selectedOrg && selectedOrg.login}
-          />
           <TextInput
             placeholder="Search Repositories..."
             value={searchTerm}
@@ -362,16 +390,17 @@ const GitHub = () => {
               <Select
                 options={branches}
                 value={selectedBranch}
-                onChange={({ option }) => {
-                  setSelectedBranch(option);
-                  fetchRepoContentsByPath(currentPath);
-                }}
+                onChange={handleBranchChange}
                 plain={true}
               />
             </Box>
           )}
 
-          <Box flex overflow="auto">
+          {repoContentsLoading ? (
+            <Box pad="medium" fill="horizontal" align="center" justify="center">
+              Loading ...
+            </Box>
+          ) : (
             <List
               data={selectedRepoFiles}
               onClickItem={({ item }) => handleFileOrFolderClick(item)}
@@ -383,9 +412,8 @@ const GitHub = () => {
                 </Box>
               )}
             />
-          </Box>
+          )}
         </Box>
-
         <Box flex="grow" overflow={{ vertical: "auto" }}>
           {selectedFile && (
             <Box>
