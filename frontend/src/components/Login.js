@@ -62,7 +62,6 @@ const Login = () => {
   return (
     <Box fill align="center" justify="center">
       {loading ? (
-        // Centered box with Spinner
         <Box align="center" justify="center">
           <Spinner size="medium" />
           <Text size="xlarge" margin="small">
@@ -70,7 +69,6 @@ const Login = () => {
           </Text>
         </Box>
       ) : (
-        // Login form and buttons
         <Box width="medium" pad="medium" gap="medium">
           <Heading level={2}>Login to platform</Heading>
           {errors && (
@@ -78,11 +76,37 @@ const Login = () => {
               Cannot log in with provided credentials
             </Text>
           )}
-          <Form onSubmit={onSubmit}>{/* Form fields */}</Form>
-          <Box direction="row" gap="medium" justify="between">
-            <Button type="submit" label="Login" primary onClick={onSubmit} />
-            <Github setLoading={setLoading} />
-          </Box>
+          <Form onSubmit={onSubmit}>
+            <FormField
+              label="User name"
+              htmlFor="username-input"
+              name="username"
+            >
+              <TextInput
+                id="username-input"
+                name="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="Password"
+              htmlFor="password-input"
+              name="password"
+            >
+              <TextInput
+                id="password-input"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </FormField>
+            <Box direction="row" gap="medium" justify="between">
+              <Button type="submit" label="Login" primary />
+            </Box>
+          </Form>
+          <Github setLoading={setLoading} />
           <Box align="center" margin={{ top: "medium" }}>
             <Text>Not already registered?</Text>
             <Button href="/signup/" label="Sign-up" />
