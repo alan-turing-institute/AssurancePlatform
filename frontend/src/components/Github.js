@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from "react";
 import hljs from "highlight.js";
 import "highlight.js/styles/default.css";
-import { Box, TextInput, List, Image, Button, Grid, Text } from "grommet";
+import {
+  Box,
+  TextInput,
+  List,
+  Image,
+  Button,
+  Grid,
+  Text,
+  Select,
+} from "grommet";
 import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
@@ -102,16 +111,8 @@ const GitHub = () => {
       fetchSingleRepo(username, repoName);
     } else {
       fetchUserRepos(inputValue);
-      setSelectedOrg({ login: inputValue });
     }
     setInputValue("");
-  };
-
-  const handleOrgChange = ({ option }) => {
-    setSelectedOrg(option);
-    if (option) {
-      fetchReposForOrg(option.login);
-    }
   };
 
   const isRepositoryURL = (value) => {
