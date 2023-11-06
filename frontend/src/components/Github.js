@@ -7,14 +7,16 @@ import {
   List,
   Image,
   Button,
+  Select,
   Grid,
   Text,
-  Select,
 } from "grommet";
 import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
 const GitHub = () => {
+  const [selectedOrg, setSelectedOrg] = useState({});
+  const [organizations, setOrganizations] = useState([]);
   const [repositories, setRepositories] = useState([]);
   const [selectedRepoFiles, setSelectedRepoFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -32,9 +34,19 @@ const GitHub = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       const userGithubHandle = await getSelfUser()["username"];
+      setSelectedOrg({ login: userGithubHandle || "Your Profile" });
       const token = localStorage.getItem("access_token");
 
       if (token) {
+        // Fetch user organizations
+        const orgsResponse = await fetch("https://api.github.com/user/orgs", {
+          headers: {
+            Authorization: `token ${token}`,
+          },
+        });
+        const orgs = await orgsResponse.json();
+        setOrganizations(orgs);
+
         // Fetch user's own repos
         const reposResponse = await fetch("https://api.github.com/user/repos", {
           headers: {
@@ -44,6 +56,8 @@ const GitHub = () => {
         const repos = await reposResponse.json();
         setRepositories(repos);
       }
+
+      fetchSpecificRepo();
 
       setLoading(false);
     };
@@ -106,13 +120,22 @@ const GitHub = () => {
       const matches = inputValue.match(
         /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/,
       );
-      const username = matches[1];
-      const repoName = matches[2];
-      fetchSingleRepo(username, repoName);
+      if (matches && matches.length >= 3) {
+        const username = matches[1];
+        const repoName = matches[2];
+        fetchSingleRepo(username, repoName);
+      }
     } else {
-      fetchUserRepos(inputValue);
+      console.error("Invalid GitHub repository URL");
     }
     setInputValue("");
+  };
+
+  const handleOrgChange = ({ option }) => {
+    setSelectedOrg(option);
+    if (option) {
+      fetchReposForOrg(option.login);
+    }
   };
 
   const isRepositoryURL = (value) => {
@@ -294,9 +317,9 @@ const GitHub = () => {
         <Box flex="grow" overflow={{ vertical: "scroll" }}>
           <Box direction="row" gap="small">
             <TextInput
-              placeholder="Search Repositories..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="GitHub Repository URL"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
             />
             <Button label="Add" onClick={handleAddInput} />
           </Box>
