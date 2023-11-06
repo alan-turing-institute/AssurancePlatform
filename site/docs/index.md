@@ -4,8 +4,7 @@ hide:
   - toc
 ---
 
-![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/building-an-assurance-case.png){
-align=right width="40%" }
+![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/building-an-assurance-case.png){ align=right width="40%" }
 
 # Trustworthy and Ethical Assurance (TEA)
 
@@ -25,8 +24,7 @@ This site contains information about the following:
 - User guidance for the TEA platform
 - Technical documentation for the TEA platform
 
-<br>
+<br />
 
 [Start Reading](about.md){ .md-button .md-button--primary }
-[Go to the Platform :material-arrow-right:](https://assuranceplatform.azurewebsites.net/){
-.md-button }
+[Go to the Platform :material-arrow-right:](https://assuranceplatform.azurewebsites.net/){ .md-button }

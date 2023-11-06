@@ -12,8 +12,7 @@ hide:
     Alan Turing Institute and University of York to support the process of
     developing and communicating trustworthy and ethical assurance cases.
 
-![A stylised illustration of an assurance case.](assets/images/assurance-case-large.png){
-align=right width="45%" }
+![A stylised illustration of an assurance case.](assets/images/assurance-case-large.png){ align=right width="45%" }
 
 To better understand the purpose and motivation of the TEA platform, we can
 consider the following question:
