@@ -7,6 +7,7 @@ import {
   Heading,
   Text,
   TextInput,
+  Spinner,
 } from "grommet";
 import { getBaseURL } from "./utils.js";
 import Github from "./GithubLogin.js";
@@ -15,7 +16,7 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState(false);
-  const [loading, setLoading] = useState(false); // Set default to false to not show loading initially
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("token") !== null) {
@@ -25,7 +26,7 @@ const Login = () => {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    setLoading(true); // Set loading to true when the login process starts
+    setLoading(true);
     const user = {
       username: username,
       password: password,
@@ -59,34 +60,35 @@ const Login = () => {
   };
 
   return (
-    <Box overflow="auto">
-      <Box flex={false} gap="medium" pad="medium" width="medium">
-        {loading ? (
-          <Text>Loading...</Text> // Display loading text when loading is true
-        ) : (
-          <>
-            <Heading level={2}>Login to platform</Heading>
-            {errors && (
-              <Heading level={2}>
-                Cannot log in with provided credentials
-              </Heading>
-            )}
-            <Form onSubmit={onSubmit}>{/* Form fields */}</Form>
-          </>
-        )}
-        <Box direction="row" gap="medium">
-          <Button
-            type="submit"
-            label="Login"
-            primary={true}
-            onClick={onSubmit}
-          />
-          <Github setLoading={setLoading} />
+    <Box fill align="center" justify="center">
+      {loading ? (
+        // Centered box with Spinner
+        <Box align="center" justify="center">
+          <Spinner size="medium" />
+          <Text size="xlarge" margin="small">
+            Loading...
+          </Text>
         </Box>
-      </Box>
-      <Box flex={false} gap="small" pad="medium" width="medium">
-        {/* Registration info */}
-      </Box>
+      ) : (
+        // Login form and buttons
+        <Box width="medium" pad="medium" gap="medium">
+          <Heading level={2}>Login to platform</Heading>
+          {errors && (
+            <Text color="status-critical" textAlign="center">
+              Cannot log in with provided credentials
+            </Text>
+          )}
+          <Form onSubmit={onSubmit}>{/* Form fields */}</Form>
+          <Box direction="row" gap="medium" justify="between">
+            <Button type="submit" label="Login" primary onClick={onSubmit} />
+            <Github setLoading={setLoading} />
+          </Box>
+          <Box align="center" margin={{ top: "medium" }}>
+            <Text>Not already registered?</Text>
+            <Button href="/signup/" label="Sign-up" />
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };
