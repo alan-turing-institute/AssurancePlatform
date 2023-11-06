@@ -113,5 +113,5 @@ and communicate them with the wider community or stakeholders.
 
 The remaining parts of this section provide further context to help situate and
 motivate trustworthy and ethical assurance. However, if you'd prefer to jump
-straight in, you can jump to our [user guidance](user-guidance/index.md) section
+straight in, you can jump to our [user guidance](../guidance/index.md) section
 instead.

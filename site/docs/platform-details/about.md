@@ -8,7 +8,7 @@
 
 The frontend web application for the Assurance Platform project was built using
 the [React](https://reactjs.org/) framework. Documentation on various npm and
-react commands can be found [here](react_info.md).
+react commands can be found on this page.
 
 ### Installing and running the code for development
 
@@ -47,39 +47,44 @@ correspond to a webpage or an element on a webpage (such as a form or a chart).
 The following Components in this codebase contribute to the Assurance Platform
 web app:
 
-- [CaseContainer](src/components/CaseContainer.js): this is the main "view" of
-  an assurance case. It contains several other components in different areas of
-  the screen (these may or may not be visible, depending on the state variables
-  that control whether some _layers_ are shown or not). This class also contains
-  the function that converts the JSON obtained from a GET request to the
-  `cases/<case_id>` API endpoint, into the markdown string that is used by
-  Mermaid.
-- [CaseSelector](src/components/CaseSelector.js). Essentially a drop-down menu
-  that allows the user to select which case to load from the database.
-- [CaseCreator](src/components/CaseCreator.js). A form that allows a user to
-  create a new AssuranceCase, and POSTs it to the API endpoint that then adds it
-  to the database.
-- [ItemViewer](src/components/ItemViewer.js) Text view of any DB object other
-  than an AssuranceCase (i.e. it could be a TopLevelNormativeGoal, Context,
-  PropertyClaim, Argument, EvidentialClaim, or Evidence). The type of object to
-  be displayed is passed to the component via the "type" prop. The component
-  itself is shown as a layer on CaseContainer when a node on the mermaid chart
-  is clicked.
-- [ItemEditor](src/components/ItemEditor.js) The layer containing the ItemEditor
+- [CaseContainer](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/CaseContainer.js):
+  this is the main "view" of an assurance case. It contains several other
+  components in different areas of the screen (these may or may not be visible,
+  depending on the state variables that control whether some _layers_ are shown
+  or not). This class also contains the function that converts the JSON obtained
+  from a GET request to the `cases/<case_id>` API endpoint, into the markdown
+  string that is used by Mermaid.
+- [CaseSelector](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/CaseSelector.js):
+  Essentially a drop-down menu that allows the user to select which case to
+  load from the database.
+- [CaseCreator](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/CaseCreator.js):
+  A form that allows a user to create a new AssuranceCase, and POSTs it to the
+  API endpoint that then adds it to the database.
+- [ItemViewer](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/ItemViewer.js):
+  Text view of any DB object other than an AssuranceCase (i.e. it could be a
+  TopLevelNormativeGoal, Context, PropertyClaim, Argument, EvidentialClaim, or
+  Evidence). The type of object to be displayed is passed to the component via
+  the "type" prop. The component itself is shown as a layer on CaseContainer
+  when a node on the mermaid chart is clicked.
+- [ItemEditor](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/ItemEditor.js):
+  The layer containing the ItemEditor
   component is shown when the "Edit" button on an ItemViewer is clicked. This
   component allows the details of any DB object other than an AssuranceCase to
   be edited.
-- [ItemCreator](src/components/ItemCreator.js) This component is shown in the
+- [ItemCreator](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/ItemCreator.js):
+  This component is shown in the
   createLayer in CaseContainer, when a "Create a new XYZ" button is clicked on
-  the ItemEditor. It will create a new DB object of the specified type, which is
-  a child of the object that was visible in the ItemEditor.
-- [Mermaid](src/components/Mermaid.js) This is the component that draws the
-  actual chart. The markdown for the chart is passed to the component via the
-  `chartmd` prop.
-- [Home](src/components/Home.js) Very basic homescreen containing navigation
-  options to the CaseCreator and CaseSelector.
-- [Routes](src/components/Routes.js) Define routes for the homepage, the
-  CaseCreator, CaseSelector, and CaseContainer components.
+  the ItemEditor. It will create a new DB object of the specified type, which
+  is a child of the object that was visible in the ItemEditor.
+- [Mermaid](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/Mermaid.js):
+  This is the component that draws the actual chart. The markdown for the chart
+  is passed to the component via the `chartmd` prop.
+- [Home](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/Home.js):
+  Very basic homescreen containing navigation options to the CaseCreator and
+  CaseSelector.
+- [Routes](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/frontend/src/components/Routes.js):
+  Define routes for the homepage, the CaseCreator, CaseSelector, and
+  CaseContainer components.
 
 ### Configuration
 
@@ -101,7 +106,7 @@ The backend is written in the [Django](https://docs.djangoproject.com/en/4.0/)
 framework. Its main purpose is to provide an API, through which data can be
 written to, retrieved from, or edited in, a database.
 
-Documentation on the API endpoints can be found [here](eap_api/API_docs.md).
+Documentation on the API endpoints can be found [here](./api.md).
 
 The database itself can be any SQL-based technology—the most straightforward to
 use being:
@@ -112,7 +117,7 @@ use being:
 ### Settings
 
 Most useful settings are in the file
-[eap_backend/settings.py](eap_backend/settings.py).
+[eap_backend/settings.py](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/eap_backend/eap_backend/settings.py).
 
 Some useful variables are:
 
@@ -159,16 +164,19 @@ python manage.py test
 In common with many projects using Django / Django REST framework, some of the
 relevant python modules are:
 
-- [eap_api/models.py](eap_api/models.py): this essentially defines the database
-  schema (via Django's Object Relational Model, where a class inheriting from
-  `django.db.models.Model` corresponds to a database table).
-- [eap_api/serializers.py](eap_api/serializers.py): this describes how
-  django-rest-framework converts the Model instances into JSON and vice versa.
-- [eap_api/views.py](eap_api/views.py): here, in addition to some helper
-  functions, there is one function per API endpoint, defining how the
-  serializers are used to produce or parse JSON data in response to different
-  REST verbs. One complication here is that we want a GET request for specific
-  cases to return the full nested JSON including all children. This makes use of
-  the recursive `get_json_tree` function.
-- [eap_api/urls.py](eap_api/urls.py: this provides the connections between API
-  endpoints and the functions defined in `views.py`.
+- [eap_api/models.py](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/eap_backend/eap_api/models.py):
+  this essentially defines the database schema (via Django's Object Relational
+  Model, where a class inheriting from `django.db.models.Model` corresponds to
+  a database table).
+- [eap_api/serializers.py](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/eap_backend/eap_api/serializers.py):
+  this describes how django-rest-framework converts the Model instances into
+  JSON and vice versa.
+- [eap_api/views.py](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/eap_backend/eap_api/views.py):
+  here, in addition to some helper functions, there is one function per API
+  endpoint, defining how the serializers are used to produce or parse JSON data
+  in response to different REST verbs. One complication here is that we want a
+  GET request for specific cases to return the full nested JSON including all
+  children. This makes use of the recursive `get_json_tree` function.
+- [eap_api/urls.py](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/eap_backend/eap_api/urls.py:
+  this provides the connections between API endpoints and the functions defined
+  in `views.py`.
