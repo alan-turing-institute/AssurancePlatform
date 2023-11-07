@@ -703,12 +703,6 @@ class CaseContainer extends Component {
               }}
             >
               <Button
-                label="Export JSON"
-                secondary
-                onClick={this.exportCurrentCase.bind(this)}
-              />
-
-              <Button
                 label="Export SVG"
                 secondary
                 onClick={this.exportCurrentCaseAsSVG.bind(this)}

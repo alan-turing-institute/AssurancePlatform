@@ -1,4 +1,3 @@
-/* Reset some default styling and ensure full height is used */
 html,
 body,
 #root {
@@ -6,7 +5,7 @@ body,
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: hidden; /* Prevent scroll on the root div */
+  overflow: hidden;
 }
 
 body {
@@ -24,50 +23,42 @@ code {
     monospace;
 }
 
-/* Grommet specific overrides for a modern look */
 .grommet {
   font-size: 1rem;
 }
 
-/* Full height container */
 .full-height-container {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* Main content with flex grow to fill available space */
 .main-content {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center content vertically */
-  align-items: center; /* Center content horizontally */
-  overflow-y: auto; /* Enable content scrolling */
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
   padding: 1rem;
 }
 
-/* Navigation and footer with appropriate spacing */
 .nav,
 .footer {
   flex-shrink: 0;
+  background-color: #333; /* Unified color for header and footer */
 }
 
-/* Box Shadows for depth */
 .box-shadow {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Navigation styles */
 .navigation {
-  background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  padding: 0px 0; /* Reduced padding to make the navbar shorter */
+  padding: 8px 0;
 }
 
-/* Footer styles */
 .footer {
-  background-color: #333;
   color: white;
   text-align: center;
   padding: 0.5rem;
@@ -78,7 +69,6 @@ code {
   text-decoration: none;
 }
 
-/* Button styles */
 .button {
   background-color: #6fffb0;
   color: #333;
@@ -94,7 +84,6 @@ code {
   color: white;
 }
 
-/* Responsive Typography */
 h1,
 h2,
 h3,
@@ -115,7 +104,6 @@ h3 {
   font-size: 1.5rem;
 }
 
-/* Responsive design for smaller screens */
 @media (max-width: 768px) {
   h1 {
     font-size: 2rem;
@@ -130,7 +118,6 @@ h3 {
   }
 }
 
-/* Utility classes for spacing */
 .px-1 {
   padding-left: 1rem;
   padding-right: 1rem;
@@ -150,9 +137,9 @@ h3 {
   margin-top: auto;
   margin-bottom: auto;
 }
+
 .wip-banner {
   position: relative;
-  /* existing styles */
 }
 
 .dismiss-button {
@@ -167,7 +154,7 @@ h3 {
 }
 
 .grommet-menu-label {
-  color: white !important; /* Use !important to override any existing color styles */
+  color: white !important;
 }
 
 .grommet-menu-item__label {
