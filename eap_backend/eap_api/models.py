@@ -81,6 +81,26 @@ class AssuranceCase(models.Model):
         return self.created_date >= timezone.now() - datetime.timedelta(days=1)
 
 
+class Comment(models.Model):
+    author = models.ForeignKey(
+        EAPUser, related_name="comments", on_delete=models.CASCADE
+    )
+    assurance_case = models.ForeignKey(
+        AssuranceCase, related_name="comments", on_delete=models.CASCADE
+    )
+    parent = models.ForeignKey(
+        "self", related_name="replies", null=True, blank=True, on_delete=models.CASCADE
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author} on {self.assurance_case}"
+
+    class Meta:
+        ordering = ["created_at"]
+
+
 class TopLevelNormativeGoal(CaseItem):
     keywords = models.CharField(max_length=3000)
     assurance_case = models.ForeignKey(

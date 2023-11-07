@@ -18,6 +18,6 @@ jest.mock("react-router-dom", () => ({
 test("renders case creator layer", () => {
   localStorage.setItem("token", "dummy");
   render(<CaseCreator />);
-  const textElement = screen.getByText("Create a new assurance case");
+  const textElement = screen.getByText("Create a New Assurance Case");
   expect(textElement).toBeInTheDocument();
 });

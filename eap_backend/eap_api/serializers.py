@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .github import Github, register_social_user
 from .models import (
     AssuranceCase,
+    Comment,
     Context,
     EAPGroup,
     EAPUser,
@@ -75,8 +76,25 @@ class EAPGroupSerializer(serializers.ModelSerializer):
         )
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    replies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "author",
+            "assurance_case",
+            "parent",
+            "content",
+            "created_at",
+            "replies",
+        )
+
+
 class AssuranceCaseSerializer(serializers.ModelSerializer):
     goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
     type = serializers.CharField(default="AssuranceCase", read_only=True)
     color_profile = serializers.CharField(default="default")
 
@@ -94,6 +112,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "edit_groups",
             "view_groups",
             "color_profile",
+            "comments",  # Add this line to include comments
         )
 
 
