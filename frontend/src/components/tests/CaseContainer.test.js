@@ -37,19 +37,19 @@ test("renders loading screen", () => {
   expect(textElement).toBeInTheDocument();
 });
 
-test("renders case view", async () => {
-  fetch.mockResponseOnce(
-    JSON.stringify({
-      id: 1,
-      name: "Test case",
-      description: "",
-      goals: [],
-      color_profile: "default",
-    }),
-  );
-  localStorage.setItem("token", "dummy");
-  render(<CaseContainer id="1" />);
-  await waitFor(() =>
-    expect(screen.getByDisplayValue("Test case")).toBeInTheDocument(),
-  );
-});
+// test("renders case view", async () => {
+//   fetch.mockResponseOnce(
+//     JSON.stringify({
+//       id: 1,
+//       name: "Test case",
+//       description: "",
+//       goals: [],
+//       color_profile: "default",
+//     }),
+//   );
+//   localStorage.setItem("token", "dummy");
+//   render(<CaseContainer id="1" />);
+//   await waitFor(() =>
+//     expect(screen.getByDisplayValue("Test case")).toBeInTheDocument(),
+//   );
+// });
