@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from .models import (
     AssuranceCase,
+    Comment,
     Context,
     EAPGroup,
     EAPUser,
@@ -19,6 +20,7 @@ from .models import (
 )
 from .serializers import (
     AssuranceCaseSerializer,
+    CommentSerializer,
     ContextSerializer,
     EAPGroupSerializer,
     EAPUserSerializer,
@@ -514,3 +516,48 @@ class GithubSocialAuthView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         data = (serializer.validated_data)["auth_token"]
         return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+def comment_list(request, assurance_case_id):
+    """
+    List all comments for an assurance case, or create a new comment.
+    """
+    if request.method == "GET":
+        comments = Comment.objects.filter(assurance_case_id=assurance_case_id)
+        serializer = CommentSerializer(comments, many=True)
+        return JsonResponse(serializer.data, safe=False)
+
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        data["assurance_case"] = assurance_case_id
+        data["author"] = request.user.id  # Ensure the author is set to the current user
+        serializer = CommentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def reply_to_comment(request, comment_id):
+    """
+    Reply to an existing comment.
+    """
+    try:
+        parent_comment = Comment.objects.get(pk=comment_id)
+    except Comment.DoesNotExist:
+        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "POST":
+        data = JSONParser().parse(request)
+        data["parent"] = comment_id
+        data["author"] = request.user.id  # Ensure the author is set to the current user
+        data["assurance_case"] = parent_comment.assurance_case_id
+        serializer = CommentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
