@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { neatJSON } from "neatjson";
 import { Select } from "grommet";
 import SVGDownloader from "./SVGDownloader.js";
-
+import CommentSection from "./CommentSection.js";
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";

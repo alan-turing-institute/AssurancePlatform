@@ -17,6 +17,8 @@ urlpatterns = [
     path("contexts/", views.context_list, name="context_list"),
     path("contexts/<int:pk>/", views.context_detail, name="context_detail"),
     path("propertyclaims/", views.property_claim_list, name="property_claim_list"),
+    path("comments/", views.comment_list, name="comment_list"),
+    path("comments/<int:pk>/", views.comment_detail, name="comment_detail"),
     path(
         "propertyclaims/<int:pk>/",
         views.property_claim_detail,
