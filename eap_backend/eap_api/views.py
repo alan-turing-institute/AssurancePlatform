@@ -531,17 +531,15 @@ def comment_list(request, assurance_case_id):
     if request.method == "GET":
         comments = Comment.objects.filter(assurance_case_id=assurance_case_id)
         serializer = CommentSerializer(comments, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        return Response(serializer.data)
 
     elif request.method == "POST":
-        data = JSONParser().parse(request)
-        data["assurance_case"] = assurance_case_id
-        data["author"] = request.user.id  # Ensure the author is set to the current user
-        serializer = CommentSerializer(data=data)
+        serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Ensure the author is set to the current user
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

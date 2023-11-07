@@ -640,7 +640,7 @@ class CaseContainer extends Component {
             pad={{
               horizontal: "small",
               top: "medium",
-              bottom: "none",
+              bottom: "small",
             }}
           >
             <Box direction="row" align="center" gap="small">

@@ -1,11 +1,16 @@
-import { Box, Button, TextArea, Text } from "grommet";
+import { Box, Button, TextArea, DataTable, Text } from "grommet";
+import { FormEdit, User, Clock } from "grommet-icons";
 import React, { useState, useEffect } from "react";
 import { getBaseURL } from "./utils.js";
-import { formatDistanceToNow } from "date-fns"; // Ensure you have date-fns installed
+import { formatDistanceToNow } from "date-fns";
 
 function CommentSection({ assuranceCaseId, authorId }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [sort, setSort] = useState({
+    property: "created_at",
+    direction: "desc",
+  });
 
   useEffect(() => {
     fetchComments();
@@ -32,7 +37,6 @@ function CommentSection({ assuranceCaseId, authorId }) {
     const commentData = {
       content: newComment,
       assurance_case: assuranceCaseId,
-      author: authorId,
     };
 
     const requestOptions = {
@@ -54,23 +58,51 @@ function CommentSection({ assuranceCaseId, authorId }) {
       console.error("Failed to post comment:", errorData);
     }
   };
-
-  const renderComments = (comments) => {
-    return comments.map((comment) => (
-      <Box key={comment.id} direction="column" pad={{ left: "1em" }}>
-        <Box direction="row" align="center" justify="between" pad="small">
-          <Text size="small">
-            {comment.author} -{" "}
-            {formatDistanceToNow(new Date(comment.created_at))} ago
-          </Text>
-          <Text>{comment.content}</Text>
-        </Box>
-      </Box>
-    ));
+  const onSort = (property) => {
+    const direction = sort.direction === "asc" ? "desc" : "asc";
+    setSort({ property, direction });
+    const sortedComments = [...comments].sort((a, b) => {
+      if (a[property] < b[property]) {
+        return sort.direction === "asc" ? 1 : -1;
+      }
+      if (a[property] > b[property]) {
+        return sort.direction === "asc" ? -1 : 1;
+      }
+      return 0;
+    });
+    setComments(sortedComments);
   };
 
+  const columns = [
+    {
+      property: "author",
+      header: (
+        <Text>
+          User <User />
+        </Text>
+      ),
+      render: (datum) => datum.author,
+    },
+    {
+      property: "created_at",
+      header: (
+        <Text>
+          Time <Clock />
+        </Text>
+      ),
+      render: (datum) =>
+        formatDistanceToNow(new Date(datum.created_at)) + " ago",
+      sortable: true,
+    },
+    {
+      property: "content",
+      header: "Comment",
+      render: (datum) => datum.content,
+    },
+  ];
+
   return (
-    <Box fill="vertical" overflow="auto" align="start" flex="grow">
+    <Box fill="vertical" align="start" flex="grow">
       <Box flex={false} direction="row" align="center" justify="between">
         <TextArea
           placeholder="Write your comment here..."
@@ -79,7 +111,13 @@ function CommentSection({ assuranceCaseId, authorId }) {
         />
         <Button label="Post Comment" onClick={handlePostComment} />
       </Box>
-      {renderComments(comments)}
+      <DataTable
+        columns={columns}
+        data={comments}
+        sort={sort}
+        onSort={(event) => onSort(event.property)}
+        step={10} // Amount of items to render at a time
+      />
     </Box>
   );
 }
