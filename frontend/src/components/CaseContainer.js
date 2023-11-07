@@ -15,6 +15,7 @@ import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
+
 import {
   getBaseURL,
   jsonToMermaid,
@@ -495,7 +496,8 @@ class CaseContainer extends Component {
   }
 
   inEditMode() {
-    return this.state.assurance_case.lock_uuid === this.state.session_id;
+    return true; // it's always edit time baby!
+    //this.state.assurance_case.lock_uuid === this.state.session_id;
   }
 
   getCreateGoalButton() {
@@ -561,12 +563,6 @@ class CaseContainer extends Component {
     } else if (this.inEditMode()) {
       return (
         <Box gap="xsmall" flex={false}>
-          <Button
-            label="Disable editor mode"
-            secondary
-            onClick={this.disableEditing.bind(this)}
-          />
-
           <Box>
             <label>Select Case color profile</label>
             <Select
@@ -610,14 +606,6 @@ class CaseContainer extends Component {
           </Box>
         </Box>
       );
-    } else if (!this.state.assurance_case.lock_uuid) {
-      return (
-        <Button
-          label="Enable editor mode"
-          primary
-          onClick={this.enableEditing.bind(this)}
-        />
-      );
     } else {
       return (
         <Box>
@@ -634,28 +622,56 @@ class CaseContainer extends Component {
       );
     }
   }
-
   render() {
-    // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return <Box>loading</Box>;
-      // if not logged-in, redirect to login page
     } else if (localStorage.getItem("token") == null) {
       window.location.replace("/login");
       return null;
     } else {
       return (
         <Box fill>
+          <Box
+            gridArea="header"
+            direction="row"
+            gap="small"
+            border={{ color: "dark-4", size: "small", side: "bottom" }}
+            pad={{
+              horizontal: "small",
+              top: "medium",
+              bottom: "none",
+            }}
+          >
+            <Box direction="row" align="center" gap="small">
+              <Text weight="bold">Case name:</Text>
+              <EditableText
+                initialValue={this.state.assurance_case.name}
+                textsize="xlarge"
+                onSubmit={(value) => this.submitCaseChange("name", value)}
+                editMode={this.inEditMode()}
+              />
+            </Box>
+            <Box direction="row" align="center" gap="small">
+              <Text weight="bold">Description:</Text>
+              <EditableText
+                initialValue={this.state.assurance_case.description}
+                size="small"
+                onSubmit={(value) =>
+                  this.submitCaseChange("description", value)
+                }
+                editMode={this.inEditMode()}
+              />
+            </Box>
+          </Box>
           <Grid
             fill
-            rows={["auto", "auto", "flex"]}
-            columns={["flex", "auto", "29%"]}
+            rows={["auto", "flex"]}
+            columns={["20%", "60%", "20%"]}
             gap="none"
             areas={[
-              { name: "header", start: [0, 0], end: [1, 0] },
-              { name: "main", start: [0, 1], end: [1, 2] },
-              { name: "top-mid", start: [1, 0], end: [1, 0] },
-              { name: "right", start: [2, 0], end: [2, 2] },
+              { name: "left", start: [0, 0], end: [0, 1] },
+              { name: "main", start: [1, 0], end: [1, 1] },
+              { name: "right", start: [2, 0], end: [2, 1] },
             ]}
           >
             {this.state.showCreateLayer &&
@@ -667,90 +683,21 @@ class CaseContainer extends Component {
             {this.state.showCasePermissionLayer && this.casePermissionLayer()}
 
             <Box
-              gridArea="header"
+              gridArea="left"
               direction="column"
+              border={{ color: "dark-4", size: "small", side: "right" }}
               gap="small"
-              pad={{
-                horizontal: "small",
-                top: "medium",
-                bottom: "none",
-              }}
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
-              <EditableText
-                initialValue={this.state.assurance_case.name}
-                textsize="xlarge"
-                onSubmit={(value) => this.submitCaseChange("name", value)}
-                editMode={this.inEditMode()}
-              />
-              <EditableText
-                initialValue={this.state.assurance_case.description}
-                size="small"
-                onSubmit={(value) =>
-                  this.submitCaseChange("description", value)
-                }
-                editMode={this.inEditMode()}
-              />
-            </Box>
-
-            <Box
-              gridArea="top-mid"
-              direction="column"
-              gap="small"
-              pad={{
-                horizontal: "small",
-                top: "small",
-                bottom: "none",
-              }}
-            >
-              <Button
-                label="Export JSON"
-                secondary
-                onClick={this.exportCurrentCase.bind(this)}
-              />
-
-              <Button
-                label="Export SVG"
-                secondary
-                onClick={this.exportCurrentCaseAsSVG.bind(this)}
-              />
-            </Box>
-
-            <Box
-              gridArea="right"
-              direction="column"
-              gap="small"
-              flex={false}
-              overflow={{ vertical: "scroll", horizontal: "visible" }}
-              pad={{
-                horizontal: "small",
-                top: "small",
-                bottom: "small",
-              }}
-            >
-              {this.getEditableControls()}
               {this.getCreateButtons()}
-              {this.state.showViewLayer &&
-                this.state.itemType &&
-                this.state.itemId &&
-                this.viewLayer()}
-              {this.state.showEditLayer &&
-                this.state.itemType &&
-                this.state.itemId &&
-                this.editLayer()}
             </Box>
 
             <Box
               gridArea="main"
-              justify="end"
+              justify="center"
+              align="center"
               fill
-              background={{
-                color: "white",
-                size: "20px 20px",
-                image: "radial-gradient(#999999 0.2%, transparent 10%)",
-                height: "200px",
-                width: "100%",
-                repeat: "repeat-xy",
-              }}
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
               <TransformWrapper
                 style={{ width: "100%", height: "100%" }}
@@ -777,22 +724,42 @@ class CaseContainer extends Component {
                       <Button
                         secondary
                         onClick={() => zoomIn()}
-                        icon=<ZoomIn />
+                        icon={<ZoomIn />}
                       />
                       <Button
                         secondary
                         onClick={() => zoomOut()}
-                        icon=<ZoomOut />
+                        icon={<ZoomOut />}
                       />
                       <Button
                         secondary
                         onClick={() => resetTransform()}
-                        icon=<FormClose />
+                        icon={<FormClose />}
                       />
                     </Box>
                   </React.Fragment>
                 )}
               </TransformWrapper>
+            </Box>
+
+            <Box
+              gridArea="right"
+              direction="column"
+              border={{ color: "dark-4", size: "small", side: "left" }}
+              gap="small"
+              flex={false}
+              overflow={{ vertical: "scroll", horizontal: "visible" }}
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
+            >
+              {this.getEditableControls()}
+              {this.state.showViewLayer &&
+                this.state.itemType &&
+                this.state.itemId &&
+                this.viewLayer()}
+              {this.state.showEditLayer &&
+                this.state.itemType &&
+                this.state.itemId &&
+                this.editLayer()}
             </Box>
           </Grid>
         </Box>

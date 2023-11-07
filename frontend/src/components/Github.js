@@ -15,8 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { getSelfUser } from "./utils.js";
 
 const GitHub = () => {
-  const [selectedOrg, setSelectedOrg] = useState({});
-  const [organizations, setOrganizations] = useState([]);
   const [repositories, setRepositories] = useState([]);
   const [selectedRepoFiles, setSelectedRepoFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -56,19 +54,9 @@ const GitHub = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       const userGithubHandle = await getSelfUser()["username"];
-      setSelectedOrg({ login: userGithubHandle || "Your Profile" });
       const token = localStorage.getItem("access_token");
 
       if (token) {
-        // Fetch user organizations
-        const orgsResponse = await fetch("https://api.github.com/user/orgs", {
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        });
-        const orgs = await orgsResponse.json();
-        setOrganizations(orgs);
-
         // Fetch user's own repos
         const reposResponse = await fetch("https://api.github.com/user/repos", {
           headers: {
@@ -153,13 +141,6 @@ const GitHub = () => {
     setInputValue("");
   };
 
-  const handleOrgChange = ({ option }) => {
-    setSelectedOrg(option);
-    if (option) {
-      fetchReposForOrg(option.login);
-    }
-  };
-
   const isRepositoryURL = (value) => {
     const regex = /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/;
     return regex.test(value);
@@ -176,40 +157,6 @@ const GitHub = () => {
         .then((response) => response.json())
         .then((repo) => {
           setRepositories((prevRepos) => [...prevRepos, repo]);
-        });
-    }
-  };
-
-  const fetchUserRepos = (username) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch(`https://api.github.com/users/${username}/repos`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((repos) => {
-          setRepositories(repos);
-        });
-    }
-  };
-
-  const fetchReposForOrg = (orgLogin) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch(`https://api.github.com/orgs/${orgLogin}/repos`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((repos) => {
-          // Filter by permissions
-          const filteredRepos = repos.filter(
-            (repo) => repo.permissions.admin || repo.permissions.maintain,
-          );
-          setRepositories(filteredRepos);
         });
     }
   };

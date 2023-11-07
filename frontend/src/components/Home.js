@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Image, Text, Grid, Button } from "grommet";
+import { Box, Image, Text, Grid } from "grommet";
 import mockup_diagram from "../images/mockup-diagram.png";
 
 const Home = () => {
@@ -27,7 +27,7 @@ const Home = () => {
           gridArea="header"
           direction="row"
           gap="small"
-          pad={{ horizontal: "small", vertical: "medium" }}
+          pad={{ horizontal: "small", vertical: "small" }}
           justify="between"
         >
           <Text size="2xl">Ethical Assurance Platform</Text>
