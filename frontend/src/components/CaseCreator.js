@@ -1,3 +1,4 @@
+import React, { useRef, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -6,14 +7,19 @@ import {
   Heading,
   TextInput,
   Layer,
+  Text,
 } from "grommet";
-import { FormClose } from "grommet-icons";
-import React, { useRef, useState, useEffect } from "react";
+import {
+  FormClose,
+  Upload,
+  CloudDownload,
+  DocumentUpload,
+  DocumentDownload,
+} from "grommet-icons";
 import TemplateSelector from "./TemplateSelector.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "regenerator-runtime/runtime";
 import { getBaseURL } from "./utils.js";
-import { useLocation } from "react-router-dom";
 
 function CaseCreator() {
   const [name, setName] = useState("Name");
@@ -120,75 +126,94 @@ function CaseCreator() {
     reader.readAsText(file);
   }
 
+  const renderFormFields = () => (
+    <Box direction="row" gap="medium" align="center">
+      <FormField label="Case Name" name="name">
+        <TextInput
+          placeholder="Enter case name"
+          value={name}
+          onChange={onChange}
+        />
+      </FormField>
+      <FormField label="Case Description" name="description">
+        <TextInput
+          placeholder="Enter case description"
+          value={description}
+          onChange={onChange}
+        />
+      </FormField>
+      <TemplateSelector value={template} setValue={setTemplate} />
+    </Box>
+  );
+
+  const renderImportButtons = () => (
+    <Box direction="row" gap="small" margin={{ top: "small" }}>
+      <Button
+        icon={<DocumentUpload />}
+        label="Load Local File"
+        onClick={() => fileInputRef.current.click()}
+      />
+      <Button
+        icon={<CloudDownload />}
+        label="Load from URL"
+        onClick={() => setShowDialog(true)}
+      />
+    </Box>
+  );
+
+  const renderImportLayer = () =>
+    showDialog && (
+      <Layer
+        onEsc={() => setShowDialog(false)}
+        onClickOutside={() => setShowDialog(false)}
+      >
+        <Box pad="medium" gap="small" width="medium">
+          <Box direction="row" justify="end">
+            <Button icon={<FormClose />} onClick={() => setShowDialog(false)} />
+          </Box>
+          <Text>Enter the URL of the JSON or SVG file you wish to import:</Text>
+          <TextInput
+            placeholder="https://example.com/case.json"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+          />
+          <Button
+            icon={<DocumentDownload />}
+            label="Fetch and Load JSON or SVG"
+            onClick={fetchJson}
+          />
+        </Box>
+      </Layer>
+    );
+
   if (localStorage.getItem("token") == null) {
     window.location.replace("/login");
     return null;
   } else {
     return (
-      // TODO The visual layout here is a bit ugly, could improve it.
-
-      <Box margin="medium" overflow="auto">
-        <Heading level={4}>Create a new assurance case</Heading>
-        <Form onSubmit={handleSubmit}>
-          <Box direction="column" width="medium">
-            <Box direction="row">
-              <FormField margin="xsmall">
-                <TextInput placeholder={name} name="name" onChange={onChange} />
-              </FormField>
-              <FormField margin="xsmall">
-                <TextInput
-                  placeholder={description}
-                  name="description"
-                  onChange={onChange}
-                />
-              </FormField>
+      <Box fill align="center" justify="start" pad="large">
+        <Box
+          width="large"
+          elevation="small"
+          pad="medium"
+          round="small"
+          background="light-1"
+        >
+          <Heading level={2} margin="none">
+            Create a New Assurance Case
+          </Heading>
+          <Form onSubmit={handleSubmit}>
+            {renderFormFields()}
+            <Box align="center" margin={{ top: "medium" }}>
+              <Button type="submit" primary label="Submit Case" />
             </Box>
-            <TemplateSelector value={template} setValue={setTemplate} />
-            <Button type="submit" primary label="Submit" margin="xsmall" />
-          </Box>
-        </Form>
-        <Box direction="column" margin={{ top: "medium" }} width="medium">
-          <Heading level={4} margin={{ top: "medium" }}>
-            Import an assurance case from file
+          </Form>
+          <Heading level={3} margin={{ top: "large" }}>
+            Import Assurance Case
           </Heading>
-          <Button
-            label="Import"
-            margin="xsmall"
-            onClick={(event) => fileInputRef.current.click()}
-          />
-          <Heading level={4} margin={{ top: "medium" }}>
-            Import an assurance case from URL
-          </Heading>
-
-          <Button
-            label="Load JSON from URL"
-            onClick={() => setShowDialog(true)}
-          />
-          {showDialog && (
-            <Layer
-              onEsc={() => setShowDialog(false)}
-              onClickOutside={() => setShowDialog(false)}
-            >
-              <Box pad="medium" gap="small" width="medium">
-                <Box direction="row" justify="end">
-                  <Button
-                    icon={<FormClose />}
-                    onClick={() => setShowDialog(false)}
-                  />
-                </Box>
-                <TextInput
-                  placeholder="Enter URL"
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                />
-                <Button label="Fetch JSON" onClick={fetchJson} />
-              </Box>
-            </Layer>
-          )}
-          {jsonContent && postCaseJSON(JSON.stringify(jsonContent, null, 2))}
-
+          {renderImportButtons()}
+          {renderImportLayer()}
           <input
-            // An invisible file selector input, that will be triggered by the import button.
             type="file"
             id="file"
             ref={fileInputRef}
