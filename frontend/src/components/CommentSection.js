@@ -1,17 +1,16 @@
-import { Box, Button, TextArea, List, Form, FormField } from "grommet";
+import { Box, Button, TextArea, List } from "grommet";
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
 
-function CommentSection() {
-  const { assuranceCaseId } = useParams();
+function CommentSection({ assuranceCaseId }) {
+  // Accept assuranceCaseId as a prop
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
     fetchComments();
-  }, [assuranceCaseId]);
+  }, [assuranceCaseId]); // assuranceCaseId is now a dependency for this effect
 
   const fetchComments = async () => {
     const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
@@ -29,7 +28,7 @@ function CommentSection() {
   const handleNewCommentChange = (event) => setNewComment(event.target.value);
 
   const handlePostComment = async () => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // POST endpoint for a new comment
+    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // Use the passed assuranceCaseId
     const requestOptions = {
       method: "POST",
       headers: {
@@ -64,7 +63,6 @@ function CommentSection() {
             justify="between"
             pad="small"
           >
-            {/* Removed edit functionality for each comment item as the provided Django views do not handle updates */}
             <span>{datum.text}</span>
           </Box>
         )}

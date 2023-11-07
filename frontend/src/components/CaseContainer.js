@@ -760,6 +760,7 @@ class CaseContainer extends Component {
                 this.state.itemType &&
                 this.state.itemId &&
                 this.editLayer()}
+              <CommentSection assuranceCaseId={this.state.assurance_case.id} />
             </Box>
           </Grid>
         </Box>
