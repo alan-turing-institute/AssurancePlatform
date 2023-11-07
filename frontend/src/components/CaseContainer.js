@@ -21,6 +21,7 @@ import {
   jsonToMermaid,
   highlightNode,
   removeHighlight,
+  getSelfUser,
 } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
@@ -689,7 +690,15 @@ class CaseContainer extends Component {
               gap="small"
               pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
-              {this.getCreateButtons()}
+              <Box flex={false} style={{ height: "25%" }}>
+                {this.getCreateButtons()}
+              </Box>
+              <Box flex={false} style={{ height: "75%", overflow: "auto" }}>
+                <CommentSection
+                  assuranceCaseId={this.state.assurance_case.id}
+                  authorId={getSelfUser()["username"]}
+                />
+              </Box>
             </Box>
 
             <Box
@@ -760,7 +769,6 @@ class CaseContainer extends Component {
                 this.state.itemType &&
                 this.state.itemId &&
                 this.editLayer()}
-              <CommentSection assuranceCaseId={this.state.assurance_case.id} />
             </Box>
           </Grid>
         </Box>
