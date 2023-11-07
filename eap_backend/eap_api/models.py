@@ -88,9 +88,6 @@ class Comment(models.Model):
     assurance_case = models.ForeignKey(
         AssuranceCase, related_name="comments", on_delete=models.CASCADE
     )
-    parent = models.ForeignKey(
-        "self", related_name="replies", null=True, blank=True, on_delete=models.CASCADE
-    )
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

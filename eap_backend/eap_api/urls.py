@@ -24,6 +24,9 @@ urlpatterns = [
         name="reply_to_comment",
     ),
     path(
+        "comments/<int:pk>/", views.CommentEdit.as_view(), name="comment_edit"
+    ),  # Use the view class
+    path(
         "propertyclaims/<int:pk>/",
         views.property_claim_detail,
         name="property_claim_detail",

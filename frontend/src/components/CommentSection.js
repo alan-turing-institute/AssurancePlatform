@@ -1,13 +1,12 @@
-import { Box, Button, TextArea, List, Collapsible, Text } from "grommet";
+import { Box, Button, TextArea, Text } from "grommet";
 import React, { useState, useEffect } from "react";
 import { getBaseURL } from "./utils.js";
-import { formatDistanceToNow } from "date-fns"; // You'll need to install date-fns if you haven't
+import { formatDistanceToNow } from "date-fns"; // Ensure you have date-fns installed
 
 function CommentSection({ assuranceCaseId, authorId }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
-  const [showReplies, setShowReplies] = useState({}); // To manage which comment's replies are visible
+  const [editingCommentId, setEditingCommentId] = useState(null); // To track which comment is being edited
 
   useEffect(() => {
     fetchComments();
@@ -27,14 +26,40 @@ function CommentSection({ assuranceCaseId, authorId }) {
 
   const handleNewCommentChange = (event) => setNewComment(event.target.value);
 
-  const handlePostComment = async (parentId = null) => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // General comments endpoint
+  const handleEditComment = async (commentId, content) => {
+    // Function to handle comment edit submission
+    const url = `${getBaseURL()}/comments/${commentId}/`;
+    const commentData = { content: content };
+
+    const requestOptions = {
+      method: "PATCH", // Use PATCH for partial updates
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(commentData),
+    };
+
+    const response = await fetch(url, requestOptions);
+    if (response.ok) {
+      fetchComments();
+      setEditingCommentId(null); // Reset editing state
+    } else {
+      // Handle the error response here
+      const errorData = await response.json();
+      console.error("Failed to edit comment:", errorData);
+    }
+  };
+
+  const handlePostComment = async () => {
+    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // General comments endpoint for a specific case
+
     const commentData = {
       content: newComment,
       assurance_case: assuranceCaseId,
-      author: authorId,
-      parent: parentId,
+      author: authorId, // Assuming you still want to send the author ID
     };
+
     const requestOptions = {
       method: "POST",
       headers: {
@@ -43,6 +68,7 @@ function CommentSection({ assuranceCaseId, authorId }) {
       },
       body: JSON.stringify(commentData),
     };
+
     const response = await fetch(url, requestOptions);
     if (response.ok) {
       setNewComment("");
@@ -54,50 +80,45 @@ function CommentSection({ assuranceCaseId, authorId }) {
     }
   };
 
-  const renderComments = (comments, depth = 0) => {
-    return comments.map((comment, index) => (
-      <Box key={comment.id} direction="column" pad={{ left: `${depth * 2}em` }}>
-        <Box
-          direction="row"
-          align="center"
-          justify="between"
-          pad="small"
-          onClick={() =>
-            setShowReplies({
-              ...showReplies,
-              [comment.id]: !showReplies[comment.id],
-            })
-          }
-        >
+  const renderComments = (comments) => {
+    return comments.map((comment) => (
+      <Box key={comment.id} direction="column" pad={{ left: "1em" }}>
+        <Box direction="row" align="center" justify="between" pad="small">
           <Text size="small">
-            {comment.author.username} -{" "}
+            {console.log(comment)}
+            {comment.author} -{" "}
             {formatDistanceToNow(new Date(comment.created_at))} ago
           </Text>
-          <Text>{comment.content}</Text>
-          <Button label="Reply" onClick={() => setReplyTo(comment.id)} />
+          {editingCommentId === comment.id ? (
+            <TextArea
+              value={newComment}
+              onChange={handleNewCommentChange}
+              onBlur={() => handleEditComment(comment.id, newComment)}
+            />
+          ) : (
+            <Text>{comment.content}</Text>
+          )}
+          <Button
+            label="Edit"
+            onClick={() => {
+              setNewComment(comment.content);
+              setEditingCommentId(comment.id);
+            }}
+          />
         </Box>
-        {comment.replies && comment.replies.length > 0 && (
-          <Collapsible open={showReplies[comment.id]}>
-            {renderComments(comment.replies, depth + 1)}
-          </Collapsible>
-        )}
       </Box>
     ));
   };
+
   return (
     <Box fill="vertical" overflow="auto" align="start" flex="grow">
       <Box flex={false} direction="row" align="center" justify="between">
         <TextArea
-          placeholder={`Replying to ${
-            replyTo ? `Comment #${replyTo}` : "Write your comment here..."
-          }`}
+          placeholder="Write your comment here..."
           value={newComment}
           onChange={handleNewCommentChange}
         />
-        <Button
-          label="Post Comment"
-          onClick={() => handlePostComment(replyTo)}
-        />
+        <Button label="Post Comment" onClick={handlePostComment} />
       </Box>
       {renderComments(comments)}
     </Box>

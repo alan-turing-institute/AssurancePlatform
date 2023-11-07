@@ -77,18 +77,14 @@ class EAPGroupSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    replies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-
     class Meta:
         model = Comment
         fields = (
             "id",
             "author",
             "assurance_case",
-            "parent",
             "content",
             "created_at",
-            "replies",
         )
 
 
