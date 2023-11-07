@@ -10,6 +10,9 @@ import CaseCreator from "./CaseCreator.js";
 import CaseSelector from "./CaseSelector.js";
 import CaseContainer from "./CaseContainer.js";
 import WorkInProcessBanner from "./WorkInProcessBanner";
+import Logout from "./Logout.js";
+import Groups from "./Groups.js";
+import Github from "./Github.js";
 
 const AllRoutes = () => {
   return (
@@ -34,9 +37,14 @@ const AllRoutes = () => {
             <Route exact path="/" element={<Home />} />
             <Route path="/case/new" element={<CaseCreator />} />
             <Route path="/case/select" element={<CaseSelector />} />
-            <Route path="/case/:caseSlug" element={<CaseContainer />} />
+            <Route path="/case">
+              <Route path=":caseSlug" element={<CaseContainer />} />
+            </Route>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/logout" element={<Logout />} />
+            <Route path="/groups" element={<Groups />} />
+            <Route path="/github" element={<Github />} />
             {/* UserProfileDropdown is now part of Navigation, so no need to have separate routes for Logout, Groups, and Github */}
           </Routes>
         </Box>

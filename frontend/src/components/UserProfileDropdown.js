@@ -27,7 +27,7 @@ const UserProfileDropdown = () => {
 
   const userMenuItems = [
     { label: "Groups", onClick: () => navigate("/groups") },
-    { label: "GitHub Files", onClick: () => navigate("/github") },
+    { label: "GitHub Files", onClick: () => navigate("/Github") },
     { label: "Logout", onClick: handleLogout },
   ];
 
