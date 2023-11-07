@@ -1,53 +1,29 @@
-import { Box } from "grommet";
 import React from "react";
+import { Box, Nav, Anchor } from "grommet";
 import { NavLink } from "react-router-dom";
 import CaseSelector from "./CaseSelector.js";
+import UserProfileDropdown from "./UserProfileDropdown"; // Import the UserProfileDropdown
 
 function Navigation() {
+  const isLoggedIn = localStorage.getItem("token") != null;
+
   return (
-    <Box className="navigation">
-      <nav className="navbar navbar-expand navbar-dark bg-dark">
-        <Box direction="row" className="container">
-          <NavLink className="navbar-brand" to="/">
-            Ethical Assurance Platform
-          </NavLink>
-          <Box gap="small" direction="row">
-            {localStorage.getItem("token") != null && <CaseSelector />}
-            <ul className="navbar-nav ml-auto">
-              {localStorage.getItem("token") != null && (
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/groups">
-                    Groups
-                  </NavLink>
-                </li>
-              )}
-              {localStorage.getItem("token") != null && (
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/Github">
-                    Github Files
-                  </NavLink>
-                </li>
-              )}
-              <li className="nav-item">
-                <a
-                  className="nav-link"
-                  href="https://alan-turing-institute.github.io/AssurancePlatform/"
-                >
-                  Docs
-                  <span className="sr-only">(current)</span>
-                </a>
-              </li>
-              {localStorage.getItem("token") != null && (
-                <li className="nav-item">
-                  <NavLink className="nav-link" to="/logout">
-                    Logout
-                  </NavLink>
-                </li>
-              )}
-            </ul>
-          </Box>
+    <Box className="navigation" as="header">
+      <Nav
+        className="navbar navbar-expand navbar-dark bg-dark"
+        direction="row"
+        pad="medium"
+        align="center"
+        justify="between"
+      >
+        <NavLink className="navbar-brand" to="/">
+          Ethical Assurance Platform
+        </NavLink>
+        <Box direction="row" align="center" gap="medium">
+          {isLoggedIn && <CaseSelector />}
+          <UserProfileDropdown />
         </Box>
-      </nav>
+      </Nav>
     </Box>
   );
 }
