@@ -3,6 +3,7 @@ import { Box, Nav, Anchor } from "grommet";
 import { NavLink } from "react-router-dom";
 import CaseSelector from "./CaseSelector.js";
 import UserProfileDropdown from "./UserProfileDropdown"; // Import the UserProfileDropdown
+import { Book } from "grommet-icons"; // Import an icon for documentation
 
 function Navigation() {
   const isLoggedIn = localStorage.getItem("token") != null;
@@ -25,6 +26,18 @@ function Navigation() {
           {isLoggedIn ? (
             <>
               <CaseSelector />
+              <Anchor
+                href="https://alan-turing-institute.github.io/AssurancePlatform/"
+                label={
+                  <Box direction="row" align="center" gap="small">
+                    <Book />
+                    Documentation
+                  </Box>
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={anchorStyle}
+              />
               <UserProfileDropdown />
             </>
           ) : (
