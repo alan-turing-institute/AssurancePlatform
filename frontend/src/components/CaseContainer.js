@@ -662,6 +662,11 @@ class CaseContainer extends Component {
                 }
                 editMode={this.inEditMode()}
               />
+              <Button
+                label="Export SVG"
+                secondary
+                onClick={this.exportCurrentCaseAsSVG.bind(this)}
+              />
             </Box>
           </Box>
           <Grid
