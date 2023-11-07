@@ -1,3 +1,4 @@
+/* Reset some default styling and ensure full height is used */
 html,
 body,
 #root {
@@ -5,7 +6,7 @@ body,
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: hidden;
+  overflow: hidden; /* Prevent scroll on the root div */
 }
 
 body {
@@ -23,42 +24,44 @@ code {
     monospace;
 }
 
+/* Grommet specific overrides for a modern look */
 .grommet {
   font-size: 1rem;
 }
 
+/* Full height container */
 .full-height-container {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
+/* Main content with flex grow to fill available space */
 .main-content {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow-y: auto;
+  justify-content: center; /* Center content vertically */
+  align-items: center; /* Center content horizontally */
+  overflow-y: auto; /* Enable content scrolling */
   padding: 1rem;
 }
 
-.nav,
-.footer {
-  flex-shrink: 0;
-  background-color: #333; /* Unified color for header and footer */
-}
-
+/* Box Shadows for depth */
 .box-shadow {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Navigation styles */
 .navigation {
+  background-color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  padding: 8px 0;
+  padding: 0px 0; /* Reduced padding to make the navbar shorter */
 }
 
+/* Footer styles */
 .footer {
+  background-color: #333;
   color: white;
   text-align: center;
   padding: 0.5rem;
@@ -69,6 +72,7 @@ code {
   text-decoration: none;
 }
 
+/* Button styles */
 .button {
   background-color: #6fffb0;
   color: #333;
@@ -84,6 +88,7 @@ code {
   color: white;
 }
 
+/* Responsive Typography */
 h1,
 h2,
 h3,
@@ -104,6 +109,7 @@ h3 {
   font-size: 1.5rem;
 }
 
+/* Responsive design for smaller screens */
 @media (max-width: 768px) {
   h1 {
     font-size: 2rem;
@@ -118,6 +124,7 @@ h3 {
   }
 }
 
+/* Utility classes for spacing */
 .px-1 {
   padding-left: 1rem;
   padding-right: 1rem;
@@ -137,9 +144,9 @@ h3 {
   margin-top: auto;
   margin-bottom: auto;
 }
-
 .wip-banner {
   position: relative;
+  /* existing styles */
 }
 
 .dismiss-button {
@@ -154,9 +161,32 @@ h3 {
 }
 
 .grommet-menu-label {
-  color: white !important;
+  color: white !important; /* Use !important to override any existing color styles */
 }
 
 .grommet-menu-item__label {
   color: white !important;
 }
+/* This will reduce the vertical padding of the navbar, making it shorter */
+.navbar {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* If you have specific height requirements, you can uncomment and adjust the following */
+.navbar {
+  height: 0; /* Adjust as needed */
+}
+
+/* This will adjust the brand link to align it vertically in the shortened navbar */
+.navbar-brand {
+  line-height: 40px; /* Adjust to navbar height if using a specific height */
+  margin-right: 20px; /* Optional: to provide some space after the brand */
+}
+
+/* To ensure that the anchor tags fit well, you may want to adjust their line height as well */
+.navigation a {
+  line-height: 1.5; /* Adjust according to your design */
+}
+
+/* Further adjustments might be needed for other elements like dropdowns, selectors, etc. */
