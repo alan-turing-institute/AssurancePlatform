@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
+import { Box, Button, Layer, Text, Grid, DropButton } from "grommet";
 import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
@@ -35,6 +35,7 @@ class CaseContainer extends Component {
       showConfirmDeleteLayer: false,
       showCasePermissionLayer: false,
       loading: true,
+      floatingMenuVisible: false,
       assurance_case: {
         id: 0,
         name: "",
@@ -45,8 +46,13 @@ class CaseContainer extends Component {
       mermaid_md: "graph TB; \n",
       metadata: null,
     };
+    this.toggleFloatingMenu = this.toggleFloatingMenu.bind(this); // Add this line
 
     this.url = `${getBaseURL()}/cases/`;
+  }
+
+  toggleFloatingMenu(visible) {
+    this.setState({ floatingMenuVisible: visible });
   }
 
   handleProfileChange = (color) => {
@@ -55,6 +61,11 @@ class CaseContainer extends Component {
         this.updateView();
       }
     });
+  };
+
+  closeFloatingMenu = () => {
+    // Your logic to close the floating menu
+    this.setState({ floatingMenuVisible: false });
   };
 
   fetchData = async (id) => {
@@ -645,7 +656,7 @@ class CaseContainer extends Component {
       return null;
     } else {
       return (
-        <Box fill>
+        <Box fill onClick={this.closeFloatingMenu.bind(this)}>
           <Grid
             fill
             rows={["auto", "auto", "flex"]}
@@ -732,6 +743,36 @@ class CaseContainer extends Component {
                 this.state.itemId &&
                 this.editLayer()}
             </Box>
+
+            {/* Floating Menu Layer */}
+            {this.state.floatingMenuVisible && (
+              <Layer
+                position="right"
+                modal={false}
+                responsive={false}
+                onClickOutside={this.closeFloatingMenu.bind(this)}
+                onEsc={this.closeFloatingMenu.bind(this)}
+              >
+                <Box
+                  fill="vertical"
+                  overflow="auto"
+                  width="medium"
+                  pad="medium"
+                  gap="medium"
+                >
+                  {this.getEditableControls()}
+                  {this.getCreateButtons()}
+                  {this.state.showViewLayer &&
+                    this.state.itemType &&
+                    this.state.itemId &&
+                    this.viewLayer()}
+                  {this.state.showEditLayer &&
+                    this.state.itemType &&
+                    this.state.itemId &&
+                    this.editLayer()}
+                </Box>
+              </Layer>
+            )}
 
             <Box
               gridArea="main"
