@@ -1,12 +1,4 @@
-import {
-  Box,
-  Button,
-  TextArea,
-  List,
-  ListItem,
-  Form,
-  FormField,
-} from "grommet";
+import { Box, Button, TextArea, List, Form, FormField } from "grommet";
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
@@ -15,8 +7,6 @@ function CommentSection() {
   const { assuranceCaseId } = useParams();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [editCommentId, setEditCommentId] = useState(null);
-  const [editCommentText, setEditCommentText] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -24,7 +14,7 @@ function CommentSection() {
   }, [assuranceCaseId]);
 
   const fetchComments = async () => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}`;
+    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
     const requestOptions = {
       method: "GET",
       headers: {
@@ -39,7 +29,7 @@ function CommentSection() {
   const handleNewCommentChange = (event) => setNewComment(event.target.value);
 
   const handlePostComment = async () => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}`;
+    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // POST endpoint for a new comment
     const requestOptions = {
       method: "POST",
       headers: {
@@ -51,32 +41,6 @@ function CommentSection() {
     const response = await fetch(url, requestOptions);
     if (response.ok) {
       setNewComment("");
-      fetchComments();
-    }
-  };
-
-  const handleEditComment = (commentId, commentText) => {
-    setEditCommentId(commentId);
-    setEditCommentText(commentText);
-    setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
-  };
-
-  const handleEditCommentChange = (event) =>
-    setEditCommentText(event.target.value);
-
-  const handleUpdateComment = async (commentId) => {
-    const url = `${getBaseURL()}/comments/${commentId}`;
-    const requestOptions = {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ text: editCommentText }),
-    };
-    const response = await fetch(url, requestOptions);
-    if (response.ok) {
-      setEditCommentId(null);
       fetchComments();
     }
   };
@@ -93,36 +57,16 @@ function CommentSection() {
       </Box>
       <List data={comments}>
         {(datum, index) => (
-          <ListItem
+          <Box
             key={index}
             direction="row"
             align="center"
             justify="between"
+            pad="small"
           >
-            {editCommentId === datum.id ? (
-              <Form>
-                <FormField>
-                  <TextArea
-                    ref={inputRef}
-                    value={editCommentText}
-                    onChange={handleEditCommentChange}
-                  />
-                </FormField>
-                <Button
-                  label="Update"
-                  onClick={() => handleUpdateComment(datum.id)}
-                />
-              </Form>
-            ) : (
-              <>
-                <span>{datum.text}</span>
-                <Button
-                  label="Edit"
-                  onClick={() => handleEditComment(datum.id, datum.text)}
-                />
-              </>
-            )}
-          </ListItem>
+            {/* Removed edit functionality for each comment item as the provided Django views do not handle updates */}
+            <span>{datum.text}</span>
+          </Box>
         )}
       </List>
     </Box>
