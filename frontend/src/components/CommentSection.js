@@ -6,11 +6,11 @@ import { formatDistanceToNow } from "date-fns"; // Ensure you have date-fns inst
 function CommentSection({ assuranceCaseId, authorId }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState(null); // To track which comment is being edited
 
   useEffect(() => {
     fetchComments();
   }, [assuranceCaseId]);
+
   const fetchComments = async () => {
     const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
     const requestOptions = {
@@ -26,38 +26,13 @@ function CommentSection({ assuranceCaseId, authorId }) {
 
   const handleNewCommentChange = (event) => setNewComment(event.target.value);
 
-  const handleEditComment = async (commentId, content) => {
-    // Function to handle comment edit submission
-    const url = `${getBaseURL()}/comments/${commentId}/`;
-    const commentData = { content: content };
-
-    const requestOptions = {
-      method: "PATCH", // Use PATCH for partial updates
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(commentData),
-    };
-
-    const response = await fetch(url, requestOptions);
-    if (response.ok) {
-      fetchComments();
-      setEditingCommentId(null); // Reset editing state
-    } else {
-      // Handle the error response here
-      const errorData = await response.json();
-      console.error("Failed to edit comment:", errorData);
-    }
-  };
-
   const handlePostComment = async () => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`; // General comments endpoint for a specific case
+    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
 
     const commentData = {
       content: newComment,
       assurance_case: assuranceCaseId,
-      author: authorId, // Assuming you still want to send the author ID
+      author: authorId,
     };
 
     const requestOptions = {
@@ -85,26 +60,10 @@ function CommentSection({ assuranceCaseId, authorId }) {
       <Box key={comment.id} direction="column" pad={{ left: "1em" }}>
         <Box direction="row" align="center" justify="between" pad="small">
           <Text size="small">
-            {console.log(comment)}
             {comment.author} -{" "}
             {formatDistanceToNow(new Date(comment.created_at))} ago
           </Text>
-          {editingCommentId === comment.id ? (
-            <TextArea
-              value={newComment}
-              onChange={handleNewCommentChange}
-              onBlur={() => handleEditComment(comment.id, newComment)}
-            />
-          ) : (
-            <Text>{comment.content}</Text>
-          )}
-          <Button
-            label="Edit"
-            onClick={() => {
-              setNewComment(comment.content);
-              setEditingCommentId(comment.id);
-            }}
-          />
+          <Text>{comment.content}</Text>
         </Box>
       </Box>
     ));
