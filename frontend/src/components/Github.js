@@ -12,7 +12,7 @@ import {
   Text,
 } from "grommet";
 import { useNavigate } from "react-router-dom";
-import { getSelfUser } from "./utils.js";
+import { getSelfUser, getBaseURL } from "./utils.js";
 
 const GitHub = () => {
   const [repositories, setRepositories] = useState([]);
@@ -89,6 +89,34 @@ const GitHub = () => {
       if (item.name.endsWith(".json")) {
         fetchFileContent(item.download_url);
       }
+    }
+  };
+
+  const handleImportRepo = async () => {
+    const url = `${getBaseURL()}/github_repositories/`;
+    const [owner, name] = selectedRepoFullName.split("/");
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        name: name,
+        url: `https://github.com/${selectedRepoFullName}`,
+        repoFullName: selectedRepoFullName, // only if it's still required by the backend
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Repository imported successfully:", data);
+      alert("Successfully imported!"); // This line adds the popup
+    } else {
+      throw new Error(
+        `Failed to import repository. Status: ${response.status}`,
+      );
     }
   };
 
@@ -340,6 +368,7 @@ const GitHub = () => {
                 onChange={handleBranchChange}
                 plain={true}
               />
+              <Button label="Import Repo" onClick={handleImportRepo} />
             </Box>
           )}
 
