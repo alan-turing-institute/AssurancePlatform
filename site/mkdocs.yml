@@ -58,7 +58,13 @@ theme:
 # Plugins
 plugins:
   - search
-  - tags
+  - tags:
+      enabled: false
+  - blog:
+      categories: false
+      pagination_per_page: 20
+      authors: true
+      draft: false
 
 # Customization
 
@@ -138,3 +144,6 @@ nav:
       - Azure Deployment: platform-details/azure.md
       - GitHub OAuth: platform-details/github.md
       - Resetting the Database: platform-details/resetting-database.md
+  - Community of Practice:
+      - Community of Practice: community/index.md
+      - Upcoming community events: blog/index.md
