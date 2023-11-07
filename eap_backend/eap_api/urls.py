@@ -42,4 +42,14 @@ urlpatterns = [
     path("strategies/", views.strategies_list, name="strategies_list"),
     path("strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"),
     path("auth/github/", views.GithubSocialAuthView.as_view()),
+    path(
+        "users/<int:pk>/github_repositories/",
+        views.github_repository_list,
+        name="github_repository_list",
+    ),
+    path(
+        "github_repositories/",
+        views.github_repository_list,
+        name="github_repository_list",
+    ),
 ]

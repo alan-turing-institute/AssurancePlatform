@@ -27,6 +27,19 @@ class EAPGroup(models.Model):
         return self.name
 
 
+class GitHubRepository(models.Model):
+    name = models.CharField(max_length=200)
+    url = models.URLField()
+    description = models.TextField(blank=True, null=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        EAPUser, related_name="github_repositories", on_delete=models.CASCADE
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class Shape(Enum):
     """
     Enum class to hold the various shapes for the objects on

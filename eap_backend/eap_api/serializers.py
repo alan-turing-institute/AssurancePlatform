@@ -8,6 +8,7 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
+    GitHubRepository,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -32,6 +33,12 @@ class GithubSocialAuthSerializer(serializers.Serializer):
         return user_info
 
 
+class GitHubRepositorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitHubRepository
+        fields = ("id", "name", "url", "description", "created_date", "owner")
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
     all_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
@@ -39,6 +46,7 @@ class EAPUserSerializer(serializers.ModelSerializer):
     owned_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
     )
+    github_repositories = GitHubRepositorySerializer(many=True, read_only=True)
 
     class Meta:
         model = EAPUser
@@ -51,6 +59,7 @@ class EAPUserSerializer(serializers.ModelSerializer):
             "is_staff",
             "all_groups",
             "owned_groups",
+            "github_repositories",  # Add this line to include GitHub repositories
         )
 
 

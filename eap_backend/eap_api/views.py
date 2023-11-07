@@ -14,6 +14,7 @@ from .models import (
     EAPGroup,
     EAPUser,
     Evidence,
+    GitHubRepository,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -25,6 +26,7 @@ from .serializers import (
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
+    GitHubRepositorySerializer,
     GithubSocialAuthSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
@@ -108,6 +110,14 @@ def user_detail(request, pk=None):
     elif request.method == "DELETE":
         user.delete()
         return HttpResponse(status=204)
+    elif request.method == "POST":
+        # This block assumes you are receiving GitHub repository data to add to the user
+        repo_serializer = GitHubRepositorySerializer(data=request.data)
+        if repo_serializer.is_valid():
+            repo_serializer.save(owner=user)
+            return JsonResponse(repo_serializer.data, status=201)
+        return JsonResponse(repo_serializer.errors, status=400)
+
     return None
 
 
@@ -521,6 +531,27 @@ class GithubSocialAuthView(GenericAPIView):
 class CommentEdit(generics.UpdateAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+
+
+@api_view(["GET", "POST"])
+def github_repository_list(request):
+    """
+    GET: List all GitHub repositories for a user.
+    POST: Add a new GitHub repository to a user.
+    """
+    if request.method == "GET":
+        repositories = GitHubRepository.objects.filter(owner=request.user)
+        serializer = GitHubRepositorySerializer(repositories, many=True)
+        return Response(serializer.data)
+
+    elif request.method == "POST":
+        # Assume the POST data includes fields for creating a GitHubRepository
+        serializer = GitHubRepositorySerializer(data=request.data)
+        if serializer.is_valid():
+            # Set the owner to the current user before saving
+            serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET", "POST"])
