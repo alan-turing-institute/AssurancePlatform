@@ -28,6 +28,8 @@ import "./CaseContainer.css";
 
 class CaseContainer extends Component {
   svgDownloader = new SVGDownloader();
+  _isMounted = false; // Flag to track mount status
+
   constructor(props) {
     super(props);
     this.state = {
@@ -65,26 +67,31 @@ class CaseContainer extends Component {
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
     };
-    const res = await fetch(this.url + id, requestOptions);
-    if (res.status === 200) {
-      const json_response = await res.json();
-      if (
-        JSON.stringify(this.state.assurance_case) !==
-        JSON.stringify(json_response)
-      ) {
-        this.setState({ loading: true });
-        this.setState({
-          assurance_case: json_response,
-        });
-        this.setState({
-          mermaid_md: jsonToMermaid(this.state.assurance_case),
-        });
-        this.setState({ loading: false });
+    try {
+      const res = await fetch(this.url + id, requestOptions);
+      if (res.status === 200) {
+        const json_response = await res.json();
+        // Only proceed to set state if the component is still mounted
+        if (this._isMounted) {
+          if (
+            JSON.stringify(this.state.assurance_case) !==
+            JSON.stringify(json_response)
+          ) {
+            this.setState({
+              assurance_case: json_response,
+              mermaid_md: jsonToMermaid(json_response),
+              loading: false, // Assuming you want to set loading to false after the data is fetched
+            });
+          }
+        }
+      } else {
+        // Handle other response statuses if necessary
+        console.error("Fetch failed with status: ", res.status);
       }
+    } catch (error) {
+      // Handle fetch error
+      console.error("Fetch error: ", error);
     }
-
-    // log the contents of assurance case
-    console.log(this.state.assurance_case);
   };
 
   submitCaseChange(field, value) {
@@ -169,6 +176,7 @@ class CaseContainer extends Component {
   }
 
   componentDidMount() {
+    this._isMounted = true; // Component is now mounted
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
     this.fetchData(id);
@@ -181,11 +189,18 @@ class CaseContainer extends Component {
     // Activate the event listener to see when the browser/tab closes
     this.setupBeforeUnloadListener();
   }
+  componentWillUnmount() {
+    this._isMounted = false; // Component will unmount
+    this.cleanup(); // Call cleanup to clear timers and subscriptions
+  }
 
   cleanup() {
     clearInterval(this.timer);
     this.timer = null;
-    if (this.state.assurance_case.lock_uuid === this.state.session_id) {
+    if (
+      this._isMounted &&
+      this.state.assurance_case.lock_uuid === this.state.session_id
+    ) {
       this.submitCaseChange("lock_uuid", null);
     }
   }

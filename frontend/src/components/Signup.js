@@ -47,7 +47,6 @@ const Signup = () => {
         if (data.key) {
           localStorage.clear();
           localStorage.setItem("token", data.key);
-          console.log("Setting localstorage token to be ", data.key);
           window.location.replace("/");
         } else {
           setUsername("");
