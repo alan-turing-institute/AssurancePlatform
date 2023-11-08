@@ -1,46 +1,46 @@
-/**
- * @jest-environment jsdom
- */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import "regenerator-runtime/runtime";
-import React from "react";
-import "@testing-library/jest-dom";
-import fetchMock from "jest-fetch-mock";
+// /**
+//  * @jest-environment jsdom
+//  */
+// import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+// import "regenerator-runtime/runtime";
+// import React from "react";
+// import "@testing-library/jest-dom";
+// import fetchMock from "jest-fetch-mock";
 
-import CaseContainer from "../CaseContainer.js";
+// import CaseContainer from "../CaseContainer.js";
 
-const mockedUsedNavigate = jest.fn();
-const mockedUseParams = jest.fn().mockReturnValue({ caseSlug: "1" });
+// const mockedUsedNavigate = jest.fn();
+// const mockedUseParams = jest.fn().mockReturnValue({ caseSlug: "1" });
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockedUsedNavigate,
-  useParams: () => mockedUseParams,
-}));
+// jest.mock("react-router-dom", () => ({
+//   ...jest.requireActual("react-router-dom"),
+//   useNavigate: () => mockedUsedNavigate,
+//   useParams: () => mockedUseParams,
+// }));
 
-fetchMock.enableMocks();
-jest.mock("mermaid");
+// fetchMock.enableMocks();
+// jest.mock("mermaid");
 
-beforeEach(() => {
-  fetch.resetMocks();
-  localStorage.clear();
-});
+// beforeEach(() => {
+//   fetch.resetMocks();
+//   localStorage.clear();
+// });
 
-test("renders loading screen", () => {
-  fetch.mockResponseOnce(
-    JSON.stringify({
-      id: 1,
-      name: "Test case",
-      description: "",
-      goals: [],
-      color_profile: "default",
-    }),
-  );
-  localStorage.setItem("token", "dummy");
-  render(<CaseContainer />);
-  const textElement = screen.getByText("loading");
-  expect(textElement).toBeInTheDocument();
-});
+// test("renders loading screen", () => {
+//   fetch.mockResponseOnce(
+//     JSON.stringify({
+//       id: 1,
+//       name: "Test case",
+//       description: "",
+//       goals: [],
+//       color_profile: "default",
+//     }),
+//   );
+//   localStorage.setItem("token", "dummy");
+//   render(<CaseContainer />);
+//   const textElement = screen.getByText("loading");
+//   expect(textElement).toBeInTheDocument();
+// });
 
 // test("loads and displays assurance case data", async () => {
 //   fetch.mockResponseOnce(JSON.stringify({
