@@ -655,7 +655,7 @@ class CaseContainer extends Component {
             pad={{
               horizontal: "small",
               top: "medium",
-              bottom: "small",
+              bottom: "medium",
             }}
           >
             <Box direction="row" align="center" gap="small">
@@ -687,7 +687,7 @@ class CaseContainer extends Component {
           <Grid
             fill
             rows={["auto", "flex"]}
-            columns={["20%", "60%", "20%"]}
+            columns={["25%", "55%", "20%"]}
             gap="none"
             areas={[
               { name: "left", start: [0, 0], end: [0, 1] },
