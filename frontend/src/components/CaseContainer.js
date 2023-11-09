@@ -29,6 +29,7 @@ import "./CaseContainer.css";
 class CaseContainer extends Component {
   svgDownloader = new SVGDownloader();
   _isMounted = false; // Flag to track mount status
+  abortController = new AbortController(); // Instantiate the AbortController
 
   constructor(props) {
     super(props);
@@ -66,7 +67,9 @@ class CaseContainer extends Component {
       headers: {
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
+      signal: this.abortController.signal, // Pass the signal to the fetch call
     };
+
     try {
       const res = await fetch(this.url + id, requestOptions);
       if (res.status === 200) {
@@ -89,8 +92,13 @@ class CaseContainer extends Component {
         console.error("Fetch failed with status: ", res.status);
       }
     } catch (error) {
-      // Handle fetch error
-      console.error("Fetch error: ", error);
+      if (error.name === "AbortError") {
+        // Ignore as this is an abort error
+        console.log("Fetch aborted", error);
+      } else {
+        // Handle other errors
+        console.error("Fetch error:", error);
+      }
     }
   };
 
@@ -176,6 +184,8 @@ class CaseContainer extends Component {
   }
 
   componentDidMount() {
+    this.fetchData(this.props.params.caseSlug);
+
     this._isMounted = true; // Component is now mounted
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
@@ -190,6 +200,7 @@ class CaseContainer extends Component {
     this.setupBeforeUnloadListener();
   }
   componentWillUnmount() {
+    this.abortController.abort(); // Abort any ongoing fetch requests
     this._isMounted = false; // Component will unmount
     this.cleanup(); // Call cleanup to clear timers and subscriptions
   }

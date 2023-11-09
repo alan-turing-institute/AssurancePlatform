@@ -26,78 +26,64 @@ beforeEach(() => {
 });
 test("renders loading screen", async () => {
   // Setup the mock response for the fetch call
-  fetch.mockResponseOnce(
-    JSON.stringify({
-      id: 1,
-      name: "Test case",
-      description: "",
-      goals: [],
-      color_profile: "default",
-    }),
-    { status: 200 },
-  ); // Ensure the status is set to 200 to simulate a successful fetch
+  const mockResponse = JSON.stringify({
+    id: 1,
+    name: "Test case",
+    description: "",
+    goals: [],
+    color_profile: "default",
+  });
+  fetch.mockResponseOnce(mockResponse, { status: 200 });
 
   localStorage.setItem("token", "dummy");
-
   const { unmount } = render(<CaseContainer />);
 
-  // Use findByText instead of getByText to wait for the element to appear
-  const textElement = await screen.findByText(/loading/i);
-  expect(textElement).toBeInTheDocument();
+  await screen.findByText(/loading/i);
 
-  // Additional debugging logs
-  console.log("Loading screen rendered");
   console.log("LocalStorage token:", localStorage.getItem("token"));
   console.log(
     "Mocked fetch calls:",
     fetch.mock.calls.map((call) => ({ url: call[0], options: call[1] })),
   );
+  console.log("JSON data returned:", mockResponse); // Log the mock response directly
 
-  // Unmount the component to cleanup and avoid state update warnings
   unmount();
 });
 
 test("renders case view", async () => {
   // Setup the mock responses for all expected fetch calls
+  const mockCaseData = JSON.stringify({
+    id: 1,
+    name: "Test case",
+    description: "",
+    goals: [],
+    color_profile: "default",
+  });
+  const mockUserData = JSON.stringify({
+    /* user data */
+  });
+  const mockCommentsData = JSON.stringify([
+    /* comments data */
+  ]);
+
   fetch.mockResponses(
-    [
-      JSON.stringify({
-        id: 1,
-        name: "Test case",
-        description: "",
-        goals: [],
-        color_profile: "default",
-      }),
-      { status: 200 },
-    ], // Mock response for case data
-    [
-      JSON.stringify({
-        /* user data */
-      }),
-      { status: 200 },
-    ], // Mock response for user data
-    [
-      JSON.stringify([
-        /* comments data */
-      ]),
-      { status: 200 },
-    ], // Mock response for comments
+    [mockCaseData, { status: 200 }],
+    [mockUserData, { status: 200 }],
+    [mockCommentsData, { status: 200 }],
   );
 
   localStorage.setItem("token", "dummy");
-
   const { unmount } = render(<CaseContainer />);
 
-  // Use findBy* queries instead of getBy* to wait for element to appear
-  const textElement = await screen.findByDisplayValue("Test case");
-  expect(textElement).toBeInTheDocument();
+  await screen.findByDisplayValue("Test case");
 
-  // Additional debugging logs
   console.log(
     "Mocked fetch calls:",
     fetch.mock.calls.map((call) => ({ url: call[0], options: call[1] })),
   );
+  console.log("JSON mockCaseData:", mockCaseData); // Log the mock response directly
+  console.log("JSON mockUserData:", mockUserData); // Log the mock response directly
+  console.log("JSON mockCommentsData:", mockCommentsData); // Log the mock response directly
 
-  // Unmount the component to cleanup and avoid state update warnings
   unmount();
 });
