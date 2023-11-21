@@ -3,10 +3,12 @@ from rest_framework import serializers
 from .github import Github, register_social_user
 from .models import (
     AssuranceCase,
+    Comment,
     Context,
     EAPGroup,
     EAPUser,
     Evidence,
+    GitHubRepository,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
@@ -31,6 +33,12 @@ class GithubSocialAuthSerializer(serializers.Serializer):
         return user_info
 
 
+class GitHubRepositorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitHubRepository
+        fields = ("id", "name", "url", "description", "created_date", "owner")
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
     all_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
@@ -38,6 +46,7 @@ class EAPUserSerializer(serializers.ModelSerializer):
     owned_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
     )
+    github_repositories = GitHubRepositorySerializer(many=True, read_only=True)
 
     class Meta:
         model = EAPUser
@@ -50,6 +59,7 @@ class EAPUserSerializer(serializers.ModelSerializer):
             "is_staff",
             "all_groups",
             "owned_groups",
+            "github_repositories",  # Add this line to include GitHub repositories
         )
 
 
@@ -75,8 +85,26 @@ class EAPGroupSerializer(serializers.ModelSerializer):
         )
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+
+    def get_author(self, obj):
+        return obj.author.username
+
+    class Meta:
+        model = Comment
+        fields = (
+            "id",
+            "author",
+            "assurance_case",
+            "content",
+            "created_at",
+        )
+
+
 class AssuranceCaseSerializer(serializers.ModelSerializer):
     goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
     type = serializers.CharField(default="AssuranceCase", read_only=True)
     color_profile = serializers.CharField(default="default")
 
@@ -94,6 +122,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "edit_groups",
             "view_groups",
             "color_profile",
+            "comments",  # Add this line to include comments
         )
 
 

@@ -77,15 +77,10 @@ function ItemCreator(props) {
       body: JSON.stringify(request_body),
     };
 
-    console.log(
-      "submit button pressed with state ",
-      JSON.stringify(request_body),
-    );
     let response = {};
 
     fetch(backendURL, requestOptions).then((response) => response.json());
 
-    console.log("response was ", response);
     return response;
   }
 

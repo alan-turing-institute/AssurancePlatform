@@ -145,7 +145,6 @@ function jsonToMermaid(in_json) {
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
   // output the length of the Mermaid string
-  console.log("Mermaid string length: " + outputmd.length);
   return outputmd;
 }
 

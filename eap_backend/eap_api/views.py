@@ -1,6 +1,6 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
@@ -9,20 +9,24 @@ from rest_framework.response import Response
 
 from .models import (
     AssuranceCase,
+    Comment,
     Context,
     EAPGroup,
     EAPUser,
     Evidence,
+    GitHubRepository,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
     AssuranceCaseSerializer,
+    CommentSerializer,
     ContextSerializer,
     EAPGroupSerializer,
     EAPUserSerializer,
     EvidenceSerializer,
+    GitHubRepositorySerializer,
     GithubSocialAuthSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
@@ -106,6 +110,14 @@ def user_detail(request, pk=None):
     elif request.method == "DELETE":
         user.delete()
         return HttpResponse(status=204)
+    elif request.method == "POST":
+        # This block assumes you are receiving GitHub repository data to add to the user
+        repo_serializer = GitHubRepositorySerializer(data=request.data)
+        if repo_serializer.is_valid():
+            repo_serializer.save(owner=user)
+            return JsonResponse(repo_serializer.data, status=201)
+        return JsonResponse(repo_serializer.errors, status=400)
+
     return None
 
 
@@ -514,3 +526,73 @@ class GithubSocialAuthView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         data = (serializer.validated_data)["auth_token"]
         return Response(data, status=status.HTTP_200_OK)
+
+
+class CommentEdit(generics.UpdateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+
+@api_view(["GET", "POST"])
+def github_repository_list(request):
+    """
+    GET: List all GitHub repositories for a user.
+    POST: Add a new GitHub repository to a user.
+    """
+    if request.method == "GET":
+        repositories = GitHubRepository.objects.filter(owner=request.user)
+        serializer = GitHubRepositorySerializer(repositories, many=True)
+        return Response(serializer.data)
+
+    elif request.method == "POST":
+        # Assume the POST data includes fields for creating a GitHubRepository
+        request.data["owner"] = request.user.id
+        serializer = GitHubRepositorySerializer(data=request.data)
+        if serializer.is_valid():
+            # Set the owner to the current user before saving
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "POST"])
+def comment_list(request, assurance_case_id):
+    """
+    List all comments for an assurance case, or create a new comment.
+    """
+    if request.method == "GET":
+        comments = Comment.objects.filter(assurance_case_id=assurance_case_id)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+
+    elif request.method == "POST":
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            # Ensure the author is set to the current user
+            serializer.save(author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def reply_to_comment(request, comment_id):
+    """
+    Reply to an existing comment.
+    """
+    try:
+        parent_comment = Comment.objects.get(pk=comment_id)
+    except Comment.DoesNotExist:
+        return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "POST":
+        data = JSONParser().parse(request)
+        data["parent"] = comment_id
+        data["author"] = request.user.id  # Ensure the author is set to the current user
+        data["assurance_case"] = parent_comment.assurance_case_id
+        serializer = CommentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

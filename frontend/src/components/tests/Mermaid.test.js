@@ -9,10 +9,9 @@ import "@testing-library/jest-dom";
 
 test("renders chart", async () => {
   render(<Mermaid chartmd="graph TB;  A[TestGoal];" />);
-  /// not sure why the graph isn't rendering :(
-  await waitFor(() =>
-    expect(screen.getByText("Syntax error in graph")).toBeInTheDocument(),
-  );
+  // Use findBy with a regex and await the result
+  const chartText = await screen.findByText(/A\[TestGoal\];/);
+  expect(chartText).toBeInTheDocument();
 });
 
 // jest.mock("mermaid", () => ({
@@ -20,13 +19,8 @@ test("renders chart", async () => {
 //   contentLoaded: jest.fn(),
 // }));
 
-// test("renders chart markdown", () => {
-//   render(<MermaidChart chartmd="graph TB;  A[TestGoal];" />);
-//   expect(screen.getByText("graph TB;  A[TestGoal];")).toBeInTheDocument();
-// });
-
 // test("mermaid is initialized with correct parameters", () => {
-//   render(<MermaidChart chartmd="graph TB;  A[TestGoal];" />);
+//   render(<Mermaid chartmd="graph TB;  A[TestGoal];" />);
 //   expect(mermaid.initialize).toHaveBeenCalledWith({
 //     theme: "base",
 //     logLevel: 1,

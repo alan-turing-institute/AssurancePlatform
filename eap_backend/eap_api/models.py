@@ -27,6 +27,19 @@ class EAPGroup(models.Model):
         return self.name
 
 
+class GitHubRepository(models.Model):
+    name = models.CharField(max_length=200)
+    url = models.URLField()
+    description = models.TextField(blank=True, null=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        EAPUser, related_name="github_repositories", on_delete=models.CASCADE
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class Shape(Enum):
     """
     Enum class to hold the various shapes for the objects on
@@ -79,6 +92,23 @@ class AssuranceCase(models.Model):
 
     def was_published_recently(self):
         return self.created_date >= timezone.now() - datetime.timedelta(days=1)
+
+
+class Comment(models.Model):
+    author = models.ForeignKey(
+        EAPUser, related_name="comments", on_delete=models.CASCADE
+    )
+    assurance_case = models.ForeignKey(
+        AssuranceCase, related_name="comments", on_delete=models.CASCADE
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author} on {self.assurance_case}"
+
+    class Meta:
+        ordering = ["created_at"]
 
 
 class TopLevelNormativeGoal(CaseItem):

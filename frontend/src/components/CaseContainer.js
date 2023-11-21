@@ -2,30 +2,44 @@ import { saveAs } from "file-saver";
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
-import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
+import {
+  FormClose,
+  ZoomIn,
+  ZoomOut,
+  Achievement,
+  Article,
+  Validate,
+  DocumentVerified,
+  Add,
+} from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
 import { neatJSON } from "neatjson";
 import { Select } from "grommet";
 import SVGDownloader from "./SVGDownloader.js";
-
+import CommentSection from "./CommentSection.js";
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
+
 import {
   getBaseURL,
   jsonToMermaid,
   highlightNode,
   removeHighlight,
+  getSelfUser,
 } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
 
 class CaseContainer extends Component {
   svgDownloader = new SVGDownloader();
+  _isMounted = false; // Flag to track mount status
+  abortController = new AbortController(); // Instantiate the AbortController
+
   constructor(props) {
     super(props);
     this.state = {
@@ -62,27 +76,39 @@ class CaseContainer extends Component {
       headers: {
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
+      signal: this.abortController.signal, // Pass the signal to the fetch call
     };
-    const res = await fetch(this.url + id, requestOptions);
-    if (res.status === 200) {
-      const json_response = await res.json();
-      if (
-        JSON.stringify(this.state.assurance_case) !==
-        JSON.stringify(json_response)
-      ) {
-        this.setState({ loading: true });
-        this.setState({
-          assurance_case: json_response,
-        });
-        this.setState({
-          mermaid_md: jsonToMermaid(this.state.assurance_case),
-        });
-        this.setState({ loading: false });
+
+    try {
+      const res = await fetch(this.url + id, requestOptions);
+      if (res.status === 200) {
+        const json_response = await res.json();
+        // Only proceed to set state if the component is still mounted
+        if (this._isMounted) {
+          if (
+            JSON.stringify(this.state.assurance_case) !==
+            JSON.stringify(json_response)
+          ) {
+            this.setState({
+              assurance_case: json_response,
+              mermaid_md: jsonToMermaid(json_response),
+              loading: false, // Assuming you want to set loading to false after the data is fetched
+            });
+          }
+        }
+      } else {
+        // Handle other response statuses if necessary
+        console.error("Fetch failed with status: ", res.status);
+      }
+    } catch (error) {
+      if (error.name === "AbortError") {
+        // Ignore as this is an abort error
+        console.log("Fetch aborted", error);
+      } else {
+        // Handle other errors
+        console.error("Fetch error:", error);
       }
     }
-
-    // log the contents of assurance case
-    console.log(this.state.assurance_case);
   };
 
   submitCaseChange(field, value) {
@@ -167,6 +193,9 @@ class CaseContainer extends Component {
   }
 
   componentDidMount() {
+    this.fetchData(this.props.params.caseSlug);
+
+    this._isMounted = true; // Component is now mounted
     const id = this.props.params.caseSlug;
     this.setState({ id: id });
     this.fetchData(id);
@@ -179,11 +208,19 @@ class CaseContainer extends Component {
     // Activate the event listener to see when the browser/tab closes
     this.setupBeforeUnloadListener();
   }
+  componentWillUnmount() {
+    this.abortController.abort(); // Abort any ongoing fetch requests
+    this._isMounted = false; // Component will unmount
+    this.cleanup(); // Call cleanup to clear timers and subscriptions
+  }
 
   cleanup() {
     clearInterval(this.timer);
     this.timer = null;
-    if (this.state.assurance_case.lock_uuid === this.state.session_id) {
+    if (
+      this._isMounted &&
+      this.state.assurance_case.lock_uuid === this.state.session_id
+    ) {
       this.submitCaseChange("lock_uuid", null);
     }
   }
@@ -342,7 +379,7 @@ class CaseContainer extends Component {
 
   editLayer() {
     return (
-      <Box pad="small" gap="xsmall" height={{ min: "small" }} flex={false}>
+      <Box pad="small" gap="xsmall" height={{ min: "large" }} flex={false}>
         <Button
           alignSelf="end"
           icon={<FormClose />}
@@ -495,12 +532,14 @@ class CaseContainer extends Component {
   }
 
   inEditMode() {
-    return this.state.assurance_case.lock_uuid === this.state.session_id;
+    return true; // it's always edit time baby!
+    //this.state.assurance_case.lock_uuid === this.state.session_id;
   }
 
   getCreateGoalButton() {
     return (
       <DropButton
+        icon={<Achievement />}
         label="Create Goal"
         dropAlign={{ top: "bottom", right: "right" }}
         dropContent={
@@ -516,8 +555,29 @@ class CaseContainer extends Component {
   }
 
   getCreateSubItemButton(childType) {
+    let icon;
+
+    switch (childType) {
+      case "Goal":
+        icon = <Achievement />;
+        break;
+      case "Context":
+        icon = <Article />;
+        break;
+      case "PropertyClaim":
+        icon = <Validate />;
+        break;
+      case "Evidence":
+        icon = <DocumentVerified />;
+        break;
+      default:
+        icon = <Add />;
+        break;
+    }
+
     return (
       <Button
+        icon={icon}
         pad="small"
         key={childType}
         onClick={(e) =>
@@ -534,128 +594,121 @@ class CaseContainer extends Component {
   }
 
   getCreateButtons() {
-    if (this.state.assurance_case.permissions === "view") {
-      return null;
-    } else if (this.inEditMode()) {
-      return (
-        <Box
-          gap="xsmall"
-          pad={{ top: "small" }}
-          direction="column"
-          flex={false}
-        >
-          {this.getCreateGoalButton()}
-          {this.state.itemType &&
-            this.state.itemId &&
-            configData.navigation[this.state.itemType]["children"].map(
-              this.getCreateSubItemButton.bind(this),
-            )}
-        </Box>
-      );
-    }
+    return (
+      <Box gap="xsmall" pad={{ top: "small" }} direction="column" flex={false}>
+        {this.getCreateGoalButton()}
+        {this.state.itemType &&
+          this.state.itemId &&
+          configData.navigation[this.state.itemType]["children"].map(
+            this.getCreateSubItemButton.bind(this),
+          )}
+      </Box>
+    );
   }
 
   getEditableControls() {
-    if (this.state.assurance_case.permissions === "view") {
-      return null;
-    } else if (this.inEditMode()) {
-      return (
-        <Box gap="xsmall" flex={false}>
-          <Button
-            label="Disable editor mode"
-            secondary
-            onClick={this.disableEditing.bind(this)}
-          />
-
-          <Box>
-            <label>Select Case color profile</label>
-            <Select
-              value={this.state.assurance_case.color_profile}
-              options={Object.keys(configData.mermaid_styles)}
-              onChange={({ option }) => this.handleProfileChange(option)}
-              labelKey={(option) =>
-                option.charAt(0).toUpperCase() + option.slice(1)
-              }
-              valueKey={(option) => option}
-            />
-          </Box>
-
-          <Box flex={false}>
-            <Grid
-              columns={["flex", "flex"]}
-              rows={["auto"]}
-              gap="xsmall"
-              areas={[
-                { name: "left", start: [0, 0], end: [0, 0] },
-                { name: "right", start: [1, 0], end: [1, 0] },
-              ]}
-            >
-              <Box gridArea="right" flex={false}>
-                <Button
-                  label="Delete case"
-                  secondary
-                  onClick={this.showConfirmDeleteLayer.bind(this)}
-                />
-              </Box>
-              <Box gridArea="left" flex={false}>
-                {this.state.assurance_case.permissions === "manage" && (
-                  <Button
-                    label="Permissions"
-                    secondary
-                    onClick={this.showCasePermissionLayer.bind(this)}
-                  />
-                )}
-              </Box>
-            </Grid>
-          </Box>
-        </Box>
-      );
-    } else if (!this.state.assurance_case.lock_uuid) {
-      return (
-        <Button
-          label="Enable editor mode"
-          primary
-          onClick={this.enableEditing.bind(this)}
-        />
-      );
-    } else {
-      return (
+    return (
+      <Box gap="xsmall" pad={{ top: "small" }} direction="column" flex={false}>
         <Box>
-          <Button
-            label="Override - enable edit mode"
-            color="#ff0000"
-            secondary
-            onClick={this.enableEditing.bind(this)}
+          <label>Select Case color profile</label>
+          <Select
+            value={this.state.assurance_case.color_profile}
+            options={Object.keys(configData.mermaid_styles)}
+            onChange={({ option }) => this.handleProfileChange(option)}
+            labelKey={(option) =>
+              option.charAt(0).toUpperCase() + option.slice(1)
+            }
+            valueKey={(option) => option}
           />
-          <Text color="#ff0000">
-            Someone else is currently editing this case.
-          </Text>
         </Box>
-      );
-    }
+
+        <Box flex={false}>
+          <Grid
+            columns={["flex", "flex"]}
+            rows={["auto"]}
+            gap="xsmall"
+            areas={[
+              { name: "left", start: [0, 0], end: [0, 0] },
+              { name: "right", start: [1, 0], end: [1, 0] },
+            ]}
+          >
+            <Box gridArea="right" flex={false}>
+              <Button
+                label="Delete case"
+                secondary
+                onClick={this.showConfirmDeleteLayer.bind(this)}
+              />
+            </Box>
+            <Box gridArea="left" flex={false}>
+              {this.state.assurance_case.permissions === "manage" && (
+                <Button
+                  label="Permissions"
+                  secondary
+                  onClick={this.showCasePermissionLayer.bind(this)}
+                />
+              )}
+            </Box>
+          </Grid>
+        </Box>
+      </Box>
+    );
   }
 
   render() {
-    // don't try to render the chart until we're sure we have the full JSON from the DB
     if (this.state.loading) {
       return <Box>loading</Box>;
-      // if not logged-in, redirect to login page
     } else if (localStorage.getItem("token") == null) {
       window.location.replace("/login");
       return null;
     } else {
       return (
         <Box fill>
+          <Box
+            gridArea="header"
+            direction="row"
+            gap="small"
+            border={{ color: "dark-4", size: "small", side: "bottom" }}
+            pad={{
+              horizontal: "small",
+              top: "medium",
+              bottom: "medium",
+            }}
+          >
+            <Box direction="row" align="center" gap="small">
+              <Text weight="bold">Case name:</Text>
+              <EditableText
+                initialValue={this.state.assurance_case.name}
+                textsize="xlarge"
+                onSubmit={(value) => this.submitCaseChange("name", value)}
+                editMode={this.inEditMode()}
+              />
+            </Box>
+            <Box direction="row" align="center" gap="small">
+              <Text weight="bold">Description:</Text>
+              <EditableText
+                initialValue={this.state.assurance_case.description}
+                size="small"
+                onSubmit={(value) =>
+                  this.submitCaseChange("description", value)
+                }
+                editMode={this.inEditMode()}
+              />
+              <Button
+                label="Export SVG"
+                secondary
+                onClick={this.exportCurrentCaseAsSVG.bind(this)}
+              />
+            </Box>
+          </Box>
           <Grid
             fill
-            rows={["auto", "auto", "flex"]}
-            columns={["flex", "auto", "29%"]}
+            rows={["auto", "flex"]}
+            columns={["25%", "55%", "20%"]}
             gap="none"
             areas={[
-              { name: "header", start: [0, 0], end: [1, 0] },
-              { name: "main", start: [0, 1], end: [1, 2] },
-              { name: "top-mid", start: [1, 0], end: [1, 0] },
-              { name: "right", start: [2, 0], end: [2, 2] },
+              { name: "left", start: [0, 0], end: [0, 1] },
+              { name: "main", start: [1, 0], end: [1, 1] },
+              { name: "right", start: [2, 0], end: [2, 1] },
             ]}
           >
             {this.state.showCreateLayer &&
@@ -667,90 +720,28 @@ class CaseContainer extends Component {
             {this.state.showCasePermissionLayer && this.casePermissionLayer()}
 
             <Box
-              gridArea="header"
+              gridArea="left"
               direction="column"
+              border={{ color: "dark-4", size: "small", side: "right" }}
               gap="small"
-              pad={{
-                horizontal: "small",
-                top: "medium",
-                bottom: "none",
-              }}
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
-              <EditableText
-                initialValue={this.state.assurance_case.name}
-                textsize="xlarge"
-                onSubmit={(value) => this.submitCaseChange("name", value)}
-                editMode={this.inEditMode()}
-              />
-              <EditableText
-                initialValue={this.state.assurance_case.description}
-                size="small"
-                onSubmit={(value) =>
-                  this.submitCaseChange("description", value)
-                }
-                editMode={this.inEditMode()}
-              />
-            </Box>
-
-            <Box
-              gridArea="top-mid"
-              direction="column"
-              gap="small"
-              pad={{
-                horizontal: "small",
-                top: "small",
-                bottom: "none",
-              }}
-            >
-              <Button
-                label="Export JSON"
-                secondary
-                onClick={this.exportCurrentCase.bind(this)}
-              />
-
-              <Button
-                label="Export SVG"
-                secondary
-                onClick={this.exportCurrentCaseAsSVG.bind(this)}
-              />
-            </Box>
-
-            <Box
-              gridArea="right"
-              direction="column"
-              gap="small"
-              flex={false}
-              overflow={{ vertical: "scroll", horizontal: "visible" }}
-              pad={{
-                horizontal: "small",
-                top: "small",
-                bottom: "small",
-              }}
-            >
-              {this.getEditableControls()}
-              {this.getCreateButtons()}
-              {this.state.showViewLayer &&
-                this.state.itemType &&
-                this.state.itemId &&
-                this.viewLayer()}
-              {this.state.showEditLayer &&
-                this.state.itemType &&
-                this.state.itemId &&
-                this.editLayer()}
+              <Box flex={false} style={{ height: "25%" }}>
+                {this.getCreateButtons()}
+              </Box>
+              <Box flex={false} style={{ height: "65%", overflow: "auto" }}>
+                <CommentSection
+                  assuranceCaseId={this.state.assurance_case.id}
+                  authorId={getSelfUser()["username"]}
+                />
+              </Box>
             </Box>
 
             <Box
               gridArea="main"
-              justify="end"
-              fill
-              background={{
-                color: "white",
-                size: "20px 20px",
-                image: "radial-gradient(#999999 0.2%, transparent 10%)",
-                height: "200px",
-                width: "100%",
-                repeat: "repeat-xy",
-              }}
+              justify="center"
+              align="center"
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
               <TransformWrapper
                 style={{ width: "100%", height: "100%" }}
@@ -777,22 +768,42 @@ class CaseContainer extends Component {
                       <Button
                         secondary
                         onClick={() => zoomIn()}
-                        icon=<ZoomIn />
+                        icon={<ZoomIn />}
                       />
                       <Button
                         secondary
                         onClick={() => zoomOut()}
-                        icon=<ZoomOut />
+                        icon={<ZoomOut />}
                       />
                       <Button
                         secondary
                         onClick={() => resetTransform()}
-                        icon=<FormClose />
+                        icon={<FormClose />}
                       />
                     </Box>
                   </React.Fragment>
                 )}
               </TransformWrapper>
+            </Box>
+
+            <Box
+              gridArea="right"
+              direction="column"
+              border={{ color: "dark-4", size: "small", side: "left" }}
+              gap="small"
+              flex={false}
+              overflow={{ vertical: "scroll", horizontal: "visible" }}
+              pad={{ horizontal: "small", top: "small", bottom: "small" }}
+            >
+              {this.getEditableControls()}
+              {this.state.showViewLayer &&
+                this.state.itemType &&
+                this.state.itemId &&
+                this.viewLayer()}
+              {this.state.showEditLayer &&
+                this.state.itemType &&
+                this.state.itemId &&
+                this.editLayer()}
             </Box>
           </Grid>
         </Box>

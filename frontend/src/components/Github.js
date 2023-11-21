@@ -12,11 +12,9 @@ import {
   Text,
 } from "grommet";
 import { useNavigate } from "react-router-dom";
-import { getSelfUser } from "./utils.js";
+import { getSelfUser, getBaseURL } from "./utils.js";
 
 const GitHub = () => {
-  const [selectedOrg, setSelectedOrg] = useState({});
-  const [organizations, setOrganizations] = useState([]);
   const [repositories, setRepositories] = useState([]);
   const [selectedRepoFiles, setSelectedRepoFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -56,19 +54,9 @@ const GitHub = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       const userGithubHandle = await getSelfUser()["username"];
-      setSelectedOrg({ login: userGithubHandle || "Your Profile" });
       const token = localStorage.getItem("access_token");
 
       if (token) {
-        // Fetch user organizations
-        const orgsResponse = await fetch("https://api.github.com/user/orgs", {
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        });
-        const orgs = await orgsResponse.json();
-        setOrganizations(orgs);
-
         // Fetch user's own repos
         const reposResponse = await fetch("https://api.github.com/user/repos", {
           headers: {
@@ -101,6 +89,34 @@ const GitHub = () => {
       if (item.name.endsWith(".json")) {
         fetchFileContent(item.download_url);
       }
+    }
+  };
+
+  const handleImportRepo = async () => {
+    const url = `${getBaseURL()}/github_repositories/`;
+    const [owner, name] = selectedRepoFullName.split("/");
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        name: name,
+        url: `https://github.com/${selectedRepoFullName}`,
+        repoFullName: selectedRepoFullName, // only if it's still required by the backend
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Repository imported successfully:", data);
+      alert("Successfully imported!"); // This line adds the popup
+    } else {
+      throw new Error(
+        `Failed to import repository. Status: ${response.status}`,
+      );
     }
   };
 
@@ -153,13 +169,6 @@ const GitHub = () => {
     setInputValue("");
   };
 
-  const handleOrgChange = ({ option }) => {
-    setSelectedOrg(option);
-    if (option) {
-      fetchReposForOrg(option.login);
-    }
-  };
-
   const isRepositoryURL = (value) => {
     const regex = /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/;
     return regex.test(value);
@@ -176,40 +185,6 @@ const GitHub = () => {
         .then((response) => response.json())
         .then((repo) => {
           setRepositories((prevRepos) => [...prevRepos, repo]);
-        });
-    }
-  };
-
-  const fetchUserRepos = (username) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch(`https://api.github.com/users/${username}/repos`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((repos) => {
-          setRepositories(repos);
-        });
-    }
-  };
-
-  const fetchReposForOrg = (orgLogin) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch(`https://api.github.com/orgs/${orgLogin}/repos`, {
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((repos) => {
-          // Filter by permissions
-          const filteredRepos = repos.filter(
-            (repo) => repo.permissions.admin || repo.permissions.maintain,
-          );
-          setRepositories(filteredRepos);
         });
     }
   };
@@ -393,6 +368,7 @@ const GitHub = () => {
                 onChange={handleBranchChange}
                 plain={true}
               />
+              <Button label="Import Repo" onClick={handleImportRepo} />
             </Box>
           )}
 

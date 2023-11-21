@@ -10,28 +10,36 @@ class MermaidChart extends React.Component {
       flowchart: {
         useMaxWidth: true,
         htmlLabels: true,
-        curve: "linear", //d3 styles: http://bl.ocks.org/d3indepth/b6d4845973089bc1012dec1674d3aff8
+        curve: "linear",
       },
       themeVariables: {
         primaryColor: "#ffffff",
-        //background: "#ffffff",
         nodeBorder: "#000000",
-        //nodeTextColor: "#274059",
         defaultLinkColor: "#004990",
         fontFamily: "arial",
       },
     });
+
     window.callback = (e) => this.props.viewLayerFunc(e);
     mermaid.contentLoaded();
-    // This is the height-equivalent of the above `useMaxWidth: true` bit.
-    // It gets the div created in `render` and its first (and only) child node, which is
-    // the SVG figure.
-    // TODO The document.getElementsByClassName certainly isn't elegant. I tried using a
-    // ref, but that failed because componentDidMount gets called before the first
-    // render. Better ideas welcome.
-    document.getElementsByClassName("mermaid")[0].childNodes[0].style[
-      "max-height"
-    ] = "100%";
+
+    // Observe changes to the Mermaid div and apply styles once the content is loaded
+    const mermaidDiv = document.querySelector(".mermaid");
+    if (mermaidDiv) {
+      const observer = new MutationObserver((mutations, obs) => {
+        for (let mutation of mutations) {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes[0].style["max-height"] = "100%";
+            obs.disconnect(); // Stop observing after applying styles
+            break;
+          }
+        }
+      });
+
+      observer.observe(mermaidDiv, { childList: true });
+    } else {
+      console.error("Mermaid div not found");
+    }
   }
 
   render() {

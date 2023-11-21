@@ -141,3 +141,4 @@ dmypy.json
 DO_NOT_COMMIT
 frontend/.env
 ENV_Testing_Vars.sh
+.aider*
