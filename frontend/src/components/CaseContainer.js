@@ -2,7 +2,16 @@ import { saveAs } from "file-saver";
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
-import { FormClose, ZoomIn, ZoomOut } from "grommet-icons";
+import {
+  FormClose,
+  ZoomIn,
+  ZoomOut,
+  Achievement,
+  Article,
+  Validate,
+  DocumentVerified,
+  Add,
+} from "grommet-icons";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { v4 as uuidv4 } from "uuid";
 import { neatJSON } from "neatjson";
@@ -370,7 +379,7 @@ class CaseContainer extends Component {
 
   editLayer() {
     return (
-      <Box pad="small" gap="xsmall" height={{ min: "small" }} flex={false}>
+      <Box pad="small" gap="xsmall" height={{ min: "large" }} flex={false}>
         <Button
           alignSelf="end"
           icon={<FormClose />}
@@ -530,6 +539,7 @@ class CaseContainer extends Component {
   getCreateGoalButton() {
     return (
       <DropButton
+        icon={<Achievement />}
         label="Create Goal"
         dropAlign={{ top: "bottom", right: "right" }}
         dropContent={
@@ -545,8 +555,29 @@ class CaseContainer extends Component {
   }
 
   getCreateSubItemButton(childType) {
+    let icon;
+
+    switch (childType) {
+      case "Goal":
+        icon = <Achievement />;
+        break;
+      case "Context":
+        icon = <Article />;
+        break;
+      case "PropertyClaim":
+        icon = <Validate />;
+        break;
+      case "Evidence":
+        icon = <DocumentVerified />;
+        break;
+      default:
+        icon = <Add />;
+        break;
+    }
+
     return (
       <Button
+        icon={icon}
         pad="small"
         key={childType}
         onClick={(e) =>
@@ -563,92 +594,66 @@ class CaseContainer extends Component {
   }
 
   getCreateButtons() {
-    if (this.state.assurance_case.permissions === "view") {
-      return null;
-    } else if (this.inEditMode()) {
-      return (
-        <Box
-          gap="xsmall"
-          pad={{ top: "small" }}
-          direction="column"
-          flex={false}
-        >
-          {this.getCreateGoalButton()}
-          {this.state.itemType &&
-            this.state.itemId &&
-            configData.navigation[this.state.itemType]["children"].map(
-              this.getCreateSubItemButton.bind(this),
-            )}
-        </Box>
-      );
-    }
+    return (
+      <Box gap="xsmall" pad={{ top: "small" }} direction="column" flex={false}>
+        {this.getCreateGoalButton()}
+        {this.state.itemType &&
+          this.state.itemId &&
+          configData.navigation[this.state.itemType]["children"].map(
+            this.getCreateSubItemButton.bind(this),
+          )}
+      </Box>
+    );
   }
 
   getEditableControls() {
-    if (this.state.assurance_case.permissions === "view") {
-      return null;
-    } else if (this.inEditMode()) {
-      return (
-        <Box gap="xsmall" flex={false}>
-          <Box>
-            <label>Select Case color profile</label>
-            <Select
-              value={this.state.assurance_case.color_profile}
-              options={Object.keys(configData.mermaid_styles)}
-              onChange={({ option }) => this.handleProfileChange(option)}
-              labelKey={(option) =>
-                option.charAt(0).toUpperCase() + option.slice(1)
-              }
-              valueKey={(option) => option}
-            />
-          </Box>
-
-          <Box flex={false}>
-            <Grid
-              columns={["flex", "flex"]}
-              rows={["auto"]}
-              gap="xsmall"
-              areas={[
-                { name: "left", start: [0, 0], end: [0, 0] },
-                { name: "right", start: [1, 0], end: [1, 0] },
-              ]}
-            >
-              <Box gridArea="right" flex={false}>
-                <Button
-                  label="Delete case"
-                  secondary
-                  onClick={this.showConfirmDeleteLayer.bind(this)}
-                />
-              </Box>
-              <Box gridArea="left" flex={false}>
-                {this.state.assurance_case.permissions === "manage" && (
-                  <Button
-                    label="Permissions"
-                    secondary
-                    onClick={this.showCasePermissionLayer.bind(this)}
-                  />
-                )}
-              </Box>
-            </Grid>
-          </Box>
-        </Box>
-      );
-    } else {
-      return (
+    return (
+      <Box gap="xsmall" pad={{ top: "small" }} direction="column" flex={false}>
         <Box>
-          <Button
-            label="Override - enable edit mode"
-            color="#ff0000"
-            secondary
-            onClick={this.enableEditing.bind(this)}
+          <label>Select Case color profile</label>
+          <Select
+            value={this.state.assurance_case.color_profile}
+            options={Object.keys(configData.mermaid_styles)}
+            onChange={({ option }) => this.handleProfileChange(option)}
+            labelKey={(option) =>
+              option.charAt(0).toUpperCase() + option.slice(1)
+            }
+            valueKey={(option) => option}
           />
-          <Text color="#ff0000">
-            Someone else is currently editing this case.
-          </Text>
         </Box>
-      );
-    }
+
+        <Box flex={false}>
+          <Grid
+            columns={["flex", "flex"]}
+            rows={["auto"]}
+            gap="xsmall"
+            areas={[
+              { name: "left", start: [0, 0], end: [0, 0] },
+              { name: "right", start: [1, 0], end: [1, 0] },
+            ]}
+          >
+            <Box gridArea="right" flex={false}>
+              <Button
+                label="Delete case"
+                secondary
+                onClick={this.showConfirmDeleteLayer.bind(this)}
+              />
+            </Box>
+            <Box gridArea="left" flex={false}>
+              {this.state.assurance_case.permissions === "manage" && (
+                <Button
+                  label="Permissions"
+                  secondary
+                  onClick={this.showCasePermissionLayer.bind(this)}
+                />
+              )}
+            </Box>
+          </Grid>
+        </Box>
+      </Box>
+    );
   }
+
   render() {
     if (this.state.loading) {
       return <Box>loading</Box>;
@@ -724,7 +729,7 @@ class CaseContainer extends Component {
               <Box flex={false} style={{ height: "25%" }}>
                 {this.getCreateButtons()}
               </Box>
-              <Box flex={false} style={{ height: "75%", overflow: "auto" }}>
+              <Box flex={false} style={{ height: "65%", overflow: "auto" }}>
                 <CommentSection
                   assuranceCaseId={this.state.assurance_case.id}
                   authorId={getSelfUser()["username"]}
@@ -736,7 +741,6 @@ class CaseContainer extends Component {
               gridArea="main"
               justify="center"
               align="center"
-              fill
               pad={{ horizontal: "small", top: "small", bottom: "small" }}
             >
               <TransformWrapper
