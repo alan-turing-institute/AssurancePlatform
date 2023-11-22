@@ -65,6 +65,7 @@ plugins:
       pagination_per_page: 20
       authors: true
       draft: false
+  - table-reader
 
 # Customization
 
