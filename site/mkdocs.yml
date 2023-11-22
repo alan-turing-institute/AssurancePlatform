@@ -146,4 +146,5 @@ nav:
       - Resetting the Database: platform-details/resetting-database.md
   - Community of Practice:
       - Community of Practice: community/index.md
+      - Why We Ask for Access to Your GitHub: community/github-access.md
       - Upcoming community events: blog/index.md
