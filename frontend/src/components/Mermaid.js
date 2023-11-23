@@ -3,6 +3,18 @@ import mermaid from "mermaid";
 
 class MermaidChart extends React.Component {
   componentDidMount() {
+    this.initializeMermaid();
+    this.renderChart();
+  }
+
+  componentDidUpdate(prevProps) {
+    // Check if the chartmd prop has changed
+    if (prevProps.chartmd !== this.props.chartmd) {
+      this.renderChart();
+    }
+  }
+
+  initializeMermaid() {
     mermaid.initialize({
       theme: "base",
       logLevel: 1,
@@ -21,22 +33,14 @@ class MermaidChart extends React.Component {
     });
 
     window.callback = (e) => this.props.viewLayerFunc(e);
-    mermaid.contentLoaded();
+  }
 
-    // Observe changes to the Mermaid div and apply styles once the content is loaded
+  renderChart() {
+    // Clear the existing content of the Mermaid div before rendering the new chart
     const mermaidDiv = document.querySelector(".mermaid");
     if (mermaidDiv) {
-      const observer = new MutationObserver((mutations, obs) => {
-        for (let mutation of mutations) {
-          if (mutation.addedNodes.length) {
-            mutation.addedNodes[0].style["max-height"] = "100%";
-            obs.disconnect(); // Stop observing after applying styles
-            break;
-          }
-        }
-      });
-
-      observer.observe(mermaidDiv, { childList: true });
+      mermaidDiv.innerHTML = this.props.chartmd;
+      mermaid.contentLoaded();
     } else {
       console.error("Mermaid div not found");
     }
