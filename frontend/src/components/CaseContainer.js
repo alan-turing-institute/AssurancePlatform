@@ -756,7 +756,6 @@ class CaseContainer extends Component {
                       contentStyle={{ width: "100%", height: "100%" }}
                       wrapperStyle={{ width: "100%", height: "100%" }}
                     >
-                      {console.log(this.state.mermaid_md)}
                       <MermaidChart
                         chartmd={this.state.mermaid_md}
                         viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
