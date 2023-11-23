@@ -225,7 +225,6 @@ class CaseContainer extends Component {
     ) {
       this.submitCaseChange("lock_uuid", null);
     }
-    this.updateView();
   }
 
   // Setup the `beforeunload` event listener to detect browser/tab closing
