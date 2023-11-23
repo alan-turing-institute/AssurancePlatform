@@ -225,6 +225,7 @@ class CaseContainer extends Component {
     ) {
       this.submitCaseChange("lock_uuid", null);
     }
+    this.updateView();
   }
 
   // Setup the `beforeunload` event listener to detect browser/tab closing
@@ -504,7 +505,7 @@ class CaseContainer extends Component {
 
 
   inEditMode() {
-    this.updateView();
+    //this.updateView();
     return true; // it's always edit time baby!
     //this.state.assurance_case.lock_uuid === this.state.session_id;
   }
