@@ -725,10 +725,11 @@ class CaseContainer extends Component {
                       contentStyle={{ width: "100%", height: "100%" }}
                       wrapperStyle={{ width: "100%", height: "100%" }}
                     >
-                      <MermaidChart
-                        chartmd={this.state.mermaid_md}
-                        viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
-                      />
+                    <MermaidChart
+                      key={this.state.mermaid_md} // Add this line
+                      chartmd={this.state.mermaid_md}
+                      viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
+                    />
                     </TransformComponent>
                     <Box
                       className="tools"
