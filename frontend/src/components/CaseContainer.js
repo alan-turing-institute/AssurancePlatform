@@ -502,38 +502,9 @@ class CaseContainer extends Component {
     );
   }
 
-  enableEditing() {
-    if (!this.state.assurance_case.lock_uuid) {
-      this.submitCaseChange("lock_uuid", this.state.session_id).then(
-        (response) => {
-          this.updateView();
-        },
-      );
-    } else if (this.state.assurance_case.lock_uuid !== this.state.session_id) {
-      // override!
-      if (
-        window.confirm(
-          "Are you sure?  You might be overwriting someone's work...",
-        )
-      ) {
-        this.submitCaseChange("lock_uuid", this.state.session_id).then(
-          (response) => {
-            this.updateView();
-          },
-        );
-      }
-    }
-  }
-
-  disableEditing() {
-    if (this.state.assurance_case.lock_uuid) {
-      this.submitCaseChange("lock_uuid", null).then((response) => {
-        this.updateView();
-      });
-    }
-  }
 
   inEditMode() {
+    this.updateView();
     return true; // it's always edit time baby!
     //this.state.assurance_case.lock_uuid === this.state.session_id;
   }
