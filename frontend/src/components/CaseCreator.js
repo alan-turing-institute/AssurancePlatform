@@ -11,9 +11,8 @@ import {
 } from "grommet";
 import {
   FormClose,
-  Upload,
-  CloudDownload,
   DocumentUpload,
+  CloudDownload,
   DocumentDownload,
 } from "grommet-icons";
 import TemplateSelector from "./TemplateSelector.js";
@@ -33,12 +32,8 @@ function CaseCreator() {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if fileContent is passed in the location state
     if (location.state && location.state.fileContent) {
-      const fileContent = location.state.fileContent;
-      // Here, you would call the function you use to handle the file import.
-      // For example:
-      postCaseJSON(fileContent);
+      postCaseJSON(location.state.fileContent);
     }
   }, [location]);
 
@@ -89,10 +84,16 @@ function CaseCreator() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    // Make a copy of the template.
+    const form = event.target;
+    const nameInput = form.elements.name.value;
+    const descriptionInput = form.elements.description.value;
+
+    setName(nameInput);
+    setDescription(descriptionInput);
+
     const case_json = JSON.parse(JSON.stringify(template));
-    case_json["name"] = name;
-    case_json["description"] = description;
+    case_json["name"] = nameInput;
+    case_json["description"] = descriptionInput;
     case_json["color_profile"] = "default";
     postCaseJSON(JSON.stringify(case_json));
   }
@@ -129,17 +130,12 @@ function CaseCreator() {
   const renderFormFields = () => (
     <Box direction="row" gap="medium" align="center">
       <FormField label="Case Name" name="name">
-        <TextInput
-          placeholder="Enter case name"
-          value={name}
-          onChange={onChange}
-        />
+        <TextInput placeholder="Enter case name" defaultValue={name} />
       </FormField>
       <FormField label="Case Description" name="description">
         <TextInput
           placeholder="Enter case description"
-          value={description}
-          onChange={onChange}
+          defaultValue={description}
         />
       </FormField>
       <TemplateSelector value={template} setValue={setTemplate} />
