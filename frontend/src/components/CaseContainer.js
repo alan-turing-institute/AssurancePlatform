@@ -76,39 +76,27 @@ class CaseContainer extends Component {
       headers: {
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
-      signal: this.abortController.signal, // Pass the signal to the fetch call
     };
-
-    try {
-      const res = await fetch(this.url + id, requestOptions);
-      if (res.status === 200) {
-        const json_response = await res.json();
-        // Only proceed to set state if the component is still mounted
-        if (this._isMounted) {
-          if (
-            JSON.stringify(this.state.assurance_case) !==
-            JSON.stringify(json_response)
-          ) {
-            this.setState({
-              assurance_case: json_response,
-              mermaid_md: jsonToMermaid(json_response),
-              loading: false, // Assuming you want to set loading to false after the data is fetched
-            });
-          }
-        }
-      } else {
-        // Handle other response statuses if necessary
-        console.error("Fetch failed with status: ", res.status);
-      }
-    } catch (error) {
-      if (error.name === "AbortError") {
-        // Ignore as this is an abort error
-        console.log("Fetch aborted", error);
-      } else {
-        // Handle other errors
-        console.error("Fetch error:", error);
+    const res = await fetch(this.url + id, requestOptions);
+    if (res.status === 200) {
+      const json_response = await res.json();
+      if (
+        JSON.stringify(this.state.assurance_case) !==
+        JSON.stringify(json_response)
+      ) {
+        this.setState({ loading: true });
+        this.setState({
+          assurance_case: json_response,
+        });
+        this.setState({
+          mermaid_md: jsonToMermaid(this.state.assurance_case),
+        });
+        this.setState({ loading: false });
       }
     }
+
+    // log the contents of assurance case
+    console.log(this.state.assurance_case);
   };
 
   submitCaseChange(field, value) {
