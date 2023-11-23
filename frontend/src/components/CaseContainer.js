@@ -65,8 +65,6 @@ class CaseContainer extends Component {
 
   handleProfileChange = (color) => {
     this.submitCaseChange("color_profile", color).then((response) => {
-      console.log(response);
-      console.log(response.status);
       if (response.status === 200) {
         this.updateView();
       }

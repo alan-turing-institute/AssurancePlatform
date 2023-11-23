@@ -36,21 +36,23 @@ class MermaidChart extends React.Component {
   }
 
   renderChart() {
-    // Clear the existing content of the Mermaid div before rendering the new chart
-    const mermaidDiv = document.querySelector(".mermaid");
-    if (mermaidDiv) {
-      mermaidDiv.innerHTML = this.props.chartmd;
-      mermaid.contentLoaded();
-    } else {
-      console.error("Mermaid div not found");
+    try {
+      const mermaidDiv = document.querySelector(".mermaid");
+      if (mermaidDiv) {
+        mermaidDiv.innerHTML = ''; // Clear the existing content
+        mermaidDiv.innerHTML = this.props.chartmd; // Set new markdown content
+        mermaid.contentLoaded(); // Inform Mermaid to process the new content
+      } else {
+        console.error("Mermaid div not found");
+      }
+    } catch (error) {
+      console.error("Error rendering Mermaid chart:", error);
     }
   }
 
   render() {
     return (
-      <div style={{ width: "100%", height: "100%" }} className="mermaid">
-        {this.props.chartmd}
-      </div>
+      <div style={{ width: "100%", height: "100%" }} className="mermaid" />
     );
   }
 }
