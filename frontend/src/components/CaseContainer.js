@@ -488,7 +488,6 @@ class CaseContainer extends Component {
     );
   }
 
-
   inEditMode() {
     //this.updateView();
     return true; // it's always edit time baby!
@@ -714,11 +713,11 @@ class CaseContainer extends Component {
                       contentStyle={{ width: "100%", height: "100%" }}
                       wrapperStyle={{ width: "100%", height: "100%" }}
                     >
-                    <MermaidChart
-                      key={this.state.mermaid_md} // Add this line
-                      chartmd={this.state.mermaid_md}
-                      viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
-                    />
+                      <MermaidChart
+                        key={this.state.mermaid_md} // Add this line
+                        chartmd={this.state.mermaid_md}
+                        viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
+                      />
                     </TransformComponent>
                     <Box
                       className="tools"

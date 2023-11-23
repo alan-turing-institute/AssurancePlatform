@@ -39,7 +39,7 @@ class MermaidChart extends React.Component {
     try {
       const mermaidDiv = document.querySelector(".mermaid");
       if (mermaidDiv) {
-        mermaidDiv.innerHTML = ''; // Clear the existing content
+        mermaidDiv.innerHTML = ""; // Clear the existing content
         mermaidDiv.innerHTML = this.props.chartmd; // Set new markdown content
         mermaid.contentLoaded(); // Inform Mermaid to process the new content
       } else {
