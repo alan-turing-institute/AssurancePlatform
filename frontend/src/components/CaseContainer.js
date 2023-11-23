@@ -626,6 +626,7 @@ class CaseContainer extends Component {
             gridArea="header"
             direction="row"
             gap="small"
+            style={{ height: "5%" }}
             border={{ color: "dark-4", size: "small", side: "bottom" }}
             pad={{
               horizontal: "small",
