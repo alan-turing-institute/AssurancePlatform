@@ -29,7 +29,15 @@ function removeArrayElement(array, element) {
   array.splice(array.indexOf(element), 1);
 }
 
-function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
+/**
+ * 
+ * @param {*} in_json 
+ * @param {string?} highlightedType 
+ * @param {string?} highlightedId 
+ * @param {string[]} collapsedNodes 
+ * @returns 
+ */
+function jsonToMermaid(in_json, highlightedType, highlightedId, collapsedNodes) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
   // Nodes in the flowchart will be named [TypeName]_[ID]
@@ -37,12 +45,17 @@ function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
     return itemType + "_" + itemId;
   }
 
-  function makeBox(text, shape) {
+  function makeBox(text, shape, isCollapsed) {
+    if(isCollapsed){
+      text = "> " + text;
+    }
+    
     // check if string starts with a number, and if so, prepend a space
     // to avoid getting a weird unicode character instead
     if (text.match(/^\d/)) {
       text = " " + text + " ";
     }
+
     if (text.length > configData["BOX_NCHAR"]) {
       text = text.substring(0, configData["BOX_NCHAR"] - 3) + "...";
     } else {
@@ -86,7 +99,7 @@ function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
       outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
     }
 
-    if(highlightedType === type && highlightedIdString === obj.id.toString()){
+    if(highlightedType === type && highlightedId === obj.id.toString()){
       outputmd += "\nclass " + getNodeName(type, obj.id) + " classHighlighted;\n";
     }
 
@@ -105,16 +118,17 @@ function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
     for (let i = 0; i < parent[thisType].length; i++) {
       let thisObj = parent[thisType][i];
       let thisNode = getNodeName(itemType, thisObj.id);
+      const isCollapsed = collapsedNodes.includes(thisNode);
       if (parentNode != null) {
         outputmd +=
           parentNode +
           arrow +
           thisNode +
-          makeBox(sanitizeForMermaid(thisObj.name), boxShape) +
+          makeBox(sanitizeForMermaid(thisObj.name), boxShape, isCollapsed) +
           "\n";
       } else {
         outputmd +=
-          thisNode + makeBox(sanitizeForMermaid(thisObj.name), boxShape) + "\n";
+          thisNode + makeBox(sanitizeForMermaid(thisObj.name), boxShape, isCollapsed) + "\n";
       }
       // add a click link to the node
       outputmd +=
@@ -125,7 +139,7 @@ function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
         '"\n';
       // add style to the node
       outputmd = addClasses(thisNode, thisObj, itemType, outputmd);
-      if (!visited.includes(JSON.stringify(thisObj))) {
+      if (!isCollapsed && !visited.includes(JSON.stringify(thisObj))) {
         for (
           let j = 0;
           j < configData.navigation[itemType]["children"].length;

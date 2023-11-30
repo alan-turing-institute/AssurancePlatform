@@ -58,8 +58,12 @@ class CaseContainer extends Component {
         color_profile: "default",
       },
       // these aren't perfectly in-sync with itemId and itemType
+      /** @type {string?} */
       selectedId: null,
+      /** @type {string?} */
       selectedType: null,
+      /** @type {string[]} */
+      collapsedNodes: [],
       metadata: null,
     };
 
@@ -242,10 +246,16 @@ class CaseContainer extends Component {
   }
 
   showViewOrEditLayer(e) {
+    this.toggleNodeVisibility(e);
+      
+    // TODO find a way to switch functionality
+    return;
+
     let chunks = e.split("_");
     if (chunks.length === 2) {
       let itemType = chunks[0];
       let itemId = chunks[1];
+      
       this.setState({ itemType: itemType, itemId: itemId });
       this.setState({ selectedType: itemType, selectedId: itemId })
       if (this.inEditMode()) {
@@ -298,6 +308,16 @@ class CaseContainer extends Component {
 
   resetHighlight() {
     this.setState({ selectedId: null, selectedType: null });
+  }
+
+  /** @param {string} nodeKey  */
+  toggleNodeVisibility(nodeKey){
+    let newArray = this.state.collapsedNodes.filter(k => k !== nodeKey);
+    if(newArray.length === this.state.collapsedNodes.length){
+      newArray.push(nodeKey);
+    }
+
+    this.setState({collapsedNodes: newArray});
   }
 
   hideViewLayer() {
@@ -604,7 +624,12 @@ class CaseContainer extends Component {
       window.location.replace("/login");
       return null;
     } else {
-      const markdown = this.constructMarkdownMemoised(this.state.assurance_case, this.state.selectedType, this.state.selectedId);
+      const markdown = this.constructMarkdownMemoised(
+        this.state.assurance_case, 
+        this.state.selectedType, 
+        this.state.selectedId, 
+        this.state.collapsedNodes
+      );
 
       return (
         <Box fill>
