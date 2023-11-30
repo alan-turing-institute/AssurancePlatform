@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import React, { Component } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Grid, Box, DropButton, Layer, Button, Text } from "grommet";
+import { Grid, Box, DropButton, Layer, Button, Text, CheckBox } from "grommet";
 import {
   FormClose,
   ZoomIn,
@@ -64,6 +64,7 @@ class CaseContainer extends Component {
       selectedType: null,
       /** @type {string[]} */
       collapsedNodes: [],
+      collapseOnClick: false,
       metadata: null,
     };
 
@@ -246,11 +247,6 @@ class CaseContainer extends Component {
   }
 
   showViewOrEditLayer(e) {
-    this.toggleNodeVisibility(e);
-      
-    // TODO find a way to switch functionality
-    return;
-
     let chunks = e.split("_");
     if (chunks.length === 2) {
       let itemType = chunks[0];
@@ -631,6 +627,10 @@ class CaseContainer extends Component {
         this.state.collapsedNodes
       );
 
+      const onNodeClick = this.state.collapseOnClick 
+        ? nodeKey => this.toggleNodeVisibility(nodeKey) 
+        : nodeKey => this.showViewOrEditLayer(nodeKey);
+
       return (
         <Box fill>
           <Box
@@ -706,6 +706,12 @@ class CaseContainer extends Component {
                   authorId={getSelfUser()["username"]}
                 />
               </Box>
+              <CheckBox 
+                  label="Click chart for expand/collapse" 
+                  checked={this.state.collapseOnClick} 
+                  onChange={(ev) => this.setState({collapseOnClick: ev.target.checked})}
+                  pad="auto"
+                />
             </Box>
 
             <Box
@@ -728,7 +734,7 @@ class CaseContainer extends Component {
                       <MermaidChart
                         key={markdown} // Add this line
                         chartmd={markdown}
-                        viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
+                        viewLayerFunc={onNodeClick}
                       />
                     </TransformComponent>
                     <Box
