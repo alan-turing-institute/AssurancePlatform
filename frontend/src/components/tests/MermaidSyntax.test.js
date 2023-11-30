@@ -8,8 +8,6 @@ import "@testing-library/jest-dom";
 import {
   getBaseURL,
   removeArrayElement,
-  highlightNode,
-  removeHighlight,
   splitCommaSeparatedString,
   joinCommaSeparatedString,
   jsonToMermaid,
@@ -34,7 +32,7 @@ test("Simple JSON translation", () => {
       },
     ],
   };
-  let output = jsonToMermaid(input);
+  let output = jsonToMermaid(input, null, null);
   expect(output.includes("test goal"));
 });
 
@@ -62,7 +60,7 @@ test("jsonToMermaid sanitizes goal name", () => {
       },
     ],
   };
-  let output = jsonToMermaid(input);
+  let output = jsonToMermaid(input, null, null);
   expect(output.includes("test goal"));
 });
 
@@ -72,16 +70,37 @@ test("removeArrayElement removes correct element", () => {
   expect(arr).toEqual([1, 2, 4]);
 });
 
-test("highlightNode appends highlight class", () => {
-  const markdown = "test markdown";
-  const highlighted = highlightNode(markdown, "Goal", 1);
-  expect(highlighted.endsWith("class Goal_1 classHighlighted;\n")).toBe(true);
-});
+test("jsonToMermaid highlights correct class", () => {
+  let input = {
+    id: 1,
+    name: "Test case",
+    description: "",
+    color_profile: "default",
+    goals: [
+      {
+        id: 1,
+        name: "test goal",
+        short_description: "short",
+        long_description: "long",
+        context: [],
+        property_claims: [],
+        strategies: [],
+      },
+      {
+        id: 2,
+        name: "test goal",
+        short_description: "short",
+        long_description: "long",
+        context: [],
+        property_claims: [],
+        strategies: [],
+      },
+    ],
+  };
+  const markdown = jsonToMermaid(input, "TopLevelNormativeGoal", "1");
 
-test("removeHighlight removes the highlight class", () => {
-  const highlighted = "test markdown\nclass Goal_1 classHighlighted;\n";
-  const result = removeHighlight(highlighted);
-  expect(result).toBe("test markdown");
+  expect(markdown).toContain("class TopLevelNormativeGoal_1 classHighlighted;");
+  expect(markdown).not.toContain("class TopLevelNormativeGoal_2 classHighlighted;");
 });
 
 test("splitCommaSeparatedString splits correctly", () => {

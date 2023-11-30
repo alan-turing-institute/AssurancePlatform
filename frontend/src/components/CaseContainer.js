@@ -24,12 +24,11 @@ import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
 import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
+import memoize from "memoize-one";
 
 import {
   getBaseURL,
   jsonToMermaid,
-  highlightNode,
-  removeHighlight,
   getSelfUser,
 } from "./utils.js";
 import configData from "../config.json";
@@ -39,6 +38,8 @@ class CaseContainer extends Component {
   svgDownloader = new SVGDownloader();
   _isMounted = false; // Flag to track mount status
   abortController = new AbortController(); // Instantiate the AbortController
+
+  constructMarkdownMemoised = memoize(jsonToMermaid);
 
   constructor(props) {
     super(props);
@@ -56,7 +57,9 @@ class CaseContainer extends Component {
         goals: [],
         color_profile: "default",
       },
-      mermaid_md: "graph TB; \n",
+      // these aren't perfectly in-sync with itemId and itemType
+      selectedId: null,
+      selectedType: null,
       metadata: null,
     };
 
@@ -87,9 +90,6 @@ class CaseContainer extends Component {
         this.setState({ loading: true });
         this.setState({
           assurance_case: json_response,
-        });
-        this.setState({
-          mermaid_md: jsonToMermaid(this.state.assurance_case),
         });
         this.setState({ loading: false });
       }
@@ -247,16 +247,7 @@ class CaseContainer extends Component {
       let itemType = chunks[0];
       let itemId = chunks[1];
       this.setState({ itemType: itemType, itemId: itemId });
-      this.setState({ loading: true });
-
-      this.setState({
-        mermaid_md: highlightNode(
-          this.state.mermaid_md,
-          this.state.itemType,
-          this.state.itemId,
-        ),
-      });
-      this.setState({ loading: false });
+      this.setState({ selectedType: itemType, selectedId: itemId })
       if (this.inEditMode()) {
         this.showEditLayer(itemType, itemId);
       } else {
@@ -306,13 +297,7 @@ class CaseContainer extends Component {
   }
 
   resetHighlight() {
-    this.setState({ loading: true });
-    this.setState({
-      mermaid_md: removeHighlight(this.state.mermaid_md),
-    });
-    setTimeout(() => {
-      this.setState({ loading: false });
-    }, 100);
+    this.setState({ selectedId: null, selectedType: null });
   }
 
   hideViewLayer() {
@@ -619,6 +604,8 @@ class CaseContainer extends Component {
       window.location.replace("/login");
       return null;
     } else {
+      const markdown = this.constructMarkdownMemoised(this.state.assurance_case, this.state.selectedType, this.state.selectedId);
+
       return (
         <Box fill>
           <Box
@@ -714,8 +701,8 @@ class CaseContainer extends Component {
                       wrapperStyle={{ width: "100%", height: "100%" }}
                     >
                       <MermaidChart
-                        key={this.state.mermaid_md} // Add this line
-                        chartmd={this.state.mermaid_md}
+                        key={markdown} // Add this line
+                        chartmd={markdown}
                         viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
                       />
                     </TransformComponent>

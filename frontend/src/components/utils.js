@@ -29,7 +29,7 @@ function removeArrayElement(array, element) {
   array.splice(array.indexOf(element), 1);
 }
 
-function jsonToMermaid(in_json) {
+function jsonToMermaid(in_json, highlightedType, highlightedIdString) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
   // Nodes in the flowchart will be named [TypeName]_[ID]
@@ -84,6 +84,10 @@ function jsonToMermaid(in_json) {
     }
     if (obj.level !== undefined) {
       outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
+    }
+
+    if(highlightedType === type && highlightedIdString === obj.id.toString()){
+      outputmd += "\nclass " + getNodeName(type, obj.id) + " classHighlighted;\n";
     }
 
     return outputmd;
@@ -148,29 +152,6 @@ function jsonToMermaid(in_json) {
   return outputmd;
 }
 
-function highlightNode(inputMarkdown, nodeType, nodeId) {
-  // add a classDef to the bottom of the markdown highlighting a node
-  inputMarkdown = removeHighlight(inputMarkdown);
-  inputMarkdown +=
-    "\nclass " + nodeType + "_" + nodeId + " classHighlighted;\n";
-  return inputMarkdown;
-}
-
-function removeHighlight(inputMarkdown) {
-  // remove last line of markdown if it contains highlight
-  let lines = inputMarkdown.split("\n");
-  let numLines = lines.length;
-  if (
-    numLines >= 2 &&
-    lines[numLines - 2] &&
-    lines[numLines - 2].includes("classHighlighted")
-  ) {
-    lines.splice(numLines - 2, numLines - 1);
-    inputMarkdown = lines.join("\n");
-  }
-  return inputMarkdown;
-}
-
 function splitCommaSeparatedString(string) {
   // Trim trailing comma if any.
   if (string[string.length - 1] === ",")
@@ -199,11 +180,9 @@ export {
   getBaseURL,
   getClientID,
   getRedirectURI,
-  highlightNode,
   joinCommaSeparatedString,
   jsonToMermaid,
   removeArrayElement,
-  removeHighlight,
   sanitizeForMermaid,
   splitCommaSeparatedString,
   getSelfUser,
