@@ -1,0 +1,27 @@
+/* visibly hidden, but treated as visible by screen-readers */
+.assistive-text {
+    position: absolute !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+}
+
+/* adjust mermaid's styling to let the button below go out of bounds */
+foreignObject {
+    overflow: visible;
+}
+
+button.collapse-expand {
+    border: none;
+    background: none;
+    color: white;
+    font-weight: bolder;
+    /* expand button's hitbox without seeming much bigger */
+    width: 2rem;
+    height: 4rem;
+    margin: -2rem -0.5rem -2rem auto;
+    padding-left: 0.5rem;
+}
+
+button.collapse-expand:hover {
+   color: yellow;
+}

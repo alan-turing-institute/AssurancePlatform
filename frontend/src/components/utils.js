@@ -30,14 +30,19 @@ function removeArrayElement(array, element) {
 }
 
 /**
- * 
- * @param {*} in_json 
- * @param {string?} highlightedType 
- * @param {string?} highlightedId 
- * @param {string[]} collapsedNodes 
- * @returns 
+ *
+ * @param {*} in_json
+ * @param {string?} highlightedType
+ * @param {string?} highlightedId
+ * @param {string[]} collapsedNodes
+ * @returns
  */
-function jsonToMermaid(in_json, highlightedType, highlightedId, collapsedNodes) {
+function jsonToMermaid(
+  in_json,
+  highlightedType,
+  highlightedId,
+  collapsedNodes
+) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
   // Nodes in the flowchart will be named [TypeName]_[ID]
@@ -45,27 +50,21 @@ function jsonToMermaid(in_json, highlightedType, highlightedId, collapsedNodes) 
     return itemType + "_" + itemId;
   }
 
-  function makeBox(text, shape, isCollapsed) {
-    if(isCollapsed){
-      text = "> " + text;
-    }
-    
-    // check if string starts with a number, and if so, prepend a space
-    // to avoid getting a weird unicode character instead
-    if (text.match(/^\d/)) {
-      text = " " + text + " ";
-    }
+  function makeBox(text, shape, name, isCollapsed) {
+    // text is already sanitised at this point, so will not contain <> or "
 
     if (text.length > configData["BOX_NCHAR"]) {
       text = text.substring(0, configData["BOX_NCHAR"] - 3) + "...";
-    } else {
-      // pad the text with spaces to make it the same width
-      let nSpaces = configData["BOX_NCHAR"] - text.length;
-      text =
-        "&#160".repeat(Math.ceil(nSpaces / 2)) +
-        text +
-        "&#160".repeat(Math.floor(nSpaces / 2));
     }
+
+    const symbol = isCollapsed ? "&plus;" : "&minus;";
+    const helpText = isCollapsed ? "Expand" : "Collapse";
+    text +=
+      `<button class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
+
+    // surround with quotes so mermaid doesn't treat content as markdown
+    text = '"' + text + '"';
+
     if (shape === "square") return "[" + text + "]";
     else if (shape === "diamond") return "{" + text + "}";
     else if (shape === "rounded") return "(" + text + ")";
@@ -99,8 +98,9 @@ function jsonToMermaid(in_json, highlightedType, highlightedId, collapsedNodes) 
       outputmd += "\nclass " + node + " classLevel" + obj.level + ";\n";
     }
 
-    if(highlightedType === type && highlightedId === obj.id.toString()){
-      outputmd += "\nclass " + getNodeName(type, obj.id) + " classHighlighted;\n";
+    if (highlightedType === type && highlightedId === obj.id.toString()) {
+      outputmd +=
+        "\nclass " + getNodeName(type, obj.id) + " classHighlighted;\n";
     }
 
     return outputmd;
@@ -124,11 +124,23 @@ function jsonToMermaid(in_json, highlightedType, highlightedId, collapsedNodes) 
           parentNode +
           arrow +
           thisNode +
-          makeBox(sanitizeForMermaid(thisObj.name), boxShape, isCollapsed) +
+          makeBox(
+            sanitizeForMermaid(thisObj.name),
+            boxShape,
+            thisNode,
+            isCollapsed
+          ) +
           "\n";
       } else {
         outputmd +=
-          thisNode + makeBox(sanitizeForMermaid(thisObj.name), boxShape, isCollapsed) + "\n";
+          thisNode +
+          makeBox(
+            sanitizeForMermaid(thisObj.name),
+            boxShape,
+            thisNode,
+            isCollapsed
+          ) +
+          "\n";
       }
       // add a click link to the node
       outputmd +=

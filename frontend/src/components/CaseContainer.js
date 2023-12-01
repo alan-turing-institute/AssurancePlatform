@@ -64,7 +64,6 @@ class CaseContainer extends Component {
       selectedType: null,
       /** @type {string[]} */
       collapsedNodes: [],
-      collapseOnClick: false,
       metadata: null,
     };
 
@@ -627,10 +626,6 @@ class CaseContainer extends Component {
         this.state.collapsedNodes
       );
 
-      const onNodeClick = this.state.collapseOnClick 
-        ? nodeKey => this.toggleNodeVisibility(nodeKey) 
-        : nodeKey => this.showViewOrEditLayer(nodeKey);
-
       return (
         <Box fill>
           <Box
@@ -706,12 +701,6 @@ class CaseContainer extends Component {
                   authorId={getSelfUser()["username"]}
                 />
               </Box>
-              <CheckBox 
-                  label="Click chart for expand/collapse" 
-                  checked={this.state.collapseOnClick} 
-                  onChange={(ev) => this.setState({collapseOnClick: ev.target.checked})}
-                  pad="auto"
-                />
             </Box>
 
             <Box
@@ -734,7 +723,8 @@ class CaseContainer extends Component {
                       <MermaidChart
                         key={markdown} // Add this line
                         chartmd={markdown}
-                        viewLayerFunc={onNodeClick}
+                        viewLayerFunc={e => this.showViewOrEditLayer(e)}
+                        toggleCollapseLayerFunc={e => this.toggleNodeVisibility(e)}
                       />
                     </TransformComponent>
                     <Box
