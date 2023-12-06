@@ -1,5 +1,6 @@
 import React from "react";
 import mermaid from "mermaid";
+import "./Mermaid.css";
 
 class MermaidChart extends React.Component {
   componentDidMount() {
@@ -35,13 +36,33 @@ class MermaidChart extends React.Component {
     window.callback = (e) => this.props.viewLayerFunc(e);
   }
 
+  /** @param {MouseEvent} e  */
+  onCollapseButtonClick(e) {
+    const data = e.target?.dataset?.["key"];
+    if (data == null) {
+      return;
+    }
+    this.props.toggleCollapseLayerFunc(data);
+
+    // don't fire click event on node itself
+    e.stopPropagation();
+  }
+
   renderChart() {
     try {
       const mermaidDiv = document.querySelector(".mermaid");
       if (mermaidDiv) {
-        mermaidDiv.innerHTML = ""; // Clear the existing content
-        mermaidDiv.innerHTML = this.props.chartmd; // Set new markdown content
+        // make sure to use textContent and not innerHtml, as our markdown can contain html
+        mermaidDiv.textContent = ""; // Clear the existing content
+        mermaidDiv.textContent = this.props.chartmd; // Set new markdown content
         mermaid.contentLoaded(); // Inform Mermaid to process the new content
+
+        const collapseButtons = document.querySelectorAll(".collapse-expand");
+        collapseButtons.forEach((button) =>
+          button.addEventListener("click", (e) =>
+            this.onCollapseButtonClick(e),
+          ),
+        );
       } else {
         console.error("Mermaid div not found");
       }
