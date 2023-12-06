@@ -204,6 +204,50 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
   return copy;
 }
 
+/**
+ * For an assurance case, and a case item id and type, 
+ * find all property claims this item in the graph,
+ * including itself if its a property claim
+ * @param {*} assuranceCase 
+ * @param {string} id 
+ * @param {string} type 
+ * @returns {any[]}
+ */
+function getParentPropertyClaims(assuranceCase, id, type) {
+
+  // run depth first search
+  /** @type [any, string, any[]] */
+  const caseItemStack = assuranceCase.goals.map(i => [i, "TopLevelNormativeGoal", []]);
+
+  let result = [];
+
+  while(caseItemStack.length > 0){
+    const [node, nodeType, parents] = caseItemStack.shift();
+    const newParents = [...parents, node];
+    
+    if(node.id.toString() === id && nodeType === type){
+      // found it!
+      result = newParents;
+      break;
+    }
+
+    const newChildren = [];
+    configData.navigation[nodeType]["children"].forEach((childName, j) => {
+      const childType = configData.navigation[nodeType]["children"][j];
+      const dbName = configData.navigation[childName]["db_name"];
+      if (Array.isArray(node[dbName])) {
+        node[dbName].forEach(child => { 
+          newChildren.push([child, childType, newParents]); 
+        });
+      }
+    });
+
+    caseItemStack.unshift(...newChildren);
+  }
+
+  return result.filter(i => i.type === "PropertyClaim");
+}
+
 export {
   getBaseURL,
   getClientID,
@@ -215,4 +259,5 @@ export {
   splitCommaSeparatedString,
   getSelfUser,
   visitCaseItem,
+  getParentPropertyClaims
 };

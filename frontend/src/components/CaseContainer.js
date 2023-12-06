@@ -31,6 +31,7 @@ import {
   jsonToMermaid,
   getSelfUser,
   visitCaseItem,
+  getParentPropertyClaims,
 } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
@@ -315,15 +316,28 @@ class CaseContainer extends Component {
     this.setState({ showEditLayer: false, itemType: null, itemId: null });
   }
 
-  /** @param {string} type */
-  getIdForNewElement(type){
+  /**
+   * @param {string} type 
+   * @param {string} parentId 
+   * @param {string} parentType 
+   * @returns {string}
+   */
+  getIdForNewElement(type, parentId, parentType){
     const newList = new Set([...this.state.identifiers, ...this.getIdListMemoised(this.state.assurance_case)]);
 
     this.setState({idList: newList});
 
-    const prefix = configData.navigation[type].db_name.substring(0, 1).toUpperCase();
-    let i = 1;
+    let prefix = configData.navigation[type].db_name.substring(0, 1).toUpperCase();
+    
+    if(type === "PropertyClaim") {
+      const parents = getParentPropertyClaims(this.state.assurance_case, parentId, parentType);
+      if(parents.length > 0){
+        const parent = parents[parents.length - 1];
+        prefix = parent.name + ".";
+      }
+    }
 
+    let i = 1;
     while(newList.has(prefix + i)){
       i++;
     }
