@@ -176,6 +176,34 @@ async function getSelfUser() {
   return user;
 }
 
+/**
+ * Make a mutable copy of a case item, and run a callback to mutate the new copy
+ * @param {*} caseItem root case item
+ * @param {(caseItem: any, type: string) => void} callback function to run at every step of the tree
+ * @returns
+ */
+function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
+  if (typeof caseItem != "object") {
+    return caseItem;
+  }
+
+  // make a shallow copy
+  var copy = { ...caseItem };
+
+  configData.navigation[itemType]["children"].forEach((childName, j) => {
+    let childType = configData.navigation[itemType]["children"][j];
+    let dbName = configData.navigation[childName]["db_name"];
+    // recurse to make deep copies of the child arrays, if they exist
+    if (Array.isArray(copy[dbName])) {
+      copy[dbName] = copy[dbName].map((g) => visitCaseItem(g, callback, childType));
+    }
+  })
+
+  callback(copy, itemType);
+
+  return copy;
+}
+
 export {
   getBaseURL,
   getClientID,
@@ -186,4 +214,5 @@ export {
   sanitizeForMermaid,
   splitCommaSeparatedString,
   getSelfUser,
+  visitCaseItem,
 };
