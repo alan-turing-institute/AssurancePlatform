@@ -14,7 +14,6 @@ import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 
 function ItemCreator(props) {
-  const [name, setName] = useState("Name");
   const [sdesc, setShortDesc] = useState("Short description");
   const [ldesc, setLongDesc] = useState("Long description");
   const [keywords, setKeywords] = useState("Keywords (comma-separated)");
@@ -89,13 +88,6 @@ function ItemCreator(props) {
     <Box className="dropdown" pad="small">
       <Heading level={3}>Create a new {props.type}</Heading>
       <Form onSubmit={handleSubmit}>
-        <FormField>
-          <TextInput
-            placeholder={name}
-            name="name"
-            onChange={(e) => setName(e.target.value)}
-          />
-        </FormField>
         <FormField>
           <TextInput
             placeholder={sdesc}

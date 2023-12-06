@@ -177,6 +177,7 @@ function ItemEditor(props) {
       <Heading level={3}>Edit {props.type}</Heading>
       <Form onSubmit={handleSubmit}>
         <FormField>
+          {/* TODO remove ability to edit once the recalculate button is available */}
           <TextInput
             value={items.name}
             name="name"
