@@ -41,7 +41,7 @@ function jsonToMermaid(
   in_json,
   highlightedType,
   highlightedId,
-  collapsedNodes
+  collapsedNodes,
 ) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
@@ -59,8 +59,7 @@ function jsonToMermaid(
 
     const symbol = isCollapsed ? "&plus;" : "&minus;";
     const helpText = isCollapsed ? "Expand" : "Collapse";
-    text +=
-      `<button class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
+    text += `<button class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
 
     // surround with quotes so mermaid doesn't treat content as markdown
     text = '"' + text + '"';
@@ -128,7 +127,7 @@ function jsonToMermaid(
             sanitizeForMermaid(thisObj.name),
             boxShape,
             thisNode,
-            isCollapsed
+            isCollapsed,
           ) +
           "\n";
       } else {
@@ -138,7 +137,7 @@ function jsonToMermaid(
             sanitizeForMermaid(thisObj.name),
             boxShape,
             thisNode,
-            isCollapsed
+            isCollapsed,
           ) +
           "\n";
       }

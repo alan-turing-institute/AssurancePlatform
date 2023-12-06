@@ -26,11 +26,7 @@ import ItemEditor from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
 import memoize from "memoize-one";
 
-import {
-  getBaseURL,
-  jsonToMermaid,
-  getSelfUser,
-} from "./utils.js";
+import { getBaseURL, jsonToMermaid, getSelfUser } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
 
@@ -250,9 +246,9 @@ class CaseContainer extends Component {
     if (chunks.length === 2) {
       let itemType = chunks[0];
       let itemId = chunks[1];
-      
+
       this.setState({ itemType: itemType, itemId: itemId });
-      this.setState({ selectedType: itemType, selectedId: itemId })
+      this.setState({ selectedType: itemType, selectedId: itemId });
       if (this.inEditMode()) {
         this.showEditLayer(itemType, itemId);
       } else {
@@ -306,13 +302,13 @@ class CaseContainer extends Component {
   }
 
   /** @param {string} nodeKey  */
-  toggleNodeVisibility(nodeKey){
-    let newArray = this.state.collapsedNodes.filter(k => k !== nodeKey);
-    if(newArray.length === this.state.collapsedNodes.length){
+  toggleNodeVisibility(nodeKey) {
+    let newArray = this.state.collapsedNodes.filter((k) => k !== nodeKey);
+    if (newArray.length === this.state.collapsedNodes.length) {
       newArray.push(nodeKey);
     }
 
-    this.setState({collapsedNodes: newArray});
+    this.setState({ collapsedNodes: newArray });
   }
 
   hideViewLayer() {
@@ -620,10 +616,10 @@ class CaseContainer extends Component {
       return null;
     } else {
       const markdown = this.constructMarkdownMemoised(
-        this.state.assurance_case, 
-        this.state.selectedType, 
-        this.state.selectedId, 
-        this.state.collapsedNodes
+        this.state.assurance_case,
+        this.state.selectedType,
+        this.state.selectedId,
+        this.state.collapsedNodes,
       );
 
       return (
@@ -723,8 +719,10 @@ class CaseContainer extends Component {
                       <MermaidChart
                         key={markdown} // Add this line
                         chartmd={markdown}
-                        viewLayerFunc={e => this.showViewOrEditLayer(e)}
-                        toggleCollapseLayerFunc={e => this.toggleNodeVisibility(e)}
+                        viewLayerFunc={(e) => this.showViewOrEditLayer(e)}
+                        toggleCollapseLayerFunc={(e) =>
+                          this.toggleNodeVisibility(e)
+                        }
                       />
                     </TransformComponent>
                     <Box

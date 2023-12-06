@@ -37,12 +37,12 @@ class MermaidChart extends React.Component {
   }
 
   /** @param {MouseEvent} e  */
-  onCollapseButtonClick(e){
+  onCollapseButtonClick(e) {
     const data = e.target?.dataset?.["key"];
-    if(data == null){
+    if (data == null) {
       return;
     }
-    this.props.toggleCollapseLayerFunc(data)
+    this.props.toggleCollapseLayerFunc(data);
 
     // don't fire click event on node itself
     e.stopPropagation();
@@ -58,7 +58,11 @@ class MermaidChart extends React.Component {
         mermaid.contentLoaded(); // Inform Mermaid to process the new content
 
         var collapseButtons = document.querySelectorAll(".collapse-expand");
-        collapseButtons.forEach(button => button.addEventListener("click", e => this.onCollapseButtonClick(e)))
+        collapseButtons.forEach((button) =>
+          button.addEventListener("click", (e) =>
+            this.onCollapseButtonClick(e),
+          ),
+        );
       } else {
         console.error("Mermaid div not found");
       }

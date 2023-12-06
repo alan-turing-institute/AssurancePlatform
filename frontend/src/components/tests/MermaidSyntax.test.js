@@ -100,7 +100,9 @@ test("jsonToMermaid highlights correct class", () => {
   const markdown = jsonToMermaid(input, "TopLevelNormativeGoal", "1", []);
 
   expect(markdown).toContain("class TopLevelNormativeGoal_1 classHighlighted;");
-  expect(markdown).not.toContain("class TopLevelNormativeGoal_2 classHighlighted;");
+  expect(markdown).not.toContain(
+    "class TopLevelNormativeGoal_2 classHighlighted;",
+  );
 });
 
 test("splitCommaSeparatedString splits correctly", () => {
@@ -146,12 +148,10 @@ test("jsonToMermaid collapses nodes correctly", () => {
                 short_description: "short",
                 long_description: "long",
                 URL: "www.some-evidence.com",
-                property_claim_id: [
-                  1
-                ]
-              }
+                property_claim_id: [1],
+              },
             ],
-            strategy_id: null
+            strategy_id: null,
           },
           {
             id: 2,
@@ -172,16 +172,14 @@ test("jsonToMermaid collapses nodes correctly", () => {
                 short_description: "short",
                 long_description: "long",
                 URL: "www.some-evidence.com",
-                property_claim_id: [
-                  2
-                ]
-              }
+                property_claim_id: [2],
+              },
             ],
-            strategy_id: null
+            strategy_id: null,
           },
         ],
         strategies: [],
-      }
+      },
     ],
   };
   const markdown = jsonToMermaid(input, "Goal", "1", ["PropertyClaim_2"]);
