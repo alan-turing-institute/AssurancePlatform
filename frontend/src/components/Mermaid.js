@@ -57,7 +57,7 @@ class MermaidChart extends React.Component {
         mermaidDiv.textContent = this.props.chartmd; // Set new markdown content
         mermaid.contentLoaded(); // Inform Mermaid to process the new content
 
-        var collapseButtons = document.querySelectorAll(".collapse-expand");
+        const collapseButtons = document.querySelectorAll(".collapse-expand");
         collapseButtons.forEach((button) =>
           button.addEventListener("click", (e) =>
             this.onCollapseButtonClick(e),
