@@ -124,9 +124,9 @@ function CaseCreator() {
   const renderFormFields = () => (
     <Box direction="row" gap="medium" align="center">
       <FormField label="Case Name" name="name">
-        <TextInput 
+        <TextInput
           name="name"
-          placeholder="Enter case name" 
+          placeholder="Enter case name"
           value={name}
           onChange={onChange}
           required
@@ -134,7 +134,7 @@ function CaseCreator() {
       </FormField>
       <FormField label="Case Description" name="description">
         <TextInput
-          name = "description"
+          name="description"
           placeholder="Enter case description"
           value={description}
           onChange={onChange}
