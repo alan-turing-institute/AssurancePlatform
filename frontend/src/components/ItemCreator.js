@@ -44,7 +44,8 @@ function ItemCreator(props) {
     }/`;
 
     let request_body = {};
-    request_body["name"] = name;
+    const id = props.getId(props.type)
+    request_body["name"] = id;
     request_body["short_description"] = sdesc;
     request_body["long_description"] = ldesc;
     request_body["keywords"] = keywords;

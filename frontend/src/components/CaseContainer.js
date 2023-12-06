@@ -30,6 +30,7 @@ import {
   getBaseURL,
   jsonToMermaid,
   getSelfUser,
+  visitCaseItem,
 } from "./utils.js";
 import configData from "../config.json";
 import "./CaseContainer.css";
@@ -40,6 +41,8 @@ class CaseContainer extends Component {
   abortController = new AbortController(); // Instantiate the AbortController
 
   constructMarkdownMemoised = memoize(jsonToMermaid);
+
+  getIdListMemoised = memoize(updateIdList);
 
   constructor(props) {
     super(props);
@@ -61,6 +64,8 @@ class CaseContainer extends Component {
       selectedId: null,
       selectedType: null,
       metadata: null,
+      /** @type {Set<string>} */
+      identifiers: new Set()
     };
 
     this.url = `${getBaseURL()}/cases/`;
@@ -228,7 +233,7 @@ class CaseContainer extends Component {
     const id = this.props.params.caseSlug;
     const oldId = prevProps.params.caseSlug;
     if (id !== oldId) {
-      this.setState({ id: id }, this.updateView);
+      this.setState({ id: id, identifiers: new Set() }, this.updateView);
     }
   }
 
@@ -308,6 +313,22 @@ class CaseContainer extends Component {
   hideEditLayer() {
     this.resetHighlight();
     this.setState({ showEditLayer: false, itemType: null, itemId: null });
+  }
+
+  /** @param {string} type */
+  getIdForNewElement(type){
+    const newList = new Set([...this.state.identifiers, ...this.getIdListMemoised(this.state.assurance_case)]);
+
+    this.setState({idList: newList});
+
+    const prefix = configData.navigation[type].db_name.substring(0, 1).toUpperCase();
+    let i = 1;
+
+    while(newList.has(prefix + i)){
+      i++;
+    }
+    
+    return prefix + i;
   }
 
   hideCreateLayer() {
@@ -396,6 +417,7 @@ class CaseContainer extends Component {
                 parentId={this.state.createItemParentId}
                 parentType={this.state.createItemParentType}
                 updateView={this.updateView.bind(this)}
+                getId={this.getIdForNewElement.bind(this)}
               />
             </Box>
           </Box>
@@ -491,6 +513,7 @@ class CaseContainer extends Component {
             parentId={this.state.id}
             parentType="AssuranceCase"
             updateView={this.updateView.bind(this)}
+            getId={this.getIdForNewElement.bind(this)}
           />
         }
       />
@@ -758,6 +781,17 @@ class CaseContainer extends Component {
     }
   }
 }
+
+/** @returns {string[]}  */
+function updateIdList (assuranceCase) {
+  const set = [];
+  assuranceCase.goals.forEach((goal) => {
+    visitCaseItem(goal, (item) => {
+      set.push(item.name);
+    });
+  });
+  return set;
+};
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => (
