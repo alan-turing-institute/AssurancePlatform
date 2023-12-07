@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Box, Image, Text, Grid } from "grommet";
 import mockup_diagram from "../images/mockup-diagram.png";
+import CaseSelector from "./CaseSelector";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -32,6 +34,9 @@ const Home = () => {
         >
           <Text size="2xl">Ethical Assurance Platform</Text>
         </Box>
+        <CaseSelector />
+        <Link to="/groups">Groups</Link>
+        <Link to="/github">GitHub Files</Link>
         <Box
           gridArea="sidebar"
           direction="column"
