@@ -3,11 +3,12 @@ import ReactDOM from "react-dom";
 //import { BrowserRouter as Router, Route } from "react-router-dom";
 import "./index.css";
 import AllRoutes from "./components/Routes";
+import Theming from "./Theming";
 //import Home from './components/Home'
 import reportWebVitals from "./reportWebVitals";
 //import Navigation from "./components/Navigation";
 
-ReactDOM.render(<AllRoutes />, document.getElementById("main"));
+ReactDOM.render(<Theming><AllRoutes /></Theming> , document.getElementById("main"));
 
 //const dropdown_menus = document.getElementById("main");
 //ReactDOM.render( <CaseContainer />, dropdown_menus);
