@@ -220,9 +220,11 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
     let dbName = configData.navigation[childName]["db_name"];
     // recurse to make deep copies of the child arrays, if they exist
     if (Array.isArray(copy[dbName])) {
-      copy[dbName] = copy[dbName].map((g) => visitCaseItem(g, callback, childType));
+      copy[dbName] = copy[dbName].map((g) =>
+        visitCaseItem(g, callback, childType),
+      );
     }
-  })
+  });
 
   callback(copy, itemType);
 
@@ -239,20 +241,23 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
  * @returns {any[]}
  */
 function getParentPropertyClaims(assuranceCase, id, type) {
-
   // run depth first search
   // because evidence cannot have property claim children,
   // don't worry that they can appear twice in the tree
   /** @type [any, string, any[]] */
-  const caseItemStack = assuranceCase.goals.map(i => [i, "TopLevelNormativeGoal", []]);
+  const caseItemStack = assuranceCase.goals.map((i) => [
+    i,
+    "TopLevelNormativeGoal",
+    [],
+  ]);
 
   let result = [];
 
-  while(caseItemStack.length > 0){
+  while (caseItemStack.length > 0) {
     const [node, nodeType, parents] = caseItemStack.shift();
     const newParents = [...parents, node];
 
-    if(node.id.toString() === id && nodeType === type){
+    if (node.id.toString() === id && nodeType === type) {
       // found it!
       result = newParents;
       break;
@@ -263,7 +268,7 @@ function getParentPropertyClaims(assuranceCase, id, type) {
       const childType = configData.navigation[nodeType]["children"][j];
       const dbName = configData.navigation[childName]["db_name"];
       if (Array.isArray(node[dbName])) {
-        node[dbName].forEach(child => {
+        node[dbName].forEach((child) => {
           newChildren.push([child, childType, newParents]);
         });
       }
@@ -272,7 +277,7 @@ function getParentPropertyClaims(assuranceCase, id, type) {
     caseItemStack.unshift(...newChildren);
   }
 
-  return result.filter(i => i.type === "PropertyClaim");
+  return result.filter((i) => i.type === "PropertyClaim");
 }
 
 export {
@@ -286,5 +291,5 @@ export {
   splitCommaSeparatedString,
   getSelfUser,
   visitCaseItem,
-  getParentPropertyClaims
+  getParentPropertyClaims,
 };

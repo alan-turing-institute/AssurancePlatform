@@ -267,6 +267,5 @@ export async function postItemUpdate(id, type, item) {
   return fetch(backendURL, requestOptions);
 }
 
-
 // eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => <ItemEditor {...props} params={useParams()} />;

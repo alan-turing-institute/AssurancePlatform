@@ -353,7 +353,7 @@ class CaseContainer extends Component {
       const parents = getParentPropertyClaims(
         this.state.assurance_case,
         parentId,
-        parentType
+        parentType,
       );
       if (parents.length > 0) {
         const parent = parents[parents.length - 1];
@@ -384,8 +384,8 @@ class CaseContainer extends Component {
         .toUpperCase();
 
       if (type === "PropertyClaim") {
-        const claimParents = parents.filter(t => t.type === "PropertyClaim");
-        if(claimParents.length > 0){
+        const claimParents = parents.filter((t) => t.type === "PropertyClaim");
+        if (claimParents.length > 0) {
           const parent = claimParents[claimParents.length - 1];
           prefix = parent.name + ".";
         }
@@ -396,16 +396,16 @@ class CaseContainer extends Component {
         i++;
       }
 
-      if(item.name === prefix + i){
+      if (item.name === prefix + i) {
         // don't need to post an update
         identifiers.add(item.name);
         return [item, type, parents];
       }
 
-      const itemCopy = {...item};
+      const itemCopy = { ...item };
       itemCopy.name = prefix + i;
       identifiers.add(itemCopy.name);
-      promises.push(postItemUpdate(item.id, type, itemCopy))
+      promises.push(postItemUpdate(item.id, type, itemCopy));
 
       return [itemCopy, type, parents];
     }
@@ -413,7 +413,7 @@ class CaseContainer extends Component {
     // run breadth first search
     /** @type [any, string, any[]] */
     const caseItemQueue = this.state.assurance_case.goals.map((i) =>
-      updateItem(i, "TopLevelNormativeGoal", [])
+      updateItem(i, "TopLevelNormativeGoal", []),
     );
 
     while (caseItemQueue.length > 0) {
@@ -425,13 +425,13 @@ class CaseContainer extends Component {
         const dbName = configData.navigation[childName]["db_name"];
         if (Array.isArray(node[dbName])) {
           node[dbName].forEach((child) => {
-            if(childType === "Evidence" && foundEvidence.has(child.id)){
+            if (childType === "Evidence" && foundEvidence.has(child.id)) {
               // already found this, skip
               return;
             }
 
             caseItemQueue.push(updateItem(child, childType, newParents));
-            if(childType === "Evidence"){
+            if (childType === "Evidence") {
               foundEvidence.add(child.id);
             }
           });
@@ -441,7 +441,7 @@ class CaseContainer extends Component {
 
     this.setState({ identifiers });
 
-    if(promises.length === 0){
+    if (promises.length === 0) {
       this.setState({ loading: false });
     } else {
       Promise.all(promises).then(() => {
@@ -670,7 +670,7 @@ class CaseContainer extends Component {
             childType,
             this.state.itemId,
             this.state.itemType,
-            e
+            e,
           )
         }
         label={"Create " + childType}
@@ -685,7 +685,7 @@ class CaseContainer extends Component {
         {this.state.itemType &&
           this.state.itemId &&
           configData.navigation[this.state.itemType]["children"].map(
-            this.getCreateSubItemButton.bind(this)
+            this.getCreateSubItemButton.bind(this),
           )}
       </Box>
     );
@@ -750,7 +750,7 @@ class CaseContainer extends Component {
         this.state.assurance_case,
         this.state.selectedType,
         this.state.selectedId,
-        this.state.collapsedNodes
+        this.state.collapsedNodes,
       );
 
       return (

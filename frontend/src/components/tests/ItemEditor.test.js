@@ -26,9 +26,7 @@ beforeEach(() => {
 
 test("renders item editor layer", async () => {
   render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
-  await waitFor(() =>
-    expect(screen.getByText("Edit G1")).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(screen.getByText("Edit G1")).toBeInTheDocument());
 });
 
 test("updates item properties correctly", async () => {

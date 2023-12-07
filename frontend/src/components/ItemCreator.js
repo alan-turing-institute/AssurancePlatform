@@ -43,7 +43,7 @@ function ItemCreator(props) {
     }/`;
 
     let request_body = {};
-    const id = props.getId(props.type, props.parentId, props.parentType)
+    const id = props.getId(props.type, props.parentId, props.parentType);
     request_body["name"] = id;
     request_body["short_description"] = sdesc;
     request_body["long_description"] = ldesc;
