@@ -127,7 +127,7 @@
     "Evidence": {
       "api_name": "evidence",
       "db_name": "evidence",
-      "parent_names": ["propertyClaim"],
+      "parent_names": ["PropertyClaim"],
       "parent_api_names": ["propertyclaims"],
       "parent_db_names": ["property_claim_id"],
       "shape": "data",
