@@ -21,9 +21,9 @@ import "regenerator-runtime/runtime";
 import { getBaseURL } from "./utils.js";
 
 function CaseCreator() {
-  const [name, setName] = useState("Name");
+  const [name, setName] = useState("");
   const [template, setTemplate] = useState("Template");
-  const [description, setDescription] = useState("Description");
+  const [description, setDescription] = useState("");
   const fileInputRef = useRef(null);
   const [showDialog, setShowDialog] = useState(false);
   const [url, setUrl] = useState("");
@@ -84,16 +84,10 @@ function CaseCreator() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    const form = event.target;
-    const nameInput = form.elements.name.value;
-    const descriptionInput = form.elements.description.value;
-
-    setName(nameInput);
-    setDescription(descriptionInput);
 
     const case_json = JSON.parse(JSON.stringify(template));
-    case_json["name"] = nameInput;
-    case_json["description"] = descriptionInput;
+    case_json["name"] = name;
+    case_json["description"] = description;
     case_json["color_profile"] = "default";
     postCaseJSON(JSON.stringify(case_json));
   }
@@ -130,12 +124,21 @@ function CaseCreator() {
   const renderFormFields = () => (
     <Box direction="row" gap="medium" align="center">
       <FormField label="Case Name" name="name">
-        <TextInput placeholder="Enter case name" defaultValue={name} />
+        <TextInput
+          name="name"
+          placeholder="Enter case name"
+          value={name}
+          onChange={onChange}
+          required
+        />
       </FormField>
       <FormField label="Case Description" name="description">
         <TextInput
+          name="description"
           placeholder="Enter case description"
-          defaultValue={description}
+          value={description}
+          onChange={onChange}
+          required
         />
       </FormField>
       <TemplateSelector value={template} setValue={setTemplate} />

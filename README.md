@@ -1,9 +1,12 @@
 # Trustworthy and Ethical Assurance Platform
 
+![A stylised illustration of an assurance case diagram. The diagram has a hierarchical tree structure with various shapes connected by lines, representing the logical argumentation and evidence supporting the assurance claim.](site/docs/assets/images/assurance-case-large.png)
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-8-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
+[![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -16,6 +19,8 @@ Ethical Assurance (TEA) platform—an application for building trustworthy and
 ethical assurance cases, developed by researchers at the
 [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
 and [University of York](https://www.york.ac.uk/assuring-autonomy/).
+
+To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/)
 
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
