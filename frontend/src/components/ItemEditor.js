@@ -234,9 +234,9 @@ function ItemEditor(props) {
 }
 
 /**
- * @param {string} id 
- * @param {string} type 
- * @param {*} item 
+ * @param {string} id
+ * @param {string} type
+ * @param {*} item
  * @returns Promise<any>
  */
 export async function postItemUpdate(id, type, item) {

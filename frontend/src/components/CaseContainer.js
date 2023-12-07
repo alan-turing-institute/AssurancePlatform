@@ -447,7 +447,7 @@ class CaseContainer extends Component {
       Promise.all(promises).then(() => {
         this.updateView();
       });
-    }    
+    }
   }
 
   hideCreateLayer() {

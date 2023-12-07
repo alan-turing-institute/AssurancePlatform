@@ -230,12 +230,12 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
 }
 
 /**
- * For an assurance case, and a case item id and type, 
+ * For an assurance case, and a case item id and type,
  * find all property claims this item in the graph,
  * including itself if its a property claim
- * @param {*} assuranceCase 
- * @param {string} id 
- * @param {string} type 
+ * @param {*} assuranceCase
+ * @param {string} id
+ * @param {string} type
  * @returns {any[]}
  */
 function getParentPropertyClaims(assuranceCase, id, type) {
@@ -251,7 +251,7 @@ function getParentPropertyClaims(assuranceCase, id, type) {
   while(caseItemStack.length > 0){
     const [node, nodeType, parents] = caseItemStack.shift();
     const newParents = [...parents, node];
-    
+
     if(node.id.toString() === id && nodeType === type){
       // found it!
       result = newParents;
@@ -263,8 +263,8 @@ function getParentPropertyClaims(assuranceCase, id, type) {
       const childType = configData.navigation[nodeType]["children"][j];
       const dbName = configData.navigation[childName]["db_name"];
       if (Array.isArray(node[dbName])) {
-        node[dbName].forEach(child => { 
-          newChildren.push([child, childType, newParents]); 
+        node[dbName].forEach(child => {
+          newChildren.push([child, childType, newParents]);
         });
       }
     });
