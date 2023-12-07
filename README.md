@@ -3,7 +3,7 @@
 ![A stylised illustration of an assurance case diagram. The diagram has a hierarchical tree structure with various shapes connected by lines, representing the logical argumentation and evidence supporting the assurance claim.](site/docs/assets/images/assurance-case-large.png)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-8-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
@@ -93,6 +93,7 @@ Ethical Assurance framework and methodology:
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/aranas"><img src="https://avatars.githubusercontent.com/u/6906140?v=4?s=100" width="100px;" alt="Sophie Arana"/><br /><sub><b>Sophie Arana</b></sub></a><br /><a href="#ideas-aranas" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/pulls?q=is%3Apr+reviewed-by%3Aaranas" title="Reviewed Pull Requests">👀</a> <a href="#projectManagement-aranas" title="Project Management">📆</a> <a href="#question-aranas" title="Answering Questions">💬</a> <a href="#design-aranas" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/S-Laher"><img src="https://avatars.githubusercontent.com/u/45235675?v=4?s=100" width="100px;" alt="Shakir Laher"/><br /><sub><b>Shakir Laher</b></sub></a><br /><a href="#content-S-Laher" title="Content">🖋</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=S-Laher" title="Documentation">📖</a> <a href="#ideas-S-Laher" title="Ideas, Planning, & Feedback">🤔</a> <a href="#research-S-Laher" title="Research">🔬</a></td>
     </tr>
   </tbody>
 </table>
