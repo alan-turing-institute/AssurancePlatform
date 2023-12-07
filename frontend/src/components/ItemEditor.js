@@ -69,32 +69,8 @@ function ItemEditor(props) {
     editDBObject().then(() => props.updateView());
   }
 
-  async function editDBObject() {
-    let backendURL = `${getBaseURL()}/${
-      configData.navigation[props.type]["api_name"]
-    }/${props.id}/`;
-
-    let request_body = {};
-    request_body["name"] = items.name;
-    request_body["short_description"] = items.short_description;
-    request_body["long_description"] = items.long_description;
-    request_body["keywords"] = items.keywords;
-    if (props.type === "PropertyClaim") {
-      request_body["claim_type"] = items.claim_type;
-    }
-    if (props.type === "Evidence") {
-      request_body["URL"] = items.URL;
-    }
-
-    const requestOptions = {
-      method: "PUT",
-      headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request_body),
-    };
-    return fetch(backendURL, requestOptions);
+  function editDBObject() {
+    return postItemUpdate(props.id, props.type, items);
   }
 
   async function submitAddParent(event) {
@@ -174,16 +150,8 @@ function ItemEditor(props) {
   if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
     <Box>
-      <Heading level={3}>Edit {props.type}</Heading>
+      <Heading level={3}>Edit {items.name}</Heading>
       <Form onSubmit={handleSubmit}>
-        <FormField>
-          {/* TODO remove ability to edit once the recalculate button is available */}
-          <TextInput
-            value={items.name}
-            name="name"
-            onChange={(e) => setItem("name", e.target.value)}
-          />
-        </FormField>
         <FormField>
           <TextInput
             value={items.short_description}
@@ -264,5 +232,41 @@ function ItemEditor(props) {
     </Box>
   );
 }
+
+/**
+ * @param {string} id 
+ * @param {string} type 
+ * @param {*} item 
+ * @returns Promise<any>
+ */
+export async function postItemUpdate(id, type, item) {
+  let backendURL = `${getBaseURL()}/${
+    configData.navigation[type]["api_name"]
+  }/${id}/`;
+
+  let request_body = {};
+  request_body["name"] = item.name;
+  request_body["short_description"] = item.short_description;
+  request_body["long_description"] = item.long_description;
+  request_body["keywords"] = item.keywords;
+  if (type === "PropertyClaim") {
+    request_body["claim_type"] = item.claim_type;
+  }
+  if (type === "Evidence") {
+    request_body["URL"] = item.URL;
+  }
+
+  const requestOptions = {
+    method: "PUT",
+    headers: {
+      Authorization: `Token ${localStorage.getItem("token")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request_body),
+  };
+  return fetch(backendURL, requestOptions);
+}
+
+
 // eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => <ItemEditor {...props} params={useParams()} />;

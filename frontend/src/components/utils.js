@@ -241,6 +241,8 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
 function getParentPropertyClaims(assuranceCase, id, type) {
 
   // run depth first search
+  // because evidence cannot have property claim children,
+  // don't worry that they can appear twice in the tree
   /** @type [any, string, any[]] */
   const caseItemStack = assuranceCase.goals.map(i => [i, "TopLevelNormativeGoal", []]);
 

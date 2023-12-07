@@ -22,7 +22,7 @@ import CasePermissionsManager from "./CasePermissionsManager.js";
 import MermaidChart from "./Mermaid";
 import EditableText from "./EditableText.js";
 import ItemViewer from "./ItemViewer.js";
-import ItemEditor from "./ItemEditor.js";
+import ItemEditor, { postItemUpdate } from "./ItemEditor.js";
 import ItemCreator from "./ItemCreator.js";
 import memoize from "memoize-one";
 
@@ -70,7 +70,7 @@ class CaseContainer extends Component {
       collapsedNodes: [],
       metadata: null,
       /** @type {Set<string>} */
-      identifiers: new Set()
+      identifiers: new Set(),
     };
 
     this.url = `${getBaseURL()}/cases/`;
@@ -332,32 +332,122 @@ class CaseContainer extends Component {
   }
 
   /**
-   * @param {string} type 
-   * @param {string} parentId 
-   * @param {string} parentType 
+   * @param {string} type
+   * @param {string} parentId
+   * @param {string} parentType
    * @returns {string}
    */
-  getIdForNewElement(type, parentId, parentType){
-    const newList = new Set([...this.state.identifiers, ...this.getIdListMemoised(this.state.assurance_case)]);
+  getIdForNewElement(type, parentId, parentType) {
+    const newList = new Set([
+      ...this.state.identifiers,
+      ...this.getIdListMemoised(this.state.assurance_case),
+    ]);
 
-    this.setState({idList: newList});
+    this.setState({ idList: newList });
 
-    let prefix = configData.navigation[type].db_name.substring(0, 1).toUpperCase();
-    
-    if(type === "PropertyClaim") {
-      const parents = getParentPropertyClaims(this.state.assurance_case, parentId, parentType);
-      if(parents.length > 0){
+    let prefix = configData.navigation[type].db_name
+      .substring(0, 1)
+      .toUpperCase();
+
+    if (type === "PropertyClaim") {
+      const parents = getParentPropertyClaims(
+        this.state.assurance_case,
+        parentId,
+        parentType
+      );
+      if (parents.length > 0) {
         const parent = parents[parents.length - 1];
         prefix = parent.name + ".";
       }
     }
 
     let i = 1;
-    while(newList.has(prefix + i)){
+    while (newList.has(prefix + i)) {
       i++;
     }
-    
+
     return prefix + i;
+  }
+
+  updateAllIdentifiers() {
+    this.setState({ loading: true });
+
+    const promises = [];
+
+    const identifiers = new Set();
+
+    const foundEvidence = new Set();
+
+    function updateItem(item, type, parents) {
+      let prefix = configData.navigation[type].db_name
+        .substring(0, 1)
+        .toUpperCase();
+
+      if (type === "PropertyClaim") {
+        const claimParents = parents.filter(t => t.type === "PropertyClaim");
+        if(claimParents.length > 0){
+          const parent = claimParents[claimParents.length - 1];
+          prefix = parent.name + ".";
+        }
+      }
+
+      let i = 1;
+      while (identifiers.has(prefix + i)) {
+        i++;
+      }
+
+      if(item.name === prefix + i){
+        // don't need to post an update
+        identifiers.add(item.name);
+        return [item, type, parents];
+      }
+
+      const itemCopy = {...item};
+      itemCopy.name = prefix + i;
+      identifiers.add(itemCopy.name);
+      promises.push(postItemUpdate(item.id, type, itemCopy))
+
+      return [itemCopy, type, parents];
+    }
+
+    // run breadth first search
+    /** @type [any, string, any[]] */
+    const caseItemQueue = this.state.assurance_case.goals.map((i) =>
+      updateItem(i, "TopLevelNormativeGoal", [])
+    );
+
+    while (caseItemQueue.length > 0) {
+      const [node, nodeType, parents] = caseItemQueue.shift();
+      const newParents = [...parents, node];
+
+      configData.navigation[nodeType]["children"].forEach((childName, j) => {
+        const childType = configData.navigation[nodeType]["children"][j];
+        const dbName = configData.navigation[childName]["db_name"];
+        if (Array.isArray(node[dbName])) {
+          node[dbName].forEach((child) => {
+            if(childType === "Evidence" && foundEvidence.has(child.id)){
+              // already found this, skip
+              return;
+            }
+
+            caseItemQueue.push(updateItem(child, childType, newParents));
+            if(childType === "Evidence"){
+              foundEvidence.add(child.id);
+            }
+          });
+        }
+      });
+    }
+
+    this.setState({ identifiers });
+
+    if(promises.length === 0){
+      this.setState({ loading: false });
+    } else {
+      Promise.all(promises).then(() => {
+        this.updateView();
+      });
+    }    
   }
 
   hideCreateLayer() {
@@ -580,7 +670,7 @@ class CaseContainer extends Component {
             childType,
             this.state.itemId,
             this.state.itemType,
-            e,
+            e
           )
         }
         label={"Create " + childType}
@@ -595,7 +685,7 @@ class CaseContainer extends Component {
         {this.state.itemType &&
           this.state.itemId &&
           configData.navigation[this.state.itemType]["children"].map(
-            this.getCreateSubItemButton.bind(this),
+            this.getCreateSubItemButton.bind(this)
           )}
       </Box>
     );
@@ -660,7 +750,7 @@ class CaseContainer extends Component {
         this.state.assurance_case,
         this.state.selectedType,
         this.state.selectedId,
-        this.state.collapsedNodes,
+        this.state.collapsedNodes
       );
 
       return (
@@ -700,6 +790,11 @@ class CaseContainer extends Component {
                 label="Export SVG"
                 secondary
                 onClick={this.exportCurrentCaseAsSVG.bind(this)}
+              />
+              <Button
+                label="Reset names"
+                secondary
+                onClick={this.updateAllIdentifiers.bind(this)}
               />
             </Box>
           </Box>
@@ -820,7 +915,7 @@ class CaseContainer extends Component {
 }
 
 /** @returns {string[]}  */
-function updateIdList (assuranceCase) {
+function updateIdList(assuranceCase) {
   const set = [];
   assuranceCase.goals.forEach((goal) => {
     visitCaseItem(goal, (item) => {
@@ -828,7 +923,7 @@ function updateIdList (assuranceCase) {
     });
   });
   return set;
-};
+}
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => (
