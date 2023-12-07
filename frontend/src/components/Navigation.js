@@ -34,7 +34,7 @@ function Navigation() {
   const isLoggedIn = localStorage.getItem("token") != null;
 
   return (
-    <AppBar component="nav">
+    <AppBar component="nav" elevation={0}>
       <Toolbar>
         <NavLink sx={{ marginRight: "auto" }} to="/">
           <Typography component="span" variant="h3">
