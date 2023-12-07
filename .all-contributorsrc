@@ -122,6 +122,18 @@
         "question",
         "design"
       ]
+    },
+    {
+      "login": "S-Laher",
+      "name": "Shakir Laher",
+      "avatar_url": "https://avatars.githubusercontent.com/u/45235675?v=4",
+      "profile": "https://github.com/S-Laher",
+      "contributions": [
+        "content",
+        "doc",
+        "ideas",
+        "research"
+      ]
     }
   ],
   "contributorsPerLine": 7,
