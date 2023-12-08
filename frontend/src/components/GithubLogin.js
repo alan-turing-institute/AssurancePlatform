@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
-import { Button } from "grommet";
 import { getBaseURL } from "./utils.js";
 import github from "./github.png";
 import { getClientID, getRedirectURI } from "./utils.js";
+import AtiButton from "./common/AtiButton.jsx";
 
-const GithubLogin = ({ setLoading }) => {
+const GithubLogin = ({ setLoading, ...props }) => {
   const GITHUB_CLIENT_ID = getClientID();
   const GITHUB_REDIRECT_URI = getRedirectURI();
   const GITHUB_AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&scope=user:email,repo,public_repo`;
@@ -49,18 +49,19 @@ const GithubLogin = ({ setLoading }) => {
   }
 
   return (
-    <Button
-      label="Sign in with GitHub"
-      icon={
+    <AtiButton
+      {...props}
+      startIcon={
         <img
           src={github}
           alt="GitHub Logo"
           style={{ width: "24px", height: "24px" }}
         />
       }
-      primary={true}
       onClick={handleGitHubLogin}
-    />
+    >
+      Sign in with GitHub
+    </AtiButton>
   );
 };
 

@@ -4,13 +4,18 @@ import { CssBaseline } from "@mui/material";
 
 function Theming({ children }) {
   const theme = createTheme({
-    typography: { 
-        fontFamily: '"Plus Jakarta Sans", sans-serif',
-        fontSize: 16,
-        h3: {
-            fontSize: 24
-        }
-     },
+    typography: {
+      fontFamily: '"Plus Jakarta Sans", sans-serif',
+      fontSize: 16,
+      h2: {
+        fontSize: "2rem",
+        fontWeight: 600,
+      },
+      h3: {
+        fontSize: "1.5rem",
+        fontWeight: 600,
+      },
+    },
     palette: {
       primary: {
         main: "#0F76B8",

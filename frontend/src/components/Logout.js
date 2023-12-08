@@ -1,10 +1,12 @@
-import React from "react";
-import { Box, Button, Text } from "grommet";
+import React, { useCallback } from "react";
 import { getBaseURL } from "./utils.js";
 import { useNavigate } from "react-router-dom";
+import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout.jsx";
+import { Typography } from "@mui/material";
+import AtiButton from "./common/AtiButton.jsx";
 
-const Logout = (props) => {
-  const handleLogout = (e) => {
+const Logout = () => {
+  const handleLogout = useCallback((e) => {
     e.preventDefault();
 
     fetch(`${getBaseURL()}/auth/logout/`, {
@@ -15,22 +17,36 @@ const Logout = (props) => {
       },
     })
       .then((res) => res.json())
-      .then((data) => {
+      .then(() => {
         localStorage.clear();
         window.location.replace("/login/");
       });
-  };
+  }, []);
 
-  let navigate = useNavigate();
+  const navigate = useNavigate();
+
+  const goBack = React.useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
 
   return (
-    <Box pad="small" gap="xsmall" width="medium">
-      <Text color="red">Are you sure you want to logout?</Text>
-      <Box direction="row" width="medium" gap="xsmall">
-        <Button onClick={() => navigate(-1)} label="Back" />
-        <Button primary={true} onClick={handleLogout} label="Confirm logout" />
-      </Box>
-    </Box>
+    <ModalLikeLayout>
+      <ColumnFlow>
+        <Typography variant="h2" component="h1">
+          Are you sure you want to logout?
+        </Typography>
+        <RowFlow>
+          <AtiButton
+            onClick={goBack}
+            variant="outlined"
+            sx={{ marginLeft: "auto" }}
+          >
+            Back
+          </AtiButton>
+          <AtiButton onClick={handleLogout}>Confirm logout</AtiButton>
+        </RowFlow>
+      </ColumnFlow>
+    </ModalLikeLayout>
   );
 };
 
