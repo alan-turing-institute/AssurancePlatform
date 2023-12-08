@@ -1,13 +1,11 @@
 import React from "react";
 import CaseSelector from "./CaseSelector";
-import { Link } from "react-router-dom";
+import { LayoutWithNav } from "./common/Layout";
 
 const ManageCases = () => {
-    return <>
+    return <LayoutWithNav>
         <CaseSelector/>
-        <Link to="/groups">Groups</Link>
-        <Link to="/github">GitHub Files</Link>
-    </>;
+    </LayoutWithNav>;
 }
 
 export default ManageCases;

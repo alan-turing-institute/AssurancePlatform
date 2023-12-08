@@ -27,6 +27,13 @@ function Theming({ children }) {
         dark: "#37597B",
         contrastText: "#FFFFFF",
       },
+      background: {
+        default: "#FAFAFA",
+        paper: "#FFFFFF"
+      },
+      text: {
+        primary: "#2F3337"
+      }
     },
   });
 
