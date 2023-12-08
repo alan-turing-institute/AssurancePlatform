@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { getBaseURL } from "./utils.js";
 import github from "./github.png";
 import { getClientID, getRedirectURI } from "./utils.js";
-import AtiButton from "./common/AtiButton.jsx";
+import AtiButton from "./common/AtiButton";
 
 const GithubLogin = ({ setLoading, ...props }) => {
   const GITHUB_CLIENT_ID = getClientID();

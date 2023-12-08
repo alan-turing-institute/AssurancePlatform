@@ -7,6 +7,10 @@ function Theming({ children }) {
     typography: {
       fontFamily: '"Plus Jakarta Sans", sans-serif',
       fontSize: 16,
+      h1: {
+        fontSize: "2.625rem",
+        fontWeight: 700,
+      },
       h2: {
         fontSize: "2rem",
         fontWeight: 600,

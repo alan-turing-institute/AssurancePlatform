@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Box, Image, Text, Grid } from "grommet";
 import mockup_diagram from "../images/mockup-diagram.png";
-import CaseSelector from "./CaseSelector";
-import { Link } from "react-router-dom";
+import { CardMedia, Container, Typography } from "@mui/material";
+import ManageCases from "./ManageCases";
+
+const Splash = () => {
+  // TODO #302 make a nicer splash screen
+  return (
+    <Container sx={{ display: "flex", flexDirection: "column", flexShrink: 1, overflow: "hidden" }}>
+      <Typography variant="h1">Ethical Assurance Platform</Typography>
+      <CardMedia
+        sx={{ flexShrink: 1, objectFit: "contain", width: "100%", height: "100%" }}
+        component="img"
+        image={mockup_diagram}
+        alt="Ethical Assurance flowchart"
+      />
+    </Container>
+  );
+};
 
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -12,49 +26,7 @@ const Home = () => {
     setIsLoggedIn(token != null);
   }, []);
 
-  return (
-    <Box fill pad="medium" overflow="auto">
-      <Grid
-        fill
-        rows={["auto", "flex"]}
-        columns={["auto", "flex"]}
-        areas={[
-          { name: "header", start: [0, 0], end: [1, 0] },
-          { name: "sidebar", start: [0, 1], end: [0, 1] },
-          { name: "main", start: [1, 1], end: [1, 1] },
-        ]}
-        gap="none"
-      >
-        <Box
-          gridArea="header"
-          direction="row"
-          gap="small"
-          pad={{ horizontal: "small", vertical: "small" }}
-          justify="between"
-        >
-          <Text size="2xl">Ethical Assurance Platform</Text>
-        </Box>
-        <CaseSelector />
-        <Link to="/groups">Groups</Link>
-        <Link to="/github">GitHub Files</Link>
-        <Box
-          gridArea="sidebar"
-          direction="column"
-          gap="small"
-          pad={{ horizontal: "small", top: "medium", bottom: "large" }}
-        >
-          {/* Sidebar content here */}
-        </Box>
-        <Box gridArea="main" justify="end">
-          <Image
-            fit="contain"
-            src={mockup_diagram}
-            alt="Ethical Assurance flowchart"
-          />
-        </Box>
-      </Grid>
-    </Box>
-  );
+  return isLoggedIn ? <ManageCases /> : <Splash />;
 };
 
 export default Home;

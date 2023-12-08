@@ -1,9 +1,9 @@
 import React, { useCallback } from "react";
 import { getBaseURL } from "./utils.js";
 import { useNavigate } from "react-router-dom";
-import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout.jsx";
+import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import { Typography } from "@mui/material";
-import AtiButton from "./common/AtiButton.jsx";
+import AtiButton from "./common/AtiButton";
 
 const Logout = () => {
   const handleLogout = useCallback((e) => {
