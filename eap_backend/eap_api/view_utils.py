@@ -127,6 +127,32 @@ def make_summary(serialized_data):
     else:
         return summarize_one(serialized_data)
 
+def make_case_summary(serialized_data):
+    """
+    Take in a full serialized object, and return dict containing just
+    the specified values
+
+    Parameter: serialized_data, dict, or list of dicts
+    Returns: dict, or list of dicts, containing only specified key/values.
+    """
+
+    keys = ["id", "name", "description", "created_date"]
+
+    def summarize_one(data):
+        result = {}
+        for key in keys:
+            if not (isinstance(data, dict) and key in data):
+                msg = f"Expected dictionary containing {key}"
+                raise RuntimeError(msg)
+            result[key] = data[key]
+        return result
+
+    if isinstance(serialized_data, list):
+        return [summarize_one(sd) for sd in serialized_data]
+    else:
+        return summarize_one(serialized_data)
+
+
 
 def get_json_tree(id_list, obj_type):
     """
