@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import mockup_diagram from "../images/mockup-diagram.png";
 import { CardMedia, Container, Typography } from "@mui/material";
 import ManageCases from "./ManageCases";
+import { useLoginToken } from "../hooks/useAuth";
 
 const Splash = () => {
   // TODO #302 make a nicer splash screen
@@ -33,10 +34,11 @@ const Splash = () => {
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const [token] = useLoginToken();
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
     setIsLoggedIn(token != null);
-  }, []);
+  }, [token]);
 
   return isLoggedIn ? <ManageCases /> : <Splash />;
 };

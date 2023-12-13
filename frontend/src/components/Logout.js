@@ -4,8 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import { Typography } from "@mui/material";
 import AtiButton from "./common/AtiButton";
+import { useEnforceLogin, useLoginToken } from "../hooks/useAuth.js";
 
 const Logout = () => {
+  useEnforceLogin();
+  const [token, setToken] = useLoginToken();
+
   const handleLogout = useCallback((e) => {
     e.preventDefault();
 
@@ -13,15 +17,15 @@ const Logout = () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
+        Authorization: `Token ${token}`,
       },
     })
       .then((res) => res.json())
       .then(() => {
-        localStorage.clear();
+        setToken(null);
         window.location.replace("/login/");
       });
-  }, []);
+  }, [token, setToken]);
 
   const navigate = useNavigate();
 

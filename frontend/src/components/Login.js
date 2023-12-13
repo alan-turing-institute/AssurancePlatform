@@ -7,6 +7,7 @@ import { Alert, Box, Typography } from "@mui/material";
 import AtiTextField from "./common/AtiTextField";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
+import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -17,13 +18,12 @@ const Login = () => {
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const isLoggedOut = useEnforceLogout();
+  const [_, setToken] = useLoginToken();
+
   useEffect(() => {
-    if (localStorage.getItem("token") !== null) {
-      window.location.replace("/home");
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    setLoading(!isLoggedOut);
+  }, [isLoggedOut]);
 
   const onSubmit = useCallback(
     (e) => {
@@ -51,14 +51,12 @@ const Login = () => {
         .then((res) => res.json())
         .then((data) => {
           if (data.key) {
-            localStorage.clear();
-            localStorage.setItem("token", data.key);
-            localStorage.setItem("username", username);
+            setToken(data.key);
             window.location.replace("/");
           } else {
             setLoading(false);
             setPassword("");
-            localStorage.clear();
+            setToken(null);
             setErrors(["Cannot log in with provided credentials"]);
           }
         })
@@ -67,7 +65,7 @@ const Login = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [username, password]
+    [username, password, setToken]
   );
 
   return (
@@ -92,7 +90,9 @@ const Login = () => {
             dirty={dirty}
             required
             noRequiredSymbol
-            autoComplete="username"
+            inputProps={{
+              autoComplete: "username",
+            }}
           />
           <AtiTextField
             label="Password"
@@ -104,7 +104,9 @@ const Login = () => {
             dirty={dirty}
             required
             noRequiredSymbol
-            autoComplete="current-password"
+            inputProps={{
+              autoComplete: "current-password",
+            }}
           />
           {errors.map((err) => (
             <Alert key={err} severity="error">

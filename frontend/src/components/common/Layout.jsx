@@ -12,6 +12,8 @@ export function ColumnFlow({ sx, ...props }) {
         display: "flex",
         flexDirection: "column",
         gap: "1rem",
+        minHeight: "100%",
+        minWidth: "100%",
         ...sx,
       }}
       {...props}
@@ -37,7 +39,7 @@ export function RowFlow({ sx, ...props }) {
 export function ModalLikeLayout({ children }) {
   return (
     <Container maxWidth={false} sx={{ display: "flex", flexGrow: 1 }}>
-      <AtiPaper sx={{ margin: "auto", padding: "3rem", width: "35.375rem" }}>
+      <AtiPaper sx={{ margin: "auto", padding: "3rem", minWidth: "35.375rem" }}>
         {children}
       </AtiPaper>
     </Container>
@@ -61,7 +63,7 @@ function SideNav({ to, ...props }) {
 
 export function LayoutWithNav({ children }) {
   return (
-    <Box sx={{ display: "flex", flexDirection: "row" }}>
+    <Box sx={{ display: "flex", flexDirection: "row", flexShrink: 1, overflow: "hidden" }}>
       <Box
         sx={{ width: "15.5625rem", display: "flex", flexDirection: "column" }}
       >
@@ -72,7 +74,7 @@ export function LayoutWithNav({ children }) {
           Methodology support
         </AtiButton>
       </Box>
-      <Box sx={{ flexGrow: 1 }}>{children}</Box>
+      <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: "100%", overflowY: "auto" }}>{children}</Box>
     </Box>
   );
 }

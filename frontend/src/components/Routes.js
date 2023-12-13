@@ -5,7 +5,6 @@ import Navigation from "./Navigation"; // Navigation now includes UserProfileDro
 import Home from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
-import CaseCreator from "./CaseCreator";
 import CaseContainer from "./CaseContainer";
 import WorkInProcessBanner from "./WorkInProcessBanner";
 import Logout from "./Logout";
@@ -17,9 +16,19 @@ const AllRoutes = () => {
   return (
     <Router>
       <Navigation />
-      <Box component="main" sx={{ minHeight: "100vh", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <Box
+        component="main"
+        sx={{
+          minHeight: "100vh",
+          height: "100vh",
+          maxHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
         <Toolbar />
-      <WorkInProcessBanner />
+        <WorkInProcessBanner />
         <Routes>
           <Route exact path="/" element={<Home />} />
           <Route path="/case">

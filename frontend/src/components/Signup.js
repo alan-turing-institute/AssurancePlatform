@@ -5,6 +5,7 @@ import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import AtiButton from "./common/AtiButton";
 import AtiTextField from "./common/AtiTextField";
+import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 
 const Signup = () => {
   const [username, setUsername] = useState("");
@@ -17,13 +18,12 @@ const Signup = () => {
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const isLoggedOut = useEnforceLogout();
+  const [_, setToken] = useLoginToken();
+
   useEffect(() => {
-    if (localStorage.getItem("token") !== null) {
-      window.location.replace("/home");
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    setLoading(!isLoggedOut);
+  }, [isLoggedOut]);
 
   const onSubmit = useCallback(
     (e) => {
@@ -52,13 +52,11 @@ const Signup = () => {
         .then((res) => res.json())
         .then((data) => {
           if (data.key) {
-            localStorage.clear();
-            localStorage.setItem("token", data.key);
+            setToken(data.key);
             window.location.replace("/");
           } else {
             setLoading(false);
-
-            localStorage.clear();
+            setToken(null);
             const currentErrors = [];
             if (data.username) {
               setUsername("");
@@ -87,7 +85,7 @@ const Signup = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [username, password1, password2]
+    [username, password1, password2, setToken]
   );
 
   const validatePassword1 = React.useCallback((val) => {
@@ -121,7 +119,9 @@ const Signup = () => {
             dirty={dirty}
             required
             noRequiredSymbol
-            autoComplete="username"
+            inputProps={{
+              autoComplete: "username",
+            }}
           />
           <AtiTextField
             label="Password"
@@ -133,7 +133,9 @@ const Signup = () => {
             dirty={dirty}
             required
             noRequiredSymbol
-            autoComplete="new-password"
+            inputProps={{
+              autoComplete: "new-password",
+            }}
             validate={validatePassword1}
           />
           <AtiTextField
@@ -146,7 +148,9 @@ const Signup = () => {
             dirty={dirty}
             required
             noRequiredSymbol
-            autoComplete="new-password"
+            inputProps={{
+              autoComplete: "new-password",
+            }}
             validate={validatePassword2}
           />
           {errors.map((err) => (

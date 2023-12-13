@@ -4,6 +4,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import { useLoginToken } from "../hooks/useAuth";
 
 function NavButton({ sx, ...props }) {
   return (
@@ -31,7 +32,9 @@ function NavLink({ ...props }) {
 }
 
 function Navigation() {
-  const isLoggedIn = localStorage.getItem("token") != null;
+  const [token] = useLoginToken();
+
+  const isLoggedIn = token != null;
 
   return (
     <AppBar component="nav" elevation={0}>
