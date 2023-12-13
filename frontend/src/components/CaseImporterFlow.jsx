@@ -5,14 +5,14 @@ import { getBaseURL } from "./utils.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 import {
   Alert,
+  Button,
   FormControlLabel,
   Radio,
   RadioGroup,
   Typography,
 } from "@mui/material";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
-import AtiButton from "./common/AtiButton.jsx";
-import AtiTextField from "./common/AtiTextField.jsx";
+import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import FileInput from "./common/FileInput.jsx";
 
@@ -216,7 +216,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           dirty={dirtyF}
         />
       ) : (
-        <AtiTextField
+        <TextInput
           label="Import file from URL:"
           value={url}
           setValue={setUrl}
@@ -237,14 +237,14 @@ function CaseImporterFlow({ titleId, onClose }) {
           <LoadingSpinner />
         ) : (
           <>
-            <AtiButton
+            <Button
               onClick={onClose}
               variant="outlined"
               sx={{ marginLeft: "auto" }}
             >
               Cancel
-            </AtiButton>
-            <AtiButton type="submmit">Continue</AtiButton>
+            </Button>
+            <Button type="submmit">Continue</Button>
           </>
         )}
       </RowFlow>

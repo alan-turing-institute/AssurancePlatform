@@ -6,7 +6,7 @@ import {
   Radio,
   RadioGroup,
 } from "@mui/material";
-import useId from "@mui/material/utils/useId";
+import useId from "@mui/utils/useId";
 import React, { useCallback, useEffect, useState } from "react";
 
 function TemplateSelector({ value, setValue, error, setError, dirty }) {

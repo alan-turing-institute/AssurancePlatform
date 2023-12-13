@@ -3,7 +3,7 @@ import TextField from "@mui/material/TextField";
 
 // TODO style more like designs
 
-function AtiTextField({
+function TextInput({
   value,
   setValue,
   helperText,
@@ -11,6 +11,8 @@ function AtiTextField({
   setError,
   dirty,
   required,
+  minLength,
+  maxLength,
   noRequiredSymbol,
   validate,
   ...props
@@ -25,13 +27,17 @@ function AtiTextField({
 
       if (required && !val) {
         error = "This value is required.";
+      } else if (minLength && val.length < minLength) {
+        error = `This value must be at least ${minLength} characters`;
+      } else if (maxLength && val.length > maxLength) {
+        error = `This value must be at most ${maxLength} characters`;
       } else if (validate) {
         error = validate(val);
       }
 
       return error;
     },
-    [validate, required]
+    [validate, required, minLength, maxLength]
   );
 
   // this lets you, e.g., trigger the empty validation message on submit click
@@ -85,4 +91,4 @@ function AtiTextField({
   );
 }
 
-export default AtiTextField;
+export default TextInput;

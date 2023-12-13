@@ -10,12 +10,9 @@ function NavButton({ sx, ...props }) {
   return (
     <Button
       {...props}
-      variant="contained"
-      disableElevation
       sx={{
         ...sx,
         fontWeight: "bold",
-        textTransform: "none",
       }}
     />
   );

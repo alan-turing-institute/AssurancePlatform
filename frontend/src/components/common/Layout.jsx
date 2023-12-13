@@ -1,9 +1,7 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
-import { Container } from "@mui/material";
-import AtiPaper from "./AtiPaper";
-import AtiButton, { NavButton } from "./AtiButton";
-import { useLocation } from "react-router-dom";
+import { Button, Container, Paper, useTheme } from "@mui/material";
+import { Link, useLocation } from "react-router-dom";
 
 export function ColumnFlow({ sx, ...props }) {
   return (
@@ -38,10 +36,19 @@ export function RowFlow({ sx, ...props }) {
 /** A screen containing only a small card with a modal-like design */
 export function ModalLikeLayout({ children }) {
   return (
-    <Container maxWidth={false} sx={{ display: "flex", flexGrow: 1 }}>
-      <AtiPaper sx={{ margin: "auto", padding: "3rem", minWidth: "35.375rem" }}>
+    <Container
+      maxWidth={false}
+      sx={{
+        padding: "1rem",
+        display: "flex",
+        flexGrow: 1,
+        flexShrink: 1,
+        overflowY: "auto",
+      }}
+    >
+      <Paper sx={{ margin: "auto", padding: "3rem", width: "35.375rem" }}>
         {children}
-      </AtiPaper>
+      </Paper>
     </Container>
   );
 }
@@ -52,7 +59,8 @@ function SideNav({ to, ...props }) {
   const isActive = location.pathname === to;
 
   return (
-    <NavButton
+    <Button
+      component={Link}
       sx={{ marginRight: "auto", fontWeight: isActive ? "bold" : undefined }}
       {...props}
       to={to}
@@ -62,20 +70,52 @@ function SideNav({ to, ...props }) {
 }
 
 export function LayoutWithNav({ children }) {
+  const theme = useTheme();
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "row", flexShrink: 1, overflow: "hidden" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        flexShrink: 1,
+        overflow: "hidden",
+      }}
+    >
       <Box
-        sx={{ width: "15.5625rem", display: "flex", flexDirection: "column" }}
+        sx={{
+          width: "15.5625rem",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          borderRightStyle: "solid",
+          borderRightWidth: "1px",
+          borderRightColor: theme.palette.primary.main,
+        }}
       >
         <SideNav to="/">Assurance cases</SideNav>
         {/* TODO figure out what to do with these pages */}
         {/* <SideNav to="/groups">Groups</SideNav>
         <SideNav to="/github">Github files</SideNav> */}
-        <AtiButton sx={{ marginRight: "auto" }} href="https://alan-turing-institute.github.io/AssurancePlatform/" target="_blank" variant="text">
+        <Button
+          sx={{ marginRight: "auto" }}
+          href="https://alan-turing-institute.github.io/AssurancePlatform/"
+          target="_blank"
+          variant="text"
+        >
           Methodology support
-        </AtiButton>
+        </Button>
       </Box>
-      <Box sx={{ flexGrow: 1, flexShrink: 1, maxHeight: "100%", overflowY: "auto" }}>{children}</Box>
+      <Box
+        sx={{
+          flexGrow: 1,
+          flexShrink: 1,
+          maxHeight: "100%",
+          overflowY: "auto",
+          padding: "2rem",
+        }}
+      >
+        {children}
+      </Box>
     </Box>
   );
 }

@@ -8,8 +8,9 @@ function ModalDialog({ children, ...props }) {
         sx={{
           display: "flex",
           padding: "3rem",
-          minHeight: "30.8125rem",
-          minWidth: "35.375rem",
+          height: "30.8125rem",
+          width: "35.375rem",
+          maxWidth: "100%"
         }}
       >
         {children}

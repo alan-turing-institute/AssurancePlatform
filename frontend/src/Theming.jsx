@@ -29,10 +29,34 @@ function Theming({ children }) {
       },
       background: {
         default: "#FAFAFA",
-        paper: "#FFFFFF"
+        paper: "#FFFFFF",
       },
       text: {
-        primary: "#2F3337"
+        primary: "#2F3337",
+      },
+    },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            textTransform: "none",
+            borderRadius: "3.125rem",
+          }
+        },
+        defaultProps: {
+          variant: "contained",
+          disableElevation: true,
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          "rounded": {
+            borderRadius: "0.5rem",
+          }
+        },
+        defaultProps: {
+          elevation: 8
+        }
       }
     },
   });

@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { getBaseURL } from "./utils.js";
 import github from "./github.png";
 import { getClientID, getRedirectURI } from "./utils.js";
-import AtiButton from "./common/AtiButton";
+import { Button } from "@mui/material";
 
 const GithubLogin = ({ setLoading, ...props }) => {
   const GITHUB_CLIENT_ID = getClientID();
@@ -49,7 +49,7 @@ const GithubLogin = ({ setLoading, ...props }) => {
   }
 
   return (
-    <AtiButton
+    <Button
       {...props}
       startIcon={
         <img
@@ -61,7 +61,7 @@ const GithubLogin = ({ setLoading, ...props }) => {
       onClick={handleGitHubLogin}
     >
       Sign in with GitHub
-    </AtiButton>
+    </Button>
   );
 };
 

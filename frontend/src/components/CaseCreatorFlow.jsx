@@ -3,10 +3,9 @@ import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
 import { useLoginToken } from "../hooks/useAuth.js";
-import { Alert, Typography } from "@mui/material";
+import { Alert, Button, Typography } from "@mui/material";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
-import AtiButton from "./common/AtiButton.jsx";
-import AtiTextField from "./common/AtiTextField.jsx";
+import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 
 // see models.py
@@ -110,7 +109,7 @@ function CaseCreatorFlow({ titleId, onClose }) {
       ))}
       {stage === 0 ? (
         <>
-          <AtiTextField
+          <TextInput
             label="Title"
             value={title}
             setValue={setTitle}
@@ -121,8 +120,9 @@ function CaseCreatorFlow({ titleId, onClose }) {
             maxLength={titleMaxLength}
             placeholder="Assurance Case 1"
           />
-          <AtiTextField
+          <TextInput
             multiline
+            rows={2}
             label="Description"
             value={description}
             setValue={setDescription}
@@ -150,28 +150,28 @@ function CaseCreatorFlow({ titleId, onClose }) {
           <LoadingSpinner />
         ) : stage === 0 ? (
           <>
-            <AtiButton
+            <Button
               onClick={onClose}
               variant="outlined"
               sx={{ marginLeft: "auto" }}
             >
               Cancel
-            </AtiButton>
-            <AtiButton type="submit">Continue</AtiButton>
+            </Button>
+            <Button type="submit">Continue</Button>
           </>
         ) : (
           <>
-            <AtiButton onClick={goBack} variant="text">
+            <Button onClick={goBack} variant="text">
               Back
-            </AtiButton>
-            <AtiButton
+            </Button>
+            <Button
               onClick={onClose}
               variant="outlined"
               sx={{ marginLeft: "auto" }}
             >
               Cancel
-            </AtiButton>
-            <AtiButton type="submit">Create</AtiButton>
+            </Button>
+            <Button type="submit">Create</Button>
           </>
         )}
       </RowFlow>
