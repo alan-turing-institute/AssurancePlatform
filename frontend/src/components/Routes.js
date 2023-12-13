@@ -37,6 +37,7 @@ const AllRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<Logout />} />
+          {/* These two pages don't have direct links, but the routes should remain for now */}
           <Route path="/groups" element={<Groups />} />
           <Route path="/github" element={<Github />} />
         </Routes>

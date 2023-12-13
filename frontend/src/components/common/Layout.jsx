@@ -68,8 +68,9 @@ export function LayoutWithNav({ children }) {
         sx={{ width: "15.5625rem", display: "flex", flexDirection: "column" }}
       >
         <SideNav to="/">Assurance cases</SideNav>
-        <SideNav to="/groups">Groups</SideNav>
-        <SideNav to="/github">Github files</SideNav>
+        {/* TODO figure out what to do with these pages */}
+        {/* <SideNav to="/groups">Groups</SideNav>
+        <SideNav to="/github">Github files</SideNav> */}
         <AtiButton sx={{ marginRight: "auto" }} variant="text">
           Methodology support
         </AtiButton>
