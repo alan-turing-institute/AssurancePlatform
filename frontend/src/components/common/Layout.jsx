@@ -71,7 +71,7 @@ export function LayoutWithNav({ children }) {
         {/* TODO figure out what to do with these pages */}
         {/* <SideNav to="/groups">Groups</SideNav>
         <SideNav to="/github">Github files</SideNav> */}
-        <AtiButton sx={{ marginRight: "auto" }} variant="text">
+        <AtiButton sx={{ marginRight: "auto" }} href="https://alan-turing-institute.github.io/AssurancePlatform/" target="_blank" variant="text">
           Methodology support
         </AtiButton>
       </Box>

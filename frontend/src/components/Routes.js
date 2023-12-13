@@ -6,7 +6,6 @@ import Home from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
 import CaseContainer from "./CaseContainer";
-import WorkInProcessBanner from "./WorkInProcessBanner";
 import Logout from "./Logout";
 import Groups from "./Groups";
 import Github from "./Github";
@@ -28,7 +27,6 @@ const AllRoutes = () => {
         }}
       >
         <Toolbar />
-        <WorkInProcessBanner />
         <Routes>
           <Route exact path="/" element={<Home />} />
           <Route path="/case">
