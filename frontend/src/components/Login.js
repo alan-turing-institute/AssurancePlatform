@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 
-import AtiButton, { NavButton } from "./common/AtiButton";
 import { getBaseURL } from "./utils.js";
 import Github from "./GithubLogin";
-import { Alert, Box, Typography } from "@mui/material";
-import AtiTextField from "./common/AtiTextField";
+import { Alert, Box, Button, Typography } from "@mui/material";
+import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -77,11 +77,11 @@ const Login = () => {
           </Typography>
           <Box sx={{ marginBottom: "1rem" }}>
             <Typography>Not already registered?</Typography>
-            <NavButton to="/signup" variant="outlined">
+            <Button component={Link} to="/signup" variant="outlined">
               Sign-up
-            </NavButton>
+            </Button>
           </Box>
-          <AtiTextField
+          <TextInput
             label="Username"
             value={username}
             setValue={setUsername}
@@ -94,7 +94,7 @@ const Login = () => {
               autoComplete: "username",
             }}
           />
-          <AtiTextField
+          <TextInput
             label="Password"
             type="password"
             value={password}
@@ -119,9 +119,9 @@ const Login = () => {
             ) : (
               <>
                 <Github variant="outlined" setLoading={setLoading} />
-                <AtiButton type="submit" sx={{ marginLeft: "auto" }}>
-                  Login
-                </AtiButton>
+                <Button type="submit" sx={{ marginLeft: "auto" }}>
+                  Log in
+                </Button>
               </>
             )}
           </RowFlow>

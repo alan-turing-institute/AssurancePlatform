@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getBaseURL } from "./utils.js";
-import { Alert, Typography } from "@mui/material";
+import { Alert, Button, Typography } from "@mui/material";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
-import AtiButton from "./common/AtiButton";
-import AtiTextField from "./common/AtiTextField";
+import TextInput from "./common/TextInput.jsx";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 
 const Signup = () => {
@@ -110,7 +109,7 @@ const Signup = () => {
           <Typography variant="h2" component="h1" sx={{ marginBottom: "1rem" }}>
             Sign up for an account
           </Typography>
-          <AtiTextField
+          <TextInput
             label="Username"
             value={username}
             setValue={setUsername}
@@ -123,7 +122,7 @@ const Signup = () => {
               autoComplete: "username",
             }}
           />
-          <AtiTextField
+          <TextInput
             label="Password"
             type="password"
             value={password1}
@@ -137,8 +136,10 @@ const Signup = () => {
               autoComplete: "new-password",
             }}
             validate={validatePassword1}
+            helperText="At least 8 characters"
+            minLength={8}
           />
-          <AtiTextField
+          <TextInput
             label="Confirm Password"
             type="password"
             value={password2}
@@ -162,9 +163,9 @@ const Signup = () => {
             {loading ? (
               <LoadingSpinner sx={{ margin: "auto" }} />
             ) : (
-              <AtiButton type="submit" sx={{ marginLeft: "auto" }}>
-                Sign-up
-              </AtiButton>
+              <Button type="submit" sx={{ marginLeft: "auto" }}>
+                Sign up
+              </Button>
             )}
           </RowFlow>
         </ColumnFlow>

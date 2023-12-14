@@ -10,9 +10,9 @@ import userEvent from "@testing-library/user-event";
 
 test("renders signup component", () => {
   render(<Signup />);
-  const userNameField = screen.getByLabelText("User name");
+  const userNameField = screen.getByLabelText("Username");
   const passwordField = screen.getByLabelText("Password");
-  const confirmPasswordField = screen.getByLabelText("Confirm password");
+  const confirmPasswordField = screen.getByLabelText("Confirm Password");
   expect(userNameField).toBeInTheDocument();
   expect(passwordField).toBeInTheDocument();
   expect(confirmPasswordField).toBeInTheDocument();
@@ -45,12 +45,19 @@ test("renders error message on failed signup", async () => {
 
   render(<Signup />);
 
+  const userNameField = screen.getByLabelText("Username");
+  const passwordField = screen.getByLabelText("Password");
+  const confirmPasswordField = screen.getByLabelText("Confirm Password");
   const submitButton = screen.getByText("Sign up");
+  
+  userEvent.type(userNameField, "testuser");
+  userEvent.type(passwordField, "testpassword");
+  userEvent.type(confirmPasswordField, "testpassword");
   userEvent.click(submitButton);
 
   // Since network requests are asynchronous, we need to wait for the error message to appear
   const errorMessage = await screen.findByText(
-    "Cannot sign up with provided credentials",
+    "This username is already taken.",
   );
   expect(errorMessage).toBeInTheDocument();
 });

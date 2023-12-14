@@ -2,8 +2,7 @@ import React, { useCallback } from "react";
 import { getBaseURL } from "./utils.js";
 import { useNavigate } from "react-router-dom";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
-import { Typography } from "@mui/material";
-import AtiButton from "./common/AtiButton";
+import { Button, Typography } from "@mui/material";
 import { useEnforceLogin, useLoginToken } from "../hooks/useAuth.js";
 
 const Logout = () => {
@@ -37,17 +36,17 @@ const Logout = () => {
     <ModalLikeLayout>
       <ColumnFlow>
         <Typography variant="h2" component="h1">
-          Are you sure you want to logout?
+          Are you sure you want to log out?
         </Typography>
         <RowFlow>
-          <AtiButton
+          <Button
             onClick={goBack}
             variant="outlined"
             sx={{ marginLeft: "auto" }}
           >
             Back
-          </AtiButton>
-          <AtiButton onClick={handleLogout}>Confirm logout</AtiButton>
+          </Button>
+          <Button onClick={handleLogout}>Confirm logout</Button>
         </RowFlow>
       </ColumnFlow>
     </ModalLikeLayout>
