@@ -39,7 +39,7 @@ const GitHub = () => {
         await fetchRepoContentsByPath(
           currentPath,
           selectedRepoFullName,
-          selectedBranch
+          selectedBranch,
         );
         setRepoContentsLoading(false);
       }
@@ -116,7 +116,7 @@ const GitHub = () => {
       alert("Successfully imported!"); // This line adds the popup
     } else {
       throw new Error(
-        `Failed to import repository. Status: ${response.status}`
+        `Failed to import repository. Status: ${response.status}`,
       );
     }
   };
@@ -130,7 +130,7 @@ const GitHub = () => {
           headers: {
             Authorization: `token ${token}`,
           },
-        }
+        },
       );
       const commits = await response.json();
       if (commits && commits.length > 0) {
@@ -157,7 +157,7 @@ const GitHub = () => {
   const handleAddInput = () => {
     if (isRepositoryURL(inputValue)) {
       const matches = inputValue.match(
-        /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/
+        /https:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/,
       );
       if (matches && matches.length >= 3) {
         const username = matches[1];
@@ -228,12 +228,12 @@ const GitHub = () => {
           headers: {
             Authorization: `token ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
         throw new Error(
-          `Failed to fetch branches. HTTP Status: ${response.status}`
+          `Failed to fetch branches. HTTP Status: ${response.status}`,
         );
       }
 
@@ -261,7 +261,7 @@ const GitHub = () => {
   const fetchRepoContentsByPath = async (
     path,
     repoName = selectedRepoFullName,
-    branch = selectedBranch
+    branch = selectedBranch,
   ) => {
     const token = localStorage.getItem("access_token");
     const branchQuery = branch ? `?ref=${branch}` : ""; // Handle the case where no branch is selected
@@ -274,7 +274,7 @@ const GitHub = () => {
             headers: {
               Authorization: `token ${token}`,
             },
-          }
+          },
         );
         const contents = await response.json();
         if (Array.isArray(contents)) {
@@ -319,7 +319,7 @@ const GitHub = () => {
   }
 
   const filteredRepos = repositories.filter((repo) =>
-    repo.name.toLowerCase().includes(searchTerm.toLowerCase())
+    repo.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (

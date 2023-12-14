@@ -49,7 +49,7 @@ test("renders error message on failed signup", async () => {
   const passwordField = screen.getByLabelText("Password");
   const confirmPasswordField = screen.getByLabelText("Confirm Password");
   const submitButton = screen.getByText("Sign up");
-  
+
   userEvent.type(userNameField, "testuser");
   userEvent.type(passwordField, "testpassword");
   userEvent.type(confirmPasswordField, "testpassword");

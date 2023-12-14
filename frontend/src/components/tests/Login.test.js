@@ -24,7 +24,7 @@ global.fetch = jest.fn(() =>
       Promise.resolve({
         key: 1, // any truthy value
       }),
-  })
+  }),
 );
 
 Object.defineProperty(window, "localStorage", {
@@ -108,7 +108,7 @@ test("renders error message on failed login", async () => {
           key: 0, // any falsey value
         }),
       status: 400, // typically, errors like these would return a 400 status
-    })
+    }),
   );
 
   const usernameInput = screen.getByLabelText("Username");
@@ -122,7 +122,7 @@ test("renders error message on failed login", async () => {
 
   // Since network requests are asynchronous, we need to wait for the error message to appear
   const errorMessage = await screen.findByText(
-    "Cannot log in with provided credentials"
+    "Cannot log in with provided credentials",
   );
   expect(errorMessage).toBeInTheDocument();
 });

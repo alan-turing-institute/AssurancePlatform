@@ -42,16 +42,16 @@ function Navigation() {
           </Typography>
         </NavLink>
         <NavItem href="https://github.com/alan-turing-institute/AssurancePlatform">
-            Github
-          </NavItem>
-          {isLoggedIn ? (
-            <NavLink to="/logout">Logout</NavLink>
-          ) : (
-            <>
-              <NavLink to="/login">Login</NavLink>
-              <NavLink to="/signup">Signup</NavLink>
-            </>
-          )}
+          Github
+        </NavItem>
+        {isLoggedIn ? (
+          <NavLink to="/logout">Logout</NavLink>
+        ) : (
+          <>
+            <NavLink to="/login">Login</NavLink>
+            <NavLink to="/signup">Signup</NavLink>
+          </>
+        )}
       </Toolbar>
     </AppBar>
   );

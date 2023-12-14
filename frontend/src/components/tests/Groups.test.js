@@ -8,10 +8,12 @@ import React from "react";
 import Groups from "../Groups.js";
 import { MemoryRouter } from "react-router-dom";
 
-function WrappedGroups(){
-  return <MemoryRouter>
-    <Groups/>
-  </MemoryRouter>
+function WrappedGroups() {
+  return (
+    <MemoryRouter>
+      <Groups />
+    </MemoryRouter>
+  );
 }
 
 global.fetch = jest.fn(() =>

@@ -60,7 +60,7 @@ function TemplateSelector({ value, setValue, error, setError, dirty }) {
       setValueInner(e.target.value);
       setValue(templates[Number.parseInt(e.target.value)]);
     },
-    [setValue, templates]
+    [setValue, templates],
   );
 
   return (

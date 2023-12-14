@@ -9,22 +9,25 @@ const Logout = () => {
   useEnforceLogin();
   const [token, setToken] = useLoginToken();
 
-  const handleLogout = useCallback((e) => {
-    e.preventDefault();
+  const handleLogout = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    fetch(`${getBaseURL()}/auth/logout/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then(() => {
-        setToken(null);
-        window.location.replace("/login/");
-      });
-  }, [token, setToken]);
+      fetch(`${getBaseURL()}/auth/logout/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then(() => {
+          setToken(null);
+          window.location.replace("/login/");
+        });
+    },
+    [token, setToken],
+  );
 
   const navigate = useNavigate();
 

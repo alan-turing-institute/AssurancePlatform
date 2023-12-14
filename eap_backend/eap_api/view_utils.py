@@ -127,6 +127,7 @@ def make_summary(serialized_data):
     else:
         return summarize_one(serialized_data)
 
+
 def make_case_summary(serialized_data):
     """
     Take in a full serialized object, and return dict containing just
@@ -151,7 +152,6 @@ def make_case_summary(serialized_data):
         return [summarize_one(sd) for sd in serialized_data]
     else:
         return summarize_one(serialized_data)
-
 
 
 def get_json_tree(id_list, obj_type):

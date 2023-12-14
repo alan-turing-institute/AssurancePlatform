@@ -7,10 +7,12 @@ import React from "react";
 import CaseCreator from "../CaseCreator.js";
 import { MemoryRouter } from "react-router-dom";
 
-function WrappedCaseCreator(){
-  return <MemoryRouter>
-    <CaseCreator isOpen={true} onClose={()=>{}} titleId="test-id" />
-  </MemoryRouter>
+function WrappedCaseCreator() {
+  return (
+    <MemoryRouter>
+      <CaseCreator isOpen={true} onClose={() => {}} titleId="test-id" />
+    </MemoryRouter>
+  );
 }
 
 test("renders case creator layer", () => {

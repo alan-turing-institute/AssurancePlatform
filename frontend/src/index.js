@@ -8,7 +8,12 @@ import Theming from "./Theming";
 import reportWebVitals from "./reportWebVitals";
 //import Navigation from "./components/Navigation";
 
-ReactDOM.render(<Theming><AllRoutes /></Theming> , document.getElementById("main"));
+ReactDOM.render(
+  <Theming>
+    <AllRoutes />
+  </Theming>,
+  document.getElementById("main"),
+);
 
 //const dropdown_menus = document.getElementById("main");
 //ReactDOM.render( <CaseContainer />, dropdown_menus);

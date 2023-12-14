@@ -84,7 +84,7 @@ const Signup = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [username, password1, password2, setToken]
+    [username, password1, password2, setToken],
   );
 
   const validatePassword1 = React.useCallback((val) => {
@@ -99,7 +99,7 @@ const Signup = () => {
         return "Passwords do not match.";
       }
     },
-    [password1]
+    [password1],
   );
 
   return (

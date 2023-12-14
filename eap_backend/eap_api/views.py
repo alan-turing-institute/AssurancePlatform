@@ -40,8 +40,8 @@ from .view_utils import (
     get_allowed_groups,
     get_case_permissions,
     get_json_tree,
-    make_summary,
     make_case_summary,
+    make_summary,
     save_json_tree,
 )
 
