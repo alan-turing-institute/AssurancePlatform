@@ -233,7 +233,7 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
 
 /**
  * For an assurance case, and a case item id and type,
- * find all property claims this item in the graph,
+ * find all property claims above this item in the graph,
  * including itself if its a property claim
  * @param {*} assuranceCase
  * @param {string} id
