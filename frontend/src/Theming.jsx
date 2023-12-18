@@ -55,7 +55,7 @@ function Theming({ children }) {
           }
         },
         defaultProps: {
-          elevation: 8
+          elevation: 4
         }
       }
     },

@@ -3,8 +3,27 @@ import { FormEdit, User, Clock } from "grommet-icons";
 import React, { useState, useEffect } from "react";
 import { getBaseURL } from "./utils.js";
 import { formatDistanceToNow } from "date-fns";
+import ModalDialog from "./common/ModalDialog.jsx";
+import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
+import { Alert, Typography } from "@mui/material";
+import LoadingSpinner from "./common/LoadingSpinner.jsx";
 
-function CommentSection({ assuranceCaseId, authorId }) {
+function CommentSection({ caseId, isOpen, onClose}){
+  return (
+    <ModalDialog
+      // aria-labelledby={titleId}
+      // aria-describedby={descriptionId}
+      open={isOpen}
+      onClose={onClose}
+    >
+      <ColumnFlow>
+        <CommentSection2 assuranceCaseId={caseId} />
+      </ColumnFlow>
+    </ModalDialog>
+  );
+}
+
+function CommentSection2({ assuranceCaseId, authorId }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [sort, setSort] = useState({

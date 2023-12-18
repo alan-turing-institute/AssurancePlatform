@@ -10,7 +10,7 @@ import { MemoryRouter } from "react-router-dom";
 function WrappedCaseCreator() {
   return (
     <MemoryRouter>
-      <CaseCreator isOpen={true} onClose={() => {}} titleId="test-id" />
+      <CaseCreator isOpen={true} onClose={() => {}} />
     </MemoryRouter>
   );
 }

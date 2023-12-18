@@ -5,8 +5,28 @@ import { Box, Button, Form, Heading, Text } from "grommet";
 import CreateGroup from "./CreateGroup.js";
 import PermissionSelector from "./PermissionSelector.js";
 import { removeArrayElement } from "./utils.js";
+import ModalDialog from "./common/ModalDialog.jsx";
+import { ColumnFlow } from "./common/Layout.jsx";
 
-class CasePermissionsManager extends Component {
+function CasePermissionsManager({ assuranceCase, isOpen, onClose, onSuccess }) {
+  return (
+    <ModalDialog
+      // aria-labelledby={titleId}
+      // aria-describedby={descriptionId}
+      open={isOpen}
+      onClose={onClose}
+    >
+      <ColumnFlow>
+        <CasePermissionsManager2
+          assurance_case={assuranceCase}
+          afterSubmit={onSuccess}
+        />
+      </ColumnFlow>
+    </ModalDialog>
+  );
+}
+
+class CasePermissionsManager2 extends Component {
   constructor(props) {
     super(props);
     this.permissions = {};
@@ -30,7 +50,7 @@ class CasePermissionsManager extends Component {
         this.state.groups.forEach((group) => {
           this.setGroupPermission(
             group,
-            this.dialValue(group, this.props.assurance_case),
+            this.dialValue(group, this.props.assurance_case)
           );
         });
       });
@@ -102,7 +122,7 @@ class CasePermissionsManager extends Component {
     };
     await fetch(
       `${getBaseURL()}/cases/${this.props.assurance_case.id}/`,
-      requestOptions,
+      requestOptions
     );
     this.props.afterSubmit();
   }

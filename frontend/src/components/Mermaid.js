@@ -1,21 +1,30 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import mermaid from "mermaid";
 import "./Mermaid.css";
+import { jsonToMermaid } from "./utils";
 
-class MermaidChart extends React.Component {
-  componentDidMount() {
-    this.initializeMermaid();
-    this.renderChart();
-  }
+function MermaidChart({
+  caseId,
+  assuranceCase,
+  selectedId,
+  selectedType,
+  setSelected,
+}) {
+  const [collapsedNodes, setCollapsedNodes] = useState([]);
 
-  componentDidUpdate(prevProps) {
-    // Check if the chartmd prop has changed
-    if (prevProps.chartmd !== this.props.chartmd) {
-      this.renderChart();
-    }
-  }
+  const chartmd = useMemo(
+    () =>
+      jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes),
+    [assuranceCase, selectedType, selectedId, collapsedNodes]
+  );
 
-  initializeMermaid() {
+  // refresh state
+  useEffect(() => {
+    setCollapsedNodes([]);
+  }, [caseId]);
+
+  // initialise mermaid
+  useEffect(() => {
     mermaid.initialize({
       theme: "base",
       logLevel: 1,
@@ -32,36 +41,57 @@ class MermaidChart extends React.Component {
         fontFamily: "arial",
       },
     });
+  }, []);
 
-    window.callback = (e) => this.props.viewLayerFunc(e);
-  }
+  // set click callback
+  useEffect(() => {
+    window.callback = (e) => {
+      let chunks = e.split("_");
+      if (chunks.length === 2) {
+        const [itemType, itemId] = chunks;
 
-  /** @param {MouseEvent} e  */
-  onCollapseButtonClick(e) {
-    const data = e.target?.dataset?.["key"];
-    if (data == null) {
-      return;
-    }
-    this.props.toggleCollapseLayerFunc(data);
+        setSelected([itemId, itemType]);
+      }
+    };
+  }, [setSelected]);
 
-    // don't fire click event on node itself
-    e.stopPropagation();
-  }
+  const onCollapseButtonClick = useCallback(
+    /** @param {MouseEvent} e  */ (e) => {
+      const nodeKey = e.target?.dataset?.key;
+      if (nodeKey == null) {
+        return;
+      }
 
-  renderChart() {
+      setCollapsedNodes((collapsedNodes) => {
+        let newArray = collapsedNodes.filter((k) => k !== nodeKey);
+        if (newArray.length === collapsedNodes.length) {
+          newArray.push(nodeKey);
+        }
+        return newArray;
+      });
+
+      // don't fire click event on node itself
+      e.stopPropagation();
+    },
+    []
+  );
+
+  // trigger mermaid reload
+  useEffect(() => {
     try {
       const mermaidDiv = document.querySelector(".mermaid");
       if (mermaidDiv) {
+        // inject the markdown here, rather than via react
+        // so in between render and the effect you don't see the text
+
         // make sure to use textContent and not innerHtml, as our markdown can contain html
         mermaidDiv.textContent = ""; // Clear the existing content
-        mermaidDiv.textContent = this.props.chartmd; // Set new markdown content
+        mermaidDiv.textContent = chartmd; // Set new markdown content
         mermaid.contentLoaded(); // Inform Mermaid to process the new content
 
         const collapseButtons = document.querySelectorAll(".collapse-expand");
         collapseButtons.forEach((button) =>
-          button.addEventListener("click", (e) =>
-            this.onCollapseButtonClick(e),
-          ),
+          button.addEventListener("click", onCollapseButtonClick)
         );
       } else {
         console.error("Mermaid div not found");
@@ -69,13 +99,21 @@ class MermaidChart extends React.Component {
     } catch (error) {
       console.error("Error rendering Mermaid chart:", error);
     }
-  }
+  }, [chartmd, onCollapseButtonClick]);
 
-  render() {
-    return (
-      <div style={{ width: "100%", height: "100%" }} className="mermaid" />
-    );
-  }
+  return (
+    <div
+      key={chartmd}
+      style={{
+        display: "flex",
+        height: "100%",
+        width: "100%",
+        justifyContent: "center",
+        overflow: "visible",
+      }}
+      className="mermaid"
+    />
+  );
 }
 
 export default MermaidChart;

@@ -1,25 +1,21 @@
 import * as React from "react";
 import TextField from "@mui/material/TextField";
+import { useCallback, useEffect } from "react";
+import { Typography } from "@mui/material";
 
-// TODO style more like designs
-
-function TextInput({
+function useInputCallbacks({
   value,
   setValue,
-  helperText,
-  error,
   setError,
-  dirty,
   required,
   minLength,
   maxLength,
-  noRequiredSymbol,
   validate,
-  ...props
+  dirty,
+  multline,
 }) {
+  const [valueInternal, setValueInternal] = React.useState(value);
   const [dirtyInternal, setDirtyInternal] = React.useState(false);
-
-  const helpTextInternal = error ? error : helperText ?? " ";
 
   const validateInternal = React.useCallback(
     (val) => {
@@ -40,24 +36,36 @@ function TextInput({
     [validate, required, minLength, maxLength]
   );
 
+  useEffect(() => {
+    setValueInternal(value);
+  }, [value]);
+
   // this lets you, e.g., trigger the empty validation message on submit click
-  React.useEffect(() => {
+  useEffect(() => {
     if (dirty && !dirtyInternal) {
       setDirtyInternal(true);
       setError(validateInternal(value));
     }
   }, [dirty, dirtyInternal, setError, validateInternal, value]);
 
-  const onChange = React.useCallback(
+  const flush = React.useCallback(
+    (newValue) => {
+      setError(validateInternal(newValue));
+      setValue(newValue);
+      setDirtyInternal(true);
+    },
+    [setValue, setError, validateInternal]
+  );
+
+  const onChange = useCallback(
     (e) => {
       const newValue = e.target.value ?? "";
 
-      setValue(newValue);
+      setValueInternal(newValue);
 
       if (document.activeElement !== e.target) {
         // element isn't focused, so this change was made by, e.g., a password manager
-        setError(validateInternal(newValue));
-        setDirtyInternal(true);
+        flush(newValue);
       } else {
         const newError = validateInternal(newValue);
 
@@ -68,15 +76,62 @@ function TextInput({
         }
       }
     },
-    [setError, validateInternal, setValue]
+    [setError, validateInternal, flush]
   );
 
   const onBlur = React.useCallback(() => {
-    setError(validateInternal(value));
-    setDirtyInternal(true);
-  }, [value, setError, validateInternal]);
+    flush(valueInternal);
+  }, [valueInternal, flush]);
+
+  const onKeydown = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        // flush changes before submit
+        flush(valueInternal);
+      }
+    },
+    [valueInternal, flush]
+  );
 
   // TODO could also add debouncing
+
+  return {
+    valueInternal,
+    onChange,
+    onBlur,
+    onKeydown: multline ? undefined : onKeydown,
+  };
+}
+
+// TODO style more like designs
+
+function TextInput({
+  value,
+  setValue,
+  error,
+  setError,
+  required,
+  minLength,
+  maxLength,
+  validate,
+  dirty,
+  helperText,
+  noRequiredSymbol,
+  ...props
+}) {
+  const helpTextInternal = error ? error : helperText ?? " ";
+
+  const { valueInternal, onChange, onBlur, onKeydown } = useInputCallbacks({
+    value,
+    setValue,
+    setError,
+    required,
+    minLength,
+    maxLength,
+    validate,
+    dirty,
+    ...props,
+  });
 
   return (
     <TextField
@@ -84,10 +139,70 @@ function TextInput({
       error={!!error}
       required={required && !noRequiredSymbol}
       helperText={helpTextInternal}
-      value={value}
+      value={valueInternal}
       onChange={onChange}
       onBlur={onBlur}
+      onKeyDown={onKeydown}
     />
+  );
+}
+
+export function DisguisedTextInput({
+  value,
+  setValue,
+  error,
+  setError,
+  required,
+  minLength,
+  maxLength,
+  validate,
+  dirty,
+  helperText,
+  noRequiredSymbol,
+  ...props
+}) {
+  const helpTextInternal = error ? error : helperText ?? " ";
+
+  const [isFocused, setIsFocused] = React.useState(false);
+
+  const { valueInternal, onChange, onBlur, onKeydown } = useInputCallbacks({
+    value,
+    setValue,
+    setError,
+    required,
+    minLength,
+    maxLength,
+    validate,
+    dirty,
+    ...props
+  });
+
+  const onFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const onBlurInner = useCallback(() => {
+    onBlur();
+    setIsFocused(false);
+  }, [onBlur]);
+
+  return isFocused || error ? (
+    <TextField
+      autoFocus={true}
+      {...props}
+      error={!!error}
+      required={required && !noRequiredSymbol}
+      helperText={helpTextInternal}
+      value={valueInternal}
+      onChange={onChange}
+      onFocus={onFocus}
+      onBlur={onBlurInner}
+      onKeyDown={onKeydown}
+    />
+  ) : (
+    <Typography onFocus={onFocus} variant="h3" component="h1" tabIndex={0}>
+      {value}
+    </Typography>
   );
 }
 

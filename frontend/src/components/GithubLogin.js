@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { getBaseURL } from "./utils.js";
-import github from "./github.png";
+import github from "../images/github.png";
 import { getClientID, getRedirectURI } from "./utils.js";
 import { Button } from "@mui/material";
 

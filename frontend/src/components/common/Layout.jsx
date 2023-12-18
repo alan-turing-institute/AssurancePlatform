@@ -10,8 +10,8 @@ export function ColumnFlow({ sx, ...props }) {
         display: "flex",
         flexDirection: "column",
         gap: "1rem",
-        minHeight: "100%",
-        minWidth: "100%",
+        height: "100%",
+        width: "100%",
         ...sx,
       }}
       {...props}
@@ -26,6 +26,7 @@ export function RowFlow({ sx, ...props }) {
         display: "flex",
         flexDirection: "row",
         gap: "1rem",
+        alignItems: "center",
         ...sx,
       }}
       {...props}

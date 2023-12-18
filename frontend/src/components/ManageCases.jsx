@@ -14,7 +14,6 @@ import { getBaseURL } from "./utils";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { Link } from "react-router-dom";
 import CaseCreator from "./CaseCreator";
-import useId from "@mui/utils/useId";
 import { useEnforceLogin, useLoginToken } from "../hooks/useAuth";
 import mockup_diagram from "../images/mockup-diagram.png";
 
@@ -51,8 +50,6 @@ const CreateCard = () => {
     setIsOpen(false);
   }, []);
 
-  const titleId = useId();
-
   const theme = useTheme();
 
   return (
@@ -82,7 +79,6 @@ const CreateCard = () => {
         Import file
       </Button>
       <CaseCreator
-        titleId={titleId}
         isOpen={isOpen}
         onClose={onClose}
         isImport={isImport}

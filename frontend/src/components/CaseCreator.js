@@ -4,8 +4,11 @@ import { useEnforceLogin } from "../hooks/useAuth.js";
 import CaseCreatorFlow from "./CaseCreatorFlow.jsx";
 import CaseImporterFlow from "./CaseImporterFlow.jsx";
 import ModalDialog from "./common/ModalDialog.jsx";
+import useId from "@mui/utils/useId";
 
-function CaseCreator({ titleId, isOpen, onClose, isImport }) {
+function CaseCreator({ isOpen, onClose, isImport }) {
+  const titleId = useId();
+
   if (!useEnforceLogin()) {
     return null;
   }
