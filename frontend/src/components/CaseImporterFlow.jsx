@@ -4,7 +4,6 @@ import "regenerator-runtime/runtime";
 import { getBaseURL } from "./utils.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 import {
-  Alert,
   Button,
   FormControlLabel,
   Radio,
@@ -15,6 +14,8 @@ import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import FileInput from "./common/FileInput.jsx";
+import { ArrowRight } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function CaseImporterFlow({ titleId, onClose }) {
   const [uploadType, setUploadType] = useState("file");
@@ -192,11 +193,7 @@ function CaseImporterFlow({ titleId, onClose }) {
         Import file
       </Typography>
       <Typography>Import a file to create a case.</Typography>
-      {errors.map((err) => (
-        <Alert key={err} severity="error">
-          {err}
-        </Alert>
-      ))}
+      <ErrorMessage errors={errors}/>
       <RadioGroup value={uploadType} onChange={onTypeChange} row>
         <FormControlLabel
           value="file"
@@ -244,7 +241,7 @@ function CaseImporterFlow({ titleId, onClose }) {
             >
               Cancel
             </Button>
-            <Button type="submmit">Continue</Button>
+            <Button type="submit" endIcon={<ArrowRight/>}>Continue</Button>
           </>
         )}
       </RowFlow>

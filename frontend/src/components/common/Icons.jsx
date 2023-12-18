@@ -41,6 +41,11 @@ export function Add({ ...props }) {
   return <Icon {...props} Component={AddSvg} />;
 }
 
+export function ArrowRight({ ...props }) {
+  return <Icon {...props} Component={ArrowRightSvg} />;
+}
+
+
 export function ArrowTopRight({ ...props }) {
     return <Icon {...props} Component={ArrowTopRightSvg} />;
 }

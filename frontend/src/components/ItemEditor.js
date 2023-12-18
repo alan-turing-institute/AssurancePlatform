@@ -1,9 +1,9 @@
 /* General function that can create any type of object apart from the top-level Case */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ParentSelector from "./ParentSelector.js";
 import configData from "../config.json";
-import { Alert, Button, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
 import { createItem, editItem, getItem } from "./caseApi.js";
@@ -12,6 +12,7 @@ import DeleteItemModal from "./DeleteItemModal.jsx";
 import { Add, Bin, ChevronRight } from "./common/Icons.jsx";
 import TextInput from "./common/TextInput.jsx";
 import SelectInput from "./common/SelectInput.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function niceNameforType(type) {
   switch (type) {
@@ -145,11 +146,6 @@ function PropertySelect({
     [token, id, type, item, fieldName, onRefresh]
   );
 
-  const innerOptions = useMemo(
-    () => options.map((str) => [str, str]),
-    [options]
-  );
-
   return (
     <SelectInput
       {...props}
@@ -157,7 +153,7 @@ function PropertySelect({
       setValue={setValue}
       error={error}
       setError={setError}
-      options={innerOptions}
+      options={options}
       required
     />
   );
@@ -301,11 +297,7 @@ function ItemEditor({ caseId, assuranceCase, id, type, onRefresh, onHide }) {
         <LoadingSpinner />
       ) : (
         <>
-          {errors.map((err) => (
-            <Alert key={err} severity="error">
-              {err}
-            </Alert>
-          ))}
+          <ErrorMessage errors={errors} />
           {item ? (
             <>
               <PropertyField

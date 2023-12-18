@@ -78,6 +78,7 @@ export function LayoutWithNav({ children }) {
       sx={{
         display: "flex",
         flexDirection: "row",
+        flexGrow: 1,
         flexShrink: 1,
         overflow: "hidden",
       }}

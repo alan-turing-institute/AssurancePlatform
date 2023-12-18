@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getBaseURL } from "./utils.js";
-import { Alert, Button, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import TextInput from "./common/TextInput.jsx";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 const Signup = () => {
   const [username, setUsername] = useState("");
@@ -154,11 +155,7 @@ const Signup = () => {
             }}
             validate={validatePassword2}
           />
-          {errors.map((err) => (
-            <Alert key={err} severity="error">
-              {err}
-            </Alert>
-          ))}
+          <ErrorMessage errors={errors} />
           <RowFlow>
             {loading ? (
               <LoadingSpinner sx={{ margin: "auto" }} />

@@ -1,51 +1,61 @@
-import { Box, Button, Form, FormField, TextInput } from "grommet";
-import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useCallback, useState } from "react";
 import { getBaseURL } from "./utils.js";
+import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
+import { Button } from "@mui/material";
+import TextInput from "./common/TextInput.jsx";
 
-class CreateGroup extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      newGroupName: "",
-    };
-  }
+function CreateGroup({ afterSubmit }) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState();
+  const [dirty, setDirty] = useState();
 
-  async submitCreateGroup() {
+  const onSubmit = useCallback((e) => {
+    e.preventDefault();
+
+    if (!name) {
+      setDirty(true);
+      return;
+    }
+
     const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Token ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify({ name: this.state.newGroupName }),
+      body: JSON.stringify({ name }),
     };
 
-    await fetch(`${getBaseURL()}/groups/`, requestOptions);
-    this.setState({ newGroupName: "" });
-    this.props.afterSubmit();
-  }
+    fetch(`${getBaseURL()}/groups/`, requestOptions)
+      .then(() => {
+        setName("");
+        afterSubmit();
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Could not create group");
+      });
+  }, [name, afterSubmit]);
 
-  render() {
-    return (
-      <Form onSubmit={this.submitCreateGroup.bind(this)}>
-        <Box gap="small" direction="row">
-          <FormField margin={{ left: "small" }}>
-            <TextInput
-              plain={true}
-              value={this.state.newGroupName}
-              name="new-group-name"
-              onChange={(e) => this.setState({ newGroupName: e.target.value })}
-            />
-          </FormField>
-          <Button type="submit" label="Create group" />
-        </Box>
-      </Form>
-    );
-  }
+  return (
+    <ColumnFlow component="form" onSubmit={onSubmit}>
+      <TextInput
+        label="Name"
+        value={name}
+        setValue={setName}
+        error={error}
+        setError={setError}
+        dirty={dirty}
+        required
+        noRequiredSymbol
+      />
+      <RowFlow>
+        <Button sx={{ marginLeft: "auto" }} variant="outlined" type="submit">
+          Create group
+        </Button>
+      </RowFlow>
+    </ColumnFlow>
+  );
 }
 
-// eslint-disable-next-line import/no-anonymous-default-export
-export default (props) => (
-  <CreateGroup {...props} params={useParams()} navigate={useNavigate()} />
-);
+export default CreateGroup;

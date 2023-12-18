@@ -2,14 +2,15 @@ import * as React from "react";
 import { useCallback, useEffect } from "react";
 import {
   FormControl,
+  FormControlLabel,
   FormHelperText,
-  InputLabel,
-  MenuItem,
-  Select,
+  FormLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import useId from "@mui/material/utils/useId";
 
-function SelectInput({
+function RadioInput({
   label,
   value,
   setValue,
@@ -53,7 +54,7 @@ function SelectInput({
     (e) => {
       const newKey = e.target.value ?? "";
 
-      const newValue = options.find(option => newKey === selectKey(option))
+      const newValue = options.find((option) => newKey === selectKey(option));
 
       setError(validateInternal(newValue));
       setValue(newValue);
@@ -67,24 +68,26 @@ function SelectInput({
   const labelId = useId();
 
   return (
-    <FormControl fullWidth error={!!error}>
-      <InputLabel id={labelId}>{label}</InputLabel>
-      <Select
-        labelId={labelId}
+    <FormControl error={!!error}>
+      <FormLabel id={labelId}>{label}</FormLabel>
+      <RadioGroup
         value={value ? selectKey(value) : ""}
         onChange={onChange}
-        label={label}
+        aria-labelledby={labelId}
         {...props}
       >
-        {options.map(option => (
-          <MenuItem key={selectKey(option)} value={selectKey(option)}>
-            {selectText(option)}
-          </MenuItem>
+        {options.map((option) => (
+          <FormControlLabel
+            key={selectKey(option)}
+            value={selectKey(option)}
+            control={<Radio />}
+            label={selectText(option)}
+          />
         ))}
-      </Select>
+      </RadioGroup>
       <FormHelperText>{helpTextInternal}</FormHelperText>
     </FormControl>
   );
 }
 
-export default SelectInput;
+export default RadioInput;

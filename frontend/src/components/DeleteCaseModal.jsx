@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, Button, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { deleteCase } from "./caseApi.js";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
@@ -7,6 +7,7 @@ import ModalDialog from "./common/ModalDialog.jsx";
 import useId from "@mui/utils/useId";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import { Bin } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function DeleteCaseModal({ isOpen, onClose, caseId, onDelete }) {
   const [loading, setLoading] = useState(false);
@@ -47,11 +48,7 @@ function DeleteCaseModal({ isOpen, onClose, caseId, onDelete }) {
           This will permanently delete the file and it's content. You cannot
           undo this action.
         </Typography>
-        {errors.map((err) => (
-          <Alert key={err} severity="error">
-            {err}
-          </Alert>
-        ))}
+        <ErrorMessage errors={errors}/>
         <RowFlow>
           {loading ? (
             <LoadingSpinner />

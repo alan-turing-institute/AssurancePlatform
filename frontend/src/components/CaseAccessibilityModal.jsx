@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
   Button,
   FormControl,
   FormControlLabel,
@@ -17,6 +16,7 @@ import useId from "@mui/utils/useId";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import configData from "../config.json";
 import { Wheelchair } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function CaseAccessibilityModal({
   isOpen,
@@ -66,11 +66,7 @@ function CaseAccessibilityModal({
           <Wheelchair sx={{marginRight: "1rem"}}/>
           Accessibility
         </Typography>
-        {errors.map((err) => (
-          <Alert key={err} severity="error">
-            {err}
-          </Alert>
-        ))}
+        <ErrorMessage errors={errors}/>
         <FormControl>
           <FormLabel id={id}>Diagram colour</FormLabel>
           <RadioGroup

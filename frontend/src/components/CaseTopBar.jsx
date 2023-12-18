@@ -5,7 +5,6 @@ import {
   ListItemIcon,
   MenuItem,
   Paper,
-  Typography,
 } from "@mui/material";
 import { createItem, editCase } from "./caseApi.js";
 import { RowFlow } from "./common/Layout.jsx";
@@ -151,6 +150,7 @@ function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
               </ListItemIcon>
               Notes
             </MenuItem>
+            {/* TODO add share functionality, possibly replacing groups and permissions */}
             <MenuItem onClick={onPermissionsClick}>
               <ListItemIcon>
                 <Share fontSize="small" />
@@ -185,6 +185,7 @@ function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
       <ExportCaseModal
         isOpen={exportOpen}
         onClose={onExportClose}
+        caseId={caseId}
         assuranceCase={assuranceCase}
       />
       <CommentSection
@@ -195,6 +196,7 @@ function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
       <CasePermissionsManager
         isOpen={permissionsOpen}
         onClose={onPermissionsClose}
+        caseId={caseId}
         assuranceCase={assuranceCase}
         onSuccess={onPermissionsSuccess}
       />

@@ -1,156 +1,202 @@
-import React, { Component } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useState } from "react";
 import { getBaseURL } from "./utils.js";
-import { Box, Button, Form, Heading, Text } from "grommet";
 import CreateGroup from "./CreateGroup.js";
 import PermissionSelector from "./PermissionSelector.js";
 import { removeArrayElement } from "./utils.js";
 import ModalDialog from "./common/ModalDialog.jsx";
-import { ColumnFlow } from "./common/Layout.jsx";
+import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
+import LoadingSpinner from "./common/LoadingSpinner.jsx";
+import { Button, Typography } from "@mui/material";
+import useId from "@mui/material/utils/useId.js";
+import { getCase } from "./caseApi.js";
+import { useLoginToken } from "../hooks/useAuth.js";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
-function CasePermissionsManager({ assuranceCase, isOpen, onClose, onSuccess }) {
+function CasePermissionsManager({
+  caseId,
+  assuranceCase,
+  isOpen,
+  onClose,
+  onSuccess,
+}) {
+  const titleId = useId();
+
   return (
-    <ModalDialog
-      // aria-labelledby={titleId}
-      // aria-describedby={descriptionId}
-      open={isOpen}
-      onClose={onClose}
-    >
+    <ModalDialog aria-labelledby={titleId} open={isOpen} onClose={onClose}>
       <ColumnFlow>
-        <CasePermissionsManager2
+        <Typography id={titleId} variant="h3">
+          Group permissions
+        </Typography>
+        <CasePermissionsManagerInner
+          caseId={caseId}
           assurance_case={assuranceCase}
           afterSubmit={onSuccess}
+          onClose={onClose}
         />
       </ColumnFlow>
     </ModalDialog>
   );
 }
 
-class CasePermissionsManager2 extends Component {
-  constructor(props) {
-    super(props);
-    this.permissions = {};
-    this.state = {
-      groups: [],
-      editGroupsStr: "",
-      viewGroupsStr: "",
-    };
-  }
+function CasePermissionsManagerInner({
+  caseId,
+  assuranceCase,
+  afterSubmit,
+  onClose,
+}) {
+  const [groups, setGroups] = useState([]);
+  const [groupPermissions, setGroupPermissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState([]);
 
-  getGroups() {
+  const [token] = useLoginToken();
+
+  const dialValue = useCallback(
+    (group) => {
+      if (group.editable_cases.includes(caseId)) return "Edit";
+      if (group.viewable_cases.includes(caseId)) return "View";
+      return "None";
+    },
+    [caseId]
+  );
+
+  const getGroupPermission = useCallback(
+    (group) => {
+      return groupPermissions[group.id];
+    },
+    [groupPermissions]
+  );
+
+  const setGroupPermission = useCallback((group, value) => {
+    setGroupPermissions((oldState) => {
+      const newState = { ...oldState };
+      newState[group.id] = value;
+      return newState;
+    });
+  }, []);
+
+  const getGroups = useCallback(() => {
+    setIsLoading(true);
+    setErrors([]);
+
     const requestOptions = {
       headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
+        Authorization: `Token ${token}`,
       },
     };
     fetch(`${getBaseURL()}/groups/`, requestOptions)
       .then((response) => response.json())
-      .then((body) => this.setState({ groups: body.member }))
-      .then((e) => {
-        this.state.groups.forEach((group) => {
-          this.setGroupPermission(
-            group,
-            this.dialValue(group, this.props.assurance_case)
-          );
+      .then((body) => {
+        const newGroups = body.member;
+        setGroups(newGroups);
+        newGroups.forEach((group) => {
+          setGroupPermission(group, dialValue(group));
         });
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        console.error(err);
+        setErrors(["Could not load groups"]);
       });
-  }
+  }, [dialValue, setGroupPermission, token]);
 
-  componentDidMount() {
-    this.getGroups();
-  }
+  // initial load
+  useEffect(() => getGroups(), [getGroups]);
 
-  dialValue(group, assurance_case) {
-    if (group.editable_cases.includes(assurance_case.id)) return "Edit";
-    if (group.viewable_cases.includes(assurance_case.id)) return "View";
-    return "None";
-  }
+  const onSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-  setGroupPermission(group, value) {
-    const newState = {};
-    newState[`permission_${group.id}`] = value;
-    this.setState(newState);
-  }
+      setErrors([]);
+      setIsLoading(true);
 
-  getGroupPermission(group) {
-    return this.state[`permission_${group.id}`];
-  }
-
-  renderGroupDials(group) {
-    const value = this.getGroupPermission(group);
-    if (value === undefined)
-      return <Text key={group.id}>Loading permissions...</Text>;
-    return (
-      <Box key={group.id} direction="row">
-        <Text>{group.name}</Text>
-        <PermissionSelector
-          name={group.name}
-          value={value}
-          setValue={(value) => this.setGroupPermission(group, value)}
-        />
-      </Box>
-    );
-  }
-
-  async onSubmit(e) {
-    let editGroups = this.props.assurance_case.edit_groups;
-    let viewGroups = this.props.assurance_case.view_groups;
-    this.state.groups.forEach((group) => {
-      const permission = this.getGroupPermission(group);
-      const id = group.id;
-      if (permission === "View") {
-        if (!viewGroups.includes(id)) viewGroups.push(id);
-        if (editGroups.includes(id)) removeArrayElement(editGroups, id);
-      } else if (permission === "Edit") {
-        if (!editGroups.includes(id)) editGroups.push(id);
-        if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
-      } else if (permission === "None") {
-        if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
-        if (editGroups.includes(id)) removeArrayElement(editGroups, id);
+      let loadedCase = assuranceCase;
+      if (!loadedCase) {
+        try {
+          loadedCase = await getCase(token, caseId);
+        } catch (err) {
+          console.error(err);
+          setIsLoading(false);
+          setErrors(["Could not load case."]);
+          return;
+        }
       }
-    });
-    const requestOptions = {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
-        view_groups: viewGroups,
-        edit_groups: editGroups,
-      }),
-    };
-    await fetch(
-      `${getBaseURL()}/cases/${this.props.assurance_case.id}/`,
-      requestOptions
-    );
-    this.props.afterSubmit();
-  }
 
-  render() {
-    return (
-      <Box>
-        <Form onSubmit={this.onSubmit.bind(this)}>
-          <Heading level={3}>Group permissions</Heading>
-          <Box pad="medium" gap="small" fill>
-            {this.state.groups.map(this.renderGroupDials.bind(this))}
-            <Button type="submit" label="Submit" />
-          </Box>
-        </Form>
-        <Box pad="medium" gap="small" fill>
-          <Heading level={4}>Create a new group</Heading>
-          <CreateGroup afterSubmit={this.getGroups.bind(this)} />
-        </Box>
-      </Box>
-    );
-  }
+      let editGroups = loadedCase.edit_groups;
+      let viewGroups = loadedCase.view_groups;
+      groups.forEach((group) => {
+        const permission = getGroupPermission(group);
+        const id = group.id;
+        if (permission === "View") {
+          if (!viewGroups.includes(id)) viewGroups.push(id);
+          if (editGroups.includes(id)) removeArrayElement(editGroups, id);
+        } else if (permission === "Edit") {
+          if (!editGroups.includes(id)) editGroups.push(id);
+          if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
+        } else if (permission === "None") {
+          if (viewGroups.includes(id)) removeArrayElement(viewGroups, id);
+          if (editGroups.includes(id)) removeArrayElement(editGroups, id);
+        }
+      });
+      const requestOptions = {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({
+          view_groups: viewGroups,
+          edit_groups: editGroups,
+        }),
+      };
+      try {
+        await fetch(`${getBaseURL()}/cases/${caseId}/`, requestOptions);
+        afterSubmit();
+      } catch (err) {
+        console.error(err);
+        setIsLoading(false);
+        setErrors(["Could not update permissions."]);
+      }
+    },
+    [afterSubmit, assuranceCase, caseId, getGroupPermission, groups, token]
+  );
+
+  return (
+    <>
+      <Typography component="h4" variant="body1">
+        Create a new group
+      </Typography>
+      <CreateGroup afterSubmit={getGroups} />
+      <ErrorMessage errors={errors} />
+      <ColumnFlow component={"form"} onSubmit={onSubmit}>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <>
+            {groups.map((group) => (
+              <PermissionSelector
+                key={group.name}
+                name={group.name}
+                value={getGroupPermission(group)}
+                setValue={(value) => setGroupPermission(group, value)}
+              />
+            ))}
+            <RowFlow>
+              <Button
+                onClick={onClose}
+                variant="outlined"
+                sx={{ marginLeft: "auto" }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Submit</Button>
+            </RowFlow>
+          </>
+        )}
+      </ColumnFlow>
+    </>
+  );
 }
 
-// eslint-disable-next-line import/no-anonymous-default-export
-export default (props) => (
-  <CasePermissionsManager
-    {...props}
-    params={useParams()}
-    navigate={useNavigate()}
-  />
-);
+export default CasePermissionsManager;

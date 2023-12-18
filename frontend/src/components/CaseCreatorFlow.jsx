@@ -3,10 +3,12 @@ import TemplateSelector from "./TemplateSelector.js";
 import { useNavigate } from "react-router-dom";
 import { getBaseURL } from "./utils.js";
 import { useLoginToken } from "../hooks/useAuth.js";
-import { Alert, Button, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
+import { ArrowRight } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 // see models.py
 const titleMaxLength = 200;
@@ -102,11 +104,7 @@ function CaseCreatorFlow({ titleId, onClose }) {
       <Typography id={titleId} variant="h2" component="h3">
         {stage === 0 ? "Create a new assurance case" : "Pick a template"}
       </Typography>
-      {errors.map((err) => (
-        <Alert key={err} severity="error">
-          {err}
-        </Alert>
-      ))}
+      <ErrorMessage errors={errors}/>
       {stage === 0 ? (
         <>
           <TextInput
@@ -157,7 +155,7 @@ function CaseCreatorFlow({ titleId, onClose }) {
             >
               Cancel
             </Button>
-            <Button type="submit">Continue</Button>
+            <Button type="submit" endIcon={<ArrowRight/>}>Continue</Button>
           </>
         ) : (
           <>
@@ -171,7 +169,7 @@ function CaseCreatorFlow({ titleId, onClose }) {
             >
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
+            <Button type="submit"  endIcon={<ArrowRight/>}>Create</Button>
           </>
         )}
       </RowFlow>

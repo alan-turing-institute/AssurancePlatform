@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import SelectInput from "./common/SelectInput.jsx";
 import { itemGetCurrentParents, itemGetPotentialParents } from "./caseApi.js";
 import { useLoginToken } from "../hooks/useAuth.js";
@@ -71,12 +71,6 @@ function ParentSelector({ type, id, potential, assuranceCase, value, setValue })
       return "Choose a parent";
     }
   }
-
-  const optionsInner = useMemo(
-    () => options.map((p) => [p.id, p.name]),
-    [options]
-  );
-
   return (
     <SelectInput
       error={error}
@@ -84,7 +78,9 @@ function ParentSelector({ type, id, potential, assuranceCase, value, setValue })
       label={getPlaceholder()}
       setValue={setValueInner}
       value={valueInner}
-      options={optionsInner}
+      options={options}
+      selectKey={item => item.id}
+      selectText={item => item.name}
     />
   );
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, Button, Typography } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 import { deleteItem } from "./caseApi.js";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
@@ -7,6 +7,7 @@ import ModalDialog from "./common/ModalDialog.jsx";
 import useId from "@mui/utils/useId";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import { Bin } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function DeleteItemModal({ isOpen, onClose, id, type, name, onDelete }) {
   const [loading, setLoading] = useState(false);
@@ -48,11 +49,7 @@ function DeleteItemModal({ isOpen, onClose, id, type, name, onDelete }) {
           This claim and all items linked to it will be permanently deleted. You
           cannot undo this action.
         </Typography>
-        {errors.map((err) => (
-          <Alert key={err} severity="error">
-            {err}
-          </Alert>
-        ))}
+        <ErrorMessage errors={errors} />
         <RowFlow>
           {loading ? (
             <LoadingSpinner />

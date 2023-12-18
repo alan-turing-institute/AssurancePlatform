@@ -7,7 +7,6 @@ import { useEnforceLogin, useLoginToken } from "../hooks/useAuth";
 
 import "./CaseContainer.css";
 import {
-  Alert,
   Box,
   IconButton,
   Paper,
@@ -19,6 +18,7 @@ import { getCase } from "./caseApi.js";
 import CaseTopBar from "./CaseTopBar.jsx";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { Add, Subtract, Target } from "./common/Icons.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 function CaseContainer() {
   const { caseSlug } = useParams();
@@ -142,11 +142,7 @@ function CaseContainer() {
               onRefresh={triggerRefresh}
               setErrors={setErrors}
             />
-            {errors.map((err) => (
-              <Alert key={err} severity="error">
-                {err}
-              </Alert>
-            ))}
+            <ErrorMessage errors={errors} />
             <TransformWrapper
               style={{ width: "100%", height: "100%" }}
               initialScale={1}

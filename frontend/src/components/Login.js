@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback } from "react";
 
 import { getBaseURL } from "./utils.js";
 import Github from "./GithubLogin";
-import { Alert, Box, Button, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 import { Link } from "react-router-dom";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -108,11 +109,7 @@ const Login = () => {
               autoComplete: "current-password",
             }}
           />
-          {errors.map((err) => (
-            <Alert key={err} severity="error">
-              {err}
-            </Alert>
-          ))}
+          <ErrorMessage errors={errors} />
           <RowFlow>
             {loading ? (
               <LoadingSpinner sx={{ margin: "auto" }} />
