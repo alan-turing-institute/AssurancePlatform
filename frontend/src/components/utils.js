@@ -201,6 +201,85 @@ async function getSelfUser() {
   return user;
 }
 
+/**
+ * Make a mutable copy of a case item, and run a callback to mutate the new copy
+ * @param {*} caseItem root case item
+ * @param {(caseItem: any, type: string) => void} callback function to run at every step of the tree
+ * @returns
+ */
+function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
+  if (typeof caseItem != "object") {
+    return caseItem;
+  }
+
+  // make a shallow copy
+  var copy = { ...caseItem };
+
+  configData.navigation[itemType]["children"].forEach((childName, j) => {
+    let childType = configData.navigation[itemType]["children"][j];
+    let dbName = configData.navigation[childName]["db_name"];
+    // recurse to make deep copies of the child arrays, if they exist
+    if (Array.isArray(copy[dbName])) {
+      copy[dbName] = copy[dbName].map((g) =>
+        visitCaseItem(g, callback, childType),
+      );
+    }
+  });
+
+  callback(copy, itemType);
+
+  return copy;
+}
+
+/**
+ * For an assurance case, and a case item id and type,
+ * find all property claims above this item in the graph,
+ * including itself if its a property claim
+ * @param {*} assuranceCase
+ * @param {string} id
+ * @param {string} type
+ * @returns {any[]}
+ */
+function getParentPropertyClaims(assuranceCase, id, type) {
+  // run depth first search
+  // because evidence cannot have property claim children,
+  // don't worry that they can appear twice in the tree
+  /** @type [any, string, any[]] */
+  const caseItemStack = assuranceCase.goals.map((i) => [
+    i,
+    "TopLevelNormativeGoal",
+    [],
+  ]);
+
+  let result = [];
+
+  while (caseItemStack.length > 0) {
+    const [node, nodeType, parents] = caseItemStack.shift();
+    const newParents = [...parents, node];
+
+    if (node.id.toString() === id && nodeType === type) {
+      // found it!
+      result = newParents;
+      break;
+    }
+
+    const newChildren = [];
+    configData.navigation[nodeType]["children"].forEach((childName, j) => {
+      const childType = configData.navigation[nodeType]["children"][j];
+      const dbName = configData.navigation[childName]["db_name"];
+      if (Array.isArray(node[dbName])) {
+        node[dbName].forEach((child) => {
+          newChildren.push([child, childType, newParents]);
+        });
+      }
+    });
+
+    caseItemStack.unshift(...newChildren);
+  }
+
+  return result.filter((i) => i.type === "PropertyClaim");
+}
+
 export {
   getBaseURL,
   getClientID,
@@ -211,4 +290,6 @@ export {
   sanitizeForMermaid,
   splitCommaSeparatedString,
   getSelfUser,
+  visitCaseItem,
+  getParentPropertyClaims,
 };

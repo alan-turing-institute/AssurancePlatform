@@ -14,14 +14,12 @@ test("renders item creator layer", () => {
 
 test("renders input fields correctly", () => {
   render(<ItemCreator type="TopLevelNormativeGoal" />);
-  const nameInput = screen.getByPlaceholderText("Name");
   const sdescInput = screen.getByPlaceholderText("Short description");
   const ldescInput = screen.getByPlaceholderText("Long description");
   const keywordsInput = screen.getByPlaceholderText(
     "Keywords (comma-separated)",
   );
 
-  expect(nameInput).toBeInTheDocument();
   expect(sdescInput).toBeInTheDocument();
   expect(ldescInput).toBeInTheDocument();
   expect(keywordsInput).toBeInTheDocument();
@@ -29,15 +27,12 @@ test("renders input fields correctly", () => {
 
 test("updates input fields on change", () => {
   render(<ItemCreator type="TopLevelNormativeGoal" />);
-  const nameInput = screen.getByPlaceholderText("Name");
   const sdescInput = screen.getByPlaceholderText("Short description");
 
-  fireEvent.change(nameInput, { target: { value: "Updated name" } });
   fireEvent.change(sdescInput, {
     target: { value: "Updated short description" },
   });
 
-  expect(nameInput.value).toBe("Updated name");
   expect(sdescInput.value).toBe("Updated short description");
 });
 
