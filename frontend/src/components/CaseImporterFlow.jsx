@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "regenerator-runtime/runtime";
-import { getBaseURL } from "./utils.js";
+import { decodeFromHtml, getBaseURL } from "./utils.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 import {
   Button,
@@ -41,7 +41,7 @@ function CaseImporterFlow({ titleId, onClose }) {
     if (svgElement && svgElement.hasAttribute("data-metadata")) {
       const metadataStr = svgElement.getAttribute("data-metadata");
       try {
-        return JSON.parse(metadataStr);
+        return JSON.parse(decodeFromHtml(metadataStr));
       } catch (err) {
         console.error("Error parsing metadata:", err);
       }
@@ -77,6 +77,7 @@ function CaseImporterFlow({ titleId, onClose }) {
 
   const postCaseJSON = useCallback(
     (json_str) => {
+      console.log(json_str);
       const requestOptions = {
         method: "POST",
         headers: {
@@ -160,6 +161,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           const metadataStr = svgElement.getAttribute("data-metadata");
           try {
             const metadataJSON = JSON.parse(metadataStr);
+            console.log(metadataJSON);
             setFileJson(metadataJSON);
           } catch (err) {
             // TODO error could be better

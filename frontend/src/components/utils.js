@@ -19,9 +19,30 @@ function getRedirectURI() {
   return configData.DEFAULT_GITHUB_REDIRECT_URI;
 }
 
-function sanitizeForMermaid(input_text) {
-  let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
-  return sanitizedText.trim();
+/** Escape html characters in text */
+function sanitizeForHtml(input_text, replaceNewLines = false) {
+  let result = input_text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/'/g, "&apos;")
+    .replace(/"/g, "&quot;");
+
+    if(replaceNewLines){
+      result = result.replace(/\n/g, "<br/>");
+    }
+
+    return result;
+}
+
+/** Unespcape html characters in text */
+function decodeFromHtml(input_text) {
+  return input_text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"');
 }
 
 function removeArrayElement(array, element) {
@@ -41,7 +62,7 @@ function jsonToMermaid(
   in_json,
   highlightedType,
   highlightedId,
-  collapsedNodes,
+  collapsedNodes
 ) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
@@ -50,19 +71,32 @@ function jsonToMermaid(
     return itemType + "_" + itemId;
   }
 
-  function makeBox(text, shape, name, isCollapsed) {
-    // text is already sanitised at this point, so will not contain <> or "
+  function makeBox(item, shape, name, isCollapsed) {
+    let identifier = sanitizeForHtml(item.name, true);
+    const description = sanitizeForHtml(item["short_description"] ?? "", true);
+    const url = sanitizeForHtml(item.URL ?? "");
 
-    if (text.length > configData["BOX_NCHAR"]) {
-      text = text.substring(0, configData["BOX_NCHAR"] - 3) + "...";
+    // use inline styles so they appear in the svg export
+
+    const containerStyle = "font-family: Plus Jakarta Sans, sans-serif;font-size: 0.875rem;font-style: normal;font-weight: 500;line-height: 150%;width:15.5rem;;display:flex;flex-direction:column";
+    const titleStyle = "font-size: 1rem;font-weight: 700;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
+    const descriptionStyle = "max-height:3.25rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
+    const urlStyle = "color: unset;";
+    // for export purposes
+    const buttonStyle = "display: none";
+
+    let text = `<h2 style='${titleStyle}'>${identifier}</h2><p style=${descriptionStyle}>${description}</p>`;
+
+    if (url) {
+      text += `<a style='${urlStyle}' href='${url}' >${url}</a>`;
     }
 
     const symbol = isCollapsed ? "&plus;" : "&minus;";
     const helpText = isCollapsed ? "Expand" : "Collapse";
-    text += `<button class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
+    text += `<button style='${buttonStyle}' class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
 
     // surround with quotes so mermaid doesn't treat content as markdown
-    text = '"' + text + '"';
+    text = `"<div style='${containerStyle}'>${text}</div>"`;
 
     if (shape === "square") return "[" + text + "]";
     else if (shape === "diamond") return "{" + text + "}";
@@ -123,30 +157,18 @@ function jsonToMermaid(
           parentNode +
           arrow +
           thisNode +
-          makeBox(
-            sanitizeForMermaid(thisObj.name),
-            boxShape,
-            thisNode,
-            isCollapsed,
-          ) +
+          makeBox(thisObj, boxShape, thisNode, isCollapsed) +
           "\n";
       } else {
         outputmd +=
-          thisNode +
-          makeBox(
-            sanitizeForMermaid(thisObj.name),
-            boxShape,
-            thisNode,
-            isCollapsed,
-          ) +
-          "\n";
+          thisNode + makeBox(thisObj, boxShape, thisNode, isCollapsed) + "\n";
       }
       // add a click link to the node
       outputmd +=
         "\n click " +
         thisNode +
         ' callback "' +
-        thisObj.short_description +
+        sanitizeForHtml(thisObj.short_description) +
         '"\n';
       // add style to the node
       outputmd = addClasses(thisNode, thisObj, itemType, outputmd);
@@ -171,6 +193,8 @@ function jsonToMermaid(
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });
+  outputmd +=
+    "classDef foo color:#ff00ff; \n";
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
   // output the length of the Mermaid string
@@ -208,7 +232,8 @@ export {
   joinCommaSeparatedString,
   jsonToMermaid,
   removeArrayElement,
-  sanitizeForMermaid,
+  sanitizeForHtml,
+  decodeFromHtml,
   splitCommaSeparatedString,
   getSelfUser,
 };

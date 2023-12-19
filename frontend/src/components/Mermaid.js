@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import mermaid from "mermaid";
-import "./Mermaid.css";
+import "./Mermaid.scss";
 import { jsonToMermaid } from "./utils";
 
 function MermaidChart({

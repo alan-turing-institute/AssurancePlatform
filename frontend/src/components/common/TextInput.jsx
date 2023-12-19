@@ -12,7 +12,7 @@ function useInputCallbacks({
   maxLength,
   validate,
   dirty,
-  multline,
+  multiline,
 }) {
   const [valueInternal, setValueInternal] = React.useState(value);
   const [dirtyInternal, setDirtyInternal] = React.useState(false);
@@ -99,7 +99,7 @@ function useInputCallbacks({
     valueInternal,
     onChange,
     onBlur,
-    onKeydown: multline ? undefined : onKeydown,
+    onKeydown: multiline ? undefined : onKeydown,
   };
 }
 

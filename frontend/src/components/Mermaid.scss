@@ -1,14 +1,17 @@
-/* adjust mermaid's styling to let the button below go out of bounds */
+// styles in this file will not apply to the svg export
+
+// adjust mermaid's styling to let the button below go out of bounds
 foreignObject {
   overflow: visible;
 }
 
 button.collapse-expand {
+  display: block !important;
   border: none;
   background: none;
   color: white;
   font-weight: bolder;
-  /* expand button's hitbox without seeming much bigger */
+  // expand button's hitbox without seeming much bigger
   width: 2rem;
   height: 4rem;
   margin: -2rem -0.5rem -2rem auto;

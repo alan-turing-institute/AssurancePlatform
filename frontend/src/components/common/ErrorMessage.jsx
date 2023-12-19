@@ -8,7 +8,7 @@ function ErrorMessage({ errors }) {
     typeof errors === "string" ? [errors] : Array.isArray(errors) ? errors : [];
 
   return (
-    <ColumnFlow>
+    <ColumnFlow sx={{flexShrink: 1, height: "auto"}}>
       {errorsInternal.map((err) => (
         <Alert key={err} severity="error">
           {err}
