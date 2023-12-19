@@ -18,7 +18,7 @@ global.fetch = jest.fn(() =>
         long_description: "long",
         keywords: "key",
       }),
-  })
+  }),
 );
 
 function WrappedItemEditor({ ...props }) {

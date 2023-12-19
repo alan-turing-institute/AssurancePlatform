@@ -47,7 +47,7 @@ function AddItemButton({
       childType,
       parentId,
       parentType,
-      getIdForNewElement(childType, parentId, parentType)
+      getIdForNewElement(childType, parentId, parentType),
     )
       .then((json) => {
         onRefresh();
@@ -109,7 +109,7 @@ function PropertyField({ id, type, item, fieldName, onRefresh, ...props }) {
           });
       }
     },
-    [token, id, type, item, fieldName, onRefresh]
+    [token, id, type, item, fieldName, onRefresh],
   );
 
   return (
@@ -162,7 +162,7 @@ function PropertySelect({
           });
       }
     },
-    [token, id, type, item, fieldName, onRefresh]
+    [token, id, type, item, fieldName, onRefresh],
   );
 
   return (

@@ -26,7 +26,6 @@ global.fetch = jest.fn(() =>
   }),
 );
 
-
 afterEach(cleanup);
 
 test("renders parent selector layer", () => {

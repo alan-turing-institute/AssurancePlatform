@@ -15,7 +15,7 @@ function MermaidChart({
   const chartmd = useMemo(
     () =>
       jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes),
-    [assuranceCase, selectedType, selectedId, collapsedNodes]
+    [assuranceCase, selectedType, selectedId, collapsedNodes],
   );
 
   // refresh state
@@ -73,7 +73,7 @@ function MermaidChart({
       // don't fire click event on node itself
       e.stopPropagation();
     },
-    []
+    [],
   );
 
   // trigger mermaid reload
@@ -91,7 +91,7 @@ function MermaidChart({
 
         const collapseButtons = document.querySelectorAll(".collapse-expand");
         collapseButtons.forEach((button) =>
-          button.addEventListener("click", onCollapseButtonClick)
+          button.addEventListener("click", onCollapseButtonClick),
         );
       } else {
         console.error("Mermaid div not found");

@@ -75,7 +75,7 @@ function jsonToMermaid(
   in_json,
   highlightedType,
   highlightedId,
-  collapsedNodes
+  collapsedNodes,
 ) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.
@@ -89,7 +89,7 @@ function jsonToMermaid(
     const description = sanitizeForHtml(item["short_description"] ?? "", true);
     let url = sanitizeForHtml(item.URL ?? "");
 
-    if(url && !url.toUpperCase().startsWith("http")){
+    if (url && !url.toUpperCase().startsWith("http")) {
       url = "https://" + url;
     }
 
@@ -210,8 +210,7 @@ function jsonToMermaid(
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });
-  outputmd +=
-    "classDef foo color:#ff00ff; \n";
+  outputmd += "classDef foo color:#ff00ff; \n";
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
   // output the length of the Mermaid string

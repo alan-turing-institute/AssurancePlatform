@@ -57,14 +57,14 @@ function CasePermissionsManagerInner({
       if (group.viewable_cases.includes(caseId)) return "View";
       return "None";
     },
-    [caseId]
+    [caseId],
   );
 
   const getGroupPermission = useCallback(
     (group) => {
       return groupPermissions[group.id];
     },
-    [groupPermissions]
+    [groupPermissions],
   );
 
   const setGroupPermission = useCallback((group, value) => {
@@ -159,7 +159,7 @@ function CasePermissionsManagerInner({
         setErrors(["Could not update permissions."]);
       }
     },
-    [afterSubmit, assuranceCase, caseId, getGroupPermission, groups, token]
+    [afterSubmit, assuranceCase, caseId, getGroupPermission, groups, token],
   );
 
   return (

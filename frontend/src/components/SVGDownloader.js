@@ -8,7 +8,7 @@ class SVGDownloader {
 
     // If metadata is provided, convert it to a string and store it in a data-metadata attribute
     if (metadata) {
-      const metadataStr = sanitizeForHtml(JSON.stringify(metadata))
+      const metadataStr = sanitizeForHtml(JSON.stringify(metadata));
       svgData = svgData.replace(
         "<svg ",
         `<svg data-metadata='${metadataStr}' `,
