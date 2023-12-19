@@ -36,18 +36,32 @@ function AddItemButton({
   parentType,
   onRefresh,
   setErrors,
+  getIdForNewElement,
 }) {
   const [token] = useLoginToken();
 
   const onClick = useCallback(() => {
-    // TODO wire into #322
-    createItem(token, childType, parentId, parentType, "TODO")
+    createItem(
+      token,
+      childType,
+      parentId,
+      parentType,
+      getIdForNewElement(childType, parentId, parentType)
+    )
       .then(() => onRefresh())
       .catch((err) => {
         console.error(err);
         setErrors(["Could not add " + niceNameforType(childType)]);
       });
-  }, [token, childType, parentId, parentType, onRefresh, setErrors]);
+  }, [
+    token,
+    childType,
+    parentId,
+    parentType,
+    onRefresh,
+    setErrors,
+    getIdForNewElement,
+  ]);
 
   return (
     <Button
@@ -159,7 +173,15 @@ function PropertySelect({
   );
 }
 
-function ItemEditor({ caseId, assuranceCase, id, type, onRefresh, onHide }) {
+function ItemEditor({
+  caseId,
+  assuranceCase,
+  id,
+  type,
+  onRefresh,
+  onHide,
+  getIdForNewElement,
+}) {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
   // TODO #298 prune fields
@@ -357,6 +379,7 @@ function ItemEditor({ caseId, assuranceCase, id, type, onRefresh, onHide }) {
                   parentType={type}
                   onRefresh={onRefresh}
                   setErrors={setErrors}
+                  getIdForNewElement={getIdForNewElement}
                 />
               ))}
               {configData.navigation[type]["parent_relation"] ===

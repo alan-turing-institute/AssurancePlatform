@@ -1,11 +1,5 @@
 import React, { useCallback, useState } from "react";
-import {
-  Button,
-  Divider,
-  ListItemIcon,
-  MenuItem,
-  Paper,
-} from "@mui/material";
+import { Button, Divider, ListItemIcon, MenuItem, Paper } from "@mui/material";
 import { createItem, editCase } from "./caseApi.js";
 import { RowFlow } from "./common/Layout.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
@@ -26,7 +20,15 @@ import CommentSection from "./CommentSection.js";
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import { DisguisedTextInput } from "./common/TextInput.jsx";
 
-function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
+function CaseTopBar({
+  sx,
+  assuranceCase,
+  caseId,
+  onRefresh,
+  setErrors,
+  getIdForNewElement,
+  updateAllIdentifiers,
+}) {
   const [token] = useLoginToken();
   const navigate = useNavigate();
 
@@ -41,24 +43,23 @@ function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
   const setCaseName = useCallback(
     (name) => {
       editCase(token, caseId, { name })
-      .then(() => onRefresh())
-      .catch((err) => {
-        console.error(err);
-        setNameError("Could not change case name");
-      });
+        .then(() => onRefresh())
+        .catch((err) => {
+          console.error(err);
+          setNameError("Could not change case name");
+        });
     },
     [token, caseId, onRefresh]
   );
 
   const addGoal = useCallback(() => {
-    // TODO wire into #322
-    createItem(token, "TopLevelNormativeGoal", caseId, "AssuranceCase", "TODO")
+    createItem(token, "TopLevelNormativeGoal", caseId, "AssuranceCase", getIdForNewElement("TopLevelNormativeGoal", caseId, "AssuranceCase"))
       .then(() => onRefresh())
       .catch((err) => {
         console.error(err);
         setErrors(["Could not add goal"]);
       });
-  }, [token, caseId, onRefresh, setErrors]);
+  }, [token, caseId, onRefresh, setErrors, getIdForNewElement]);
 
   const onA11yClick = useCallback(() => {
     setA11yOpen(true);
@@ -170,6 +171,11 @@ function CaseTopBar({ sx, assuranceCase, caseId, onRefresh, setErrors }) {
       <Button
         sx={{ marginLeft: "auto" }}
         variant="outlined"
+        onClick={updateAllIdentifiers}
+      >
+        Reset names
+      </Button>
+      <Button
         onClick={addGoal}
         startIcon={<Add />}
       >

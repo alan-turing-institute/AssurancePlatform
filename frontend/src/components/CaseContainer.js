@@ -4,17 +4,12 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import MermaidChart from "./Mermaid";
 import ItemEditor from "./ItemEditor.js";
 import { useEnforceLogin, useLoginToken } from "../hooks/useAuth";
-
+import { getParentPropertyClaims, visitCaseItem } from "./utils.js";
+import configData from "../config.json";
 import "./CaseContainer.css";
-import {
-  Box,
-  IconButton,
-  Paper,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, IconButton, Paper, Typography, useTheme } from "@mui/material";
 import LoadingSpinner from "./common/LoadingSpinner.jsx";
-import { getCase } from "./caseApi.js";
+import { editItem, getCase } from "./caseApi.js";
 import CaseTopBar from "./CaseTopBar.jsx";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { Add, Subtract, Target } from "./common/Icons.jsx";
@@ -29,6 +24,7 @@ function CaseContainer() {
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState([]);
   const [assuranceCase, setAssuranceCase] = useState();
+  const [identifiers, setIdentifiers] = useState(new Set());
 
   // pair state so they can be updated together with only one re-render
   const [selected, setSelected] = useState([]);
@@ -45,6 +41,7 @@ function CaseContainer() {
     setAssuranceCase();
     setIsLoading(true);
     setErrors([]);
+    setIdentifiers(new Set());
   }, [caseSlug]);
 
   // open edit window on select item
@@ -113,6 +110,135 @@ function CaseContainer() {
     };
   }, []);
 
+  useEffect(() => {
+    if (assuranceCase) {
+      setIdentifiers(
+        (oldSet) => new Set([...oldSet, ...updateIdList(assuranceCase)])
+      );
+    }
+  }, [assuranceCase]);
+
+  const getIdForNewElement = useCallback(
+    /**
+     * @param {string} type
+     * @param {string} parentId
+     * @param {string} parentType
+     * @returns {string}
+     */
+    (type, parentId, parentType) => {
+      let prefix = configData.navigation[type].db_name
+        .substring(0, 1)
+        .toUpperCase();
+
+      if (type === "PropertyClaim") {
+        const parents = getParentPropertyClaims(
+          assuranceCase,
+          parentId,
+          parentType
+        );
+        if (parents.length > 0) {
+          const parent = parents[parents.length - 1];
+          prefix = parent.name + ".";
+        }
+      }
+
+      let i = 1;
+      while (identifiers.has(prefix + i)) {
+        i++;
+      }
+
+      return prefix + i;
+    },
+    [assuranceCase, identifiers]
+  );
+
+  const updateAllIdentifiers = useCallback(() => {
+    setIsLoading(true);
+
+    const promises = [];
+
+    const newIdentifiers = new Set();
+
+    const foundEvidence = new Set();
+
+    function updateItem(item, type, parents) {
+      let prefix = configData.navigation[type].db_name
+        .substring(0, 1)
+        .toUpperCase();
+
+      if (type === "PropertyClaim") {
+        const claimParents = parents.filter((t) => t.type === "PropertyClaim");
+        if (claimParents.length > 0) {
+          const parent = claimParents[claimParents.length - 1];
+          prefix = parent.name + ".";
+        }
+      }
+
+      let i = 1;
+      while (newIdentifiers.has(prefix + i)) {
+        i++;
+      }
+
+      const newName = prefix + i;
+      newIdentifiers.add(newName);
+      if (item.name === newName) {
+        // don't need to post an update
+        return [item, type, parents];
+      }
+
+      const itemCopy = { ...item };
+      itemCopy.name = newName;
+      promises.push(editItem(token, item.id, type, { name: newName }));
+
+      return [itemCopy, type, parents];
+    }
+
+    // run breadth first search
+    /** @type [any, string, any[]] */
+    const caseItemQueue = assuranceCase.goals.map((i) =>
+      updateItem(i, "TopLevelNormativeGoal", [])
+    );
+
+    while (caseItemQueue.length > 0) {
+      const [node, nodeType, parents] = caseItemQueue.shift();
+      const newParents = [...parents, node];
+
+      configData.navigation[nodeType]["children"].forEach((childName, j) => {
+        const childType = configData.navigation[nodeType]["children"][j];
+        const dbName = configData.navigation[childName]["db_name"];
+        if (Array.isArray(node[dbName])) {
+          node[dbName].forEach((child) => {
+            if (childType === "Evidence" && foundEvidence.has(child.id)) {
+              // already found this, skip
+              return;
+            }
+
+            caseItemQueue.push(updateItem(child, childType, newParents));
+            if (childType === "Evidence") {
+              foundEvidence.add(child.id);
+            }
+          });
+        }
+      });
+    }
+
+    setIdentifiers(newIdentifiers);
+
+    if (promises.length === 0) {
+      setIsLoading(false);
+    } else {
+      Promise.all(promises)
+        .then(() => {
+          setShouldFetch(true);
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrors(["An error occurred"]);
+          setIsLoading(false);
+        });
+    }
+  }, [assuranceCase, token]);
+
   return (
     <>
       {isLoading || !assuranceCase ? (
@@ -141,6 +267,8 @@ function CaseContainer() {
               assuranceCase={assuranceCase}
               onRefresh={triggerRefresh}
               setErrors={setErrors}
+              getIdForNewElement={getIdForNewElement}
+              updateAllIdentifiers={updateAllIdentifiers}
             />
             <ErrorMessage errors={errors} />
             <TransformWrapper
@@ -216,6 +344,7 @@ function CaseContainer() {
                 assuranceCase={assuranceCase}
                 onRefresh={triggerRefresh}
                 onHide={hideEditLayer}
+                getIdForNewElement={getIdForNewElement}
               />
             </ColumnFlow>
           ) : (
@@ -225,6 +354,17 @@ function CaseContainer() {
       )}
     </>
   );
+}
+
+/** @returns {string[]}  */
+function updateIdList(assuranceCase) {
+  const set = [];
+  assuranceCase.goals.forEach((goal) => {
+    visitCaseItem(goal, (item) => {
+      set.push(item.name);
+    });
+  });
+  return set;
 }
 
 export default CaseContainer;

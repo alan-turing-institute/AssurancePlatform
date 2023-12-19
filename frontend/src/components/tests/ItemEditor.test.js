@@ -12,7 +12,7 @@ global.fetch = jest.fn(() =>
     json: () =>
       Promise.resolve({
         id: 1,
-        name: "Test goal",
+        name: "G1",
         short_description: "short",
         long_description: "long",
         keywords: "key",
@@ -26,26 +26,21 @@ beforeEach(() => {
 
 test("renders item editor layer", async () => {
   render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
-  await waitFor(() =>
-    expect(screen.getByDisplayValue("Test goal")).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(screen.getByText("Edit G1")).toBeInTheDocument());
 });
 
 test("updates item properties correctly", async () => {
   render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
 
-  await waitFor(() => screen.getByDisplayValue("Test goal"));
-  const nameInput = screen.getByDisplayValue("Test goal");
+  await waitFor(() => screen.getByText("Edit G1"));
   const shortDescInput = screen.getByDisplayValue("short");
   const longDescInput = screen.getByDisplayValue("long");
   const keywordsInput = screen.getByDisplayValue("key");
 
-  fireEvent.change(nameInput, { target: { value: "Updated name" } });
   fireEvent.change(shortDescInput, { target: { value: "Updated short" } });
   fireEvent.change(longDescInput, { target: { value: "Updated long" } });
   fireEvent.change(keywordsInput, { target: { value: "Updated key" } });
 
-  expect(nameInput.value).toBe("Updated name");
   expect(shortDescInput.value).toBe("Updated short");
   expect(longDescInput.value).toBe("Updated long");
   expect(keywordsInput.value).toBe("Updated key");
