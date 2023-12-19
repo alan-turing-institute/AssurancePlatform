@@ -62,6 +62,14 @@ export function Draft({ ...props }) {
     return <Icon {...props} Component={DraftSvg} />;
 }
 
+export function Module({ ...props }) {
+  return <Icon {...props} Component={ModuleSvg} />;
+}
+
+export function NodesThree({ ...props }) {
+  return <Icon {...props} Component={NodesThreeSvg} />;
+}
+
 export function Remove({ ...props }) {
   return <Icon {...props} Component={RemoveSvg} />;
 }

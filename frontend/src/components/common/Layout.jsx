@@ -2,6 +2,7 @@ import * as React from "react";
 import Box from "@mui/material/Box";
 import { Button, Container, Paper, useTheme } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
+import { Module, NodesThree } from "./Icons";
 
 export function ColumnFlow({ sx, ...props }) {
   return (
@@ -62,7 +63,11 @@ function SideNav({ to, ...props }) {
   return (
     <Button
       component={Link}
-      sx={{ marginRight: "auto", fontWeight: isActive ? "bold" : undefined }}
+      sx={{
+        marginRight: "auto",
+        fontWeight: isActive ? "bold" : undefined,
+        textDecoration: isActive ? "underline" : undefined,
+      }}
       {...props}
       to={to}
       variant="text"
@@ -92,19 +97,25 @@ export function LayoutWithNav({ children }) {
           borderRightStyle: "solid",
           borderRightWidth: "1px",
           borderRightColor: theme.palette.primary.main,
+          padding: "1rem",
+          gap: "1.5rem",
         }}
       >
-        <SideNav to="/">Assurance cases</SideNav>
+        <SideNav to="/" startIcon={<NodesThree />}>
+          Assurance cases
+        </SideNav>
         {/* TODO figure out what to do with these pages */}
         {/* <SideNav to="/groups">Groups</SideNav>
         <SideNav to="/github">Github files</SideNav> */}
         <Button
+          startIcon={<Module />}
           sx={{ marginRight: "auto" }}
           href="https://alan-turing-institute.github.io/AssurancePlatform/"
           target="_blank"
           variant="text"
         >
-          Methodology support
+          {/* TODO add external link icon */}
+          Documentation
         </Button>
       </Box>
       <Box
