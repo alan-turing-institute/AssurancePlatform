@@ -175,7 +175,6 @@ function PropertySelect({
 
 function ItemEditor({
   caseId,
-  assuranceCase,
   id,
   type,
   onRefresh,
@@ -193,18 +192,13 @@ function ItemEditor({
 
   const [token] = useLoginToken();
 
-  // refresh state
+  // fetch item
   useEffect(() => {
-    if (id && type) {
+    if (token) {
       setLoading(true);
       setErrors([]);
       setItem(undefined);
-    }
-  }, [id, type]);
 
-  // fetch item
-  useEffect(() => {
-    if (token && assuranceCase) {
       let isMounted = true;
 
       getItem(token, id, type)
@@ -231,7 +225,7 @@ function ItemEditor({
         isMounted = false;
       };
     }
-  }, [token, assuranceCase, id, type]);
+  }, [token, id, type]);
 
   const onDeleteClick = useCallback(() => {
     setDeleteModalOpen(true);
@@ -388,7 +382,7 @@ function ItemEditor({
                   <ParentSelector
                     type={type}
                     id={id}
-                    assuranceCase={assuranceCase}
+                    caseId={caseId}
                     value={parentToAdd}
                     setValue={setParentToAdd}
                     potential={true}
@@ -403,7 +397,7 @@ function ItemEditor({
                   <ParentSelector
                     type={type}
                     id={id}
-                    assuranceCase={assuranceCase}
+                    caseId={caseId}
                     value={parentToRemove}
                     setValue={setParentToRemove}
                     potential={false}

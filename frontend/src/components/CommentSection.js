@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import ModalDialog from "./common/ModalDialog.jsx";
 import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { Button, Typography } from "@mui/material";
-import useId from "@mui/material/utils/useId.js";
+import useId from "@mui/utils/useId";
 import TextInput from "./common/TextInput.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
 

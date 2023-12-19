@@ -77,7 +77,6 @@ function CaseImporterFlow({ titleId, onClose }) {
 
   const postCaseJSON = useCallback(
     (json_str) => {
-      console.log(json_str);
       const requestOptions = {
         method: "POST",
         headers: {
@@ -161,7 +160,6 @@ function CaseImporterFlow({ titleId, onClose }) {
           const metadataStr = svgElement.getAttribute("data-metadata");
           try {
             const metadataJSON = JSON.parse(metadataStr);
-            console.log(metadataJSON);
             setFileJson(metadataJSON);
           } catch (err) {
             // TODO error could be better

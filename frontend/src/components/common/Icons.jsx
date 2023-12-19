@@ -1,3 +1,4 @@
+import React from "react";
 import { SvgIcon } from "@mui/material";
 import { ReactComponent as AddSvg } from "../../images/add-1--expand-cross-buttons-button-more-remove-plus-add-+-mathematics-math.svg";
 import { ReactComponent as ArrowTopRightSvg } from "../../images/arrow-diagonal-top-right-large--keyboard-top-arrow-right-up-large-head.svg";
@@ -44,7 +45,6 @@ export function Add({ ...props }) {
 export function ArrowRight({ ...props }) {
   return <Icon {...props} Component={ArrowRightSvg} />;
 }
-
 
 export function ArrowTopRight({ ...props }) {
     return <Icon {...props} Component={ArrowTopRightSvg} />;

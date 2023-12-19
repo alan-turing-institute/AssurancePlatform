@@ -1,5 +1,5 @@
 import { Box, IconButton, Menu } from "@mui/material";
-import useId from "@mui/material/utils/useId";
+import useId from "@mui/utils/useId";
 import * as React from "react";
 import { useRef } from "react";
 import { VerticalMenu } from "./Icons";

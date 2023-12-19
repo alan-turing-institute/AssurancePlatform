@@ -3,7 +3,7 @@ import SelectInput from "./common/SelectInput.jsx";
 import { itemGetCurrentParents, itemGetPotentialParents } from "./caseApi.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 
-function ParentSelector({ type, id, potential, assuranceCase, value, setValue }) {
+function ParentSelector({ type, id, potential, caseId, value, setValue }) {
   // A dropdown menu component for selecting parents of an item. The props are:
   // type: Item type of the one whose parents we want to select from.
   // id: Id of the item whose parents we want to select from.
@@ -30,7 +30,7 @@ function ParentSelector({ type, id, potential, assuranceCase, value, setValue })
         } else {
           let potentialParents = await itemGetPotentialParents(
             token,
-            assuranceCase.id,
+            caseId,
             type
           );
           if (!isMounted) {
@@ -53,7 +53,7 @@ function ParentSelector({ type, id, potential, assuranceCase, value, setValue })
     return () => {
       isMounted = false;
     };
-  }, [token, assuranceCase, id, type, potential]);
+  }, [token, caseId, id, type, potential]);
 
   const valueInner = value?.id ?? "";
 

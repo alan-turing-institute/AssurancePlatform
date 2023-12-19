@@ -7,7 +7,7 @@ import {
   MenuItem,
   Select,
 } from "@mui/material";
-import useId from "@mui/material/utils/useId";
+import useId from "@mui/utils/useId";
 
 function SelectInput({
   label,

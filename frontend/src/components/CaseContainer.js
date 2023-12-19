@@ -341,7 +341,6 @@ function CaseContainer() {
                 caseId={caseSlug}
                 id={selectedId}
                 type={selectedType}
-                assuranceCase={assuranceCase}
                 onRefresh={triggerRefresh}
                 onHide={hideEditLayer}
                 getIdForNewElement={getIdForNewElement}
