@@ -41,6 +41,7 @@ function Theming({ children }) {
           root: {
             textTransform: "none",
             borderRadius: "3.125rem",
+            borderWidth: "2px",
           }
         },
         defaultProps: {

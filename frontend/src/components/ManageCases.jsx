@@ -155,6 +155,7 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
             height: "50%",
             textDecoration: "none",
             color: "unset",
+            overflow: "hidden"
           }}
         >
           <Typography variant="h3" component="h2">
@@ -164,12 +165,14 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
             variant="body2"
             sx={{
               flexGrow: 1,
+              flexShrink:1,
               textWrap: "wrap",
               textOverflow: "ellipsis",
               overflow: "clip",
+              minHeight: 0
             }}
           >
-            {description}
+            {description?.split("\n").map(str => <>{str}<br/></>)}
           </Typography>
           {/* TODO, designs would prefer the updated date */}
           <Typography variant="body2">

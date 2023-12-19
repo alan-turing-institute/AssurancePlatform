@@ -61,7 +61,7 @@ function DeleteCaseModal({ isOpen, onClose, caseId, onDelete }) {
               >
                 Cancel
               </Button>
-              <Button variant="delete" onClick={onDeleteClick} endIcon={<Bin/>}>
+              <Button variant="text" color="error" onClick={onDeleteClick} endIcon={<Bin/>}>
                 Delete
               </Button>
             </>

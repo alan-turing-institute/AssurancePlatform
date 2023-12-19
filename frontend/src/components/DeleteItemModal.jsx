@@ -62,7 +62,7 @@ function DeleteItemModal({ isOpen, onClose, id, type, name, onDelete }) {
               >
                 Cancel
               </Button>
-              <Button variant="delete" onClick={onDeleteClick} endIcon={<Bin/>}>
+              <Button variant="text" color="error" onClick={onDeleteClick} endIcon={<Bin/>}>
                 Delete
               </Button>
             </>

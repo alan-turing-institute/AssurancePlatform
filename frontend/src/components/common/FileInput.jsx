@@ -1,6 +1,7 @@
 import "./FileInput.scss";
 import { Button, IconButton, Typography, useTheme } from "@mui/material";
 import React, { useCallback, useRef } from "react";
+import { Remove } from "./Icons";
 
 function FileInput({ file, setFile, accept }) {
   const fileInputRef = useRef(null);
@@ -40,7 +41,7 @@ function FileInput({ file, setFile, accept }) {
         <>
           <Typography>{file.name}</Typography>
           <IconButton aria-label="clear" onClick={onClear} sx={{zIndex: 2}}>
-            X
+            <Remove/>
           </IconButton>
         </>
       ) : (

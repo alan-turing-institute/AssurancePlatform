@@ -240,19 +240,22 @@ function CaseContainer() {
   }, [assuranceCase, token]);
 
   return (
-    <>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        flexShrink: 1,
+        flexGrow: 1,
+        overflow: "hidden",
+        backgroundImage:
+          "radial-gradient(circle at 1rem 1rem, #EDF2F7 0.25rem, transparent 0)",
+        backgroundSize: "2rem 2rem",
+      }}
+    >
       {isLoading || !assuranceCase ? (
         <LoadingSpinner color="inherit" />
       ) : (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-            flexShrink: 1,
-            flexGrow: 1,
-            overflow: "hidden",
-          }}
-        >
+        <>
           <ColumnFlow
             sx={{
               flexGrow: 1,
@@ -292,7 +295,7 @@ function CaseContainer() {
                     />
                   </TransformComponent>
                   <RowFlow>
-                    <Paper sx={{ marginLeft: "auto" }}>
+                    <Paper sx={{ marginLeft: "auto", padding: "0.25rem" }}>
                       <IconButton
                         size="small"
                         aria-label="re-centre"
@@ -301,7 +304,7 @@ function CaseContainer() {
                         <Target fontSize="small" />
                       </IconButton>
                     </Paper>
-                    <Paper>
+                    <Paper sx={{ padding: "0.25rem" }}>
                       <RowFlow>
                         <IconButton
                           size="small"
@@ -336,6 +339,7 @@ function CaseContainer() {
                 borderLeftStyle: "solid",
                 borderLeftWidth: "1px",
                 borderLeftColor: theme.palette.primary.main,
+                backgroundColor: "#FAFAFA"
               }}
             >
               <ItemEditor
@@ -351,9 +355,9 @@ function CaseContainer() {
           ) : (
             <></>
           )}
-        </Box>
+        </>
       )}
-    </>
+    </Box>
   );
 }
 

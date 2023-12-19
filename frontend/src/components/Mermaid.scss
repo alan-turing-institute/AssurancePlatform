@@ -3,21 +3,36 @@
 // adjust mermaid's styling to let the button below go out of bounds
 foreignObject {
   overflow: visible;
+  position: relative;
 }
 
 button.collapse-expand {
+  // undo hiding for export purposes
   display: block !important;
+  position: absolute;
+  right: -2rem;
+  bottom: -1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 100%;
   border: none;
-  background: none;
+  background-color: #0F76B8;
   color: white;
-  font-weight: bolder;
-  // expand button's hitbox without seeming much bigger
-  width: 2rem;
-  height: 4rem;
-  margin: -2rem -0.5rem -2rem auto;
-  padding-left: 0.5rem;
-}
+  cursor: pointer;
 
-button.collapse-expand:hover {
-  color: yellow;
+  padding: 0.5rem;
+
+  &:hover, &:focus {
+    background-color: #37597b;
+  }
+
+  // undo mermaid messing with our svgs
+  svg {
+    pointer-events: none;
+
+    path {
+      stroke: currentColor !important;
+      fill: none !important;
+    }
+  }
 }

@@ -62,6 +62,10 @@ export function Draft({ ...props }) {
     return <Icon {...props} Component={DraftSvg} />;
 }
 
+export function Remove({ ...props }) {
+  return <Icon {...props} Component={RemoveSvg} />;
+}
+
 export function Share({ ...props }) {
     return <Icon {...props} Component={ShareSvg} />;
 }

@@ -355,7 +355,8 @@ function ItemEditor({
                 <></>
               )}
               <Button
-                variant="delete"
+                variant="text"
+                color="error"
                 sx={{ marginRight: "auto" }}
                 startIcon={<Bin />}
                 onClick={onDeleteClick}
