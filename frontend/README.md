@@ -43,36 +43,24 @@ Components in this codebase contribute to the Assurance Platform web app:
 - [CaseContainer](src/components/CaseContainer.js): this is the main "view" of
   an assurance case. It contains several other components in different areas of
   the screen (these may or may not be visible, depending on the state variables
-  that control whether some _layers_ are shown or not). This class also contains
-  the function that converts the JSON obtained from a GET request to the
-  `cases/<case_id>` API endpoint, into the markdown string that is used by
-  Mermaid.
-- [CaseSelector](src/components/CaseSelector.js). Essentially a drop-down menu
-  that allows the user to select which case to load from the database.
-- [CaseCreator](src/components/CaseCreator.js). A form that allows a user to
+  that control whether some _layers_ are shown or not).
+- [CaseCreator](src/components/CaseCreator.js). A modal that allows a user to
   create a new AssuranceCase, and POSTs it to the API endpoint that then adds it
-  to the database.
-- [ItemViewer](src/components/ItemViewer.js) Text view of any DB object other
-  than an AssuranceCase (i.e. it could be a TopLevelNormativeGoal, Context,
-  PropertyClaim, Argument, EvidentialClaim, or Evidence). The type of object to
-  be displayed is passed to the component via the "type" prop. The component
-  itself is shown as a layer on CaseContainer when a node on the mermaid chart
-  is clicked.
+  to the database. The user can start from templates or import existing cases.
+- [CaseTopBar](src/components/CaseTopBar.jsx). The top later of the case container, with controls for editing the assurance case itself.
 - [ItemEditor](src/components/ItemEditor.js) The layer containing the ItemEditor
-  component is shown when the "Edit" button on an ItemViewer is clicked. This
+  component is shown when an element on the chart is clicked. This
   component allows the details of any DB object other than an AssuranceCase to
   be edited.
-- [ItemCreator](src/components/ItemCreator.js) This component is shown in the
-  createLayer in CaseContainer, when a "Create a new XYZ" button is clicked on
-  the ItemEditor. It will create a new DB object of the specified type, which is
-  a child of the object that was visible in the ItemEditor.
+- [Layout](src/components/common/Layout.jsx) Contains layouts used by multiple pages.
+- [Manage cases](src/components/ManageCases.jsx) This is the home page for a logged in user. It allows them to see a list of their existing cases, or to create new ones.
 - [Mermaid](src/components/Mermaid.js) This is the component that draws the
   actual chart. The markdown for the chart is passed to the component via the
-  `chartmd` prop.
-- [Home](src/components/Home.js) Very basic homescreen containing navigation
-  options to the CaseCreator and CaseSelector.
+  `chartmd` prop. It is also responsible for turning the case JSON into markdown.
+- [Home](src/components/Home.js) Very basic homescreen.
 - [Routes](src/components/Routes.js) Define routes for the homepage, the
-  CaseCreator, CaseSelector, and CaseContainer components.
+  ManageCases, CaseSelector, and CaseContainer components.
+- [Theming](src/Theming.jsx) Used to style material ui components across the entire app.
 
 ## Configuration
 
