@@ -269,6 +269,7 @@ function CaseContainer() {
               setErrors={setErrors}
               getIdForNewElement={getIdForNewElement}
               updateAllIdentifiers={updateAllIdentifiers}
+              setSelected={setSelected}
             />
             <ErrorMessage errors={errors} />
             <TransformWrapper
@@ -344,6 +345,7 @@ function CaseContainer() {
                 onRefresh={triggerRefresh}
                 onHide={hideEditLayer}
                 getIdForNewElement={getIdForNewElement}
+                setSelected={setSelected}
               />
             </ColumnFlow>
           ) : (

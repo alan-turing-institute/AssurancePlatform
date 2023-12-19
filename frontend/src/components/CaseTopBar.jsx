@@ -28,6 +28,7 @@ function CaseTopBar({
   setErrors,
   getIdForNewElement,
   updateAllIdentifiers,
+  setSelected
 }) {
   const [token] = useLoginToken();
   const navigate = useNavigate();
@@ -54,12 +55,15 @@ function CaseTopBar({
 
   const addGoal = useCallback(() => {
     createItem(token, "TopLevelNormativeGoal", caseId, "AssuranceCase", getIdForNewElement("TopLevelNormativeGoal", caseId, "AssuranceCase"))
-      .then(() => onRefresh())
+      .then((json) => {
+        onRefresh();
+        setSelected([json.id.toString(), "TopLevelNormativeGoal"]);
+      })
       .catch((err) => {
         console.error(err);
         setErrors(["Could not add goal"]);
       });
-  }, [token, caseId, onRefresh, setErrors, getIdForNewElement]);
+  }, [token, caseId, onRefresh, setErrors, getIdForNewElement, setSelected]);
 
   const onA11yClick = useCallback(() => {
     setA11yOpen(true);

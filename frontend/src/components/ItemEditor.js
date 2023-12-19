@@ -37,6 +37,7 @@ function AddItemButton({
   onRefresh,
   setErrors,
   getIdForNewElement,
+  setSelected,
 }) {
   const [token] = useLoginToken();
 
@@ -48,7 +49,10 @@ function AddItemButton({
       parentType,
       getIdForNewElement(childType, parentId, parentType)
     )
-      .then(() => onRefresh())
+      .then((json) => {
+        onRefresh();
+        setSelected([json.id.toString(), childType]);
+      })
       .catch((err) => {
         console.error(err);
         setErrors(["Could not add " + niceNameforType(childType)]);
@@ -61,6 +65,7 @@ function AddItemButton({
     onRefresh,
     setErrors,
     getIdForNewElement,
+    setSelected,
   ]);
 
   return (
@@ -180,6 +185,7 @@ function ItemEditor({
   onRefresh,
   onHide,
   getIdForNewElement,
+  setSelected,
 }) {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
@@ -364,51 +370,60 @@ function ItemEditor({
                 type={type}
                 name={item.name}
               />
-              <Typography fontWeight="bold">Link to {item.name}</Typography>
-              {configData.navigation[type].children.map((childType) => (
-                <AddItemButton
-                  key={childType}
-                  childType={childType}
-                  parentId={id}
-                  parentType={type}
-                  onRefresh={onRefresh}
-                  setErrors={setErrors}
-                  getIdForNewElement={getIdForNewElement}
-                />
-              ))}
-              {configData.navigation[type]["parent_relation"] ===
-              "many-to-many" ? (
+              {configData.navigation[type].children.length ||
+              configData.navigation[type]["parent_relation"] ===
+                "many-to-many" ? (
                 <>
-                  <ParentSelector
-                    type={type}
-                    id={id}
-                    caseId={caseId}
-                    value={parentToAdd}
-                    setValue={setParentToAdd}
-                    potential={true}
-                  />
-                  <Button
-                    variant="outlined"
-                    sx={{ marginRight: "auto" }}
-                    onClick={submitAddParent}
-                  >
-                    Add parent
-                  </Button>
-                  <ParentSelector
-                    type={type}
-                    id={id}
-                    caseId={caseId}
-                    value={parentToRemove}
-                    setValue={setParentToRemove}
-                    potential={false}
-                  />
-                  <Button
-                    variant="outlined"
-                    sx={{ marginRight: "auto" }}
-                    onClick={submitRemoveParent}
-                  >
-                    Remove parent
-                  </Button>
+                  <Typography fontWeight="bold">Link to {item.name}</Typography>
+                  {configData.navigation[type].children.map((childType) => (
+                    <AddItemButton
+                      key={childType}
+                      childType={childType}
+                      parentId={id}
+                      parentType={type}
+                      onRefresh={onRefresh}
+                      setErrors={setErrors}
+                      getIdForNewElement={getIdForNewElement}
+                      setSelected={setSelected}
+                    />
+                  ))}
+                  {configData.navigation[type]["parent_relation"] ===
+                  "many-to-many" ? (
+                    <>
+                      <ParentSelector
+                        type={type}
+                        id={id}
+                        caseId={caseId}
+                        value={parentToAdd}
+                        setValue={setParentToAdd}
+                        potential={true}
+                      />
+                      <Button
+                        variant="outlined"
+                        sx={{ marginRight: "auto" }}
+                        onClick={submitAddParent}
+                      >
+                        Add parent
+                      </Button>
+                      <ParentSelector
+                        type={type}
+                        id={id}
+                        caseId={caseId}
+                        value={parentToRemove}
+                        setValue={setParentToRemove}
+                        potential={false}
+                      />
+                      <Button
+                        variant="outlined"
+                        sx={{ marginRight: "auto" }}
+                        onClick={submitRemoveParent}
+                      >
+                        Remove parent
+                      </Button>
+                    </>
+                  ) : (
+                    <></>
+                  )}
                 </>
               ) : (
                 <></>
