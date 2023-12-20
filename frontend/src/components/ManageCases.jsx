@@ -164,6 +164,8 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
           <Typography
             variant="body2"
             sx={{
+              // TODO this will show elipses when the text is too wide vertically
+              // but not horizontally. CSS has no easy solution here.
               flexGrow: 1,
               flexShrink:1,
               textWrap: "wrap",

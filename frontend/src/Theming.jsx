@@ -27,6 +27,9 @@ function Theming({ children }) {
         dark: "#37597B",
         contrastText: "#FFFFFF",
       },
+      error: {
+        main: "#E42451",
+      },
       background: {
         default: "#FAFAFA",
         paper: "#FFFFFF",
@@ -41,8 +44,8 @@ function Theming({ children }) {
           root: {
             textTransform: "none",
             borderRadius: "3.125rem",
-            borderWidth: "2px",
-          }
+            borderWidth: "2px !important", // else its lost on hover...
+          },
         },
         defaultProps: {
           variant: "contained",

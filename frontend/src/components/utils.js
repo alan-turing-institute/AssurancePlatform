@@ -89,7 +89,7 @@ function jsonToMermaid(
     const description = sanitizeForHtml(item["short_description"] ?? "", true);
     let url = sanitizeForHtml(item.URL ?? "");
 
-    if(url && !url.toUpperCase().startsWith("http")){
+    if (url && !url.toUpperCase().startsWith("http")) {
       url = "https://" + url;
     }
 
@@ -99,6 +99,8 @@ function jsonToMermaid(
       "font-family: Plus Jakarta Sans, sans-serif;font-size: 0.875rem;font-style: normal;font-weight: 500;line-height: 150%;width:15.5rem;;display:flex;flex-direction:column";
     const titleStyle =
       "font-size: 1rem;font-weight: 700;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
+    // TODO this will show elipses when the text is too wide vertically
+    // but not horizontally. CSS has no easy solution here.
     const descriptionStyle =
       "max-height:3.25rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
     const urlStyle = "color: unset;";
@@ -210,8 +212,7 @@ function jsonToMermaid(
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });
-  outputmd +=
-    "classDef foo color:#ff00ff; \n";
+  outputmd += "classDef foo color:#ff00ff; \n";
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
   // output the length of the Mermaid string
@@ -262,7 +263,7 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
     // recurse to make deep copies of the child arrays, if they exist
     if (Array.isArray(copy[dbName])) {
       copy[dbName] = copy[dbName].map((g) =>
-        visitCaseItem(g, callback, childType),
+        visitCaseItem(g, callback, childType)
       );
     }
   });
