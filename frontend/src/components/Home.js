@@ -1,33 +1,53 @@
 import React, { useState, useEffect } from "react";
-import mockup_diagram from "../images/mockup-diagram.png";
-import { CardMedia, Container, Typography } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import ManageCases from "./ManageCases";
 import { useLoginToken } from "../hooks/useAuth";
+import Login from "./Login";
+import { ColumnFlow } from "./common/Layout";
+import splashImage from "../images/building-an-assurance-case-adjusted-aspect-ratio.png";
 
 const Splash = () => {
-  // TODO #302 make a nicer splash screen
+  // TODO #302 add content to splash screen
+  const theme = useTheme();
+
   return (
-    <Container
+    <Box
       sx={{
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
         flexShrink: 1,
+        flexGrow: 1,
         overflow: "hidden",
       }}
     >
-      <Typography variant="h1">Ethical Assurance Platform</Typography>
-      <CardMedia
+      <ColumnFlow
         sx={{
+          flexGrow: 1,
           flexShrink: 1,
-          objectFit: "contain",
-          width: "100%",
-          height: "100%",
+          // TODO use SVG instead - but that would involve tweaking the aspect ratio of the svg
+          // and repairing the odd background at the border
+          backgroundImage: `url(${splashImage})`,
+          backgroundRepeat: "no-repeat",
+          backgroundColor: "#63c0d5",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
-        component="img"
-        image={mockup_diagram}
-        alt="Ethical Assurance flowchart"
-      />
-    </Container>
+      ></ColumnFlow>
+      <ColumnFlow
+        sx={{
+          width: "35.375rem",
+          maxWidth: "100%",
+          flexShrink: 0,
+          padding: "2.25rem 1.5rem",
+          borderLeftStyle: "solid",
+          borderLeftWidth: "1px",
+          borderLeftColor: theme.palette.primary.main,
+          backgroundColor: "#FAFAFA",
+        }}
+      >
+        <Login />
+      </ColumnFlow>
+    </Box>
   );
 };
 

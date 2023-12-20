@@ -5,7 +5,7 @@ import Github from "./GithubLogin";
 import { Box, Button, Typography } from "@mui/material";
 import TextInput from "./common/TextInput.jsx";
 import LoadingSpinner from "./common/LoadingSpinner";
-import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
+import { ColumnFlow, RowFlow } from "./common/Layout";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 import { Link } from "react-router-dom";
 import ErrorMessage from "./common/ErrorMessage.jsx";
@@ -66,65 +66,63 @@ const Login = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [username, password, setToken],
+    [username, password, setToken]
   );
 
   return (
-    <ModalLikeLayout>
-      <form noValidate onSubmit={onSubmit}>
-        <ColumnFlow>
-          <Typography variant="h2" component="h1" sx={{ marginBottom: "1rem" }}>
-            Login
-          </Typography>
-          <Box sx={{ marginBottom: "1rem" }}>
-            <Typography>Not already registered?</Typography>
-            <Button component={Link} to="/signup" variant="outlined">
-              Sign-up
-            </Button>
-          </Box>
-          <TextInput
-            label="Username"
-            value={username}
-            setValue={setUsername}
-            error={usernameError}
-            setError={setUsernameError}
-            dirty={dirty}
-            required
-            noRequiredSymbol
-            inputProps={{
-              autoComplete: "username",
-            }}
-          />
-          <TextInput
-            label="Password"
-            type="password"
-            value={password}
-            setValue={setPassword}
-            error={passwordError}
-            setError={setPasswordError}
-            dirty={dirty}
-            required
-            noRequiredSymbol
-            inputProps={{
-              autoComplete: "current-password",
-            }}
-          />
-          <ErrorMessage errors={errors} />
-          <RowFlow>
-            {loading ? (
-              <LoadingSpinner sx={{ margin: "auto" }} />
-            ) : (
-              <>
-                <Github variant="outlined" setLoading={setLoading} />
-                <Button type="submit" sx={{ marginLeft: "auto" }}>
-                  Log in
-                </Button>
-              </>
-            )}
-          </RowFlow>
-        </ColumnFlow>
-      </form>
-    </ModalLikeLayout>
+    <form noValidate onSubmit={onSubmit}>
+      <ColumnFlow>
+        <Typography variant="h2" component="h1" sx={{ marginBottom: "1rem" }}>
+          Login
+        </Typography>
+        <Box sx={{ marginBottom: "1rem" }}>
+          <Typography>Not already registered?</Typography>
+          <Button component={Link} to="/signup" variant="outlined">
+            Sign-up
+          </Button>
+        </Box>
+        <TextInput
+          label="Username"
+          value={username}
+          setValue={setUsername}
+          error={usernameError}
+          setError={setUsernameError}
+          dirty={dirty}
+          required
+          noRequiredSymbol
+          inputProps={{
+            autoComplete: "username",
+          }}
+        />
+        <TextInput
+          label="Password"
+          type="password"
+          value={password}
+          setValue={setPassword}
+          error={passwordError}
+          setError={setPasswordError}
+          dirty={dirty}
+          required
+          noRequiredSymbol
+          inputProps={{
+            autoComplete: "current-password",
+          }}
+        />
+        <ErrorMessage errors={errors} />
+        <RowFlow>
+          {loading ? (
+            <LoadingSpinner sx={{ margin: "auto" }} />
+          ) : (
+            <>
+              <Github variant="outlined" setLoading={setLoading} />
+              <Button type="submit" sx={{ marginLeft: "auto" }}>
+                Log in
+              </Button>
+            </>
+          )}
+        </RowFlow>
+      </ColumnFlow>
+    </form>
   );
 };
 

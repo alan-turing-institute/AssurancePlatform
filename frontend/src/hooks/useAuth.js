@@ -2,7 +2,7 @@ export function useEnforceLogin() {
   const [token] = useLoginToken();
 
   if (token == null) {
-    window.location.replace("/login");
+    window.location.replace("/");
     return false;
   }
 

@@ -48,7 +48,7 @@ function Navigation() {
           <NavLink to="/logout">Logout</NavLink>
         ) : (
           <>
-            <NavLink to="/login">Login</NavLink>
+            <NavLink to="/">Login</NavLink>
             <NavLink to="/signup">Signup</NavLink>
           </>
         )}
