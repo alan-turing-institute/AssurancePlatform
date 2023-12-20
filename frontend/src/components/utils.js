@@ -263,7 +263,7 @@ function visitCaseItem(caseItem, callback, itemType = "TopLevelNormativeGoal") {
     // recurse to make deep copies of the child arrays, if they exist
     if (Array.isArray(copy[dbName])) {
       copy[dbName] = copy[dbName].map((g) =>
-        visitCaseItem(g, callback, childType)
+        visitCaseItem(g, callback, childType),
       );
     }
   });
