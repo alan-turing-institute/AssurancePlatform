@@ -66,7 +66,7 @@ const Login = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [username, password, setToken]
+    [username, password, setToken],
   );
 
   return (
