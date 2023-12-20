@@ -113,7 +113,7 @@ function CaseContainer() {
   useEffect(() => {
     if (assuranceCase) {
       setIdentifiers(
-        (oldSet) => new Set([...oldSet, ...updateIdList(assuranceCase)])
+        (oldSet) => new Set([...oldSet, ...updateIdList(assuranceCase)]),
       );
     }
   }, [assuranceCase]);
@@ -134,7 +134,7 @@ function CaseContainer() {
         const parents = getParentPropertyClaims(
           assuranceCase,
           parentId,
-          parentType
+          parentType,
         );
         if (parents.length > 0) {
           const parent = parents[parents.length - 1];
@@ -149,7 +149,7 @@ function CaseContainer() {
 
       return prefix + i;
     },
-    [assuranceCase, identifiers]
+    [assuranceCase, identifiers],
   );
 
   const updateAllIdentifiers = useCallback(() => {
@@ -196,7 +196,7 @@ function CaseContainer() {
     // run breadth first search
     /** @type [any, string, any[]] */
     const caseItemQueue = assuranceCase.goals.map((i) =>
-      updateItem(i, "TopLevelNormativeGoal", [])
+      updateItem(i, "TopLevelNormativeGoal", []),
     );
 
     while (caseItemQueue.length > 0) {
@@ -339,7 +339,7 @@ function CaseContainer() {
                 borderLeftStyle: "solid",
                 borderLeftWidth: "1px",
                 borderLeftColor: theme.palette.primary.main,
-                backgroundColor: "#FAFAFA"
+                backgroundColor: "#FAFAFA",
               }}
             >
               <ItemEditor

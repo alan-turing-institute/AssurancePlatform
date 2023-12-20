@@ -31,7 +31,7 @@ function ParentSelector({ type, id, potential, caseId, value, setValue }) {
           let potentialParents = await itemGetPotentialParents(
             token,
             caseId,
-            type
+            type,
           );
           if (!isMounted) {
             return;
@@ -61,7 +61,7 @@ function ParentSelector({ type, id, potential, caseId, value, setValue }) {
     (newValue) => {
       setValue(options.find((o) => o.id === newValue));
     },
-    [setValue, options]
+    [setValue, options],
   );
 
   function getPlaceholder() {
@@ -79,8 +79,8 @@ function ParentSelector({ type, id, potential, caseId, value, setValue }) {
       setValue={setValueInner}
       value={valueInner}
       options={options}
-      selectKey={item => item.id}
-      selectText={item => item.name}
+      selectKey={(item) => item.id}
+      selectText={(item) => item.name}
     />
   );
 }

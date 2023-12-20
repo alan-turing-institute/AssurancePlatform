@@ -16,13 +16,14 @@ button.collapse-expand {
   height: 2.5rem;
   border-radius: 100%;
   border: none;
-  background-color: #0F76B8;
+  background-color: #0f76b8;
   color: white;
   cursor: pointer;
 
   padding: 0.5rem;
 
-  &:hover, &:focus {
+  &:hover,
+  &:focus {
     background-color: #37597b;
   }
 

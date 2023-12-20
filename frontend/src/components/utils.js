@@ -75,7 +75,7 @@ function jsonToMermaid(
   in_json,
   highlightedType,
   highlightedId,
-  collapsedNodes
+  collapsedNodes,
 ) {
   // function to convert the JSON response from a GET request to the /cases/id
   // API endpoint, into the markdown string required for Mermaid to render a flowchart.

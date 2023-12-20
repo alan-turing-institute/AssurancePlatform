@@ -9,33 +9,36 @@ function CreateGroup({ afterSubmit }) {
   const [error, setError] = useState();
   const [dirty, setDirty] = useState();
 
-  const onSubmit = useCallback((e) => {
-    e.preventDefault();
+  const onSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    if (!name) {
-      setDirty(true);
-      return;
-    }
+      if (!name) {
+        setDirty(true);
+        return;
+      }
 
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ name }),
-    };
+      const requestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ name }),
+      };
 
-    fetch(`${getBaseURL()}/groups/`, requestOptions)
-      .then(() => {
-        setName("");
-        afterSubmit();
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Could not create group");
-      });
-  }, [name, afterSubmit]);
+      fetch(`${getBaseURL()}/groups/`, requestOptions)
+        .then(() => {
+          setName("");
+          afterSubmit();
+        })
+        .catch((err) => {
+          console.error(err);
+          setError("Could not create group");
+        });
+    },
+    [name, afterSubmit],
+  );
 
   return (
     <ColumnFlow component="form" onSubmit={onSubmit}>

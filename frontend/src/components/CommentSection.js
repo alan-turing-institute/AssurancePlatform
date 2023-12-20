@@ -58,7 +58,7 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
     async (e) => {
       e.preventDefault();
 
-      if(!newComment){
+      if (!newComment) {
         setDirty(true);
         return;
       }
@@ -89,7 +89,7 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
         console.error("Failed to post comment:", errorData);
       }
     },
-    [assuranceCaseId, token, fetchComments, newComment]
+    [assuranceCaseId, token, fetchComments, newComment],
   );
 
   const onSort = (property) => {
