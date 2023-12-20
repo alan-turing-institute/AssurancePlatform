@@ -46,6 +46,9 @@ function Theming({ children }) {
             borderRadius: "3.125rem",
             borderWidth: "2px !important", // else its lost on hover...
           },
+          outlined: {
+            background: "#FFFFFF"
+          }
         },
         defaultProps: {
           variant: "contained",
