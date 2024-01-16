@@ -1,55 +1,66 @@
 import React, { useState, useEffect } from "react";
-import { Box, Image, Text, Grid } from "grommet";
-import mockup_diagram from "../images/mockup-diagram.png";
+import { Box, useTheme } from "@mui/material";
+import ManageCases from "./ManageCases";
+import { useLoginToken } from "../hooks/useAuth";
+import Login from "./Login";
+import { ColumnFlow } from "./common/Layout";
+import splashImage from "../images/building-an-assurance-case-adjusted-aspect-ratio.png";
+
+const Splash = () => {
+  // TODO #302 add content to splash screen
+  const theme = useTheme();
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "row",
+        flexShrink: 1,
+        flexGrow: 1,
+        overflow: "hidden",
+      }}
+    >
+      <ColumnFlow
+        sx={{
+          flexGrow: 1,
+          flexShrink: 1,
+          // TODO use SVG instead - but that would involve tweaking the aspect ratio of the svg
+          // and repairing the odd background at the border
+          backgroundImage: `url(${splashImage})`,
+          backgroundRepeat: "no-repeat",
+          backgroundColor: "#63c0d5",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      ></ColumnFlow>
+      <ColumnFlow
+        sx={{
+          width: "35.375rem",
+          maxWidth: "100%",
+          flexShrink: 0,
+          padding: "2.25rem 1.5rem",
+          borderLeftStyle: "solid",
+          borderLeftWidth: "1px",
+          borderLeftColor: theme.palette.primary.main,
+          backgroundColor: "#FAFAFA",
+        }}
+      >
+        <Login />
+      </ColumnFlow>
+    </Box>
+  );
+};
 
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(token != null);
-  }, []);
+  const [token] = useLoginToken();
 
-  return (
-    <Box fill pad="medium" overflow="auto">
-      <Grid
-        fill
-        rows={["auto", "flex"]}
-        columns={["auto", "flex"]}
-        areas={[
-          { name: "header", start: [0, 0], end: [1, 0] },
-          { name: "sidebar", start: [0, 1], end: [0, 1] },
-          { name: "main", start: [1, 1], end: [1, 1] },
-        ]}
-        gap="none"
-      >
-        <Box
-          gridArea="header"
-          direction="row"
-          gap="small"
-          pad={{ horizontal: "small", vertical: "small" }}
-          justify="between"
-        >
-          <Text size="2xl">Ethical Assurance Platform</Text>
-        </Box>
-        <Box
-          gridArea="sidebar"
-          direction="column"
-          gap="small"
-          pad={{ horizontal: "small", top: "medium", bottom: "large" }}
-        >
-          {/* Sidebar content here */}
-        </Box>
-        <Box gridArea="main" justify="end">
-          <Image
-            fit="contain"
-            src={mockup_diagram}
-            alt="Ethical Assurance flowchart"
-          />
-        </Box>
-      </Grid>
-    </Box>
-  );
+  useEffect(() => {
+    setIsLoggedIn(token != null);
+  }, [token]);
+
+  return isLoggedIn ? <ManageCases /> : <Splash />;
 };
 
 export default Home;

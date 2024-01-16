@@ -13,6 +13,7 @@ import {
 } from "grommet";
 import { useNavigate } from "react-router-dom";
 import { getSelfUser, getBaseURL } from "./utils.js";
+import { LayoutWithNav } from "./common/Layout.jsx";
 
 const GitHub = () => {
   const [repositories, setRepositories] = useState([]);
@@ -322,106 +323,113 @@ const GitHub = () => {
   );
 
   return (
-    <Box pad="small" flex="grow" overflow={{ vertical: "scroll" }}>
-      <Grid columns={["1fr", "1fr", "1fr"]} gap="small" fill>
-        <Box flex="grow" overflow={{ vertical: "scroll" }}>
-          <Box direction="row" gap="small">
-            <TextInput
-              placeholder="GitHub Repository URL"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-            <Button label="Add" onClick={handleAddInput} />
-          </Box>
-          <TextInput
-            placeholder="Search Repositories..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Box flex overflow="hidden">
-            <List
-              data={filteredRepos}
-              primaryKey="name"
-              onClickItem={({ item }) => handleRepoClick(item.full_name)}
-            />
-          </Box>
-        </Box>
-
-        <Box flex="grow" overflow={{ vertical: "auto" }}>
-          {selectedRepoFullName && (
-            <Box
-              direction="row"
-              align="center"
-              gap="small"
-              margin={{ bottom: "small" }}
-            >
-              {currentPath !== "/" && (
-                <>
-                  <Button label=".. go up" onClick={handleGoUp} />
-                  <Text>{currentPath}</Text>
-                </>
-              )}
-              <Text>Branch:</Text>
-              <Select
-                options={branches}
-                value={selectedBranch}
-                onChange={handleBranchChange}
-                plain={true}
+    <LayoutWithNav>
+      <Box pad="small" flex="grow" overflow={{ vertical: "scroll" }}>
+        <Grid columns={["1fr", "1fr", "1fr"]} gap="small" fill>
+          <Box flex="grow" overflow={{ vertical: "scroll" }}>
+            <Box direction="row" gap="small">
+              <TextInput
+                placeholder="GitHub Repository URL"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
               />
-              <Button label="Import Repo" onClick={handleImportRepo} />
+              <Button label="Add" onClick={handleAddInput} />
             </Box>
-          )}
-
-          {repoContentsLoading ? (
-            <Box pad="medium" fill="horizontal" align="center" justify="center">
-              Loading ...
-            </Box>
-          ) : (
-            <List
-              data={selectedRepoFiles}
-              onClickItem={({ item }) => handleFileOrFolderClick(item)}
-              children={(item) => (
-                <Box direction="row" gap="small">
-                  <Text>
-                    {item.type === "dir" ? "📁" : "📄"} {item.name}
-                  </Text>
-                </Box>
-              )}
+            <TextInput
+              placeholder="Search Repositories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          )}
-        </Box>
-        <Box flex="grow" overflow={{ vertical: "auto" }}>
-          {selectedFile && (
-            <Box>
-              {selectedFile.name.endsWith(".svg") && (
-                <Image src={selectedFile.download_url} />
-              )}
-              {(selectedFile.name.endsWith(".json") ||
-                selectedFile.name.endsWith(".svg")) && (
-                <Button label="Import as Case" onClick={handleImportClick} />
-              )}
-              {selectedFile.name.endsWith(".json") && (
-                <Box flex overflow="auto">
-                  <pre>
-                    <code
-                      dangerouslySetInnerHTML={{
-                        __html: hljs.highlight("json", fileContent).value,
-                      }}
-                    ></code>
-                  </pre>
-                </Box>
-              )}
-              {lastModified && (
-                <Text>
-                  Last Modified: {new Date(lastModified).toLocaleString()} by{" "}
-                  {lastModifiedBy}
-                </Text>
-              )}
+            <Box flex overflow="hidden">
+              <List
+                data={filteredRepos}
+                primaryKey="name"
+                onClickItem={({ item }) => handleRepoClick(item.full_name)}
+              />
             </Box>
-          )}
-        </Box>
-      </Grid>
-    </Box>
+          </Box>
+
+          <Box flex="grow" overflow={{ vertical: "auto" }}>
+            {selectedRepoFullName && (
+              <Box
+                direction="row"
+                align="center"
+                gap="small"
+                margin={{ bottom: "small" }}
+              >
+                {currentPath !== "/" && (
+                  <>
+                    <Button label=".. go up" onClick={handleGoUp} />
+                    <Text>{currentPath}</Text>
+                  </>
+                )}
+                <Text>Branch:</Text>
+                <Select
+                  options={branches}
+                  value={selectedBranch}
+                  onChange={handleBranchChange}
+                  plain={true}
+                />
+                <Button label="Import Repo" onClick={handleImportRepo} />
+              </Box>
+            )}
+
+            {repoContentsLoading ? (
+              <Box
+                pad="medium"
+                fill="horizontal"
+                align="center"
+                justify="center"
+              >
+                Loading ...
+              </Box>
+            ) : (
+              <List
+                data={selectedRepoFiles}
+                onClickItem={({ item }) => handleFileOrFolderClick(item)}
+                children={(item) => (
+                  <Box direction="row" gap="small">
+                    <Text>
+                      {item.type === "dir" ? "📁" : "📄"} {item.name}
+                    </Text>
+                  </Box>
+                )}
+              />
+            )}
+          </Box>
+          <Box flex="grow" overflow={{ vertical: "auto" }}>
+            {selectedFile && (
+              <Box>
+                {selectedFile.name.endsWith(".svg") && (
+                  <Image src={selectedFile.download_url} />
+                )}
+                {(selectedFile.name.endsWith(".json") ||
+                  selectedFile.name.endsWith(".svg")) && (
+                  <Button label="Import as Case" onClick={handleImportClick} />
+                )}
+                {selectedFile.name.endsWith(".json") && (
+                  <Box flex overflow="auto">
+                    <pre>
+                      <code
+                        dangerouslySetInnerHTML={{
+                          __html: hljs.highlight("json", fileContent).value,
+                        }}
+                      ></code>
+                    </pre>
+                  </Box>
+                )}
+                {lastModified && (
+                  <Text>
+                    Last Modified: {new Date(lastModified).toLocaleString()} by{" "}
+                    {lastModifiedBy}
+                  </Text>
+                )}
+              </Box>
+            )}
+          </Box>
+        </Grid>
+      </Box>
+    </LayoutWithNav>
   );
 };
 

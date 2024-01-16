@@ -1,63 +1,97 @@
-import { Box, Button, TextArea, DataTable, Text } from "grommet";
-import { FormEdit, User, Clock } from "grommet-icons";
-import React, { useState, useEffect } from "react";
+import { DataTable, Text } from "grommet";
+import { User, Clock } from "grommet-icons";
+import React, { useState, useEffect, useCallback } from "react";
 import { getBaseURL } from "./utils.js";
 import { formatDistanceToNow } from "date-fns";
+import ModalDialog from "./common/ModalDialog.jsx";
+import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
+import { Button, Typography } from "@mui/material";
+import useId from "@mui/utils/useId";
+import TextInput from "./common/TextInput.jsx";
+import { useLoginToken } from "../hooks/useAuth.js";
 
-function CommentSection({ assuranceCaseId, authorId }) {
+function CommentSection({ caseId, isOpen, onClose }) {
+  const titleId = useId();
+
+  return (
+    <ModalDialog aria-labelledby={titleId} open={isOpen} onClose={onClose}>
+      <ColumnFlow>
+        <Typography variant="h3" id={titleId}>
+          Notes
+        </Typography>
+        <CommentSectionInner assuranceCaseId={caseId} onClose={onClose} />
+      </ColumnFlow>
+    </ModalDialog>
+  );
+}
+
+function CommentSectionInner({ assuranceCaseId, onClose }) {
   const [comments, setComments] = useState([]);
+  const [error, setError] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [sort, setSort] = useState({
     property: "created_at",
     direction: "desc",
   });
 
-  useEffect(() => {
-    fetchComments();
-  }, [assuranceCaseId]);
+  const [token] = useLoginToken();
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
     const requestOptions = {
       method: "GET",
       headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
+        Authorization: `Token ${token}`,
       },
     };
     const response = await fetch(url, requestOptions);
     const data = await response.json();
     setComments(data);
-  };
+  }, [assuranceCaseId, token]);
 
-  const handleNewCommentChange = (event) => setNewComment(event.target.value);
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
 
-  const handlePostComment = async () => {
-    const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
+  const onSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-    const commentData = {
-      content: newComment,
-      assurance_case: assuranceCaseId,
-    };
+      if (!newComment) {
+        setDirty(true);
+        return;
+      }
 
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(commentData),
-    };
+      const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
 
-    const response = await fetch(url, requestOptions);
-    if (response.ok) {
-      setNewComment("");
-      fetchComments();
-    } else {
-      // Handle the error response here
-      const errorData = await response.json();
-      console.error("Failed to post comment:", errorData);
-    }
-  };
+      const commentData = {
+        content: newComment,
+        assurance_case: assuranceCaseId,
+      };
+
+      const requestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify(commentData),
+      };
+
+      const response = await fetch(url, requestOptions);
+      if (response.ok) {
+        setNewComment("");
+        fetchComments();
+      } else {
+        // Handle the error response here
+        const errorData = await response.json();
+        console.error("Failed to post comment:", errorData);
+      }
+    },
+    [assuranceCaseId, token, fetchComments, newComment],
+  );
+
   const onSort = (property) => {
     const direction = sort.direction === "asc" ? "desc" : "asc";
     setSort({ property, direction });
@@ -102,15 +136,31 @@ function CommentSection({ assuranceCaseId, authorId }) {
   ];
 
   return (
-    <Box fill="vertical" align="start" flex="grow">
-      <Box flex={false} direction="row" align="center" justify="between">
-        <TextArea
-          placeholder="Write your comment here..."
+    <>
+      <ColumnFlow component="form" onSubmit={onSubmit}>
+        <TextInput
+          label="New note"
+          multiline
           value={newComment}
-          onChange={handleNewCommentChange}
+          setValue={setNewComment}
+          error={error}
+          setError={setError}
+          placeholder="Write your comment here..."
+          dirty={dirty}
         />
-        <Button label="Post Comment" onClick={handlePostComment} />
-      </Box>
+        <RowFlow>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            sx={{ marginLeft: "auto" }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit">Post Comment</Button>
+        </RowFlow>
+      </ColumnFlow>
+
+      {/* TODO migrate from Grommet */}
       <DataTable
         columns={columns}
         data={comments}
@@ -118,7 +168,7 @@ function CommentSection({ assuranceCaseId, authorId }) {
         onSort={(event) => onSort(event.property)}
         step={10} // Amount of items to render at a time
       />
-    </Box>
+    </>
   );
 }
 

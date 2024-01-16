@@ -1,271 +1,442 @@
 /* General function that can create any type of object apart from the top-level Case */
 
-import {
-  Box,
-  Button,
-  Form,
-  FormField,
-  Heading,
-  Select,
-  TextInput,
-} from "grommet";
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
 import ParentSelector from "./ParentSelector.js";
-import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
+import { Button, Typography } from "@mui/material";
+import LoadingSpinner from "./common/LoadingSpinner.jsx";
+import { useLoginToken } from "../hooks/useAuth.js";
+import { createItem, editItem, getItem } from "./caseApi.js";
+import { RowFlow } from "./common/Layout.jsx";
+import DeleteItemModal from "./DeleteItemModal.jsx";
+import { Add, Bin, ChevronRight } from "./common/Icons.jsx";
+import TextInput from "./common/TextInput.jsx";
+import SelectInput from "./common/SelectInput.jsx";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
-function ItemEditor(props) {
-  const [loading, setLoading] = useState(true);
-  const [parentToAdd, setParentToAdd] = useState();
-  const [parentToRemove, setParentToRemove] = useState();
-  const [items, setItems] = useState([{ label: "Loading ...", value: "" }]);
-
-  useEffect(() => {
-    let unmounted = false;
-    let url = `${getBaseURL()}/${
-      configData.navigation[props.type]["api_name"]
-    }/${props.id}`;
-    async function getCurrent() {
-      const requestOptions = {
-        headers: {
-          Authorization: `Token ${localStorage.getItem("token")}`,
-        },
-      };
-      const response = await fetch(url, requestOptions);
-      const body = await response.json();
-      if (!unmounted) {
-        setItems(body);
-        setLoading(false);
-      }
-    }
-    getCurrent();
-    return () => {
-      unmounted = true;
-    };
-  }, [props.id, props.type]);
-
-  function handleDelete(event) {
-    deleteDBObject().then((resolve) => props.updateView());
+function niceNameforType(type) {
+  switch (type) {
+    case "TopLevelNormativeGoal":
+    case "Goal":
+      return "Goal";
+    case "Context":
+      return "Context";
+    case "PropertyClaim":
+      return "Claim";
+    case "Evidence":
+      return "Evidence";
+    default:
+      return type;
   }
+}
 
-  async function deleteDBObject() {
-    let url = `${getBaseURL()}/${
-      configData.navigation[props.type]["api_name"]
-    }/${props.id}/`;
-    const requestOptions = {
-      method: "DELETE",
-      headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    };
-    return fetch(url, requestOptions);
-  }
+function AddItemButton({
+  childType,
+  parentId,
+  parentType,
+  onRefresh,
+  setErrors,
+  getIdForNewElement,
+  setSelected,
+}) {
+  const [token] = useLoginToken();
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    editDBObject().then(() => props.updateView());
-  }
+  const onClick = useCallback(() => {
+    createItem(
+      token,
+      childType,
+      parentId,
+      parentType,
+      getIdForNewElement(childType, parentId, parentType),
+    )
+      .then((json) => {
+        onRefresh();
+        setSelected([json.id.toString(), childType]);
+      })
+      .catch((err) => {
+        console.error(err);
+        setErrors(["Could not add " + niceNameforType(childType)]);
+      });
+  }, [
+    token,
+    childType,
+    parentId,
+    parentType,
+    onRefresh,
+    setErrors,
+    getIdForNewElement,
+    setSelected,
+  ]);
 
-  function editDBObject() {
-    return postItemUpdate(props.id, props.type, items);
-  }
-
-  async function submitAddParent(event) {
-    if (parentToAdd === undefined) {
-      return;
-    }
-    const parentType = parentToAdd["type"];
-    const parentId = parentToAdd["id"];
-    const url = `${getBaseURL()}/${
-      configData.navigation[props.type]["api_name"]
-    }/${props.id}/`;
-    const response = await fetch(url);
-    const current = await response.json();
-    const idName = configData.navigation[parentType]["id_name"];
-    const currentParents = current[idName];
-
-    if (!currentParents.includes(parentId)) {
-      currentParents.push(parentId);
-      const requestOptions = {
-        method: "PUT",
-        headers: {
-          Authorization: `Token ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(current),
-      };
-      await fetch(url, requestOptions);
-      props.updateView();
-    }
-  }
-
-  async function submitRemoveParent(event) {
-    if (parentToRemove === undefined) {
-      return;
-    }
-    const parentType = parentToRemove["type"];
-    const parentId = parentToRemove["id"];
-    const url = `${getBaseURL()}/${
-      configData.navigation[props.type]["api_name"]
-    }/${props.id}/`;
-    const requestOptions = {
-      headers: {
-        Authorization: `Token ${localStorage.getItem("token")}`,
-      },
-    };
-    const response = await fetch(url, requestOptions);
-    const current = await response.json();
-    const idName = configData.navigation[parentType]["id_name"];
-    let currentParents = current[idName];
-
-    if (currentParents.includes(parentId)) {
-      currentParents = currentParents.filter((id) => id !== parentId);
-      if (currentParents.length < 1) {
-        alert("Can not remove the last parent of an item.");
-        return;
-      }
-      current[idName] = currentParents;
-      const requestOptions = {
-        method: "PUT",
-        headers: {
-          Authorization: `Token ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(current),
-      };
-      await fetch(url, requestOptions);
-      props.updateView();
-    }
-  }
-
-  function setItem(key, value) {
-    const newItems = { ...items };
-    newItems[key] = value;
-    setItems(newItems);
-  }
-
-  if (loading) return <Heading level={3}> Loading... </Heading>;
   return (
-    <Box>
-      <Heading level={3}>Edit {items.name}</Heading>
-      <Form onSubmit={handleSubmit}>
-        <FormField>
-          <TextInput
-            value={items.short_description}
-            name="short_description"
-            onChange={(e) => setItem("short_description", e.target.value)}
-          />
-        </FormField>
-        <FormField>
-          <TextInput
-            value={items.long_description}
-            name="long_description"
-            onChange={(e) => setItem("long_description", e.target.value)}
-          />
-        </FormField>
-        <FormField>
-          <TextInput
-            value={items.keywords}
-            name="keywords"
-            onChange={(e) => setItem("keywords", e.target.value)}
-          />
-        </FormField>
-        {props.type === "Evidence" && (
-          <FormField>
-            <TextInput
-              value={items.URL}
-              name="URL"
-              onChange={(e) => setItem("URL", e.target.value)}
-            />
-          </FormField>
-        )}
-        {props.type === "PropertyClaim" && (
-          <FormField label="Claim type">
-            <Select
-              value={items.claim_type}
-              name="claim_type"
-              options={configData["property_claim_types"]}
-              onChange={(e) => setItem("claim_type", e.target.value)}
-            />
-          </FormField>
-        )}
-        <Button type="submit" label="Submit" />
-      </Form>
-
-      {configData.navigation[props.type]["parent_relation"] ===
-        "many-to-many" && (
-        <Box direction="row" gap="small" pad={{ top: "small" }}>
-          <ParentSelector
-            type={props.type}
-            id={props.id}
-            caseId={props.caseId}
-            value={parentToAdd}
-            setValue={setParentToAdd}
-            potential={true}
-          />
-          <Button onClick={(e) => submitAddParent(e)} label="Add parent" />
-        </Box>
-      )}
-      {configData.navigation[props.type]["parent_relation"] ===
-        "many-to-many" && (
-        <Box direction="row" gap="small" pad={{ top: "small" }}>
-          <ParentSelector
-            type={props.type}
-            id={props.id}
-            caseId={props.caseId}
-            value={parentToRemove}
-            setValue={setParentToRemove}
-            potential={false}
-          />
-          <Button
-            onClick={(e) => submitRemoveParent(e)}
-            label="Remove parent"
-          />
-        </Box>
-      )}
-      <Box pad={{ top: "small" }}>
-        <Button onClick={(e) => handleDelete(e)} label="Delete item" />
-      </Box>
-    </Box>
+    <Button
+      key={childType}
+      variant="outlined"
+      startIcon={<Add />}
+      onClick={onClick}
+    >
+      Add {niceNameforType(childType)}
+    </Button>
   );
 }
 
-/**
- * @param {string} id
- * @param {string} type
- * @param {*} item
- * @returns Promise<any>
- */
-export async function postItemUpdate(id, type, item) {
-  let backendURL = `${getBaseURL()}/${
-    configData.navigation[type]["api_name"]
-  }/${id}/`;
+function PropertyField({ id, type, item, fieldName, onRefresh, ...props }) {
+  const [error, setError] = useState("");
 
-  let request_body = {};
-  request_body["name"] = item.name;
-  request_body["short_description"] = item.short_description;
-  request_body["long_description"] = item.long_description;
-  request_body["keywords"] = item.keywords;
-  if (type === "PropertyClaim") {
-    request_body["claim_type"] = item.claim_type;
-  }
-  if (type === "Evidence") {
-    request_body["URL"] = item.URL;
-  }
+  const [token] = useLoginToken();
 
-  const requestOptions = {
-    method: "PUT",
-    headers: {
-      Authorization: `Token ${localStorage.getItem("token")}`,
-      "Content-Type": "application/json",
+  const setValue = useCallback(
+    (value) => {
+      if (item[fieldName] !== value) {
+        editItem(token, id, type, { [fieldName]: value })
+          .then((response) => {
+            if (response.ok) {
+              onRefresh();
+            } else {
+              response.json().then((json) => {
+                console.error(json);
+                if (json[fieldName]) {
+                  setError(json[fieldName]);
+                } else {
+                  setError("Could not change field");
+                }
+              });
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            setError("Could not change field");
+          });
+      }
     },
-    body: JSON.stringify(request_body),
-  };
-  return fetch(backendURL, requestOptions);
+    [token, id, type, item, fieldName, onRefresh],
+  );
+
+  return (
+    <TextInput
+      {...props}
+      value={item[fieldName]}
+      setValue={setValue}
+      error={error}
+      setError={setError}
+      required
+    />
+  );
 }
 
-// eslint-disable-next-line import/no-anonymous-default-export
-export default (props) => <ItemEditor {...props} params={useParams()} />;
+function PropertySelect({
+  label,
+  id,
+  type,
+  item,
+  fieldName,
+  onRefresh,
+  options,
+  ...props
+}) {
+  const [error, setError] = useState("");
+
+  const [token] = useLoginToken();
+
+  const setValue = useCallback(
+    (value) => {
+      if (item[fieldName] !== value) {
+        editItem(token, id, type, { [fieldName]: value })
+          .then((response) => {
+            if (response.ok) {
+              onRefresh();
+            } else {
+              response.json().then((json) => {
+                console.error(json);
+                if (json[fieldName]) {
+                  setError(json[fieldName]);
+                } else {
+                  setError("Could not change field");
+                }
+              });
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            setError("Could not change field");
+          });
+      }
+    },
+    [token, id, type, item, fieldName, onRefresh],
+  );
+
+  return (
+    <SelectInput
+      {...props}
+      value={item[fieldName]}
+      setValue={setValue}
+      error={error}
+      setError={setError}
+      options={options}
+      required
+    />
+  );
+}
+
+function ItemEditor({
+  caseId,
+  id,
+  type,
+  onRefresh,
+  onHide,
+  getIdForNewElement,
+  setSelected,
+}) {
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState([]);
+  // TODO #298 prune fields
+  const [item, setItem] = useState();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const [parentToAdd, setParentToAdd] = useState();
+  const [parentToRemove, setParentToRemove] = useState();
+
+  const [token] = useLoginToken();
+
+  // fetch item
+  useEffect(() => {
+    if (token) {
+      setLoading(true);
+      setErrors([]);
+      setItem(undefined);
+
+      let isMounted = true;
+
+      getItem(token, id, type)
+        .then((json) => {
+          if (!isMounted) {
+            return;
+          }
+
+          setLoading(false);
+          setItem((oldItem) => {
+            if (JSON.stringify(json) !== JSON.stringify(oldItem)) {
+              return json;
+            } else {
+              return oldItem;
+            }
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrors(["An error occured, please try again later."]);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [token, id, type]);
+
+  const onDeleteClick = useCallback(() => {
+    setDeleteModalOpen(true);
+  }, []);
+
+  const onDeleteModalClose = useCallback(() => {
+    setDeleteModalOpen(false);
+  }, []);
+
+  const onDeleteModalSuccess = useCallback(() => {
+    onRefresh();
+    onHide();
+  }, [onRefresh, onHide]);
+
+  const submitAddParent = useCallback(() => {
+    if (!parentToAdd) {
+      return;
+    }
+
+    const parentType = parentToAdd["type"];
+    const parentId = parentToAdd["id"];
+
+    const idName = configData.navigation[parentType]["id_name"];
+    const currentParents = item[idName];
+    if (!currentParents.includes(parentId)) {
+      editItem(token, id, type, {
+        [idName]: [...currentParents, parentId],
+      })
+        .then((response) => {
+          if (response.ok) {
+            onRefresh();
+          } else {
+            setErrors(["Could not add parent"]);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrors(["Could not add parent"]);
+        });
+    }
+  }, [parentToAdd, item, token, id, type, onRefresh]);
+
+  const submitRemoveParent = useCallback(() => {
+    if (!parentToRemove) {
+      return;
+    }
+
+    const parentType = parentToRemove["type"];
+    const parentId = parentToRemove["id"];
+
+    const idName = configData.navigation[parentType]["id_name"];
+    const currentParents = item[idName];
+    if (currentParents.includes(parentId)) {
+      editItem(token, id, type, {
+        [idName]: currentParents.filter((id) => id !== parentId),
+      })
+        .then((response) => {
+          if (response.ok) {
+            onRefresh();
+          } else {
+            setErrors(["Could not remove parent"]);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrors(["Could not remove parent"]);
+        });
+    }
+  }, [parentToRemove, item, token, id, type, onRefresh]);
+
+  return (
+    <>
+      <RowFlow>
+        <Typography fontWeight="bold">Editing: {item?.name}</Typography>
+        <Button
+          variant="text"
+          sx={{ marginLeft: "auto" }}
+          onClick={onHide}
+          endIcon={<ChevronRight />}
+        >
+          Hide
+        </Button>
+      </RowFlow>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <>
+          <ErrorMessage errors={errors} />
+          {item ? (
+            <>
+              <PropertyField
+                multiline
+                label={item.name + " Description"}
+                placeholder="Write down a small description of what the intentions are."
+                id={id}
+                type={type}
+                item={item}
+                fieldName="short_description"
+                onRefresh={onRefresh}
+              />
+              {type === "Evidence" ? (
+                <PropertyField
+                  label={item.name + " URL"}
+                  id={id}
+                  type={type}
+                  item={item}
+                  fieldName="URL"
+                  onRefresh={onRefresh}
+                />
+              ) : type === "PropertyClaim" ? (
+                <PropertySelect
+                  label="Claim type"
+                  id={id}
+                  type={type}
+                  item={item}
+                  fieldName="claim_type"
+                  options={configData["property_claim_types"]}
+                  onRefresh={onRefresh}
+                />
+              ) : (
+                <></>
+              )}
+              <Button
+                variant="text"
+                color="error"
+                sx={{ marginRight: "auto" }}
+                startIcon={<Bin />}
+                onClick={onDeleteClick}
+              >
+                Delete {niceNameforType(type)}
+              </Button>
+              <DeleteItemModal
+                isOpen={deleteModalOpen}
+                onClose={onDeleteModalClose}
+                onDelete={onDeleteModalSuccess}
+                id={id}
+                type={type}
+                name={item.name}
+              />
+              {configData.navigation[type].children.length ||
+              configData.navigation[type]["parent_relation"] ===
+                "many-to-many" ? (
+                <>
+                  <Typography fontWeight="bold">Link to {item.name}</Typography>
+                  {configData.navigation[type].children.map((childType) => (
+                    <AddItemButton
+                      key={childType}
+                      childType={childType}
+                      parentId={id}
+                      parentType={type}
+                      onRefresh={onRefresh}
+                      setErrors={setErrors}
+                      getIdForNewElement={getIdForNewElement}
+                      setSelected={setSelected}
+                    />
+                  ))}
+                  {configData.navigation[type]["parent_relation"] ===
+                  "many-to-many" ? (
+                    <>
+                      <ParentSelector
+                        type={type}
+                        id={id}
+                        caseId={caseId}
+                        value={parentToAdd}
+                        setValue={setParentToAdd}
+                        potential={true}
+                      />
+                      <Button
+                        variant="outlined"
+                        sx={{ marginRight: "auto" }}
+                        onClick={submitAddParent}
+                      >
+                        Add parent
+                      </Button>
+                      <ParentSelector
+                        type={type}
+                        id={id}
+                        caseId={caseId}
+                        value={parentToRemove}
+                        setValue={setParentToRemove}
+                        potential={false}
+                      />
+                      <Button
+                        variant="outlined"
+                        sx={{ marginRight: "auto" }}
+                        onClick={submitRemoveParent}
+                      >
+                        Remove parent
+                      </Button>
+                    </>
+                  ) : (
+                    <></>
+                  )}
+                </>
+              ) : (
+                <></>
+              )}
+            </>
+          ) : (
+            <></>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+export default ItemEditor;

@@ -6,6 +6,15 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import Groups from "../Groups.js";
+import { MemoryRouter } from "react-router-dom";
+
+function WrappedGroups() {
+  return (
+    <MemoryRouter>
+      <Groups />
+    </MemoryRouter>
+  );
+}
 
 global.fetch = jest.fn(() =>
   Promise.resolve({
@@ -34,25 +43,25 @@ jest.mock("react-router-dom", () => ({
 
 test("renders groups layer", () => {
   localStorage.setItem("token", "dummy");
-  render(<Groups />);
+  render(<WrappedGroups />);
   const text = screen.getByText("Groups you own");
   expect(text).toBeInTheDocument();
 });
 
 test("renders owner groups", async () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const groupNames = await screen.findAllByText("Group 1");
   expect(groupNames[0]).toBeInTheDocument();
 });
 
 test("renders member groups", async () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const memberGroupNames = await screen.findAllByText("Group 1");
   expect(memberGroupNames[0]).toBeInTheDocument();
 });
 
 test("renders group creation button", () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const createButton = screen.getByRole("button", {
     name: /create group/i,
   });
@@ -60,7 +69,7 @@ test("renders group creation button", () => {
 });
 
 test("renders manage members button for owned groups", async () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const manageButton = await screen.findByRole("button", {
     name: /manage members/i,
   });
@@ -68,13 +77,13 @@ test("renders manage members button for owned groups", async () => {
 });
 
 test("renders delete button for owned groups", async () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const deleteButton = await screen.findByRole("button", { name: /delete/i });
   expect(deleteButton).toBeInTheDocument();
 });
 
 test("renders 'Groups you are member of' section", () => {
-  render(<Groups />);
+  render(<WrappedGroups />);
   const text = screen.getByText("Groups you are member of");
   expect(text).toBeInTheDocument();
 });

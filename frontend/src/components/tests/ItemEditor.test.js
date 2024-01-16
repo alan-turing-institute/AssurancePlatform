@@ -1,11 +1,12 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import "regenerator-runtime/runtime";
 import React from "react";
 import ItemEditor from "../ItemEditor.js";
+import userEvent from "@testing-library/user-event";
 
 global.fetch = jest.fn(() =>
   Promise.resolve({
@@ -20,35 +21,43 @@ global.fetch = jest.fn(() =>
   }),
 );
 
+function WrappedItemEditor({ ...props }) {
+  return (
+    <ItemEditor
+      caseId="1"
+      onRefresh={() => {}}
+      onHide={() => {}}
+      getIdForNewElement={() => "New"}
+      {...props}
+    />
+  );
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
+  localStorage.setItem("token", "dummy");
 });
 
 test("renders item editor layer", async () => {
-  render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
-  await waitFor(() => expect(screen.getByText("Edit G1")).toBeInTheDocument());
+  render(<WrappedItemEditor type="TopLevelNormativeGoal" id="1" />);
+  const header = await screen.findByText("Editing: G1");
+  expect(header).toBeInTheDocument();
 });
 
 test("updates item properties correctly", async () => {
-  render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
+  render(<WrappedItemEditor type="TopLevelNormativeGoal" id="1" />);
 
-  await waitFor(() => screen.getByText("Edit G1"));
-  const shortDescInput = screen.getByDisplayValue("short");
-  const longDescInput = screen.getByDisplayValue("long");
-  const keywordsInput = screen.getByDisplayValue("key");
+  await screen.findByText("Editing: G1");
+  const shortDescInput = screen.getByLabelText("Description", { exact: false });
 
-  fireEvent.change(shortDescInput, { target: { value: "Updated short" } });
-  fireEvent.change(longDescInput, { target: { value: "Updated long" } });
-  fireEvent.change(keywordsInput, { target: { value: "Updated key" } });
+  userEvent.clear(shortDescInput);
+  userEvent.type(shortDescInput, "Updated short");
 
   expect(shortDescInput.value).toBe("Updated short");
-  expect(longDescInput.value).toBe("Updated long");
-  expect(keywordsInput.value).toBe("Updated key");
 });
 
 test("renders delete item button", async () => {
-  render(<ItemEditor type="TopLevelNormativeGoal" id="1" />);
-  await waitFor(() => screen.getByText("Delete item"));
-  const deleteButton = screen.getByText("Delete item");
+  render(<WrappedItemEditor type="TopLevelNormativeGoal" id="1" />);
+  const deleteButton = await screen.findByText("Delete Goal");
   expect(deleteButton).toBeInTheDocument();
 });

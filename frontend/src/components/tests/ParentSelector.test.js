@@ -2,10 +2,12 @@
  * @jest-environment jsdom
  */
 import "regenerator-runtime/runtime";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import ParentSelector from "../ParentSelector.js";
+import { cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 global.window.scrollTo = jest.fn();
 
 global.fetch = jest.fn(() =>
@@ -24,27 +26,25 @@ global.fetch = jest.fn(() =>
   }),
 );
 
-import { cleanup } from "@testing-library/react";
-
 afterEach(cleanup);
 
 test("renders parent selector layer", () => {
   localStorage.setItem("token", "dummy");
-  render(<ParentSelector type="Evidence" />);
-  const dropdown = screen.getByPlaceholderText("Choose a parent");
+  render(<ParentSelector type="Evidence" caseId="1" />);
+  const dropdown = screen.getByLabelText("Choose a parent");
   expect(dropdown).toBeInTheDocument();
 });
 
 test("renders dropdown with 'Choose a potential parent' placeholder for potential prop", () => {
-  render(<ParentSelector type="Evidence" potential={true} />);
-  const dropdown = screen.getByPlaceholderText("Choose a potential parent");
+  render(<ParentSelector type="Evidence" potential={true} caseId="1" />);
+  const dropdown = screen.getByLabelText("Choose a potential parent");
   expect(dropdown).toBeInTheDocument();
 });
 
 test("renders options based on API response", async () => {
-  render(<ParentSelector type="Evidence" />);
-  const dropdown = screen.getByPlaceholderText("Choose a parent");
-  fireEvent.click(dropdown);
+  render(<ParentSelector type="Evidence" caseId="1" />);
+  const dropdown = await screen.findByRole("combobox");
+  userEvent.click(dropdown);
 
   const option1 = await screen.findByText("PropertyClaim 1");
   const option2 = await screen.findByText("PropertyClaim 2");
