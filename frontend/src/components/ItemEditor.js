@@ -129,6 +129,7 @@ function PropertySelect({
   id,
   type,
   item,
+  setItem,
   fieldName,
   onRefresh,
   options,
@@ -144,6 +145,9 @@ function PropertySelect({
         editItem(token, id, type, { [fieldName]: value })
           .then((response) => {
             if (response.ok) {
+              response.json().then((json) => {
+                setItem(json)
+              })
               onRefresh();
             } else {
               response.json().then((json) => {
@@ -363,6 +367,7 @@ function ItemEditor({
                   id={id}
                   type={type}
                   item={item}
+                  setItem={setItem}
                   fieldName="claim_type"
                   options={configData["property_claim_types"]}
                   onRefresh={onRefresh}
