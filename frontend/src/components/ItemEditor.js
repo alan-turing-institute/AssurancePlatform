@@ -186,6 +186,7 @@ function ItemEditor({
   onHide,
   getIdForNewElement,
   setSelected,
+  graphUpdate
 }) {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
@@ -198,8 +199,7 @@ function ItemEditor({
 
   const [token] = useLoginToken();
 
-  // fetch item
-  useEffect(() => {
+  const updateItem = useCallback(() => {
     if (token) {
       setLoading(true);
       setErrors([]);
@@ -216,6 +216,8 @@ function ItemEditor({
           setLoading(false);
           setItem((oldItem) => {
             if (JSON.stringify(json) !== JSON.stringify(oldItem)) {
+              setParentToAdd();
+              setParentToRemove();
               return json;
             } else {
               return oldItem;
@@ -231,6 +233,13 @@ function ItemEditor({
         isMounted = false;
       };
     }
+  }, [token, id, type])
+
+  // Fetch item when selected node in graph changes, but **not** for every graph update.
+  // Graph updates occur on an interval, and updating the item on this interval re-renders the 
+  // ItemEditor.
+  useEffect(() => {
+    updateItem();
   }, [token, id, type]);
 
   const onDeleteClick = useCallback(() => {
@@ -263,6 +272,10 @@ function ItemEditor({
         .then((response) => {
           if (response.ok) {
             onRefresh();
+            setParentToAdd();
+            // Update item to ensure the `currentParents` can be correctly determined when 
+            // add/remove parent operations are called in succession.
+            updateItem();
           } else {
             setErrors(["Could not add parent"]);
           }
@@ -291,6 +304,8 @@ function ItemEditor({
         .then((response) => {
           if (response.ok) {
             onRefresh();
+            setParentToRemove();
+            updateItem();
           } else {
             setErrors(["Could not remove parent"]);
           }
@@ -335,6 +350,7 @@ function ItemEditor({
               {type === "Evidence" ? (
                 <PropertyField
                   label={item.name + " URL"}
+                  placeholder="URL of the evidence resource."
                   id={id}
                   type={type}
                   item={item}
@@ -398,6 +414,7 @@ function ItemEditor({
                         value={parentToAdd}
                         setValue={setParentToAdd}
                         potential={true}
+                        graphUpdate={graphUpdate}
                       />
                       <Button
                         variant="outlined"
@@ -413,6 +430,7 @@ function ItemEditor({
                         value={parentToRemove}
                         setValue={setParentToRemove}
                         potential={false}
+                        graphUpdate={graphUpdate}
                       />
                       <Button
                         variant="outlined"

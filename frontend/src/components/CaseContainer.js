@@ -350,6 +350,7 @@ function CaseContainer() {
                 onHide={hideEditLayer}
                 getIdForNewElement={getIdForNewElement}
                 setSelected={setSelected}
+                graphUpdate={shouldFetch}
               />
             </ColumnFlow>
           ) : (
