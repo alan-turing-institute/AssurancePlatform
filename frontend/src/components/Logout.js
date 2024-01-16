@@ -23,7 +23,7 @@ const Logout = () => {
         .then((res) => res.json())
         .then(() => {
           setToken(null);
-          window.location.replace("/login/");
+          window.location.replace("/");
         });
     },
     [token, setToken],
