@@ -275,11 +275,11 @@ function ItemEditor({
       })
         .then((response) => {
           if (response.ok) {
+            response.json().then((json) => {
+              setItem(json)
+            })
             onRefresh();
             setParentToAdd();
-            // Update item to ensure the `currentParents` can be correctly determined when 
-            // add/remove parent operations are called in succession.
-            updateItem();
           } else {
             setErrors(["Could not add parent"]);
           }
@@ -307,9 +307,11 @@ function ItemEditor({
       })
         .then((response) => {
           if (response.ok) {
+            response.json().then((json) => {
+              setItem(json)
+            })
             onRefresh();
             setParentToRemove();
-            updateItem();
           } else {
             setErrors(["Could not remove parent"]);
           }
