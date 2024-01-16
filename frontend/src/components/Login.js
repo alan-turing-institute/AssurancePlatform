@@ -17,14 +17,9 @@ const Login = () => {
   const [passwordError, setPasswordError] = useState("");
   const [errors, setErrors] = useState([]);
   const [dirty, setDirty] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const isLoggedOut = useEnforceLogout();
   const [_, setToken] = useLoginToken();
-
-  useEffect(() => {
-    setLoading(!isLoggedOut);
-  }, [isLoggedOut]);
 
   const onSubmit = useCallback(
     (e) => {
@@ -113,12 +108,12 @@ const Login = () => {
           {loading ? (
             <LoadingSpinner sx={{ margin: "auto" }} />
           ) : (
-            <>
+<>
               <Github variant="outlined" setLoading={setLoading} />
-              <Button type="submit" sx={{ marginLeft: "auto" }}>
-                Log in
-              </Button>
-            </>
+                    <Button type="submit" sx={{ marginLeft: "auto" }}>
+            Log in
+          </Button>
+</>
           )}
         </RowFlow>
       </ColumnFlow>
