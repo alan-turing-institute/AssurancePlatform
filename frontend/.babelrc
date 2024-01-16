@@ -3,7 +3,7 @@
   "plugins": ["dynamic-import-node"],
   "env": {
     "test": {
-      "plugins": ["transform-require-context"]
-    }
-  }
+      "plugins": ["transform-require-context"],
+    },
+  },
 }
