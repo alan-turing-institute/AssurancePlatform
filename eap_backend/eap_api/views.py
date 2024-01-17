@@ -501,7 +501,7 @@ def strategy_detail(request, pk):
 
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = StrategySerializer(strategy, data=data)
+        serializer = StrategySerializer(strategy, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
