@@ -13,6 +13,7 @@ function useInputCallbacks({
   validate,
   dirty,
   multiline,
+  mermaidFocus,
 }) {
   const [valueInternal, setValueInternal] = React.useState(value);
   const [dirtyInternal, setDirtyInternal] = React.useState(false);
@@ -79,9 +80,15 @@ function useInputCallbacks({
     [setError, validateInternal, flush]
   );
 
-  const onBlur = React.useCallback(() => {
-    flush(valueInternal);
-  }, [valueInternal, flush]);
+  const onBlur = React.useCallback(
+    (e) => {
+      flush(valueInternal);
+    },
+    [valueInternal, flush]
+  );
+
+  // manually trigger onBlur if a different node is selected on the mermaid chart
+  useEffect(onBlur, [mermaidFocus]);
 
   const onKeydown = useCallback(
     (e) => {
@@ -117,6 +124,7 @@ function TextInput({
   dirty,
   helperText,
   noRequiredSymbol,
+  mermaidFocus,
   ...props
 }) {
   const helpTextInternal = error ? error : helperText ?? " ";
@@ -130,6 +138,7 @@ function TextInput({
     maxLength,
     validate,
     dirty,
+    mermaidFocus,
     ...props,
   });
 
@@ -174,7 +183,7 @@ export function DisguisedTextInput({
     maxLength,
     validate,
     dirty,
-    ...props
+    ...props,
   });
 
   const onFocus = useCallback(() => {

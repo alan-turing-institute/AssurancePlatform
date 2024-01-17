@@ -9,6 +9,7 @@ function MermaidChart({
   selectedId,
   selectedType,
   setSelected,
+  setMermaidFocus
 }) {
   const [collapsedNodes, setCollapsedNodes] = useState([]);
 
@@ -46,6 +47,7 @@ function MermaidChart({
   // set click callback
   useEffect(() => {
     window.callback = (e) => {
+      setMermaidFocus(tog => !tog);
       let chunks = e.split("_");
       if (chunks.length === 2) {
         const [itemType, itemId] = chunks;
@@ -53,7 +55,7 @@ function MermaidChart({
         setSelected([itemId, itemType]);
       }
     };
-  }, [setSelected]);
+  }, [setSelected, setMermaidFocus]);
 
   const onCollapseButtonClick = useCallback(
     /** @param {MouseEvent} e  */ (e) => {

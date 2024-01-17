@@ -80,7 +80,7 @@ function AddItemButton({
   );
 }
 
-function PropertyField({ id, type, item, fieldName, onRefresh, ...props }) {
+function PropertyField({ id, type, item, fieldName, onRefresh, mermaidFocus, ...props }) {
   const [error, setError] = useState("");
 
   const [token] = useLoginToken();
@@ -119,6 +119,7 @@ function PropertyField({ id, type, item, fieldName, onRefresh, ...props }) {
       setValue={setValue}
       error={error}
       setError={setError}
+      mermaidFocus={mermaidFocus}
       required
     />
   );
@@ -190,7 +191,8 @@ function ItemEditor({
   onHide,
   getIdForNewElement,
   setSelected,
-  graphUpdate
+  graphUpdate,
+  mermaidFocus
 }) {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
@@ -352,6 +354,7 @@ function ItemEditor({
                 item={item}
                 fieldName="short_description"
                 onRefresh={onRefresh}
+                mermaidFocus={mermaidFocus}
               />
               {type === "Evidence" ? (
                 <PropertyField
@@ -362,6 +365,7 @@ function ItemEditor({
                   item={item}
                   fieldName="URL"
                   onRefresh={onRefresh}
+                  mermaidFocus={mermaidFocus}
                 />
               ) : type === "PropertyClaim" ? (
                 <PropertySelect

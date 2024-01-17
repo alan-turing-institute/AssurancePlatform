@@ -30,6 +30,8 @@ function CaseContainer() {
   const [selected, setSelected] = useState([]);
   const [selectedId, selectedType] = selected;
 
+  const [mermaidFocus, setMermaidFocus] = useState(false);
+
   const [shouldFetch, setShouldFetch] = useState(true);
 
   useEnforceLogin();
@@ -292,6 +294,7 @@ function CaseContainer() {
                       selectedId={selectedId}
                       selectedType={selectedType}
                       setSelected={setSelected}
+                      setMermaidFocus={setMermaidFocus}
                     />
                   </TransformComponent>
                   <RowFlow>
@@ -351,6 +354,7 @@ function CaseContainer() {
                 getIdForNewElement={getIdForNewElement}
                 setSelected={setSelected}
                 graphUpdate={shouldFetch}
+                mermaidFocus={mermaidFocus}
               />
             </ColumnFlow>
           ) : (
