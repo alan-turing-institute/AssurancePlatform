@@ -265,7 +265,8 @@ function CaseContainer() {
               flexShrink: 1,
               maxHeight: "100%",
               overflowY: "auto",
-              padding: "2rem",
+              padding: "1rem",
+              gap:"1rem"
             }}
           >
             <CaseTopBar
