@@ -155,7 +155,7 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
             height: "50%",
             textDecoration: "none",
             color: "unset",
-            overflow: "hidden"
+            overflow: "hidden",
           }}
         >
           <Typography variant="h3" component="h2">
@@ -167,14 +167,19 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
               // TODO this will show elipses when the text is too wide vertically
               // but not horizontally. CSS has no easy solution here.
               flexGrow: 1,
-              flexShrink:1,
+              flexShrink: 1,
               textWrap: "wrap",
               textOverflow: "ellipsis",
               overflow: "clip",
-              minHeight: 0
+              minHeight: 0,
             }}
           >
-            {description?.split("\n").map(str => <>{str}<br/></>)}
+            {description?.split("\n").map((str) => (
+              <>
+                {str}
+                <br />
+              </>
+            ))}
           </Typography>
           {/* TODO, designs would prefer the updated date */}
           <Typography variant="body2">
