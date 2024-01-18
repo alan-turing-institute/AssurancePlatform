@@ -28,7 +28,7 @@ function CaseTopBar({
   setErrors,
   getIdForNewElement,
   updateAllIdentifiers,
-  setSelected
+  setSelected,
 }) {
   const [token] = useLoginToken();
   const navigate = useNavigate();
@@ -54,7 +54,13 @@ function CaseTopBar({
   );
 
   const addGoal = useCallback(() => {
-    createItem(token, "TopLevelNormativeGoal", caseId, "AssuranceCase", getIdForNewElement("TopLevelNormativeGoal", caseId, "AssuranceCase"))
+    createItem(
+      token,
+      "TopLevelNormativeGoal",
+      caseId,
+      "AssuranceCase",
+      getIdForNewElement("TopLevelNormativeGoal", caseId, "AssuranceCase")
+    )
       .then((json) => {
         onRefresh();
         setSelected([json.id.toString(), "TopLevelNormativeGoal"]);
@@ -179,10 +185,7 @@ function CaseTopBar({
       >
         Reset names
       </Button>
-      <Button
-        onClick={addGoal}
-        startIcon={<Add />}
-      >
+      <Button onClick={addGoal} startIcon={<Add />}>
         Add Goal
       </Button>
       <CaseAccessibilityModal
