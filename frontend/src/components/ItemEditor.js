@@ -80,7 +80,15 @@ function AddItemButton({
   );
 }
 
-function PropertyField({ id, type, item, fieldName, onRefresh, mermaidFocus, ...props }) {
+function PropertyField({
+  id,
+  type,
+  item,
+  fieldName,
+  onRefresh,
+  mermaidFocus,
+  ...props
+}) {
   const [error, setError] = useState("");
 
   const [token] = useLoginToken();
@@ -147,8 +155,8 @@ function PropertySelect({
           .then((response) => {
             if (response.ok) {
               response.json().then((json) => {
-                setItem(json)
-              })
+                setItem(json);
+              });
               onRefresh();
             } else {
               response.json().then((json) => {
@@ -192,7 +200,7 @@ function ItemEditor({
   getIdForNewElement,
   setSelected,
   graphUpdate,
-  mermaidFocus
+  mermaidFocus,
 }) {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
@@ -239,10 +247,10 @@ function ItemEditor({
         isMounted = false;
       };
     }
-  }, [token, id, type])
+  }, [token, id, type]);
 
   // Fetch item when selected node in graph changes, but **not** for every graph update.
-  // Graph updates occur on an interval, and updating the item on this interval re-renders the 
+  // Graph updates occur on an interval, and updating the item on this interval re-renders the
   // ItemEditor.
   useEffect(() => {
     updateItem();
@@ -278,8 +286,8 @@ function ItemEditor({
         .then((response) => {
           if (response.ok) {
             response.json().then((json) => {
-              setItem(json)
-            })
+              setItem(json);
+            });
             onRefresh();
             setParentToAdd();
           } else {
@@ -310,8 +318,8 @@ function ItemEditor({
         .then((response) => {
           if (response.ok) {
             response.json().then((json) => {
-              setItem(json)
-            })
+              setItem(json);
+            });
             onRefresh();
             setParentToRemove();
           } else {

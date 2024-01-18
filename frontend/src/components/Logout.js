@@ -45,29 +45,29 @@ const Logout = () => {
     <ModalLikeLayout>
       {sessionExpired ? (
         <ColumnFlow>
-        <Typography variant="h2" component="h1">
-          Your login session has expired.
-        </Typography>
-        <RowFlow>
-          <Button onClick={handleLogout}>Ok</Button>
-        </RowFlow>
-      </ColumnFlow>
+          <Typography variant="h2" component="h1">
+            Your login session has expired.
+          </Typography>
+          <RowFlow>
+            <Button onClick={handleLogout}>Ok</Button>
+          </RowFlow>
+        </ColumnFlow>
       ) : (
-      <ColumnFlow>
-        <Typography variant="h2" component="h1">
-          Are you sure you want to log out?
-        </Typography>
-        <RowFlow>
-          <Button
-            onClick={goBack}
-            variant="outlined"
-            sx={{ marginLeft: "auto" }}
-          >
-            Back
-          </Button>
-          <Button onClick={handleLogout}>Confirm logout</Button>
-        </RowFlow>
-      </ColumnFlow>
+        <ColumnFlow>
+          <Typography variant="h2" component="h1">
+            Are you sure you want to log out?
+          </Typography>
+          <RowFlow>
+            <Button
+              onClick={goBack}
+              variant="outlined"
+              sx={{ marginLeft: "auto" }}
+            >
+              Back
+            </Button>
+            <Button onClick={handleLogout}>Confirm logout</Button>
+          </RowFlow>
+        </ColumnFlow>
       )}
     </ModalLikeLayout>
   );

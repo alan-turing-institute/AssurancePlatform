@@ -3,7 +3,15 @@ import SelectInput from "./common/SelectInput.jsx";
 import { itemGetCurrentParents, itemGetPotentialParents } from "./caseApi.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 
-function ParentSelector({ type, id, potential, caseId, value, setValue, graphUpdate }) {
+function ParentSelector({
+  type,
+  id,
+  potential,
+  caseId,
+  value,
+  setValue,
+  graphUpdate,
+}) {
   // A dropdown menu component for selecting parents of an item. The props are:
   // type: Item type of the one whose parents we want to select from.
   // id: Id of the item whose parents we want to select from.

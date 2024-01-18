@@ -6,7 +6,7 @@ import Login from "./Login";
 import { ColumnFlow } from "./common/Layout";
 import splashImage from "../images/building-an-assurance-case-adjusted-aspect-ratio.png";
 
-export const Splash = ({notFound}) => {
+export const Splash = ({ notFound }) => {
   // TODO #302 add content to splash screen
   const theme = useTheme();
 
@@ -45,13 +45,13 @@ export const Splash = ({notFound}) => {
           backgroundColor: "#FAFAFA",
         }}
       >
-      { notFound ? (
-        <Typography variant="h2" component="h1" sx={{ padding: "2rem" }}>
-        Page not found
-      </Typography>
-      ) : (
-        <Login />
-      )}
+        {notFound ? (
+          <Typography variant="h2" component="h1" sx={{ padding: "2rem" }}>
+            Page not found
+          </Typography>
+        ) : (
+          <Login />
+        )}
       </ColumnFlow>
     </Box>
   );

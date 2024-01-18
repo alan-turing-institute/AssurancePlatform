@@ -260,17 +260,22 @@ function CaseContainer() {
         <>
           <ColumnFlow
             sx={{
-              position:"relative",
+              position: "relative",
               flexGrow: 1,
               flexShrink: 1,
               maxHeight: "100%",
               overflowY: "auto",
               padding: "1rem",
-              gap:"1rem"
+              gap: "1rem",
             }}
           >
             <CaseTopBar
-              sx={{position:"absolute", width:"100%", zIndex:99, paddingRight:"4rem"}}
+              sx={{
+                position: "absolute",
+                width: "100%",
+                zIndex: 99,
+                paddingRight: "4rem",
+              }}
               caseId={caseSlug}
               assuranceCase={assuranceCase}
               onRefresh={triggerRefresh}
@@ -300,7 +305,14 @@ function CaseContainer() {
                       setMermaidFocus={setMermaidFocus}
                     />
                   </TransformComponent>
-                  <RowFlow sx={{position:"absolute", width:"100%", right: "2rem", bottom: "2rem"}}>
+                  <RowFlow
+                    sx={{
+                      position: "absolute",
+                      width: "100%",
+                      right: "2rem",
+                      bottom: "2rem",
+                    }}
+                  >
                     <Paper sx={{ marginLeft: "auto", padding: "0.25rem" }}>
                       <IconButton
                         size="small"

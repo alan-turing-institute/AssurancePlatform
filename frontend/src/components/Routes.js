@@ -2,7 +2,7 @@ import React from "react";
 import "../index.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navigation from "./Navigation"; // Navigation now includes UserProfileDropdown
-import {Home, Splash} from "./Home";
+import { Home, Splash } from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
 import CaseContainer from "./CaseContainer";

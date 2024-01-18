@@ -108,12 +108,12 @@ const Login = () => {
           {loading ? (
             <LoadingSpinner sx={{ margin: "auto" }} />
           ) : (
-<>
+            <>
               <Github variant="outlined" setLoading={setLoading} />
-                    <Button type="submit" sx={{ marginLeft: "auto" }}>
-            Log in
-          </Button>
-</>
+              <Button type="submit" sx={{ marginLeft: "auto" }}>
+                Log in
+              </Button>
+            </>
           )}
         </RowFlow>
       </ColumnFlow>
