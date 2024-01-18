@@ -2,6 +2,7 @@ import * as React from "react";
 import TextField from "@mui/material/TextField";
 import { useCallback, useEffect } from "react";
 import { Typography } from "@mui/material";
+import { useRef } from "react";
 
 function useInputCallbacks({
   value,
@@ -17,6 +18,7 @@ function useInputCallbacks({
 }) {
   const [valueInternal, setValueInternal] = React.useState(value);
   const [dirtyInternal, setDirtyInternal] = React.useState(false);
+  const componentInit = useRef(true);
 
   const validateInternal = React.useCallback(
     (val) => {
@@ -88,7 +90,13 @@ function useInputCallbacks({
   );
 
   // manually trigger onBlur if a different node is selected on the mermaid chart
-  useEffect(onBlur, [mermaidFocus]);
+  useEffect(() => {
+    if (componentInit.current) {
+      componentInit.current = false;
+      return;
+    }
+    onBlur();
+  }, [mermaidFocus]);
 
   const onKeydown = useCallback(
     (e) => {
