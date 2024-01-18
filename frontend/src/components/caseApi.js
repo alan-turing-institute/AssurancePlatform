@@ -1,5 +1,6 @@
 import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
+import { unauthorized } from "../hooks/useAuth.js";
 
 export async function getCase(token, id) {
   const url = `${getBaseURL()}/cases/${id}/`;
@@ -12,6 +13,10 @@ export async function getCase(token, id) {
   const res = await fetch(url, requestOptions);
   if (res.status === 200) {
     return await res.json();
+  } else if (res.status === 401) {
+    unauthorized();
+  } else if (res.status === 404) {
+    window.location.replace("/not-found");
   }
 
   throw new Error("Could not fetch case.");

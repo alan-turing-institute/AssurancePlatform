@@ -2,7 +2,7 @@ import React from "react";
 import "../index.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navigation from "./Navigation"; // Navigation now includes UserProfileDropdown
-import Home from "./Home";
+import {Home, Splash} from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
 import CaseContainer from "./CaseContainer";
@@ -33,10 +33,14 @@ const AllRoutes = () => {
             <Route path=":caseSlug" element={<CaseContainer />} />
           </Route>
           <Route path="/signup" element={<Signup />} />
-          <Route path="/logout" element={<Logout />} />
+          <Route path="/logout" element={<Logout />}>
+            <Route path=":sessionExpired" element={<Logout />} />
+          </Route>
           {/* These two pages don't have direct links, but the routes should remain for now */}
           <Route path="/groups" element={<Groups />} />
           <Route path="/github" element={<Github />} />
+
+          <Route path="*" element={<Splash notFound={true} />} />
         </Routes>
       </Box>
     </Router>

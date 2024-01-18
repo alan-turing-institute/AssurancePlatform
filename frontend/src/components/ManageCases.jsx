@@ -15,7 +15,7 @@ import { getBaseURL } from "./utils";
 import LoadingSpinner from "./common/LoadingSpinner";
 import { Link } from "react-router-dom";
 import CaseCreator from "./CaseCreator";
-import { useEnforceLogin, useLoginToken } from "../hooks/useAuth";
+import { unauthorized, useEnforceLogin, useLoginToken } from "../hooks/useAuth";
 import mockup_diagram from "../images/mockup-diagram.png";
 import { Add, ArrowTopRight, Bin, Draft, Share } from "./common/Icons";
 import BurgerMenu from "./common/BurgerMenu";
@@ -269,7 +269,21 @@ const ManageCases = () => {
     };
 
     fetch(url, requestOptions)
-      .then((response) => response.json())
+      .then(
+        (response) => {
+          switch (response.status) {
+            case 200:
+              return response.json();
+            case 401:
+              unauthorized();
+              break;
+          }
+        },
+        (reason) => {
+          console.log(reason);
+          setError("Something went wrong. Please try again later.");
+        }
+      )
       .then((body) => {
         if (isMounted && body.map !== undefined) {
           setCases(

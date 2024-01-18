@@ -20,6 +20,10 @@ export function useEnforceLogout() {
   return true;
 }
 
+export function unauthorized() {
+  window.location.replace("/logout/expired");
+}
+
 function setToken(value) {
   localStorage.clear();
 

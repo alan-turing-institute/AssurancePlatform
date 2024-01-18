@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box, useTheme, Typography } from "@mui/material";
 import ManageCases from "./ManageCases";
 import { useLoginToken } from "../hooks/useAuth";
 import Login from "./Login";
 import { ColumnFlow } from "./common/Layout";
 import splashImage from "../images/building-an-assurance-case-adjusted-aspect-ratio.png";
 
-const Splash = () => {
+export const Splash = ({notFound}) => {
   // TODO #302 add content to splash screen
   const theme = useTheme();
 
@@ -45,13 +45,19 @@ const Splash = () => {
           backgroundColor: "#FAFAFA",
         }}
       >
+      { notFound ? (
+        <Typography variant="h2" component="h1" sx={{ padding: "2rem" }}>
+        Page not found
+      </Typography>
+      ) : (
         <Login />
+      )}
       </ColumnFlow>
     </Box>
   );
 };
 
-const Home = () => {
+export const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [token] = useLoginToken();
@@ -62,5 +68,3 @@ const Home = () => {
 
   return isLoggedIn ? <ManageCases /> : <Splash />;
 };
-
-export default Home;
