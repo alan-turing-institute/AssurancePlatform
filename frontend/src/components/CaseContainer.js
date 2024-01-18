@@ -260,6 +260,7 @@ function CaseContainer() {
         <>
           <ColumnFlow
             sx={{
+              position:"relative",
               flexGrow: 1,
               flexShrink: 1,
               maxHeight: "100%",
@@ -297,7 +298,7 @@ function CaseContainer() {
                       setMermaidFocus={setMermaidFocus}
                     />
                   </TransformComponent>
-                  <RowFlow>
+                  <RowFlow sx={{position:"absolute", width:"100%", right: "2rem", bottom: "2rem"}}>
                     <Paper sx={{ marginLeft: "auto", padding: "0.25rem" }}>
                       <IconButton
                         size="small"
