@@ -269,6 +269,7 @@ function CaseContainer() {
             }}
           >
             <CaseTopBar
+              sx={{position:"absolute", width:"100%", zIndex:99, paddingRight:"4rem"}}
               caseId={caseSlug}
               assuranceCase={assuranceCase}
               onRefresh={triggerRefresh}
