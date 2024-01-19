@@ -363,6 +363,7 @@ function ItemEditor({
                 fieldName="short_description"
                 onRefresh={onRefresh}
                 mermaidFocus={mermaidFocus}
+                maxLength={configData.user_input_validity.item_editor.desc_char_max_len}
               />
               {type === "Evidence" ? (
                 <PropertyField
@@ -374,6 +375,7 @@ function ItemEditor({
                   fieldName="URL"
                   onRefresh={onRefresh}
                   mermaidFocus={mermaidFocus}
+                  maxLength={configData.user_input_validity.item_editor.evidence_url_char_max_len}
                 />
               ) : type === "PropertyClaim" ? (
                 <PropertySelect
