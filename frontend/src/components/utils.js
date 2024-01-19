@@ -19,14 +19,48 @@ function getRedirectURI() {
   return configData.DEFAULT_GITHUB_REDIRECT_URI;
 }
 
-function sanitizeForMermaid(input_text) {
-  let sanitizedText = input_text.replace(/[^a-z0-9 .,_-]/gim, "");
-  return sanitizedText.trim();
+/** Escape html characters in text */
+function sanitizeForHtml(input_text, replaceNewLines = false) {
+  let result = input_text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/'/g, "&apos;")
+    .replace(/"/g, "&quot;");
+
+  if (replaceNewLines) {
+    result = result.replace(/\n/g, "<br/>");
+  }
+
+  return result;
+}
+
+/** Unespcape html characters in text */
+function decodeFromHtml(input_text) {
+  return input_text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"');
 }
 
 function removeArrayElement(array, element) {
   // Remove from `array`, in place, the (first instance of?) `element`.
   array.splice(array.indexOf(element), 1);
+}
+
+function collapseExpandButton(name, isCollapsed) {
+  // for export purposes
+  const buttonStyle = "display: none";
+
+  const svg = isCollapsed
+    ? `<svg width='24' height='24' viewBox='0 0 12 20' fill='none' xmlns='http://www.w3.org/2000/svg'><g id='arrow-left-3--arrow-keyboard-left'><path id='Vector' d='M10.5002 0.714294L1.7145 9.50001C1.64618 9.56414 1.59172 9.64159 1.55449 9.72759C1.51726 9.81358 1.49805 9.90629 1.49805 10C1.49805 10.0937 1.51726 10.1864 1.55449 10.2724C1.59172 10.3584 1.64618 10.4359 1.7145 10.5L10.5002 19.2857' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></g></svg>`
+    : `<svg width='24' height='24' viewBox='0 0 20 12' fill='none' xmlns='http://www.w3.org/2000/svg'><g id='arrow-down-3--arrow-down-keyboard'><path id='Vector' d='M0.714355 1.50012L9.50007 10.2858C9.5642 10.3541 9.64166 10.4087 9.72766 10.4458C9.81364 10.4831 9.90636 10.5023 10.0001 10.5023C10.0938 10.5023 10.1865 10.4831 10.2725 10.4458C10.3585 10.4087 10.4359 10.3541 10.5001 10.2858L19.2858 1.50012' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></g></svg>`;
+
+  const label = isCollapsed ? "Expand" : "Collapse";
+
+  return `<button data-key='${name}' style='${buttonStyle}' class='collapse-expand' aria-label='${label}'>${svg}</button>`;
 }
 
 /**
@@ -50,19 +84,38 @@ function jsonToMermaid(
     return itemType + "_" + itemId;
   }
 
-  function makeBox(text, shape, name, isCollapsed) {
-    // text is already sanitised at this point, so will not contain <> or "
+  function makeBox(item, shape, name, isCollapsed) {
+    let identifier = sanitizeForHtml(item.name, true);
+    const description = sanitizeForHtml(item["short_description"] ?? "", true);
+    let url = sanitizeForHtml(item.URL ?? "");
 
-    if (text.length > configData["BOX_NCHAR"]) {
-      text = text.substring(0, configData["BOX_NCHAR"] - 3) + "...";
+    if (url && !url.toUpperCase().startsWith("http")) {
+      url = "https://" + url;
     }
 
-    const symbol = isCollapsed ? "&plus;" : "&minus;";
-    const helpText = isCollapsed ? "Expand" : "Collapse";
-    text += `<button class='collapse-expand' data-key='${name}'><span class='assistive-text'>${helpText}</span>${symbol}</button>`;
+    // use inline styles so they appear in the svg export
+
+    const containerStyle =
+      "font-family: Plus Jakarta Sans, sans-serif;font-size: 0.875rem;font-style: normal;font-weight: 500;line-height: 150%;width:15.5rem;;display:flex;flex-direction:column";
+    const titleStyle =
+      "font-size: 1rem;font-weight: 700;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
+    // TODO this will show elipses when the text is too wide vertically
+    // but not horizontally. CSS has no easy solution here.
+    const descriptionStyle =
+      "max-height:3.25rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
+    const urlStyle = "color: unset;";
+
+    let text = `<h2 style='${titleStyle}'>${identifier}</h2><p style=${descriptionStyle}>${description}</p>`;
+
+    if (url) {
+      // something seems to strip target off...
+      text += `<a style='${urlStyle}' href='${url}' target='_blank'>${url}</a>`;
+    }
+
+    text += collapseExpandButton(name, isCollapsed);
 
     // surround with quotes so mermaid doesn't treat content as markdown
-    text = '"' + text + '"';
+    text = `"<div style='${containerStyle}'>${text}</div>"`;
 
     if (shape === "square") return "[" + text + "]";
     else if (shape === "diamond") return "{" + text + "}";
@@ -123,30 +176,18 @@ function jsonToMermaid(
           parentNode +
           arrow +
           thisNode +
-          makeBox(
-            sanitizeForMermaid(thisObj.name),
-            boxShape,
-            thisNode,
-            isCollapsed,
-          ) +
+          makeBox(thisObj, boxShape, thisNode, isCollapsed) +
           "\n";
       } else {
         outputmd +=
-          thisNode +
-          makeBox(
-            sanitizeForMermaid(thisObj.name),
-            boxShape,
-            thisNode,
-            isCollapsed,
-          ) +
-          "\n";
+          thisNode + makeBox(thisObj, boxShape, thisNode, isCollapsed) + "\n";
       }
       // add a click link to the node
       outputmd +=
         "\n click " +
         thisNode +
         ' callback "' +
-        thisObj.short_description +
+        sanitizeForHtml(thisObj.short_description) +
         '"\n';
       // add style to the node
       outputmd = addClasses(thisNode, thisObj, itemType, outputmd);
@@ -171,6 +212,7 @@ function jsonToMermaid(
   Object.keys(styleclasses).forEach((key) => {
     outputmd += `classDef ${key} ${styleclasses[key]}; \n`;
   });
+  outputmd += "classDef foo color:#ff00ff; \n";
   // call the recursive addTree function, starting with the Goal as the top node
   outputmd = addTree("TopLevelNormativeGoal", in_json, null, outputmd, []);
   // output the length of the Mermaid string
@@ -287,7 +329,8 @@ export {
   joinCommaSeparatedString,
   jsonToMermaid,
   removeArrayElement,
-  sanitizeForMermaid,
+  sanitizeForHtml,
+  decodeFromHtml,
   splitCommaSeparatedString,
   getSelfUser,
   visitCaseItem,

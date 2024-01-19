@@ -40,6 +40,7 @@ from .view_utils import (
     get_allowed_groups,
     get_case_permissions,
     get_json_tree,
+    make_case_summary,
     make_summary,
     save_json_tree,
 )
@@ -184,7 +185,7 @@ def case_list(request):
     if request.method == "GET":
         cases = get_allowed_cases(request.user)
         serializer = AssuranceCaseSerializer(cases, many=True)
-        summaries = make_summary(serializer.data)
+        summaries = make_case_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
@@ -500,7 +501,7 @@ def strategy_detail(request, pk):
 
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = StrategySerializer(strategy, data=data)
+        serializer = StrategySerializer(strategy, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)

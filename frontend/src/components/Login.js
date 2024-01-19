@@ -1,119 +1,123 @@
-import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Form,
-  FormField,
-  Heading,
-  Text,
-  TextInput,
-  Spinner,
-} from "grommet";
+import React, { useState, useEffect, useCallback } from "react";
+
 import { getBaseURL } from "./utils.js";
-import Github from "./GithubLogin.js";
+import Github from "./GithubLogin";
+import { Box, Button, Typography } from "@mui/material";
+import TextInput from "./common/TextInput.jsx";
+import LoadingSpinner from "./common/LoadingSpinner";
+import { ColumnFlow, RowFlow } from "./common/Layout";
+import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
+import { Link } from "react-router-dom";
+import ErrorMessage from "./common/ErrorMessage.jsx";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [errors, setErrors] = useState([]);
+  const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (localStorage.getItem("token") !== null) {
-      window.location.replace("/");
-    }
-  }, []);
+  const [_, setToken] = useLoginToken();
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const user = {
-      username: username,
-      password: password,
-    };
+  const onSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    fetch(`${getBaseURL()}/auth/login/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setLoading(false); // Set loading to false when the login process is completed
-        if (data.key) {
-          localStorage.clear();
-          localStorage.setItem("token", data.key);
-          localStorage.setItem("username", username);
-          window.location.replace("/");
-        } else {
-          setUsername("");
-          setPassword("");
-          localStorage.clear();
-          setErrors(true);
-        }
+      if (!username || !password) {
+        setDirty(true);
+        return;
+      }
+
+      setErrors([]);
+      setLoading(true);
+      const user = {
+        username: username,
+        password: password,
+      };
+
+      fetch(`${getBaseURL()}/auth/login/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
       })
-      .catch(() => {
-        setLoading(false); // Also set loading to false when there is an error
-      });
-  };
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.key) {
+            setToken(data.key);
+            window.location.replace("/");
+          } else {
+            setLoading(false);
+            setPassword("");
+            setToken(null);
+            setErrors(["Cannot log in with provided credentials"]);
+          }
+        })
+        .catch(() => {
+          setLoading(false); // Also set loading to false when there is an error
+          setErrors(["An error occurred, please try again later"]);
+        });
+    },
+    [username, password, setToken],
+  );
 
   return (
-    <Box fill align="center" justify="center">
-      {loading ? (
-        <Box align="center" justify="center">
-          <Spinner size="medium" />
-          <Text size="xlarge" margin="small">
-            Loading...
-          </Text>
+    <form noValidate onSubmit={onSubmit}>
+      <ColumnFlow>
+        <Typography variant="h2" component="h1" sx={{ marginBottom: "1rem" }}>
+          Login
+        </Typography>
+        <Box sx={{ marginBottom: "1rem" }}>
+          <Typography>Not already registered?</Typography>
+          <Button component={Link} to="/signup" variant="outlined">
+            Sign-up
+          </Button>
         </Box>
-      ) : (
-        <Box width="medium" pad="medium" gap="medium">
-          <Heading level={2}>Login to platform</Heading>
-          {errors && (
-            <Text color="status-critical" textAlign="center">
-              Cannot log in with provided credentials
-            </Text>
+        <TextInput
+          label="Username"
+          value={username}
+          setValue={setUsername}
+          error={usernameError}
+          setError={setUsernameError}
+          dirty={dirty}
+          required
+          noRequiredSymbol
+          inputProps={{
+            autoComplete: "username",
+          }}
+        />
+        <TextInput
+          label="Password"
+          type="password"
+          value={password}
+          setValue={setPassword}
+          error={passwordError}
+          setError={setPasswordError}
+          dirty={dirty}
+          required
+          noRequiredSymbol
+          inputProps={{
+            autoComplete: "current-password",
+          }}
+        />
+        <ErrorMessage errors={errors} />
+        <RowFlow>
+          {loading ? (
+            <LoadingSpinner sx={{ margin: "auto" }} />
+          ) : (
+            <>
+              <Github variant="outlined" setLoading={setLoading} />
+              <Button type="submit" sx={{ marginLeft: "auto" }}>
+                Log in
+              </Button>
+            </>
           )}
-          <Form onSubmit={onSubmit}>
-            <FormField
-              label="User name"
-              htmlFor="username-input"
-              name="username"
-            >
-              <TextInput
-                id="username-input"
-                name="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-              />
-            </FormField>
-            <FormField
-              label="Password"
-              htmlFor="password-input"
-              name="password"
-            >
-              <TextInput
-                id="password-input"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </FormField>
-            <Box direction="row" gap="medium" justify="between">
-              <Button type="submit" label="Login" primary />
-            </Box>
-          </Form>
-          <Github setLoading={setLoading} />
-          <Box align="center" margin={{ top: "medium" }}>
-            <Text>Not already registered?</Text>
-            <Button href="/signup/" label="Sign-up" />
-          </Box>
-        </Box>
-      )}
-    </Box>
+        </RowFlow>
+      </ColumnFlow>
+    </form>
   );
 };
 

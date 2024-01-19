@@ -134,8 +134,6 @@ class Strategy(CaseItem):
     goal = models.ForeignKey(
         TopLevelNormativeGoal, related_name="strategies", on_delete=models.CASCADE
     )
-    short_description = models.CharField(max_length=1000, null=True, blank=True)
-    long_description = models.CharField(max_length=3000, null=True, blank=True)
 
     def __str__(self):
         return self.name

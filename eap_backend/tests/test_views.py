@@ -20,7 +20,7 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
-from eap_api.views import make_summary
+from eap_api.views import make_case_summary, make_summary
 from rest_framework.authtoken.models import Token
 
 from .constants_tests import (
@@ -71,7 +71,7 @@ class CaseViewTest(TestCase):
     def test_case_list_view_get(self):
         response_get = self.client.get(reverse("case_list"))
         assert response_get.status_code == 200
-        assert response_get.json() == make_summary(self.serializer.data)
+        assert response_get.json() == make_case_summary(self.serializer.data)
 
     def test_case_detail_view_get(self):
         response_get = self.client.get(

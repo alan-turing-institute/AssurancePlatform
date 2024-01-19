@@ -5,19 +5,19 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import React from "react";
 import CaseCreator from "../CaseCreator.js";
+import { MemoryRouter } from "react-router-dom";
 
-const mockedUseNavigate = jest.fn();
-const mockedUseLocation = jest.fn().mockReturnValue({ state: {} }); // return an object with the state property
-
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useNavigate: () => mockedUseNavigate,
-  useLocation: () => mockedUseLocation,
-}));
+function WrappedCaseCreator() {
+  return (
+    <MemoryRouter>
+      <CaseCreator isOpen={true} onClose={() => {}} />
+    </MemoryRouter>
+  );
+}
 
 test("renders case creator layer", () => {
   localStorage.setItem("token", "dummy");
-  render(<CaseCreator />);
-  const textElement = screen.getByText("Create a New Assurance Case");
+  render(<WrappedCaseCreator />);
+  const textElement = screen.getByText("Create a new assurance case");
   expect(textElement).toBeInTheDocument();
 });

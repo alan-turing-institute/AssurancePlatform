@@ -1,16 +1,34 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import Mermaid from "../Mermaid.js";
 import "regenerator-runtime/runtime";
 import "@testing-library/jest-dom";
 
 test("renders chart", async () => {
-  render(<Mermaid chartmd="graph TB;  A[TestGoal];" />);
+  let input = {
+    id: 1,
+    name: "TestCase",
+    description: "",
+    color_profile: "default",
+    goals: [
+      {
+        id: 1,
+        name: "TestGoal",
+        short_description: "short",
+        long_description: "long",
+        context: [],
+        property_claims: [],
+        strategies: [],
+      },
+    ],
+  };
+
+  render(<Mermaid caseId="1" assuranceCase={input} setSelected={() => {}} />);
   // Use findBy with a regex and await the result
-  const chartText = await screen.findByText(/A\[TestGoal\];/);
+  const chartText = await screen.findByText(/TestGoal/);
   expect(chartText).toBeInTheDocument();
 });
 

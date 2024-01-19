@@ -1,45 +1,89 @@
-import { Select } from "grommet";
-import React, { Component } from "react";
-import { useParams } from "react-router-dom";
+import {
+  FormControl,
+  FormControlLabel,
+  FormHelperText,
+  FormLabel,
+  Radio,
+  RadioGroup,
+} from "@mui/material";
+import useId from "@mui/utils/useId";
+import React, { useCallback, useEffect, useState } from "react";
 
-class TemplateSelector extends Component {
-  constructor(props) {
-    super(props);
-    this.templates = [];
-  }
+function TemplateSelector({ value, setValue, error, setError, dirty }) {
+  const [dirtyInternal, setDirtyInternal] = React.useState(false);
 
-  componentDidMount() {
+  const [templates, setTemplates] = useState([]);
+  const [defaultValue, setDefaultValue] = useState(0);
+  const [valueInner, setValueInner] = useState("");
+
+  const helpTextInternal = error ? error : " ";
+
+  useEffect(() => {
+    if (dirty && !dirtyInternal) {
+      setDirtyInternal(true);
+      if (!value) {
+        setError("Please select a template");
+      }
+    }
+  }, [dirty, dirtyInternal, setError, value]);
+
+  useEffect(() => {
+    const index = templates.indexOf(value);
+
+    if (index >= 0) {
+      setValueInner(index.toString());
+    }
+  }, [value, templates]);
+
+  useEffect(() => {
     // Import all *.json files from caseTemplates, make a list of the contents.
     const rc = require.context("../caseTemplates", false, /.json$/);
-    rc.keys().forEach((key) => this.templates.push(rc(key)));
+    const newTemplates = [];
+    rc.keys().forEach((key) => newTemplates.push(rc(key)));
     // The default case is the one called empty, if it exists, otherwise the first one.
-    if (this.templates.length === 0) return null;
-    let defaultCase = this.templates[0];
-    for (let c of this.templates) {
+    if (newTemplates.length === 0) return;
+    let defaultCase = 0;
+    for (let c of newTemplates) {
       if (c.name === "empty") {
         defaultCase = c;
         break;
       }
     }
-    this.props.setValue(defaultCase);
-  }
+    setTemplates(newTemplates);
+    setDefaultValue(defaultCase);
+  }, []);
 
-  onChange(event) {
-    this.props.setValue(event.value);
-  }
+  const id = useId();
 
-  render() {
-    return (
-      <Select
-        placeholder="Choose template"
-        onChange={this.onChange.bind(this)}
-        value={this.props.value}
-        options={this.templates}
-        labelKey="name"
-      />
-    );
-  }
+  const onChange = useCallback(
+    (e) => {
+      setValueInner(e.target.value);
+      setValue(templates[Number.parseInt(e.target.value)]);
+    },
+    [setValue, templates],
+  );
+
+  return (
+    <FormControl error={!!error}>
+      <FormLabel id={id}>Choose template</FormLabel>
+      <RadioGroup
+        value={valueInner}
+        onChange={onChange}
+        aria-labelledby={id}
+        defaultValue={defaultValue}
+      >
+        {templates.map((template, i) => (
+          <FormControlLabel
+            key={i}
+            value={i.toString()}
+            control={<Radio />}
+            label={template.name}
+          />
+        ))}
+      </RadioGroup>
+      <FormHelperText>{helpTextInternal}</FormHelperText>
+    </FormControl>
+  );
 }
 
-// eslint-disable-next-line import/no-anonymous-default-export
-export default (props) => <TemplateSelector {...props} params={useParams()} />;
+export default TemplateSelector;

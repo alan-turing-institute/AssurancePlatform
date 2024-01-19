@@ -16,6 +16,7 @@ import {
   splitCommaSeparatedString,
 } from "./utils.js";
 import CreateGroup from "./CreateGroup.js";
+import { LayoutWithNav } from "./common/Layout.jsx";
 
 class Groups extends React.Component {
   constructor(props) {
@@ -222,5 +223,7 @@ class Groups extends React.Component {
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default (props) => (
-  <Groups {...props} params={useParams()} navigate={useNavigate()} />
+  <LayoutWithNav>
+    <Groups {...props} params={useParams()} navigate={useNavigate()} />
+  </LayoutWithNav>
 );
