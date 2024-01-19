@@ -7,16 +7,16 @@ import { Button, Typography } from "@mui/material";
 import useId from "@mui/utils/useId";
 import TextInput from "./common/TextInput.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import { visuallyHidden } from '@mui/utils';
-import TableSortLabel from '@mui/material/TableSortLabel';
-import Box from '@mui/material/Box';
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import { visuallyHidden } from "@mui/utils";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import Box from "@mui/material/Box";
 
 function CommentSection({ caseId, isOpen, onClose }) {
   const titleId = useId();
@@ -157,46 +157,47 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
       </ColumnFlow>
 
       <TableContainer component={Paper}>
-      <Table sx={{ width: "100%" }} size="small">
-        <TableHead>
-          <TableRow>
+        <Table sx={{ width: "100%" }} size="small">
+          <TableHead>
+            <TableRow>
               {columns.map((headCell) => (
-              <TableCell
-                key={headCell.header}
-                sortDirection={sort.property === headCell.property ? sort.direction : false}
-              >
-              <TableSortLabel
-                active={sort.property === headCell.property}
-                direction={sort.direction}
-                onClick={()=> onSort(headCell.property)}
-              >
-              {headCell.header}
-              {sort.property === headCell.property ? (
-                <Box component="span" sx={visuallyHidden}>
-                  {sort.direction === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                </Box>
-              ) : null}
-            </TableSortLabel>
-            </TableCell>
-          ))}
-            
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {comments.map((row) => (
-            <TableRow
-              key={row.id}
-            >
-              <TableCell>
-                {row.author}
-              </TableCell>
-              <TableCell>{formatDistanceToNow(new Date(row.created_at)) + " ago"}</TableCell>
-              <TableCell>{row.content}</TableCell>
+                <TableCell
+                  key={headCell.header}
+                  sortDirection={
+                    sort.property === headCell.property ? sort.direction : false
+                  }
+                >
+                  <TableSortLabel
+                    active={sort.property === headCell.property}
+                    direction={sort.direction}
+                    onClick={() => onSort(headCell.property)}
+                  >
+                    {headCell.header}
+                    {sort.property === headCell.property ? (
+                      <Box component="span" sx={visuallyHidden}>
+                        {sort.direction === "desc"
+                          ? "sorted descending"
+                          : "sorted ascending"}
+                      </Box>
+                    ) : null}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {comments.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell>{row.author}</TableCell>
+                <TableCell>
+                  {formatDistanceToNow(new Date(row.created_at)) + " ago"}
+                </TableCell>
+                <TableCell>{row.content}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </>
   );
 }
