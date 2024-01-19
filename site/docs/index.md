@@ -24,6 +24,10 @@ This site contains information about the following:
 - User guidance for the TEA platform
 - Technical documentation for the TEA platform
 
+## Funding Statement 💶
+
+Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
 <br />
 
 [Start Reading](about.md){ .md-button .md-button--primary }
