@@ -1,5 +1,3 @@
-import { DataTable, Text } from "grommet";
-import { User, Clock } from "grommet-icons";
 import React, { useState, useEffect, useCallback } from "react";
 import { getBaseURL } from "./utils.js";
 import { formatDistanceToNow } from "date-fns";
@@ -9,6 +7,16 @@ import { Button, Typography } from "@mui/material";
 import useId from "@mui/utils/useId";
 import TextInput from "./common/TextInput.jsx";
 import { useLoginToken } from "../hooks/useAuth.js";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import { visuallyHidden } from "@mui/utils";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import Box from "@mui/material/Box";
 
 function CommentSection({ caseId, isOpen, onClose }) {
   const titleId = useId();
@@ -93,7 +101,8 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
   );
 
   const onSort = (property) => {
-    const direction = sort.direction === "asc" ? "desc" : "asc";
+    const opositeDir = sort.direction === "asc" ? "desc" : "asc";
+    const direction = sort.property === property ? opositeDir : sort.direction;
     setSort({ property, direction });
     const sortedComments = [...comments].sort((a, b) => {
       if (a[property] < b[property]) {
@@ -110,28 +119,15 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
   const columns = [
     {
       property: "author",
-      header: (
-        <Text>
-          User <User />
-        </Text>
-      ),
-      render: (datum) => datum.author,
+      header: "User",
     },
     {
       property: "created_at",
-      header: (
-        <Text>
-          Time <Clock />
-        </Text>
-      ),
-      render: (datum) =>
-        formatDistanceToNow(new Date(datum.created_at)) + " ago",
-      sortable: true,
+      header: "Time",
     },
     {
       property: "content",
       header: "Comment",
-      render: (datum) => datum.content,
     },
   ];
 
@@ -160,14 +156,48 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
         </RowFlow>
       </ColumnFlow>
 
-      {/* TODO migrate from Grommet */}
-      <DataTable
-        columns={columns}
-        data={comments}
-        sort={sort}
-        onSort={(event) => onSort(event.property)}
-        step={10} // Amount of items to render at a time
-      />
+      <TableContainer component={Paper}>
+        <Table sx={{ width: "100%" }} size="small">
+          <TableHead>
+            <TableRow>
+              {columns.map((headCell) => (
+                <TableCell
+                  key={headCell.header}
+                  sortDirection={
+                    sort.property === headCell.property ? sort.direction : false
+                  }
+                >
+                  <TableSortLabel
+                    active={sort.property === headCell.property}
+                    direction={sort.direction}
+                    onClick={() => onSort(headCell.property)}
+                  >
+                    {headCell.header}
+                    {sort.property === headCell.property ? (
+                      <Box component="span" sx={visuallyHidden}>
+                        {sort.direction === "desc"
+                          ? "sorted descending"
+                          : "sorted ascending"}
+                      </Box>
+                    ) : null}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {comments.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell>{row.author}</TableCell>
+                <TableCell>
+                  {formatDistanceToNow(new Date(row.created_at)) + " ago"}
+                </TableCell>
+                <TableCell>{row.content}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </>
   );
 }
