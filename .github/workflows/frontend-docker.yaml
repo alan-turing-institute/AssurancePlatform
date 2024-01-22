@@ -2,7 +2,7 @@ name: frontend-docker
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, develop]
   workflow_dispatch:
 
 jobs:
