@@ -28,16 +28,16 @@ global.fetch = jest.fn(() =>
 
 afterEach(cleanup);
 
-test("renders parent selector layer", () => {
+test("renders parent selector layer", async () => {
   localStorage.setItem("token", "dummy");
   render(<ParentSelector type="Evidence" caseId="1" />);
-  const dropdown = screen.getByLabelText("Choose a parent");
+  const dropdown = await screen.findByLabelText("Choose a parent");
   expect(dropdown).toBeInTheDocument();
 });
 
-test("renders dropdown with 'Choose a potential parent' placeholder for potential prop", () => {
+test("renders dropdown with 'Choose a potential parent' placeholder for potential prop", async () => {
   render(<ParentSelector type="Evidence" potential={true} caseId="1" />);
-  const dropdown = screen.getByLabelText("Choose a potential parent");
+  const dropdown = await screen.findByLabelText("Choose a potential parent");
   expect(dropdown).toBeInTheDocument();
 });
 
