@@ -357,7 +357,7 @@ function CaseContainer() {
                 borderLeftWidth: "1px",
                 borderLeftColor: theme.palette.primary.main,
                 backgroundColor: "#FAFAFA",
-                overflow: "scroll"
+                overflow: "scroll",
               }}
             >
               <ItemEditor

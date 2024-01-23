@@ -58,7 +58,7 @@ test("onChange updates selected value correctly", async () => {
   const dropdown = await screen.findByLabelText("Choose a parent");
   userEvent.click(dropdown);
 
-  const option = await screen.findByText("PropertyClaim 1");;
+  const option = await screen.findByText("PropertyClaim 1");
   userEvent.click(option);
 
   expect(setValueMock).toHaveBeenCalledWith({ id: 1, name: "PropertyClaim 1" });
