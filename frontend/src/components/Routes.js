@@ -3,12 +3,9 @@ import "../index.css";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navigation from "./Navigation"; // Navigation now includes UserProfileDropdown
 import { Home, Splash } from "./Home";
-import Login from "./Login";
 import Signup from "./Signup";
 import CaseContainer from "./CaseContainer";
 import Logout from "./Logout";
-import Groups from "./Groups";
-import Github from "./Github";
 import { Box, Toolbar } from "@mui/material";
 
 const AllRoutes = () => {
@@ -36,9 +33,10 @@ const AllRoutes = () => {
           <Route path="/logout" element={<Logout />}>
             <Route path=":sessionExpired" element={<Logout />} />
           </Route>
-          {/* These two pages don't have direct links, but the routes should remain for now */}
-          <Route path="/groups" element={<Groups />} />
-          <Route path="/github" element={<Github />} />
+          {/* These two pages are not linked to from anywhere, and these routes have been commented
+          out because the pages have not been updated to remove grommet dependencies. */}
+          {/* <Route path="/groups" element={<Groups />} />
+          <Route path="/github" element={<Github />} /> */}
 
           <Route path="*" element={<Splash notFound={true} />} />
         </Routes>
