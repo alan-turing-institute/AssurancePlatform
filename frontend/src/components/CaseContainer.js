@@ -273,7 +273,6 @@ function CaseContainer() {
               sx={{
                 position: "absolute",
                 width: "100%",
-                zIndex: 99,
                 paddingRight: "4rem",
               }}
               caseId={caseSlug}
@@ -358,6 +357,7 @@ function CaseContainer() {
                 borderLeftWidth: "1px",
                 borderLeftColor: theme.palette.primary.main,
                 backgroundColor: "#FAFAFA",
+                overflow: "scroll",
               }}
             >
               <ItemEditor

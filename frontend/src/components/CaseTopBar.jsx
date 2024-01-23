@@ -131,7 +131,7 @@ function CaseTopBar({
 
   return (
     <RowFlow sx={sx}>
-      <Paper sx={{ padding: "0.75rem 1rem", flexShrink: 1 }}>
+      <Paper sx={{ padding: "0.75rem 1rem", flexShrink: 1, zIndex: 99 }}>
         <RowFlow sx={{ height: "2.75rem", alignItems: "center" }}>
           <DisguisedTextInput
             value={assuranceCase.name}
@@ -179,13 +179,13 @@ function CaseTopBar({
         </RowFlow>
       </Paper>
       <Button
-        sx={{ marginLeft: "auto" }}
+        sx={{ marginLeft: "auto", zIndex: 99 }}
         variant="outlined"
         onClick={updateAllIdentifiers}
       >
         Reset names
       </Button>
-      <Button onClick={addGoal} startIcon={<Add />}>
+      <Button onClick={addGoal} startIcon={<Add />} sx={{ zIndex: 99 }}>
         Add Goal
       </Button>
       <CaseAccessibilityModal
