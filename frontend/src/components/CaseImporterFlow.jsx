@@ -127,7 +127,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           }
         });
       } else {
-        postCaseJSON(JSON.stringify(fileJson));
+        postCaseJSON(fileJson);
       }
     },
     [uploadType, url, fileJson, getUrlContent, postCaseJSON]
@@ -193,7 +193,7 @@ function CaseImporterFlow({ titleId, onClose }) {
         Import file
       </Typography>
       <Typography>Import a file to create a case.</Typography>
-      <ErrorMessage errors={errors}/>
+      <ErrorMessage errors={errors} />
       <RadioGroup value={uploadType} onChange={onTypeChange} row>
         <FormControlLabel
           value="file"
@@ -241,7 +241,9 @@ function CaseImporterFlow({ titleId, onClose }) {
             >
               Cancel
             </Button>
-            <Button type="submit" endIcon={<ArrowRight/>}>Continue</Button>
+            <Button type="submit" endIcon={<ArrowRight />}>
+              Continue
+            </Button>
           </>
         )}
       </RowFlow>
