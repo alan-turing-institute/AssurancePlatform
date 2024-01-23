@@ -52,15 +52,14 @@ test("renders options based on API response", async () => {
   expect(option2).toBeInTheDocument();
 });
 
-// TODO: Get this test to work
-// test("onChange updates selected value correctly", () => {
-//   const setValueMock = jest.fn();
-//   render(<ParentSelector type="Evidence" setValue={setValueMock} />);
-//   const dropdown = screen.getByPlaceholderText("Choose a parent");
-//   fireEvent.click(dropdown);
+test("onChange updates selected value correctly", async () => {
+  const setValueMock = jest.fn();
+  render(<ParentSelector type="Evidence" setValue={setValueMock} />);
+  const dropdown = await screen.findByLabelText("Choose a parent");
+  userEvent.click(dropdown);
 
-//   const option = screen.findByText("PropertyClaim 1");;
-//   fireEvent.click(option);
+  const option = await screen.findByText("PropertyClaim 1");;
+  userEvent.click(option);
 
-//   expect(setValueMock).toHaveBeenCalledWith({ id: 1, name: "PropertyClaim 1" });
-// });
+  expect(setValueMock).toHaveBeenCalledWith({ id: 1, name: "PropertyClaim 1" });
+});
