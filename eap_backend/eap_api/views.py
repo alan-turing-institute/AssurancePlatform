@@ -561,6 +561,10 @@ def comment_list(request, assurance_case_id):
     """
     List all comments for an assurance case, or create a new comment.
     """
+    permissions = get_case_permissions(assurance_case_id, request.user)
+    if not permissions:
+        return HttpResponse(status=403)
+
     if request.method == "GET":
         comments = Comment.objects.filter(assurance_case_id=assurance_case_id)
         serializer = CommentSerializer(comments, many=True)
@@ -583,8 +587,13 @@ def reply_to_comment(request, comment_id):
     """
     try:
         parent_comment = Comment.objects.get(pk=comment_id)
+        assurance_case_id = parent_comment.assurance_case_id
     except Comment.DoesNotExist:
         return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+
+    permissions = get_case_permissions(assurance_case_id, request.user)
+    if not permissions:
+        return HttpResponse(status=403)
 
     if request.method == "POST":
         data = JSONParser().parse(request)
