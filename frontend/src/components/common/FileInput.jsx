@@ -40,8 +40,8 @@ function FileInput({ file, setFile, accept }) {
       {file ? (
         <>
           <Typography>{file.name}</Typography>
-          <IconButton aria-label="clear" onClick={onClear} sx={{zIndex: 2}}>
-            <Remove/>
+          <IconButton aria-label="clear" onClick={onClear} sx={{ zIndex: 2 }}>
+            <Remove />
           </IconButton>
         </>
       ) : (
@@ -60,7 +60,7 @@ function FileInput({ file, setFile, accept }) {
       )}
       <input
         ref={fileInputRef}
-        class="file-input-input"
+        className="file-input-input"
         type="file"
         accept={accept}
         onChange={onChange}

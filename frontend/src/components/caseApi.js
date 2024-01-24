@@ -15,6 +15,9 @@ export async function getCase(token, id) {
     return await res.json();
   } else if (res.status === 401) {
     unauthorized();
+  } else if (res.status === 403) {
+    // forbidden (eg. attempts to access cases without required permissions)
+    window.location.replace("/not-found");
   } else if (res.status === 404) {
     window.location.replace("/not-found");
   }

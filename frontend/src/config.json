@@ -111,7 +111,6 @@
       "children": [],
       "parent_relation": "one-to-many"
     },
-
     "PropertyClaim": {
       "api_name": "propertyclaims",
       "db_name": "property_claims",
@@ -123,7 +122,6 @@
       "children": ["Evidence", "PropertyClaim"],
       "parent_relation": "one-to-many"
     },
-
     "Evidence": {
       "api_name": "evidence",
       "db_name": "evidence",
@@ -144,6 +142,12 @@
       "shape": "parallelogram-left",
       "children": ["PropertyClaim"],
       "parent_relation": "one-to-many"
+    }
+  },
+  "user_input_validity": {
+    "item_editor": {
+      "desc_char_max_len": 40,
+      "evidence_url_char_max_len": 250
     }
   }
 }

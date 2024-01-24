@@ -21,11 +21,6 @@ code {
     monospace;
 }
 
-/* Grommet specific overrides for a modern look */
-.grommet {
-  font-size: 1rem;
-}
-
 /* Full height container */
 .full-height-container {
   display: flex;
@@ -157,13 +152,6 @@ h3 {
   font-size: 1.5rem;
 }
 
-.grommet-menu-label {
-  color: white !important; /* Use !important to override any existing color styles */
-}
-
-.grommet-menu-item__label {
-  color: white !important;
-}
 /* This will reduce the vertical padding of the navbar, making it shorter */
 .navbar {
   padding-top: 8px;
