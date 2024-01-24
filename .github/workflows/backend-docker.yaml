@@ -27,6 +27,17 @@ jobs:
         run: |
           docker build -t turingassuranceplatform/eap_backend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_backend:main
+      - name: "Build develop"
+        if: ${{ github.ref == 'refs/heads/develop' }}
+        working-directory: eap_backend
+        run: |
+          docker build -t turingassuranceplatform/eap_backend:develop -f Dockerfile .
+          docker push turingassuranceplatform/eap_backend:develop
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: "Publish main"
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: azure/webapps-deploy@v2
@@ -34,10 +45,3 @@ jobs:
           app-name: "eap-backend"
           publish-profile: ${{ secrets.AZURE_BACKEND_PUBLISH_PROFILE }}
           images: "turingassuranceplatform/eap_backend:main"
-
-      - name: "Build develop"
-        if: ${{ github.ref == 'refs/heads/develop' }}
-        working-directory: eap_backend
-        run: |
-          docker build -t turingassuranceplatform/eap_backend:develop -f Dockerfile .
-          docker push turingassuranceplatform/eap_backend:develop
