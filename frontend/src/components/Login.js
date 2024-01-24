@@ -109,7 +109,7 @@ const Login = () => {
             <LoadingSpinner sx={{ margin: "auto" }} />
           ) : (
             <>
-              <Github variant="outlined" setLoading={setLoading} />
+              {/* <Github variant="outlined" setLoading={setLoading} /> */}
               <Button type="submit" sx={{ marginLeft: "auto" }}>
                 Log in
               </Button>
