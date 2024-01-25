@@ -13,12 +13,12 @@ authors:
 ## What are standards?
 
 A 'standard' can be described as rules, requirements, norms or guidelines, that are established for application within certain contexts and settings.
-We see examples of this in, industry, academia, professions, products and services, to establish standardised processes as part of governance and assurance frameworks. 
+We see examples of this in, industry, academia, professions, products and services, to establish standardised processes as part of governance and assurance frameworks.
 
 Standards are developed in a variety of ways, although the best-practice approach to their formation and the most widely accepted are essentially standards crafted through *consensus-building processes*.
-These standards can be developed and led by, for example, academic institutions, international bodies, professional associations, industry or formally recognised Standards Development Organisations (SDOs)/[^sdos] 
+These standards can be developed and led by, for example, academic institutions, international bodies, professional associations, industry or formally recognised Standards Development Organisations (SDOs)/[^sdos]
 
-[^sdos]: Also see [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/). 
+[^sdos]: Also see [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/).
 
 Standards developed by SDOs are often referred to as 'technical standards'.
 These standards are developed by stakeholder-driven processes that are guided by principles such as relevance, transparency, and consensus.
@@ -26,7 +26,7 @@ Standards on the whole are voluntary but can be formally recognised in regulatio
 Furthermore, they can be tools used as part of compliance towards governance and assurance frameworks.
 
 Standards can be in a variety of forms but commonly are established and disseminated as documents approved by a recognised body.
-They provide common and repeatable rules, requirements, norms, guidelines and characteristics for activities that will lead to their associated outcomes; and are aimed at providing order in the contexts where they are applied. 
+They provide common and repeatable rules, requirements, norms, guidelines and characteristics for activities that will lead to their associated outcomes; and are aimed at providing order in the contexts where they are applied.
 
 ## Different types of standards
 
@@ -34,7 +34,7 @@ Standards find application across diverse domains and sectors.
 They serve to encode technical specifications related to the measurement, design, or performance of products and systems.
 Additionally, standards extend their influence to evaluating the impacts or efficiency of broader processes or services.
 
-While some standards are uncomplicated, offering clear metric definitions (e.g. the standardised format of A4 and related paper sizes adopted globally), others offer guidance on intricate, context-specific processes. 
+While some standards are uncomplicated, offering clear metric definitions (e.g. the standardised format of A4 and related paper sizes adopted globally), others offer guidance on intricate, context-specific processes.
 
 Below are some of the categories of standards available.
 
@@ -67,7 +67,7 @@ These standards often form the baseline language utilised in other standards sup
 ### Process, management, and governance
 
 Process and management standards assist organisational processes and approaches to follow well defined steps to achieve their aims and objectives.
-These standards are in-place to guide areas such as; quality assurance, risk management, management systems, benchmarking and regulatory compliance. 
+These standards are in-place to guide areas such as; quality assurance, risk management, management systems, benchmarking and regulatory compliance.
 
 <!-- :::success
 **Examples**
@@ -144,7 +144,7 @@ Noteworthy examples like [DCB 0129/0160](https://www.england.nhs.uk/long-read/di
 
 By establishing benchmarks for the quality of products, services, or processes, standards help organisations maintain high standards of excellence.
 Consumers, in turn, gain confidence in products that adhere to recognised standards, knowing that they meet specified criteria for safety, reliability, and performance.
-Additionally, standards contribute to cost savings and efficiency by streamlining processes, reducing errors, and optimising resource utilisation. 
+Additionally, standards contribute to cost savings and efficiency by streamlining processes, reducing errors, and optimising resource utilisation.
 
 ### Knowledge and technology diffusion
 
@@ -210,9 +210,9 @@ They can also help set out criteria or benchmarks for determining which forms of
 !!! note "The Use of Artificial Intelligence in Health Care: Trustworthiness (ANSI/CTA-2090)"
 
     ANSI/CTA-2090 is one example of a standard that sets out requirements for several core attributes related to human, technical, and regulatory trust. For instance, their approach to bias includes (but is not limited to) the following requirements for the model developer and owner of the AI solution:
-    
+
         - Determine if the existing data set are “raw” data or pre-processed data.
-        - For pre-processed data, find out what kind(s) of pre-processing has been performed so that the same preprocessing software/method can be applied to the input data during inference. 
+        - For pre-processed data, find out what kind(s) of pre-processing has been performed so that the same preprocessing software/method can be applied to the input data during inference.
         - If there is need to capture additional new data, it is important to know how the existing data was collected (e.g., hardware/sensor, environment condition) so that the new data can be collected under similar conditions.
         - When combining or joining multiple existing data sets:
             - Learn and/or model the bias for each data set.
@@ -236,10 +236,10 @@ As such, communication through structured assurance cases that reference key sta
 #### Knowledge transfer and consensus formation
 
 Where standards exist at an early (and perhaps incomplete) stage of development, or perhaps do not exist at all (e.g. when dealing with novel data-driven technologies), assurance cases can serve as a useful reference for how different teams and sectors understand sufficiency and justifiability.
-Consider a situation where an assurance claim regarding a property of a system cannot be sufficiently evidenced. 
-This does not necessarily mean it is false. 
+Consider a situation where an assurance claim regarding a property of a system cannot be sufficiently evidenced.
+This does not necessarily mean it is false.
 Rather, it could indicate a gap where standards do not yet exist.
-In this sense, open assurance cases can support the formation of consensus and the development of best practices and community-based standards. 
+In this sense, open assurance cases can support the formation of consensus and the development of best practices and community-based standards.
 
 For instance, several teams within a shared community of practice (e.g. explainability of AI systems for environmental science) may choose to share their assurance cases with each other through structured knowledge share events (e.g. workshops). In doing so, they could identify common claims that depend on the same forms of `evaluative` evidence (e.g. usability testing and related human factors research). Furthermore, they may be able to identify areas where their design choices will limit `interoperability` in the broader ecosystem, and on this basis revisit their system requirements.
 
