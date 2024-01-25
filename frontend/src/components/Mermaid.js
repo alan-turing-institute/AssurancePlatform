@@ -109,9 +109,11 @@ function MermaidChart({
       key={chartmd}
       style={{
         display: "flex",
+        flexDirection: "column",
         height: "100%",
         width: "100%",
-        justifyContent: "center",
+        justifyContent: "start",
+        alignItems: "start",
         overflow: "visible",
       }}
       className={`mermaid-${caseId} mermaid`}
