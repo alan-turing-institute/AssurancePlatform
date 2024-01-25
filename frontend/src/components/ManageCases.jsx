@@ -241,7 +241,7 @@ const CaseCard = ({ caseObj, reload }) => {
   );
 };
 
-const LoadingCard = () => {
+export const LoadingCard = () => {
   return (
     <ThemedCard sx={{ display: "flex" }}>
       <LoadingSpinner sx={{ margin: "auto" }} />

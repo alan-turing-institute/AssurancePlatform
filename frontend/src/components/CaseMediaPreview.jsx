@@ -7,11 +7,13 @@ import MermaidChart from "./Mermaid";
 import { useLoginToken } from "../hooks/useAuth";
 import { getCase } from "./caseApi";
 import { Box } from "@mui/material";
+import { LoadingCard } from "./ManageCases";
 
 export const CaseMediaPreview = ({ caseObj }) => {
   const theme = useTheme();
   const [token] = useLoginToken();
   const [assuranceCase, setAssuranceCase] = useState();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
@@ -22,6 +24,7 @@ export const CaseMediaPreview = ({ caseObj }) => {
             return;
           }
           setAssuranceCase(json);
+          setIsLoading(false);
         })
         .catch((err) => {
           console.error(err);
@@ -34,35 +37,41 @@ export const CaseMediaPreview = ({ caseObj }) => {
     }
   }, [token, caseObj]);
 
-  return (
-    <>
-      {configData.use_case_preview_svg && assuranceCase ? (
-        <Box
-          sx={{
-            height: "50%",
-            position: "relative",
-            pointerEvents: "none",
-            overflow: "hidden",
-          }}
-        >
-          <MermaidChart
-            assuranceCase={assuranceCase}
-            caseId={caseObj.id}
-            selectedId={[]}
-            selectedType={[]}
-            setSelected={() => {}}
-            setMermaidFocus={() => {}}
-          />
-        </Box>
-      ) : (
-        <CardMedia
-          height={227}
-          component="img"
-          image={mockup_diagram}
-          alt=""
-          sx={{ background: theme.palette.grey[200] }}
-        />
-      )}
-    </>
-  );
+  if (configData.use_case_preview_svg) {
+    return (
+      <>
+        {isLoading ? (
+          <LoadingCard />
+        ) : (
+          <Box
+            sx={{
+              height: "50%",
+              position: "relative",
+              pointerEvents: "none",
+              overflow: "hidden",
+            }}
+          >
+            <MermaidChart
+              assuranceCase={assuranceCase}
+              caseId={caseObj.id}
+              selectedId={[]}
+              selectedType={[]}
+              setSelected={() => {}}
+              setMermaidFocus={() => {}}
+            />
+          </Box>
+        )}
+      </>
+    );
+  } else {
+    return (
+      <CardMedia
+        height={227}
+        component="img"
+        image={mockup_diagram}
+        alt=""
+        sx={{ background: theme.palette.grey[200] }}
+      />
+    );
+  }
 };
