@@ -14,8 +14,9 @@ function MermaidChart({
   const [collapsedNodes, setCollapsedNodes] = useState([]);
 
   const chartmd = useMemo(
-    () =>
-      jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes),
+    () => {
+      return jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes)
+    },
     [assuranceCase, selectedType, selectedId, collapsedNodes],
   );
 
@@ -81,7 +82,7 @@ function MermaidChart({
   // trigger mermaid reload
   useEffect(() => {
     try {
-      const mermaidDiv = document.querySelector(".mermaid");
+      const mermaidDiv = document.querySelector(`.mermaid-${caseId}`);
       if (mermaidDiv) {
         // inject the markdown here, rather than via react
         // so in between render and the effect you don't see the text
@@ -89,7 +90,7 @@ function MermaidChart({
         // make sure to use textContent and not innerHtml, as our markdown can contain html
         mermaidDiv.textContent = ""; // Clear the existing content
         mermaidDiv.textContent = chartmd; // Set new markdown content
-        mermaid.contentLoaded(); // Inform Mermaid to process the new content
+        mermaid.contentLoaded();  // Inform Mermaid to process the new content
 
         const collapseButtons = document.querySelectorAll(".collapse-expand");
         collapseButtons.forEach((button) =>
@@ -113,7 +114,7 @@ function MermaidChart({
         justifyContent: "center",
         overflow: "visible",
       }}
-      className="mermaid"
+      className={`mermaid-${caseId} mermaid`}
     />
   );
 }

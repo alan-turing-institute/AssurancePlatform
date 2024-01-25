@@ -24,6 +24,7 @@ import CommentSection from "./CommentSection";
 import CasePermissionsManager from "./CasePermissionsManager";
 import DeleteCaseModal from "./DeleteCaseModal";
 import ErrorMessage from "./common/ErrorMessage";
+import { CaseMediaPreview } from "./CaseMediaPreview";
 
 const ThemedCard = ({ sx, ...props }) => {
   return (
@@ -77,7 +78,7 @@ const formatter = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
 });
 
-const CaseCard = ({ id, name, description, createdDate, reload }) => {
+const CaseCard = ({ caseObj, reload }) => {
   const theme = useTheme();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -135,16 +136,11 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
     <ThemedCard sx={{ position: "relative" }}>
       <CardActionArea
         component={Link}
-        to={"case/" + id}
+        to={"case/" + caseObj.id}
         sx={{ height: "100%" }}
       >
-        <CardMedia
-          height={227}
-          component="img"
-          image={mockup_diagram}
-          alt=""
-          sx={{ background: theme.palette.grey[200] }}
-        />
+        <CaseMediaPreview caseObj={caseObj} />
+
         <CardContent
           sx={{
             padding: "1.5rem",
@@ -156,10 +152,11 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
             textDecoration: "none",
             color: "unset",
             overflow: "hidden",
+            zIndex: 99,
           }}
         >
           <Typography variant="h3" component="h2">
-            {name}
+            {caseObj.name}
           </Typography>
           <Typography
             variant="body2"
@@ -174,7 +171,7 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
               minHeight: 0,
             }}
           >
-            {description?.split("\n").map((str) => (
+            {caseObj.description?.split("\n").map((str) => (
               <>
                 {str}
                 <br />
@@ -183,7 +180,7 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
           </Typography>
           {/* TODO, designs would prefer the updated date */}
           <Typography variant="body2">
-            Created: {formatter.format(createdDate)}
+            Created: {formatter.format(caseObj.createdDate)}
           </Typography>
         </CardContent>
       </CardActionArea>
@@ -221,19 +218,23 @@ const CaseCard = ({ id, name, description, createdDate, reload }) => {
       <ExportCaseModal
         isOpen={exportOpen}
         onClose={onExportClose}
-        caseId={id}
+        caseId={caseObj.id}
       />
-      <CommentSection isOpen={notesOpen} onClose={onNotesClose} caseId={id} />
+      <CommentSection
+        isOpen={notesOpen}
+        onClose={onNotesClose}
+        caseId={caseObj.id}
+      />
       <CasePermissionsManager
         isOpen={permissionsOpen}
         onClose={onPermissionsClose}
-        caseId={id}
+        caseId={caseObj.id}
         onSuccess={onPermissionsSuccess}
       />
       <DeleteCaseModal
         isOpen={deleteOpen}
         onClose={onDeleteClose}
-        caseId={id}
+        caseId={caseObj.id}
         onDelete={onDeleteSuccess}
       />
     </ThemedCard>
@@ -353,8 +354,8 @@ const ManageCases = () => {
             <LoadingCard />
           ) : (
             <>
-              {cases.map(({ id, ...props }) => (
-                <CaseCard id={id} key={id} {...props} reload={doLoad} />
+              {cases.map((caseObj) => (
+                <CaseCard caseObj={caseObj} reload={doLoad} />
               ))}
             </>
           )}
