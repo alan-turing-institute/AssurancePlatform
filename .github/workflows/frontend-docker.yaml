@@ -21,11 +21,6 @@ jobs:
         run: |
           docker build -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:main
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: "assuranceplatform"
-          publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          images: "turingassuranceplatform/eap_frontend:main"
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: frontend
