@@ -13,12 +13,14 @@ function MermaidChart({
 }) {
   const [collapsedNodes, setCollapsedNodes] = useState([]);
 
-  const chartmd = useMemo(
-    () => {
-      return jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes)
-    },
-    [assuranceCase, selectedType, selectedId, collapsedNodes],
-  );
+  const chartmd = useMemo(() => {
+    return jsonToMermaid(
+      assuranceCase,
+      selectedType,
+      selectedId,
+      collapsedNodes,
+    );
+  }, [assuranceCase, selectedType, selectedId, collapsedNodes]);
 
   // refresh state
   useEffect(() => {
@@ -90,7 +92,7 @@ function MermaidChart({
         // make sure to use textContent and not innerHtml, as our markdown can contain html
         mermaidDiv.textContent = ""; // Clear the existing content
         mermaidDiv.textContent = chartmd; // Set new markdown content
-        mermaid.contentLoaded();  // Inform Mermaid to process the new content
+        mermaid.contentLoaded(); // Inform Mermaid to process the new content
 
         const collapseButtons = document.querySelectorAll(".collapse-expand");
         collapseButtons.forEach((button) =>
