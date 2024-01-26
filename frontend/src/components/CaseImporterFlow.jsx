@@ -41,7 +41,7 @@ function CaseImporterFlow({ titleId, onClose }) {
     if (svgElement && svgElement.hasAttribute("data-metadata")) {
       const metadataStr = svgElement.getAttribute("data-metadata");
       try {
-        return JSON.parse(decodeFromHtml(metadataStr));
+        return JSON.parse(JSON.parse(decodeFromHtml(metadataStr)));
       } catch (err) {
         console.error("Error parsing metadata:", err);
       }
@@ -76,14 +76,14 @@ function CaseImporterFlow({ titleId, onClose }) {
   );
 
   const postCaseJSON = useCallback(
-    (json_str) => {
+    (json) => {
       const requestOptions = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-        body: json_str,
+        body: JSON.stringify(json),
       };
 
       setLoading(true);
@@ -123,7 +123,7 @@ function CaseImporterFlow({ titleId, onClose }) {
       if (uploadType === "url") {
         getUrlContent(url).then((json) => {
           if (json) {
-            postCaseJSON(JSON.stringify(json));
+            postCaseJSON(json);
           }
         });
       } else {
@@ -160,7 +160,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           const metadataStr = svgElement.getAttribute("data-metadata");
           try {
             const metadataJSON = JSON.parse(metadataStr);
-            setFileJson(metadataJSON);
+            setFileJson(JSON.parse(metadataJSON));
           } catch (err) {
             // TODO error could be better
             setFileError("File is not a valid SVG");
