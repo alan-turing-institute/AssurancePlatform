@@ -149,5 +149,6 @@
       "desc_char_max_len": 40,
       "evidence_url_char_max_len": 250
     }
-  }
+  },
+  "use_case_preview_svg": true
 }
