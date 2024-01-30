@@ -13,11 +13,14 @@ function MermaidChart({
 }) {
   const [collapsedNodes, setCollapsedNodes] = useState([]);
 
-  const chartmd = useMemo(
-    () =>
-      jsonToMermaid(assuranceCase, selectedType, selectedId, collapsedNodes),
-    [assuranceCase, selectedType, selectedId, collapsedNodes],
-  );
+  const chartmd = useMemo(() => {
+    return jsonToMermaid(
+      assuranceCase,
+      selectedType,
+      selectedId,
+      collapsedNodes,
+    );
+  }, [assuranceCase, selectedType, selectedId, collapsedNodes]);
 
   // refresh state
   useEffect(() => {
@@ -81,7 +84,7 @@ function MermaidChart({
   // trigger mermaid reload
   useEffect(() => {
     try {
-      const mermaidDiv = document.querySelector(".mermaid");
+      const mermaidDiv = document.querySelector(`.mermaid-${caseId}`);
       if (mermaidDiv) {
         // inject the markdown here, rather than via react
         // so in between render and the effect you don't see the text
@@ -108,12 +111,14 @@ function MermaidChart({
       key={chartmd}
       style={{
         display: "flex",
+        flexDirection: "column",
         height: "100%",
         width: "100%",
-        justifyContent: "center",
+        justifyContent: "start",
+        alignItems: "start",
         overflow: "visible",
       }}
-      className="mermaid"
+      className={`mermaid-${caseId} mermaid`}
     />
   );
 }
