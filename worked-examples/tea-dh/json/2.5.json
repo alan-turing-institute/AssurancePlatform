@@ -1,0 +1,65 @@
+{
+  "type": "AssuranceCase",
+  "name": "2.5",
+  "description": "Figure 2.5: a portion of an assurance case for a chatbot",
+  "created_date": "2024-02-02T18:40:53.253171Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "...",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 19,
+      "context": [],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "P1",
+          "short_description": "The chatbot is an accessible form of alternative therapy for service members who do not wish to speak with a human therapist.",
+          "long_description": "N/A",
+          "goal_id": 29,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1.1",
+              "short_description": "A variety of virtual avatars were evaluated by a randomly selected sample of service members, and the majority rated \"Lisa\" as the most \"friendly and realistic\"",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 52,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [
+                {
+                  "type": "Evidence",
+                  "name": "E1",
+                  "short_description": "Results of evaluative study.",
+                  "long_description": "N/A",
+                  "URL": "www.url-to-study.com",
+                  "property_claim_id": [
+                    53
+                  ]
+                }
+              ],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}

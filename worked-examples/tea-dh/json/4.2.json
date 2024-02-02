@@ -1,0 +1,161 @@
+{
+  "type": "AssuranceCase",
+  "name": "4.2",
+  "description": "Figure 4.2: the assurance case for breakout group 1, focusing on ensuring fair outcomes for patients.",
+  "created_date": "2024-02-02T18:42:53.999863Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "Improve clinical and lifestyle outcomes for patients in a way that is fair across all groups",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 20,
+      "context": [
+        {
+          "type": "Context",
+          "name": "C1",
+          "short_description": "The patient has filled in an initial form detailing their presenting symptoms but this is the first meeting during which they have met their clinician.",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:43:08.909579Z",
+          "goal_id": 30
+        }
+      ],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "P1",
+          "short_description": "The system improves mood across demographic groups who are the target population.",
+          "long_description": "N/A",
+          "goal_id": 30,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1.1",
+              "short_description": "Over X time period there is an improvement of mood according to X clinical metric across demographics",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 55,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [
+                {
+                  "type": "Evidence",
+                  "name": "E1",
+                  "short_description": "Results from clinical trial",
+                  "long_description": "N/A",
+                  "URL": "www.some-evidence.com",
+                  "property_claim_id": [
+                    57
+                  ]
+                },
+                {
+                  "type": "Evidence",
+                  "name": "E2",
+                  "short_description": "Benchmarks",
+                  "long_description": "N/A",
+                  "URL": "www.some-evidence.com",
+                  "property_claim_id": [
+                    57
+                  ]
+                }
+              ],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P1.2",
+              "short_description": "NLP algorithm gives accurate recommendations for target population",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 55,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [
+                {
+                  "type": "Evidence",
+                  "name": "E3",
+                  "short_description": "Training data drawn from target population",
+                  "long_description": "N/A",
+                  "URL": "www.some-evidence.com",
+                  "property_claim_id": [
+                    58
+                  ]
+                }
+              ],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "P2",
+          "short_description": "Reduce health inequality by serving black male communities in the UK",
+          "long_description": "N/A",
+          "goal_id": 30,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P2.1",
+              "short_description": "The developer team reviewed health outcomes by group in the UK and found that black males are currently underserved and so would benefit from the decision support tool",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 56,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.2",
+              "short_description": "Monitor uptake and dropout (incomplete claim)",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 56,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.3",
+              "short_description": "Collect regular feedback on service suitabilitv (incomplete claim)",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 56,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}

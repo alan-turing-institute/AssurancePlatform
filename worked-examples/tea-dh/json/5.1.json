@@ -1,0 +1,290 @@
+{
+  "type": "AssuranceCase",
+  "name": "5.1",
+  "description": "Figure 5.1: A pattern for designing, developing, and deploying fair digital mental health technologies",
+  "created_date": "2024-02-02T18:46:06.962295Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "Deployment and use of the {system} in {intended context} promotes fair outcomes and creates equitable impacts that are complementary to the goals of {impacted or affected stakeholders}.",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 21,
+      "context": [
+        {
+          "type": "Context",
+          "name": "C1",
+          "short_description": "Stakeholders",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:47:00.601736Z",
+          "goal_id": 31
+        },
+        {
+          "type": "Context",
+          "name": "C2",
+          "short_description": "System Description",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:47:09.463025Z",
+          "goal_id": 31
+        },
+        {
+          "type": "Context",
+          "name": "C3",
+          "short_description": "Context of use",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:47:19.364394Z",
+          "goal_id": 31
+        }
+      ],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "P1",
+          "short_description": "Relevant biases have been identified, evaluated, and mitigated",
+          "long_description": "N/A",
+          "goal_id": 31,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1.1",
+              "short_description": "Biases that were identified and methods for mitigation are proportional to the risks they pose.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 62,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P1.2",
+              "short_description": "Biases that were identified and explanations for why no mitigation took place.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 62,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "P2",
+          "short_description": "Deployment and use of the {system} does not create unfair forms of digital exclusion",
+          "long_description": "N/A",
+          "goal_id": 31,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P2.1",
+              "short_description": "Objectives and purpose of {system} are acceptable to all affected individuals or groups.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 65,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.2",
+              "short_description": "Interaction with the system is accessible for all {stakeholders}",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 65,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.3",
+              "short_description": "Transparent data governance ensures ongoing accountability and informed consent.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 65,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.4",
+              "short_description": "Necessary access to alternative (non-digital) services remains a viable option.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 65,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "P3",
+          "short_description": "The {system} does not exacerbate existing patterns of discrimination or create new discriminatory harms",
+          "long_description": "N/A",
+          "goal_id": 31,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P3.1",
+              "short_description": "Project team understand existing social patterns of discrimination and mental health inequalities that are relevant to the {context of use}",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 70,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P3.2",
+              "short_description": "Design of {system} has been informed by a contextual assessment to evaluate the risk of discriminatory harms.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 70,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P3.3",
+              "short_description": "Data collection, analysis and use do not perpetuate forms of stigmatisation of harmful representations.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 70,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P3.4",
+              "short_description": "Performance of model is non-discriminatory across stakeholder-informed sub-groups in training-testing dataset.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 70,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P3.5",
+              "short_description": "The choice of {definition of fairness} as a statistical measure is the best overall for the {context of use}",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 70,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "P4",
+          "short_description": "Deployment and use of the {system} promotes sustainable and equitable mental health goals.",
+          "long_description": "N/A",
+          "goal_id": 31,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P4.1",
+              "short_description": "The system avoids creating dependencies that could limit the capabilities of a user.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 76,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P4.2",
+              "short_description": "The {system} supports self-determined and autonomous decision-making.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 76,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P4.3",
+              "short_description": "The system improves mental health outcomes for the most vulnerable or disadvantaged.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 76,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}
