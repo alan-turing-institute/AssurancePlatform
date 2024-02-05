@@ -141,7 +141,14 @@ nav:
   - Platform Details:
       - About: platform-details/about.md
       - Installation Instructions: platform-details/installation.md
-      - API Documentation: platform-details/api.md
+      - API Documentation:
+          - Start: platform-details/api/index.md
+          - Authentication Endpoints: platform-details/api/authentication.md
+          - User Endpoints: platform-details/api/user.md
+          - Group Endpoints: platform-details/api/group.md
+          - Assurance Case Endpoints: platform-details/api/assurance-cases.md
+          - Comment Endpoints: platform-details/api/comment.md
+          - GitHub Repository Endpoints: platform-details/api/github.md
       - Azure Deployment: platform-details/azure.md
       - GitHub OAuth: platform-details/github.md
       - Resetting the Database: platform-details/resetting-database.md
