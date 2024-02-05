@@ -200,7 +200,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           control={<Radio />}
           label="File upload"
         />
-        <FormControlLabel value="url" control={<Radio />} label="Url upload" />
+        <FormControlLabel value="url" control={<Radio />} label="URL upload" />
       </RadioGroup>
       {uploadType === "file" ? (
         <FileInput
