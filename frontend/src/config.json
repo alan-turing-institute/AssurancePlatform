@@ -3,7 +3,14 @@
   "DEFAULT_GITHUB_CLIENT_ID": "c2c9c84887b1bf94d80b",
   "DEFAULT_GITHUB_REDIRECT_URI": "http://localhost:3000/login",
   "BOX_NCHAR": 25,
-  "property_claim_types": ["Project claim", "System claim"],
+  "property_claim_types": [
+    "Project claim",
+    "System claim"
+  ],
+  "styling": {
+    "mainFont": "'Plus Jakarta Sans', sans-serif",
+    "mermaidFont": "Plus Jakarta Sans, sans-serif"
+  },
   "mermaid_styles": {
     "default": {
       "classTopLevelNormativeGoal": "fill:#638cb0,color:#FFF",
@@ -94,19 +101,35 @@
       "api_name": "goals",
       "db_name": "goals",
       "id_name": "goal_id",
-      "parent_names": ["AssuranceCase"],
-      "parent_api_names": ["cases"],
-      "parent_db_names": ["assurance_case_id"],
+      "parent_names": [
+        "AssuranceCase"
+      ],
+      "parent_api_names": [
+        "cases"
+      ],
+      "parent_db_names": [
+        "assurance_case_id"
+      ],
       "shape": "hexagon",
-      "children": ["Context", "PropertyClaim", "Strategy"],
+      "children": [
+        "Context",
+        "PropertyClaim",
+        "Strategy"
+      ],
       "parent_relation": "one-to-many"
     },
     "Context": {
       "api_name": "contexts",
       "db_name": "context",
-      "parent_names": ["TopLevelNormativeGoal"],
-      "parent_api_names": ["goals"],
-      "parent_db_names": ["goal_id"],
+      "parent_names": [
+        "TopLevelNormativeGoal"
+      ],
+      "parent_api_names": [
+        "goals"
+      ],
+      "parent_db_names": [
+        "goal_id"
+      ],
       "shape": "stadium",
       "children": [],
       "parent_relation": "one-to-many"
@@ -115,19 +138,37 @@
       "api_name": "propertyclaims",
       "db_name": "property_claims",
       "id_name": "property_claim_id",
-      "parent_names": ["TopLevelNormativeGoal", "PropertyClaim"],
-      "parent_api_names": ["goals", "propertyclaims"],
-      "parent_db_names": ["goal_id", "property_claim_id"],
+      "parent_names": [
+        "TopLevelNormativeGoal",
+        "PropertyClaim"
+      ],
+      "parent_api_names": [
+        "goals",
+        "propertyclaims"
+      ],
+      "parent_db_names": [
+        "goal_id",
+        "property_claim_id"
+      ],
       "shape": "rounded",
-      "children": ["Evidence", "PropertyClaim"],
+      "children": [
+        "Evidence",
+        "PropertyClaim"
+      ],
       "parent_relation": "one-to-many"
     },
     "Evidence": {
       "api_name": "evidence",
       "db_name": "evidence",
-      "parent_names": ["PropertyClaim"],
-      "parent_api_names": ["propertyclaims"],
-      "parent_db_names": ["property_claim_id"],
+      "parent_names": [
+        "PropertyClaim"
+      ],
+      "parent_api_names": [
+        "propertyclaims"
+      ],
+      "parent_db_names": [
+        "property_claim_id"
+      ],
       "shape": "data",
       "children": [],
       "parent_relation": "many-to-many"
@@ -136,11 +177,19 @@
       "api_name": "strategies",
       "db_name": "strategies",
       "id_name": "strategy_id",
-      "parent_names": ["TopLevelNormativeGoal"],
-      "parent_api_names": ["goals"],
-      "parent_db_names": ["goal_id"],
+      "parent_names": [
+        "TopLevelNormativeGoal"
+      ],
+      "parent_api_names": [
+        "goals"
+      ],
+      "parent_db_names": [
+        "goal_id"
+      ],
       "shape": "parallelogram-left",
-      "children": ["PropertyClaim"],
+      "children": [
+        "PropertyClaim"
+      ],
       "parent_relation": "one-to-many"
     }
   },

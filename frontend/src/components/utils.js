@@ -96,7 +96,7 @@ function jsonToMermaid(
     // use inline styles so they appear in the svg export
 
     const containerStyle =
-      "font-family: Plus Jakarta Sans, sans-serif;font-size: 0.875rem;font-style: normal;font-weight: 500;line-height: 150%;width:15.5rem;;display:flex;flex-direction:column";
+      `font-family: ${configData.styling.mermaidFont};font-size: 0.875rem;font-style: normal;font-weight: 500;line-height: 150%;width:15.5rem;;display:flex;flex-direction:column`;
     const titleStyle =
       "font-size: 1rem;font-weight: 700;max-width:100%;overflow:hidden;text-overflow:ellipsis;";
     // TODO this will show elipses when the text is too wide vertically
@@ -116,6 +116,7 @@ function jsonToMermaid(
 
     // surround with quotes so mermaid doesn't treat content as markdown
     text = `"<div style='${containerStyle}'>${text}</div>"`;
+
 
     if (shape === "square") return "[" + text + "]";
     else if (shape === "diamond") return "{" + text + "}";
