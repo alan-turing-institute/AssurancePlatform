@@ -26,13 +26,24 @@ TYPE_DICT = {
         "serializer": AssuranceCaseSerializer,
         "model": AssuranceCase,
         "children": ["goals"],
-        "fields": ("name", "description", "lock_uuid", "owner", "color_profile"),
+        "fields": (
+            "name",
+            "description",
+            "lock_uuid",
+            "owner",
+            "color_profile",
+        ),
     },
     "goal": {
         "serializer": TopLevelNormativeGoalSerializer,
         "model": TopLevelNormativeGoal,
         "children": ["context", "property_claims", "strategies"],
-        "fields": ("name", "short_description", "long_description", "keywords"),
+        "fields": (
+            "name",
+            "short_description",
+            "long_description",
+            "keywords",
+        ),
         "parent_types": [("assurance_case", False)],
     },
     "context": {
@@ -259,6 +270,9 @@ def get_case_permissions(case, user):
        "view": if user is a member of a group that has view rights on the case
     None otherwise.
     """
+    if isinstance(case, int) or isinstance(case, str):
+        case = AssuranceCase.objects.get(pk=int(case))
+
     if (not case.owner) or (case.owner == user):
         # case has no owner - anyone can view it, or user is owner
         return "manage"
@@ -341,4 +355,6 @@ def get_allowed_groups(user, level="member"):
     list of EAPGroup instances in which the user is a member, or the owner
     """
     all_groups = EAPGroup.objects.all()
-    return [group for group in all_groups if can_view_group(group, user, level)]
+    return [
+        group for group in all_groups if can_view_group(group, user, level)
+    ]
