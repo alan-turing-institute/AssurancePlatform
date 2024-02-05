@@ -150,8 +150,8 @@
   },
   "user_input_validity": {
     "item_editor": {
-      "desc_char_max_len": 40,
-      "evidence_url_char_max_len": 250
+      "desc_char_max_len": 1000,
+      "evidence_url_char_max_len": 500
     }
   },
   "use_case_preview_svg": true
