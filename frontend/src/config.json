@@ -4,6 +4,10 @@
   "DEFAULT_GITHUB_REDIRECT_URI": "http://localhost:3000/login",
   "BOX_NCHAR": 25,
   "property_claim_types": ["Project claim", "System claim"],
+  "styling": {
+    "mainFont": "'Plus Jakarta Sans', sans-serif",
+    "mermaidFont": "Plus Jakarta Sans, sans-serif"
+  },
   "mermaid_styles": {
     "default": {
       "classTopLevelNormativeGoal": "fill:#638cb0,color:#FFF",
