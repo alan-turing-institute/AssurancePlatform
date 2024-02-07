@@ -131,6 +131,7 @@ nav:
       - The Assurance Ecosystem: introductory-resources/assurance-ecosystem.md
       - An Introduction to Argument-Based Assurance: introductory-resources/argument-based-assurance.md
       - Open Challenges in Trustworthy and Ethical Assurance: introductory-resources/open-challenges.md
+      # - Standards and their role in assurance: introductory-resources/standards.md
   - User Guidance:
       - About this Section: guidance/index.md
       - Quickly Getting Started with the TEA Platform: guidance/getting-started.md
