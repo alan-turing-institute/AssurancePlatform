@@ -12,6 +12,9 @@ We are currently in the process of building out our community infrastructure for
 
 Together, we can build a community that not only advances the field of technology assurance but also ensures that the development and application of data-driven technologies are conducted ethically, transparently, and inclusively.
 
+<!--
+TODO: Enable when we've agreed on the community values
+
 ## Our Commitment to Community Values
 
 The TEA Platform is guided by core values that shape our approach to developing a community of practice:
@@ -41,3 +44,4 @@ The TEA Platform is guided by core values that shape our approach to developing 
         </td>
     </tr>
 </table>
+-->
