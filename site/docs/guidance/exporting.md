@@ -9,6 +9,7 @@ By following the simple steps in this guide, you can communicate your commitment
 ## Step-by-step Guide
 
 ### Step 1: Select Your Case
+
 - Navigate to the dashboard of the TEA platform and locate the assurance case you wish to export.
 - Open the assurance case to access the detailed view.
 
@@ -18,9 +19,11 @@ By following the simple steps in this guide, you can communicate your commitment
 - Click on “Export” to see the available format options.
 
 ### Step 3: Select Format
+
 - The TEA platform offers two formats for export and data interchange: JSON and SVG. Choose the format that best suits your needs.
 
 ### Step 4: Download the File
+
 - After selecting the format, initiate the export process. The platform will prepare the file for download.
 - Once the file is ready, you may be prompted to confirm the download or it might start automatically. Ensure you save the file in your desired location.
 

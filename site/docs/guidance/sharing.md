@@ -44,15 +44,15 @@ Hosting TEA cases on GitHub is not only easy. You can also leverage the platform
 
 ### How to Share TEA Cases on GitHub
 
-1. **Export Your Case**: Begin by exporting your assurance case from the TEA platform in either JSON or SVG format, depending on your sharing needs. [LINK TO EXPORT SECTION]
+1. **Export Your Case**: Begin by exporting your assurance case from the TEA platform in either JSON or SVG format, depending on your sharing needs. <!-- TODO: [LINK TO EXPORT SECTION] -->
 2. **Create a GitHub Repository**: If you don't already have one, create a new repository on GitHub for hosting your TEA cases. Ensure the repository is set to public if you intend to share your case with the wider community.
 3. **Upload the Case File**: Upload your exported TEA case file(s) to the GitHub repository. You can organize multiple cases within the same repository using folders.
 4. **Share the Link**: Once uploaded, you can share the link to your repository or specific files within it. For JSON files intended for import into TEA, ensure the URL points directly to the raw version of the file.
 
 ### Best Practices for Sharing on GitHub
 
-**Documentation**: Include a README file in your repository with information about the assurance cases, how to use them, and any relevant context or instructions for collaborators. [DOES TTW HAVE SOME INFO HERE?]
+**Documentation**: Include a README file in your repository with information about the assurance cases, how to use them, and any relevant context or instructions for collaborators. <!-- TODO: [DOES TTW HAVE SOME INFO HERE?] -->
 
-**Licensing**: Consider adding a license file to your repository to clearly communicate how others can use or contribute to your assurance cases. [LINK TO TTW HERE]
+**Licensing**: Consider adding a license file to your repository to clearly communicate how others can use or contribute to your assurance cases. <!-- TODO: [LINK TO TTW HERE] -->
 
 **Engage with the Community**: Use issues and pull requests to engage with users who may have questions, suggestions, or contributions to your assurance cases.

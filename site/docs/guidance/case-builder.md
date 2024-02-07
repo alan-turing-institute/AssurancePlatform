@@ -34,7 +34,7 @@ Claims are specific assertions that support your goal within its context.
 
 2. **Add a Claim**. Click on "Add Claim" and provide a concise statement that you plan to justify through evidence. For example, "The system encrypts all user data."
 
-3. **Detail Your Claim**. You may also add a longer description ==pending update to the 60 characters limitation== if necessary. Again, your claim will be saved automatically.
+3. **Detail Your Claim**. You may also add a longer description if necessary. Again, your claim will be saved automatically.
 
 ### Adding Evidence
 
