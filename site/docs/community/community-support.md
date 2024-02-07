@@ -32,7 +32,7 @@ This section guides you on how to use GitHub issues effectively to share your TE
 
 ## TEA Platform Repository Discussions and Issues
 
-The TEA (Trustworthy and Ethical Assurance) platform's repository on GitHub (https://github.com/alan-turing-institute/AssurancePlatform) serves as a central hub for community engagement, feature development, and issue tracking.
+The TEA (Trustworthy and Ethical Assurance) platform's [repository on GitHub](https://github.com/alan-turing-institute/AssurancePlatform) serves as a central hub for community engagement, feature development, and issue tracking.
 
 It is our aim to make it a vibrant community space where users, developers, and stakeholders can collaborate to enhance the platform's functionality and usability. We want you all to come together to make the platform better for everyone. By engaging in discussions, reporting issues, requesting features, and contributing to the codebase, you play a vital role in the continuous improvement and success of the TEA platform.
 
