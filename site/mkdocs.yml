@@ -48,7 +48,7 @@ theme:
 
   font:
     text: Plus Jakarta Sans
-    code: Roboto Mono
+    code: Source Code Pro
   # favicon: assets/logo.png
   icon:
     logo: material/vector-circle
