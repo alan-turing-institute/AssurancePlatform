@@ -7,7 +7,7 @@ status: draft
     This section is being drafted.
 
 In this section you will find the main documentation and user guidance for the TEA platform.
-For those who are completely new to the platform, we recommend you follow these guides in order <!-- (or watch our [introductory video]()) -->:
+For those who are completely new to the platform, we recommend you follow these guides in order <!-- TODO: (or watch our [introductory video]()) -->:
 
 1. [Quickly Getting Started with the TEA Platform](getting-started.md) (*in progress*)
 2. [An Introduction to the TEA Case Builder](case-builder.md) (*in progress*)
