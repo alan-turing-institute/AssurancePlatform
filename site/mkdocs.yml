@@ -133,7 +133,11 @@ nav:
       - Open Challenges in Trustworthy and Ethical Assurance: introductory-resources/open-challenges.md
   - User Guidance:
       - About this Section: guidance/index.md
+      - Quickly Getting Started with the TEA Platform: guidance/getting-started.md
+      - An Introduction to the TEA Case Builder: guidance/case-builder.md
       - Components of an Assurance Case: guidance/components.md
+      - Managing TEA Assurance Cases: guidance/case-management.md
+      - Exporting TEA Cases: guidance/exporting.md
       # - Operationalising Ethical Principles: guidance/operationalising-ethics.md
       # - TEA and the Project Lifecycle: guidance/tea-project-lifecycle.md
       # - The Role of Standards in TEA: guidance/standards.md
