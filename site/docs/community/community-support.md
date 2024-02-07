@@ -12,7 +12,7 @@ This section guides you on how to use GitHub issues effectively to share your TE
 
 ### Creating a GitHub Issue for Sharing a TEA Case
 
-1. **Navigate to Your Repository**: Open the GitHub repository where your TEA case is hosted. [LINK TO SHARE TEA CASES ON GITHUB]
+1. **Navigate to Your Repository**: Open the GitHub repository where your TEA case is hosted. <!-- TODO: [ADD LINK TO SHARE TEA CASES ON GITHUB] -->
 2. **Open the Issues Tab**: Click on the "Issues" tab near the top of the repository page.
 3. Click the **"New issue"** button to start drafting your issue. Give your issue a clear title that indicates it’s about sharing a TEA case for feedback. In the description, provide context about the assurance case, including its goals, the specific areas where you're seeking feedback, and any particular challenges you're facing.
 4. Include a **direct link to the assurance case file** (preferably the raw file link if it’s in JSON format for easy import) or to the folder containing the case if there are multiple related files.
@@ -42,22 +42,22 @@ Below, we discuss how you can actively participate in discussions, report issues
 
 ### Engaging in Discussions
 
-The repository's Issues [LINK] section is an excellent place for initiating discussions on a wide range of topics, including feature requests, bug reports, and general queries about the TEA platform. This section is where you can voice your thoughts and contribute to ongoing conversations, whether you've encountered a technical glitch, have an idea for a new feature that could improve the platform, or simply have a question about how something works.
+The [repository's Issues](https://www.github.com/alan-turing-institute/AssurancePlatform/issues) section is an excellent place for initiating discussions on a wide range of topics, including feature requests, bug reports, and general queries about the TEA platform. This section is where you can voice your thoughts and contribute to ongoing conversations, whether you've encountered a technical glitch, have an idea for a new feature that could improve the platform, or simply have a question about how something works.
 
 ### Reporting Bugs
 
-If you encounter a problem or an error while using the TEA platform, we encourage you to report it via the repository's Issues section. When reporting a bug, please provide a detailed description of the issue, steps to reproduce the problem, and any relevant screenshots or error messages. This information is invaluable in diagnosing and resolving issues more efficiently.
+If you encounter a problem or an error while using the TEA platform, we encourage you to report it via the [repository's Issues](https://www.github.com/alan-turing-institute/AssurancePlatform/issues) section. When reporting a bug, please provide a detailed description of the issue, steps to reproduce the problem, and any relevant screenshots or error messages. This information is invaluable in diagnosing and resolving issues more efficiently.
 
 ### Requesting Features
 
-The TEA platform is continually being developed, and user feedback is a crucial driver of this process. If you have an idea for a new feature or an enhancement to an existing one, please share it as a feature request in the Issues section. Describe your proposed feature, its potential benefits, and how it could be implemented within the platform. Community feedback on these proposals can help prioritize development efforts.
+The TEA platform is continually being developed, and user feedback is a crucial driver of this process. If you have an idea for a new feature or an enhancement to an existing one, please share it as a feature request<!-- TODO add link straight to feature request--> in the Issues section. Describe your proposed feature, its potential benefits, and how it could be implemented within the platform. Community feedback on these proposals can help prioritize development efforts.
 
 ### Contributing to the Codebase
 
-For users with programming experience interested in contributing to the TEA platform, the repository contains detailed instructions on how to contribute to the codebase. Whether it's developing new features, fixing bugs, or improving documentation, your contributions are welcome. Here's how you can get started:
+For users with programming experience interested in contributing to the TEA platform, the [repository](https://www.github.com/alan-turing-institute/AssurancePlatform/issues) contains detailed instructions on how to contribute to the codebase. Whether it's developing new features, fixing bugs, or improving documentation, your contributions are welcome. Here's how you can get started:
 
-**Read the Contribution Guidelines**: Before making any contributions, please review the contribution guidelines provided in the repository. These guidelines cover the process for submitting pull requests, coding standards, and other important practices.
+**Read the Contribution Guidelines**: Before making any contributions, please review [repository's Issues](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md). These guidelines cover the process for submitting pull requests, coding standards, and other important practices.
 
-**Set Up Your Development Environment**: The documentation includes instructions for setting up your development environment, allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
+**Set Up Your Development Environment**: The documentation includes [instructions for setting up your development environment](../platform-details/installation.md), allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
 
 **Submit a Pull Request**: Once you've made your changes, submit a pull request through GitHub. Your pull request will be reviewed by the platform's maintainers, and feedback or requests for revisions will be communicated through the GitHub interface.
