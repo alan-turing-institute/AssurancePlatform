@@ -47,7 +47,7 @@ theme:
     scheme: default
 
   font:
-    text: Roboto
+    text: Plus Jakarta Sans
     code: Roboto Mono
   # favicon: assets/logo.png
   icon:
