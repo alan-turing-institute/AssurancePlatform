@@ -1,4 +1,9 @@
-# TEA Case Management
+---
+tags:
+  - core elements
+---
+
+# Managing TEA Assurance Cases
 
 ## Using templates and patterns
 
@@ -25,7 +30,7 @@ However, if you want to access other templates, you can consult the TEA reposito
 1. Navigate to the <!-- TODO: ADD A PAGE ON DOCS EXPLAINING THE DIFFERENT TEMPLATES --> and select a template. Click on the "Copy URL" button next to the template you want to use.
 2. Navigate to the Dashboard (make sure you are logged in)
 3. Press the "Import File" button.
-4. Press the "Url upload" radio button.
+4. Press the "URL upload" radio button.
 5. Paste the URL you copied from the documentation here. (e.g. https://github.com/alan-turing-institute/AssurancePlatform/raw/adding-more-docs/worked-examples/tea-dh/json/5.1.json)
 6. Press "Continue"
 7. Your template should now have loaded in the Case Builder

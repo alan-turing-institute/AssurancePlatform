@@ -1,4 +1,9 @@
-# TEA Case Builder
+---
+tags:
+  - core elements
+---
+
+# An Introduction to the TEA Case Builder
 
 The Trustworthy and Ethical Assurance Platform is dedicated to simplifying the process of creating, managing, and sharing assurance cases. Our Assurance Case Builder is a core feature of the platform, designed to help you visually and logically structure your assurance cases with ease.
 
