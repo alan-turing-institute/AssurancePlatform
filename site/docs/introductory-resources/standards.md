@@ -201,7 +201,7 @@ Find an instance of a standard to use as an example. Similar to how CDEI present
 ### Evidential grounding and justification of property claims
 
 Property claims require evidential grounding.
-That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link (see [guidance](../guidance/components/#support-links)).
+That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link (see [guidance](../guidance/components.md#support-links)).
 But how does a project team or organisation know which evidence to select, and whether it is sufficient to justify the claims being made? This is where standards can provide useful support?
 
 For instance, `measurement and test methods` and `product and performance requirements` standards are crucial for determining whether a system meets the required performance levels.
