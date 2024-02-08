@@ -156,7 +156,8 @@ nav:
       # - A Case Study: guidance/case-study.md
   - Platform Details:
       - About: platform-details/about.md
-      - Docker Installation Guide: platform-details/docker-installation.md
+      - Quick Start with Docker: platform-details/docker-quickstart.md
+      - Setting Up Your Development Environment: platform-details/development-environment.md
       - Backend:
           - Backend Documentation for the TEA Platform: platform-details/backend/index.md
           - Installation and Setup: platform-details/backend/installation.md
