@@ -139,7 +139,7 @@ extra_css:
 
 nav:
   - Home: index.md
-  - About: about.md
+  - About the Platform: about.md
   - Introductory Resources:
       - About this Section: introductory-resources/index.md
       - What is Trustworthy and Ethical Assurance: introductory-resources/what-is-tea.md
