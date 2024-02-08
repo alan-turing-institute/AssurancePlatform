@@ -113,7 +113,7 @@ following example.
     consistency with this standard, which is why property claims have the same
     type as goal claims, but adds an additional descriptive layer to better
     represent the ethical process of deliberation and reflection (see section on
-    [Operationalising Principles](operationalising-principles.md))
+    [Operationalising Principles](operationalising-principles.md)) <!-- @chrisdburr it looks like this document is missing! -->
 
 [^modularity]: See earlier note about 'Multiple Goals and Modular Arguments'.
 
