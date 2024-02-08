@@ -171,7 +171,7 @@ nav:
           - React Components: platform-details/frontend/react-components.md
           - Visualizing Assurance Cases with Mermaid.js: platform-details/frontend/mermaid.md
       - Deployment:
-          - Deploying the TEA Platform on Microsoft Azure Cloud: platform-details/deployment/azure.md
+          - Microsoft Azure Cloud: platform-details/deployment/azure.md
       # - GitHub OAuth: platform-details/github.md  # TODO: No GitHub access currently
       - Resetting the Database:
           - Resetting the Database: platform-details/reset-database/index.md
