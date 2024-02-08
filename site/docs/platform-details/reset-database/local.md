@@ -64,7 +64,7 @@ file for your database. To remove it, simply remove the file
 following the instructions [here](README.md)) the commands:
 
 ```
-python manage.py makemigrations && python manage.py migrate
+$ python manage.py makemigrations && python manage.py migrate
 ```
 
 and next time you run the backend, you should have a new sqlite file with an
