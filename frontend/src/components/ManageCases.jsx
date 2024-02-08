@@ -26,6 +26,12 @@ import DeleteCaseModal from "./DeleteCaseModal";
 import ErrorMessage from "./common/ErrorMessage";
 import { CaseMediaPreview } from "./CaseMediaPreview";
 
+/**
+ * ThemedCard is a wrapper component that standardizes the appearance of cards in the ManageCases view. It applies a theme-based styling to ensure consistency across different parts of the application.
+ *
+ * @param {Object} props - Component props including standard Card props and additional style overrides.
+ * @returns {JSX.Element} A Card component with applied theme styles.
+ */
 const ThemedCard = ({ sx, ...props }) => {
   return (
     <Card
@@ -41,6 +47,12 @@ const ThemedCard = ({ sx, ...props }) => {
   );
 };
 
+/**
+ * CreateCard provides a UI element for initiating the creation of a new assurance case. It displays a card styled according to the application theme, with an action area that, when clicked, opens the case creation modal.
+ *
+ * @param {Function} onCreateClick - Callback function to be called when the card is clicked.
+ * @returns {JSX.Element} A card that triggers the case creation process when clicked.
+ */
 const CreateCard = ({ onCreateClick }) => {
   const theme = useTheme();
 
@@ -72,12 +84,22 @@ const CreateCard = ({ onCreateClick }) => {
   );
 };
 
+/**
+ * formatter is an instance of Intl.DateTimeFormat that formats dates in the "short" format, including the month, day, and year.
+ */
 const formatter = new Intl.DateTimeFormat(undefined, {
   month: "short",
   day: "2-digit",
   year: "numeric",
 });
 
+/**
+ * CaseCard displays a single assurance case in card format within the ManageCases view. It includes a preview of the case, the case name, description, and action buttons for case operations like edit, delete, and more.
+ *
+ * @param {Object} caseObj - An object containing the details of the assurance case to display.
+ * @param {Function} reload - A function to reload the list of cases, called after certain operations like delete.
+ * @returns {JSX.Element} A card representing an assurance case with actionable items.
+ */
 const CaseCard = ({ caseObj, reload }) => {
   const theme = useTheme();
 
@@ -241,6 +263,11 @@ const CaseCard = ({ caseObj, reload }) => {
   );
 };
 
+/**
+ * LoadingCard displays a placeholder card with a loading indicator. It is used in the ManageCases view while assurance case data is being loaded from the backend.
+ *
+ * @returns {JSX.Element} A card with a loading spinner, indicating data is being loaded.
+ */
 export const LoadingCard = () => {
   return (
     <ThemedCard sx={{ display: "flex" }}>
@@ -249,6 +276,13 @@ export const LoadingCard = () => {
   );
 };
 
+/**
+ * ManageCases is the main component for managing assurance cases. It displays a list of assurance cases each represented by a CaseCard, and provides options to create a new case or import cases from files.
+ *
+ * @returns {JSX.Element} A layout including a list of assurance cases, and options for creating or importing cases.
+ *
+ * This component integrates several functionalities including case creation, import, and display. It fetches and displays assurance cases from the backend, handling loading states and errors. It also provides entry points for case creation and import through modal dialogs.
+ */
 const ManageCases = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cases, setCases] = useState([]);
@@ -259,6 +293,12 @@ const ManageCases = () => {
   useEnforceLogin();
   const [token] = useLoginToken();
 
+  /**
+   * doLoad is a memoized callback function that fetches assurance cases from the backend and updates the component state with the loaded data. It handles loading states and errors, and is called when the component mounts or when the token changes.
+   *
+   * @returns {Function} A memoized callback function to fetch assurance cases from the backend and update the component state.
+   * @throws {Error} If the fetch process fails with a 401 status code.
+   */
   const doLoad = useCallback(() => {
     let isMounted = true;
 
@@ -278,10 +318,11 @@ const ManageCases = () => {
             case 401:
               unauthorized();
               break;
+            // TODO: add default case?
           }
         },
-        (reason) => {
-          console.log(reason);
+        (err) => {
+          console.log(err);
           setError("Something went wrong. Please try again later.");
         }
       )
@@ -312,7 +353,9 @@ const ManageCases = () => {
     };
   }, [token]);
 
-  // initial load
+  /**
+   * Load the assurance cases from the backend when the component mounts.
+   */
   useEffect(() => {
     doLoad();
   }, [doLoad]);

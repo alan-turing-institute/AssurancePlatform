@@ -20,6 +20,18 @@ import { getCase } from "./caseApi.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * ExportCaseModal provides a user interface for exporting an assurance case in either JSON or SVG format. It allows users to select their preferred export format and initiates the download process. This component ensures that users can easily export and save their work for external use or archival purposes.
+ *
+ * @param {Object} props - Component props.
+ * @param {boolean} props.isOpen - Controls the visibility of the export modal.
+ * @param {Function} props.onClose - Callback function to close the export modal.
+ * @param {string} props.caseId - The unique identifier of the assurance case to be exported.
+ * @param {Object} props.assuranceCase - The loaded assurance case object. If not provided, the case will be fetched using the provided caseId.
+ * @returns {JSX.Element} A modal dialog that provides options to export the assurance case in selected format.
+ *
+ * The component handles the export process based on the selected format: for JSON, it uses `neatJSON` to format the case data and `file-saver` library to initiate the download; for SVG, it utilizes a custom SVGDownloader class to generate and download the SVG representation of the case. It supports dynamic loading of the assurance case if not provided and handles errors during the export process.
+ */
 function ExportCaseModal({ isOpen, onClose, caseId, assuranceCase }) {
   const [format, setFormat] = useState("json");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +46,13 @@ function ExportCaseModal({ isOpen, onClose, caseId, assuranceCase }) {
     setFormat(e.target.value);
   }, []);
 
+  /**
+   * Handle the export of the assurance case.
+   *
+   * @param {Event} e - The form submit event.
+   * @returns {void}
+   * @throws {Error} If the export process fails.
+   */
   const onSubmit = useCallback(
     async (e) => {
       e.preventDefault();

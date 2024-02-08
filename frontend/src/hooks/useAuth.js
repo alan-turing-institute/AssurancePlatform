@@ -1,3 +1,8 @@
+/**
+ * Enforce that the user is logged in.
+ *
+ * @returns {boolean} Whether the user is logged in.
+ */
 export function useEnforceLogin() {
   const [token] = useLoginToken();
 
@@ -9,6 +14,11 @@ export function useEnforceLogin() {
   return true;
 }
 
+/**
+ * Enforce that the user is logged out.
+ *
+ * @returns {boolean} Whether the user is logged out.
+ */
 export function useEnforceLogout() {
   const [token] = useLoginToken();
 
@@ -20,10 +30,21 @@ export function useEnforceLogout() {
   return true;
 }
 
+/**
+ * Redirect the user to the login page if they are not logged in.
+ *
+ * @returns {void}
+ */
 export function unauthorized() {
   window.location.replace("/logout/expired");
 }
 
+/**
+ * Set the user's login token. The token is stored in local storage.
+ *
+ * @param {string} value - The token to set.
+ * @returns {void}
+ */
 function setToken(value) {
   localStorage.clear();
 
@@ -32,7 +53,11 @@ function setToken(value) {
   }
 }
 
-/** @returns {[string?, (value: string?) => void]} */
+/**
+ * Get the user's login token. The token is stored in local storage.
+ *
+ * @returns {[string, function]} The user's login token and a function to set the token.
+ */
 export function useLoginToken() {
   const token = localStorage.getItem("token");
 

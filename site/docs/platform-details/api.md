@@ -1,3 +1,6 @@
+<!-- The API documentation has moved to platform-details/backend/api/*. -->
+
+<!--
 # API Documentation
 
 The API endpoints in this document should be appended to a BASE_URL, which will
@@ -168,3 +171,4 @@ example, it will be something like
 - A DELETE request will delete the specified Evidence.
   - returns `[{name: <str:evidence_name>, id: <int:evidence_id>}, ...]` listing
     remaining Evidence
+-->

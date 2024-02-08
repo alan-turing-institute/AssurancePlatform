@@ -6,11 +6,22 @@ import { ColumnFlow, ModalLikeLayout, RowFlow } from "./common/Layout";
 import { Button, Typography } from "@mui/material";
 import { useEnforceLogin, useLoginToken } from "../hooks/useAuth.js";
 
+/**
+ * Logout is a form component used for logging out of the TEA Platform. It provides a simple interface for logging out and redirects to the login page upon successful logout.
+ *
+ * @returns {JSX.Element} A form that allows users to log out of the platform.
+ */
 const Logout = () => {
   const { sessionExpired } = useParams();
   useEnforceLogin();
   const [token, setToken] = useLoginToken();
 
+  /**
+   * Handle logout request.
+   *
+   * @param {Event} e - The event object.
+   * @returns {void}
+   */
   const handleLogout = useCallback(
     (e) => {
       e.preventDefault();

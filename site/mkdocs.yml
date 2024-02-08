@@ -47,8 +47,8 @@ theme:
     scheme: default
 
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Plus Jakarta Sans
+    code: Source Code Pro
   # favicon: assets/logo.png
   icon:
     logo: material/vector-circle
@@ -66,6 +66,16 @@ plugins:
       authors: true
       draft: false
   - table-reader
+  - include-markdown:
+      encoding: ascii
+      preserve_includer_indent: false
+      dedent: false
+      trailing_newlines: true
+      comments: true
+      rewrite_relative_urls: true
+      heading_offset: 0
+      start: <!--start-->
+      end: <!--end-->
 
 # Customization
 
@@ -131,28 +141,47 @@ nav:
       - The Assurance Ecosystem: introductory-resources/assurance-ecosystem.md
       - An Introduction to Argument-Based Assurance: introductory-resources/argument-based-assurance.md
       - Open Challenges in Trustworthy and Ethical Assurance: introductory-resources/open-challenges.md
+      # - Standards and their role in assurance: introductory-resources/standards.md
   - User Guidance:
       - About this Section: guidance/index.md
+      - Quickly Getting Started with the TEA Platform: guidance/getting-started.md
+      - An Introduction to the TEA Case Builder: guidance/case-builder.md
       - Components of an Assurance Case: guidance/components.md
+      - Managing TEA Assurance Cases: guidance/case-management.md
+      - Exporting TEA Cases: guidance/exporting.md
+      - Sharing TEA Cases: guidance/sharing.md
       # - Operationalising Ethical Principles: guidance/operationalising-ethics.md
       # - TEA and the Project Lifecycle: guidance/tea-project-lifecycle.md
       # - The Role of Standards in TEA: guidance/standards.md
       # - A Case Study: guidance/case-study.md
   - Platform Details:
       - About: platform-details/about.md
-      - Installation Instructions: platform-details/installation.md
-      - API Documentation:
-          - Start: platform-details/api/index.md
-          - Authentication Endpoints: platform-details/api/authentication.md
-          - User Endpoints: platform-details/api/user.md
-          - Group Endpoints: platform-details/api/group.md
-          - Assurance Case Endpoints: platform-details/api/assurance-cases.md
-          - Comment Endpoints: platform-details/api/comment.md
-          - GitHub Repository Endpoints: platform-details/api/github.md
-      - Azure Deployment: platform-details/azure.md
-      - GitHub OAuth: platform-details/github.md
-      - Resetting the Database: platform-details/resetting-database.md
+      - Quick Start with Docker: platform-details/docker-quickstart.md
+      - Setting Up Your Development Environment: platform-details/development-environment.md
+      - Backend:
+          - Backend Documentation for the TEA Platform: platform-details/backend/index.md
+          - Installation and Setup: platform-details/backend/installation.md
+          - Django Settings: platform-details/backend/django-settings.md
+          - Backend Management files: platform-details/backend/backend-management-files.md
+          - API Documentation: platform-details/backend/api/index.md
+      - Frontend:
+          - Frontend Documentation for the TEA Platform: platform-details/frontend/index.md
+          - Installation and Setup: platform-details/frontend/installation.md
+          - Frontend Configuration: platform-details/frontend/react-configuration.md
+          - React Components: platform-details/frontend/react-components.md
+          - Visualizing Assurance Cases with Mermaid.js: platform-details/frontend/mermaid.md
+      - Deployment:
+          - Microsoft Azure Cloud: platform-details/deployment/azure.md
+      # - GitHub OAuth: platform-details/github.md  # TODO: No GitHub access currently
+      - Resetting the Database:
+          - Resetting the Database: platform-details/reset-database/index.md
+          - Azure Deployments: platform-details/reset-database/azure.md
+          - Local Deployments: platform-details/reset-database/local.md
   - Community of Practice:
       - Community of Practice: community/index.md
-      - Why We Ask for Access to Your GitHub: community/github-access.md
+      - Community Support: community/community-support.md
+      # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
       - Upcoming community events: blog/index.md
+
+not_in_nav: |
+  _prerequisites.md

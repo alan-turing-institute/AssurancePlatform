@@ -10,10 +10,23 @@ import LoadingSpinner from "./common/LoadingSpinner.jsx";
 import { ArrowRight } from "./common/Icons.jsx";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
-// see models.py
+/**
+ * Maximum allowed lengths for title and description,
+ * see /eap_backend/eap_api/models.py
+ */
 const titleMaxLength = 200;
 const descriptionMaxLength = 1000;
 
+
+/**
+ * CaseCreatorFlow component guides the user through the process of creating a new assurance case.
+ * It consists of two stages: entering basic case details (title and description),
+ * and selecting a template for the case. Upon completion, the case is posted to the server.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.titleId A unique ID for the title element, used for accessibility.
+ * @param {Function} props.onClose Function to call when the user chooses to close the modal.
+ */
 function CaseCreatorFlow({ titleId, onClose }) {
   const [stage, setStage] = useState(0);
 
