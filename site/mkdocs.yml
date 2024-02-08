@@ -163,7 +163,14 @@ nav:
           - Installation and Setup: platform-details/backend/installation.md
           - Django Settings: platform-details/backend/django-settings.md
           - Backend Management files: platform-details/backend/backend-management-files.md
-          - API Documentation: platform-details/backend/api/index.md
+          - API Documentation:
+              - API Documentation: platform-details/backend/api/index.md
+              - Authentication Endpoints: platform-details/backend/api/authentication.md
+              - User Endpoints: platform-details/backend/api/user.md
+              - Group Endpoints: platform-details/backend/api/group.md
+              - Assurance Case Endpoints: platform-details/backend/api/assurance-cases.md
+              - GitHub Repository Endpoints: platform-details/backend/api/github.md
+              - Comment Endpoints: platform-details/backend/api/comment.md
       - Frontend:
           - Frontend Documentation for the TEA Platform: platform-details/frontend/index.md
           - Installation and Setup: platform-details/frontend/installation.md
