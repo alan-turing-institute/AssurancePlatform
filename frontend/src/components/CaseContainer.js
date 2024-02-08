@@ -15,6 +15,14 @@ import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { Add, Subtract, Target } from "./common/Icons.jsx";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * CaseContainer serves as the main component for displaying and interacting with an assurance case.
+ * It integrates various components such as MermaidChart for visual representation, ItemEditor for editing case items,
+ * and CaseTopBar for additional case management functions. This component handles loading of case data,
+ * user authentication, and provides zoom and pan functionality for the case diagram.
+ *
+ * @returns {JSX.Element} Renders the assurance case container with editing capabilities and visualization controls.
+ */
 function CaseContainer() {
   const { caseSlug } = useParams();
   const theme = useTheme();
@@ -120,13 +128,16 @@ function CaseContainer() {
     }
   }, [assuranceCase]);
 
+  /**
+   * Generates a unique identifier for new elements within the assurance case based on the type and its parents.
+   * It prefixes the identifier based on the type and ensures uniqueness within the case.
+   *
+   * @param {string} type - The type of the element for which the ID is being generated.
+   * @param {string} parentId - The ID of the parent element.
+   * @param {string} parentType - The type of the parent element.
+   * @returns {string} A unique identifier for the new element.
+   */
   const getIdForNewElement = useCallback(
-    /**
-     * @param {string} type
-     * @param {string} parentId
-     * @param {string} parentType
-     * @returns {string}
-     */
     (type, parentId, parentType) => {
       let prefix = configData.navigation[type].db_name
         .substring(0, 1)
@@ -154,6 +165,11 @@ function CaseContainer() {
     [assuranceCase, identifiers],
   );
 
+  /**
+   * Updates all identifiers within the assurance case to ensure they are unique.
+   * This function might be necessary when there are changes to the case structure
+   * or to correct any identifier conflicts.
+   */
   const updateAllIdentifiers = useCallback(() => {
     setIsLoading(true);
 
@@ -381,7 +397,13 @@ function CaseContainer() {
   );
 }
 
-/** @returns {string[]}  */
+/**
+ * Generates a list of identifiers from the assurance case. It recursively visits
+ * each item in the case structure, collecting the names to form a set of identifiers.
+ *
+ * @param {Object} assuranceCase - The assurance case object from which to generate the list.
+ * @returns {string[]} A list of unique identifiers derived from the assurance case items.
+ */
 function updateIdList(assuranceCase) {
   const set = [];
   assuranceCase.goals.forEach((goal) => {

@@ -20,6 +20,20 @@ import CommentSection from "./CommentSection.js";
 import CasePermissionsManager from "./CasePermissionsManager.js";
 import { DisguisedTextInput } from "./common/TextInput.jsx";
 
+/**
+ * CaseTopBar provides a top navigation bar for the assurance case page within the TEA Platform, offering various functionalities such as editing the case title, adding goals, managing accessibility settings, exporting, adding notes, managing permissions, and deleting the case. It enhances user interaction by providing quick access to these features directly from the case view.
+ *
+ * @param {Object} props - Component props.
+ * @param {Object} props.sx - The style properties applied to the component.
+ * @param {Object} props.assuranceCase - The current assurance case object, containing case details.
+ * @param {string} props.caseId - The unique identifier for the current assurance case.
+ * @param {Function} props.onRefresh - Callback function to refresh the case view after certain actions.
+ * @param {Function} props.setErrors - Callback function to handle errors and display them to the user.
+ * @param {Function} props.getIdForNewElement - Function to generate IDs for new case elements.
+ * @param {Function} props.updateAllIdentifiers - Function to update all identifiers/names within the case, ensuring uniqueness.
+ * @param {Function} props.setSelected - Function to set the currently selected item in the case.
+ * @returns {JSX.Element} The top navigation bar with case management features.
+ */
 function CaseTopBar({
   sx,
   assuranceCase,
@@ -41,6 +55,12 @@ function CaseTopBar({
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  /**
+   * Set the case name to the provided value.
+   *
+   * @param {string} name - The new name for the case.
+   * @returns {void}
+   */
   const setCaseName = useCallback(
     (name) => {
       editCase(token, caseId, { name })
@@ -53,6 +73,12 @@ function CaseTopBar({
     [token, caseId, onRefresh]
   );
 
+  /**
+   * Add a new goal to the assurance case.
+   *
+   * @returns {void}
+   * @throws {Error} If the goal cannot be added.
+   */
   const addGoal = useCallback(() => {
     createItem(
       token,

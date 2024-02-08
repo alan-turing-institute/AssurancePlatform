@@ -1,0 +1,15 @@
+:root {
+  --md-primary-fg-color: rgb(15, 119, 184);
+  --md-primary-fg-color--light: rgb(86, 172, 225);
+  --md-primary-fg-color--dark: rgb(10, 85, 132);
+}
+h1,
+h2 {
+  font-weight: 500 !important;
+}
+li.md-nav__item {
+  margin-bottom: 8px !important;
+}
+li.md-tabs__item {
+  font-weight: 700 !important;
+}
