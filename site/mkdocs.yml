@@ -43,13 +43,18 @@ theme:
     - search.suggest
     - toc.follow
     # - toc.integrate
+
+  # Set custom colours
   palette:
-    scheme: default
+    primary: custom
+    accent: deep orange
 
   font:
     text: Plus Jakarta Sans
     code: Source Code Pro
+
   # favicon: assets/logo.png
+
   icon:
     logo: material/vector-circle
     admonition:
@@ -127,8 +132,8 @@ markdown_extensions:
 #   - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
 #   - javascripts/tablesort.js
 
-# extra_css:
-#   - stylesheets/extra.css
+extra_css:
+  - assets/style.css
 
 # Page tree
 
