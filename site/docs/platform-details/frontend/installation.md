@@ -37,7 +37,7 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     ```
 
 4. **Run the Development Server**
-    
+
     Start the development server to launch the TEA Platform in your default web browser.
 
     ```shell
@@ -47,7 +47,7 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     **This command will automatically open a new browser tab pointing to http://localhost:3000, where you can start interacting with the frontend application.**
 
 5. **Run Tests**
-    
+
     It's good practice to run the available tests to ensure that the frontend components are functioning as expected.
 
     ```shell
