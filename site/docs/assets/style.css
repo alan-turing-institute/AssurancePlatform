@@ -13,3 +13,6 @@ li.md-nav__item {
 li.md-tabs__item {
   font-weight: 700 !important;
 }
+article.md-content__inner {
+  padding-bottom: 12rem;
+}
