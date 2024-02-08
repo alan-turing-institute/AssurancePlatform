@@ -37,7 +37,7 @@ const Signup = () => {
 
   /**
    * Submit the signup form.
-   * 
+   *
    * @param {Event} e - The form submission event.
    * @returns {void}
    */

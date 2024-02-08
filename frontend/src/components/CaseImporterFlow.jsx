@@ -164,7 +164,7 @@ function CaseImporterFlow({ titleId, onClose }) {
     },
     [uploadType, url, fileJson, getUrlContent, postCaseJSON]
   );
-  
+
   /**
    * Handles changes in the selected upload type (file or URL)
    * @param {Event} e The change event

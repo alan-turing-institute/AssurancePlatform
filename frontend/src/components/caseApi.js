@@ -136,8 +136,9 @@ export async function createItem(token, type, parentId, parentType, name) {
  * @returns {Promise} The response from the server.
  */
 export async function getItem(token, id, type) {
-  const url = `${getBaseURL()}/${configData.navigation[type]["api_name"]
-    }/${id}`;
+  const url = `${getBaseURL()}/${
+    configData.navigation[type]["api_name"]
+  }/${id}`;
 
   const requestOptions = {
     headers: {
@@ -180,8 +181,9 @@ export function editItem(token, id, type, item) {
  * @returns {Promise} The response from the server.
  */
 export function deleteItem(token, id, type) {
-  const url = `${getBaseURL()}/${configData.navigation[type]["api_name"]
-    }/${id}/`;
+  const url = `${getBaseURL()}/${
+    configData.navigation[type]["api_name"]
+  }/${id}/`;
   const requestOptions = {
     method: "DELETE",
     headers: {

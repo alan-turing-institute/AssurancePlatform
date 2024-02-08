@@ -26,10 +26,10 @@ function NavButton({ sx, ...props }) {
 
 /**
  * NavItem is a wrapper around NavButton for creating navigational items that do not require routing functionality provided by React Router's Link component. It's primarily used for external links.
-*
-* @param {Object} props - Props to be passed to the NavButton component.
-* @returns {JSX.Element} A navigational button for external links, styled consistently with the navigation bar.
-*/
+ *
+ * @param {Object} props - Props to be passed to the NavButton component.
+ * @returns {JSX.Element} A navigational button for external links, styled consistently with the navigation bar.
+ */
 // I feel you should be able to do component={to ? Link : "a"}, but no...
 // I suspect because of a bug in MUI
 function NavItem({ ...props }) {

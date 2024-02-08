@@ -5,7 +5,7 @@ import { useLoginToken } from "../hooks/useAuth.js";
 
 /**
  * A dropdown menu component for selecting parents of an item.
- * 
+ *
  * @param {Object} props - The props for this component.
  * @param {string} props.type - Item type of the one whose parents we want to select from.
  * @param {number} props.id - Id of the item whose parents we want to select from.

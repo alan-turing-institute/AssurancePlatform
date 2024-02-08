@@ -66,7 +66,6 @@ export const Splash = ({ notFound }) => {
   );
 };
 
-
 /**
  * Home serves as the main entry point for users, directing them to either manage their cases if logged in or to the splash screen if not. It checks the authentication status and dynamically renders the appropriate component based on the user's login state.
  *

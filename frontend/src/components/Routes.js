@@ -10,7 +10,7 @@ import { Box, Toolbar } from "@mui/material";
 
 /**
  * AllRoutes is the top-level component for the application. It includes the main navigation bar and routes to the main sections of the site.
- * 
+ *
  * @returns {JSX.Element} The top-level component for the application, including the main navigation bar and routes to the main sections of the site.
  */
 const AllRoutes = () => {

@@ -5,7 +5,7 @@ import { jsonToMermaid } from "./utils";
 
 /**
  * MermaidChart is a component for rendering assurance case diagrams using the Mermaid library. It takes a JSON representation of an assurance case and renders it as a flowchart.
- * 
+ *
  * @param {Object} props - Component props.
  * @param {string} props.caseId - The ID of the assurance case to render.
  * @param {Object} props.assuranceCase - The JSON representation of the assurance case to render.
@@ -94,26 +94,23 @@ function MermaidChart({
    * @param {MouseEvent} e - The click event.
    * @returns {void}
    */
-  const onCollapseButtonClick = useCallback(
-    (e) => {
-      const nodeKey = e.target?.dataset?.key;
-      if (nodeKey == null) {
-        return;
+  const onCollapseButtonClick = useCallback((e) => {
+    const nodeKey = e.target?.dataset?.key;
+    if (nodeKey == null) {
+      return;
+    }
+
+    setCollapsedNodes((collapsedNodes) => {
+      let newArray = collapsedNodes.filter((k) => k !== nodeKey);
+      if (newArray.length === collapsedNodes.length) {
+        newArray.push(nodeKey);
       }
+      return newArray;
+    });
 
-      setCollapsedNodes((collapsedNodes) => {
-        let newArray = collapsedNodes.filter((k) => k !== nodeKey);
-        if (newArray.length === collapsedNodes.length) {
-          newArray.push(nodeKey);
-        }
-        return newArray;
-      });
-
-      // don't fire click event on node itself
-      e.stopPropagation();
-    },
-    [],
-  );
+    // don't fire click event on node itself
+    e.stopPropagation();
+  }, []);
 
   /**
    * Trigger a re-render of the Mermaid chart when the markdown content changes.

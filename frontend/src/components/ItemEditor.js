@@ -304,7 +304,7 @@ function ItemEditor({
 
   /**
    * Fetch the item from the server.
-   * 
+   *
    * @returns {void}
    * @throws {Error} If ...
    */
@@ -521,7 +521,7 @@ function ItemEditor({
                 name={item.name}
               />
               {configData.navigation[type].children.length ||
-                configData.navigation[type]["parent_relation"] ===
+              configData.navigation[type]["parent_relation"] ===
                 "many-to-many" ? (
                 <>
                   <Typography fontWeight="bold">Link to {item.name}</Typography>
@@ -538,7 +538,7 @@ function ItemEditor({
                     />
                   ))}
                   {configData.navigation[type]["parent_relation"] ===
-                    "many-to-many" ? (
+                  "many-to-many" ? (
                     <>
                       <ParentSelector
                         type={type}

@@ -3,7 +3,7 @@ import RadioInput from "./common/RadioInput";
 
 /**
  * PermissionSelector is a component for selecting the permission level for a user or group on an item.
- * 
+ *
  * @param {Object} props - Component props.
  * @param {string} props.name - The name of the permission selector.
  * @param {string} props.value - The current value of the permission selector.
