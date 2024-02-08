@@ -1,6 +1,16 @@
 import { sanitizeForHtml } from "./utils";
 
+/**
+ * SVGDownloader is a class for downloading the SVG of a mermaid diagram.
+ */
 class SVGDownloader {
+  /**
+   * SVGDownloader is a method for downloading the SVG of a mermaid diagram.
+   *
+   * @param {Object} metadata - A metadata object to be stored in the SVG as a data-metadata attribute
+   * @returns {void}
+   * @throws {Error} An error if the SVG element is not found.
+   */
   handleDownloadSVG(metadata = null) {
     const svgElement =
       document.getElementsByClassName("mermaid")[0].childNodes[0];

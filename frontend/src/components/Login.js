@@ -10,6 +10,11 @@ import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 import { Link } from "react-router-dom";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * Login is a form component used for authenticating users within the TEA Platform. It provides a simple interface for entering a username and password and submitting them to the server. Upon successful submission, the form sets a token in local storage and redirects the user to the home page.
+ *
+ * @returns {JSX.Element} A form that allows users to input their username and password and log in.
+ */
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

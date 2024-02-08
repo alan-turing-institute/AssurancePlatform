@@ -2,6 +2,13 @@ import { getBaseURL } from "./utils.js";
 import configData from "../config.json";
 import { unauthorized } from "../hooks/useAuth.js";
 
+/**
+ * Get a certain case from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the case to get.
+ * @returns {Promise} The response from the server.
+ */
 export async function getCase(token, id) {
   const url = `${getBaseURL()}/cases/${id}/`;
 
@@ -10,7 +17,9 @@ export async function getCase(token, id) {
       Authorization: `Token ${token}`,
     },
   };
+
   const res = await fetch(url, requestOptions);
+
   if (res.status === 200) {
     return await res.json();
   } else if (res.status === 401) {
@@ -25,6 +34,14 @@ export async function getCase(token, id) {
   throw new Error("Could not fetch case.");
 }
 
+/**
+ * Change the properties of a case.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the case to change.
+ * @param {Object} changes - The changes to make to the case.
+ * @returns {Promise} The response from the server.
+ */
 export function editCase(token, id, changes) {
   const url = `${getBaseURL()}/cases/${id}/`;
 
@@ -38,6 +55,13 @@ export function editCase(token, id, changes) {
   return fetch(url, requestOptions);
 }
 
+/**
+ * Delete a case from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the case to delete.
+ * @returns {Promise} The response from the server.
+ */
 export function deleteCase(token, id) {
   const url = `${getBaseURL()}/cases/${id}/`;
   const requestOptions = {
@@ -49,6 +73,16 @@ export function deleteCase(token, id) {
   return fetch(url, requestOptions);
 }
 
+/**
+ * Create a new item in the database.
+ *
+ * @param {string} token - The user's token.
+ * @param {string} type - The type of the item to create.
+ * @param {number} parentId - The id of the parent item.
+ * @param {string} parentType - The type of the parent item.
+ * @param {string} name - The name of the new item.
+ * @returns {Promise} The response from the server.
+ */
 export async function createItem(token, type, parentId, parentType, name) {
   const url = `${getBaseURL()}/${configData.navigation[type]["api_name"]}/`;
 
@@ -93,10 +127,17 @@ export async function createItem(token, type, parentId, parentType, name) {
   return await response.json();
 }
 
+/**
+ * Get a certain item from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the item to get.
+ * @param {string} type - The type of the item to get.
+ * @returns {Promise} The response from the server.
+ */
 export async function getItem(token, id, type) {
-  const url = `${getBaseURL()}/${
-    configData.navigation[type]["api_name"]
-  }/${id}`;
+  const url = `${getBaseURL()}/${configData.navigation[type]["api_name"]
+    }/${id}`;
 
   const requestOptions = {
     headers: {
@@ -107,6 +148,15 @@ export async function getItem(token, id, type) {
   return await response.json();
 }
 
+/**
+ * Change the properties of an item.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the item to change.
+ * @param {string} type - The type of the item to change.
+ * @param {Object} item - The changes to make to the item.
+ * @returns {Promise} The response from the server.
+ */
 export function editItem(token, id, type, item) {
   let url = `${getBaseURL()}/${configData.navigation[type]["api_name"]}/${id}/`;
 
@@ -121,10 +171,17 @@ export function editItem(token, id, type, item) {
   return fetch(url, requestOptions);
 }
 
+/**
+ * Delete an item from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} id - The id of the item to delete.
+ * @param {string} type - The type of the item to delete.
+ * @returns {Promise} The response from the server.
+ */
 export function deleteItem(token, id, type) {
-  const url = `${getBaseURL()}/${
-    configData.navigation[type]["api_name"]
-  }/${id}/`;
+  const url = `${getBaseURL()}/${configData.navigation[type]["api_name"]
+    }/${id}/`;
   const requestOptions = {
     method: "DELETE",
     headers: {
@@ -136,6 +193,13 @@ export function deleteItem(token, id, type) {
   return fetch(url, requestOptions);
 }
 
+/**
+ * Get all parent items of a certain type from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {string} type - The type of the parent items to get.
+ * @returns {Promise} The response from the server.
+ */
 export async function itemGetCurrentParents(token, id, type) {
   const db_name = configData.navigation[type]["db_name"];
   const url = `${getBaseURL()}/parents/${db_name}/${id}`;
@@ -147,6 +211,14 @@ export async function itemGetCurrentParents(token, id, type) {
   return await fetch(url, requestOptions).then((response) => response.json());
 }
 
+/**
+ * Get all potential parent items of a certain type for a given case from the server.
+ *
+ * @param {string} token - The user's token.
+ * @param {number} caseId - The id of the case.
+ * @param {string} type - The type of the parent items to get.
+ * @returns {Promise} The response from the server.
+ */
 export async function itemGetPotentialParents(token, caseId, type) {
   const requestOptions = {
     headers: {

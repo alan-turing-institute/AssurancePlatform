@@ -3,6 +3,18 @@ import mermaid from "mermaid";
 import "./Mermaid.scss";
 import { jsonToMermaid } from "./utils";
 
+/**
+ * MermaidChart is a component for rendering assurance case diagrams using the Mermaid library. It takes a JSON representation of an assurance case and renders it as a flowchart.
+ * 
+ * @param {Object} props - Component props.
+ * @param {string} props.caseId - The ID of the assurance case to render.
+ * @param {Object} props.assuranceCase - The JSON representation of the assurance case to render.
+ * @param {string} props.selectedId - The ID of the currently selected node in the assurance case.
+ * @param {string} props.selectedType - The type of the currently selected node in the assurance case.
+ * @param {Function} props.setSelected - A function to set the currently selected node in the assurance case.
+ * @param {Function} props.setMermaidFocus - A function to set the focus state of the Mermaid chart.
+ * @returns {JSX.Element} A Mermaid chart component.
+ */
 function MermaidChart({
   caseId,
   assuranceCase,
@@ -13,6 +25,12 @@ function MermaidChart({
 }) {
   const [collapsedNodes, setCollapsedNodes] = useState([]);
 
+  /**
+   * Convert the assurance case to a Mermaid markdown representation.
+   *
+   * @type {string}
+   * @returns {string} The Mermaid markdown representation of the assurance case.
+   */
   const chartmd = useMemo(() => {
     return jsonToMermaid(
       assuranceCase,
@@ -22,12 +40,20 @@ function MermaidChart({
     );
   }, [assuranceCase, selectedType, selectedId, collapsedNodes]);
 
-  // refresh state
+  /**
+   * Refresh the state of the collapsed nodes when the assurance case changes.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     setCollapsedNodes([]);
   }, [caseId]);
 
-  // initialise mermaid
+  /**
+   * Initialize the Mermaid library.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     mermaid.initialize({
       theme: "base",
@@ -47,7 +73,9 @@ function MermaidChart({
     });
   }, []);
 
-  // set click callback
+  /**
+   * Set the selected node when a node is clicked in the Mermaid chart.
+   */
   useEffect(() => {
     window.callback = (e) => {
       setMermaidFocus((tog) => !tog);
@@ -60,8 +88,14 @@ function MermaidChart({
     };
   }, [setSelected, setMermaidFocus]);
 
+  /**
+   * Handle the collapse/expand button click event.
+   *
+   * @param {MouseEvent} e - The click event.
+   * @returns {void}
+   */
   const onCollapseButtonClick = useCallback(
-    /** @param {MouseEvent} e  */ (e) => {
+    (e) => {
       const nodeKey = e.target?.dataset?.key;
       if (nodeKey == null) {
         return;
@@ -81,7 +115,13 @@ function MermaidChart({
     [],
   );
 
-  // trigger mermaid reload
+  /**
+   * Trigger a re-render of the Mermaid chart when the markdown content changes.
+   *
+   * @returns {void}
+   * @throws {Error} If the Mermaid div is not found.
+   * @throws {Error} If there is an error rendering the Mermaid chart.
+   */
   useEffect(() => {
     try {
       const mermaidDiv = document.querySelector(`.mermaid-${caseId}`);

@@ -18,6 +18,15 @@ import { visuallyHidden } from "@mui/utils";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Box from "@mui/material/Box";
 
+/**
+ * CommentSection provides an interface for users to view and add comments to an assurance case. It presents a modal dialog with a form to submit new comments and a list of existing comments.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.caseId - The unique identifier of the assurance case to which comments are related.
+ * @param {boolean} props.isOpen - Boolean state to control the visibility of the comment section modal.
+ * @param {Function} props.onClose - Function to call when closing the comment section modal.
+ * @returns {JSX.Element} A modal dialog component that allows users to manage comments for an assurance case.
+ */
 function CommentSection({ caseId, isOpen, onClose }) {
   const titleId = useId();
 
@@ -33,6 +42,14 @@ function CommentSection({ caseId, isOpen, onClose }) {
   );
 }
 
+/**
+ * CommentSectionInner handles the display and management of comments for a specific assurance case, including posting new comments and sorting existing ones.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.assuranceCaseId - The unique identifier of the assurance case.
+ * @param {Function} props.onClose - Function to call when the user wishes to close the comment section.
+ * @returns {JSX.Element} The inner content of the comment section, including a form for new comments and a list of existing comments.
+ */
 function CommentSectionInner({ assuranceCaseId, onClose }) {
   const [comments, setComments] = useState([]);
   const [error, setError] = useState("");
@@ -45,6 +62,11 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
 
   const [token] = useLoginToken();
 
+  /**
+   * Fetch comments from the server.
+   *
+   * @returns {undefined}
+   */
   const fetchComments = useCallback(async () => {
     const url = `${getBaseURL()}/comments/${assuranceCaseId}/`;
     const requestOptions = {
@@ -58,10 +80,21 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
     setComments(data);
   }, [assuranceCaseId, token]);
 
+  /**
+   * Fetch comments when the component mounts.
+   *
+   * @returns {undefined}
+   */
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
 
+  /**
+   * Post a new comment to the server.
+   *
+   * @param {Event} e - The form submission event.
+   * @returns {undefined}
+   */
   const onSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -100,6 +133,12 @@ function CommentSectionInner({ assuranceCaseId, onClose }) {
     [assuranceCaseId, token, fetchComments, newComment],
   );
 
+  /**
+   * Sort comments by a given property.
+   *
+   * @param {string} property - The property to sort by.
+   * @returns {undefined}
+   */
   const onSort = (property) => {
     const opositeDir = sort.direction === "asc" ? "desc" : "asc";
     const direction = sort.property === property ? opositeDir : sort.direction;
