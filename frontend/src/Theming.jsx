@@ -1,11 +1,12 @@
 import * as React from "react";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
+import configData from "./config.json";
 
 function Theming({ children }) {
   const theme = createTheme({
     typography: {
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
+      fontFamily: configData.styling.mainFont,
       fontSize: 16,
       h1: {
         fontSize: "2.625rem",

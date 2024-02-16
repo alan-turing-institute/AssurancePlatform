@@ -7,6 +7,11 @@ import TextInput from "./common/TextInput.jsx";
 import { useEnforceLogout, useLoginToken } from "../hooks/useAuth.js";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * Signup is a component for creating a new user account.
+ *
+ * @returns {JSX.Element} A form for creating a new user account.
+ */
 const Signup = () => {
   const [username, setUsername] = useState("");
   const [password1, setPassword1] = useState("");
@@ -21,10 +26,21 @@ const Signup = () => {
   const isLoggedOut = useEnforceLogout();
   const [_, setToken] = useLoginToken();
 
+  /**
+   * Set the loading state based on the user's authentication status.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     setLoading(!isLoggedOut);
   }, [isLoggedOut]);
 
+  /**
+   * Submit the signup form.
+   *
+   * @param {Event} e - The form submission event.
+   * @returns {void}
+   */
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
@@ -88,12 +104,24 @@ const Signup = () => {
     [username, password1, password2, setToken],
   );
 
+  /**
+   * Validate the password input.
+   *
+   * @param {string} val - The password input value.
+   * @returns {string|undefined} An error message if the password input is invalid, otherwise undefined.
+   */
   const validatePassword1 = React.useCallback((val) => {
     if (val.length < 8) {
       return "Password must be at least 8 characters.";
     }
   }, []);
 
+  /**
+   * Validate the confirm password input.
+   *
+   * @param {string} val - The confirm password input value.
+   * @returns {string|undefined} An error message if the confirm password input is invalid, otherwise undefined.
+   */
   const validatePassword2 = React.useCallback(
     (val) => {
       if (val !== password1) {

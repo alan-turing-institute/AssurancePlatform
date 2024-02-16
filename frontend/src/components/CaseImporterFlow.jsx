@@ -17,6 +17,14 @@ import FileInput from "./common/FileInput.jsx";
 import { ArrowRight } from "./common/Icons.jsx";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * CaseImporterFlow allows users to import an assurance case into the TEA Platform from either a file or a URL.
+ * It supports importing from SVG files with embedded JSON metadata or directly from JSON files.
+ *
+ * @param {Object} props The component props.
+ * @param {string} props.titleId A unique identifier for the title element, used for accessibility.
+ * @param {Function} props.onClose A function to call when closing the import modal.
+ */
 function CaseImporterFlow({ titleId, onClose }) {
   const [uploadType, setUploadType] = useState("file");
   const [url, setUrl] = useState("");
@@ -33,6 +41,11 @@ function CaseImporterFlow({ titleId, onClose }) {
   const baseURL = `${getBaseURL()}`;
   const navigate = useNavigate();
 
+  /** Parses SVG text to extract embedded JSON metadata
+   * @param {string} text The SVG text to parse
+   * @returns {Promise<Object>} The parsed JSON metadata
+   * @throws {Error} If the metadata cannot be parsed
+   */
   const parseSvg = useCallback(async (text) => {
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(text, "image/svg+xml");
@@ -48,8 +61,13 @@ function CaseImporterFlow({ titleId, onClose }) {
     }
   }, []);
 
+  /** Fetches content from a URL and tries to parse it as JSON or SVG
+   *
+   * @param {string} url
+   * @returns {Promise<Object>} The parsed JSON or SVG content
+   * @throws {Error} If the content cannot be loaded or parsed
+   */
   const getUrlContent = useCallback(
-    /** @param {string} url */
     async (url) => {
       try {
         const response = await fetch(url);
@@ -75,6 +93,13 @@ function CaseImporterFlow({ titleId, onClose }) {
     [parseSvg]
   );
 
+  /**
+   * Posts the JSON representation of a case to the backend
+   *
+   * @param {Object} json The case JSON to post
+   * @returns {Promise<void>}
+   * @throws {Error} If the JSON cannot be posted
+   */
   const postCaseJSON = useCallback(
     (json) => {
       const requestOptions = {
@@ -108,6 +133,13 @@ function CaseImporterFlow({ titleId, onClose }) {
     [token, baseURL, navigate]
   );
 
+  /**
+   * Handles form submission for importing a case
+   *
+   * @param {Event} e The form submission event
+   * @returns {void}
+   * @throws {Error} If the form submission fails
+   */
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
@@ -133,10 +165,21 @@ function CaseImporterFlow({ titleId, onClose }) {
     [uploadType, url, fileJson, getUrlContent, postCaseJSON]
   );
 
+  /**
+   * Handles changes in the selected upload type (file or URL)
+   * @param {Event} e The change event
+   * @returns {void}
+   * @throws {Error} If the change event fails
+   */
   const onTypeChange = useCallback((e) => {
     setUploadType(e.target.value);
   }, []);
 
+  /**
+   * Processes the selected file to extract JSON data.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     if (!file) {
       setFileJson(null);
@@ -200,7 +243,7 @@ function CaseImporterFlow({ titleId, onClose }) {
           control={<Radio />}
           label="File upload"
         />
-        <FormControlLabel value="url" control={<Radio />} label="Url upload" />
+        <FormControlLabel value="url" control={<Radio />} label="URL upload" />
       </RadioGroup>
       {uploadType === "file" ? (
         <FileInput

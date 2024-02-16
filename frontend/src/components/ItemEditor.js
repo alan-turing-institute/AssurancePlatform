@@ -14,6 +14,12 @@ import TextInput from "./common/TextInput.jsx";
 import SelectInput from "./common/SelectInput.jsx";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * niceNameforType returns a human-readable name for the given type.
+ *
+ * @param {string} type - The type of the item.
+ * @returns {string} A human-readable name for the given type.
+ */
 function niceNameforType(type) {
   switch (type) {
     case "TopLevelNormativeGoal":
@@ -30,6 +36,21 @@ function niceNameforType(type) {
   }
 }
 
+/**
+ * AddItemButton provides a button interface for adding a new item (Goal, Context, Claim, or Evidence) as a child to a specified parent within an assurance case. It creates a new item of the specified type and links it to the parent item, then refreshes the view and selects the newly created item.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.childType - The type of item to be created.
+ * @param {string} props.parentId - The ID of the parent item to which the new item will be linked.
+ * @param {string} props.parentType - The type of the parent item.
+ * @param {Function} props.onRefresh - Function to refresh the view after the item is added.
+ * @param {Function} props.setErrors - Function to display errors.
+ * @param {Function} props.getIdForNewElement - Function to generate a new ID for the item being created.
+ * @param {Function} props.setSelected - Function to set the newly created item as selected in the UI.
+ * @returns {JSX.Element} A button that triggers the creation of a new item when clicked.
+ *
+ * This component simplifies the process of adding new items to the assurance case by handling the API call and subsequent UI updates.
+ */
 function AddItemButton({
   childType,
   parentId,
@@ -41,6 +62,11 @@ function AddItemButton({
 }) {
   const [token] = useLoginToken();
 
+  /**
+   * Handle the click event for adding a new item.
+   *
+   * @returns {void}
+   */
   const onClick = useCallback(() => {
     createItem(
       token,
@@ -80,6 +106,21 @@ function AddItemButton({
   );
 }
 
+/**
+ * PropertyField allows editing of a single property (field) of an item within an assurance case. It supports text input and updates the backend upon change. It is used for editing properties like name, description, and URL of items.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.id - The ID of the item being edited.
+ * @param {string} props.type - The type of the item being edited.
+ * @param {Object} props.item - The current state of the item being edited.
+ * @param {string} props.fieldName - The name of the field in the item to be edited.
+ * @param {Function} props.onRefresh - Function to refresh the parent view upon successful edit.
+ * @param {boolean} props.mermaidFocus - Indicates if the field is focused in the Mermaid diagram.
+ * @param {Object} [props...props] - Additional props passed to the TextInput component.
+ * @returns {JSX.Element} A text input field for editing a property of an item.
+ *
+ * This component abstracts the input field logic for editing item properties, handling validation, and API update calls.
+ */
 function PropertyField({
   id,
   type,
@@ -93,6 +134,13 @@ function PropertyField({
 
   const [token] = useLoginToken();
 
+  /**
+   * Handle the change event for the input field.
+   *
+   * @param {string} value - The new value of the input field.
+   * @returns {void}
+   * @throws {Error} If the field cannot be changed.
+   */
   const setValue = useCallback(
     (value) => {
       if (item[fieldName] !== value) {
@@ -133,6 +181,23 @@ function PropertyField({
   );
 }
 
+/**
+ * PropertySelect provides a dropdown selection interface for changing a specific property of an item within an assurance case. It is used for fields where a selection from predefined options is required, like the claim type of a PropertyClaim.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.label - The label for the select field.
+ * @param {string} props.id - The ID of the item being edited.
+ * @param {string} props.type - The type of the item being edited.
+ * @param {Object} props.item - The current state of the item being edited.
+ * @param {Function} props.setItem - Function to set the updated item state.
+ * @param {string} props.fieldName - The name of the field in the item to be edited.
+ * @param {Function} props.onRefresh - Function to refresh the parent view upon successful edit.
+ * @param {Array} props.options - The options for the dropdown.
+ * @param {Object} [props...props] - Additional props passed to the SelectInput component.
+ * @returns {JSX.Element} A dropdown select field for editing a specific property of an item.
+ *
+ * This component simplifies the process of selecting from predefined options for a specific item property, handling the update logic and UI feedback.
+ */
 function PropertySelect({
   label,
   id,
@@ -148,6 +213,13 @@ function PropertySelect({
 
   const [token] = useLoginToken();
 
+  /**
+   * Handle the change event for the select field.
+   *
+   * @param {string} value - The new value of the select field.
+   * @returns {void}
+   * @throws {Error} If the field cannot be changed.
+   */
   const setValue = useCallback(
     (value) => {
       if (item[fieldName] !== value) {
@@ -191,6 +263,23 @@ function PropertySelect({
   );
 }
 
+/**
+ * ItemEditor provides an interface for editing the details of a specific item within an assurance case, such as goals, contexts, claims, or evidence. It allows for editing textual properties, linking to parents, and deleting the item.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.caseId - The ID of the assurance case to which the item belongs.
+ * @param {string} props.id - The ID of the item being edited.
+ * @param {string} props.type - The type of the item being edited.
+ * @param {Function} props.onRefresh - Function to refresh the view after editing.
+ * @param {Function} props.onHide - Function to hide the editor.
+ * @param {Function} props.getIdForNewElement - Function to generate a new ID for linking items.
+ * @param {Function} props.setSelected - Function to select an item in the UI.
+ * @param {boolean} props.graphUpdate - Flag indicating if the graph should be updated.
+ * @param {boolean} props.mermaidFocus - Indicates if the item is focused in the Mermaid diagram.
+ * @returns {JSX.Element} An interface for editing an item's details.
+ *
+ * This component encapsulates the functionality required for editing items within an assurance case, providing fields for editing, options for linking to other items, and actions for deleting the item.
+ */
 function ItemEditor({
   caseId,
   id,
@@ -213,6 +302,12 @@ function ItemEditor({
 
   const [token] = useLoginToken();
 
+  /**
+   * Fetch the item from the server.
+   *
+   * @returns {void}
+   * @throws {Error} If ...
+   */
   const updateItem = useCallback(() => {
     if (token) {
       setLoading(true);
@@ -249,9 +344,11 @@ function ItemEditor({
     }
   }, [token, id, type]);
 
-  // Fetch item when selected node in graph changes, but **not** for every graph update.
-  // Graph updates occur on an interval, and updating the item on this interval re-renders the
-  // ItemEditor.
+  /**
+   * Fetch the item when the selected node in the graph changes, but **not** for every graph update. Graph updates occur on an interval, and updating the item on this interval re-renders the ItemEditor.
+   *
+   * @returns {void}
+   */
   useEffect(() => {
     updateItem();
   }, [token, id, type]);
@@ -269,6 +366,11 @@ function ItemEditor({
     onHide();
   }, [onRefresh, onHide]);
 
+  /**
+   * Add a parent to the item.
+   *
+   * @returns {void}
+   */
   const submitAddParent = useCallback(() => {
     if (!parentToAdd) {
       return;
@@ -301,6 +403,11 @@ function ItemEditor({
     }
   }, [parentToAdd, item, token, id, type, onRefresh]);
 
+  /**
+   * Remove a parent from the item.
+   *
+   * @returns {void}
+   */
   const submitRemoveParent = useCallback(() => {
     if (!parentToRemove) {
       return;

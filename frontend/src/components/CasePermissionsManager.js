@@ -12,6 +12,17 @@ import { getCase } from "./caseApi.js";
 import { useLoginToken } from "../hooks/useAuth.js";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * CasePermissionsManager serves as a modal dialog for managing group permissions for a specific assurance case within the TEA Platform. It provides an interface for viewing and editing the access levels (view or edit) of various groups associated with the case.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.caseId - The unique identifier of the assurance case.
+ * @param {Object} props.assuranceCase - The assurance case object.
+ * @param {boolean} props.isOpen - Controls the visibility of the modal dialog.
+ * @param {Function} props.onClose - Callback function that is called when the modal is requested to be closed.
+ * @param {Function} props.onSuccess - Callback function that is called after successfully updating permissions.
+ * @returns {JSX.Element} A modal dialog for managing group permissions.
+ */
 function CasePermissionsManager({
   caseId,
   assuranceCase,
@@ -38,6 +49,16 @@ function CasePermissionsManager({
   );
 }
 
+/**
+ * CasePermissionsManagerInner is the core component within the CasePermissionsManager modal dialog, responsible for the actual management of group permissions. It allows users to assign 'view' or 'edit' permissions to groups for the specified assurance case, or remove their access entirely.
+ *
+ * @param {Object} props - Component props.
+ * @param {string} props.caseId - The unique identifier of the assurance case for which permissions are being managed.
+ * @param {Object} props.assuranceCase - The assurance case object, used for preloading existing permissions.
+ * @param {Function} props.afterSubmit - Callback function that is called after permissions are successfully updated.
+ * @param {Function} props.onClose - Callback function to close the permissions manager.
+ * @returns {JSX.Element} The interface for managing group permissions, including a list of groups with selectable permissions and action buttons to submit changes or cancel the operation.
+ */
 function CasePermissionsManagerInner({
   caseId,
   assuranceCase,

@@ -18,6 +18,23 @@ import configData from "../config.json";
 import { Wheelchair } from "./common/Icons.jsx";
 import ErrorMessage from "./common/ErrorMessage.jsx";
 
+/**
+ * CaseAccessibilityModal provides a modal dialog for editing the accessibility options,
+ * specifically the colour profile, of an assurance case diagram. Users can select from
+ * predefined colour schemes configured in `config.json` to enhance diagram accessibility.
+ *
+ * @param {Object} props The component props.
+ * @param {boolean} props.isOpen Indicates if the modal is open.
+ * @param {Function} props.onClose Function to call when closing the modal.
+ * @param {Function} props.onSuccess Function to call upon successful update of the case.
+ * @param {string} props.caseId The ID of the case being edited.
+ * @param {string} props.currentColour The current colour profile of the case diagram.
+ *
+ * This component utilizes the `editCase` API to submit the selected colour profile update,
+ * handling loading states, success, and error feedback within the modal dialog. The colour
+ * selection is made through a radio button group, offering a user-friendly way to enhance
+ * diagram accessibility for users with visual impairments.
+ */
 function CaseAccessibilityModal({
   isOpen,
   onClose,

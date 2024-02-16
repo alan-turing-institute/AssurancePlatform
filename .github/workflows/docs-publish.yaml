@@ -1,4 +1,4 @@
-name: ci
+name: docs-publish
 on:
   workflow_dispatch:
   pull_request:
@@ -9,10 +9,6 @@ on:
   release:
     types:
       - published
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 permissions:
   contents: write
 jobs:
@@ -29,26 +25,17 @@ jobs:
       - uses: pre-commit/action@v3.0.0
         with:
           extra_args: --hook-stage manual --all-files
-
-  deploy:
+  docs:
     runs-on: ubuntu-latest
-    if: github.event.repository.fork == false
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: 3.x
-      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
-      - uses: actions/cache@v3
-        with:
-          key: mkdocs-material-${{ env.cache_id }}
-          path: .cache
-          restore-keys: |
-            mkdocs-material-
-      - run:
-          pip install
-          git+https://${GH_TOKEN}@github.com/squidfunk/mkdocs-material.git
-          mkdocs-table-reader-plugin
+      - name: "Upgrade pip"
+        run: pip install --upgrade pip
+      - name: "Install requirements"
+        run: pip install -r site/requirements.txt
       - name: Build and Deploy
         working-directory: ./site
         run: |
@@ -56,3 +43,6 @@ jobs:
           mkdocs gh-deploy --force
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

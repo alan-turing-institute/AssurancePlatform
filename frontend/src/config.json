@@ -4,6 +4,10 @@
   "DEFAULT_GITHUB_REDIRECT_URI": "http://localhost:3000/login",
   "BOX_NCHAR": 25,
   "property_claim_types": ["Project claim", "System claim"],
+  "styling": {
+    "mainFont": "'Plus Jakarta Sans', sans-serif",
+    "mermaidFont": "Plus Jakarta Sans, sans-serif"
+  },
   "mermaid_styles": {
     "default": {
       "classTopLevelNormativeGoal": "fill:#638cb0,color:#FFF",
@@ -146,8 +150,8 @@
   },
   "user_input_validity": {
     "item_editor": {
-      "desc_char_max_len": 40,
-      "evidence_url_char_max_len": 250
+      "desc_char_max_len": 1000,
+      "evidence_url_char_max_len": 500
     }
   },
   "use_case_preview_svg": true

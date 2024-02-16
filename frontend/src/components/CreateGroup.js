@@ -4,6 +4,15 @@ import { ColumnFlow, RowFlow } from "./common/Layout.jsx";
 import { Button } from "@mui/material";
 import TextInput from "./common/TextInput.jsx";
 
+/**
+ * CreateGroup is a form component used for creating a new group within the TEA Platform. It provides a simple interface for entering the name of the new group and submitting it to the server. Upon successful submission, the form invokes a callback function to reflect the change.
+ *
+ * @param {Object} props - Component props.
+ * @param {Function} props.afterSubmit - Callback function to be called after successfully creating a group. It is used to trigger any necessary updates in the parent component, such as refreshing the list of groups.
+ * @returns {JSX.Element} A form that allows users to input a name for a new group and create it.
+ *
+ * This component includes error handling to provide feedback to the user in case of an unsuccessful group creation attempt. It leverages the `TextInput` component for inputting the group's name and validates the input before submission to ensure that a name is provided.
+ */
 function CreateGroup({ afterSubmit }) {
   const [name, setName] = useState("");
   const [error, setError] = useState();
