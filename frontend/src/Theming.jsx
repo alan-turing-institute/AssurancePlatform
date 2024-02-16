@@ -7,17 +7,17 @@ function Theming({ children }) {
   const theme = createTheme({
     typography: {
       fontFamily: configData.styling.mainFont,
-      fontSize: 16,
+      fontSize: configData.styling.mainFontSize,
       h1: {
-        fontSize: "2.625rem",
+        fontSize: `${configData.styling.mainFontSize * 0.1640625}rem`,
         fontWeight: 700,
       },
       h2: {
-        fontSize: "2rem",
+        fontSize: `${configData.styling.mainFontSize * 0.125}rem`,
         fontWeight: 600,
       },
       h3: {
-        fontSize: "1.5rem",
+        fontSize: `${configData.styling.mainFontSize * 0.09375}rem`,
         fontWeight: 600,
       },
     },
