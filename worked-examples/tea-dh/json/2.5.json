@@ -41,9 +41,7 @@
                   "short_description": "Results of evaluative study.",
                   "long_description": "N/A",
                   "URL": "www.url-to-study.com",
-                  "property_claim_id": [
-                    53
-                  ]
+                  "property_claim_id": [53]
                 }
               ],
               "strategy_id": null

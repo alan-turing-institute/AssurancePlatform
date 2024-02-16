@@ -1,99 +1,93 @@
 {
-    "type": "AssuranceCase",
-    "name": "CybersecurityBestPracticesForIoT",
-    "description": "A template for ensuring IoT devices adhere to cybersecurity best practices, including secure communication, regular updates, and strong authentication.",
-    "created_date": "2024-02-02T12:00:00.000Z",
-    "lock_uuid": null,
-    "goals": [
+  "type": "AssuranceCase",
+  "name": "CybersecurityBestPracticesForIoT",
+  "description": "A template for ensuring IoT devices adhere to cybersecurity best practices, including secure communication, regular updates, and strong authentication.",
+  "created_date": "2024-02-02T12:00:00.000Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "Ensure Cybersecurity in IoT Devices",
+      "short_description": "Secure IoT devices against potential cyber threats.",
+      "long_description": "This goal focuses on implementing and maintaining high cybersecurity standards across IoT devices to protect against unauthorized access, data breaches, and other cyber threats.",
+      "keywords": "cybersecurity, IoT, secure communication, software updates, authentication",
+      "assurance_case_id": 1,
+      "context": [
         {
-            "type": "TopLevelNormativeGoal",
-            "name": "Ensure Cybersecurity in IoT Devices",
-            "short_description": "Secure IoT devices against potential cyber threats.",
-            "long_description": "This goal focuses on implementing and maintaining high cybersecurity standards across IoT devices to protect against unauthorized access, data breaches, and other cyber threats.",
-            "keywords": "cybersecurity, IoT, secure communication, software updates, authentication",
-            "assurance_case_id": 1,
-            "context": [
-                {
-                    "type": "Context",
-                    "name": "IoT Deployment Context",
-                    "short_description": "The environment in which IoT devices are deployed.",
-                    "long_description": "Describes the varied environments IoT devices operate in, including home, industrial, and public spaces, and the unique security challenges each presents.",
-                    "created_date": "2024-02-02T12:05:00.000Z",
-                    "goal_id": 1
-                }
-            ],
-            "property_claims": [
-                {
-                    "type": "PropertyClaim",
-                    "name": "Secure Communication Protocols",
-                    "short_description": "IoT devices use secure communication protocols.",
-                    "long_description": "Ensures that all data transmitted by IoT devices is encrypted and secure from interception or tampering.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Security Requirement",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Encryption Standards Compliance",
-                            "short_description": "Compliance with recognized encryption standards.",
-                            "long_description": "Documented evidence that IoT devices comply with industry-standard encryption protocols for secure communication.",
-                            "URL": "www.example.com/encryption-compliance",
-                            "property_claim_id": [
-                                1
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "PropertyClaim",
-                    "name": "Regular Software Updates",
-                    "short_description": "IoT devices receive regular software updates.",
-                    "long_description": "IoT devices are regularly updated to address security vulnerabilities and enhance functionality.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Maintenance Policy",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Update Policy Documentation",
-                            "short_description": "Documentation of the software update policy.",
-                            "long_description": "A policy document detailing the frequency, method, and security measures for software updates on IoT devices.",
-                            "URL": "www.example.com/update-policy",
-                            "property_claim_id": [
-                                2
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "PropertyClaim",
-                    "name": "Robust Authentication Mechanisms",
-                    "short_description": "IoT devices implement robust authentication mechanisms.",
-                    "long_description": "Authentication mechanisms are in place to verify the identity of users and devices, preventing unauthorized access.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Authentication Standard",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Authentication Protocol Audit",
-                            "short_description": "Audit report of authentication protocols.",
-                            "long_description": "An external audit report confirming that IoT devices employ strong authentication protocols to ensure secure access.",
-                            "URL": "www.example.com/authentication-audit",
-                            "property_claim_id": [
-                                3
-                            ]
-                        }
-                    ]
-                }
-            ],
-            "strategies": []
+          "type": "Context",
+          "name": "IoT Deployment Context",
+          "short_description": "The environment in which IoT devices are deployed.",
+          "long_description": "Describes the varied environments IoT devices operate in, including home, industrial, and public spaces, and the unique security challenges each presents.",
+          "created_date": "2024-02-02T12:05:00.000Z",
+          "goal_id": 1
         }
-    ],
-    "owner": 12,
-    "edit_groups": [],
-    "view_groups": [],
-    "color_profile": "default",
-    "comments": [],
-    "permissions": "manage"
+      ],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "Secure Communication Protocols",
+          "short_description": "IoT devices use secure communication protocols.",
+          "long_description": "Ensures that all data transmitted by IoT devices is encrypted and secure from interception or tampering.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Security Requirement",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Encryption Standards Compliance",
+              "short_description": "Compliance with recognized encryption standards.",
+              "long_description": "Documented evidence that IoT devices comply with industry-standard encryption protocols for secure communication.",
+              "URL": "www.example.com/encryption-compliance",
+              "property_claim_id": [1]
+            }
+          ]
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "Regular Software Updates",
+          "short_description": "IoT devices receive regular software updates.",
+          "long_description": "IoT devices are regularly updated to address security vulnerabilities and enhance functionality.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Maintenance Policy",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Update Policy Documentation",
+              "short_description": "Documentation of the software update policy.",
+              "long_description": "A policy document detailing the frequency, method, and security measures for software updates on IoT devices.",
+              "URL": "www.example.com/update-policy",
+              "property_claim_id": [2]
+            }
+          ]
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "Robust Authentication Mechanisms",
+          "short_description": "IoT devices implement robust authentication mechanisms.",
+          "long_description": "Authentication mechanisms are in place to verify the identity of users and devices, preventing unauthorized access.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Authentication Standard",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Authentication Protocol Audit",
+              "short_description": "Audit report of authentication protocols.",
+              "long_description": "An external audit report confirming that IoT devices employ strong authentication protocols to ensure secure access.",
+              "URL": "www.example.com/authentication-audit",
+              "property_claim_id": [3]
+            }
+          ]
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
 }

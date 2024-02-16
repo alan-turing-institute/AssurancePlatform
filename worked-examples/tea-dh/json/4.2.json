@@ -50,9 +50,7 @@
                   "short_description": "Results from clinical trial",
                   "long_description": "N/A",
                   "URL": "www.some-evidence.com",
-                  "property_claim_id": [
-                    57
-                  ]
+                  "property_claim_id": [57]
                 },
                 {
                   "type": "Evidence",
@@ -60,9 +58,7 @@
                   "short_description": "Benchmarks",
                   "long_description": "N/A",
                   "URL": "www.some-evidence.com",
-                  "property_claim_id": [
-                    57
-                  ]
+                  "property_claim_id": [57]
                 }
               ],
               "strategy_id": null
@@ -84,9 +80,7 @@
                   "short_description": "Training data drawn from target population",
                   "long_description": "N/A",
                   "URL": "www.some-evidence.com",
-                  "property_claim_id": [
-                    58
-                  ]
+                  "property_claim_id": [58]
                 }
               ],
               "strategy_id": null

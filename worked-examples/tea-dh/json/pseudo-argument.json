@@ -31,9 +31,7 @@
               "short_description": "The project lifecycle model scaffolds reflective and deliberative activities, providing a shared structure for project teams.",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                80
-              ]
+              "property_claim_id": [80]
             },
             {
               "type": "Evidence",
@@ -41,9 +39,7 @@
               "short_description": "Assurance case elements have a clear relational structure to help teams identify gaps in an argument e.g. claims with missing evidence that help teams identify necessary actions)",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                80
-              ]
+              "property_claim_id": [80]
             }
           ],
           "strategy_id": null
@@ -65,9 +61,7 @@
               "short_description": "Stakeholder engagement can support the co-creation of generalisable patterns, as seen in this report.",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                81
-              ]
+              "property_claim_id": [81]
             },
             {
               "type": "Evidence",
@@ -75,9 +69,7 @@
               "short_description": "Stakeholder engagement can help anticipate potential risks and adverse impacts that a project team may not have otherwise identified.",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                81
-              ]
+              "property_claim_id": [81]
             }
           ],
           "strategy_id": null
@@ -99,9 +91,7 @@
               "short_description": "Building an assurance case is a process of documentation, and the result can be shared with stakeholders who can verify the accuracy and sufficiency of the case.",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                82
-              ]
+              "property_claim_id": [82]
             },
             {
               "type": "Evidence",
@@ -109,9 +99,7 @@
               "short_description": "Robust and well-validated standards can be used to help teams identify appropriate or permissible forms of evidence.",
               "long_description": "N/A",
               "URL": "www.some-evidence.com",
-              "property_claim_id": [
-                82
-              ]
+              "property_claim_id": [82]
             }
           ],
           "strategy_id": null

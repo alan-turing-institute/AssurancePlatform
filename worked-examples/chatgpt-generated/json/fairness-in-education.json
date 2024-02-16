@@ -1,113 +1,107 @@
 {
-    "type": "AssuranceCase",
-    "name": "FairLLM-Education",
-    "description": "A pattern for ensuring fairness in large language model technologies within educational settings.",
-    "created_date": "2024-02-02T12:00:00.000Z",
-    "lock_uuid": null,
-    "goals": [
+  "type": "AssuranceCase",
+  "name": "FairLLM-Education",
+  "description": "A pattern for ensuring fairness in large language model technologies within educational settings.",
+  "created_date": "2024-02-02T12:00:00.000Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "Fairness in Education",
+      "short_description": "Ensure LLM technologies promote equitable learning outcomes.",
+      "long_description": "This goal aims to establish that the deployment of LLM technologies in educational settings does not perpetuate or introduce biases, ensuring fair and equitable learning outcomes for all students.",
+      "keywords": "fairness, education, equity, LLM",
+      "assurance_case_id": 1,
+      "context": [
         {
-            "type": "TopLevelNormativeGoal",
-            "name": "Fairness in Education",
-            "short_description": "Ensure LLM technologies promote equitable learning outcomes.",
-            "long_description": "This goal aims to establish that the deployment of LLM technologies in educational settings does not perpetuate or introduce biases, ensuring fair and equitable learning outcomes for all students.",
-            "keywords": "fairness, education, equity, LLM",
-            "assurance_case_id": 1,
-            "context": [
-                {
-                    "type": "Context",
-                    "name": "Educational Context",
-                    "short_description": "Diverse educational settings",
-                    "long_description": "The context includes various educational settings, highlighting the diversity of student backgrounds, learning preferences, and accessibility needs.",
-                    "created_date": "2024-02-02T12:05:00.000Z",
-                    "goal_id": 1
-                },
-                {
-                    "type": "Context",
-                    "name": "LLM Usage",
-                    "short_description": "Application of LLM in education",
-                    "long_description": "Describes how LLM technologies are applied in educational contexts, from personalized learning assistants to content generation and assessment tools.",
-                    "created_date": "2024-02-02T12:06:00.000Z",
-                    "goal_id": 1
-                }
-            ],
-            "property_claims": [
-                {
-                    "type": "PropertyClaim",
-                    "name": "Bias Identification and Mitigation",
-                    "short_description": "Identify and mitigate biases in LLM",
-                    "long_description": "Addresses the processes for identifying and mitigating biases within LLM technologies to prevent discriminatory impacts on students.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Ethical Design",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Bias Audit Report",
-                            "short_description": "Report on bias audit findings",
-                            "long_description": "Detailed report of the bias audit conducted on the LLM technology, including methodologies, findings, and mitigation strategies.",
-                            "URL": "www.example.com/bias-audit-report",
-                            "property_claim_id": [
-                                1
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "PropertyClaim",
-                    "name": "Accessibility and Inclusion",
-                    "short_description": "Ensure LLM is accessible to all students",
-                    "long_description": "Ensures that LLM technologies are accessible to all students, including those with disabilities, to promote inclusive education.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Inclusive Technology",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Accessibility Compliance Certificate",
-                            "short_description": "Certification of LLM's accessibility",
-                            "long_description": "Certificate issued by an independent body confirming that the LLM technology meets established accessibility standards.",
-                            "URL": "www.example.com/accessibility-certificate",
-                            "property_claim_id": [
-                                2
-                            ]
-                        }
-                    ]
-                },
-                {
-                    "type": "PropertyClaim",
-                    "name": "Educational Equity",
-                    "short_description": "LLM supports equitable education",
-                    "long_description": "Demonstrates how LLM technologies support equitable educational opportunities and outcomes across diverse student populations.",
-                    "goal_id": 1,
-                    "level": 1,
-                    "claim_type": "Supportive Learning",
-                    "evidence": [
-                        {
-                            "type": "Evidence",
-                            "name": "Equity Impact Study",
-                            "short_description": "Study on LLM's impact on educational equity",
-                            "long_description": "A comprehensive study assessing the impact of LLM technologies on educational equity, highlighting benefits and areas for improvement.",
-                            "URL": "www.example.com/equity-impact-study",
-                            "property_claim_id": [
-                                3
-                            ]
-                        }
-                    ]
-                }
-            ],
-            "strategies": []
-        }
-    ],
-    "owner": 12,
-    "edit_groups": [],
-    "view_groups": [],
-    "color_profile": "default",
-    "comments": [
+          "type": "Context",
+          "name": "Educational Context",
+          "short_description": "Diverse educational settings",
+          "long_description": "The context includes various educational settings, highlighting the diversity of student backgrounds, learning preferences, and accessibility needs.",
+          "created_date": "2024-02-02T12:05:00.000Z",
+          "goal_id": 1
+        },
         {
-            "author": "Ethics Board Chair",
-            "text": "Review the bias mitigation strategies for completeness.",
-            "date": "2024-02-03T09:00:00.000Z"
+          "type": "Context",
+          "name": "LLM Usage",
+          "short_description": "Application of LLM in education",
+          "long_description": "Describes how LLM technologies are applied in educational contexts, from personalized learning assistants to content generation and assessment tools.",
+          "created_date": "2024-02-02T12:06:00.000Z",
+          "goal_id": 1
         }
-    ],
-    "permissions": "manage"
+      ],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "Bias Identification and Mitigation",
+          "short_description": "Identify and mitigate biases in LLM",
+          "long_description": "Addresses the processes for identifying and mitigating biases within LLM technologies to prevent discriminatory impacts on students.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Ethical Design",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Bias Audit Report",
+              "short_description": "Report on bias audit findings",
+              "long_description": "Detailed report of the bias audit conducted on the LLM technology, including methodologies, findings, and mitigation strategies.",
+              "URL": "www.example.com/bias-audit-report",
+              "property_claim_id": [1]
+            }
+          ]
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "Accessibility and Inclusion",
+          "short_description": "Ensure LLM is accessible to all students",
+          "long_description": "Ensures that LLM technologies are accessible to all students, including those with disabilities, to promote inclusive education.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Inclusive Technology",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Accessibility Compliance Certificate",
+              "short_description": "Certification of LLM's accessibility",
+              "long_description": "Certificate issued by an independent body confirming that the LLM technology meets established accessibility standards.",
+              "URL": "www.example.com/accessibility-certificate",
+              "property_claim_id": [2]
+            }
+          ]
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "Educational Equity",
+          "short_description": "LLM supports equitable education",
+          "long_description": "Demonstrates how LLM technologies support equitable educational opportunities and outcomes across diverse student populations.",
+          "goal_id": 1,
+          "level": 1,
+          "claim_type": "Supportive Learning",
+          "evidence": [
+            {
+              "type": "Evidence",
+              "name": "Equity Impact Study",
+              "short_description": "Study on LLM's impact on educational equity",
+              "long_description": "A comprehensive study assessing the impact of LLM technologies on educational equity, highlighting benefits and areas for improvement.",
+              "URL": "www.example.com/equity-impact-study",
+              "property_claim_id": [3]
+            }
+          ]
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [
+    {
+      "author": "Ethics Board Chair",
+      "text": "Review the bias mitigation strategies for completeness.",
+      "date": "2024-02-03T09:00:00.000Z"
+    }
+  ],
+  "permissions": "manage"
 }
