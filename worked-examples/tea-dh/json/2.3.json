@@ -1,0 +1,54 @@
+{
+  "type": "AssuranceCase",
+  "name": "2.3",
+  "description": "Figure 2.3: a portion of a simplified assurance case on respect for privacy",
+  "created_date": "2024-02-02T18:35:11.033474Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "This app respects a user's right to privacy",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 17,
+      "context": [],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "P1",
+          "short_description": "We respect user privacy by adhering to data minimisation principles.",
+          "long_description": "N/A",
+          "goal_id": 26,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1.1",
+              "short_description": "Our app requires no personal data collection for its functioning.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 45,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}
