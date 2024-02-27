@@ -341,8 +341,8 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
             </div>
           </div>
 
-          <main className="py-10 bg-background text-foreground">
-            <div className="px-4 sm:px-6 lg:px-8">
+          <main className="bg-background text-foreground">
+            <div>
               {/* Your content */}
               {children}
             </div>

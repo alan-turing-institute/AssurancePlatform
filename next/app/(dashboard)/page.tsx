@@ -1,9 +1,10 @@
+import NoCasesFound from '@/components/cases/NoCasesFound'
 import React from 'react'
 
 const Dashboard = () => {
   return (
     <>
-      Content here sdsdsd
+      <NoCasesFound />
     </>
   )
 }
