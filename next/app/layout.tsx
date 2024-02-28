@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full bg-white">
+    <html lang="en" className="h-full bg-background">
       <body className={cn(
           "min-h-screen bg-background font-sans antialiased",
           fontSans.variable

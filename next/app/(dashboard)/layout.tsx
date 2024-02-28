@@ -5,33 +5,13 @@ import { Dialog, Menu, Transition } from '@headlessui/react'
 import {
   Bars3Icon,
   BellIcon,
-  CalendarIcon,
-  ChartPieIcon,
   Cog6ToothIcon,
-  DocumentDuplicateIcon,
-  FolderIcon,
-  HomeIcon,
-  UsersIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
-import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { ModeToggle } from '@/components/ui/theme-toggle'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
-
-const navigation = [
-  { name: 'Assurance Cases', href: '#', icon: FolderIcon, current: true },
-  { name: 'Team', href: '#', icon: UsersIcon, current: false },
-  { name: 'Documentation', href: '#', icon: DocumentDuplicateIcon, current: false },
-]
-const teams = [
-  { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
-  { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
-  { id: 3, name: 'General', href: '#', initial: 'G', current: false },
-]
-const userNavigation = [
-  { name: 'Your profile', href: '#' },
-  { name: 'Sign out', href: '#' },
-]
+import { navigation, teams, userNavigation } from '@/config'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -102,6 +82,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                               <li key={item.name}>
                                 <a
                                   href={item.href}
+                                  target={(!item.externalLink) ? '_self' : '_blank'}
                                   className={classNames(
                                     item.current
                                       ? 'bg-indigo-700 text-white'
@@ -147,7 +128,8 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                         </li>
                         <li className="mt-auto">
                           <a
-                            href="#"
+                            href="https://github.com/alan-turing-institute/AssurancePlatform"
+                            target='_blank'
                             className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
                           >
                             <GitHubLogoIcon
@@ -198,6 +180,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                       <li key={item.name}>
                         <a
                           href={item.href}
+                          target={(!item.externalLink) ? '_self' : '_blank'}
                           className={classNames(
                             item.current
                               ? 'bg-indigo-700 text-white'
@@ -243,7 +226,8 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                 </li>
                 <li className="mt-auto">
                   <a
-                    href="#"
+                    href="https://github.com/alan-turing-institute/AssurancePlatform"
+                    target='_blank'
                     className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
                   >
                     <GitHubLogoIcon
@@ -278,7 +262,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
             </button>
 
             <div className='flex flex-1 justify-start items-center'>
-              <h2 className='text-foreground font-medium'>Dashboard</h2>
+              <h2 className='text-foreground font-medium'>Assurance Cases</h2>
             </div>
 
             <div className="flex justify-end gap-x-4 self-stretch lg:gap-x-6">
