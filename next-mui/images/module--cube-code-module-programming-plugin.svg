@@ -1,0 +1,8 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="module--cube-code-module-programming-plugin">
+<path id="Vector" d="M19.1277 4.29109C19.0516 4.1878 18.9475 4.10849 18.8277 4.06251L10.2562 0.81966C10.1751 0.784263 10.0876 0.765991 9.99909 0.765991C9.91059 0.765991 9.82306 0.784263 9.74195 0.81966L1.17052 4.11966C1.05728 4.14966 0.953855 4.20876 0.870522 4.29109C0.770733 4.4118 0.715277 4.56304 0.713379 4.71966V15.1769C0.715232 15.3194 0.759766 15.4583 0.841243 15.5754C0.92272 15.6926 1.03741 15.7826 1.17052 15.834L9.74195 19.134H10.2562L18.8277 15.834C18.9607 15.7826 19.0754 15.6926 19.1569 15.5754C19.2384 15.4583 19.283 15.3194 19.2849 15.1769V4.7768C19.2969 4.60071 19.2406 4.42673 19.1277 4.29109Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M9.99902 19.234V7.86255" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M9.99902 7.86255V19.234" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M0.870605 4.34821L9.99918 7.86249L19.1277 4.34821" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
