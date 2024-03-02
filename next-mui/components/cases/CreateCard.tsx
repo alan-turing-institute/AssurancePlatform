@@ -4,6 +4,7 @@ import { CardActionArea, Typography, useTheme } from '@mui/material';
 import React from 'react'
 import { ThemedCard } from '../common/ThemeCard';
 import { PlusIcon } from 'lucide-react';
+import AddSvg from "../../images/add-1--expand-cross-buttons-button-more-remove-plus-add-+-mathematics-math.svg";
 
 const CreateCard = () => {
   const theme = useTheme();
@@ -27,7 +28,7 @@ const CreateCard = () => {
           gap: "2rem",
         }}
       >
-        <PlusIcon style={{ fontSize: '26px' }} />
+        <PlusIcon size={48} />
         <Typography variant="h3" component="h2">
           Create a new case
         </Typography>

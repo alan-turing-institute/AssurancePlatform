@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+;import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import MermaidChart from "./Mermaid";
 import ItemEditor from "./ItemEditor.js";
 import { useEnforceLogin, useLoginToken } from "../hooks/useAuth";
