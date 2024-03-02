@@ -6,6 +6,8 @@ import NextLink from 'next/link'
 import { ColumnFlow, RowFlow } from '@/components/common/Layouts'
 import TextInput from '@/components/common/TextInput'
 import ErrorMessage from '../common/ErrorMessage'
+import { useRouter } from 'next/navigation'
+import { useLoginToken } from '@/hooks/useAuth'
 
 const LoginForm = () => {
   const [username, setUsername] = useState<string>("");
@@ -16,7 +18,9 @@ const LoginForm = () => {
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // const [_, setToken] = useLoginToken();
+  const router = useRouter()
+
+  const [_, setToken] = useLoginToken();
 
   const onSubmit = useCallback(
     (e : any) => {
@@ -37,30 +41,30 @@ const LoginForm = () => {
 
       console.log(user)
 
-      // fetch(`${getBaseURL()}/auth/login/`, {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify(user),
-      // })
-      //   .then((res) => res.json())
-      //   .then((data) => {
-      //     console.log('API Data', data)
-      //     // if (data.key) {
-      //     //   setToken(data.key);
-      //     //   window.location.replace("/");
-      //     // } else {
-      //     //   setLoading(false);
-      //     //   setPassword("");
-      //     //   setToken(null);
-      //     //   setErrors(["Cannot log in with provided credentials"]);
-      //     // }
-      //   })
-      //   .catch(() => {
-      //     setLoading(false); // Also set loading to false when there is an error
-      //     setErrors(["An error occurred, please try again later"]);
-      //   });
+      fetch(`http://localhost:8000/api/auth/login/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log('API Data', data)
+          if (data.key) {
+            setToken(data.key);
+            router.push('/')
+          } else {
+            setLoading(false);
+            setPassword("");
+            setToken(null);
+            setErrors(["Cannot log in with provided credentials"]);
+          }
+        })
+        .catch(() => {
+          setLoading(false); // Also set loading to false when there is an error
+          setErrors(["An error occurred, please try again later"]);
+        });
     },
     [username, password],
   );

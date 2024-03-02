@@ -102,7 +102,7 @@ export function LayoutWithNav({ children } : { children : React.ReactNode }) {
           flexDirection: "column",
           borderRightStyle: "solid",
           borderRightWidth: "1px",
-          borderRightColor: theme.palette.primary.main,
+          borderRightColor: theme.palette.primary.dark,
           padding: "1rem",
           gap: "1.5rem",
         }}
