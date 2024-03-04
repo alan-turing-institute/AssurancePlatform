@@ -51,6 +51,7 @@ export function ModalLikeLayout({ children } : { children : React.ReactNode }) {
         flexGrow: 1,
         flexShrink: 1,
         overflowY: "auto",
+        marginTop: '6rem'
       }}
     >
       <Paper sx={{ margin: "auto", padding: "3rem", width: "35.375rem" }}>
