@@ -29,6 +29,7 @@ const CaseTopBar = (
     updateAllIdentifiers,
     setSelected 
   } : CaseTopBarProps) => {
+    console.log(assuranceCase)
   return (
     <RowFlow sx={sx}>
       <Paper sx={{ padding: "0.75rem 1rem", flexShrink: 1, zIndex: 99 }}>
@@ -43,9 +44,9 @@ const CaseTopBar = (
             maxLength={200}
           /> */}
           <Typography  tabIndex={0}>
-            {assuranceCase.title}
+            {assuranceCase.name}
           </Typography>
-          <CaseMenu />
+          <CaseMenu caseId={assuranceCase.id} />
         </RowFlow>
       </Paper>
       <Button

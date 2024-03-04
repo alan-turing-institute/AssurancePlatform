@@ -6,8 +6,14 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { AccessibilityIcon, ArrowRightFromLine, MoreVerticalIcon, NotebookIcon, Share2Icon, Trash2Icon, Type } from 'lucide-react';
 import { Divider, IconButton, ListItemIcon, Typography } from '@mui/material';
+import DeleteCaseModal from '../modals/DeleteCaseModal';
+import { useRouter } from 'next/navigation';
 
-export default function CaseMenu() {
+interface CaseMenuProps {
+  caseId: any
+}
+
+export default function CaseMenu({ caseId } : CaseMenuProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -17,10 +23,15 @@ export default function CaseMenu() {
     setAnchorEl(null);
   };
 
+  const router = useRouter()
+
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [showNotesMenu, setShowNotesMenu] = useState(false)
   const [showPermissionsMenu, setShowPermissionsMenu] = useState(false)
   const [showDeleteMenu, setShowDeleteMenu] = useState(false)
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Menu Actions
   const onExportClick = useCallback(() => {
@@ -44,10 +55,16 @@ export default function CaseMenu() {
   }, []);
 
   const onDeleteClick = useCallback(() => {
-    // setDeleteOpen(true);
-    // setMenuOpen(false);
-    alert('Delete Selected')
-    setShowDeleteMenu(true)
+    setDeleteOpen(true);
+    setMenuOpen(false);
+  }, []);
+
+  const onDeleteClose = useCallback(() => {
+    setDeleteOpen(false);
+  }, []);
+
+  const onDeleteSuccess = useCallback(() => {
+    router.push('/')
   }, []);
 
   return (
@@ -93,6 +110,12 @@ export default function CaseMenu() {
           <Typography>Delete</Typography>
         </MenuItem>
       </Menu>
+      <DeleteCaseModal
+        isOpen={deleteOpen}
+        onClose={onDeleteClose}
+        caseId={caseId}
+        onDelete={onDeleteSuccess}
+      />
     </div>
   );
 }

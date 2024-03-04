@@ -10,6 +10,7 @@ export function useEnforceLogin() {
 
   if (token == null) {
     window.location.replace("/");
+    
     return false;
   }
 
