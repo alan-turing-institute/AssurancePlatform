@@ -15,6 +15,7 @@
     "@fontsource/roboto": "^5.0.8",
     "@mui/material": "^5.15.11",
     "@mui/material-nextjs": "^5.15.11",
+    "date-fns": "^3.3.1",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.344.0",
     "moment": "^2.30.1",

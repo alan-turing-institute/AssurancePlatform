@@ -9,6 +9,7 @@ import { Divider, IconButton, ListItemIcon, Typography } from '@mui/material';
 import DeleteCaseModal from '../modals/DeleteCaseModal';
 import { useRouter } from 'next/navigation';
 import ExportCaseModal from '../modals/ExportCaseModal';
+import CaseNotesModal from '../modals/NotesCaseModal';
 
 interface CaseMenuProps {
   caseId: any
@@ -125,12 +126,12 @@ export default function CaseMenu({ caseId } : CaseMenuProps) {
         onClose={onExportClose}
         caseId={caseId}
       />
-      {/* <CommentSection
+      <CaseNotesModal
         isOpen={notesOpen}
         onClose={onNotesClose}
         caseId={caseId}
       />
-      <CasePermissionsManager
+      {/* <CasePermissionsManager
         isOpen={permissionsOpen}
         onClose={onPermissionsClose}
         caseId={caseId}
