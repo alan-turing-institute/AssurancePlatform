@@ -8,6 +8,7 @@ import { AccessibilityIcon, ArrowRightFromLine, MoreVerticalIcon, NotebookIcon, 
 import { Divider, IconButton, ListItemIcon, Typography } from '@mui/material';
 import DeleteCaseModal from '../modals/DeleteCaseModal';
 import { useRouter } from 'next/navigation';
+import ExportCaseModal from '../modals/ExportCaseModal';
 
 interface CaseMenuProps {
   caseId: any
@@ -25,38 +26,47 @@ export default function CaseMenu({ caseId } : CaseMenuProps) {
 
   const router = useRouter()
 
-  const [showExportMenu, setShowExportMenu] = useState(false)
-  const [showNotesMenu, setShowNotesMenu] = useState(false)
-  const [showPermissionsMenu, setShowPermissionsMenu] = useState(false)
-  const [showDeleteMenu, setShowDeleteMenu] = useState(false)
-
   const [menuOpen, setMenuOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Menu Actions
   const onExportClick = useCallback(() => {
-    // setExportOpen(true);
-    // setMenuOpen(false);
-    setShowExportMenu(true)
+    setExportOpen(true);
+    setAnchorEl(null);
+  }, []);
+
+  const onExportClose = useCallback(() => {
+    setExportOpen(false);
   }, []);
 
   const onNotesClick = useCallback(() => {
-    // setNotesOpen(true);
-    // setMenuOpen(false);
-    alert('Notes Selected')
-    setShowNotesMenu(true)
+    setNotesOpen(true);
+    setAnchorEl(null);
+  }, []);
+
+  const onNotesClose = useCallback(() => {
+    setNotesOpen(false);
   }, []);
 
   const onPermissionsClick = useCallback(() => {
-    // setPermissionsOpen(true);
-    // setMenuOpen(false);
-    alert('Peermissions Selected')
-    setShowPermissionsMenu(true)
+    setPermissionsOpen(true);
+    setAnchorEl(null);
+  }, []);
+
+  const onPermissionsClose = useCallback(() => {
+    setPermissionsOpen(false);
+  }, []);
+
+  const onPermissionsSuccess = useCallback(() => {
+    setPermissionsOpen(false);
   }, []);
 
   const onDeleteClick = useCallback(() => {
     setDeleteOpen(true);
-    setMenuOpen(false);
+    setAnchorEl(null);
   }, []);
 
   const onDeleteClose = useCallback(() => {
@@ -110,6 +120,23 @@ export default function CaseMenu({ caseId } : CaseMenuProps) {
           <Typography>Delete</Typography>
         </MenuItem>
       </Menu>
+      <ExportCaseModal
+        isOpen={exportOpen}
+        onClose={onExportClose}
+        caseId={caseId}
+      />
+      {/* <CommentSection
+        isOpen={notesOpen}
+        onClose={onNotesClose}
+        caseId={caseId}
+      />
+      <CasePermissionsManager
+        isOpen={permissionsOpen}
+        onClose={onPermissionsClose}
+        caseId={caseId}
+        assuranceCase={assuranceCase}
+        onSuccess={onPermissionsSuccess}
+      /> */}
       <DeleteCaseModal
         isOpen={deleteOpen}
         onClose={onDeleteClose}
