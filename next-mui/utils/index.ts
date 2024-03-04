@@ -19,3 +19,16 @@ export function sanitizeForHtml(input_text: any, replaceNewLines = false) {
 
   return result;
 }
+
+/**
+ * Remove an element from an array. Modifies the array in place. If the element
+ * is not found, nothing happens.
+ *
+ * @param {Array} array - The array to remove the element from
+ * @param {*} element - The element to remove
+ * @returns {void}
+ */
+export function removeArrayElement(array: any[], element: any) {
+  // Remove from `array`, in place, the (first instance of?) `element`.
+  array.splice(array.indexOf(element), 1);
+}

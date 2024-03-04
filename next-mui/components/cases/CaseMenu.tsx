@@ -10,6 +10,7 @@ import DeleteCaseModal from '../modals/DeleteCaseModal';
 import { useRouter } from 'next/navigation';
 import ExportCaseModal from '../modals/ExportCaseModal';
 import CaseNotesModal from '../modals/NotesCaseModal';
+import PermissionsCaseModal from '../modals/PermissionsCaseModal';
 
 interface CaseMenuProps {
   caseId: any
@@ -131,13 +132,12 @@ export default function CaseMenu({ caseId } : CaseMenuProps) {
         onClose={onNotesClose}
         caseId={caseId}
       />
-      {/* <CasePermissionsManager
+      <PermissionsCaseModal
         isOpen={permissionsOpen}
         onClose={onPermissionsClose}
         caseId={caseId}
-        assuranceCase={assuranceCase}
         onSuccess={onPermissionsSuccess}
-      /> */}
+      />
       <DeleteCaseModal
         isOpen={deleteOpen}
         onClose={onDeleteClose}
