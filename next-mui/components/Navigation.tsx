@@ -6,7 +6,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-// import { useLoginToken } from "../hooks/useAuth";
+import { useLoginToken } from "@/hooks/useAuth";
 
 /**
  * NavButton is a customized Button component designed to fit within the application's navigation bar. It applies specific styling to maintain visual consistency across all navigational buttons.
@@ -56,10 +56,9 @@ function NavLink({ ...props }) {
  * @returns {JSX.Element} The top navigation bar of the application, including links to home, GitHub, login, and signup pages, as well as a logout option for authenticated users.
  */
 function Navigation() {
-  // const [token] = useLoginToken();
+  const [token] = useLoginToken();
 
-  // const isLoggedIn = token != null;
-  const isLoggedIn = false;
+  const isLoggedIn = token != null;
 
   return (
     <AppBar component="nav" elevation={0}>
