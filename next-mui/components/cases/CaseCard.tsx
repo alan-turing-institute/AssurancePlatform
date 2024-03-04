@@ -4,6 +4,8 @@ import { CardActionArea, CardContent, CardMedia, Typography, useTheme } from '@m
 import React, { useCallback, useState } from 'react'
 import { ThemedCard } from '../common/ThemeCard';
 import NextLink from 'next/link'
+import { formatter } from '@/utils';
+import moment from 'moment';
 
 interface CaseCardProps {
   assuranceCase: any
@@ -93,7 +95,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             }}
           >
             <Typography variant="h3" component="h2">
-              {assuranceCase.title}
+              {assuranceCase.name}
             </Typography>
             <Typography
               variant="body2"
@@ -117,8 +119,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             </Typography>
             {/* TODO, designs would prefer the updated date */}
             <Typography variant="body2">
-              {/* Created: {formatter.format(caseObj.createdDate)} */}
-              Created: {assuranceCase.created}
+              Created: {moment(assuranceCase.created_date).format('DD/MM/YYYY')}
             </Typography>
           </CardContent>
         </CardActionArea>

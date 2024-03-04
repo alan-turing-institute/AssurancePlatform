@@ -6,7 +6,11 @@ import { ThemedCard } from '../common/ThemeCard';
 import { PlusIcon } from 'lucide-react';
 import AddSvg from "../../images/add-1--expand-cross-buttons-button-more-remove-plus-add-+-mathematics-math.svg";
 
-const CreateCard = () => {
+interface CreateCardProps {
+  onCreateClick: () => void
+}
+
+const CreateCard = ({ onCreateClick } : CreateCardProps) => {
   const theme = useTheme();
 
   return (
@@ -18,7 +22,7 @@ const CreateCard = () => {
       }}
     >
       <CardActionArea
-        // onClick={onCreateClick}
+        onClick={onCreateClick}
         sx={{
           display: "flex",
           flexDirection: "column",
