@@ -1,0 +1,46 @@
+// styles in this file will not apply to the svg export
+
+// adjust mermaid's styling to let the button below go out of bounds
+foreignObject {
+  overflow: visible;
+  position: relative;
+}
+
+button.collapse-expand {
+  // undo hiding for export purposes
+  display: block !important;
+  position: absolute;
+  right: -1rem;
+  bottom: -1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 100%;
+  border: none;
+  background-color: #0f76b8;
+  color: white;
+  cursor: pointer;
+
+  padding: 0.5rem;
+
+  &:hover,
+  &:focus {
+    background-color: #37597b;
+  }
+
+  // undo mermaid messing with our svgs
+  svg {
+    pointer-events: none;
+
+    path {
+      stroke: currentColor !important;
+      fill: none !important;
+    }
+  }
+}
+
+// TODO think of nice hover styling for graph nodes
+// g.node {
+//   &:hover {
+//     outline: 2px yellow solid;
+//   }
+// }

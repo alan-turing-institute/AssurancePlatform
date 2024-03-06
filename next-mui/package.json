@@ -18,12 +18,14 @@
     "date-fns": "^3.3.1",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.344.0",
+    "mermaid": "^10.8.0",
     "moment": "^2.30.1",
     "neatjson": "^0.10.6",
     "next": "14.1.0",
     "react": "^18",
     "react-dom": "^18",
-    "react-zoom-pan-pinch": "^3.4.3"
+    "react-zoom-pan-pinch": "^3.4.3",
+    "sass": "^1.71.1"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.7",

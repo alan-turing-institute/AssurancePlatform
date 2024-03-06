@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { ColumnFlow, RowFlow } from '../common/Layouts'
 import ErrorMessage from '../common/ErrorMessage'
 import { IconButton, Paper, Typography, useTheme } from '@mui/material'
@@ -9,6 +9,8 @@ import { CrosshairIcon, Minus, PlusIcon, TargetIcon } from 'lucide-react'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useParams } from 'next/navigation'
 import CaseTopBar from './CaseTopBar'
+import { useLoginToken } from '@/hooks/useAuth'
+import MermaidChart from '../Mermaid'
 
 interface CaseContainerProps {
   assuranceCase: any
@@ -17,7 +19,7 @@ interface CaseContainerProps {
 const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
   const { id } = useParams();
   const theme = useTheme();
-  // const [token] = useLoginToken();
+  const [token] = useLoginToken();
 
   const [showEditLayer, setShowEditLayer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +42,139 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
     setTransformScale(e.instance.transformState.scale)
   }
 
+  const triggerRefresh = useCallback(() => {
+    setShouldFetch(true);
+  }, []);
+
+  /**
+   * Generates a unique identifier for new elements within the assurance case based on the type and its parents.
+   * It prefixes the identifier based on the type and ensures uniqueness within the case.
+   *
+   * @param {string} type - The type of the element for which the ID is being generated.
+   * @param {string} parentId - The ID of the parent element.
+   * @param {string} parentType - The type of the parent element.
+   * @returns {string} A unique identifier for the new element.
+   */
+  // const getIdForNewElement = useCallback(
+  //   ({type, parentId, parentType} : any) => {
+  //     let prefix = configData.navigation[type].db_name
+  //       .substring(0, 1)
+  //       .toUpperCase();
+
+  //     if (type === "PropertyClaim") {
+  //       const parents = getParentPropertyClaims(
+  //         assuranceCase,
+  //         parentId,
+  //         parentType,
+  //       );
+  //       if (parents.length > 0) {
+  //         const parent = parents[parents.length - 1];
+  //         prefix = parent.name + ".";
+  //       }
+  //     }
+
+  //     let i = 1;
+  //     while (identifiers.has(prefix + i)) {
+  //       i++;
+  //     }
+
+  //     return prefix + i;
+  //   },
+  //   [assuranceCase, identifiers],
+  // );
+
+  /**
+   * Updates all identifiers within the assurance case to ensure they are unique.
+   * This function might be necessary when there are changes to the case structure
+   * or to correct any identifier conflicts.
+   */
+  // const updateAllIdentifiers = useCallback(() => {
+  //   setIsLoading(true);
+
+  //   const promises: any = [];
+
+  //   const newIdentifiers = new Set();
+
+  //   const foundEvidence = new Set();
+
+  //   function updateItem(item: any, type: any, parents: any) {
+  //     let prefix = configData.navigation[type].db_name
+  //       .substring(0, 1)
+  //       .toUpperCase();
+
+  //     if (type === "PropertyClaim") {
+  //       const claimParents = parents.filter((t) => t.type === "PropertyClaim");
+  //       if (claimParents.length > 0) {
+  //         const parent = claimParents[claimParents.length - 1];
+  //         prefix = parent.name + ".";
+  //       }
+  //     }
+
+  //     let i = 1;
+  //     while (newIdentifiers.has(prefix + i)) {
+  //       i++;
+  //     }
+
+  //     const newName = prefix + i;
+  //     newIdentifiers.add(newName);
+  //     if (item.name === newName) {
+  //       // don't need to post an update
+  //       return [item, type, parents];
+  //     }
+
+  //     const itemCopy = { ...item };
+  //     itemCopy.name = newName;
+  //     promises.push(editItem(token, item.id, type, { name: newName }));
+
+  //     return [itemCopy, type, parents];
+  //   }
+
+  //   // run breadth first search
+  //   /** @type [any, string, any[]] */
+  //   const caseItemQueue = assuranceCase.goals.map((i) =>
+  //     updateItem(i, "TopLevelNormativeGoal", []),
+  //   );
+
+  //   while (caseItemQueue.length > 0) {
+  //     const [node, nodeType, parents] = caseItemQueue.shift();
+  //     const newParents = [...parents, node];
+
+  //     configData.navigation[nodeType]["children"].forEach((childName, j) => {
+  //       const childType = configData.navigation[nodeType]["children"][j];
+  //       const dbName = configData.navigation[childName]["db_name"];
+  //       if (Array.isArray(node[dbName])) {
+  //         node[dbName].forEach((child) => {
+  //           if (childType === "Evidence" && foundEvidence.has(child.id)) {
+  //             // already found this, skip
+  //             return;
+  //           }
+
+  //           caseItemQueue.push(updateItem(child, childType, newParents));
+  //           if (childType === "Evidence") {
+  //             foundEvidence.add(child.id);
+  //           }
+  //         });
+  //       }
+  //     });
+  //   }
+
+  //   setIdentifiers(newIdentifiers);
+
+  //   if (promises.length === 0) {
+  //     setIsLoading(false);
+  //   } else {
+  //     Promise.all(promises)
+  //       .then(() => {
+  //         setShouldFetch(true);
+  //       })
+  //       .catch((err) => {
+  //         console.error(err);
+  //         setErrors(["An error occurred"]);
+  //         setIsLoading(false);
+  //       });
+  //   }
+  // }, [assuranceCase, token]);
+
   return (
     <>
       <ColumnFlow
@@ -61,11 +196,11 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
           }}
           caseId={'1'}
           assuranceCase={assuranceCase}
-          // onRefresh={triggerRefresh}
-          // setErrors={setErrors}
+          onRefresh={triggerRefresh}
+          setErrors={setErrors}
           // getIdForNewElement={getIdForNewElement}
           // updateAllIdentifiers={updateAllIdentifiers}
-          // setSelected={setSelected}
+          setSelected={setSelected}
         />
         <ErrorMessage errors={errors} />
         <TransformWrapper
@@ -81,15 +216,14 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
                 contentStyle={{ width: "100%", height: "100%" }}
                 wrapperStyle={{ width: "100%", height: "100%" }}
               >
-                <p>Chart</p>
-                {/* <MermaidChart
-                  caseId={caseSlug}
+                <MermaidChart
+                  caseId={assuranceCase.id}
                   assuranceCase={assuranceCase}
                   selectedId={selectedId}
                   selectedType={selectedType}
                   setSelected={setSelected}
                   setMermaidFocus={setMermaidFocus}
-                /> */}
+                />
               </TransformComponent>
               <RowFlow
                 sx={{
