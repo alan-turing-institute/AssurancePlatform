@@ -58,6 +58,6 @@ For users with programming experience interested in contributing to the TEA plat
 
 **Read the Contribution Guidelines**: Before making any contributions, please review [repository's Issues](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md). These guidelines cover the process for submitting pull requests, coding standards, and other important practices.
 
-**Set Up Your Development Environment**: The documentation includes [instructions for setting up your development environment](../platform-details/installation.md), allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
+**Set Up Your Development Environment**: The documentation includes instructions for [setting up your backend](../platform-details/backend/installation.md) and [your frontend](../platform-details/frontend/installation.md), allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
 
 **Submit a Pull Request**: Once you've made your changes, submit a pull request through GitHub. Your pull request will be reviewed by the platform's maintainers, and feedback or requests for revisions will be communicated through the GitHub interface.

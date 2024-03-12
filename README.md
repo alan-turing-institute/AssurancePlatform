@@ -27,8 +27,7 @@ To view the documentation site, please go to
 
 ### Quickstart install instructions
 
-To get started quickly with installing this platform vist
-[https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
+To get started quickly with installing this platform visit the [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/) and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/) installation instructions.
 
 ## What is Trustworthy and Ethical Assurance? 🤝
 
@@ -59,8 +58,10 @@ developing, and deploying their technology or system.
 
 The Trustworthy and Ethical Assurance application can be run locally or deployed
 on your own server or a cloud-based service (e.g. Azure). To view the different
-installation instructions, please visit our documentation site:
-[https://alan-turing-institute.github.io/AssurancePlatform/installation.html](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/installation/)
+installation instructions, please visit our documentation site for
+[backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/)
+and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/)
+installation instructions.
 
 ## Further Resources 📚
 
