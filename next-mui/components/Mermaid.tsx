@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import mermaid from "mermaid";
+import mermaid from 'mermaid'
 import "./Mermaid.scss";
 import { jsonToMermaid } from "@/utils";
+import { CloudFog } from "lucide-react";
 
 /**
  * MermaidChart is a component for rendering assurance case diagrams using the Mermaid library. It takes a JSON representation of an assurance case and renders it as a flowchart.
@@ -22,8 +23,10 @@ function MermaidChart({
   selectedType,
   setSelected,
   setMermaidFocus,
+  chart
 }: any) {
   const [collapsedNodes, setCollapsedNodes] = useState([]);
+  const [loading, setLoading] = useState(true)
 
   /**
    * Convert the assurance case to a Mermaid markdown representation.
@@ -32,15 +35,12 @@ function MermaidChart({
    * @returns {string} The Mermaid markdown representation of the assurance case.
    */
   const chartmd = useMemo(() => {
-
-    const json = jsonToMermaid(
+    return jsonToMermaid(
       assuranceCase,
       selectedType,
       selectedId,
       collapsedNodes,
     );
-    console.log('JSON', json)
-    return json
   }, [assuranceCase, selectedType, selectedId, collapsedNodes]);
 
   /**
@@ -74,6 +74,7 @@ function MermaidChart({
         fontFamily: "arial",
       },
     });
+    mermaid.contentLoaded();
   }, []);
 
   /**
@@ -147,19 +148,27 @@ function MermaidChart({
   }, [chartmd, onCollapseButtonClick]);
 
   return (
-    <div
-      key={chartmd}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        justifyContent: "start",
-        alignItems: "start",
-        overflow: "visible",
-      }}
-      className={`mermaid-${caseId} mermaid`}
-    />
+    <div style={{ marginTop: '90px'}}>
+    {loading ? (
+      <p>Loading...</p>
+    ) : (
+      // <div
+      //   style={{
+      //     display: "flex",
+      //     flexDirection: "column",
+      //     height: "100%",
+      //     width: "100%",
+      //     justifyContent: "start",
+      //     alignItems: "start",
+      //     overflow: "visible",
+      //   }}
+      //   className='mermaid'
+      // >
+      //   {chartmd}
+      // </div>
+      <div className="mermaid">{chart}</div>
+    )}
+    </div>
   );
 }
 

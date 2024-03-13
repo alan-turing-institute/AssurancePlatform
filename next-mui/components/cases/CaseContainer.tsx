@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { ColumnFlow, RowFlow } from '../common/Layouts'
 import ErrorMessage from '../common/ErrorMessage'
 import { IconButton, Paper, Typography, useTheme } from '@mui/material'
@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation'
 import CaseTopBar from './CaseTopBar'
 import { useLoginToken } from '@/hooks/useAuth'
 import MermaidChart from '../Mermaid'
+import { Mermaid } from '../MermaidTest'
 
 interface CaseContainerProps {
   assuranceCase: any
@@ -24,21 +25,29 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
   const [showEditLayer, setShowEditLayer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState([]);
-  // const [assuranceCase, setAssuranceCase] = useState();
   const [identifiers, setIdentifiers] = useState(new Set());
-
   // pair state so they can be updated together with only one re-render
   const [selected, setSelected] = useState([]);
   const [selectedId, selectedType] = selected;
-
   const [mermaidFocus, setMermaidFocus] = useState(false);
-
   const [shouldFetch, setShouldFetch] = useState(true);
-
   const [transformScale, setTransformScale] = useState(1)
 
+  const [chart, setChart] = useState("");
+
+  useEffect(() => {
+    setChart(`
+    flowchart TB
+    A[Start] --Some text--> B(Continue)
+    B --> C{Evaluate}
+    C -- One --> D[Option 1]
+    C -- Two --> E[Option 2]
+    C -- Three --> F[fa:fa-car Option 3]
+      `);
+  },[])
+
   function handleTransform(e:any){
-    console.log(e.instance.transformState.scale); // output scale factor
+    // console.log(e.instance.transformState.scale); // output scale factor
     setTransformScale(e.instance.transformState.scale)
   }
 
@@ -183,6 +192,7 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
           flexGrow: 1,
           flexShrink: 1,
           maxHeight: "100%",
+          width: "100%",
           overflowY: "auto",
           padding: "1rem",
           gap: "1rem",
@@ -216,14 +226,15 @@ const CaseContainer = ({ assuranceCase } : CaseContainerProps) => {
                 contentStyle={{ width: "100%", height: "100%" }}
                 wrapperStyle={{ width: "100%", height: "100%" }}
               >
-                <MermaidChart
+                {/* <MermaidChart
                   caseId={assuranceCase.id}
                   assuranceCase={assuranceCase}
                   selectedId={selectedId}
                   selectedType={selectedType}
                   setSelected={setSelected}
                   setMermaidFocus={setMermaidFocus}
-                />
+                /> */}
+                <Mermaid chart={chart} name={'Test Chart'} />
               </TransformComponent>
               <RowFlow
                 sx={{
