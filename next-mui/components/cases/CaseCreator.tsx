@@ -9,6 +9,7 @@ import useId from "@mui/utils/useId";
 import { useEnforceLogin } from "@/hooks/useAuth";
 import ModalDialog from "../common/ModalDialog";
 import CaseCreatorOptions from "./CaseCreationOptions";
+import CaseImporterFlow from "./CaseImporter";
 
 /**
  * CaseCreator component that toggles between the CaseCreatorFlow and CaseImporterFlow based on user action.
@@ -39,8 +40,7 @@ function CaseCreator({ isOpen, onClose, isImport } : CaseCreatorProps) {
   return (
     <ModalDialog aria-labelledby={titleId} open={isOpen} onClose={onClose}>
       {isImport ? (
-        // <CaseImporterFlow titleId={titleId} onClose={onClose} />
-        <p>Show Import</p>
+        <CaseImporterFlow titleId={titleId} onClose={onClose} />
       ) : (
         <CaseCreatorOptions titleId={titleId} onClose={onClose} />
       )}
