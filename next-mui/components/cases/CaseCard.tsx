@@ -4,8 +4,9 @@ import { CardActionArea, CardContent, CardMedia, Typography, useTheme } from '@m
 import React, { useCallback, useState } from 'react'
 import { ThemedCard } from '../common/ThemeCard';
 import NextLink from 'next/link'
-import { formatter } from '@/utils';
+// import { formatter } from '@/utils';
 import moment from 'moment';
+import CaseMenu from './CaseMenu';
 
 interface CaseCardProps {
   assuranceCase: any
@@ -97,6 +98,9 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             <Typography variant="h3" component="h2">
               {assuranceCase.name}
             </Typography>
+            <div style={{ position: "absolute", top: "1rem", right: "1rem", zIndex: '99' }}>
+              <CaseMenu caseId={assuranceCase.id} />
+            </div>
             <Typography
               variant="body2"
               sx={{
