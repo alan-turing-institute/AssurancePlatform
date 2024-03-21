@@ -12,6 +12,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { ModeToggle } from '@/components/ui/theme-toggle'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
 import { navigation, teams, userNavigation } from '@/config'
+import { Button } from '@/components/ui/button'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -278,7 +279,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                 <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10" aria-hidden="true" />
 
                 {/* Profile dropdown */}
-                <Menu as="div" className="relative">
+                {/* <Menu as="div" className="relative">
                   <Menu.Button className="-m-1.5 flex items-center p-1.5">
                     <span className="sr-only">Open user menu</span>
                     <img
@@ -320,7 +321,13 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                       ))}
                     </Menu.Items>
                   </Transition>
-                </Menu>
+                </Menu> */}
+
+                <Button
+                  className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                  Logout
+                </Button>
               </div>
             </div>
           </div>

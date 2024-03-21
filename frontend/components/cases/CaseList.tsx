@@ -1,4 +1,4 @@
-import { AssuranceCase } from '@/types'
+// import { AssuranceCase } from '@/types'
 import { ArrowUpTrayIcon } from '@heroicons/react/20/solid'
 import React from 'react'
 import CaseCard from './CaseCard'
@@ -15,12 +15,12 @@ import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 interface CaseListProps {
-  assuranceCases: AssuranceCase[]
+  assuranceCases: any[]
 }
 
 const CaseList = ({ assuranceCases } : CaseListProps) => {
   return (
-    <div className='flex flex-col justify-start items-start min-h-screen px-4 sm:px-6 lg:px-8'>
+    <div className='flex flex-col justify-start items-start min-h-screen px-4 sm:px-6 lg:px-8 pb-16'>
       <div className='w-full flex justify-end items-start py-6'>
         <button
             type="button"
