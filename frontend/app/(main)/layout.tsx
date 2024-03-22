@@ -13,6 +13,7 @@ import { ModeToggle } from '@/components/ui/theme-toggle'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
 import { navigation, teams, userNavigation } from '@/config'
 import { Button } from '@/components/ui/button'
+import LogoutButton from '@/components/auth/LogoutButton'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -323,11 +324,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   </Transition>
                 </Menu> */}
 
-                <Button
-                  className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  Logout
-                </Button>
+                <LogoutButton />
               </div>
             </div>
           </div>

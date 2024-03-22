@@ -30,7 +30,7 @@ const CaseList = ({ assuranceCases } : CaseListProps) => {
              Import File
           </button>
       </div>
-      <div className='grid grid-cols-3 gap-4'>
+      <div className='grid grid-cols-2 xl:grid-cols-3 gap-4'>
         <Link href={'/'} className='group'>
           <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
             <CardContent className='flex flex-col justify-center items-center gap-2'>

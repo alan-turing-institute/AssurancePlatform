@@ -68,20 +68,6 @@ const Dashboard = () => {
     }
   },[token])
 
-  // if(assuranceCases.length === 0 || !assuranceCases) {
-  //   return (
-  //     <>
-  //       <NoCasesFound />
-  //     </>
-  //   )
-  // }
-
-  // return (
-  //   <>
-  //     <CaseList assuranceCases={assuranceCases}/>
-  //   </>
-  // )
-
   return (
     <>
       {!isLoggedIn ? (
