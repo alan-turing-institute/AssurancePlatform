@@ -55,7 +55,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
 
   return (
     <>
-    <Link href={'/'} className='group relative'>
+    <Link href={`/case/${assuranceCase.id}`} className='group relative'>
       <Card className='flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full'>
         <CardHeader className='flex-1'>
           <img src='https://images.unsplash.com/photo-1708844897353-649da595a3f2?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' alt='' className='rounded-md mb-4' />
