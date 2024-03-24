@@ -1,3 +1,5 @@
+'use client'
+
 // import { AssuranceCase } from '@/types'
 import { ArrowUpTrayIcon } from '@heroicons/react/20/solid'
 import React from 'react'
