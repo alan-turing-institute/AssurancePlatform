@@ -112,7 +112,10 @@ function CaseCreatorOptions({ titleId, onClose } : CaseCreatorOptionsProps) {
         case_json["name"] = title;
         case_json["description"] = description;
         case_json["color_profile"] = "default";
-        postCaseJSON(JSON.stringify(case_json));
+
+        console.log(case_json)
+
+        // postCaseJSON(JSON.stringify(case_json));
       }
     },
     [stage, title, description, template, postCaseJSON]

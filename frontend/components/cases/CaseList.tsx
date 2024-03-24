@@ -13,17 +13,22 @@ import {
 } from "@/components/ui/card"
 import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { useCreateCaseModal } from '@/hooks/useCreateCaseModal'
+import { useImportModal } from '@/hooks/useImportModal'
 
 interface CaseListProps {
   assuranceCases: any[]
 }
 
 const CaseList = ({ assuranceCases } : CaseListProps) => {
+  const createCaseModal = useCreateCaseModal();
+  const importModal = useImportModal();
+
   return (
     <div className='flex flex-col justify-start items-start min-h-screen px-4 sm:px-6 lg:px-8 pb-16'>
       <div className='w-full flex justify-end items-start py-6'>
         <button
-            type="button"
+            onClick={() => importModal.onOpen()}
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
             <ArrowUpTrayIcon className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
@@ -31,7 +36,7 @@ const CaseList = ({ assuranceCases } : CaseListProps) => {
           </button>
       </div>
       <div className='grid grid-cols-2 xl:grid-cols-3 gap-4'>
-        <Link href={'/'} className='group'>
+        <button onClick={() => createCaseModal.onOpen()} className='group'>
           <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
             <CardContent className='flex flex-col justify-center items-center gap-2'>
               <PlusCircleIcon className='w-10 h-10 group-hover:-translate-y-1 transition-all' />
@@ -41,7 +46,7 @@ const CaseList = ({ assuranceCases } : CaseListProps) => {
               </div>
             </CardContent>
           </Card>
-        </Link>
+        </button>
         {assuranceCases.map((assuranceCase) => (
           <CaseCard key={assuranceCase.id} assuranceCase={assuranceCase} />
         ))}

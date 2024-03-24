@@ -1,7 +1,9 @@
+import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
 import { PlusIcon } from '@heroicons/react/20/solid'
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 
 export default function NoCasesFound() {
+  const createCaseModal = useCreateCaseModal();
   return (
     <div className='flex justify-center items-center min-h-screen px-4 sm:px-6 lg:px-8'>
       <div className="text-center">
@@ -24,6 +26,7 @@ export default function NoCasesFound() {
         <p className="mt-1 text-sm text-foreground/80">Get started by creating a new assurance case.</p>
         <div className="mt-6 flex justify-center items-center gap-2">
           <button
+            onClick={() => createCaseModal.onOpen()}
             type="button"
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >

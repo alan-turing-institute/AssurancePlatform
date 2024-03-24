@@ -105,6 +105,7 @@ function TemplateSelector({ value, setValue, error, setError, dirty } : any) {
    */
   const onChange = useCallback(
     (e: any) => {
+      console.log(e.target.value)
       setValueInner(e.target.value);
       setValue(templates[Number.parseInt(e.target.value)]);
     },

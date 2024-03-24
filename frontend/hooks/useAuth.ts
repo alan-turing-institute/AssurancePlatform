@@ -1,3 +1,5 @@
+'use client'
+
 type TokenHookReturnType = [string | null, (value: any) => void];
 
 /**
