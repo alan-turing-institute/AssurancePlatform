@@ -14,6 +14,7 @@ import { GitHubLogoIcon } from '@radix-ui/react-icons'
 import { navigation, teams, userNavigation } from '@/config'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/auth/LogoutButton'
+import { usePathname, useRouter } from 'next/navigation'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -21,6 +22,8 @@ function classNames(...classes: any) {
 
 export default function DashboardLayout({ children } : { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname();
+  const pageName = pathname === '/' ? 'assurance cases' : pathname.split('/')[1]
 
   return (
     <>
@@ -86,7 +89,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                                   href={item.href}
                                   target={(!item.externalLink) ? '_self' : '_blank'}
                                   className={classNames(
-                                    item.current
+                                    item.href === pathname
                                       ? 'bg-indigo-700 text-white'
                                       : 'text-indigo-200 hover:text-white hover:bg-indigo-700 dark:hover:bg-indigo-700/60',
                                     'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
@@ -184,7 +187,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                           href={item.href}
                           target={(!item.externalLink) ? '_self' : '_blank'}
                           className={classNames(
-                            item.current
+                            item.href === pathname
                               ? 'bg-indigo-700 text-white'
                               : 'text-indigo-200 hover:text-white hover:bg-indigo-700 dark:hover:bg-indigo-700/60',
                             'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
@@ -264,7 +267,10 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
             </button>
 
             <div className='flex flex-1 justify-start items-center'>
-              <h2 className='text-foreground font-medium'>Assurance Cases</h2>
+              <h2 className='text-foreground font-medium capitalize'>
+                {/* TODO: Dynamicall render based on path */}
+                {pageName}
+              </h2>
             </div>
 
             <div className="flex justify-end gap-x-4 self-stretch lg:gap-x-6">
