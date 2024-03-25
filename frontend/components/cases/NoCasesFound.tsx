@@ -1,9 +1,12 @@
 import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
+import { useImportModal } from '@/hooks/useImportModal';
 import { PlusIcon } from '@heroicons/react/20/solid'
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 
 export default function NoCasesFound() {
   const createCaseModal = useCreateCaseModal();
+  const importModal = useImportModal()
+  
   return (
     <div className='flex justify-center items-center min-h-screen px-4 sm:px-6 lg:px-8'>
       <div className="text-center">
@@ -34,6 +37,7 @@ export default function NoCasesFound() {
             New Case
           </button>
           <button
+            onClick={() => importModal.onOpen()}
             type="button"
             className="inline-flex items-center rounded-md bg-foreground/5 dark:bg-foreground/10 px-3 py-2 text-sm font-semibold rexr-slate-900 dark:text-white shadow-sm hover:bg-foreground/10 dark:hover:bg-foreground/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >

@@ -16,6 +16,7 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
+import { LockIcon, LockKeyhole } from 'lucide-react'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -85,8 +86,11 @@ const EditForm: React.FC<EditFormProps> = ({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="Goal name" {...field} />
+                <Input placeholder="Goal name" {...field} readOnly />
               </FormControl>
+              <FormDescription className='flex justify-start items-center gap-2'>
+                <LockKeyhole className='w-3 h-3'/> Read only field
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

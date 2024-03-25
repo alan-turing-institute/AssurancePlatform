@@ -70,7 +70,7 @@ const SignInForm = () => {
         </h2>
         <p className="mt-2 text-sm leading-6 text-foreground">
           Not a member?{' '}
-          <a href="#" className="font-semibold text-foreground hover:text-foreground/80">
+          <a href="/register" className="font-semibold text-indigo-600 hover:text-indigo-600/80">
             Sign up today!
           </a>
         </p>
