@@ -71,6 +71,7 @@ export const ImportModal = () => {
         .then((json) => {
           if (json.id) {
             // navigate("/case/" + json.id);
+            importModal.onClose()
             router.push(`/case/${json.id}`)
           } else {
             console.error(json);

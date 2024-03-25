@@ -64,6 +64,7 @@ export const CaseCreateModal = () => {
         .then((json) => {
           if (json.id) {
             // navigate("/case/" + json.id);
+            createCaseModal.onClose()
             router.push(`/case/${json.id}`)
           } else {
             console.error(json);
