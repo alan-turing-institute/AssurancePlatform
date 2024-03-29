@@ -33,27 +33,18 @@ const RegisterForm = () => {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
-    const currentErrors = [];
-
-    const { username, password1, password2 } = values
-
-    // check for empty values
-    if (!username || !password1 || !password2 || password1 !== password2) {
-      // setDirty(true);
-      setErrors(["Please fill in the form to signup."]);
-      return;
+    if(values.password1 !== values.password2) {
+      setErrors(['Your passwords must match, please try again.'])
+      return 
     }
 
     setErrors([]);
     setLoading(true);
 
     const user = {
-      username: username,
-      password1: password1,
-      password2: password2,
+      username: values.username,
+      password1: values.password1,
+      password2: values.password2,
     };
 
     const requestOptions: RequestInit = {
@@ -72,9 +63,9 @@ const RegisterForm = () => {
       router.push('/')
     } 
     else {
+        const currentErrors = [];
         setLoading(false);
         setToken(null);
-        const currentErrors = [];
         if (result.username) {
           currentErrors.push(...result.username.slice(1));
         }
@@ -96,7 +87,12 @@ const RegisterForm = () => {
       <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
 
         {errors && errors.map((error: any) => (
-          <p key={crypto.randomUUID()}>{error}</p>
+          <div 
+          key={crypto.randomUUID()}
+          className='bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mb-6'
+          >
+            <p>{error}</p>
+          </div>
         ))}
 
         <Form {...form}>
