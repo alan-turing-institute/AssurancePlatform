@@ -24,7 +24,7 @@ const CaseContainer = () => {
       },
     };
   
-    const response = await fetch(`http://localhost:8000/api/cases/${id}/`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
       // TODO: 404 NOT FOUND PAGE  

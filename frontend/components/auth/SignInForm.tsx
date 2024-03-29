@@ -3,6 +3,17 @@
 import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useState } from 'react'
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+
+const formSchema = z.object({
+  username: z.string().min(2).max(50),
+  password: z.string().min(8)
+})
 
 const SignInForm = () => {
   const [username, setUsername] = useState<string>("Rich");
@@ -17,50 +28,63 @@ const SignInForm = () => {
 
   const [_, setToken] = useLoginToken();
 
-  const onSubmit = useCallback(
-    (e : any) => {
-      e.preventDefault();
+  // const onSubmit = useCallback(
+  //   (e : any) => {
+  //     e.preventDefault();
 
-    //   if (!username || !password) {
-    //     setErrors(['You must provide these details.'])
-    //     return;
-    //   }
+  //   //   if (!username || !password) {
+  //   //     setErrors(['You must provide these details.'])
+  //   //     return;
+  //   //   }
 
-    //   setErrors([]);
-      setLoading(true);
+  //   //   setErrors([]);
+  //     setLoading(true);
       
-      const user = {
-        username: username,
-        password: password,
-      };
+  //     const user = {
+  //       username: username,
+  //       password: password,
+  //     };
 
-      fetch(`http://localhost:8000/api/auth/login/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log('API Data', data)
-          if (data.key) {
-            setToken(data.key);
-            router.push('/')
-          } else {
-            setLoading(false);
-            setPassword("");
-            setToken(null);
-            setErrors(["Cannot log in with provided credentials"]);
-          }
-        })
-        .catch(() => {
-          setLoading(false); // Also set loading to false when there is an error
-          setErrors(["An error occurred, please try again later"]);
-        });
+  //     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(user),
+  //     })
+  //       .then((res) => res.json())
+  //       .then((data) => {
+  //         console.log('API Data', data)
+  //         if (data.key) {
+  //           setToken(data.key);
+  //           router.push('/')
+  //         } else {
+  //           setLoading(false);
+  //           setPassword("");
+  //           setToken(null);
+  //           setErrors(["Cannot log in with provided credentials"]);
+  //         }
+  //       })
+  //       .catch(() => {
+  //         setLoading(false); // Also set loading to false when there is an error
+  //         setErrors(["An error occurred, please try again later"]);
+  //       });
+  //   },
+  //   [username, password],
+  // );
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
     },
-    [username, password],
-  );
+  })
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    // Do something with the form values.
+    // ✅ This will be type-safe and validated.
+    console.log(values)
+  }
 
   return (
     <div className="mx-auto w-full max-w-sm lg:w-96">
@@ -77,70 +101,37 @@ const SignInForm = () => {
       </div>
 
       <div className="mt-10">
-        <div>
-          <form action="#" method="POST" className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium leading-6 text-foreground">
-                Email address
-              </label>
-              <div className="mt-2">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="block w-full dark:bg-slate-900 rounded-md border-0 px-2 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-800 placeholder:text-foreground focus:ring-2 focus:ring-inset focus:ring-foreground sm:text-sm sm:leading-6"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium leading-6 text-foreground">
-                Password
-              </label>
-              <div className="mt-2">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="block w-full dark:bg-slate-900 rounded-md border-0 px-2 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-800 placeholder:text-foreground focus:ring-2 focus:ring-inset focus:ring-foreground sm:text-sm sm:leading-6"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              {/* <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-foreground focus:ring-foreground/80"
-                />
-                <label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-foreground">
-                  Remember me
-                </label>
-              </div> */}
-
-              <div className="text-sm leading-6">
-                <a href="#" className="font-semibold text-foreground hover:text-foreground/80">
-                  Forgot password?
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <button
-                onClick={(e) => onSubmit(e)}
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Sign in
-              </button>
-            </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Alan Turing" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type='password' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className='w-full text-white bg-indigo-600 hover:bg-indigo-500'>Login</Button>
           </form>
-        </div>
+        </Form>
 
         <div className="mt-10">
           <div className="relative">

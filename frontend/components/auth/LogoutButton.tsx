@@ -19,7 +19,7 @@ const LogoutButton = () => {
   //     //   router.push('/')
   //     //   return;
   //     // }
-  //     fetch(`http://localhost:8000/api/auth/logout/`, {
+  //     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
   //       method: "POST",
   //       headers: {
   //         "Content-Type": "application/json",
@@ -37,7 +37,7 @@ const LogoutButton = () => {
   // );
 
   const handleLogout = async () => {
-    const response = await fetch(`http://localhost:8000/api/auth/logout/`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

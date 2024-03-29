@@ -64,9 +64,8 @@ const RegisterForm = () => {
       body: JSON.stringify(user),
     }
 
-    const response = await fetch(`http://localhost:8000/api/auth/register/`, requestOptions)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register/`, requestOptions)
     const result = await response.json()
-    console.log(result)
 
     if (result.key) {
       setToken(result.key);

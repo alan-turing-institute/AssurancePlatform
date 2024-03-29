@@ -27,7 +27,7 @@ const Dashboard = () => {
       redirect: 'follow'
     };
   
-    const response = await fetch("http://localhost:8000/api/cases/", requestOptions)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
     const result = await response.json()
     console.log(result)
     return result

@@ -41,7 +41,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
         method: "DELETE",
       };
 
-      const response = await fetch(`http://localhost:8000/api/cases/${assuranceCase.id}/`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`, requestOptions)
       if(response.ok) {
         window.location.reload()
       }
