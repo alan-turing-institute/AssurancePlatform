@@ -95,6 +95,10 @@ const RegisterForm = () => {
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
       <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
 
+        {errors && errors.map((error: any) => (
+          <p key={crypto.randomUUID()}>{error}</p>
+        ))}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField

@@ -77,13 +77,44 @@ const SignInForm = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
+      password: ""
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
     console.log(values)
+
+    setLoading(true);
+
+    const user = {
+      username: username,
+      password: password,
+    };
+    
+    const requestOptions: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user),
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, requestOptions)
+    const result = await response.json()
+
+    console.log('API Data', result)
+
+    if (result.key) {
+      setToken(result.key);
+      router.push('/')
+      return
+    } else {
+      setLoading(false);
+      setToken(null);
+      setErrors(["Cannot log in with provided credentials"]);
+    }
   }
 
   return (
@@ -99,6 +130,10 @@ const SignInForm = () => {
           </a>
         </p>
       </div>
+
+      {errors && errors.map(error => (
+        <p key={crypto.randomUUID()}>{error}</p>
+      ))}
 
       <div className="mt-10">
         <Form {...form}>

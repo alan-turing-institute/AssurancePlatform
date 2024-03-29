@@ -10,32 +10,6 @@ const LogoutButton = () => {
   const [token, setToken] = useLoginToken();
   const router = useRouter()
 
-  // const handleLogout = useCallback(
-  //   (e: any) => {
-  //     e.preventDefault();
-  //     // if (sessionExpired) {
-  //     //   setToken(null);
-  //     //   // window.location.replace("/");
-  //     //   router.push('/')
-  //     //   return;
-  //     // }
-  //     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Token ${token}`,
-  //       },
-  //     })
-  //       .then((res) => res.json())
-  //       .then(() => {
-  //         setToken(null);
-  //         // window.location.replace("/");
-  //         router.push('/')
-  //       });
-  //   },
-  //   [token, setToken],
-  // );
-
   const handleLogout = async () => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
         method: "POST",
