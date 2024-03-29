@@ -1,67 +1,145 @@
-import React from 'react'
+'use client'
+
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form"
+import { Button } from "../ui/button"
+import { Input } from "../ui/input"
+import { useState } from "react"
+import { useEnforceLogout, useLoginToken } from "@/hooks/useAuth"
+import { useRouter } from "next/navigation"
+
+const formSchema = z.object({
+  username: z.string().min(2).max(50),
+  password1: z.string().min(8),
+  password2: z.string().min(8)
+})
 
 const RegisterForm = () => {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<any>([]);
+
+  const isLoggedOut = useEnforceLogout();
+  const [_, setToken] = useLoginToken();
+
+  const router = useRouter()
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+    },
+  })
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Do something with the form values.
+    // ✅ This will be type-safe and validated.
+    console.log(values)
+    const currentErrors = [];
+
+    const { username, password1, password2 } = values
+
+    // check for empty values
+    if (!username || !password1 || !password2 || password1 !== password2) {
+      // setDirty(true);
+      setErrors(["Please fill in the form to signup."]);
+      return;
+    }
+
+    setErrors([]);
+    setLoading(true);
+
+    const user = {
+      username: username,
+      password1: password1,
+      password2: password2,
+    };
+
+    const requestOptions: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user),
+    }
+
+    const response = await fetch(`http://localhost:8000/api/auth/register/`, requestOptions)
+    const result = await response.json()
+    console.log(result)
+
+    if (result.key) {
+      setToken(result.key);
+      router.push('/')
+    } 
+    else {
+        setLoading(false);
+        setToken(null);
+        const currentErrors = [];
+        if (result.username) {
+          currentErrors.push(...result.username.slice(1));
+        }
+        if (result.password1) {
+          currentErrors.push(...result.password1.slice(1));
+        }
+        if (result.password2) {
+          currentErrors.push(...result.password2.slice(1));
+        }
+        if (result.non_field_errors) {
+          currentErrors.push(...result.non_field_errors);
+        }
+        setErrors(currentErrors);
+    }
+  }
+
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
       <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
-        <form className="space-y-6" action="#" method="POST">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium leading-6 text-foreground">
-              Email address
-            </label>
-            <div className="mt-2">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="block w-full dark:bg-background/20 rounded-md border-0 px-2 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-800 placeholder:text-foreground focus:ring-2 focus:ring-inset focus:ring-foreground sm:text-sm sm:leading-6"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium leading-6 text-foreground">
-              Password
-            </label>
-            <div className="mt-2">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="block w-full dark:bg-background/20 rounded-md border-0 px-2 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-800 placeholder:text-foreground focus:ring-2 focus:ring-inset focus:ring-foreground sm:text-sm sm:leading-6"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium leading-6 text-foreground">
-              Confirm Password
-            </label>
-            <div className="mt-2">
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete=""
-                required
-                className="block w-full dark:bg-background/20 rounded-md border-0 px-2 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-800 placeholder:text-foreground focus:ring-2 focus:ring-inset focus:ring-foreground sm:text-sm sm:leading-6"
-              />
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Register
-            </button>
-          </div>
-        </form>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Alan Turing" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password1"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type='password' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input type='password' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="infline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white">Submit</Button>
+          </form>
+        </Form>
 
         <div className="mt-10">
           <div className="relative">
