@@ -21,8 +21,8 @@ function StrategyNode({ data, ...props }: NodeProps) {
       </div>
 
       <Handle type="target" position={Position.Top} />
-      <Handle type="source" id='b' position={Position.Bottom} />
       <Handle type="source" id='a' position={Position.Left} />
+      <Handle type="source" id='c' position={Position.Bottom} />
     </div>
   );
 }

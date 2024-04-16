@@ -271,7 +271,6 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
 
             <div className='flex flex-1 justify-start items-center'>
               <h2 className='text-foreground font-medium capitalize'>
-                {/* TODO: Dynamicall render based on path */}
                 {pageName}
               </h2>
             </div>
