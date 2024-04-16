@@ -27,15 +27,6 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   let outgoers: any[] = [];
   let connectedEdges: any[] = [];
 
-  const hide = (hidden:boolean , childEdgeID: any, childNodeID: any) => (nodeOrEdge: any) => {
-    if (
-      childEdgeID.includes(nodeOrEdge.id) ||
-      childNodeID.includes(nodeOrEdge.id)
-    )
-      nodeOrEdge.hidden = hidden;
-    return nodeOrEdge;
-  };
-
   const checkTarget = (edge: any, id: number) => {
     let edges = edge.filter((ed: any) => {
       return ed.target !== id;
@@ -48,11 +39,12 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
 
     let currentNodeID = parseInt(node.id);
     stack.push(node);
+
     while (stack.length > 0) {
-      let lastNOde = stack.pop();
-      let childnode = getOutgoers(lastNOde, nodes, edges);
+      let lastNode = stack.pop();
+      let childnode = getOutgoers(lastNode, nodes, edges);
       let childedge = checkTarget(
-        getConnectedEdges([lastNOde], edges),
+        getConnectedEdges([lastNode], edges),
         currentNodeID
       );
       childnode.map((goer, key) => {
@@ -78,10 +70,16 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
       return n
     })
 
+    const updatedEdges = edges.map((n: any) => {
+      if(childEdgeID.includes(n.id)) {
+        n.hidden = hidden;
+      }
+      return n
+    })
+
     setNodes(updatedNodes)
+    setEdges(updatedEdges);
     
-    // setNodes((n) => n.map(hide(hidden, childEdgeID, childNodeID)));
-    // setEdges((e) => e.map(hide(hidden, childEdgeID, childNodeID)));
     setHidden(!hidden);
   }
   

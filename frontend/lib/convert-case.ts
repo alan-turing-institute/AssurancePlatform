@@ -1,6 +1,6 @@
+import { getLayoutedElements } from "./layout-helper";
 
 export const convertAssuranceCase = async (assuranceCase: any) => {
-  console.log('Assurance Case To Convert', assuranceCase)
   let caseNodes: any[] = [], caseEdges: any[] = []
 
   // Create nodes for each child array item
@@ -11,6 +11,11 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
 
   // Create edges for every node
   caseEdges = createEdgesFromNodes(caseNodes);
+
+  // const layouted = await getLayoutedElements(caseNodes, caseEdges, { direction: 'TB' });
+
+  // setNodes(layouted.nodes);
+  // setEdges(layouted.edges);
 
   return { caseNodes, caseEdges }
 }

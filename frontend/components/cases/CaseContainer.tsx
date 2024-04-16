@@ -6,6 +6,7 @@ import { unauthorized, useEnforceLogin, useLoginToken } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Header from '../Header';
+import { ReactFlowProvider } from 'reactflow';
 
 const CaseContainer = () => {
   const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -54,10 +55,10 @@ const CaseContainer = () => {
         </div>
       ) : (
         assuranceCase ? (
-          <>
+          <ReactFlowProvider>
             <Header assuranceCase={assuranceCase} />
             <Flow assuranceCase={assuranceCase} />
-          </>
+          </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>
         )
