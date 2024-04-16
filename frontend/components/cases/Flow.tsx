@@ -56,7 +56,6 @@ function Flow({ assuranceCase }: FlowProps) {
 
   const convert = async () => {
     const result = await convertAssuranceCase(assuranceCase)
-
     const { caseNodes, caseEdges } = result
 
     setNodes(caseNodes);
@@ -68,10 +67,12 @@ function Flow({ assuranceCase }: FlowProps) {
     }, 0)
   }
 
+  // intial conversion of the assurance case on component render
   useEffect(() => {
     convert()
   },[])
 
+  // Reset focus to get the layouted version of nodes to fitview
   useEffect(() => {
     fitView();
     setLoading(false)

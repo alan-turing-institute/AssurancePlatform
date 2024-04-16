@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, FolderOpenDot } from 'lucide-react';
 import React, { memo } from 'react';
 import { Handle, NodeProps, NodeTypes, Position } from 'reactflow';
 import ToggleButton from './ToggleButton';
@@ -10,8 +10,7 @@ function PropertyNode({ data, ...props}: NodeProps) {
     <div className={`px-4 py-2 shadow-md rounded-md bg-blue-600 text-white`}>
       <div className="flex">
         <div className={`rounded-full w-12 h-12 flex justify-center items-center bg-slate-900/20`}>
-          {/* {data.emoji} */}
-          {data.icon}
+          <FolderOpenDot />
         </div>
         <div className="ml-2 w-[200px]">
           <div className="text-lg font-bold">{data.name}</div>

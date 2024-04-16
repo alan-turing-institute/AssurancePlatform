@@ -109,7 +109,7 @@ const EditForm: React.FC<EditFormProps> = ({
           )}
         />
         <div className='flex justify-start items-center gap-3'>
-          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600">Update&nbsp;<span className='capitalize'>{node.type}</span></Button>
+          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white">Update&nbsp;<span className='capitalize'>{node.type}</span></Button>
         </div>
       </form>
     </Form>

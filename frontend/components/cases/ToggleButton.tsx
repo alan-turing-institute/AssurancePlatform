@@ -37,7 +37,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   const handleToggle = (e:any) => {
     e.stopPropagation();
 
-    let currentNodeID = parseInt(node.id);
+    let currentNodeID = node.id;
     stack.push(node);
 
     while (stack.length > 0) {
