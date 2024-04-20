@@ -1,10 +1,9 @@
-import { getLayoutedElements } from "./layout-helper";
-
 export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
 
   // Create nodes for each child array item
   const goals = assuranceCase.goals;
+  console.log('GOALS', goals)
 
   // Create nodes recursively for goals and their children
   caseNodes = createNodesRecursively(goals, 'goal');
@@ -30,7 +29,9 @@ const createNodesRecursively = (items:any, nodeType: string, parentNodeId: any |
       type: nodeType,
       data: { id: item.id, name: item.name, type: item.type, description: item.short_description, ...item },
       position: { x: 0, y: 50 },
-      hidden: false
+      hidden: false,
+      height: 64, 
+      width: 288
     };
 
     if (parentNodeId) {
@@ -77,7 +78,8 @@ const createEdgesFromNodes = (nodes:any[]) => {
         source: node.data.parentId,
         target: currentNodeId,
         animated: (node.type === 'context'),
-        sourceHandle: node.type === 'context' ? 'a' : 'c',
+        sourceHandle: 'c',
+        // sourceHandle: node.type === 'context' ? 'a' : 'c',
         hidden: false
       };
 

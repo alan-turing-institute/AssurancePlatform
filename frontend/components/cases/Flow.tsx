@@ -13,39 +13,24 @@ import 'reactflow/dist/style.css';
 import NodeEdit from '@/components/common/NodeEdit';
 import ActionButtons from './ActionButtons';
 
-import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
 import { CloudFog, Loader2 } from 'lucide-react';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
 
 interface FlowProps {
-  assuranceCase: any
 }
 
-const selector = (state: any) => ({
-  nodes: state.nodes,
-  edges: state.edges,
-  nodeTypes: state.nodeTypes,
-  onNodesChange: state.onNodesChange,
-  onEdgesChange: state.onEdgesChange,
-  onConnect: state.onConnect,
-  setNodes: state.setNodes,
-  setEdges: state.setEdges,
-  layoutNodes: state.layoutNodes
-});
-
-function Flow({ assuranceCase }: FlowProps) {
+function Flow({ }: FlowProps) {
   const { fitView } = useReactFlow()
-  const { nodes, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, setNodes, setEdges, layoutNodes } = useStore(selector, shallow);
+  const { nodes, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, setNodes, setEdges, layoutNodes, assuranceCase } = useStore();
   const [editOpen, setEditOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<Node | any>(null)
   const [loading, setLoading] = useState(true)
-  const [focus, setFocus] = useState(false)
 
   const onLayout = (direction: any) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
-  
+
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
   
@@ -58,25 +43,15 @@ function Flow({ assuranceCase }: FlowProps) {
     const result = await convertAssuranceCase(assuranceCase)
     const { caseNodes, caseEdges } = result
 
-    setNodes(caseNodes);
-    setEdges(caseEdges);
-
-    setTimeout(() => {
-      layoutNodes()
-      setFocus(true)
-    }, 0)
+    // Send new nodes & edges to layout function
+    layoutNodes(caseNodes, caseEdges)
+    setLoading(false)
   }
 
   // intial conversion of the assurance case on component render
   useEffect(() => {
     convert()
-  },[])
-
-  // Reset focus to get the layouted version of nodes to fitview
-  useEffect(() => {
-    fitView();
-    setLoading(false)
-  }, [focus]);
+  },[assuranceCase])
   
   // const onConnect = useCallback((params: any ) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 

@@ -8,10 +8,13 @@ import { Loader2 } from 'lucide-react';
 import Header from '../Header';
 import { ReactFlowProvider } from 'reactflow';
 
+import useStore from '@/data/store';
+
 const CaseContainer = () => {
-  const [assuranceCase, setAssuranceCase] = useState<any>()
+  // const [assuranceCase, setAssuranceCase] = useState<any>()
   const [loading, setLoading] = useState(true)
-  
+  const { assuranceCase, setAssuranceCase } = useStore();
+
   const params = useParams()
   const { caseId } = params
   
@@ -37,6 +40,7 @@ const CaseContainer = () => {
 
     const result = await response.json()
     return result
+
   }
 
   useEffect(() => {
@@ -57,7 +61,7 @@ const CaseContainer = () => {
         assuranceCase ? (
           <ReactFlowProvider>
             <Header assuranceCase={assuranceCase} />
-            <Flow assuranceCase={assuranceCase} />
+            <Flow />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>

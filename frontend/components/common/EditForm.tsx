@@ -17,6 +17,7 @@ import { Button } from '../ui/button'
 import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
 import { LockIcon, LockKeyhole } from 'lucide-react'
+import { getLayoutedElements } from '@/lib/layout-helper'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -33,7 +34,7 @@ interface EditFormProps {
 
 const selector = (state: any) => ({
   nodes: state.nodes,
-  setNodes: state.setNodes
+  setNodes: state.setNodes,
 });
 
 const EditForm: React.FC<EditFormProps> = ({
@@ -49,10 +50,6 @@ const EditForm: React.FC<EditFormProps> = ({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
-
     const nodeIndex = nodes.findIndex((n: any) => n.id === node.id);
     if (nodeIndex !== -1) {
       // Make a copy of the nodes array to avoid mutating state directly
@@ -69,6 +66,9 @@ const EditForm: React.FC<EditFormProps> = ({
           description: values.description
         }
       };
+
+      const newData = updatedNodes[nodeIndex].data
+      console.log(newData)
 
       // Update the nodes state in the store with the modified node
       setNodes(updatedNodes);

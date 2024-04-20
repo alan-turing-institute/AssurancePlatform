@@ -21,8 +21,8 @@ function GoalNode({ data, ...props }: NodeProps) {
         <ToggleButton node={props}/>
       </div>
 
-      <Handle type="source" id='b' position={Position.Right} />
-      <Handle type="source" id='a' position={Position.Left} />
+      {/* <Handle type="source" id='b' position={Position.Right} />
+      <Handle type="source" id='a' position={Position.Left} /> */}
       <Handle type="source" id='c' position={Position.Bottom} />
     </div>
   );

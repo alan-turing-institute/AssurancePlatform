@@ -1,69 +1,5 @@
 'use client'
 
-// import { create } from 'zustand';
-// import {
-//   Connection,
-//   Edge,
-//   EdgeChange,
-//   Node,
-//   NodeChange,
-//   addEdge,
-//   OnNodesChange,
-//   OnEdgesChange,
-//   OnConnect,
-//   applyNodeChanges,
-//   applyEdgeChanges,
-//   NodeTypes,
-// } from 'reactflow';
-// import { initNodes } from './nodes';
-// import { initEdges } from './edges';
-// import { nodeTypes } from './nodeTypes';
-
-// type RFState = {
-//   nodes: Node[];
-//   edges: Edge[];
-//   nodeTypes: NodeTypes
-//   onNodesChange: OnNodesChange;
-//   onEdgesChange: OnEdgesChange;
-//   onConnect: OnConnect;
-//   setNodes: (nodes: Node[]) => void;
-//   setEdges: (edges: Edge[]) => void;
-// };
-
-// export type NodeData = {
-//   color: string;
-// };
-
-// // this is our useStore hook that we can use in our components to get parts of the store and call actions
-// const useStore = create<RFState>((set, get) => ({
-//   nodes: initNodes,
-//   edges: initEdges,
-//   nodeTypes: nodeTypes,
-//   onNodesChange: (changes: NodeChange[]) => {
-//     set({
-//       nodes: applyNodeChanges(changes, get().nodes),
-//     });
-//   },
-//   onEdgesChange: (changes: EdgeChange[]) => {
-//     set({
-//       edges: applyEdgeChanges(changes, get().edges),
-//     });
-//   },
-//   onConnect: (connection: Connection) => {
-//     set({
-//       edges: addEdge(connection, get().edges),
-//     });
-//   },
-//   setNodes: (nodes: Node[]) => {
-//     set({ nodes });
-//   },
-//   setEdges: (edges: Edge[]) => {
-//     set({ edges });
-//   },
-// }));
-
-// export default useStore;
-
 import { create } from 'zustand';
 import {
   Connection,
@@ -84,16 +20,18 @@ import { initEdges } from './edges';
 import { nodeTypes } from './nodeTypes';
 import Dagre from '@dagrejs/dagre';
 
-type RFState = {
+type Store = {
+  assuranceCase: any;
   nodes: Node[];
   edges: Edge[];
   nodeTypes: NodeTypes;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
+  setAssuranceCase: (assuranceCase: any) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
-  layoutNodes: () => void;
+  layoutNodes: (nodes: Node[], edges: Edge[]) => void;
 };
 
 export type NodeData = {
@@ -112,7 +50,7 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
   Dagre.layout(g);
 
   return {
-    nodes: nodes.map((node: Node) => {
+    nodes: nodes.map((node: any, index: any) => {
       const { x, y } = g.node(node.id);
       return { ...node, position: { x, y } };
     }),
@@ -121,7 +59,8 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
-const useStore = create<RFState>((set, get) => ({
+const useStore = create<Store>((set, get) => ({
+  assuranceCase: null,
   nodes: initNodes,
   edges: initEdges,
   nodeTypes: nodeTypes,
@@ -140,17 +79,18 @@ const useStore = create<RFState>((set, get) => ({
       edges: addEdge(connection, get().edges),
     });
   },
+  setAssuranceCase: (assuranceCase: any) => {
+    set({ assuranceCase })
+  },
   setNodes: (nodes: Node[]) => {
+    // const { nodes: layoutedNodes } = layoutNodesVertically(nodes, []);
     set({ nodes });
   },
   setEdges: (edges: Edge[]) => {
     set({ edges });
   },
   fitView: () => {}, // Define fitView function
-  layoutNodes: () => {
-    // Get current nodes and edges
-    const { nodes, edges } = get();
-
+  layoutNodes: (nodes: Node[], edges: Edge[]) => {
     // Layout nodes vertically
     const { nodes: layoutedNodes, edges: layoutedEdges } = layoutNodesVertically(nodes, edges);
 
@@ -160,4 +100,3 @@ const useStore = create<RFState>((set, get) => ({
 }));
 
 export default useStore;
-

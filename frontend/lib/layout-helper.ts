@@ -14,7 +14,6 @@ export const getLayoutedElements = (nodes: any, edges: any, options: any) => {
   return {
     nodes: nodes.map((node: any) => {
       const { x, y } = g.node(node.id);
-
       return { ...node, position: { x, y } };
     }),
     edges,

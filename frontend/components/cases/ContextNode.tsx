@@ -17,7 +17,7 @@ function ContextNode({ isConnectable, data }: any) {
         </div>
       </div>
 
-      <Handle type="target" position={Position.Right} />
+      <Handle type="target" position={Position.Top} />
       {/* <Handle type="source" position={Position.Left} isConnectable={false} /> */}
     </div>
   );
