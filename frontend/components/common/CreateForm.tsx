@@ -15,7 +15,6 @@ import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
-import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
 
 const formSchema = z.object({
@@ -31,13 +30,8 @@ interface CreateFormProps {
   onClose: () => void
 };
 
-const selector = (state: any) => ({
-  nodes: state.nodes,
-  setNodes: state.setNodes
-});
-
 const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
-  const { nodes, setNodes } = useStore(selector, shallow);
+  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,24 +42,29 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
-
-    const newGoal: any = {
-      id: crypto.randomUUID(),
-      type: 'goal',
-      data: { 
-        name: values.name, 
-        type: 'goal', 
-        description: values.description, 
-        icon: <Goal /> 
-      },
-      position: { x: 400, y: 50 },
+    // TODO: This needs to be created at api 
+    const newGoal = {
+      "id": crypto.randomUUID(),
+      "type": "goal",
+      "name": values.name,
+      "short_description": values.description,
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": assuranceCase.id,
+      "context":[],
+      "property_claims":[],
+      "strategies":[]
     }
 
-    const updatedNodes = [...nodes, newGoal]
-    setNodes(updatedNodes)
+    console.log('New Goal', newGoal)
+
+    const updatedAssuranceCase = {
+      ...assuranceCase,
+      goals: [ newGoal ]
+    }
+
+    setAssuranceCase(updatedAssuranceCase)
+
     onClose()
   }
 

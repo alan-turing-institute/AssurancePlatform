@@ -7,6 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
+import { addPropertyClaimToNested } from "@/lib/case-helper";
 
 interface NodeEditProps {
   node: Node | any
@@ -16,7 +17,7 @@ interface NodeEditProps {
 
 const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   const [isMounted, setIsMounted] = useState(false);
-  const { nodes, edges, setNodes, setEdges, layoutNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase } = useStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -30,80 +31,13 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     return null
   }
 
-  function addPropertyClaimToNested(propertyClaims: any, parentId: any, newPropertyClaim: any ) {
-    // Iterate through the property claims array
-    for (let i = 0; i < propertyClaims.length; i++) {
-        const propertyClaim = propertyClaims[i];
-
-        // Check if this property claim matches the parent ID
-        if (propertyClaim.id === parentId) {
-            // Check if the property claim already has property claims array
-            if (!propertyClaim.property_claims) {
-                propertyClaim.property_claims = [];
-            }
-
-            // Add the new property claim to the property claim's property claims
-            propertyClaim.property_claims.push(newPropertyClaim);
-
-            return true; // Indicates the property claim was found and updated
-        }
-
-        // If this property claim has nested property claims, recursively search within them
-        if (propertyClaim.property_claims && propertyClaim.property_claims.length > 0) {
-            const found = addPropertyClaimToNested(propertyClaim.property_claims, parentId, newPropertyClaim);
-            if (found) {
-                return true; // Indicates the property claim was found and updated within nested property claims
-            }
-        }
-
-        // If this property claim has strategies, recursively search within them
-        if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-          for (const strategy of propertyClaim.strategies) {
-              if (strategy.property_claims && strategy.property_claims.length > 0) {
-                  const found = addPropertyClaimToNested(strategy.property_claims, parentId, newPropertyClaim);
-                  if (found) {
-                      return true; // Indicates the property claim was found and updated within nested property claims of strategy
-                  }
-              }
-          }
-      }
-    }
-
-    return false; // Indicates the parent property claim was not found
-  }
-
-  // const updatePropertyClaimsRecursively = (goals: any, propertyClaimId: any, newPropertyClaimItem:any) => {
-  //   return goals.map((goal: any) => {
-  //     if (goal.property_claims) {
-  //       const updatedPropertyClaims = goal.property_claims.map((property: any) => {
-  //         if (property.id === propertyClaimId) {
-  //           return {
-  //             ...property,
-  //             property_claims: [...(property.property_claims || []), newPropertyClaimItem]
-  //           };
-  //         } else if (property.property_claims) {
-  //           return {
-  //             ...property,
-  //             property_claims: updatePropertyClaimsRecursively(property.property_claims, propertyClaimId, newPropertyClaimItem)
-  //           };
-  //         }
-  //         return property;
-  //       });
-  //       return {
-  //         ...goal,
-  //         property_claims: updatedPropertyClaims
-  //       };
-  //     }
-  //     return goal;
-  //   });
-  // };
-
+  /** Function used to handle creation of a context node linked to a goal */
   const handleContextAdd = async () => {
-    // Create a new context object to add
+    // Create a new context object to add - this should be created by calling the api 
     const newContextItem = {
-      "id": 833,
+      "id": crypto.randomUUID(),
       "type": "context",
-      "name": "Context",
+      "name": "New Context",
       "short_description": "Short description",
       "long_description": "Long description",
       "created_date": "2024-04-09T17:31:54.953978Z",
@@ -129,12 +63,13 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     setAssuranceCase(updatedAssuranceCase)
   }
 
+  /** Function used to handle creation of a strategy node linked to a goal */
   const handleStrategyAdd = async () => {
     // Create a new strategy object to add
     const newStrategyItem = {
-      "id": Math.random(),
+      "id": crypto.randomUUID(),
       "type": "strategy",
-      "name": "Strategy",
+      "name": "New Strategy",
       "short_description": "Short description",
       "long_description": "Long description",
       "created_date": "2024-04-09T17:31:54.953978Z",
@@ -161,6 +96,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     setAssuranceCase(updatedAssuranceCase)
   }
 
+  /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
   const handleClaimAdd = async () => {
     let strategy_id: any  = null
     let property_claim_id: any = null
@@ -308,111 +244,6 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       setAssuranceCase(updatedAssuranceCase)
     }
   }
-
-  // const handleClaimAdd = async () => {
-  //   let x = node.position.x - 200, y = node.position.y + 200, level = 0
-
-  //   // Check to see if we have strategy nodes
-  //   let strategyNodes = nodes.filter((node:any) => node.type === 'strategy')
-
-  //   // If strategy nodes, property needs to be to the side and lower
-  //   if(strategyNodes.length > 0) {
-  //     // look for related edges (linked to same parent)
-  //     let relatedEdges = edges.filter((e:any) => e.source === node.id)
-
-  //     if(relatedEdges.length > 0) {
-  //       let lastEdge = relatedEdges[relatedEdges.length - 1];
-  //       let lastNode = nodes.filter((node:any) => node.id === lastEdge.target)[0]
-  //       x = lastNode.position.x + 350
-  //       // y = y + 100
-  //     }
-  //   }
-    
-  //   // search for other property claim nodes
-  //   let propertyNodes = nodes.filter((node:any) => node.type === 'property')
-  //   // If property nodes, then this needs to be added alongside last property
-  //   if(propertyNodes.length > 0) {
-  //     // look for related edges (linked to same parent)
-  //     let relatedEdges = edges.filter((e:any) => e.source === node.id)
-
-  //     if(relatedEdges.length > 0) {
-  //       let lastEdge = relatedEdges[relatedEdges.length - 1];
-  //       let lastNode = nodes.filter((node:any) => node.id === lastEdge.target)[0]
-  //       x = lastNode.position.x + 350
-  //     }
-  //   }
-
-  //   if(node.type === 'property' || node.type === 'strategy') {
-  //     level = node.level + 1
-  //   }
-
-  //   // Update all other nodes on same level moving x axis
-  //   let levelNodes = nodes.filter((node:any) => node.level === level && node.parent !== node.id )
-  //   levelNodes.map((node:any) => {
-  //     if(parent !== node.id) {
-
-  //       const nodeIndex = nodes.findIndex((n: any) => n.id === node.id);
-  //       if (nodeIndex !== -1) {
-  //         // Make a copy of the nodes array to avoid mutating state directly
-  //         const updatedNodes = [...nodes];
-
-  //         // Node to move
-  //         console.log(updatedNodes[nodeIndex])
-
-  //         // ISSUE: Cant seem to update nodes to move
-
-  //         // // Make changes to the node (for example, updating its data)
-  //         // updatedNodes[nodeIndex] = {
-  //         //   ...updatedNodes[nodeIndex], // Copy the existing node properties
-  //         //   data: {
-  //         //     ...updatedNodes[nodeIndex].data, // Copy the existing node data properties
-  //         //     // Update the specific property you want to change
-  //         //     // For example:
-  //         //     name: 'moved',
-  //         //     description: 'moved'
-  //         //   }
-  //         // };
-
-  //         // // Update the nodes state in the store with the modified node
-  //         // setNodes(updatedNodes);
-  //       }
-  //     }
-  //   })
-
-  //   const newClaim: any = {
-  //     id: crypto.randomUUID(),
-  //     type: 'property',
-  //     data: { 
-  //       name: 'Test Property Claim', 
-  //       type: 'property', 
-  //       description: 'Text Property Claim Description'
-  //     },
-  //     position: { x, y },
-  //     parent: node.id,
-  //     level
-  //   }
-
-  //   console.log('newClaim', newClaim)
-
-  //   const updatedNodes = [...nodes, newClaim]
-  //   setNodes(updatedNodes)
-
-  //   const edge = {
-  //     id: crypto.randomUUID(),
-  //     source: node.id,
-  //     target: newClaim.id,
-  //     sourceHandle: 'c',
-  //     hidden: false
-  //   }
-
-  //   const updatedEdges = [...edges, edge]
-  //   setEdges(updatedEdges)
-
-  //   setTimeout(() => {
-  //     const focusBtn = document.getElementById('FocusBtn')
-  //     focusBtn?.click()
-  //   }, 0)
-  // }
 
   return (
     <EditSheet 
