@@ -3,7 +3,6 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
 
   // Create nodes for each child array item
   const goals = assuranceCase.goals;
-  console.log('GOALS', goals)
 
   // Create nodes recursively for goals and their children
   caseNodes = createNodesRecursively(goals, 'goal');
