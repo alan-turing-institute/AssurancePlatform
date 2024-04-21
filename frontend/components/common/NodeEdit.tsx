@@ -6,6 +6,7 @@ import EditSheet from "../ui/edit-sheet";
 import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
+import { Autour_One } from "next/font/google";
 
 interface NodeEditProps {
   node: Node | any
@@ -28,6 +29,74 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   if(!node) {
     return null
   }
+
+  function addPropertyClaimToNested(propertyClaims: any, parentId: any, newPropertyClaim: any ) {
+    // Iterate through the property claims array
+    for (let i = 0; i < propertyClaims.length; i++) {
+        const propertyClaim = propertyClaims[i];
+
+        // Check if this property claim matches the parent ID
+        if (propertyClaim.id === parentId) {
+            // Check if the property claim already has property claims array
+            if (!propertyClaim.property_claims) {
+                propertyClaim.property_claims = [];
+            }
+
+            // Add the new property claim to the property claim's property claims
+            propertyClaim.property_claims.push(newPropertyClaim);
+
+            return true; // Indicates the property claim was found and updated
+        }
+
+        // If this property claim has nested property claims, recursively search within them
+        if (propertyClaim.property_claims && propertyClaim.property_claims.length > 0) {
+            const found = addPropertyClaimToNested(propertyClaim.property_claims, parentId, newPropertyClaim);
+            if (found) {
+                return true; // Indicates the property claim was found and updated within nested property claims
+            }
+        }
+
+        // If this property claim has strategies, recursively search within them
+        if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
+          for (const strategy of propertyClaim.strategies) {
+              if (strategy.property_claims && strategy.property_claims.length > 0) {
+                  const found = addPropertyClaimToNested(strategy.property_claims, parentId, newPropertyClaim);
+                  if (found) {
+                      return true; // Indicates the property claim was found and updated within nested property claims of strategy
+                  }
+              }
+          }
+      }
+    }
+
+    return false; // Indicates the parent property claim was not found
+  }
+
+  // const updatePropertyClaimsRecursively = (goals: any, propertyClaimId: any, newPropertyClaimItem:any) => {
+  //   return goals.map((goal: any) => {
+  //     if (goal.property_claims) {
+  //       const updatedPropertyClaims = goal.property_claims.map((property: any) => {
+  //         if (property.id === propertyClaimId) {
+  //           return {
+  //             ...property,
+  //             property_claims: [...(property.property_claims || []), newPropertyClaimItem]
+  //           };
+  //         } else if (property.property_claims) {
+  //           return {
+  //             ...property,
+  //             property_claims: updatePropertyClaimsRecursively(property.property_claims, propertyClaimId, newPropertyClaimItem)
+  //           };
+  //         }
+  //         return property;
+  //       });
+  //       return {
+  //         ...goal,
+  //         property_claims: updatedPropertyClaims
+  //       };
+  //     }
+  //     return goal;
+  //   });
+  // };
 
   const handleContextAdd = async () => {
     // Create a new context object to add
@@ -69,7 +138,8 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       "short_description": "Short description",
       "long_description": "Long description",
       "created_date": "2024-04-09T17:31:54.953978Z",
-      "goal_id": 16
+      "goal_id": 16, 
+      "property_claims": []
     };
 
     // Create a new strategy array by adding the new context item
@@ -92,10 +162,6 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   }
 
   const handleClaimAdd = async () => {
-    /* 
-      TODO: Identify what parent node the property claim belongs to 
-      so it can have the correct parent and update case correctly 
-    */
     let strategy_id: any  = null
     let property_claim_id: any = null
 
@@ -111,9 +177,9 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
     // Create a new property claims object to add
     const newPropertyClaimItem = {
-      id: Math.random(),
+      id: crypto.randomUUID(),
       type: "property",
-      name: "Property Claim",
+      name: "NEW Property Claim",
       short_description: "Short description",
       long_description: "Long description",
       created_date: "2024-04-09T17:31:54.953978Z",
@@ -122,14 +188,9 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       property_claim_id
     };
 
-    // TODO: Need to find where to add the new property claiim
-    // Not in Goal but in child strategy or property claims
-
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
       const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === strategy_id));
-
-      console.log(goalContainingStrategy)
 
       if (goalContainingStrategy) {
         // Clone the assuranceCase to avoid mutating the state directly
@@ -166,45 +227,65 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       }
     }
 
+    // if(node.type === 'property') {
+    //   // Find the goal containing the specific property claim
+    //   const goalContainingPropertyClaim = assuranceCase.goals.find((goal:any) => goal.property_claims && goal.property_claims.some((property:any) => property.id === property_claim_id));
+    //   // const goalContainingPropertyClaim = findGoalContainingPropertyClaim(assuranceCase.goals, property_claim_id);
+
+    //   console.log('Found Property Claim', goalContainingPropertyClaim)
+
+    //   if (goalContainingPropertyClaim) {
+    //     // Clone the assuranceCase to avoid mutating the state directly
+    //     const updatedAssuranceCase = { ...assuranceCase };
+    
+    //     // Update the strategies array in the goal containing the specific strategy
+    //     const updatedPropertyClaims = goalContainingPropertyClaim.property_claims.map((property: any) => {
+    //       if (property.id === property_claim_id) {
+    //         // Add the new property claim to the corresponding strategy
+    //         return {
+    //           ...property,
+    //           property_claims: [...property.property_claims, newPropertyClaimItem]
+    //         };
+    //       }
+    //       return property;
+    //     });
+    
+    //     // Update the goal containing the specific strategy with the updated strategies array
+    //     const updatedGoalContainingPropertyClaim = {
+    //       ...goalContainingPropertyClaim,
+    //       property_claims: updatedPropertyClaims
+    //     };
+    
+    //     // Update the assuranceCase goals array with the updated goal containing the specific strategy
+    //     updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
+    //       if (goal === goalContainingPropertyClaim) {
+    //         return updatedGoalContainingPropertyClaim;
+    //       }
+    //       return goal;
+    //     });
+    
+    //     // Update Assurance Case in state
+    //     setAssuranceCase(updatedAssuranceCase);
+    //   }
+    // }
+
     if(node.type === 'property') {
-      // Find the goal containing the specific property claim
-      const goalContainingPropertyClaim = assuranceCase.goals.find((goal:any) => goal.property_claims && goal.property_claims.some((property:any) => property.id === property_claim_id));
-
-      console.log(goalContainingPropertyClaim)
-
-      if (goalContainingPropertyClaim) {
-        // Clone the assuranceCase to avoid mutating the state directly
-        const updatedAssuranceCase = { ...assuranceCase };
-    
-        // Update the strategies array in the goal containing the specific strategy
-        const updatedPropertyClaims = goalContainingPropertyClaim.property_claims.map((property: any) => {
-          if (property.id === property_claim_id) {
-            // Add the new property claim to the corresponding strategy
-            return {
-              ...property,
-              property_claims: [...property.property_claims, newPropertyClaimItem]
-            };
-          }
-          return property;
-        });
-    
-        // Update the goal containing the specific strategy with the updated strategies array
-        const updatedGoalContainingPropertyClaim = {
-          ...goalContainingPropertyClaim,
-          property_claims: updatedPropertyClaims
-        };
-    
-        // Update the assuranceCase goals array with the updated goal containing the specific strategy
-        updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
-          if (goal === goalContainingPropertyClaim) {
-            return updatedGoalContainingPropertyClaim;
-          }
-          return goal;
-        });
-    
-        // Update Assurance Case in state
-        setAssuranceCase(updatedAssuranceCase);
+      // Call the function to add the new property claim to the nested structure
+      const added = addPropertyClaimToNested(assuranceCase.goals, property_claim_id, newPropertyClaimItem);
+      if (!added) {
+          return console.error("Parent property claim not found!");
       }
+
+      const updatedAssuranceCase = {
+        ...assuranceCase,
+        goals: [
+          {
+            ...assuranceCase.goals[0],
+          }
+        ]
+      }
+
+      setAssuranceCase(updatedAssuranceCase)
     }
 
     if(node.type === 'goal') {
