@@ -6,7 +6,7 @@ import React, { useCallback } from 'react'
 import { Button } from '../ui/button';
 
 const LogoutButton = () => {
-  useEnforceLogin();
+  // useEnforceLogin();
   const [token, setToken] = useLoginToken();
   const router = useRouter()
 

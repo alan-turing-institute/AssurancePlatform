@@ -19,7 +19,7 @@ const CaseContainer = () => {
   const { caseId } = params
   
   const [token] = useLoginToken();
-  useEnforceLogin()
+  // useEnforceLogin()
 
   const fetchSingleCase = async (id: number) => {
     const requestOptions: RequestInit = {

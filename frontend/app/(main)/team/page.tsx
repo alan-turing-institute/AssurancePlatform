@@ -1,3 +1,5 @@
+'use client'
+
 import MemberList from '@/components/team/MemberList'
 import React from 'react'
 

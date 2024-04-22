@@ -17,8 +17,6 @@ const Dashboard = () => {
   // const [token] = useLoginToken();
   const router = useRouter()
 
-  const token = localStorage.getItem("token");
-
   const fetchAssuranceCases = async (token: any) => {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
@@ -38,16 +36,13 @@ const Dashboard = () => {
 
   useEffect(() => {
     let token = localStorage.getItem("token");
-    console.log('component rendered')
-
     if(!token) router.push('/login')
-    
     setIsLoggedIn(token != null);
     fetchAssuranceCases(token).then(result => {
       setAssuranceCases(result)
       setLoading(false)
     })
-  },[token])
+  },[])
 
   // if(assuranceCases.length === 0 || !assuranceCases) {
   //   return (
