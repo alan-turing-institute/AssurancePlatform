@@ -1,6 +1,7 @@
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function RegisterPage() {
+  
   return (
     <>
       <div className="bg-slate-50 dark:bg-background flex min-h-screen flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">

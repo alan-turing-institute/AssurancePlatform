@@ -56,15 +56,12 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       "strategies":[]
     }
 
-    console.log('New Goal', newGoal)
-
     const updatedAssuranceCase = {
       ...assuranceCase,
       goals: [ newGoal ]
     }
 
     setAssuranceCase(updatedAssuranceCase)
-
     onClose()
   }
 
@@ -98,7 +95,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
           )}
         />
         <div className='flex justify-start items-center gap-3'>
-          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600">Create Goal</Button>
+          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white">Create Goal</Button>
         </div>
       </form>
     </Form>

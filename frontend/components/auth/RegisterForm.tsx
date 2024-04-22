@@ -6,7 +6,7 @@ import { z } from "zod"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useEnforceLogout, useLoginToken } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 
@@ -19,8 +19,6 @@ const formSchema = z.object({
 const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>([]);
-
-  const isLoggedOut = useEnforceLogout();
   const [_, setToken] = useLoginToken();
 
   const router = useRouter()
@@ -81,6 +79,13 @@ const RegisterForm = () => {
         setErrors(currentErrors);
     }
   }
+
+  useEffect(() => {
+    let token = localStorage.getItem("token");
+    if(token) {
+      router.push('/')
+    }
+  },[])
 
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">

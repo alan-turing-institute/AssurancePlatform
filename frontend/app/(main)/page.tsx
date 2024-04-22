@@ -30,18 +30,20 @@ const Dashboard = () => {
   
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
     const result = await response.json()
-    console.log(result)
     return result
   }    
 
   useEffect(() => {
     let token = localStorage.getItem("token");
-    if(!token) router.push('/login')
-    setIsLoggedIn(token != null);
-    fetchAssuranceCases(token).then(result => {
-      setAssuranceCases(result)
-      setLoading(false)
-    })
+    if(token === null) {
+      router.push('login')
+    } else {
+      setIsLoggedIn(token != null);
+      fetchAssuranceCases(token).then(result => {
+        setAssuranceCases(result)
+        setLoading(false)
+      })
+    }
   },[])
 
   // if(assuranceCases.length === 0 || !assuranceCases) {
@@ -58,7 +60,7 @@ const Dashboard = () => {
   //   </>
   // )
 
-  return (
+  return isLoggedIn ? (
     <>
       {loading ? (
         <div className='flex justify-center items-center'>
@@ -70,7 +72,7 @@ const Dashboard = () => {
         </>
       )}
     </>
-  )
+  ) : null
 }
 
 export default Dashboard

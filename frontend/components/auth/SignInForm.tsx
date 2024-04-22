@@ -80,10 +80,6 @@ const SignInForm = () => {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
-
     setLoading(true);
 
     const user = {
@@ -101,8 +97,6 @@ const SignInForm = () => {
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, requestOptions)
     const result = await response.json()
-
-    console.log('API Data', result)
 
     if (result.key) {
       setToken(result.key);
