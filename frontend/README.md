@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Assurance Platform
+==================
 
-## Getting Started
+Assurance Platform is a web application developed using Next.js, React, and TypeScript. It provides a platform for managing and monitoring assurance cases in various domains.
 
-First, run the development server:
+Getting Started
+---------------
 
-```bash
+To get started with Assurance Platform, follow these steps:
+
+### Prerequisites
+
+-   Node.js and npm (or Yarn) installed on your machine.
+
+### Installation
+
+1.  Clone the repository:
+
+    ```
+    git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+    ```
+
+2.  Navigate to the project directory:
+
+    ```
+    cd AssurancePlatform
+    ```
+
+3.  Install dependencies using npm:
+
+    ```
+    npm install
+    ```
+
+### Development
+
+To run the application in development mode, use the following comman
+
+```
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This command starts the development server and opens the application in your default web browser. The application will automatically reload if you make any changes to the source code.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Production
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+To build and run the application in production mode, use the following command
 
-## Learn More
+```
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+This will build the application for production and start a server to serve the built files.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+The application uses environment variables for configuration. Create a `.env.local` file in the root directory and specify the required environment variables. You can use the `.env.example` file as a template.
 
-## Deploy on Vercel
+### Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+You can deploy using Docker. Please follow these commands to build your docker image with docker compose. 
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+```
+docker compose build
+```
+
+To run your new image use
+
+```
+docker compose up
+```
+
+Contributing
+------------
+
+Contributions are welcome! If you find any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
+
+License
+-------
+
+This project is licensed under the MIT License. See the LICENSE file for details.
