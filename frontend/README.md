@@ -71,6 +71,11 @@ To run your new image use
 docker compose up
 ```
 
+Demo
+------------
+
+<iframe src="https://scribehow.com/embed/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw" width="100%" height="640" allowfullscreen frameborder="0"></iframe>
+
 Contributing
 ------------
 
