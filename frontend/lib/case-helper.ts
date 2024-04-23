@@ -103,9 +103,59 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
             return { error: `Something went wrong ${response.status}` }
         }
 
-        return { data: newItem }
+        const result = await response.json()
+
+        const data = {
+            ...newItem, 
+            id: result.id
+        }
+
+        return { data }
     } catch (error) {
         console.log('Error', error)
         return { error }
+    }
+}
+
+export const deleteAssuranceCaseNode = async (type: string, id: any, token: string | null) => {
+    if(!token) return console.log('No token')
+
+    let entity = null
+    switch (type) {
+        case 'context':
+            entity = 'contexts'
+            break;
+        case 'strategy':
+            entity = 'strategies'
+            break;
+        case 'property':
+            entity = 'propertyclaims'
+            break;
+        case 'evidence':
+            entity = 'evidence'
+            break;
+        default:
+            entity = 'goals'
+            break;
+    }
+
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/`
+
+        const requestOptions: RequestInit = {
+            method: "DELETE",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            }
+        };
+        const response = await fetch(url, requestOptions);
+        
+        if(response.ok) {
+            return true
+        }
+    } catch (error) {
+        console.log('Error', error)
+        return false
     }
 }

@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 
 interface NodeEditProps {
@@ -36,6 +36,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to handle creation of a context node linked to a goal */
   const handleContextAdd = async () => {
+    console.log('case', assuranceCase.goals)
     // Create a new context object to add - this should be created by calling the api 
     const newContextItem = {
       "name": "New Context",
@@ -137,7 +138,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
-      const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === newPropertyClaimItem.strategy_id));
+      const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === result.data.strategy_id));
 
       if (goalContainingStrategy) {
         // Clone the assuranceCase to avoid mutating the state directly
@@ -145,11 +146,11 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     
         // Update the strategies array in the goal containing the specific strategy
         const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
-          if (strategy.id === newPropertyClaimItem.strategy_id) {
+          if (strategy.id === result.data.strategy_id) {
             // Add the new property claim to the corresponding strategy
             return {
               ...strategy,
-              property_claims: [...strategy.property_claims, newPropertyClaimItem]
+              property_claims: [...strategy.property_claims, result.data]
             };
           }
           return strategy;
@@ -176,7 +177,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
     if(node.type === 'property') {
       // Call the function to add the new property claim to the nested structure
-      const added = addPropertyClaimToNested(assuranceCase.goals, newPropertyClaimItem.property_claim_id, newPropertyClaimItem);
+      const added = addPropertyClaimToNested(assuranceCase.goals, result.data.property_claim_id, newPropertyClaimItem);
       if (!added) {
           return console.error("Parent property claim not found!");
       }
@@ -233,7 +234,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       // TODO: Rendering error
     }
 
-    const added = addEvidenceToClaim(assuranceCase.goals, property_claim_id[0], newEvidenceItem);
+    const added = addEvidenceToClaim(assuranceCase.goals, result.data.property_claim_id[0], result.data);
     if (!added) {
       return console.error("Parent property claim not found!");
     }
@@ -248,6 +249,16 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     }
 
     setAssuranceCase(updatedAssuranceCase)
+  }
+
+  /** Function used to handle deletion of the current selected item */
+  const handleDelete = async () => {
+    const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
+    
+    if(deleted) {
+      // TODO: Remove node from selected Nodes
+      window.location.reload()
+    }
   }
 
   return (
@@ -287,6 +298,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       )}
       <div className="mt-6">
         <Button variant={'ghost'} 
+          onClick={handleDelete}
           className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"
         >
           <Trash2 className="mr-2"/>

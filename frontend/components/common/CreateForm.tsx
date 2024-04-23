@@ -51,20 +51,21 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       "long_description": "N/A",
       "keywords": "N/A",
       "assurance_case_id": assuranceCase.id,
-      // "context":[],
-      // "property_claims":[],
-      // "strategies":[]
+      "context":[],
+      "property_claims":[],
+      "strategies":[]
     }
 
     const result: any = await createAssuranceCaseNode('goals', newGoal, token)
     
     if(result.error) {
       // TODO: Rendering error
+      return console.log(result.error)
     }
 
     const updatedAssuranceCase = {
       ...assuranceCase,
-      goals: [ newGoal ]
+      goals: [ result.data ]
     }
 
     setAssuranceCase(updatedAssuranceCase)
