@@ -16,6 +16,8 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
+import { createAssuranceCaseNode } from '@/lib/case-helper'
+import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -32,6 +34,7 @@ interface CreateFormProps {
 
 const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const [token] = useLoginToken();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,19 +44,22 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
     }
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // TODO: This needs to be created at api 
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     const newGoal = {
-      "id": crypto.randomUUID(),
-      "type": "goal",
       "name": values.name,
       "short_description": values.description,
       "long_description": "N/A",
       "keywords": "N/A",
       "assurance_case_id": assuranceCase.id,
-      "context":[],
-      "property_claims":[],
-      "strategies":[]
+      // "context":[],
+      // "property_claims":[],
+      // "strategies":[]
+    }
+
+    const result: any = await createAssuranceCaseNode('goals', newGoal, token)
+    
+    if(result.error) {
+      // TODO: Rendering error
     }
 
     const updatedAssuranceCase = {

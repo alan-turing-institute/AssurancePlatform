@@ -7,7 +7,8 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addPropertyClaimToNested } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode } from "@/lib/case-helper";
+import { useLoginToken } from "@/hooks/useAuth";
 
 interface NodeEditProps {
   node: Node | any
@@ -18,6 +19,8 @@ interface NodeEditProps {
 const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   const [isMounted, setIsMounted] = useState(false);
   const { assuranceCase, setAssuranceCase } = useStore();
+
+  const [token] = useLoginToken();
 
   useEffect(() => {
     setIsMounted(true);
@@ -35,17 +38,20 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   const handleContextAdd = async () => {
     // Create a new context object to add - this should be created by calling the api 
     const newContextItem = {
-      "id": crypto.randomUUID(),
-      "type": "context",
       "name": "New Context",
       "short_description": "Short description",
       "long_description": "Long description",
-      "created_date": "2024-04-09T17:31:54.953978Z",
-      "goal_id": 16
+      "goal_id": assuranceCase.goals[0].id
     };
 
+    const result: any = await createAssuranceCaseNode('contexts', newContextItem, token)
+    
+    if(result.error) {
+      // TODO: Rendering error
+    }
+
     // Create a new context array by adding the new context item
-    const newContext = [...assuranceCase.goals[0].context, newContextItem];
+    const newContext = [...assuranceCase.goals[0].context, result.data];
 
     // Create a new assuranceCase object with the updated context array
     const updatedAssuranceCase = {
@@ -67,18 +73,21 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   const handleStrategyAdd = async () => {
     // Create a new strategy object to add
     const newStrategyItem = {
-      "id": crypto.randomUUID(),
-      "type": "strategy",
       "name": "New Strategy",
       "short_description": "Short description",
       "long_description": "Long description",
-      "created_date": "2024-04-09T17:31:54.953978Z",
-      "goal_id": 16, 
+      "goal_id": assuranceCase.goals[0].id, 
       "property_claims": []
     };
 
+    const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, token)
+
+    if(result.error) {
+      // TODO: Rendering error
+    }
+
     // Create a new strategy array by adding the new context item
-    const newStrategy = [...assuranceCase.goals[0].strategies, newStrategyItem];
+    const newStrategy = [...assuranceCase.goals[0].strategies, result.data];
 
     // Create a new assuranceCase object with the updated strategy array
     const updatedAssuranceCase = {
@@ -98,35 +107,37 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
   const handleClaimAdd = async () => {
-    let strategy_id: any  = null
-    let property_claim_id: any = null
-
-    console.log('Updating Node..', node)
-
-    if(node.type === 'strategy') {
-      strategy_id = node.data.id
-    }
-
-    if(node.type === 'property') {
-      property_claim_id = node.data.id
-    }
-
     // Create a new property claims object to add
-    const newPropertyClaimItem = {
-      id: crypto.randomUUID(),
-      type: "property",
+    const newPropertyClaimItem: any = {
       name: "NEW Property Claim",
       short_description: "Short description",
       long_description: "Long description",
-      created_date: "2024-04-09T17:31:54.953978Z",
-      goal_id: 16,
-      strategy_id,
-      property_claim_id
+      claim_type: 'Property Claim'
     };
+
+    switch (node.type) {
+      case 'strategy':
+        newPropertyClaimItem.strategy_id = node.data.id
+        break;
+      case 'property':
+        newPropertyClaimItem.property_claim_id = node.data.id
+        break;
+      default:
+        newPropertyClaimItem.goal_id = assuranceCase.goals[0].id
+        break;
+    }
+
+    const result: any = await createAssuranceCaseNode('propertyclaims', newPropertyClaimItem, token)
+    console.log('RESULT', result)
+
+    if(result.error) {
+      console.log('RESULT ERROR', result.error)
+      return 
+    }
 
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
-      const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === strategy_id));
+      const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === newPropertyClaimItem.strategy_id));
 
       if (goalContainingStrategy) {
         // Clone the assuranceCase to avoid mutating the state directly
@@ -134,7 +145,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     
         // Update the strategies array in the goal containing the specific strategy
         const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
-          if (strategy.id === strategy_id) {
+          if (strategy.id === newPropertyClaimItem.strategy_id) {
             // Add the new property claim to the corresponding strategy
             return {
               ...strategy,
@@ -163,51 +174,9 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
       }
     }
 
-    // if(node.type === 'property') {
-    //   // Find the goal containing the specific property claim
-    //   const goalContainingPropertyClaim = assuranceCase.goals.find((goal:any) => goal.property_claims && goal.property_claims.some((property:any) => property.id === property_claim_id));
-    //   // const goalContainingPropertyClaim = findGoalContainingPropertyClaim(assuranceCase.goals, property_claim_id);
-
-    //   console.log('Found Property Claim', goalContainingPropertyClaim)
-
-    //   if (goalContainingPropertyClaim) {
-    //     // Clone the assuranceCase to avoid mutating the state directly
-    //     const updatedAssuranceCase = { ...assuranceCase };
-    
-    //     // Update the strategies array in the goal containing the specific strategy
-    //     const updatedPropertyClaims = goalContainingPropertyClaim.property_claims.map((property: any) => {
-    //       if (property.id === property_claim_id) {
-    //         // Add the new property claim to the corresponding strategy
-    //         return {
-    //           ...property,
-    //           property_claims: [...property.property_claims, newPropertyClaimItem]
-    //         };
-    //       }
-    //       return property;
-    //     });
-    
-    //     // Update the goal containing the specific strategy with the updated strategies array
-    //     const updatedGoalContainingPropertyClaim = {
-    //       ...goalContainingPropertyClaim,
-    //       property_claims: updatedPropertyClaims
-    //     };
-    
-    //     // Update the assuranceCase goals array with the updated goal containing the specific strategy
-    //     updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
-    //       if (goal === goalContainingPropertyClaim) {
-    //         return updatedGoalContainingPropertyClaim;
-    //       }
-    //       return goal;
-    //     });
-    
-    //     // Update Assurance Case in state
-    //     setAssuranceCase(updatedAssuranceCase);
-    //   }
-    // }
-
     if(node.type === 'property') {
       // Call the function to add the new property claim to the nested structure
-      const added = addPropertyClaimToNested(assuranceCase.goals, property_claim_id, newPropertyClaimItem);
+      const added = addPropertyClaimToNested(assuranceCase.goals, newPropertyClaimItem.property_claim_id, newPropertyClaimItem);
       if (!added) {
           return console.error("Parent property claim not found!");
       }
@@ -245,6 +214,42 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     }
   }
 
+  /** Function used to handle creation of a evidence node linked to a property claim */
+  const handleEvidenceAdd = async () => {
+    let property_claim_id: any = [node.data.id]
+    
+    // Create a new evidence object to add
+    const newEvidenceItem = {
+      name: "NEW Evidence",
+      short_description: "Short description",
+      long_description: "Long description",
+      URL: 'ww.some-evidence.com',
+      property_claim_id
+    };
+
+    const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, token)
+
+    if(result.error) {
+      // TODO: Rendering error
+    }
+
+    const added = addEvidenceToClaim(assuranceCase.goals, property_claim_id[0], newEvidenceItem);
+    if (!added) {
+      return console.error("Parent property claim not found!");
+    }
+
+    const updatedAssuranceCase = {
+      ...assuranceCase,
+      goals: [
+        {
+          ...assuranceCase.goals[0],
+        }
+      ]
+    }
+
+    setAssuranceCase(updatedAssuranceCase)
+  }
+
   return (
     <EditSheet 
       title={`Editing ${node.data.name}`} 
@@ -268,7 +273,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
             )}
             {node.type === 'property' && (
               <>
-                <Button variant='outline' className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Evidence</Button>
+                <Button variant='outline' onClick={handleEvidenceAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Evidence</Button>
                 <Button variant='outline' onClick={handleClaimAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
               </>
             )}
