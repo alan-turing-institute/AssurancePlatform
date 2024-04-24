@@ -9,7 +9,7 @@ export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, new
             if (!propertyClaim.property_claims) {
                 propertyClaim.property_claims = [];
             }
-
+            
             // Add the new property claim to the property claim's property claims
             propertyClaim.property_claims.push(newPropertyClaim);
 

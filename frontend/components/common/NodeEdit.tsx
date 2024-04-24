@@ -129,7 +129,6 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
     }
 
     const result: any = await createAssuranceCaseNode('propertyclaims', newPropertyClaimItem, token)
-    console.log('RESULT', result)
 
     if(result.error) {
       console.log('RESULT ERROR', result.error)
@@ -196,7 +195,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
     if(node.type === 'goal') {
       // Create a new property claim array by adding the new property claims item
-      const newPropertyClaim = [...assuranceCase.goals[0].property_claims, newPropertyClaimItem];
+      const newPropertyClaim = [...assuranceCase.goals[0].property_claims, result.data];
 
       // Create a new assuranceCase object with the updated property claims array
       const updatedAssuranceCase = {
