@@ -177,7 +177,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
     if(node.type === 'property') {
       // Call the function to add the new property claim to the nested structure
-      const added = addPropertyClaimToNested(assuranceCase.goals, result.data.property_claim_id, newPropertyClaimItem);
+      const added = addPropertyClaimToNested(assuranceCase.goals, result.data.property_claim_id, result.data);
       if (!added) {
           return console.error("Parent property claim not found!");
       }

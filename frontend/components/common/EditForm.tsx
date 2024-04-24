@@ -14,10 +14,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
-import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
-import { LockIcon, LockKeyhole } from 'lucide-react'
+import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
+import { useLoginToken } from '@/hooks/useAuth'
+import { findItemById, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -32,15 +33,11 @@ interface EditFormProps {
   node: any;
 };
 
-const selector = (state: any) => ({
-  nodes: state.nodes,
-  setNodes: state.setNodes,
-});
-
 const EditForm: React.FC<EditFormProps> = ({
   node
 }) => {
-  const { nodes, setNodes } = useStore(selector, shallow);
+  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const [token] = useLoginToken();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,29 +46,41 @@ const EditForm: React.FC<EditFormProps> = ({
     }
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const nodeIndex = nodes.findIndex((n: any) => n.id === node.id);
-    if (nodeIndex !== -1) {
-      // Make a copy of the nodes array to avoid mutating state directly
-      const updatedNodes = [...nodes];
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Update item via api 
+    const updateItem = {
+      short_description: values.description
+    }
 
-      // Make changes to the node (for example, updating its data)
-      updatedNodes[nodeIndex] = {
-        ...updatedNodes[nodeIndex], // Copy the existing node properties
-        data: {
-          ...updatedNodes[nodeIndex].data, // Copy the existing node data properties
-          // Update the specific property you want to change
-          // For example:
-          name: values.name,
-          description: values.description
-        }
-      };
+    const updated = await updateAssuranceCaseNode(node.type, node.data.id, token, updateItem)
+    
+    if(updated) {
+      // const nodeIndex = nodes.findIndex((n: any) => n.id === node.id);
+      // if (nodeIndex !== -1) {
+      //   // Make a copy of the nodes array to avoid mutating state directly
+      //   const updatedNodes = [...nodes];
 
-      const newData = updatedNodes[nodeIndex].data
-      console.log(newData)
+      //   // Make changes to the node (for example, updating its data)
+      //   updatedNodes[nodeIndex] = {
+      //     ...updatedNodes[nodeIndex], // Copy the existing node properties
+      //     data: {
+      //       ...updatedNodes[nodeIndex].data, // Copy the existing node data properties
+      //       // Update the specific property you want to change
+      //       // For example:
+      //       name: values.name,
+      //       description: values.description
+      //     }
+      //   };
 
-      // Update the nodes state in the store with the modified node
-      setNodes(updatedNodes);
+      //   // Update the nodes state in the store with the modified node
+      //   setNodes(updatedNodes);
+      // }
+
+      // Assurance Case Update
+      const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node) 
+      if(updatedAssuranceCase) {
+        setAssuranceCase(updatedAssuranceCase)
+      }
     }
 
   }
