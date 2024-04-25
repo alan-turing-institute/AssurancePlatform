@@ -79,7 +79,7 @@ Process, management and governance standards play a vital role in guiding organi
     - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-management-system/)
 
 - **DCB0129:** Clinical Risk Management: its Application in the Manufacture of Health IT Systems & **DCB0160:** Clinical Risk Management: its Application in the Deployment and Use of Health IT Systems
-    - These standard form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clincal safety of Health Information Technology (HIT) systems
+    - These standards form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clinical safety of Health Information Technology (HIT) systems
     - [DCB0129](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0129-clinical-risk-management-its-application-in-the-manufacture-of-health-it-systems) is for organisations who develop and maintain HIT that will be utilised in health and care environments.
     - [DCB0160](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0160-clinical-risk-management-its-application-in-the-deployment-and-use-of-health-it-systems) is for organisations who plan to deploy, use, maintain and decommission HIT systems within health and care environments.
 :::
