@@ -7,6 +7,7 @@ import NodeCreate from "@/components/common/NodeCreate";
 import useStore from "@/data/store";
 import { useLoginToken } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { AlertModal } from "../modals/alertModal";
 
 interface ActionButtonProps {
   showCreateGoal: boolean
@@ -15,6 +16,9 @@ interface ActionButtonProps {
 
 const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
   const [open, setOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [loading, setLoading] = useState(false);
+
   const [token] = useLoginToken(); 
   const { assuranceCase, setAssuranceCase } = useStore()
   const router = useRouter()
@@ -23,6 +27,7 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
 
   const onDelete = async () => {
     try {
+      setLoading(true);
       const requestOptions: RequestInit = {
         headers: {
           Authorization: `Token ${token}`,
@@ -37,7 +42,8 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
     } catch (error: any) {
       console.log('ERROR!!!!', error)
     } finally {
-      setOpen(false);
+      setLoading(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -52,9 +58,15 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
         <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /></button>
         <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Share2 className='w-5 h-5' /></button>
         <button className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /></button>
-        <button onClick={onDelete} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /></button>
+        <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /></button>
       </div>
       <NodeCreate isOpen={open} onClose={() => setOpen(false)} />
+      <AlertModal
+        isOpen={deleteOpen} 
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={onDelete}
+        loading={loading}
+      />
     </div>
     </div>
   )
