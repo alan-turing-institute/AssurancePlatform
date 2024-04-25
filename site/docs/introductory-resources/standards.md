@@ -12,13 +12,12 @@ authors:
 
 ## What are standards?
 
-A 'standard' can be described as rules, requirements, norms or guidelines, that are established for application within certain contexts and settings.
-We see examples of this in, industry, academia, professions, products and services, to establish standardised processes as part of governance and assurance frameworks.
+A 'standard' can be described as rules, norms or guidelines, that are established for application within certain contexts and settings. They are crafted to establish a dependable foundation for cultivating collective expectations concerning a product, process, service, or system as part of governance and assurance frameworks. We see examples of their implementation in industry, academia, professions, product development and service delivery.
 
 Standards are developed in a variety of ways, although the best-practice approach to their formation and the most widely accepted are essentially standards crafted through *consensus-building processes*.
-These standards can be developed and led by, for example, academic institutions, international bodies, professional associations, industry or formally recognised Standards Development Organisations (SDOs)/[^sdos]
+These standards can be developed and led by, for example, academic institutions, international bodies, professional associations, industry, or most commonly, formally recognised Standards Development Organisations (SDOs)[^sdos]
 
-[^sdos]: Also see [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/).
+[^sdos]: AI Standards Hub. 1.Introducing AI Standards. 2022.  [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/).
 
 Standards developed by SDOs are often referred to as 'technical standards'.
 These standards are developed by stakeholder-driven processes that are guided by principles such as relevance, transparency, and consensus.
@@ -26,12 +25,14 @@ Standards on the whole are voluntary but can be formally recognised in regulatio
 Furthermore, they can be tools used as part of compliance towards governance and assurance frameworks.
 
 Standards can be in a variety of forms but commonly are established and disseminated as documents approved by a recognised body.
-They provide common and repeatable rules, requirements, norms, guidelines and characteristics for activities that will lead to their associated outcomes; and are aimed at providing order in the contexts where they are applied.
+They provide common and repeatable rules, requirements, norms, guidelines and characteristics for activities that will lead to their associated outcomes; and are aimed at providing 'optimum degree of order'[^iso] in the contexts where they are applied.
+
+[^iso]: International Standards Organisation. 1. Standards in our world. ISO. [https://www.iso.org/sites/ConsumersStandards/1_standards.html](https://www.iso.org/sites/ConsumersStandards/1_standards.html)
 
 ## Different types of standards
 
 Standards find application across diverse domains and sectors.
-They serve to encode technical specifications related to the measurement, design, or performance of products and systems.
+They serve to encode technical specifications related to the design, development, measurement, or performance; of products and systems.
 Additionally, standards extend their influence to evaluating the impacts or efficiency of broader processes or services.
 
 While some standards are uncomplicated, offering clear metric definitions (e.g. the standardised format of A4 and related paper sizes adopted globally), others offer guidance on intricate, context-specific processes.
@@ -39,6 +40,7 @@ While some standards are uncomplicated, offering clear metric definitions (e.g. 
 Below are some of the categories of standards available.
 
 !!! info "Types of Standards"
+
 
 - [Foundational and terminological](#foundational-and-terminological)
 - [Process, management, and governance](#process-management-and-governance)
@@ -48,7 +50,7 @@ Below are some of the categories of standards available.
 
 ### Foundational and terminological
 
-Foundational and terminological standards provide shared vocabularies, terms, descriptions and definitions, enabling effective communication and fostering collaboration between stakeholders on a given shared area of interest.
+Foundational and terminological standards provide shared vocabularies, terms, concepts, descriptions and definitions, enabling effective communication and fostering collaboration between stakeholders on a given shared area of interest.
 They help improve understanding between stakeholders through the shared common language at their disposal by setting out agreed-upon terms and definitions.
 These standards often form the baseline language utilised in other standards supporting their development and forming bilateral relationships.
 
@@ -66,15 +68,21 @@ These standards often form the baseline language utilised in other standards sup
 
 ### Process, management, and governance
 
-Process and management standards assist organisational processes and approaches to follow well defined steps to achieve their aims and objectives.
-These standards are in-place to guide areas such as; quality assurance, risk management, management systems, benchmarking and regulatory compliance.
 
-<!-- :::success
+Process, management and governance standards play a vital role in guiding organisational processes and approaches, providing a structured framework to help achieve well-defined steps towards their aims and objectives. These standards serve as a cornerstone in governance, offering a systematic foundation for areas such as quality assurance, risk management, management systems, benchmarking, and regulatory compliance. By establishing clear guidelines and best practices, these standards contribute to effective governance practices within an organisation. They not only enhance the efficiency and consistency of processes but also ensure that organisational activities align with industry benchmarks and comply with relevant regulations. These standards become essential tools in fostering transparency, accountability, and overall excellence in organisational performance.
+
+:::success
 **Examples**
 
-- 42001 - SL to do
-- DCBs or 14971 considering healthcare - SL to do
-::: -->
+- ISO/IEC FDIS 42001:2023 Information technology – Artificial intelligence – Management system
+    - This standard specifies the requirements and provides guidance for establishing, implementing, maintaining and continually improving an AI management system within the context of an organization. The standard is intended for use by an organization providing or using products or services that utilize AI systems. It is intended to help the organization develop or use AI systems responsibly in pursuing its objectives and meet applicable regulatory requirements, obligations related to interested parties and expectations from them. This standard is applicable to any organization, regardless of size, type and nature, that provides or uses products or services that utilize AI systems.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-management-system/)
+    
+- **DCB0129:** Clinical Risk Management: its Application in the Manufacture of Health IT Systems & **DCB0160:** Clinical Risk Management: its Application in the Deployment and Use of Health IT Systems
+    - These standard form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clincal safety of Health Information Technology (HIT) systems
+    - [DCB0129](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0129-clinical-risk-management-its-application-in-the-manufacture-of-health-it-systems) is for organisations who develop and maintain HIT that will be utilised in health and care environments.
+    - [DCB0160](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0160-clinical-risk-management-its-application-in-the-deployment-and-use-of-health-it-systems) is for organisations who plan to deploy, use, maintain and decommission HIT systems within health and care environments.
+:::
 
 ### Measurement and test methods
 
@@ -83,42 +91,63 @@ These standards ensure specified thresholds have been achieved and enable entiti
 For communication amongst stakeholders, these standards provide clarity and a shared understanding of tests and measurement requirements, enabling precise and meaningful communication across discrete sectors, domains and scientific disciplines, whose tests and measurement requirements differ.
 The aviation industry is one example where they are relied upon to achieve acceptably safe and trustworthy aircraft.
 
-<!-- :::success
+:::success
 **Examples**
 
-- SL note:  maybe ask Sunny
-- Example 2
-::: -->
+- ISO/IEC TS 4213:2022 - Assessment of machine learning classification performance
+
+    - This document specifies methodologies for measuring classification performance of machine learning models, systems and algorithms.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-assessment-of-machine-learning-classification-performance/)
+- IEEE 2937-2022 - Performance Benchmarking for Artificial Intelligence Server Systems
+
+    - 'AI computing differs from generic computing in terms of device formation, operators, and usage. AI server systems, including AI server, cluster, and high-performance computing (HPC) infrastructures are designed specifically for this purpose. The performance of these infrastructures is important to users not only on generic models but also on the ones for specific domains. Formal methods for the performance benchmarking for AI server systems are provided in this standard, including approaches for test, metrics, and measure. In addition, the technical requirements for benchmarking tools are discussed.'
+    - [IEEE 2937-2022](https://standards.ieee.org/ieee/2937/10376/)
+:::
 
 ### Product and performance requirements
 
 Product and performance standards play a multifaceted role across industries, serving as vital tools for quality assurance, consumer protection, and regulatory compliance.
 These standards establish specific criteria to ensure that products and services meet defined benchmarks, safeguarding consumers by setting safety and performance requirements.
-Facilitating international trade, standards provide a common ground for product specifications, enabling consistency and smooth trade relations between countries.
+These standards facilitate international trade by their very nature, as they provide a common ground for product specifications, enabling consistency and smooth trade relations between countries.
 Beyond regulatory requirements, adherence to recognised standards fosters innovation, serving as a foundational reference for research and development efforts.
-The efficiency and productivity of organisations are significantly enhanced as standards streamline processes, reducing errors and improving overall workflow.
+The efficiency and productivity of organisations can significantly be enhanced as these standards streamline processes, reducing errors and improving overall workflow.
 They also play a crucial role in risk management, helping organisations identify and mitigate potential risks associated with their products and processes.
 Compliance with standards builds public trust, as consumers are more inclined to rely on products and services adhering to recognised criteria.
 Additionally, this set of standards contribute to safety assurance, particularly in industries where safety is paramount, by preventing accidents and protecting consumers and users.
 These standards are instrumental in shaping reliable, safe, and high-quality products, contributing to the advancement and credibility of various industries.
 
-<!-- :::success
+:::success
 **Examples**
 
-- Note SL - consider cyber
-- Example 2
-::: -->
+- BS ISO/IEC 29155-4:2016 - Systems and software engineering. Information technology project performance benchmarking framework. Guidance for data collection and maintenance
+    - This text provides requirements and guidance pertaining to the collection and maintenance of data for information technology (IT) projects. It serves as a foundational element within the broader context of benchmarking activities under "the IT project performance benchmarking framework." 
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/systems-and-software-engineering-information-technology-project-performance-benchmarking-framework-guidance-for-data-collection-and-maintenance/)
+
+- ISO 9001:2015 - Quality Management Systems. Requirements
+    - ISO 9001 is an international standard that provides a framework for establishing and maintaining a quality management system. It is a horizontal sector agnostic standard applicable to organisations regardless of their size or the nature of their products or services. While ISO 9001 is not exclusively focused on product development, many organisations adopt it to demonstrate their commitment to quality and to enhance their overall product development and delivery processes.
+    - [ISO 9001](https://www.iso.org/standard/62085.html)
+    - **Check with Chris how best to reference**
+:::
 
 ### Interface and architecture
 
-Interoperability, infrastructure, architecture, and data management and compatibility standards define common protocols, formats, and interfaces to ensure that diverse elements within a system or across systems can exchange data and functionality effectively between platforms and architectures.
+Interface and architecture standards define and describe common protocols, schemas, syntax, design patterns, interfaces and formats which assists towards interoperability, architectural design and data management. These standards play a pivotal role in ensuring seamless communication and collaboration among diverse components within a system or across multiple systems. By defining consistent protocols and formats, these standards enable elements with similar qualities that are not exactly the same, to exchange data and functionality effectively. They are pivotal to a cohesive and integrated environment, where disparate platforms and architectures can work together harmoniously.
 
-<!-- :::success
+Additionally, these standards further enhance the reliability and efficiency of information exchange. They provide a structured framework for handling and organizing data, promoting consistency and coherence in the management of information interchange across architectures. 
+In essence, the combination of interoperability, infrastructure, architecture, and data management and compatibility standards establishes a robust foundation for the seamless interaction of elements within complex systems, facilitating efficient data exchange and enhancing overall system performance.
+
+:::success
 **Examples**
 
-- W3C - SL to do
-- Example 2
-::: -->
+- IEEE 2941: Standard for Artificial Intelligence (AI) Model Representation, Compression, Distribution, and Management
+    - The AI development interface, AI model interoperable representation, coding format, and model encapsulated format for efficient AI model inference, storage, distribution, and management are discussed in this standard.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/ieee-standard-for-artificial-intelligence-ai-model-representation-compression-distribution-and-management/)
+
+- HTML (HyperText Markup Language)
+    - A standard developed and maintained by the World Wide Web Consortium (W3C) and Web Hypertext Application Technology Working Group (WHATWG) to serve as a markup language for structuring and presenting content on the world wide web, providing a standardised and interoperable format for creating web pages and applications.
+    - [HTML - Living Standard](https://html.spec.whatwg.org/multipage/)
+
+:::
 
 ## Functions and benefits of standards
 
@@ -201,7 +230,7 @@ Find an instance of a standard to use as an example. Similar to how CDEI present
 ### Evidential grounding and justification of property claims
 
 Property claims require evidential grounding.
-That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link (see [guidance](../guidance/components.md#support-links)).
+That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link (see [guidance](../guidance/components/#support-links)).
 But how does a project team or organisation know which evidence to select, and whether it is sufficient to justify the claims being made? This is where standards can provide useful support?
 
 For instance, `measurement and test methods` and `product and performance requirements` standards are crucial for determining whether a system meets the required performance levels.
