@@ -32,6 +32,14 @@ To get started with Assurance Platform, follow these steps:
     npm install
     ```
 
+### Environment Variables
+
+Ensure that you have added the following to your `.env.local` file in the root of this project.
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
 ### Development
 
 To run the application in development mode, use the following comman
