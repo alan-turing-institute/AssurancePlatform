@@ -9,7 +9,7 @@ export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, new
             if (!propertyClaim.property_claims) {
                 propertyClaim.property_claims = [];
             }
-            
+
             // Add the new property claim to the property claim's property claims
             propertyClaim.property_claims.push(newPropertyClaim);
 
@@ -118,6 +118,50 @@ export const addEvidenceToClaim = (array: any, parentId: any, newEvidence: any) 
 
     return false; // Indicates the parent property claim was not found
 }
+
+export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
+    // Iterate through the array
+    for (let i = 0; i < array.length; i++) {
+        let item = array[i];
+
+        // Check if this property claim matches the parent ID
+        if (item.id === id) {
+            array[i] = { ...item, ...newEvidence };
+
+            return array; // Return the updated array
+        }
+
+        if(item.evidence && item.evidence.length > 0) {
+            const updatedNestedArray = updateEvidenceNested(item.evidence, id, newEvidence)
+            if (updatedNestedArray) {
+                return array
+            }
+        }
+        
+        if(item.property_claims && item.property_claims.length > 0) {
+            const updatedNestedArray = updateEvidenceNested(item.property_claims, id, newEvidence)
+            if (updatedNestedArray) {
+                return array
+            }
+        }
+
+        if(item.strategies && item.strategies.length > 0) {
+            for (const strategy of item.strategies) {
+                if (strategy.property_claims && strategy.property_claims.length > 0) {
+                    const updatedNestedArray = updateEvidenceNested(strategy.property_claims, id, newEvidence)
+                    if (updatedNestedArray) {
+                        return array
+                    }
+                }
+            }
+        }
+
+        return null
+    }
+
+    // If evidence with the given ID is not found, return null
+    return null;
+};
 
 export const createAssuranceCaseNode = async (entity: string, newItem: any, token: string | null) => {
     if(!token) return console.log('No token')
@@ -273,6 +317,8 @@ export const findItemById = async (item: any, id: any) => {
 
 export const updateAssuranceCase = async (type: string, assuranceCase: any, updatedItem: any, id: any, node: any) => {
     let updatedAssuranceCase: any
+    let updatedGoals: any
+
     switch (type) {
         case 'context':
             const newContext = assuranceCase.goals[0].context.map((context: any) => {
@@ -314,19 +360,17 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
             }
             return updatedAssuranceCase
         case 'property':
-            const updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
+            updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
             updatedAssuranceCase = {
                 ...assuranceCase,
                 goals: updatedGoals
             }
             return updatedAssuranceCase
         case 'evidence':
+            updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
             updatedAssuranceCase = {
                 ...assuranceCase,
-                goals: [ {
-                    ...assuranceCase.goals[0],
-                    ...updatedItem
-                }]
+                goals: updatedGoals
             }
             return updatedAssuranceCase
         default:

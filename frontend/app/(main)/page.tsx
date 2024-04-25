@@ -14,7 +14,7 @@ const Dashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState(true)
 
-  // const [token] = useLoginToken();
+  const [token] = useLoginToken();
   const router = useRouter()
 
   const fetchAssuranceCases = async (token: any) => {
@@ -29,12 +29,16 @@ const Dashboard = () => {
     };
   
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
+
+    if(response.status === 401) {
+      localStorage.removeItem('token')
+      router.push('login')
+    }
     const result = await response.json()
     return result
   }    
 
   useEffect(() => {
-    let token = localStorage.getItem("token");
     if(token === null) {
       router.push('login')
     } else {
@@ -46,20 +50,6 @@ const Dashboard = () => {
     }
   },[])
 
-  // if(assuranceCases.length === 0 || !assuranceCases) {
-  //   return (
-  //     <>
-  //       <NoCasesFound />
-  //     </>
-  //   )
-  // }
-
-  // return (
-  //   <>
-  //     <CaseList assuranceCases={assuranceCases}/>
-  //   </>
-  // )
-
   return isLoggedIn ? (
     <>
       {loading ? (
@@ -68,7 +58,11 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {assuranceCases.length === 0 || !assuranceCases ? <NoCasesFound /> : <CaseList assuranceCases={assuranceCases}/>}
+          {token && (
+            <>
+              {assuranceCases.length === 0 || !assuranceCases ? <NoCasesFound /> : <CaseList assuranceCases={assuranceCases}/>}
+            </>
+        )}
         </>
       )}
     </>

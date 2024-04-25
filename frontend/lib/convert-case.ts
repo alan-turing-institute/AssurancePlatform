@@ -2,18 +2,13 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
 
   // Create nodes for each child array item
-  const goals = assuranceCase.goals;
+  const goals = assuranceCase.goals
 
   // Create nodes recursively for goals and their children
-  caseNodes = createNodesRecursively(goals, 'goal');
+  caseNodes = createNodesRecursively(goals, 'goal')
 
   // Create edges for every node
-  caseEdges = createEdgesFromNodes(caseNodes);
-
-  // const layouted = await getLayoutedElements(caseNodes, caseEdges, { direction: 'TB' });
-
-  // setNodes(layouted.nodes);
-  // setEdges(layouted.edges);
+  caseEdges = createEdgesFromNodes(caseNodes)
 
   return { caseNodes, caseEdges }
 }
