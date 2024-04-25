@@ -1,7 +1,1 @@
-{
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(auth)/register/page": "app/(auth)/register/page.js",
-  "/api/templates/route": "app/api/templates/route.js",
-  "/(main)/page": "app/(main)/page.js",
-  "/(cases)/case/[caseId]/page": "app/(cases)/case/[caseId]/page.js"
-}
+{}
