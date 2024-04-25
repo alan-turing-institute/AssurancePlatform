@@ -6,7 +6,7 @@ import {
 
 export const navigation = [
   { name: 'Assurance Cases', href: '/', icon: FolderIcon, current: true , externalLink: false},
-  { name: 'Team', href: '/team', icon: UsersIcon, current: false, externalLink: false },
+  // { name: 'Team', href: '/team', icon: UsersIcon, current: false, externalLink: false },
   { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ]
 export const teams = [
