@@ -77,7 +77,7 @@ Process, management and governance standards play a vital role in guiding organi
 - ISO/IEC FDIS 42001:2023 Information technology – Artificial intelligence – Management system
     - This standard specifies the requirements and provides guidance for establishing, implementing, maintaining and continually improving an AI management system within the context of an organization. The standard is intended for use by an organization providing or using products or services that utilize AI systems. It is intended to help the organization develop or use AI systems responsibly in pursuing its objectives and meet applicable regulatory requirements, obligations related to interested parties and expectations from them. This standard is applicable to any organization, regardless of size, type and nature, that provides or uses products or services that utilize AI systems.
     - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-management-system/)
-    
+
 - **DCB0129:** Clinical Risk Management: its Application in the Manufacture of Health IT Systems & **DCB0160:** Clinical Risk Management: its Application in the Deployment and Use of Health IT Systems
     - These standard form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clincal safety of Health Information Technology (HIT) systems
     - [DCB0129](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0129-clinical-risk-management-its-application-in-the-manufacture-of-health-it-systems) is for organisations who develop and maintain HIT that will be utilised in health and care environments.
@@ -120,7 +120,7 @@ These standards are instrumental in shaping reliable, safe, and high-quality pro
 **Examples**
 
 - BS ISO/IEC 29155-4:2016 - Systems and software engineering. Information technology project performance benchmarking framework. Guidance for data collection and maintenance
-    - This text provides requirements and guidance pertaining to the collection and maintenance of data for information technology (IT) projects. It serves as a foundational element within the broader context of benchmarking activities under "the IT project performance benchmarking framework." 
+    - This text provides requirements and guidance pertaining to the collection and maintenance of data for information technology (IT) projects. It serves as a foundational element within the broader context of benchmarking activities under "the IT project performance benchmarking framework."
     - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/systems-and-software-engineering-information-technology-project-performance-benchmarking-framework-guidance-for-data-collection-and-maintenance/)
 
 - ISO 9001:2015 - Quality Management Systems. Requirements
@@ -133,7 +133,7 @@ These standards are instrumental in shaping reliable, safe, and high-quality pro
 
 Interface and architecture standards define and describe common protocols, schemas, syntax, design patterns, interfaces and formats which assists towards interoperability, architectural design and data management. These standards play a pivotal role in ensuring seamless communication and collaboration among diverse components within a system or across multiple systems. By defining consistent protocols and formats, these standards enable elements with similar qualities that are not exactly the same, to exchange data and functionality effectively. They are pivotal to a cohesive and integrated environment, where disparate platforms and architectures can work together harmoniously.
 
-Additionally, these standards further enhance the reliability and efficiency of information exchange. They provide a structured framework for handling and organizing data, promoting consistency and coherence in the management of information interchange across architectures. 
+Additionally, these standards further enhance the reliability and efficiency of information exchange. They provide a structured framework for handling and organizing data, promoting consistency and coherence in the management of information interchange across architectures.
 In essence, the combination of interoperability, infrastructure, architecture, and data management and compatibility standards establishes a robust foundation for the seamless interaction of elements within complex systems, facilitating efficient data exchange and enhancing overall system performance.
 
 :::success
