@@ -77,7 +77,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
                 </>
               )}
               {node.type === 'strategy' && (
-                  <Button variant='outline' onClick={() => selectLink('strategy')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
+                  <Button variant='outline' onClick={() => selectLink('claim')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
               )}
               {node.type === 'property' && (
                 <>
