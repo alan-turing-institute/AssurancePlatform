@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, setNodeIdentifier } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 
 interface NodeEditProps {
@@ -36,10 +36,11 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to handle creation of a context node linked to a goal */
   const handleContextAdd = async () => {
-    console.log('case', assuranceCase.goals)
+    const identifier = await setNodeIdentifier(node, 'context')
+
     // Create a new context object to add - this should be created by calling the api 
     const newContextItem = {
-      "name": "New Context",
+      "name": `C${identifier}`,
       "short_description": "Short description",
       "long_description": "Long description",
       "goal_id": assuranceCase.goals[0].id
@@ -72,9 +73,11 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to handle creation of a strategy node linked to a goal */
   const handleStrategyAdd = async () => {
+    const identifier = await setNodeIdentifier(node, 'strategy')
+
     // Create a new strategy object to add
     const newStrategyItem = {
-      "name": "New Strategy",
+      "name": `S${identifier}`,
       "short_description": "Short description",
       "long_description": "Long description",
       "goal_id": assuranceCase.goals[0].id, 
@@ -108,12 +111,16 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
   const handleClaimAdd = async () => {
+    const identifier = await setNodeIdentifier(node, 'property')
+
     // Create a new property claims object to add
     const newPropertyClaimItem: any = {
-      name: "NEW Property Claim",
+      name: `P${identifier}`,
       short_description: "Short description",
       long_description: "Long description",
-      claim_type: 'Property Claim'
+      claim_type: 'Property Claim',
+      property_claims: [],
+      evidence: []
     };
 
     switch (node.type) {
@@ -216,11 +223,13 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
   /** Function used to handle creation of a evidence node linked to a property claim */
   const handleEvidenceAdd = async () => {
+    const identifier = await setNodeIdentifier(node, 'evidence')
+
     let property_claim_id: any = [node.data.id]
     
     // Create a new evidence object to add
     const newEvidenceItem = {
-      name: "NEW Evidence",
+      name: `E${identifier}`,
       short_description: "Short description",
       long_description: "Long description",
       URL: 'ww.some-evidence.com',

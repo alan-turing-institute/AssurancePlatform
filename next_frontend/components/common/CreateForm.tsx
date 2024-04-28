@@ -16,13 +16,13 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
-import { createAssuranceCaseNode } from '@/lib/case-helper'
+import { createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
+  // name: z.string().min(2, {
+  //   message: "Name must be at least 2 characters.",
+  // }),
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
   })
@@ -39,14 +39,16 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
+      // name: '',
       description: ''
     }
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    const identifier = await setNodeIdentifier(null, 'goal') 
+
     const newGoal = {
-      "name": values.name,
+      "name": `G${identifier}`,
       "short_description": values.description,
       "long_description": "N/A",
       "keywords": "N/A",
@@ -75,7 +77,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
-        <FormField
+        {/* <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
@@ -87,7 +89,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
         <FormField
           control={form.control}
           name="description"

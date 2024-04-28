@@ -1,5 +1,8 @@
+import { setNodeIdentifier } from "./case-helper"
+
 export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
+  let identifier = 0
 
   // Create nodes for each child array item
   const goals = assuranceCase.goals
@@ -13,7 +16,7 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
   return { caseNodes, caseEdges }
 }
 
-const createNodesRecursively = (items: any, nodeType: string, parentNodeId: any | null = null, processedItems = new Set(), depth = 10) => {
+const createNodesRecursively = (items: any, nodeType: string, parentNode: any | null = null, processedItems = new Set(), depth = 10) => {
   const nodes: any[] = [];
 
   if (depth <= 0) {
@@ -38,8 +41,8 @@ const createNodesRecursively = (items: any, nodeType: string, parentNodeId: any 
       width: 288
     };
 
-    if (parentNodeId) {
-      node.data.parentId = parentNodeId;
+    if (parentNode) {
+      node.data.parentId = parentNode.id;
     }
 
     nodes.push(node);
@@ -49,19 +52,19 @@ const createNodesRecursively = (items: any, nodeType: string, parentNodeId: any 
 
     // Recursively create nodes for child elements
     if (item.context && item.context.length > 0) {
-      const contextNodes = createNodesRecursively(item.context, 'context', nodeId, processedItems, depth - 1);
+      const contextNodes = createNodesRecursively(item.context, 'context', node, processedItems, depth - 1);
       nodes.push(...contextNodes);
     }
     if (item.property_claims && item.property_claims.length > 0) {
-      const propertyClaimNodes = createNodesRecursively(item.property_claims, 'property', nodeId, processedItems, depth - 1);
+      const propertyClaimNodes = createNodesRecursively(item.property_claims, 'property', node, processedItems, depth - 1);
       nodes.push(...propertyClaimNodes);
     }
     if (item.evidence && item.evidence.length > 0) {
-      const evidenceNodes = createNodesRecursively(item.evidence, 'evidence', nodeId, processedItems, depth - 1);
+      const evidenceNodes = createNodesRecursively(item.evidence, 'evidence', node, processedItems, depth - 1);
       nodes.push(...evidenceNodes);
     }
     if (item.strategies && item.strategies.length > 0) {
-      const strategyNodes = createNodesRecursively(item.strategies, 'strategy', nodeId, processedItems, depth - 1);
+      const strategyNodes = createNodesRecursively(item.strategies, 'strategy', node, processedItems, depth - 1);
       nodes.push(...strategyNodes);
     }
   });

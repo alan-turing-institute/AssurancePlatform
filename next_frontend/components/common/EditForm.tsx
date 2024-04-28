@@ -21,9 +21,9 @@ import { useLoginToken } from '@/hooks/useAuth'
 import { findItemById, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
+  // name: z.string().min(2, {
+  //   message: "Name must be at least 2 characters.",
+  // }),
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
   })
@@ -42,7 +42,8 @@ const EditForm: React.FC<EditFormProps> = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: node.data || {
-      name: '',
+      // name: '',
+      description: ''
     }
   });
 
@@ -55,27 +56,6 @@ const EditForm: React.FC<EditFormProps> = ({
     const updated = await updateAssuranceCaseNode(node.type, node.data.id, token, updateItem)
     
     if(updated) {
-      // const nodeIndex = nodes.findIndex((n: any) => n.id === node.id);
-      // if (nodeIndex !== -1) {
-      //   // Make a copy of the nodes array to avoid mutating state directly
-      //   const updatedNodes = [...nodes];
-
-      //   // Make changes to the node (for example, updating its data)
-      //   updatedNodes[nodeIndex] = {
-      //     ...updatedNodes[nodeIndex], // Copy the existing node properties
-      //     data: {
-      //       ...updatedNodes[nodeIndex].data, // Copy the existing node data properties
-      //       // Update the specific property you want to change
-      //       // For example:
-      //       name: values.name,
-      //       description: values.description
-      //     }
-      //   };
-
-      //   // Update the nodes state in the store with the modified node
-      //   setNodes(updatedNodes);
-      // }
-
       // Assurance Case Update
       const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node) 
       if(updatedAssuranceCase) {
@@ -88,7 +68,7 @@ const EditForm: React.FC<EditFormProps> = ({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
-        <FormField
+        {/* <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
@@ -103,7 +83,7 @@ const EditForm: React.FC<EditFormProps> = ({
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
         <FormField
           control={form.control}
           name="description"

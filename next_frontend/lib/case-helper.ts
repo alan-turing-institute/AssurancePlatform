@@ -384,3 +384,49 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
             return updatedAssuranceCase
     }
 }
+
+export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
+    let identifier: number = 0
+    let newArray: any[] = []
+    let parentPrefix: number | null = null
+    
+    switch (newNodeType.toLowerCase()) {
+        case 'context':
+            newArray = [...parentNode.data.context]
+            break;
+        case 'strategy':
+            newArray = [...parentNode.data.strategies]
+            break;
+        case 'property':
+            parentPrefix = parseFloat(parentNode.data.name.substring(1))
+            newArray = [...parentNode.data.property_claims]
+            break;
+        case 'evidence':
+            newArray = [...parentNode.data.evidence]
+            break;
+        default:
+            break;
+    }
+
+    if(newArray.length > 0) {
+        const lastItem = newArray.pop()
+        
+        if(newNodeType === 'property' && parentNode.type === 'property') {
+            const lastIdentifier = parseFloat(lastItem.name.substring(1)).toString()
+            const subIdentifier = lastIdentifier.split('.')[1]
+            identifier = parseInt(subIdentifier) + 1;
+        } 
+        else {
+            const lastIdentifier = parseFloat(lastItem.name.substring(1))
+            identifier = lastIdentifier + 1
+        }
+    } else {
+        identifier = 1
+    }
+
+    if (parentNode && parentNode.type === 'property' && parentPrefix !== null) {
+        return `${parentPrefix}.${identifier}`;
+    }
+
+    return identifier.toString()
+}

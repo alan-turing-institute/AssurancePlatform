@@ -13,7 +13,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
           <Route />
         </div>
         <div className="ml-2 w-[200px]">
-          <div className="text-lg font-bold">{data.name}</div>
+          <div className="text-lg font-bold">{data.name}<span className='text-xs ml-2'>({data.identifier})</span></div>
           <div className="text-xs truncate">{data.description}</div>
         </div>
         <ToggleButton node={props}/>
