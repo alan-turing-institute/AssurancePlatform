@@ -106,44 +106,6 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
         </div>
         </>
       )}
-      {/* <EditForm node={node} />
-      {node.type != 'context' && (
-        <div className="flex flex-col justify-start items-start mt-8">
-          <h3 className="text-lg font-semibold mb-2">Link to {node.data.name}</h3>
-          <div className="flex flex-col justify-start items-center gap-4 w-full">
-            {node.type === 'goal' && (
-              <>
-                <Button variant='outline' onClick={handleContextAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button>
-                <Button variant='outline' onClick={handleClaimAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
-                <Button variant='outline' onClick={handleStrategyAdd}className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Strategy</Button>
-              </>
-            )}
-            {node.type === 'strategy' && (
-                <Button variant='outline' onClick={handleClaimAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
-            )}
-            {node.type === 'property' && (
-              <>
-                <Button variant='outline' onClick={handleEvidenceAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Evidence</Button>
-                <Button variant='outline' onClick={handleClaimAdd} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
-              </>
-            )}
-            {node.type === 'evidence' && (
-              <>
-                TODO: Property Links
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      <div className="mt-6">
-        <Button variant={'ghost'} 
-          onClick={handleDelete}
-          className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"
-        >
-          <Trash2 className="mr-2"/>
-          Delete&nbsp;
-          <span className='capitalize'>{node.type}</span></Button>
-      </div> */}
     </EditSheet>
   )
 }
