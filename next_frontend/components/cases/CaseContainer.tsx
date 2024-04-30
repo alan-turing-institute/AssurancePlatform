@@ -60,7 +60,7 @@ const CaseContainer = () => {
       ) : (
         assuranceCase ? (
           <ReactFlowProvider>
-            <Header assuranceCase={assuranceCase} />
+            <Header />
             <Flow />
           </ReactFlowProvider>
         ) : (

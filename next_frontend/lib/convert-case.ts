@@ -1,4 +1,3 @@
-import { setNodeIdentifier } from "./case-helper"
 
 export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
@@ -99,8 +98,6 @@ const createEdgesFromNodes = (nodes:any[]) => {
 
   return edges;
 };
-
-// const createNodesRecursively = (items:any, nodeType: string, parentNodeId: any | null = null) => {
 //   const nodes: any[] = [];
 
 //   items.forEach((item:any) => {
