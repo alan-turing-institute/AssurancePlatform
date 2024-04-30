@@ -25,11 +25,9 @@ const formSchema = z.object({
 })
 
 interface NotesFormProps {
-  notes: any[]
-  setNotes: (value: any[]) => void
 };
 
-const NotesForm: React.FC<NotesFormProps> = ({ notes, setNotes }) => {
+const NotesForm: React.FC<NotesFormProps> = ({ }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
 
@@ -41,16 +39,42 @@ const NotesForm: React.FC<NotesFormProps> = ({ notes, setNotes }) => {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setNotes([...notes, {
-      id: crypto.randomUUID(),
-      type: 'comment',
-      person: { name: 'System User', href: '#' },
-      imageUrl:
-        'https://images.unsplash.com/photo-1520785643438-5bf77931f493?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=8&w=256&h=256&q=80',
-      comment: values.note,
-      date: new Date(),
-    }])
-    form.setValue('note', '')
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${assuranceCase.id}/`
+
+        const requestOptions: RequestInit = {
+            method: "POST",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                content: values.note,
+                assurance_case: assuranceCase.id,
+            })
+        };
+        const response = await fetch(url, requestOptions);
+        
+        if(!response.ok) {
+            console.log('error')
+        }
+
+        const result = await response.json()
+
+        const updatedComments = [ ...assuranceCase.comments, result ]
+
+        const updatedAssuranceCase = {
+          ...assuranceCase,
+          comments: updatedComments
+        }
+    
+        setAssuranceCase(updatedAssuranceCase)
+
+
+        form.setValue('note', '')
+    } catch (error) {
+        console.log('Error', error)
+    }
   }
 
   return (
