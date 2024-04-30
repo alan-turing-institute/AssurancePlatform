@@ -11,6 +11,7 @@ import { AlertModal } from "../modals/alertModal";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
 import ActionTooltip from "../ui/action-tooltip";
+import CaseNotes from "./CaseNotes";
 
 interface ActionButtonProps {
   showCreateGoal: boolean
@@ -19,6 +20,7 @@ interface ActionButtonProps {
 
 const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
   const [open, setOpen] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false);
 
@@ -105,13 +107,14 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
           <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Share2 className='w-5 h-5' /><span className="sr-only">Share</span></button>
         </ActionTooltip>
         <ActionTooltip label='Notes'>
-          <button className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
+          <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
         </ActionTooltip>
         <ActionTooltip label='Delete'>
           <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
         </ActionTooltip>
       </div>
       <NodeCreate isOpen={open} onClose={() => setOpen(false)} />
+      <CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
       <AlertModal
         isOpen={deleteOpen} 
         onClose={() => setDeleteOpen(false)}
