@@ -47,6 +47,9 @@ import useStore from '@/data/store'
 export default function NotesFeed({ }) {
   const { assuranceCase } = useStore()
 
+  //@ts-ignore
+  assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
   useEffect(() => {
     //@ts-ignore
     assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
