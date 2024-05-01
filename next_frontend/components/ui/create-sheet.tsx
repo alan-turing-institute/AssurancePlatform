@@ -24,7 +24,7 @@ const CreateSheet = ({ isOpen, onClose, children } : CreateSheetProps ) => {
 
   return (
     <Sheet open={isOpen} onOpenChange={onChange}>
-      <SheetContent>
+      <SheetContent className="overflow-y-scroll">
         <SheetHeader>
           <SheetTitle>Create new Goal</SheetTitle>
           <SheetDescription>

@@ -26,7 +26,7 @@ const EditSheet = ({ title, description, isOpen, onClose, children } : EditSheet
 
   return (
     <Sheet open={isOpen} onOpenChange={onChange}>
-      <SheetContent>
+      <SheetContent className="overflow-y-scroll">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
