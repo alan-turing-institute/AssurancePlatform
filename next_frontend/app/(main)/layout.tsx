@@ -111,7 +111,10 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                         <li>
                           <div className="text-xs font-semibold leading-6 text-indigo-200">Your teams</div>
                           <ul role="list" className="-mx-2 mt-2 space-y-1">
-                            {teams.map((team) => (
+                            {teams.length === 0 && (
+                              <p className='text-indigo-100/60 dark:text-slate-300/50 text-sm px-2'>No teams added</p>
+                            )}
+                            {teams.length > 0 && teams.map((team: any) => (
                               <li key={team.name}>
                                 <a
                                   href={team.href}
@@ -212,7 +215,10 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                 <li>
                   <div className="text-xs font-semibold leading-6 text-indigo-200">Your teams</div>
                   <ul role="list" className="-mx-2 mt-2 space-y-1">
-                    {teams.map((team) => (
+                    {teams.length === 0 && (
+                      <p className='text-indigo-100/60 dark:text-slate-300/50 text-sm px-2'>No teams added</p>
+                    )}
+                    {teams.length > 0 && teams.map((team: any) => (
                       <li key={team.name}>
                         <a
                           href={team.href}

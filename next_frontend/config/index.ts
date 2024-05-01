@@ -10,9 +10,9 @@ export const navigation = [
   { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ]
 export const teams = [
-  { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
-  { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
-  { id: 3, name: 'General', href: '#', initial: 'G', current: false },
+  // { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
+  // { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
+  // { id: 3, name: 'General', href: '#', initial: 'G', current: false },
 ]
 export const userNavigation = [
   { name: 'Your profile', href: '#' },

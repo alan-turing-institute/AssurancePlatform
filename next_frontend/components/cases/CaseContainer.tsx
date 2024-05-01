@@ -54,8 +54,11 @@ const CaseContainer = () => {
   return (
     <>
       {loading ? (
-        <div className='flex justify-center items-center'>
-          <Loader2 className='w-6 h-6 animate-spin' />
+        <div className='flex justify-center items-center min-h-screen'>
+          <div className='flex flex-col justify-center items-center gap-2'>
+            <Loader2 className='w-8 h-8 animate-spin' />
+            <p className='text-muted-foreground'>Rendering your chart...</p>
+          </div>
         </div>
       ) : (
         assuranceCase ? (

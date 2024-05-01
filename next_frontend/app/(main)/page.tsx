@@ -53,14 +53,17 @@ const Dashboard = () => {
   return isLoggedIn ? (
     <>
       {loading ? (
-        <div className='flex justify-center items-center'>
-          <Loader2 className='w-12 h-12 mt-8 animate-spin' />
+        <div className='flex justify-center items-center min-h-screen'>
+          <div className='flex flex-col justify-center items-center gap-2'>
+            <Loader2 className='w-10 h-10 mt-8 animate-spin' />
+            <p className='text-muted-foreground'>Fetching cases...</p>
+          </div>
         </div>
       ) : (
         <>
           {token && (
             <>
-              {assuranceCases.length === 0 || !assuranceCases ? <NoCasesFound /> : <CaseList assuranceCases={assuranceCases}/>}
+              {assuranceCases && assuranceCases.length === 0 || !assuranceCases ? <NoCasesFound /> : <CaseList assuranceCases={assuranceCases}/>}
             </>
         )}
         </>
