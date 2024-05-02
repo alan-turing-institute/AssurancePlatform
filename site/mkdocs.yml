@@ -191,6 +191,7 @@ nav:
           - Local Deployments: platform-details/reset-database/local.md
   - Community of Practice:
       - Community of Practice: community/index.md
+      - Case Studies: community/case-studies/index.md
       - Community Support: community/community-support.md
       # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
       - Upcoming community events: blog/index.md
