@@ -20,7 +20,7 @@ ethical assurance cases, developed by researchers at the
 [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
 and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
-To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/)
+To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
 
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
@@ -58,10 +58,9 @@ developing, and deploying their technology or system.
 
 The Trustworthy and Ethical Assurance application can be run locally or deployed
 on your own server or a cloud-based service (e.g. Azure). To view the different
-installation instructions, please visit our documentation site for
+installation instructions, please visit our documentation site for the
 [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/)
-and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/)
-installation instructions.
+and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/).
 
 ## Further Resources 📚
 
@@ -80,7 +79,7 @@ Ethical Assurance framework and methodology:
 
 Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
 
-Between July 2021 and June 2022. this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
+Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
 (Grant number: TAS_PP_00040).
 
 ## Contributors
