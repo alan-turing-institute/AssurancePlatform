@@ -2,9 +2,8 @@
 
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import React, { useState } from 'react'
-import { Edge, NodeProps, getConnectedEdges, getOutgoers } from 'reactflow'
+import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
 
-import { shallow } from 'zustand/shallow';
 import useStore from '@/data/store';
 
 
@@ -12,16 +11,10 @@ interface ToggleButtonProps {
   node: any
 }
 
-const selector = (state: any) => ({
-  nodes: state.nodes,
-  edges: state.edges,
-  setNodes: state.setNodes,
-  setEdges: state.setEdges
-});
-
 const ToggleButton = ({ node } : ToggleButtonProps) => {
   const [hidden, setHidden] = useState<boolean>(true);
-  const { nodes, edges, setNodes, setEdges } = useStore(selector, shallow);
+  const { nodes, edges, layoutNodes } = useStore();
+  const { fitView } = useReactFlow()
 
   let stack: any[] = []
   let outgoers: any[] = [];
@@ -77,10 +70,13 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
       return n
     })
 
-    setNodes(updatedNodes)
-    setEdges(updatedEdges);
-    
+    layoutNodes(updatedNodes, updatedEdges)
+    window.requestAnimationFrame(() => {
+      fitView();
+    });
+
     setHidden(!hidden);
+
   }
   
   return (

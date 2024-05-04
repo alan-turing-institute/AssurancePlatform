@@ -1,6 +1,6 @@
 'use client'
 
-import { Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { Node } from "reactflow";
 import { useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
