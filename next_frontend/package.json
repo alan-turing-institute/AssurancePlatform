@@ -27,6 +27,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "file-saver": "^2.0.5",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.360.0",
     "moment": "^2.30.1",
     "neatjson": "^0.10.6",
