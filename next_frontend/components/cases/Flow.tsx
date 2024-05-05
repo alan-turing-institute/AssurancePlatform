@@ -18,6 +18,10 @@ import { CloudFog, Loader2 } from 'lucide-react';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
 
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useTheme } from 'next-themes';
+
 interface FlowProps {
 }
 
@@ -27,6 +31,7 @@ function Flow({ }: FlowProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<Node | any>(null)
   const [loading, setLoading] = useState(true)
+  const { theme } = useTheme()
 
   const onLayout = (direction: any) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
@@ -62,6 +67,17 @@ function Flow({ }: FlowProps) {
 
   const showCreateGoal = (nodes.length > 0 && nodes[0].type === 'goal') ? false : true
 
+  const notify = (message: string) => toast.success(message, {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme,
+  });
+
   return (
     <div className='min-h-screen'>
       {loading ? (
@@ -69,8 +85,9 @@ function Flow({ }: FlowProps) {
           <Loader2 className='w-8 h-8 animate-spin' />
         </div>
       ) : (
-        <>
+        <div id='ChartFlow'>
           <ReactFlow
+            id='ReactFlow'
             nodes={nodes}
             edges={edges}
             onNodeClick={handleNodeClick}
@@ -86,9 +103,21 @@ function Flow({ }: FlowProps) {
             <Controls className='z-50' />
             <Background/>
           </ReactFlow>
-          <ActionButtons showCreateGoal={showCreateGoal} actions={{ onLayout }} />
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme={theme}
+          />
+          <ActionButtons showCreateGoal={showCreateGoal} actions={{ onLayout }} notify={notify} />
           <NodeEdit node={selectedNode} isOpen={editOpen} onClose={() => setEditOpen(false)} />
-        </>
+        </div>
       )}
       
     </div>

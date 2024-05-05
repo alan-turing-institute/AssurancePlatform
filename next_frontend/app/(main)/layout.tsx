@@ -15,6 +15,7 @@ import { navigation, teams, userNavigation } from '@/config'
 import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { usePathname, useRouter } from 'next/navigation'
+import { Toaster } from "@/components/ui/sonner"
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')

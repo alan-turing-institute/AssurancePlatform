@@ -13,12 +13,19 @@ import { saveAs } from "file-saver";
 import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./CaseNotes";
 
+import html2canvas from 'html2canvas'
+import { capture } from "@/actions/capture";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+
 interface ActionButtonProps {
   showCreateGoal: boolean
   actions: any
+  notify: (message: string) => void
 }
 
-const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
+const ActionButtons = ({ showCreateGoal, actions, notify }: ActionButtonProps) => {
   const [open, setOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -87,6 +94,34 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
       setLoading(false);
   }
 
+  const handleCapture = async () => {
+    const screenshotTarget = document.getElementById('ReactFlow');
+    if(screenshotTarget) {
+      html2canvas(screenshotTarget).then(async canvas => {
+          // Convert canvas to base64 image data URL
+          const base64image = canvas.toDataURL("image/png");
+          const captured = await capture(base64image, assuranceCase.id)
+          if(captured) {
+            notify('📷 Screenshot Saved!')
+          }
+          // Create anchor element
+          // const downloadLink = document.createElement('a');
+          // downloadLink.href = base64image;
+          // downloadLink.download = 'screenshot.png'; // Set the file name
+
+          // // Append anchor element to the document body
+          // document.body.appendChild(downloadLink);
+          
+          // // Trigger click event on the anchor element
+          // downloadLink.click();
+          
+          // // Clean up: Remove the anchor element from the document body
+          // document.body.removeChild(downloadLink);
+      }); 
+    }
+  }
+
+
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
     <div className="w-1/8 m-auto bg-indigo-100 dark:bg-indigo-500/20 shadow-lg text-white py-2 px-4 flex justify-center items-center gap-2 rounded-full">
@@ -108,6 +143,9 @@ const ActionButtons = ({ showCreateGoal, actions }: ActionButtonProps) => {
         </ActionTooltip>
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
+        </ActionTooltip>
+        <ActionTooltip label='Capture'>
+          <button onClick={handleCapture} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Camera className='w-5 h-5' /><span className="sr-only">Capture</span></button>
         </ActionTooltip>
         <ActionTooltip label='Delete'>
           <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
