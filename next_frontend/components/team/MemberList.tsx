@@ -65,9 +65,9 @@ export default function MemberList() {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-base font-semibold leading-6 text-foreground">Team Members</h1>
+            <h1 className="text-base font-semibold leading-6 text-foreground">Users</h1>
             <p className="mt-2 text-sm text-foreground/70">
-              A list of all the members in your account including their name, title, email and role.
+              A list of all users in your account including their name, title, email and role.
             </p>
           </div>
           <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">

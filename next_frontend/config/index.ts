@@ -2,11 +2,13 @@ import {
   DocumentDuplicateIcon,
   FolderIcon,
   UsersIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline'
 
 export const navigation = [
-  { name: 'Assurance Cases', href: '/', icon: FolderIcon, current: true , externalLink: false},
-  // { name: 'Team', href: '/team', icon: UsersIcon, current: false, externalLink: false },
+  { name: 'My Assurance Cases', href: '/', icon: FolderIcon, current: false , externalLink: false},
+  { name: 'Shared With Me', href: '/shared', icon: UsersIcon, current: false , externalLink: false},
+  // { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
   { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ]
 export const teams = [
