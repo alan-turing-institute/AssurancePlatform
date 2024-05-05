@@ -14,7 +14,7 @@ import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./CaseNotes";
 
 import html2canvas from 'html2canvas'
-import { capture } from "@/actions/capture";
+import { capture, test } from "@/actions/capture";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -23,9 +23,10 @@ interface ActionButtonProps {
   showCreateGoal: boolean
   actions: any
   notify: (message: string) => void
+  notifyError: (message: string) => void
 }
 
-const ActionButtons = ({ showCreateGoal, actions, notify }: ActionButtonProps) => {
+const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionButtonProps) => {
   const [open, setOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -97,28 +98,35 @@ const ActionButtons = ({ showCreateGoal, actions, notify }: ActionButtonProps) =
   const handleCapture = async () => {
     const screenshotTarget = document.getElementById('ReactFlow');
     if(screenshotTarget) {
-      html2canvas(screenshotTarget).then(async canvas => {
-          // Convert canvas to base64 image data URL
-          const base64image = canvas.toDataURL("image/png");
-          const imageUrl = await capture(base64image, assuranceCase.id)
-          console.log('ImageUrl', imageUrl)
-          if(imageUrl) {
-            notify('📷 Screenshot Saved!')
-          }
-          // Create anchor element
-          // const downloadLink = document.createElement('a');
-          // downloadLink.href = base64image;
-          // downloadLink.download = 'screenshot.png'; // Set the file name
+      const canvas = await html2canvas(screenshotTarget)
+     
+      const base64image = canvas.toDataURL("image/png");
 
-          // // Append anchor element to the document body
-          // document.body.appendChild(downloadLink);
-          
-          // // Trigger click event on the anchor element
-          // downloadLink.click();
-          
-          // // Clean up: Remove the anchor element from the document body
-          // document.body.removeChild(downloadLink);
-      }); 
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+
+      const newImage = JSON.stringify({
+        id: assuranceCase.id,
+        base64: base64image
+      });
+
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers: myHeaders,
+        body: newImage,
+        redirect: "follow"
+      };
+
+      const response = await fetch("/api/screenshot", requestOptions)
+      const { imageUrl, error, message } = await response.json()
+      
+      if(error) {
+        notifyError(message)
+      }
+
+      if(imageUrl) {
+        notify('📷 Screenshot Saved!')
+      }
     }
   }
 

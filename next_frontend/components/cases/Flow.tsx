@@ -78,6 +78,17 @@ function Flow({ }: FlowProps) {
     theme,
   });
 
+  const notifyError = (message: string) => toast.error(message, {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme,
+  });
+
   return (
     <div className='min-h-screen'>
       {loading ? (
@@ -115,7 +126,12 @@ function Flow({ }: FlowProps) {
             pauseOnHover
             theme={theme}
           />
-          <ActionButtons showCreateGoal={showCreateGoal} actions={{ onLayout }} notify={notify} />
+          <ActionButtons 
+            showCreateGoal={showCreateGoal} 
+            actions={{ onLayout }} 
+            notify={notify} 
+            notifyError={notifyError} 
+          />
           <NodeEdit node={selectedNode} isOpen={editOpen} onClose={() => setEditOpen(false)} />
         </div>
       )}

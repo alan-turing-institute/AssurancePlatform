@@ -67,8 +67,6 @@ const saveToStorage = async (buffer: Buffer, filename : string) => {
     const blockBlobClient = containerClient.getBlockBlobClient(filename);
     await blockBlobClient.uploadData(buffer);
 
-    revalidatePath('/')
-
     // Return the URL of the uploaded image
     const imageUrl = `https://${account}.blob.core.windows.net/${containerName}/${filename}`;
     return imageUrl
@@ -76,4 +74,8 @@ const saveToStorage = async (buffer: Buffer, filename : string) => {
   } catch (error) {
     console.log('Error', error)
   }
+}
+
+export const test = async () => {
+  return true
 }
