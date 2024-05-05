@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@azure/identity": "^4.2.0",
+    "@azure/storage-blob": "^12.17.0",
     "@dagrejs/dagre": "^1.1.2",
     "@headlessui/react": "^1.7.18",
     "@heroicons/react": "^2.1.1",

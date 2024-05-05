@@ -100,8 +100,9 @@ const ActionButtons = ({ showCreateGoal, actions, notify }: ActionButtonProps) =
       html2canvas(screenshotTarget).then(async canvas => {
           // Convert canvas to base64 image data URL
           const base64image = canvas.toDataURL("image/png");
-          const captured = await capture(base64image, assuranceCase.id)
-          if(captured) {
+          const imageUrl = await capture(base64image, assuranceCase.id)
+          console.log('ImageUrl', imageUrl)
+          if(imageUrl) {
             notify('📷 Screenshot Saved!')
           }
           // Create anchor element

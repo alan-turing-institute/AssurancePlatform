@@ -17,7 +17,6 @@ import { AlertModal } from '@/components/modals/alertModal'
 import { useParams, useRouter } from 'next/navigation'
 import { useLoginToken } from '@/hooks/useAuth'
 import Image from 'next/image'
-import { existingImage } from '@/actions/capture'
 
 interface CaseCardProps {
   assuranceCase: any
@@ -31,7 +30,11 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
 
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [imageExists, setImageExists] = useState(true)
+  const [imgSrc, setImgSrc] = useState(`https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`);
+  // const [imageExists, setImageExists] = useState(true)
+  // const [imageUrl, setImageUrl] = useState<string>('')
+
+  // const imageUrl = `https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`
 
   const onDelete = async () => {
     try {
@@ -56,50 +59,20 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
     }
   }
 
-  useEffect(() => {
-    const checkImageExists = async () => {
-      try {
-        const haveFile = await existingImage(`public/chart-screenshot-case-${assuranceCase.id}.png`)
-        if (!haveFile) {
-          // Image does not exist, set imageExists to false
-          setImageExists(false);
-        }
-      } catch (error) {
-        console.error('Error checking image existence:', error);
-      }
-    };
-
-    checkImageExists();
-  }, [id]);
-
   return (
     <div className='group relative'>
       <Link href={`/case/${assuranceCase.id}`}>
         <Card className='flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full'>
           <CardHeader className='flex-1 w-full'>
             <div className='relative flex aspect-video rounded-md mb-4 overflow-hidden'>
-              {/* <img src='https://images.unsplash.com/photo-1708844897353-649da595a3f2?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' alt='' className='rounded-md mb-4' /> */}
-              {/* <img src={`/chart-screenshot-case-${id}.png`} alt='' className='rounded-md mb-4 aspect-video' /> */}
-              {/* <Image
-                src={`/chart-screenshot-case-${id}.png`}
+              <Image
+                src={imgSrc}
                 alt={`Assurance Case ${assuranceCase.name} screenshot`}
                 fill
-                placeholder='blur'
-                blurDataURL='/images/assurance-case-medium.png'
-              /> */}
-              {imageExists ? (
-                <Image
-                  src={`/chart-screenshot-case-${id}.png`}
-                  alt={`Assurance Case ${assuranceCase.name} screenshot`}
-                  fill
-                />
-              ) : (
-                <Image
-                  src="/images/assurance-case-medium.png"
-                  alt="Default Image"
-                  fill
-                />
-              )}
+                onError={() => {
+                  setImgSrc('/images/assurance-case-medium.png');
+                }}
+              />
             </div>
             <CardTitle>{name}</CardTitle>
             <CardDescription className='text-slate-900 dark:text-white'>{description}</CardDescription>
