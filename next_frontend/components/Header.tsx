@@ -5,6 +5,7 @@ import { ModeToggle } from './ui/theme-toggle';
 import { useRouter } from 'next/navigation';
 import { useLoginToken } from '@/hooks/useAuth';
 import useStore from '@/data/store';
+import { CaseNavigation } from './cases/CaseNavigation';
 
 interface HeaderProps {}
 
@@ -80,7 +81,11 @@ const Header = ({ }: HeaderProps) => {
             </p>
           )}
         </div>
-        <ModeToggle className='bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none' />
+        
+        <div className='flex justify-start items-center gap-4'>
+          <CaseNavigation />
+          <ModeToggle className='bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none' />
+        </div>
       </div>
     </div>
   );
