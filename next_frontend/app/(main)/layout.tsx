@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import LogoutButton from '@/components/auth/LogoutButton'
 import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from "@/components/ui/sonner"
+import FeedbackBanner from '@/components/FeedbackBanner'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -348,6 +349,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
             <div>
               {/* Your content */}
               {children}
+              <FeedbackBanner />
             </div>
           </main>
         </div>
