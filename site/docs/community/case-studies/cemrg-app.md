@@ -1,6 +1,7 @@
 # Case Study: Advancing Cardiovascular Medicine with CemrgApp
 
-<!-- Embed video and transcript here? -->
+<!-- Embed video and transcript here -->
+<iframe class="youtube-video" src="https://www.youtube.com/embed/2V8FAu2U4MM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Introduction to CemrgApp
 
