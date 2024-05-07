@@ -14,7 +14,7 @@ To view your own user details, including your username, email, and associated gr
 #### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/user/ \
+curl -X GET http://localhost:8000/api/user/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -31,7 +31,7 @@ Retrieve a list of all users on the TEA Platform, useful for finding collaborato
 #### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/users/ \
+curl -X GET http://localhost:8000/api/users/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -46,7 +46,7 @@ Add a new user to the TEA Platform by providing necessary information such as us
 #### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/users/ \
+curl -X POST http://localhost:8000/api/users/ \
      -H "Content-Type: application/json" \
      -d '{"username": "new_user", "email": "new_user@example.com", "password": "secure_password"}'
 ```
@@ -62,7 +62,7 @@ Access detailed information about a specific user by their user ID.
 #### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/users//<int:pk>/ \
+curl -X GET http://localhost:8000/api/users//<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -77,7 +77,7 @@ Modify details of an existing user, such as their username, email, or password.
 #### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/users//<int:pk>/ \
+curl -X PUT http://localhost:8000/api/users//<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"username": "updated_username", "email": "updated_email@example.com"}'
@@ -94,7 +94,7 @@ Remove a user account from the TEA Platform. This action is irreversible and sho
 #### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/users//<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/users//<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 

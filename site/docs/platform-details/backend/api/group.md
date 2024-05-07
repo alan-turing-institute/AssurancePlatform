@@ -13,7 +13,7 @@ Retrieve a comprehensive list of all groups on the TEA Platform. This is useful 
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/groups/ \
+curl -X GET http://localhost:8000/api/groups/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -28,7 +28,7 @@ Establish a new group on the platform by specifying its name. This endpoint can 
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/groups/ \
+curl -X POST http://localhost:8000/api/groups/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "New Group Name"}'
@@ -45,7 +45,7 @@ Access detailed information about a specific group by its ID. This endpoint prov
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/groups/<int:pk>/ \
+curl -X GET http://localhost:8000/api/groups/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -60,7 +60,7 @@ Modify the details of an existing group, such as its name or members. This endpo
 ### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/groups/<int:pk>/ \
+curl -X PUT http://localhost:8000/api/groups/<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Group Name"}'
@@ -77,7 +77,7 @@ Remove a group from the platform. This action should be used with caution, as it
 ### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/groups/<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/groups/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 

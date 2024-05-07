@@ -15,7 +15,7 @@ Retrieve a list of all GitHub repositories associated with a specific user by th
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/users//<int:pk>/github_repositories/ \
+curl -X GET http://localhost:8000/api/users//<int:pk>/github_repositories/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -30,7 +30,7 @@ To view all GitHub repositories linked within the TEA Platform, irrespective of 
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/github_repositories/ \
+curl -X GET http://localhost:8000/api/github_repositories/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -45,7 +45,7 @@ Link a new GitHub repository to the TEA Platform by providing the repository's d
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/github_repositories/ \
+curl -X POST http://localhost:8000/api/github_repositories/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{

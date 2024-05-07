@@ -9,7 +9,7 @@ To authenticate a user and receive an access token for subsequent requests, use 
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/auth/login/ \
+curl -X POST http://localhost:8000/api/auth/login/ \
      -H "Content-Type: application/json" \
      -d '{"username": "your_username", "password": "your_password"}'
 ```
@@ -29,7 +29,7 @@ To log out a user and invalidate the current token, use the `/api/auth/logout/` 
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/auth/logout/ \
+curl -X POST http://localhost:8000/api/auth/logout/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -44,7 +44,7 @@ To create a new user account, submit a request to `/api/auth/register/` with the
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/auth/register/ \
+curl -X POST http://localhost:8000/api/auth/register/ \
      -H "Content-Type: application/json" \
      -d '{
            "username": "new_user",

@@ -19,7 +19,7 @@ Before beginning, ensure you have Docker and docker-compose installed on your sy
 Start by cloning the Assurance Platform repository from GitHub to your local machine. Open your terminal and run the following command:
 
 ```shell
-$ git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+git clone https://github.com/alan-turing-institute/AssurancePlatform.git
 ```
 
 This command downloads the project files to your local system.
@@ -29,7 +29,7 @@ This command downloads the project files to your local system.
 After cloning, change your current directory to the AssurancePlatform folder:
 
 ```shell
-$ cd AssurancePlatform/
+cd AssurancePlatform/
 ```
 
 ### Deploy with Docker Compose
@@ -37,7 +37,7 @@ $ cd AssurancePlatform/
 Use docker-compose to pull the necessary images and start the containers. Execute:
 
 ```shell
-$ docker compose pull && docker compose up
+docker compose pull && docker compose up
 ```
 
 This command fetches the latest Docker images for the TEA Platform and runs them. The process may take a few minutes the first time as it downloads the images and initializes the containers.
@@ -53,7 +53,7 @@ You should now see the TEA Platform's homepage, ready for exploration and use.
 When you're done using the platform and wish to stop the Docker containers, open a new terminal window. Ensure you're in the AssurancePlatform directory, then execute:
 
 ```shell
-$ docker compose down
+docker compose down
 ```
 
 This command stops and removes the containers set up by docker-compose, effectively shutting down the platform until you choose to run it again.

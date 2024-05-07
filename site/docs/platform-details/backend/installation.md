@@ -73,7 +73,7 @@ Welcome to the setup guide for the backend environment of the Trustworthy and Et
 After making any updates to the database schema or if you're running the server for the first time, ensure to apply migrations:
 
 ```shell
-$ python manage.py migrate
+python manage.py migrate
 ```
 
 ## Running the API Server
@@ -81,7 +81,7 @@ $ python manage.py migrate
 To start the API server, simply execute:
 
 ```shell
-$ python manage.py runserver
+python manage.py runserver
 ```
 
 from the `eap_backend` directory. The server will restart automatically upon code changes, making development efficient and streamlined.
@@ -91,7 +91,7 @@ from the `eap_backend` directory. The server will restart automatically upon cod
 It's good practice to run tests frequently during development. To execute the test suite, use:
 
 ```shell
-$ python manage.py test
+python manage.py test
 ```
 
 ## Continue with Frontend Setup
