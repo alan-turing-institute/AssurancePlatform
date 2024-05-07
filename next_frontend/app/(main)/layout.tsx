@@ -17,6 +17,7 @@ import LogoutButton from '@/components/auth/LogoutButton'
 import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from "@/components/ui/sonner"
 import FeedbackBanner from '@/components/FeedbackBanner'
+import Link from 'next/link'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -254,16 +255,16 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   </a>
                 </li>
                 <li className="">
-                  <a
-                    href="#"
-                    className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+                  <Link
+                    href="/settings"
+                    className={`group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white ${pathname === '/settings' ? 'bg-indigo-700 text-white' : null}`}
                   >
                     <Cog6ToothIcon
                       className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
                       aria-hidden="true"
                     />
                     Settings
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </nav>
