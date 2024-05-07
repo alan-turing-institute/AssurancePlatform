@@ -9,7 +9,7 @@ export default function FeedbackBanner() {
   if(!showBanner) return null
 
   return (
-    <div className="flex items-center gap-x-6 bg-violet-600 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
+    <div className="flex items-center gap-x-6 bg-slate-900 dark:bg-violet-600 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
       <p className="text-sm leading-6 text-white">
         <Link href="/feedback" className='flex justify-start items-center gap-2'>
           <MessageSquareMore className='w-4 h-4' />
