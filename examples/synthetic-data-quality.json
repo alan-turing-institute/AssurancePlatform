@@ -1,0 +1,159 @@
+{
+  "type": "AssuranceCase",
+  "name": "Synthetic Data Quality (Pattern)",
+  "description": "An argument pattern for assuring quality of synthetic data",
+  "created_date": "2024-04-05T10:42:11.335559Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "The synthetic data generated meets the required quality standards for its intended use.",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 66,
+      "context": [
+        {
+          "type": "Context",
+          "name": "C1",
+          "short_description": "Used by trained healthcare professionals.",
+          "long_description": "N/A",
+          "created_date": "2024-04-19T13:46:55.161911Z",
+          "goal_id": 90
+        }
+      ],
+      "property_claims": [],
+      "strategies": [
+        {
+          "name": "S1",
+          "short_description": "Fidelity—ensure synthetic data accurately reflects the statistical properties and distributions of the original dataset.",
+          "long_description": "N/A",
+          "goal_id": 90,
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1",
+              "short_description": "The mean, variance, and correlation of synthetic data closely match those of the original dataset.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 44
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2",
+              "short_description": "Visual inspection of synthetic and original data distributions shows high similarity.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 44
+            }
+          ]
+        },
+        {
+          "name": "S2",
+          "short_description": "Diversity—ensure the synthetic data encompasses a wide range of scenarios, including rare or edge cases, to accurately represent the variability in the real dataset.",
+          "long_description": "N/A",
+          "goal_id": 90,
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P3",
+              "short_description": "The synthetic data includes representations of all known edge cases in the original dataset.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 45
+            }
+          ]
+        },
+        {
+          "name": "S3",
+          "short_description": "Privacy—ensure the synthetic data protects sensitive information and prevents re-identification of individuals.",
+          "long_description": "N/A",
+          "goal_id": 90,
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P4",
+              "short_description": "Synthetic data generation incorporates differential privacy techniques to minimise re-identification risks.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 46
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P5",
+              "short_description": "Re-identification risk assessments confirm that the risk of identifying individuals from the synthetic data is below acceptable thresholds.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 46
+            }
+          ]
+        },
+        {
+          "name": "S4",
+          "short_description": "Utility—ensure the synthetic data is useful for its intended application, such as training machine learning models or analysis.",
+          "long_description": "N/A",
+          "goal_id": 90,
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P6",
+              "short_description": "Model trained on synthetic data achieves performance metrics within an acceptable range of those trained on original data.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 47
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P7",
+              "short_description": "Domain experts confirm the synthetic data is realistic and meets the needs of the intended application.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 47
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "owner": 14,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}
