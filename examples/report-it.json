@@ -1,0 +1,520 @@
+{
+  
+  "type":"AssuranceCase",
+  "name":"Westminster Council Report It",
+  "description":"A demo case for Westminster Council, using the example of the Report It app and two of the Microsoft Responsible AI Standards.",
+  "created_date":"2024-05-01T04:48:02.320237Z",
+  "lock_uuid":null,
+  "goals":[
+    {
+      
+      "type":"TopLevelNormativeGoal",
+      "name":"G1",
+      "short_description":"The 'Report It' app has been designed and developed in an ethical and responsible manner.",
+      "long_description":"N/A",
+      "keywords":"N/A",
+      "assurance_case_id":83,
+      "context":[
+        {
+          
+          "type":"Context",
+          "name":"C1",
+          "short_description":"Ethical and responsible is defined in accordance with the six pillars of Microsoft's Responsible AI Standard, Version 2 requirements.",
+          "long_description":"N/A",
+          "created_date":"2024-05-01T04:51:19.130887Z",
+          "goal_id":111
+        }
+      ],
+      "property_claims":[],
+      "strategies":[
+        {
+          
+          "name":"S1",
+          "short_description":"Argument over Accountability pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P1",
+              "short_description":"An impact assessment has found the Report It app to have no significant adverse impacts.",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[
+                {
+                  
+                  "type":"Evidence",
+                  "name":"E1",
+                  "short_description":"Impact Assessment",
+                  "long_description":"N/A",
+                  "URL":"www.some-evidence.com",
+                  "property_claim_id":[278]
+                }
+              ],
+              "strategy_id":60
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P2",
+              "short_description":"An oversight and review committee has been appointed to continuously monitor the app.",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[
+                {
+                  
+                  "type":"Evidence",
+                  "name":"E2",
+                  "short_description":"Committee description",
+                  "long_description":"N/A",
+                  "URL":"www.some-evidence.com",
+                  "property_claim_id":[280]
+                }
+              ],
+              "strategy_id":60
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P3",
+              "short_description":"The Report It app is fit for purpose",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P3.1",
+                  "short_description":"The Report It app enables residents to report street problems in Westminster.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":281,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P3.2",
+                  "short_description":"The data input methods are sufficient for reporting the most common issues.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":281,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P3.3",
+                  "short_description":"The object classification feature is sufficiently performant.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":281,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[
+                    {
+                      
+                      "type":"PropertyClaim",
+                      "name":"P3.3.1",
+                      "short_description":"The convolutional neural network is able to accurately classify the {X} most common incidents.",
+                      "long_description":"N/A",
+                      "goal_id":null,
+                      "property_claim_id":284,
+                      "level":3,
+                      "claim_type":"Project claim",
+                      "property_claims":[],
+                      "evidence":[],
+                      "strategy_id":null
+                    },
+                    {
+                      
+                      "type":"PropertyClaim",
+                      "name":"P3.3.2",
+                      "short_description":"Any reports that exceed the uncertainty threshold are flagged for human review.",
+                      "long_description":"N/A",
+                      "goal_id":null,
+                      "property_claim_id":284,
+                      "level":3,
+                      "claim_type":"Project claim",
+                      "property_claims":[],
+                      "evidence":[],
+                      "strategy_id":null
+                    }
+                  ],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P3.4",
+                  "short_description":"An ongoing evaluation plan will detect drift in model performance.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":281,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[
+                    {
+                      
+                      "type":"Evidence",
+                      "name":"E3",
+                      "short_description":"Evaluation Plan",
+                      "long_description":"N/A",
+                      "URL":"www.some-evidence.com",
+                      "property_claim_id":[287]
+                    }
+                  ],
+                  "strategy_id":null
+                }
+              ],
+              "evidence":[],
+              "strategy_id":60
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P4",
+              "short_description":"The Report It app adheres to all data governance and management requirements.",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P4.1",
+                  "short_description":"Data Protection 2018 Goals",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":289,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P4.2",
+                  "short_description":"UK GDPR Goals",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":289,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P4.3",
+                  "short_description":"Additional Westminster City Council DG Goals",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":289,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                }
+              ],
+              "evidence":[],
+              "strategy_id":60
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P5",
+              "short_description":"Oversight and control mechanisms are sufficient for intended use.",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.1",
+                  "short_description":"Stakeholder responsibilities have been clearly documented and communicated.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[
+                    {
+                      
+                      "type":"Evidence",
+                      "name":"E4",
+                      "short_description":"RACI matrix",
+                      "long_description":"N/A",
+                      "URL":"www.some-evidence.com",
+                      "property_claim_id":[291]
+                    }
+                  ],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.2",
+                  "short_description":"Stakeholders understand the system’s intended uses.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.3",
+                  "short_description":"Stakeholders understand how to effectively execute interactions with the system.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.4",
+                  "short_description":"Stakeholders understand how to interpret system behavior.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.5",
+                  "short_description":"Stakeholders understand when and how to override, intervene, or interrupt the system.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.6",
+                  "short_description":"Stakeholders understand how to remain aware of the possible tendency of over-relying on outputs produced by the system.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.7",
+                  "short_description":"Oversight and control mechanisms can be exercised by stakeholders in ordinary context of use.",
+                  "long_description":"N/A",
+                  "goal_id":null,
+                  "property_claim_id":290,
+                  "level":2,
+                  "claim_type":"Project claim",
+                  "property_claims":[],
+                  "evidence":[
+                    {
+                      
+                      "type":"Evidence",
+                      "name":"E5",
+                      "short_description":"Documentation of system use.",
+                      "long_description":"N/A",
+                      "URL":"www.some-evidence.com",
+                      "property_claim_id":[297]
+                    },
+                    {
+                      
+                      "type":"Evidence",
+                      "name":"E6",
+                      "short_description":"Compliance with WCAG criteria",
+                      "long_description":"N/A",
+                      "URL":"www.some-evidence.com",
+                      "property_claim_id":[297]
+                    }
+                  ],
+                  "strategy_id":null
+                }
+              ],
+              "evidence":[],
+              "strategy_id":60
+            }
+          ]
+        },
+        {
+          
+          "name":"S2",
+          "short_description":"Argument over Transparency pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P6",
+              "short_description":"Uninstantiated strategy",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":61
+            }
+          ]
+        },
+        {
+          
+          "name":"S3",
+          "short_description":"Argument over Fairness pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P7",
+              "short_description":"Uninstantiated strategy",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":62
+            }
+          ]
+        },
+        {
+          
+          "name":"S4",
+          "short_description":"Argument over Reliability & Safety pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P8",
+              "short_description":"Uninstantiated strategy",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":63
+            }
+          ]
+        },
+        {
+          
+          "name":"S5",
+          "short_description":"Argument over Privacy & Security pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P9",
+              "short_description":"Uninstantiated strategy",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":64
+            }
+          ]
+        },
+        {
+          
+          "name":"S6",
+          "short_description":"Argument over Inclusiveness pillar",
+          "long_description":"N/A",
+          "goal_id":111,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P10",
+              "short_description":"Description",
+              "long_description":"N/A",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Project claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":65
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "owner":14,
+  "edit_groups":[],
+  "view_groups":[],
+  "color_profile":"default",
+  "comments":[],
+  "permissions":"manage"
+}
