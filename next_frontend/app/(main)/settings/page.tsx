@@ -8,7 +8,7 @@ const SettingsPage = () => {
     <main>
       <h1 className="sr-only">Account Settings</h1>
 
-      <header className="border-b border-foreground/5">
+      <header className="border-b border-foreground/500">
         <SettingsNav />
       </header>
 

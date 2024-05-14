@@ -71,9 +71,9 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     })
 
     layoutNodes(updatedNodes, updatedEdges)
-    window.requestAnimationFrame(() => {
-      fitView();
-    });
+    // window.requestAnimationFrame(() => {
+    //   fitView();
+    // });
 
     setHidden(!hidden);
 
