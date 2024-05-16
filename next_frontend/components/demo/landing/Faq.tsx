@@ -1,39 +1,33 @@
 const faqs = [
   {
     id: 1,
-    question: "What's the best thing about Switzerland?",
+    question: "What is TEA?",
     answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+      "TEA, short for Transformative Evidential Assurance Platform, is an innovative tool designed to provide assurance and trustworthiness to your data and analyses.",
   },
   {
-    id: 1,
-    question: "What's the best thing about Switzerland?",
+    id: 2,
+    question: "How does TEA ensure evidential assurance?",
     answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+      "TEA employs a robust evidential framework that tracks and verifies the integrity of data and analyses in real-time, providing a reliable foundation for decision-making.",
   },
   {
-    id: 1,
-    question: "What's the best thing about Switzerland?",
+    id: 3,
+    question: "Is TEA suitable for my organization?",
     answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+      "Absolutely! TEA is designed to be versatile and adaptable, catering to the needs of various organizations across different industries. Whether you're a small startup or a large enterprise, TEA can help enhance your assurance processes.",
   },
   {
-    id: 1,
-    question: "What's the best thing about Switzerland?",
+    id: 4,
+    question: "Can I customize TEA to fit my workflow?",
     answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+      "Yes, you can! TEA offers customizable workflows, allowing you to tailor the platform to align with your specific requirements and preferences.",
   },
   {
-    id: 1,
-    question: "What's the best thing about Switzerland?",
+    id: 5,
+    question: "How easy is it to integrate TEA into my existing systems?",
     answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
-  },
-  {
-    id: 1,
-    question: "What's the best thing about Switzerland?",
-    answer:
-      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+      "Integrating TEA is straightforward and seamless. Our team provides comprehensive support to ensure a smooth integration process, minimizing disruption to your workflow.",
   },
 ]
 

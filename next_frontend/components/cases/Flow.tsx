@@ -21,6 +21,7 @@ import { getLayoutedElements } from '@/lib/layout-helper';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from 'next-themes';
+import { useToast } from '../ui/use-toast';
 
 interface FlowProps {
 }
@@ -32,6 +33,7 @@ function Flow({ }: FlowProps) {
   const [selectedNode, setSelectedNode] = useState<Node | any>(null)
   const [loading, setLoading] = useState(true)
   const { theme } = useTheme()
+  const { toast } = useToast()
 
   const onLayout = (direction: any) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
@@ -67,27 +69,43 @@ function Flow({ }: FlowProps) {
 
   const showCreateGoal = (nodes.length > 0 && nodes[0].type === 'goal') ? false : true
 
-  const notify = (message: string) => toast.success(message, {
-    position: "top-right",
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    theme,
-  });
+  // const notify = (message: string) => toast.success(message, {
+  //   position: "top-right",
+  //   autoClose: 5000,
+  //   hideProgressBar: false,
+  //   closeOnClick: true,
+  //   pauseOnHover: true,
+  //   draggable: true,
+  //   progress: undefined,
+  //   theme,
+  // });
 
-  const notifyError = (message: string) => toast.error(message, {
-    position: "top-right",
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    theme,
-  });
+  const notify = (message: string) => {
+    toast({
+      variant: "success",
+      // title: "Success",
+      description: message,
+    })
+  }
+
+  const notifyError = (message: string) => {
+    toast({
+      variant: "destructive",
+      title: "Uh oh! Something went wrong.",
+      description: message,
+    })
+  }
+
+  // const notifyError = (message: string) => toast.error(message, {
+  //   position: "top-right",
+  //   autoClose: 5000,
+  //   hideProgressBar: false,
+  //   closeOnClick: true,
+  //   pauseOnHover: true,
+  //   draggable: true,
+  //   progress: undefined,
+  //   theme,
+  // });
 
   return (
     <div className='min-h-screen'>
@@ -114,7 +132,7 @@ function Flow({ }: FlowProps) {
             <Controls className='z-50' />
             <Background/>
           </ReactFlow>
-          <ToastContainer
+          {/* <ToastContainer
             position="top-right"
             autoClose={5000}
             hideProgressBar={false}
@@ -125,7 +143,7 @@ function Flow({ }: FlowProps) {
             draggable
             pauseOnHover
             theme={theme}
-          />
+          /> */}
           <ActionButtons
             showCreateGoal={showCreateGoal}
             actions={{ onLayout }}

@@ -350,7 +350,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
             <div>
               {/* Your content */}
               {children}
-              {/* <FeedbackBanner /> */}
+              <FeedbackBanner />
             </div>
           </main>
         </div>

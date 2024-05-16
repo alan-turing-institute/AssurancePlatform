@@ -9,33 +9,33 @@ import {
 
 const features = [
   {
-    name: 'Push to deploy.',
-    description: 'Lorem ipsum, dolor sit amet consectetur adipisicing elit aute id magna.',
+    name: 'Seamless Integration.',
+    description: 'TEA seamlessly integrates into your existing workflow, enhancing efficiency without disruption.',
     icon: CloudArrowUpIcon,
   },
   {
-    name: 'SSL certificates.',
-    description: 'Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo.',
+    name: 'Evidential Assurance.',
+    description: 'Ensure the integrity and trustworthiness of your data and analyses with TEAs robust evidential framework.',
     icon: LockClosedIcon,
   },
   {
-    name: 'Simple queues.',
-    description: 'Ac tincidunt sapien vehicula erat auctor pellentesque rhoncus.',
+    name: 'Real-time Monitoring.',
+    description: 'Stay informed with real-time monitoring capabilities, providing insights and alerts when anomalies occur.',
     icon: ArrowPathIcon,
   },
   {
-    name: 'Advanced security.',
-    description: 'Lorem ipsum, dolor sit amet consectetur adipisicing elit aute id magna.',
+    name: 'Customizable Workflows.',
+    description: 'Tailor TEA to fit your unique needs with customizable workflows, ensuring a personalized experience.',
     icon: FingerPrintIcon,
   },
   {
-    name: 'Powerful API.',
-    description: 'Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo.',
+    name: 'Collaborative Environment:.',
+    description: 'Foster collaboration among team members with TEAs collaborative features, promoting transparency and synergy.',
     icon: Cog6ToothIcon,
   },
   {
-    name: 'Database backups.',
-    description: 'Ac tincidunt sapien vehicula erat auctor pellentesque rhoncus. ',
+    name: 'Scalability.',
+    description: 'Grow with confidence knowing that TEA scales effortlessly to accommodate your evolving requirements and workload.',
     icon: ServerIcon,
   },
 ]
@@ -46,11 +46,11 @@ export default function Features() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl sm:text-center">
           <h2 className="text-base font-semibold leading-7 text-indigo-600">Everything you need</h2>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">No server? No problem.</p>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
+          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">What TEA offers</p>
+          {/* <p className="mt-6 text-lg leading-8 text-gray-600">
             Lorem ipsum, dolor sit amet consectetur adipisicing elit. Maiores impedit perferendis suscipit eaque, iste
             dolor cupiditate blanditiis.
-          </p>
+          </p> */}
         </div>
       </div>
       <div className="relative overflow-hidden pt-16">

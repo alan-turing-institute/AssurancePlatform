@@ -125,7 +125,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
       }
 
       if(imageUrl) {
-        notify('📷 Screenshot Saved!')
+        notify('Screenshot Saved!')
       }
     }
   }
