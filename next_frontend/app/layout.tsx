@@ -4,7 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ModalProvider } from "@/providers/modal-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster"
 
 export const fontSans = FontSans({
   subsets: ["latin"],
@@ -35,6 +35,7 @@ export default function RootLayout({
           >
              <ModalProvider />
             {children}
+            <Toaster />
           </ThemeProvider>
           <Toaster />
       </body>

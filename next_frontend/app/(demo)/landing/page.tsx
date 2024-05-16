@@ -13,7 +13,7 @@ const LandingPage = () => {
       <Features />
       <CTA />
       <FAQ />
-      <MailingList />
+      {/* <MailingList /> */}
       <Footer />
     </>
   )
