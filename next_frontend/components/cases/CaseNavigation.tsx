@@ -91,7 +91,7 @@ export function CaseNavigation() {
           </NavigationMenuContent>
         </NavigationMenuItem> */}
         <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-indigo-600 hover:bg-indigo-700 hover:text-white dark:bg-slate-900 dark:hover:bg-slate-800">Components</NavigationMenuTrigger>
+          <NavigationMenuTrigger className="bg-indigo-600 hover:bg-indigo-700 hover:text-white dark:bg-slate-900 dark:hover:bg-slate-800">Resources</NavigationMenuTrigger>
           <NavigationMenuContent>
             <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
               {components.map((component) => (
