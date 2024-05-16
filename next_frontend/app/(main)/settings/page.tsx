@@ -8,12 +8,12 @@ const SettingsPage = () => {
     <main>
       <h1 className="sr-only">Account Settings</h1>
 
-      <header className="border-b border-foreground/500">
+      {/* <header className="border-b border-foreground/500">
         <SettingsNav />
-      </header>
+      </header> */}
 
       <div className="divide-y divide-foreground/5">
-        <PersonalInfoForm />
+        {/* <PersonalInfoForm />
         <PasswordForm />
         <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
           <div>
@@ -32,7 +32,8 @@ const SettingsPage = () => {
               Yes, delete my account
             </button>
           </form>
-        </div>
+        </div> */}
+        <p>Settings coming soon...</p>
       </div>
     </main>
   )
