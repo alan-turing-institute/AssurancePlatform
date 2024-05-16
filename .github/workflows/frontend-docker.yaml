@@ -23,7 +23,7 @@ jobs:
           docker push turingassuranceplatform/eap_frontend:main
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
-        working-directory: frontend
+        working-directory: next_frontend
         run: |
           docker build -t turingassuranceplatform/eap_frontend:develop -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
