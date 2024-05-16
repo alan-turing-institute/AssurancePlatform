@@ -82,7 +82,6 @@ function Flow({ }: FlowProps) {
 
   const notify = (message: string) => {
     toast({
-      variant: "success",
       // title: "Success",
       description: message,
     })
