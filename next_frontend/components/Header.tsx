@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, MessageSquareMore, X } from 'lucide-react';
 import { ModeToggle } from './ui/theme-toggle';
 import { useRouter } from 'next/navigation';
 import { useLoginToken } from '@/hooks/useAuth';
 import useStore from '@/data/store';
 import { CaseNavigation } from './cases/CaseNavigation';
+import Link from 'next/link';
 
 interface HeaderProps {}
 
@@ -84,6 +85,14 @@ const Header = ({ }: HeaderProps) => {
 
         <div className='flex justify-start items-center gap-4'>
           <CaseNavigation />
+          <Link 
+            href={'https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/'}
+            target='_blank'
+            className='flex justify-center items-center gap-2 bg-indigo-600 text-white py-2 px-3 rounded-md'
+          >
+            <MessageSquareMore className='w-4 h-4' />
+            <span className="font-medium text-sm">Feedback</span>
+          </Link>
           <ModeToggle className='bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none' />
         </div>
       </div>
