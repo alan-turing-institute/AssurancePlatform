@@ -86,7 +86,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
         <Trash2 className='w-4 h-4' />
       </button>
       <AlertModal
-        isOpen={open} 
+        isOpen={open}
         onClose={() => setOpen(false)}
         onConfirm={onDelete}
         loading={loading}

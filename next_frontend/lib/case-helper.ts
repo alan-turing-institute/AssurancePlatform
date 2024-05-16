@@ -137,7 +137,7 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
                 return array
             }
         }
-        
+
         if(item.property_claims && item.property_claims.length > 0) {
             const updatedNestedArray = updateEvidenceNested(item.property_claims, id, newEvidence)
             if (updatedNestedArray) {
@@ -178,7 +178,7 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
             body: JSON.stringify(newItem),
         };
         const response = await fetch(url, requestOptions);
-        
+
         if(!response.ok) {
             return { error: `Something went wrong ${response.status}` }
         }
@@ -186,7 +186,7 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
         const result = await response.json()
 
         const data = {
-            ...newItem, 
+            ...newItem,
             id: result.id
         }
 
@@ -230,7 +230,7 @@ export const deleteAssuranceCaseNode = async (type: string, id: any, token: stri
             }
         };
         const response = await fetch(url, requestOptions);
-        
+
         if(response.ok) {
             return true
         }
@@ -274,7 +274,7 @@ export const updateAssuranceCaseNode = async (type: string, id: any, token: stri
             body: JSON.stringify(updateItem)
         };
         const response = await fetch(url, requestOptions);
-        
+
         if(response.ok) {
             return true
         }
@@ -324,7 +324,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
             const newContext = assuranceCase.goals[0].context.map((context: any) => {
                 if(context.id === id) {
                     return {
-                        ...context, 
+                        ...context,
                         ...updatedItem
                     }
                 }
@@ -341,7 +341,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
             const newStrategy = assuranceCase.goals[0].strategies.map((strategy: any) => {
                 if(strategy.id === id) {
                     return {
-                        ...strategy, 
+                        ...strategy,
                         ...updatedItem
                     }
                 }
@@ -389,7 +389,7 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
     let identifier: number = 0
     let newArray: any[] = []
     let parentPrefix: number | null = null
-    
+
     switch (newNodeType.toLowerCase()) {
         case 'context':
             newArray = [...parentNode.data.context]
@@ -410,12 +410,12 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
 
     if(newArray.length > 0) {
         const lastItem = newArray.pop()
-        
+
         if(newNodeType === 'property' && parentNode.type === 'property') {
             const lastIdentifier = parseFloat(lastItem.name.substring(1)).toString()
             const subIdentifier = lastIdentifier.split('.')[1]
             identifier = parseInt(subIdentifier) + 1;
-        } 
+        }
         else {
             const lastIdentifier = parseFloat(lastItem.name.substring(1))
             identifier = lastIdentifier + 1

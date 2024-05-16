@@ -24,8 +24,8 @@ const CaseNotes = ({ isOpen, onClose } : CaseNotesProps ) => {
   }
 
   return (
-    <NotesSheet 
-      isOpen={isOpen} 
+    <NotesSheet
+      isOpen={isOpen}
       onClose={onClose}
       title='Manage Case Notes'
       description='Use this section to view and manage your notes.'

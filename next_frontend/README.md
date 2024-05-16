@@ -67,7 +67,7 @@ The application uses environment variables for configuration. Create a `.env.loc
 
 ### Deployment
 
-You can deploy using Docker. Please follow these commands to build your docker image with docker compose. 
+You can deploy using Docker. Please follow these commands to build your docker image with docker compose.
 
 ```
 docker compose build

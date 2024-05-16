@@ -21,7 +21,7 @@ const NodeCreate = ({ isOpen, onClose } : NodeCreateProps ) => {
   }
 
   return (
-    <CreateSheet 
+    <CreateSheet
       isOpen={isOpen} onClose={onClose}
     >
       <CreateForm onClose={onClose} />

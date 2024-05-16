@@ -45,7 +45,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const identifier = await setNodeIdentifier(null, 'goal') 
+    const identifier = await setNodeIdentifier(null, 'goal')
 
     const newGoal = {
       "name": `G${identifier}`,
@@ -59,7 +59,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
     }
 
     const result: any = await createAssuranceCaseNode('goals', newGoal, token)
-    
+
     if(result.error) {
       // TODO: Rendering error
       return console.log(result.error)

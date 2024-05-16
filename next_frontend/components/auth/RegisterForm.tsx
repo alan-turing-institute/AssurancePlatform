@@ -33,7 +33,7 @@ const RegisterForm = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if(values.password1 !== values.password2) {
       setErrors(['Your passwords must match, please try again.'])
-      return 
+      return
     }
 
     setErrors([]);
@@ -59,7 +59,7 @@ const RegisterForm = () => {
     if (result.key) {
       setToken(result.key);
       router.push('/')
-    } 
+    }
     else {
         const currentErrors = [];
         setLoading(false);
@@ -92,7 +92,7 @@ const RegisterForm = () => {
       <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
 
         {errors && errors.map((error: any) => (
-          <div 
+          <div
           key={crypto.randomUUID()}
           className='bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mb-6'
           >

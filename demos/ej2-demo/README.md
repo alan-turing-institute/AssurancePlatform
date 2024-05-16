@@ -1,6 +1,6 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Documentation 
+## Documentation
 [ej2 Docs](https://ej2.syncfusion.com/react/documentation/diagram/shapes?cs-save-lang=1&cs-lang=ts#flow-shapes)
 
 ## Getting Started

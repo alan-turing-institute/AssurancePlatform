@@ -32,7 +32,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false);
 
-  const [token] = useLoginToken(); 
+  const [token] = useLoginToken();
   const { assuranceCase, setAssuranceCase } = useStore()
   const router = useRouter()
 
@@ -99,7 +99,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     const screenshotTarget = document.getElementById('ReactFlow');
     if(screenshotTarget) {
       const canvas = await html2canvas(screenshotTarget)
-     
+
       const base64image = canvas.toDataURL("image/png");
 
       const myHeaders = new Headers();
@@ -119,7 +119,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
       const response = await fetch("/api/screenshot", requestOptions)
       const { imageUrl, error, message } = await response.json()
-      
+
       if(error) {
         notifyError(message)
       }
@@ -163,7 +163,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
       <NodeCreate isOpen={open} onClose={() => setOpen(false)} />
       <CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
       <AlertModal
-        isOpen={deleteOpen} 
+        isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         onConfirm={onDelete}
         loading={loading}

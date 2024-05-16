@@ -78,7 +78,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     setHidden(!hidden);
 
   }
-  
+
   return (
     <button onClick={(e) => handleToggle(e)}>
       <div className='infline-flex hover:bg-slate-900/10 p-1 rounded-full'>

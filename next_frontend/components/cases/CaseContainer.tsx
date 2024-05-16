@@ -17,7 +17,7 @@ const CaseContainer = () => {
 
   const params = useParams()
   const { caseId } = params
-  
+
   const [token] = useLoginToken();
   // useEnforceLogin()
 
@@ -27,11 +27,11 @@ const CaseContainer = () => {
         Authorization: `Token ${token}`,
       },
     };
-  
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
-      // TODO: 404 NOT FOUND PAGE  
+      // TODO: 404 NOT FOUND PAGE
       console.log('Render Not Found Page')
       return
     }

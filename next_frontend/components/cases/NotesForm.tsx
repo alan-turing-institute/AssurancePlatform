@@ -54,7 +54,7 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
             })
         };
         const response = await fetch(url, requestOptions);
-        
+
         if(!response.ok) {
             console.log('error')
         }
@@ -67,7 +67,7 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
           ...assuranceCase,
           comments: updatedComments
         }
-    
+
         setAssuranceCase(updatedAssuranceCase)
 
 

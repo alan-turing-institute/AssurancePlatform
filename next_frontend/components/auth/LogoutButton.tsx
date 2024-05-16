@@ -23,7 +23,7 @@ const LogoutButton = () => {
       setToken(null);
       router.push('/login')
     }
-  } 
+  }
 
   return (
     <Button

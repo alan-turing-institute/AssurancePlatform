@@ -37,7 +37,7 @@ const SignInForm = () => {
 
   //   //   setErrors([]);
   //     setLoading(true);
-      
+
   //     const user = {
   //       username: username,
   //       password: password,
@@ -86,7 +86,7 @@ const SignInForm = () => {
       username: values.username,
       password: values.password,
     };
-    
+
     const requestOptions: RequestInit = {
       method: "POST",
       headers: {
@@ -124,7 +124,7 @@ const SignInForm = () => {
       </div>
 
       {errors && errors.map(error => (
-        <div 
+        <div
           key={crypto.randomUUID()}
           className='bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mt-4 -mb-4'
           >

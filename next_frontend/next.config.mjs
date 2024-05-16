@@ -4,10 +4,10 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'teamedia.blob.core.windows.net',
-        port: '',
-        pathname: '/sample-container/**',
+        protocol: "https",
+        hostname: "teamedia.blob.core.windows.net",
+        port: "",
+        pathname: "/sample-container/**",
       },
     ],
   },

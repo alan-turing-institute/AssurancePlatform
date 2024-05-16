@@ -108,7 +108,7 @@ const createEdgesFromNodes = (nodes:any[]) => {
 //       data: { id: item.id, name: item.name, type: item.type, description: item.short_description, ...item },
 //       position: { x: 0, y: 50 },
 //       hidden: false,
-//       height: 64, 
+//       height: 64,
 //       width: 288
 //     };
 

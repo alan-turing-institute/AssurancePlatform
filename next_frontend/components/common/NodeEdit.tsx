@@ -45,7 +45,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   /** Function used to handle deletion of the current selected item */
   const handleDelete = async () => {
     const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
-    
+
     if(deleted) {
       // TODO: Remove node from selected Nodes
       window.location.reload()
@@ -53,9 +53,9 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
   }
 
   return (
-    <EditSheet 
-      title={`Editing ${node.data.name}`} 
-      description="Use this form to update your goal." 
+    <EditSheet
+      title={`Editing ${node.data.name}`}
+      description="Use this form to update your goal."
       isOpen={isOpen} onClose={onClose}
     >
       {selectedLink ? (
@@ -96,7 +96,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
 
         {/* Handle Delete */}
         <div className="mt-6">
-          <Button variant={'ghost'} 
+          <Button variant={'ghost'}
             onClick={handleDelete}
             className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"
           >

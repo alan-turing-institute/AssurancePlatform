@@ -90,11 +90,11 @@ export const ImportModal = () => {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const { file } = values
-    
+
     try {
       if (file) {
         const fileReader = new FileReader();
-  
+
         fileReader.onload = async (event: any) => {
           try {
             const json = JSON.parse(event.target.result as string);
@@ -103,7 +103,7 @@ export const ImportModal = () => {
             console.error("Error parsing JSON:", error);
           }
         };
-  
+
         fileReader.readAsText(file);
       }
     } catch (error) {
@@ -115,7 +115,7 @@ export const ImportModal = () => {
     <Modal
       title="Import File"
       description="Please select a file you wish to import to create your case."
-      isOpen={importModal.isOpen} 
+      isOpen={importModal.isOpen}
       onClose={importModal.onClose}
     >
       <Form {...form}>

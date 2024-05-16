@@ -48,16 +48,16 @@ const EditForm: React.FC<EditFormProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Update item via api 
+    // Update item via api
     const updateItem = {
       short_description: values.description
     }
 
     const updated = await updateAssuranceCaseNode(node.type, node.data.id, token, updateItem)
-    
+
     if(updated) {
       // Assurance Case Update
-      const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node) 
+      const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node)
       if(updatedAssuranceCase) {
         setAssuranceCase(updatedAssuranceCase)
       }

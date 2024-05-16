@@ -52,7 +52,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   const handleContextAdd = async (description: string) => {
     const identifier = await setNodeIdentifier(node, 'context')
 
-    // Create a new context object to add - this should be created by calling the api 
+    // Create a new context object to add - this should be created by calling the api
     const newContextItem = {
       "name": `C${identifier}`,
       "short_description": description,
@@ -61,7 +61,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     };
 
     const result: any = await createAssuranceCaseNode('contexts', newContextItem, token)
-    
+
     if(result.error) {
       // TODO: Rendering error
     }
@@ -95,7 +95,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "name": `S${identifier}`,
       "short_description": description,
       "long_description": description,
-      "goal_id": assuranceCase.goals[0].id, 
+      "goal_id": assuranceCase.goals[0].id,
       "property_claims": []
     };
 
@@ -155,7 +155,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
     if(result.error) {
       console.log('RESULT ERROR', result.error)
-      return 
+      return
     }
 
     if(node.type === 'strategy') {
@@ -165,7 +165,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       if (goalContainingStrategy) {
         // Clone the assuranceCase to avoid mutating the state directly
         const updatedAssuranceCase = { ...assuranceCase };
-    
+
         // Update the strategies array in the goal containing the specific strategy
         const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
           if (strategy.id === result.data.strategy_id) {
@@ -177,13 +177,13 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
           }
           return strategy;
         });
-    
+
         // Update the goal containing the specific strategy with the updated strategies array
         const updatedGoalContainingStrategy = {
           ...goalContainingStrategy,
           strategies: updatedStrategies
         };
-    
+
         // Update the assuranceCase goals array with the updated goal containing the specific strategy
         updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
           if (goal === goalContainingStrategy) {
@@ -191,7 +191,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
           }
           return goal;
         });
-    
+
         // Update Assurance Case in state
         setAssuranceCase(updatedAssuranceCase);
         reset()
@@ -245,7 +245,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     const identifier = await setNodeIdentifier(node, 'evidence')
 
     let property_claim_id: any = [node.data.id]
-    
+
     // Create a new evidence object to add
     const newEvidenceItem = {
       name: `E${identifier}`,

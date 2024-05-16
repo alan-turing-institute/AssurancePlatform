@@ -81,7 +81,7 @@ const Header = ({ }: HeaderProps) => {
             </p>
           )}
         </div>
-        
+
         <div className='flex justify-start items-center gap-4'>
           <CaseNavigation />
           <ModeToggle className='bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none' />

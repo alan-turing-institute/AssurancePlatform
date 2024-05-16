@@ -99,7 +99,7 @@ export function FeedbackForm() {
           />
           <div className='flex justify-between items-center'>
           <Button onClick={(e) => {
-            e.preventDefault() 
+            e.preventDefault()
             router.push('/')
           }} variant={"ghost"}><MoveLeft className="w-4 h-4 mr-2"/>Cancel</Button>
           <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">Submit</Button>

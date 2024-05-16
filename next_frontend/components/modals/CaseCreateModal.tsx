@@ -90,7 +90,7 @@ export const CaseCreateModal = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const newCase = templates[parseInt(values.template)]
-    
+
     try {
       newCase.name = values.name
       newCase.description = values.description
@@ -117,7 +117,7 @@ export const CaseCreateModal = () => {
     <Modal
       title="Create New Assurance Case"
       description="Please enter a name and description for your new assurance case."
-      isOpen={createCaseModal.isOpen} 
+      isOpen={createCaseModal.isOpen}
       onClose={createCaseModal.onClose}
     >
     {loading ? (
@@ -194,7 +194,7 @@ export const CaseCreateModal = () => {
         </div>
       </div>
     )}
-    
+
     </Modal>
   );
 };

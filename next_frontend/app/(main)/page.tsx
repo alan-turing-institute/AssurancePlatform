@@ -21,13 +21,13 @@ const Dashboard = () => {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
     myHeaders.append("Authorization", `Token ${token}`);
-  
+
     var requestOptions: RequestInit = {
       method: 'GET',
       headers: myHeaders,
       redirect: 'follow'
     };
-  
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
 
     if(response.status === 401) {
@@ -36,7 +36,7 @@ const Dashboard = () => {
     }
     const result = await response.json()
     return result
-  }    
+  }
 
   useEffect(() => {
     if(token === null) {

@@ -38,7 +38,7 @@ function Flow({ }: FlowProps) {
 
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  
+
     window.requestAnimationFrame(() => {
       fitView();
     });
@@ -57,7 +57,7 @@ function Flow({ }: FlowProps) {
   useEffect(() => {
     convert()
   },[assuranceCase])
-  
+
   // const onConnect = useCallback((params: any ) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
@@ -126,16 +126,16 @@ function Flow({ }: FlowProps) {
             pauseOnHover
             theme={theme}
           />
-          <ActionButtons 
-            showCreateGoal={showCreateGoal} 
-            actions={{ onLayout }} 
-            notify={notify} 
-            notifyError={notifyError} 
+          <ActionButtons
+            showCreateGoal={showCreateGoal}
+            actions={{ onLayout }}
+            notify={notify}
+            notifyError={notifyError}
           />
           <NodeEdit node={selectedNode} isOpen={editOpen} onClose={() => setEditOpen(false)} />
         </div>
       )}
-      
+
     </div>
   );
 }

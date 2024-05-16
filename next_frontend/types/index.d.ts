@@ -9,7 +9,7 @@ type Note = {
   assurance_case:51,
   content:"asdasdsadasdds",
   created_at:"2024-04-30T13:03:43.507729Z"
-  
+
   tags?: string[]
   assigned?: any
 }
