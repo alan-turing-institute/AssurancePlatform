@@ -25,7 +25,7 @@ You will now drop the existing database and create a new one using `psql`.
 Open your terminal or command prompt and execute the following commands:
 
 ```bash
-$ psql --host=SERVER_NAME.postgres.database.azure.com --port=5432 --username=ADMIN_USERNAME@SERVER_NAME --dbname=postgres
+psql --host=SERVER_NAME.postgres.database.azure.com --port=5432 --username=ADMIN_USERNAME@SERVER_NAME --dbname=postgres
 ```
 
 Once connected, run:

@@ -13,7 +13,7 @@ Retrieve a list of all comments associated with a specific assurance case by mak
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/comments/<int:assurance_case_id>/ \
+curl -X GET http://localhost:8000/api/comments/<int:assurance_case_id>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -28,7 +28,7 @@ To add a new comment to an assurance case, use the POST method with the assuranc
 ### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/comments/<int:assurance_case_id>/ \
+curl -X POST http://localhost:8000/api/comments/<int:assurance_case_id>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"content": "Your insightful comment here."}'
@@ -45,7 +45,7 @@ Access the details of a specific comment by its ID using a GET request.
 ### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/comments/<int:pk>/ \
+curl -X GET http://localhost:8000/api/comments/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -60,7 +60,7 @@ Update the content of an existing comment by sending a PUT request to the commen
 ### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/comments/<int:pk>/ \
+curl -X PUT http://localhost:8000/api/comments/<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"content": "Updated content of the comment."}'
@@ -77,7 +77,7 @@ To remove a comment from an assurance case, issue a DELETE request to the specif
 ### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/comments/<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/comments/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 

@@ -59,7 +59,7 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
 To enable the export of SVG images from the frontend, you need to install the Mermaid CLI globally on your system.
 
 ```shell
-$ npm install -g @mermaid-js/mermaid-cli
+npm install -g @mermaid-js/mermaid-cli
 ```
 
 ## Troubleshooting SSL Errors
@@ -67,9 +67,9 @@ $ npm install -g @mermaid-js/mermaid-cli
 If you encounter any SSL errors during setup, try updating npm and forcing an audit fix, followed by updating react-scripts to the latest version.
 
 ```shell
-$ npm update
-$ npm audit fix --force
-$ npm i react-scripts@latest
+npm update && \
+npm audit fix --force && \
+npm i react-scripts@latest
 ```
 
 ## Conclusion

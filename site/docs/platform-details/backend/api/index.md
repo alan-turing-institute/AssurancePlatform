@@ -11,7 +11,7 @@ To get you started with the TEA Platform API, we'll walk you through a few basic
 To interact with the TEA Platform API, you'll first need to authenticate. If you're logging in, you'll typically post your credentials to receive an authentication token.
 
 ```bash
-$ curl -X POST http://localhost:8000/auth/login/ \
+curl -X POST http://localhost:8000/auth/login/ \
      -H 'Content-Type: application/json' \
      -d '{"username": "yourusername", "password": "yourpassword"}'
 ```
@@ -21,7 +21,7 @@ $ curl -X POST http://localhost:8000/auth/login/ \
 You can list assurance cases available to you.
 
 ```bash
-$ curl -X GET http://localhost:8000/api/cases/
+curl -X GET http://localhost:8000/api/cases/
 ```
 
 ### Add a New Case
@@ -29,7 +29,7 @@ $ curl -X GET http://localhost:8000/api/cases/
 To create a new assurance case, you'll need to POST the required data.
 
 ```bash
-$ curl -X POST http://localhost:8000/api/cases/ \
+curl -X POST http://localhost:8000/api/cases/ \
      -H 'Authorization: Bearer your_token_here' \
      -H 'Content-Type: application/json' \
      -d '{"name": "New Assurance Case", "description": "Detailed description of the case", "user_id": "1", "lock_uuid": "", "color_profile": "default"}'

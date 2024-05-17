@@ -15,7 +15,7 @@ The local database for the TEA Platform is stored in an SQLite file typically lo
 To reset your database, you need to delete the existing SQLite file. Navigate to the **`eap_backend`** directory and remove the **`db.sqlite3`** file.
 
 ```bash
-$ rm eap_backend/db.sqlite3
+rm eap_backend/db.sqlite3
 ```
 
 ## 3. Recreate the Database
@@ -25,8 +25,8 @@ After deleting the old database file, you'll need to recreate the database struc
 Ensure your backend environment is correctly set up, then execute the following Django management commands:
 
 ```bash
-$ python manage.py makemigrations
-$ python manage.py migrate
+python manage.py makemigrations && \
+python manage.py migrate
 ```
 
 These commands will generate a **new `db.sqlite3` file** with a fresh database schema based on your Django models.

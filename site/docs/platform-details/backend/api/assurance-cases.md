@@ -13,7 +13,7 @@ The `curl` examples in the following serve as a quick way to test and interact w
 #### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/cases/ \
+curl -X GET http://localhost:8000/api/cases/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -26,7 +26,7 @@ A JSON array of assurance cases, each with its details.
 #### Request
 
 ```bash
-$ curl -X POST http://localhost:8000/api/cases/ \
+curl -X POST http://localhost:8000/api/cases/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Case Name", "description": "Case Description", "lock_uuid": "", "color_profile": "default"}'
@@ -41,7 +41,7 @@ JSON object of the created assurance case.
 #### Request
 
 ```bash
-$ curl -X GET http://localhost:8000/api/cases/<int:pk>/ \
+curl -X GET http://localhost:8000/api/cases/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -54,7 +54,7 @@ JSON object of the specified assurance case.
 #### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/cases/<int:pk>/ \
+curl -X PUT http://localhost:8000/api/cases/<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Case Name", "description": "Updated Case Description"}'
@@ -69,7 +69,7 @@ JSON object of the updated assurance case.
 #### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/cases/<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/cases/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -84,14 +84,14 @@ HTTP 204 No Content on successful deletion.
 #### List All Goals
 
 ```bash
-$ curl -X GET http://localhost:8000/api/goals/ \
+curl -X GET http://localhost:8000/api/goals/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
 #### Create a New Goal
 
 ```bash
-$ curl -X POST http://localhost:8000/api/goals/ \
+curl -X POST http://localhost:8000/api/goals/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Goal Name", "description": "Goal Description", "assurance_case": <case_id>}'
@@ -104,7 +104,7 @@ To update an existing goal element in an assurance case, use the PUT method at t
 ##### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/goals/<int:pk>/ \
+curl -X PUT http://localhost:8000/api/goals/<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Goal Name", "description": "Updated Goal Description"}'
@@ -121,7 +121,7 @@ To delete a specific goal element from an assurance case, send a DELETE request 
 ##### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/goals/<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/goals/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -134,14 +134,14 @@ HTTP 204 No Content on successful deletion, indicating the goal has been removed
 #### List All Contexts
 
 ```bash
-$ curl -X GET http://localhost:8000/api/contexts/ \
+curl -X GET http://localhost:8000/api/contexts/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
 #### Create a New Context
 
 ```bash
-$ curl -X POST http://localhost:8000/api/contexts/ \
+curl -X POST http://localhost:8000/api/contexts/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Context Name", "description": "Context Description", "goal": <goal_id>}'
@@ -154,7 +154,7 @@ To update details of a context element linked to a goal, utilize the PUT method 
 ##### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/contexts/<int:pk>/ \
+curl -X PUT http://localhost:8000/api/contexts/<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Context Name", "description": "Updated Context Description"}'
@@ -171,7 +171,7 @@ Remove a context element by sending a DELETE request to `/contexts/<int:pk>/`.
 ##### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/contexts/<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/contexts/<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -184,14 +184,14 @@ HTTP 204 No Content, confirming the context has been successfully deleted.
 #### List All Property Claims
 
 ```bash
-$ curl -X GET http://localhost:8000/api/propertyclaims/ \
+curl -X GET http://localhost:8000/api/propertyclaims/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
 #### Create a New Property Claim
 
 ```bash
-$ curl -X POST http://localhost:8000/api/propertyclaims/ \
+curl -X POST http://localhost:8000/api/propertyclaims/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Property Claim Name", "description": "Property Claim Description", "goal": <goal_id>}'
@@ -204,7 +204,7 @@ Property claims can be updated by sending a PUT request to `/propertyclaims/<int
 ##### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/propertyclaims//<int:pk>/ \
+curl -X PUT http://localhost:8000/api/propertyclaims//<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Claim Name", "description": "Updated Claim Description"}'
@@ -221,7 +221,7 @@ To delete a property claim, issue a DELETE command to `/propertyclaims/<int:pk>/
 ##### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/propertyclaims//<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/propertyclaims//<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
@@ -234,14 +234,14 @@ HTTP 204 No Content upon successful removal of the property claim.
 #### List All Strategies
 
 ```bash
-$ curl -X GET http://localhost:8000/api/strategies/ \
+curl -X GET http://localhost:8000/api/strategies/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
 #### Create a New Strategy
 
 ```bash
-$ curl -X POST http://localhost:8000/api/strategies/ \
+curl -X POST http://localhost:8000/api/strategies/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Strategy Name", "description": "Strategy Description", "goal": <goal_id>}'
@@ -254,7 +254,7 @@ Modify an existing strategy by using the PUT method on `/strategies/<int:pk>/`.
 ##### Request
 
 ```bash
-$ curl -X PUT http://localhost:8000/api/strategies//<int:pk>/ \
+curl -X PUT http://localhost:8000/api/strategies//<int:pk>/ \
      -H "Content-Type: application/json" \
      -H "Authorization: Token your_access_token_here" \
      -d '{"name": "Updated Strategy Name", "description": "Updated Strategy Description"}'
@@ -271,7 +271,7 @@ Remove a strategy from an assurance case by sending a DELETE request to `/strate
 ##### Request
 
 ```bash
-$ curl -X DELETE http://localhost:8000/api/strategies//<int:pk>/ \
+curl -X DELETE http://localhost:8000/api/strategies//<int:pk>/ \
      -H "Authorization: Token your_access_token_here"
 ```
 
