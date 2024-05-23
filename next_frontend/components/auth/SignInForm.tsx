@@ -26,51 +26,6 @@ const SignInForm = () => {
 
   const [_, setToken] = useLoginToken();
 
-  // const onSubmit = useCallback(
-  //   (e : any) => {
-  //     e.preventDefault();
-
-  //   //   if (!username || !password) {
-  //   //     setErrors(['You must provide these details.'])
-  //   //     return;
-  //   //   }
-
-  //   //   setErrors([]);
-  //     setLoading(true);
-
-  //     const user = {
-  //       username: username,
-  //       password: password,
-  //     };
-
-  //     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify(user),
-  //     })
-  //       .then((res) => res.json())
-  //       .then((data) => {
-  //         console.log('API Data', data)
-  //         if (data.key) {
-  //           setToken(data.key);
-  //           router.push('/')
-  //         } else {
-  //           setLoading(false);
-  //           setPassword("");
-  //           setToken(null);
-  //           setErrors(["Cannot log in with provided credentials"]);
-  //         }
-  //       })
-  //       .catch(() => {
-  //         setLoading(false); // Also set loading to false when there is an error
-  //         setErrors(["An error occurred, please try again later"]);
-  //       });
-  //   },
-  //   [username, password],
-  // );
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -100,7 +55,7 @@ const SignInForm = () => {
 
     if (result.key) {
       setToken(result.key);
-      router.push('/')
+      router.push('/dashboard')
       return
     } else {
       setLoading(false);

@@ -18,6 +18,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from "@/components/ui/sonner"
 import FeedbackBanner from '@/components/FeedbackBanner'
 import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -75,12 +76,12 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   {/* Sidebar component, swap this element with another sidebar if you like */}
                   <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 dark:bg-slate-900 px-6 pb-4">
                     <div className="flex h-16 shrink-0 items-center">
-                      {/* <img
-                        className="h-8 w-auto"
-                        src="https://tailwindui.com/img/logos/mark.svg?color=white"
-                        alt="Your Company"
-                      /> */}
-                      <p className='text-white font-semibold'>Assurance Platform</p>
+                      <Link href={'/dashboard'}>
+                        <p className='text-white font-semibold flex justify-start items-center gap-2'>
+                          <svg className='w-6 h-6' fill='white' xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 2v2.06A8.522 8.522 0 0 0 4.05 9H2v6h2.06A8.494 8.494 0 0 0 9 19.95V22h6v-2.06A8.494 8.494 0 0 0 19.95 15H22V9h-2.06A8.522 8.522 0 0 0 15 4.05V2m-4 2h2v2h-2m-2 .25V8h6V6.25c1.18.61 2.14 1.57 2.75 2.75H16v6h1.75A6.406 6.406 0 0 1 15 17.75V16H9v1.75A6.406 6.406 0 0 1 6.25 15H8V9H6.25A6.406 6.406 0 0 1 9 6.25M4 11h2v2H4m14-2h2v2h-2m-7 5h2v2h-2"></path></svg>
+                          Assurance Platform
+                        </p>
+                      </Link>
                     </div>
                     <nav className="flex flex-1 flex-col">
                       <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -176,15 +177,12 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
           {/* Sidebar component, swap this element with another sidebar if you like */}
           <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 dark:bg-slate-900 px-6 pb-4">
             <div className="flex h-16 shrink-0 items-center">
-              {/* <img
-                className="h-8 w-auto"
-                src="https://tailwindui.com/img/logos/mark.svg?color=white"
-                alt="Your Company"
-              /> */}
-              <p className='text-white font-semibold flex justify-start items-center gap-2'>
-              <svg className='w-6 h-6' fill='white' xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 2v2.06A8.522 8.522 0 0 0 4.05 9H2v6h2.06A8.494 8.494 0 0 0 9 19.95V22h6v-2.06A8.494 8.494 0 0 0 19.95 15H22V9h-2.06A8.522 8.522 0 0 0 15 4.05V2m-4 2h2v2h-2m-2 .25V8h6V6.25c1.18.61 2.14 1.57 2.75 2.75H16v6h1.75A6.406 6.406 0 0 1 15 17.75V16H9v1.75A6.406 6.406 0 0 1 6.25 15H8V9H6.25A6.406 6.406 0 0 1 9 6.25M4 11h2v2H4m14-2h2v2h-2m-7 5h2v2h-2"></path></svg>
-                Assurance Platform
-              </p>
+              <Link href={'/dashboard'}>
+                <p className='text-white font-semibold flex justify-start items-center gap-2'>
+                  <svg className='w-6 h-6' fill='white' xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 2v2.06A8.522 8.522 0 0 0 4.05 9H2v6h2.06A8.494 8.494 0 0 0 9 19.95V22h6v-2.06A8.494 8.494 0 0 0 19.95 15H22V9h-2.06A8.522 8.522 0 0 0 15 4.05V2m-4 2h2v2h-2m-2 .25V8h6V6.25c1.18.61 2.14 1.57 2.75 2.75H16v6h1.75A6.406 6.406 0 0 1 15 17.75V16H9v1.75A6.406 6.406 0 0 1 6.25 15H8V9H6.25A6.406 6.406 0 0 1 9 6.25M4 11h2v2H4m14-2h2v2h-2m-7 5h2v2h-2"></path></svg>
+                  Assurance Platform
+                </p>
+              </Link>
             </div>
             <nav className="flex flex-1 flex-col">
               <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -199,7 +197,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                             item.href === pathname
                               ? 'bg-indigo-700 text-white'
                               : 'text-indigo-200 hover:text-white hover:bg-indigo-700 dark:hover:bg-indigo-700/60',
-                            'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
+                            'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold items-center'
                           )}
                         >
                           <item.icon
@@ -210,6 +208,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                             aria-hidden="true"
                           />
                           {item.name}
+                          {item.externalLink && <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />}
                         </a>
                       </li>
                     ))}
@@ -245,19 +244,20 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   <a
                     href="https://github.com/alan-turing-institute/AssurancePlatform"
                     target='_blank'
-                    className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+                    className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white items-center"
                   >
                     <GitHubLogoIcon
                       className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
                       aria-hidden="true"
                     />
                     GitHub
+                    <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />
                   </a>
                 </li>
                 <li className="">
                   <Link
-                    href="/settings"
-                    className={`group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white ${pathname === '/settings' ? 'bg-indigo-700 text-white' : null}`}
+                    href="/dashboard/settings"
+                    className={`group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white ${pathname === '/dashboard/settings' ? 'bg-indigo-700 text-white' : null}`}
                   >
                     <Cog6ToothIcon
                       className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
