@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
@@ -34,11 +34,13 @@ const formSchema = z.object({
 interface EditFormProps {
   node: any;
   onClose: () => void
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
 };
 
 const EditForm: React.FC<EditFormProps> = ({
   node,
-  onClose
+  onClose,
+  setUnresolvedChanges
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
@@ -76,6 +78,14 @@ const EditForm: React.FC<EditFormProps> = ({
     }
 
   }
+
+  useEffect(() => {
+    form.watch((values, { name }) => {
+      if (name === 'description' || name === 'URL') {
+        setUnresolvedChanges(true);
+      }
+    });
+  }, [form.watch, setUnresolvedChanges]);
 
   return (
     <Form {...form}>
