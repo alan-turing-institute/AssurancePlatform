@@ -175,7 +175,7 @@ export default function Hero() {
                   </div>
                 </div>
                 <div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">
-                  <div className='bg-red-500 w-full rounded-lg overflow-hidden shadow-xl'>
+                  <div className='w-full rounded-lg overflow-hidden shadow-xl'>
                     <video 
                       src="/images/building-an-assurance-case.mp4" 
                       autoPlay 
