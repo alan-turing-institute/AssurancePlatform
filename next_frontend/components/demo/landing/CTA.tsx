@@ -4,12 +4,12 @@ export default function CTA() {
       <div className="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Boost your productivity.
+            Boost your assurance case process.
             <br />
             Start using TEA today.
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-indigo-200">
-            View our online demo today and see the TEA platform in action. If would like this set up in your own environment, get in touch!
+            You can sign up and test the TEA platform in action today. If would like to set up the platform in your own, private environment, please get in touch!
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <a
