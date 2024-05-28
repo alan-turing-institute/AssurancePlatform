@@ -149,7 +149,7 @@ function Flow({ }: FlowProps) {
             notify={notify}
             notifyError={notifyError}
           />
-          <NodeEdit node={selectedNode} isOpen={editOpen} onClose={() => setEditOpen(false)} />
+          <NodeEdit node={selectedNode} isOpen={editOpen} setEditOpen={setEditOpen} />
         </div>
       )}
 

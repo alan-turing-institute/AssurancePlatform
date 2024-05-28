@@ -40,12 +40,12 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
 
-  const { setSelectedLink, setLinkToCreate, onClose } = actions
+  const { setSelectedLink, setLinkToCreate, handleClose } = actions
 
   const reset = () => {
     setLinkToCreate('')
     setSelectedLink(false)
-    onClose()
+    handleClose()
   }
 
   /** Function used to handle creation of a context node linked to a goal */
