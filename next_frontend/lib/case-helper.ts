@@ -124,10 +124,9 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
     for (let i = 0; i < array.length; i++) {
         let item = array[i];
 
-        // Check if this property claim matches the parent ID
+        // Check if this evidence matches the parent ID
         if (item.id === id) {
             array[i] = { ...item, ...newEvidence };
-
             return array; // Return the updated array
         }
 
@@ -155,8 +154,6 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
                 }
             }
         }
-
-        return null
     }
 
     // If evidence with the given ID is not found, return null
