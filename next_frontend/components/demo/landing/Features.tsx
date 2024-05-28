@@ -5,38 +5,39 @@ import {
   FingerPrintIcon,
   LockClosedIcon,
   ServerIcon,
+  AcademicCapIcon, ChatBubbleLeftRightIcon, LightBulbIcon
 } from '@heroicons/react/20/solid'
 
 const features = [
   {
-    name: 'Seamless Integration.',
-    description: 'TEA seamlessly integrates into your existing workflow, enhancing efficiency without disruption.',
+    name: 'Structured Methodology.',
+    description: 'Our platform uses a structured methodology for assurance, supported by open and accessible user resources that have been designed to help build capabilities within the assurance ecosystem.',
     icon: CloudArrowUpIcon,
   },
   {
-    name: 'Evidential Assurance.',
-    description: 'Ensure the integrity and trustworthiness of your data and analyses with TEAs robust evidential framework.',
+    name: 'Best Practices.',
+    description: 'By facilitating the sharing and communication of assurance cases, the TEA platform enables cross-sector and multi-disciplinary forms of knowledge sharing and best practice.',
     icon: LockClosedIcon,
   },
   {
-    name: 'Real-time Monitoring.',
-    description: 'Stay informed with real-time monitoring capabilities, providing insights and alerts when anomalies occur.',
-    icon: ArrowPathIcon,
+    name: 'Responsible research and Innovation.',
+    description: 'Going beyond traditional goals such as safety or security, the TEA platform encourages teams to critically reflect and deliberate about the societal and ethical impact of their research and innovation practices.',
+    icon: LightBulbIcon,
   },
   {
-    name: 'Customizable Workflows.',
-    description: 'Tailor TEA to fit your unique needs with customizable workflows, ensuring a personalized experience.',
+    name: 'Community Building.',
+    description: 'The TEA Platform enhances the ethical design and development of data-driven technologies by fostering an open and inclusive community, committed to advancing trustworthiness.',
+    icon: ChatBubbleLeftRightIcon,
+  },
+  {
+    name: 'Privacy and Control.',
+    description: 'Where necessary, we provide detailed guidance and support for self-hosting to ensure that users who handle sensitive information can manage it securely and privately within their own organisation\'s infrastructure.',
     icon: FingerPrintIcon,
   },
   {
-    name: 'Collaborative Environment:.',
-    description: 'Foster collaboration among team members with TEAs collaborative features, promoting transparency and synergy.',
-    icon: Cog6ToothIcon,
-  },
-  {
-    name: 'Scalability.',
-    description: 'Grow with confidence knowing that TEA scales effortlessly to accommodate your evolving requirements and workload.',
-    icon: ServerIcon,
+    name: 'Training and Capacity Building.',
+    description: 'The platform includes freely accessible training resources for a broad range of users and stakeholders, with the goal of enriching the assurance ecosystem’s capabilities.',
+    icon: AcademicCapIcon,
   },
 ]
 
@@ -56,7 +57,7 @@ export default function Features() {
       <div className="relative overflow-hidden pt-16">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <img
-            src="https://tailwindui.com/img/component-images/project-app-screenshot.png"
+            src="/images/tea-chart.png"
             alt="App screenshot"
             className="mb-[-12%] rounded-xl shadow-2xl ring-1 ring-gray-900/10"
             width={2432}
