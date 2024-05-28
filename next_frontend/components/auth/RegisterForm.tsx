@@ -58,7 +58,7 @@ const RegisterForm = () => {
 
     if (result.key) {
       setToken(result.key);
-      router.push('/')
+      router.push('/dashboard')
     }
     else {
         const currentErrors = [];
@@ -83,7 +83,7 @@ const RegisterForm = () => {
   useEffect(() => {
     let token = localStorage.getItem("token");
     if(token) {
-      router.push('/')
+      router.push('/dashboard')
     }
   },[])
 

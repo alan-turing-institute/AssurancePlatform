@@ -12,7 +12,7 @@ const SettingsPage = () => {
         <SettingsNav />
       </header> */}
 
-      <div className="divide-y divide-foreground/5">
+      <div className="divide-y divide-foreground/5 min-h-screen">
         {/* <PersonalInfoForm />
         <PasswordForm />
         <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -33,7 +33,9 @@ const SettingsPage = () => {
             </button>
           </form>
         </div> */}
-        <p>Settings coming soon...</p>
+        <div className='flex justify-center items-center p-3'>
+        <p className='text-muted-foreground'>Settings coming soon...</p>
+        </div>
       </div>
     </main>
   )

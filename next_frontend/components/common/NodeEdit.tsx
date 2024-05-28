@@ -62,7 +62,7 @@ const NodeEdit = ({ node, isOpen, onClose } : NodeEditProps ) => {
         <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, onClose }} />
       ) : (
         <>
-        <EditForm node={node} />
+        <EditForm node={node} onClose={onClose} />
 
         {/* Node specific form buttons */}
         {node.type != 'context' && (

@@ -58,7 +58,7 @@ const Header = ({ }: HeaderProps) => {
     <div className='fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50'>
       <div className='container py-3 flex justify-between items-center'>
         <div className='flex justify-start items-center gap-2'>
-          <Button variant={'ghost'} size={'icon'} onClick={() => router.push('/')} className='hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white'>
+          <Button variant={'ghost'} size={'icon'} onClick={() => router.push('/dashboard')} className='hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white'>
             <ArrowLeft className='w-4 h-4' />
           </Button>
           {editName ? (
