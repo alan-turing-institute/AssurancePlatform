@@ -21,11 +21,19 @@ const MemberEdit = ({ member, isOpen, onClose } : MemberEditProps ) => {
     return null;
   }
 
+  const onChange = (open: boolean) => {
+    if(!open) {
+      onClose()
+    }
+  };
+
   return (
     <EditSheet
       title={`Editing Member`}
       description="Use this form to update members."
-      isOpen={isOpen} onClose={onClose}
+      isOpen={isOpen} 
+      onClose={onClose}
+      onChange={onChange}
     >
       {member && <MemberEditForm member={member} />}
     </EditSheet>

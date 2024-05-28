@@ -78,6 +78,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
       description="Use this form to update your goal."
       isOpen={isOpen} 
       onClose={handleClose}
+      onChange={onChange}
     >
       {selectedLink ? (
         <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} />
