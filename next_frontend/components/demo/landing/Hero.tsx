@@ -160,7 +160,7 @@ export default function Hero() {
                     Build trust, collaboratively.
                   </h1>
                   <p className="mt-6 text-lg leading-8 text-gray-600 sm:max-w-md lg:max-w-none">
-                    The Trustworthy and Ethical Assurance (TEA) Platform is an innovative, open-source tool designed to facilite the process of creating, managing and sharing assurance cases for data-driven technologies, such as digital twins or AI. 
+                    The Trustworthy and Ethical Assurance (TEA) Platform is an innovative, open-source tool designed to facilite the process of creating, managing and sharing assurance cases for data-driven technologies, such as digital twins or AI.
                   </p>
                   <div className="mt-10 flex items-center gap-x-6">
                     <a
@@ -176,10 +176,10 @@ export default function Hero() {
                 </div>
                 <div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">
                   <div className='bg-red-500 w-full rounded-lg overflow-hidden shadow-xl'>
-                    <video 
-                      src="/images/building-an-assurance-case.mp4" 
-                      autoPlay 
-                      loop 
+                    <video
+                      src="/images/building-an-assurance-case.mp4"
+                      autoPlay
+                      loop
                       muted
                     />
                   </div>
