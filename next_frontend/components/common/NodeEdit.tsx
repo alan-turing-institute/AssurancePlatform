@@ -76,7 +76,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
     <EditSheet
       title={`Editing ${node.data.name}`}
       description="Use this form to update your goal."
-      isOpen={isOpen} 
+      isOpen={isOpen}
       onClose={handleClose}
     >
       {selectedLink ? (
