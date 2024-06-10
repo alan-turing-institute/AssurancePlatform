@@ -661,3 +661,20 @@ def update_identifiers(item: CaseItem):
     for property_claim_index, property_claim in enumerate(current_case_claims):
         property_claim.name = f"P{property_claim_index + 1}"
         property_claim.save()
+        update_property_claim_identifiers(property_claim)
+
+
+def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
+    child_property_claims = PropertyClaim.objects.filter(
+        property_claim_id=parent_property_claim.pk
+    )
+
+    if len(child_property_claims) == 0:
+        return
+    else:
+        for index, child_property_claim in enumerate(child_property_claims):
+            child_property_claim.name = (
+                f"{parent_property_claim.name}.{index + 1}"
+            )
+            child_property_claim.save()
+            update_property_claim_identifiers(child_property_claim)
