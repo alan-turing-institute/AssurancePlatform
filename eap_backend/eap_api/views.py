@@ -7,6 +7,8 @@ from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from typing import Optional
+
 from .models import (
     AssuranceCase,
     Comment,
@@ -47,7 +49,7 @@ from .view_utils import (
 
 
 @csrf_exempt
-def user_list(request):
+def user_list(request) -> Optional[HttpResponse]:
     """
     List all users, or make a new user
     """
@@ -245,7 +247,9 @@ def goal_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
+        assurance_case_id = AssuranceCase.objects.get(
+            id=data["assurance_case_id"]
+        )
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
@@ -277,7 +281,9 @@ def goal_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
+        serializer = TopLevelNormativeGoalSerializer(
+            goal, data=data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -307,6 +313,7 @@ def context_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            updated_identifiers(serializer.instance.goal.pk)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -339,6 +346,7 @@ def context_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         context.delete()
+        updated_identifiers(context.goal.pk)
         return HttpResponse(status=204)
     return None
 
@@ -483,6 +491,7 @@ def strategies_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            updated_identifiers(serializer.instance.goal.pk)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -510,6 +519,7 @@ def strategy_detail(request, pk):
 
     elif request.method == "DELETE":
         strategy.delete()
+        updated_identifiers(strategy.goal.pk)
         return HttpResponse(status=204)
     return None
 
@@ -598,11 +608,31 @@ def reply_to_comment(request, comment_id):
     if request.method == "POST":
         data = JSONParser().parse(request)
         data["parent"] = comment_id
-        data["author"] = request.user.id  # Ensure the author is set to the current user
+        data[
+            "author"
+        ] = request.user.id  # Ensure the author is set to the current user
         data["assurance_case"] = parent_comment.assurance_case_id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        return JsonResponse(
+            serializer.errors, status=status.HTTP_400_BAD_REQUEST
+        )
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def updated_identifiers(goal_id: int):
+    for context_index, context in enumerate(
+        Context.objects.filter(goal_id=goal_id)
+    ):
+        context.name = f"C{context_index + 1}"
+        context.save()
+
+    for strategy_index, strategy in enumerate(
+        Strategy.objects.filter(goal_id=goal_id)
+    ):
+        strategy.name = f"S{strategy_index + 1}"
+        strategy.save()
