@@ -24,9 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # TODO(cgavidia): Move DEBUG and SECRET_KEY to environment variables.
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g"
-)
+SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -67,11 +65,11 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",  # TODO(cgavidia): This line is duplicated.
     "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware", # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.sessions.middleware.SessionMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware", # TODO(cgavidia): Apparently, we don't need this.
-    "django.contrib.messages.middleware.MessageMiddleware", # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.messages.middleware.MessageMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
 ]
@@ -108,7 +106,7 @@ TEMPLATES = [
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
-    # TODO(cgavidia): Can we use IsAuthenticated instead?
+    # TODO(cgavidia): Can we use IsAuthenticated instead?
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     # "DEFAULT_PERMISSION_CLASSES": [
     #    "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
