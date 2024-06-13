@@ -48,7 +48,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
     const identifier = await setNodeIdentifier(null, 'goal')
 
     const newGoal = {
-      "name": `G${identifier}`,
+      "name": `G1`,
       "short_description": values.description,
       "long_description": "N/A",
       "keywords": "N/A",
@@ -70,8 +70,9 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       goals: [ result.data ]
     }
 
-    setAssuranceCase(updatedAssuranceCase)
+    // setAssuranceCase(updatedAssuranceCase)
     onClose()
+    window.location.reload()
   }
 
   return (

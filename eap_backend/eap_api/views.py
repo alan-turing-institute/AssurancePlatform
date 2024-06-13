@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -9,6 +11,7 @@ from rest_framework.response import Response
 
 from .models import (
     AssuranceCase,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -38,6 +41,7 @@ from .view_utils import (
     filter_by_case_id,
     get_allowed_cases,
     get_allowed_groups,
+    get_case_id,
     get_case_permissions,
     get_json_tree,
     make_case_summary,
@@ -47,7 +51,7 @@ from .view_utils import (
 
 
 @csrf_exempt
-def user_list(request):
+def user_list(request) -> Optional[HttpResponse]:
     """
     List all users, or make a new user
     """
@@ -307,6 +311,7 @@ def context_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(serializer.instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -339,6 +344,7 @@ def context_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         context.delete()
+        update_identifiers(context)
         return HttpResponse(status=204)
     return None
 
@@ -360,6 +366,7 @@ def property_claim_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(serializer.instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -392,6 +399,7 @@ def property_claim_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
+        update_identifiers(claim)
         return HttpResponse(status=204)
     return None
 
@@ -483,6 +491,7 @@ def strategies_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(serializer.instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -510,6 +519,7 @@ def strategy_detail(request, pk):
 
     elif request.method == "DELETE":
         strategy.delete()
+        update_identifiers(strategy)
         return HttpResponse(status=204)
     return None
 
@@ -606,3 +616,43 @@ def reply_to_comment(request, comment_id):
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def update_identifiers(item: CaseItem):
+
+    case_id: Optional[int] = get_case_id(item)
+    if case_id is None:
+        raise ValueError("Cannot obtain case id!")
+
+    goal_id: int = TopLevelNormativeGoal.objects.get(assurance_case_id=case_id).pk
+
+    for context_index, context in enumerate(Context.objects.filter(goal_id=goal_id)):
+        context.name = f"C{context_index + 1}"
+        context.save()
+
+    for strategy_index, strategy in enumerate(Strategy.objects.filter(goal_id=goal_id)):
+        strategy.name = f"S{strategy_index + 1}"
+        strategy.save()
+
+    parent_property_claims = PropertyClaim.objects.filter(property_claim_id=None)
+    current_case_claims = [
+        claim for claim in parent_property_claims if get_case_id(claim) == case_id
+    ]
+    for property_claim_index, property_claim in enumerate(current_case_claims):
+        property_claim.name = f"P{property_claim_index + 1}"
+        property_claim.save()
+        update_property_claim_identifiers(property_claim)
+
+
+def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
+    child_property_claims = PropertyClaim.objects.filter(
+        property_claim_id=parent_property_claim.pk
+    )
+
+    if len(child_property_claims) == 0:
+        return
+    else:
+        for index, child_property_claim in enumerate(child_property_claims):
+            child_property_claim.name = f"{parent_property_claim.name}.{index + 1}"
+            child_property_claim.save()
+            update_property_claim_identifiers(child_property_claim)
