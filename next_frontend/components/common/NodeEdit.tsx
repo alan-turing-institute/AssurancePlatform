@@ -7,15 +7,21 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, setNodeIdentifier } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface NodeEditProps {
   node: Node | any
   isOpen: boolean
-  // onClose: () => void
   setEditOpen: Dispatch<SetStateAction<boolean>>
 }
 
@@ -29,7 +35,17 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
   const [alertOpen, setAlertOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const [selectedClaimMove, setSelectedClaimMove] = useState<string | null>(null); // State for selected strategy
+  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<string | null>(null); // State for selected strategy
+
   const [token] = useLoginToken();
+
+  let claims, strategies = []
+
+  if(assuranceCase.goals[0]) {
+    strategies = assuranceCase.goals[0].strategies
+    claims = listPropertyClaims(assuranceCase.goals)
+  }
 
   useEffect(() => {
     setIsMounted(true);
@@ -72,6 +88,32 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
     }
   };
 
+  const handleMove = async () => {
+    // Add your move logic here
+    if (selectedClaimMove) {
+      console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
+      const updateItem = {
+        strategy_id: selectedClaimMove,
+      }
+      const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+      if(updated) {
+        window.location.reload()
+      }
+      console.log('Something went wrong updating')
+    }
+    if (selectedEvidenceMove) {
+      console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
+      const updateItem = {
+        property_claim_id: [selectedEvidenceMove],
+      }
+      const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
+      if(updated) {
+        window.location.reload()
+      }
+      console.log('Something went wrong updating')
+    }
+  }
+
   return (
     <EditSheet
       title={`Editing ${node.data.name}`}
@@ -87,7 +129,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges}/>
 
           {/* Node specific form buttons */}
-          {node.type != 'context' && (
+          {node.type != 'context' && node.type != 'evidence' && (
             <div className="flex flex-col justify-start items-start mt-8">
               <h3 className="text-lg font-semibold mb-2">Link to {node.data.name}</h3>
               <div className="flex flex-col justify-start items-center gap-4 w-full">
@@ -107,17 +149,66 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
                     <Button variant='outline' onClick={() => selectLink('claim')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Claim</Button>
                   </>
                 )}
-                {node.type === 'evidence' && (
-                  <>
-                    TODO: Property Links
-                  </>
-                )}
               </div>
             </div>
           )}
 
+          {/* Moving element options */}
+          {node.type === 'property' || node.type === 'evidence' ? (
+            <div className="w-full pt-4">
+              <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">Move {node.type}</h3>
+              <div className="flex justify-start items-center gap-2">
+                {node.type === 'property' && 
+                  <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Move to" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {strategies.map((strategy: any) => (
+                          <SelectItem key={strategy.id} value={strategy.id}>
+                            <div className="flex flex-col justify-start items-start gap-1">
+                              <span className="font-medium">{strategy.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      }
+                      {strategies.length === 0 && (
+                        <SelectItem disabled={true} value="{strategy.id}">
+                          No strategies found.
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                }
+                {node.type === 'evidence' && 
+                  <Select onValueChange={setSelectedEvidenceMove}> {/* Update state on change */}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Move to" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {claims && claims.map((claim: any) => (
+                          <SelectItem key={claim.id} value={claim.id}>
+                            <div className="flex flex-col justify-start items-start gap-1">
+                              <span className="font-medium">{claim.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      }
+                      {claims && claims.length === 0 && (
+                        <SelectItem disabled={true} value="{strategy.id}">
+                          No property claims found.
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                }
+                <Button variant={"outline"} onClick={handleMove}>Move</Button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Handle Delete */}
-          <div className="mt-6">
+          <div className="mt-12">
             <Button variant={'ghost'}
               onClick={() => setDeleteOpen(true)}
               className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"

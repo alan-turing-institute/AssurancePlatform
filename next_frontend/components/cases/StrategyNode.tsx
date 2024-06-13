@@ -7,7 +7,7 @@ import ToggleButton from './ToggleButton';
 
 function StrategyNode({ data, ...props }: NodeProps) {
   return (
-    <div className={`px-4 py-2 shadow-md rounded-md bg-indigo-600 text-white -skew-x-6`}>
+    <div className={`px-4 py-2 shadow-md rounded-md bg-indigo-600 text-white -skew-x-6 w-[300px]`}>
       <div className="flex skew-x-6">
         <div className={`rounded-full w-12 h-12 flex justify-center items-center bg-slate-900/20`}>
           <Route />

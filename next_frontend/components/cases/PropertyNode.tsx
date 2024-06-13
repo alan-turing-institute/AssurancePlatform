@@ -7,7 +7,7 @@ import ToggleButton from './ToggleButton';
 
 function PropertyNode({ data, ...props}: NodeProps) {
   return (
-    <div className={`px-4 py-2 shadow-md rounded-md bg-blue-600 text-white`}>
+    <div className={`px-4 py-2 shadow-md rounded-md bg-blue-600 text-white w-[300px]`}>
       <div className="flex">
         <div className={`rounded-full w-12 h-12 flex justify-center items-center bg-slate-900/20`}>
           <FolderOpenDot />
