@@ -1,0 +1,119 @@
+{
+  "type": "AssuranceCase",
+  "name": "2.4",
+  "description": "Figure 2.4: a portion of the assurance case for this hypothetical project.",
+  "created_date": "2024-02-02T18:37:34.719913Z",
+  "lock_uuid": null,
+  "goals": [
+    {
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "An explanation of how our system predicts whether a user is a \"problem gambler\" can be provided to all users of our platform.",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 18,
+      "context": [
+        {
+          "type": "Context",
+          "name": "C1",
+          "short_description": "Accessible by any verified user who is over 18.",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:38:16.750674Z",
+          "goal_id": 28
+        },
+        {
+          "type": "Context",
+          "name": "C2",
+          "short_description": "Description",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:38:26.851741Z",
+          "goal_id": 28
+        },
+        {
+          "type": "Context",
+          "name": "C2",
+          "short_description": "An online gambling platform that uses a classification algorithm to identify problem gamblers.",
+          "long_description": "N/A",
+          "created_date": "2024-02-02T18:38:26.871253Z",
+          "goal_id": 28
+        }
+      ],
+      "property_claims": [
+        {
+          "type": "PropertyClaim",
+          "name": "P1",
+          "short_description": "Accessible and plain language explanations are presented to users to build trust.",
+          "long_description": "N/A",
+          "goal_id": 28,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P1.1",
+              "short_description": "Stakeholder workshops were conducted to codevelop accessible explanations.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 47,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        },
+        {
+          "type": "PropertyClaim",
+          "name": "P2",
+          "short_description": "Independent auditors review detailed, technical explanations to verify system performance.",
+          "long_description": "N/A",
+          "goal_id": 28,
+          "property_claim_id": null,
+          "level": 1,
+          "claim_type": "Project claim",
+          "property_claims": [
+            {
+              "type": "PropertyClaim",
+              "name": "P2.1",
+              "short_description": "The k-nearest neighbours algorithm is used to ensure our model is interpretable.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 48,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            },
+            {
+              "type": "PropertyClaim",
+              "name": "P2.2",
+              "short_description": "Auditors receive a model that includes predictive features and subgroup accuracy rates.",
+              "long_description": "N/A",
+              "goal_id": null,
+              "property_claim_id": 48,
+              "level": 2,
+              "claim_type": "Project claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": null
+            }
+          ],
+          "evidence": [],
+          "strategy_id": null
+        }
+      ],
+      "strategies": []
+    }
+  ],
+  "owner": 12,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
+}
