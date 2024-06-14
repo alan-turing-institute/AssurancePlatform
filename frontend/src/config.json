@@ -6,7 +6,8 @@
   "property_claim_types": ["Project claim", "System claim"],
   "styling": {
     "mainFont": "'Plus Jakarta Sans', sans-serif",
-    "mermaidFont": "Plus Jakarta Sans, sans-serif"
+    "mermaidFont": "Plus Jakarta Sans, sans-serif",
+    "mainFontSize": 16
   },
   "mermaid_styles": {
     "default": {
