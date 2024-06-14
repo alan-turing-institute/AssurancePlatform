@@ -198,6 +198,42 @@ def case_list(request):
     return None
 
 
+# @csrf_exempt
+# @api_view(["GET", "POST", "PUT", "DELETE"])
+# def case_detail(request, pk):
+#     """
+#     Retrieve, update, or delete an AssuranceCase, by primary key
+#     """
+#     try:
+#         case = AssuranceCase.objects.get(pk=pk)
+#     except AssuranceCase.DoesNotExist:
+#         return HttpResponse(status=404)
+#     permissions = get_case_permissions(case, request.user)
+#     if not permissions:
+#         return HttpResponse(status=403)
+#     if request.method == "GET":
+#         serializer = AssuranceCaseSerializer(case)
+#         case_data = serializer.data
+#         goals = get_json_tree(case_data["goals"], "goals")
+#         case_data["goals"] = goals
+#         case_data["permissions"] = permissions
+#         return JsonResponse(case_data)
+#     elif request.method == "PUT":
+#         if permissions not in ["manage", "edit"]:
+#             return HttpResponse(status=403)
+#         data = JSONParser().parse(request)
+#         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return JsonResponse(serializer.data)
+#         return JsonResponse(serializer.errors, status=400)
+#     elif request.method == "DELETE":
+#         if permissions not in ["manage", "edit"]:
+#             return HttpResponse(status=403)
+#         case.delete()
+#         return HttpResponse(status=204)
+
+#     return None
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
 def case_detail(request, pk):
@@ -212,6 +248,10 @@ def case_detail(request, pk):
     if not permissions:
         return HttpResponse(status=403)
     if request.method == "GET":
+        # Run update_identifiers for all elements in assurance case goals
+        for goal in case.goals.all():
+            update_identifiers(goal)
+
         serializer = AssuranceCaseSerializer(case)
         case_data = serializer.data
         goals = get_json_tree(case_data["goals"], "goals")
@@ -234,6 +274,7 @@ def case_detail(request, pk):
         return HttpResponse(status=204)
 
     return None
+
 
 
 @csrf_exempt
