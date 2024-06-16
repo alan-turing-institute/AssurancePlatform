@@ -8,6 +8,8 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.db.models.query import QuerySet
+from typing import cast
 
 from .models import (
     AssuranceCase,
@@ -249,12 +251,17 @@ def goal_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
+        assurance_case_id = AssuranceCase.objects.get(
+            id=data["assurance_case_id"]
+        )
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(
+                cast(TopLevelNormativeGoal, serializer.instance)
+            )
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -281,7 +288,9 @@ def goal_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
+        serializer = TopLevelNormativeGoalSerializer(
+            goal, data=data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -290,6 +299,7 @@ def goal_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         goal.delete()
+        update_identifiers(goal)
         return HttpResponse(status=204)
     return None
 
@@ -311,7 +321,7 @@ def context_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
-            update_identifiers(serializer.instance)
+            update_identifiers(cast(Context, serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -366,7 +376,7 @@ def property_claim_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
-            update_identifiers(serializer.instance)
+            update_identifiers(cast(PropertyClaim, serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -491,7 +501,7 @@ def strategies_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
-            update_identifiers(serializer.instance)
+            update_identifiers(cast(Strategy, serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -608,13 +618,19 @@ def reply_to_comment(request, comment_id):
     if request.method == "POST":
         data = JSONParser().parse(request)
         data["parent"] = comment_id
-        data["author"] = request.user.id  # Ensure the author is set to the current user
+        data[
+            "author"
+        ] = request.user.id  # Ensure the author is set to the current user
         data["assurance_case"] = parent_comment.assurance_case_id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        return JsonResponse(
+            serializer.errors, status=status.HTTP_400_BAD_REQUEST
+        )
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -624,24 +640,43 @@ def update_identifiers(item: CaseItem):
     if case_id is None:
         raise ValueError("Cannot obtain case id!")
 
-    goal_id: int = TopLevelNormativeGoal.objects.get(assurance_case_id=case_id).pk
+    if TopLevelNormativeGoal.objects.filter(
+        assurance_case_id=case_id
+    ).exists():
+        goal_id: int = TopLevelNormativeGoal.objects.get(
+            assurance_case_id=case_id
+        ).pk
 
-    for context_index, context in enumerate(Context.objects.filter(goal_id=goal_id)):
-        context.name = f"C{context_index + 1}"
-        context.save()
+        update_sequential_identifiers(
+            TopLevelNormativeGoal.objects.filter(id=goal_id), "G"
+        )
+        update_sequential_identifiers(
+            Context.objects.filter(goal_id=goal_id), "C"
+        )
+        update_sequential_identifiers(
+            Strategy.objects.filter(goal_id=goal_id), "S"
+        )
 
-    for strategy_index, strategy in enumerate(Strategy.objects.filter(goal_id=goal_id)):
-        strategy.name = f"S{strategy_index + 1}"
-        strategy.save()
+        parent_property_claims = PropertyClaim.objects.filter(
+            property_claim_id=None
+        )
+        current_case_claims = [
+            claim
+            for claim in parent_property_claims
+            if get_case_id(claim) == case_id
+        ]
+        for property_claim_index, property_claim in enumerate(
+            current_case_claims
+        ):
+            property_claim.name = f"P{property_claim_index + 1}"
+            property_claim.save()
+            update_property_claim_identifiers(property_claim)
 
-    parent_property_claims = PropertyClaim.objects.filter(property_claim_id=None)
-    current_case_claims = [
-        claim for claim in parent_property_claims if get_case_id(claim) == case_id
-    ]
-    for property_claim_index, property_claim in enumerate(current_case_claims):
-        property_claim.name = f"P{property_claim_index + 1}"
-        property_claim.save()
-        update_property_claim_identifiers(property_claim)
+
+def update_sequential_identifiers(query_set: QuerySet, prefix: str):
+    for model_index, model in enumerate(query_set):
+        model.name = f"{prefix}{model_index + 1}"
+        model.save()
 
 
 def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
@@ -653,6 +688,8 @@ def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
         return
     else:
         for index, child_property_claim in enumerate(child_property_claims):
-            child_property_claim.name = f"{parent_property_claim.name}.{index + 1}"
+            child_property_claim.name = (
+                f"{parent_property_claim.name}.{index + 1}"
+            )
             child_property_claim.save()
             update_property_claim_identifiers(child_property_claim)
