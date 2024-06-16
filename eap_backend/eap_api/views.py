@@ -278,7 +278,6 @@ def case_detail(request, pk):
     return None
 
 
-
 @csrf_exempt
 def goal_list(request):
     """
@@ -698,16 +697,18 @@ def update_identifiers(item: CaseItem):
             Strategy.objects.filter(goal_id=goal_id), "S"
         )
 
-        parent_property_claims = PropertyClaim.objects.filter(
-            property_claim_id=None
-        )
-        current_case_claims = [
-            claim
-            for claim in parent_property_claims
+        case_claim_ids: list[int] = [
+            claim.pk
+            for claim in PropertyClaim.objects.all()
             if get_case_id(claim) == case_id
         ]
+
+        parent_property_claims: QuerySet = PropertyClaim.objects.filter(
+            pk__in=case_claim_ids
+        ).filter(property_claim_id=None)
+
         for property_claim_index, property_claim in enumerate(
-            current_case_claims
+            parent_property_claims
         ):
             property_claim.name = f"P{property_claim_index + 1}"
             property_claim.save()
