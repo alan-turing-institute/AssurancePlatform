@@ -16,8 +16,16 @@ urlpatterns = [
     path("goals/<int:pk>/", views.goal_detail, name="goal_detail"),
     path("contexts/", views.context_list, name="context_list"),
     path("contexts/<int:pk>/", views.context_detail, name="context_detail"),
-    path("propertyclaims/", views.property_claim_list, name="property_claim_list"),
-    path("comments/<int:assurance_case_id>/", views.comment_list, name="comment_list"),
+    path(
+        "propertyclaims/",
+        views.property_claim_list,
+        name="property_claim_list",
+    ),
+    path(
+        "comments/<int:assurance_case_id>/",
+        views.comment_list,
+        name="comment_list",
+    ),
     path(
         "comments/<int:comment_id>/reply/",
         views.reply_to_comment,
@@ -38,9 +46,13 @@ urlpatterns = [
         views.parents,
         name="parents",
     ),
-    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+    path(
+        "api-auth/", include("rest_framework.urls", namespace="rest_framework")
+    ),
     path("strategies/", views.strategies_list, name="strategies_list"),
-    path("strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"),
+    path(
+        "strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"
+    ),
     path("auth/github/", views.GithubSocialAuthView.as_view()),
     path(
         "users/<int:pk>/github_repositories/",

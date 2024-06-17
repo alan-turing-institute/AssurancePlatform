@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -6,9 +8,12 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.db.models.query import QuerySet
+from typing import cast
 
 from .models import (
     AssuranceCase,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -38,6 +43,7 @@ from .view_utils import (
     filter_by_case_id,
     get_allowed_cases,
     get_allowed_groups,
+    get_case_id,
     get_case_permissions,
     get_json_tree,
     make_case_summary,
@@ -47,7 +53,7 @@ from .view_utils import (
 
 
 @csrf_exempt
-def user_list(request):
+def user_list(request) -> Optional[HttpResponse]:
     """
     List all users, or make a new user
     """
@@ -194,6 +200,42 @@ def case_list(request):
     return None
 
 
+# @csrf_exempt
+# @api_view(["GET", "POST", "PUT", "DELETE"])
+# def case_detail(request, pk):
+#     """
+#     Retrieve, update, or delete an AssuranceCase, by primary key
+#     """
+#     try:
+#         case = AssuranceCase.objects.get(pk=pk)
+#     except AssuranceCase.DoesNotExist:
+#         return HttpResponse(status=404)
+#     permissions = get_case_permissions(case, request.user)
+#     if not permissions:
+#         return HttpResponse(status=403)
+#     if request.method == "GET":
+#         serializer = AssuranceCaseSerializer(case)
+#         case_data = serializer.data
+#         goals = get_json_tree(case_data["goals"], "goals")
+#         case_data["goals"] = goals
+#         case_data["permissions"] = permissions
+#         return JsonResponse(case_data)
+#     elif request.method == "PUT":
+#         if permissions not in ["manage", "edit"]:
+#             return HttpResponse(status=403)
+#         data = JSONParser().parse(request)
+#         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return JsonResponse(serializer.data)
+#         return JsonResponse(serializer.errors, status=400)
+#     elif request.method == "DELETE":
+#         if permissions not in ["manage", "edit"]:
+#             return HttpResponse(status=403)
+#         case.delete()
+#         return HttpResponse(status=204)
+
+#     return None
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
 def case_detail(request, pk):
@@ -245,12 +287,15 @@ def goal_list(request):
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
-        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
+        assurance_case_id = AssuranceCase.objects.get(
+            id=data["assurance_case_id"]
+        )
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(get_case_id(serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -277,7 +322,9 @@ def goal_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
+        serializer = TopLevelNormativeGoalSerializer(
+            goal, data=data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -286,6 +333,7 @@ def goal_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         goal.delete()
+        update_identifiers(get_case_id(goal))
         return HttpResponse(status=204)
     return None
 
@@ -307,6 +355,7 @@ def context_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(get_case_id(serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -339,6 +388,7 @@ def context_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         context.delete()
+        update_identifiers(get_case_id(context))
         return HttpResponse(status=204)
     return None
 
@@ -360,6 +410,7 @@ def property_claim_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(get_case_id(serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -392,6 +443,7 @@ def property_claim_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
+        update_identifiers(get_case_id(claim))
         return HttpResponse(status=204)
     return None
 
@@ -413,6 +465,7 @@ def evidence_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(get_case_id(serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -444,7 +497,9 @@ def evidence_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
+        case_id: Optional[int] = get_case_id(evidence)
         evidence.delete()
+        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
@@ -483,6 +538,7 @@ def strategies_list(request):
         if serializer.is_valid():
             serializer.save()
             summary = make_summary(serializer.data)
+            update_identifiers(get_case_id(serializer.instance))
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -510,6 +566,7 @@ def strategy_detail(request, pk):
 
     elif request.method == "DELETE":
         strategy.delete()
+        update_identifiers(get_case_id(strategy))
         return HttpResponse(status=204)
     return None
 
@@ -598,11 +655,80 @@ def reply_to_comment(request, comment_id):
     if request.method == "POST":
         data = JSONParser().parse(request)
         data["parent"] = comment_id
-        data["author"] = request.user.id  # Ensure the author is set to the current user
+        data[
+            "author"
+        ] = request.user.id  # Ensure the author is set to the current user
         data["assurance_case"] = parent_comment.assurance_case_id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        return JsonResponse(
+            serializer.errors, status=status.HTTP_400_BAD_REQUEST
+        )
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def update_identifiers(case_id: Optional[int] = None):
+
+    if case_id is None:
+        raise ValueError("Assurance Case ID not provided.")
+
+    if TopLevelNormativeGoal.objects.filter(
+        assurance_case_id=case_id
+    ).exists():
+        goal_id: int = TopLevelNormativeGoal.objects.get(
+            assurance_case_id=case_id
+        ).pk
+
+        update_sequential_identifiers(
+            TopLevelNormativeGoal.objects.filter(id=goal_id), "G"
+        )
+        update_sequential_identifiers(
+            Context.objects.filter(goal_id=goal_id), "C"
+        )
+        update_sequential_identifiers(
+            Strategy.objects.filter(goal_id=goal_id), "S"
+        )
+
+        case_claim_ids: list[int] = [
+            claim.pk
+            for claim in PropertyClaim.objects.all()
+            if get_case_id(claim) == case_id
+        ]
+
+        update_sequential_identifiers(
+            Evidence.objects.filter(property_claim__id__in=case_claim_ids), "E"
+        )
+
+        parent_property_claims: QuerySet = PropertyClaim.objects.filter(
+            pk__in=case_claim_ids
+        ).filter(property_claim_id=None)
+
+        update_sequential_identifiers(parent_property_claims, "P")
+        for _, property_claim in enumerate(parent_property_claims):
+            update_property_claim_identifiers(property_claim)
+
+
+def update_sequential_identifiers(query_set: QuerySet, prefix: str):
+    for model_index, model in enumerate(query_set):
+        model.name = f"{prefix}{model_index + 1}"
+        model.save()
+
+
+def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
+    child_property_claims = PropertyClaim.objects.filter(
+        property_claim_id=parent_property_claim.pk
+    )
+
+    if len(child_property_claims) == 0:
+        return
+    else:
+        for index, child_property_claim in enumerate(child_property_claims):
+            child_property_claim.name = (
+                f"{parent_property_claim.name}.{index + 1}"
+            )
+            child_property_claim.save()
+            update_property_claim_identifiers(child_property_claim)

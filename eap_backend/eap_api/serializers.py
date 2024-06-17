@@ -70,8 +70,12 @@ class EAPGroupSerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(
         source="owner", queryset=EAPUser.objects.all()
     )
-    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    viewable_cases = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
+    editable_cases = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = EAPGroup
@@ -131,9 +135,13 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
     strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
+    type = serializers.CharField(
+        default="TopLevelNormativeGoal", read_only=True
+    )
 
     class Meta:
         model = TopLevelNormativeGoal
@@ -149,6 +157,8 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "property_claims",
             "strategies",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
 
 class ContextSerializer(serializers.ModelSerializer):
@@ -168,6 +178,8 @@ class ContextSerializer(serializers.ModelSerializer):
             "created_date",
             "goal_id",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
@@ -189,7 +201,9 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
 
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     # Use SerializerMethodField to handle the possibility of property_claim being None
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
@@ -212,6 +226,8 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "strategy_id",
         )
 
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
 
 class EvidenceSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
@@ -233,6 +249,8 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "property_claim_id",
         )
 
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
 
 class StrategySerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -241,7 +259,9 @@ class StrategySerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = Strategy
@@ -253,3 +273,5 @@ class StrategySerializer(serializers.ModelSerializer):
             "goal_id",
             "property_claims",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
