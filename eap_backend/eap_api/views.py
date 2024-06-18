@@ -13,7 +13,6 @@ from typing import cast
 
 from .models import (
     AssuranceCase,
-    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -293,9 +292,11 @@ def goal_list(request):
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            update_identifiers(get_case_id(serializer.instance))
+            goal_model: TopLevelNormativeGoal = cast(
+                TopLevelNormativeGoal, serializer.save()
+            )
+            update_identifiers(get_case_id(goal_model))
+            summary = make_summary(goal_model)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None

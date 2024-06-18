@@ -1,9 +1,13 @@
 import warnings
 
 from django.http import JsonResponse
+from django.forms.models import model_to_dict
+
+from typing import Union
 
 from . import models
 from .models import (
+    CaseItem,
     AssuranceCase,
     Context,
     EAPGroup,
@@ -118,25 +122,30 @@ def filter_by_case_id(items, request):
     return items
 
 
-def make_summary(serialized_data):
+def make_summary(model_data: Union[dict, list, CaseItem]):
     """
     Take in a full serialized object, and return dict containing just
     the id and the name
 
     Parameter: serialized_data, dict, or list of dicts
-    Returns: dict, or list of dicts, containing just "name" and "id" key/values.
+    Returns: dict, or list of dicts, containing just "name" and "id" 
+    key/values.
     """
 
-    def summarize_one(data):
+    def summarize_one(data: Union[dict, CaseItem]):
+        if isinstance(data, CaseItem):
+            data.refresh_from_db()
+            data = model_to_dict(data)
+
         if not (isinstance(data, dict) and "id" in data and "name" in data):
             msg = "Expected dictionary containing name and id"
             raise RuntimeError(msg)
         return {"name": data["name"], "id": data["id"]}
 
-    if isinstance(serialized_data, list):
-        return [summarize_one(sd) for sd in serialized_data]
+    if isinstance(model_data, list):
+        return [summarize_one(sd) for sd in model_data]
     else:
-        return summarize_one(serialized_data)
+        return summarize_one(model_data)
 
 
 def make_case_summary(serialized_data):
