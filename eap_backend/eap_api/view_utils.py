@@ -355,4 +355,6 @@ def get_allowed_groups(user, level="member"):
     list of EAPGroup instances in which the user is a member, or the owner
     """
     all_groups = EAPGroup.objects.all()
-    return [group for group in all_groups if can_view_group(group, user, level)]
+    return [
+        group for group in all_groups if can_view_group(group, user, level)
+    ]

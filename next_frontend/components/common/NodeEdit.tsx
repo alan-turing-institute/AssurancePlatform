@@ -101,6 +101,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
 
         let updateItem = {
+          goal_id: null,
+          strategy_id: null,
           property_claim_id: elementId,
         }
 
@@ -113,7 +115,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         const elementId = strategies.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
 
         let updateItem = {
+          goal_id: null,
           strategy_id: elementId,
+          property_claim_id: null,
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)

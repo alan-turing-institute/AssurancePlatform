@@ -332,8 +332,9 @@ def goal_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
+        case_id: Optional[int] = get_case_id(goal)
         goal.delete()
-        update_identifiers(get_case_id(goal))
+        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
@@ -387,8 +388,9 @@ def context_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
+        case_id: Optional[int] = get_case_id(context)
         context.delete()
-        update_identifiers(get_case_id(context))
+        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
@@ -442,8 +444,9 @@ def property_claim_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
+        case_id: Optional[int] = get_case_id(claim)
         claim.delete()
-        update_identifiers(get_case_id(claim))
+        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
@@ -565,8 +568,9 @@ def strategy_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
 
     elif request.method == "DELETE":
+        case_id: Optional[int] = get_case_id(strategy)
         strategy.delete()
-        update_identifiers(get_case_id(strategy))
+        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
