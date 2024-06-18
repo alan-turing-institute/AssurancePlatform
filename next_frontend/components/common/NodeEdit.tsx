@@ -37,10 +37,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
 
   const [selectedClaimMove, setSelectedClaimMove] = useState<string | null>(null); // State for selected strategy
   const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<string | null>(null); // State for selected strategy
+  const [moveElementType, setMoveElementType] = useState<string | null>(null); // State for selected strategy
 
   const [token] = useLoginToken();
 
-  let claims, strategies = []
+  let claims: any[] = [] 
+  let strategies: any[] = []
 
   if(assuranceCase.goals[0]) {
     strategies = assuranceCase.goals[0].strategies
@@ -89,17 +91,51 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
   };
 
   const handleMove = async () => {
-    // Add your move logic here
     if (selectedClaimMove) {
+      let updatedItem = null
       console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
-      const updateItem = {
-        strategy_id: selectedClaimMove,
+
+      // Find id for selected move element
+      const type = selectedClaimMove.substring(0,1)
+      if(type === 'P') {
+        const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
+
+        let updateItem = {
+          goal_id: null,
+          strategy_id: null,
+          property_claim_id: elementId,
+        }
+
+        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        if(updated) {
+          window.location.reload()
+        }
       }
-      const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
-      if(updated) {
-        window.location.reload()
+      if(type === 'S') {
+        const elementId = strategies.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
+
+        let updateItem = {
+          goal_id: null,
+          strategy_id: elementId,
+          property_claim_id: null,
+        }
+
+        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        if(updated) {
+          window.location.reload()
+        }
+
+        console.log('Something went wrong updating')
       }
-      console.log('Something went wrong updating')
+
+      // const updateItem = {
+      //   strategy_id: selectedClaimMove,
+      // }
+      // const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+      // if(updated) {
+      //   window.location.reload()
+      // }
+      // console.log('Something went wrong updating')
     }
     if (selectedEvidenceMove) {
       console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
@@ -165,9 +201,17 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
                     </SelectTrigger>
                     <SelectContent>
                       {strategies.map((strategy: any) => (
-                          <SelectItem key={strategy.id} value={strategy.id}>
+                          <SelectItem key={strategy.id} value={strategy.name}>
                             <div className="flex flex-col justify-start items-start gap-1">
                               <span className="font-medium">{strategy.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      }
+                      {claims && claims.map((claim: any) => (
+                          <SelectItem key={claim.id} value={claim.name}>
+                            <div className="flex flex-col justify-start items-start gap-1">
+                              <span className="font-medium">{claim.name}</span>
                             </div>
                           </SelectItem>
                         ))

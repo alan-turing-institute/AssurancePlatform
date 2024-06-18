@@ -2,6 +2,7 @@ import json
 
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.http import HttpResponse
 from eap_api.models import (
     AssuranceCase,
     Context,
@@ -112,6 +113,20 @@ class GoalViewTest(TestCase):
         self.data = TopLevelNormativeGoal.objects.all()
         # convert it to JSON
         self.serializer = TopLevelNormativeGoalSerializer(self.data, many=True)
+
+    def test_goal_list_view_post_with_id_update(self):
+
+        self.goal.delete()
+        goal_bad_name: dict = GOAL_INFO
+
+        response_post: HttpResponse = self.client.post(
+            reverse("goal_list"),
+            data=json.dumps(goal_bad_name),
+            content_type="application/json",
+        )
+
+        print(f"{response_post.json()=}")
+        assert response_post.json()["name"] == "G1"
 
     def test_goal_list_view_get(self):
         response_get = self.client.get(reverse("goal_list"))

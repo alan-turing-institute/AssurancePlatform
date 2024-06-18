@@ -8,9 +8,6 @@ import ToggleButton from './ToggleButton';
 function GoalNode({ data, ...props }: NodeProps) {
   const [hidden, setHidden] = useState<boolean>(true)
 
-  // Debug: Log the data.description value
-  console.log(data.description);
-
   return (
     <div className="px-4 py-2 shadow-md rounded-md bg-pink-600 text-white w-[300px]">
       <div className="flex justify-start items-center">

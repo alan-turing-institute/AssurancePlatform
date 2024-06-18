@@ -187,16 +187,19 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         source="goal",
         queryset=TopLevelNormativeGoal.objects.all(),
         required=False,
+        allow_null=True,
     )
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
         required=False,
+        allow_null=True,
     )
     strategy_id = serializers.PrimaryKeyRelatedField(
         source="strategy",
         queryset=Strategy.objects.all(),
         required=False,
+        allow_null=True,
     )
 
     level = serializers.IntegerField(read_only=True)
@@ -205,7 +208,8 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         many=True, read_only=True
     )
 
-    # Use SerializerMethodField to handle the possibility of property_claim being None
+    # Use SerializerMethodField to handle the possibility of property_claim
+    #  being None
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -226,7 +230,9 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "strategy_id",
         )
 
-        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+        extra_kwargs = {
+            "name": {"allow_null": True, "required": False},
+        }
 
 
 class EvidenceSerializer(serializers.ModelSerializer):

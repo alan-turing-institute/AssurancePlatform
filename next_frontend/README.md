@@ -42,7 +42,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ### Development
 
-To run the application in development mode, use the following comman
+To run the application in development mode, navigate to this directory and use the following command.
 
 ```
 npm run dev
