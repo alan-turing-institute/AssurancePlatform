@@ -125,7 +125,6 @@ class GoalViewTest(TestCase):
             content_type="application/json",
         )
 
-        print(f"{response_post.json()=}")
         assert response_post.json()["name"] == "G1"
 
     def test_goal_list_view_get(self):
