@@ -31,7 +31,7 @@ const MemberEdit = ({ member, isOpen, onClose } : MemberEditProps ) => {
     <EditSheet
       title={`Editing Member`}
       description="Use this form to update members."
-      isOpen={isOpen} 
+      isOpen={isOpen}
       onClose={onClose}
       onChange={onChange}
     >

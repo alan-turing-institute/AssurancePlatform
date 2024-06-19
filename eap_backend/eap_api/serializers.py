@@ -70,12 +70,8 @@ class EAPGroupSerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(
         source="owner", queryset=EAPUser.objects.all()
     )
-    viewable_cases = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True
-    )
-    editable_cases = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True
-    )
+    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = EAPGroup
@@ -135,13 +131,9 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    property_claims = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True
-    )
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(
-        default="TopLevelNormativeGoal", read_only=True
-    )
+    type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
     class Meta:
         model = TopLevelNormativeGoal
@@ -204,9 +196,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
 
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    property_claims = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True
-    )
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     # Use SerializerMethodField to handle the possibility of property_claim
     #  being None
@@ -265,9 +255,7 @@ class StrategySerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    property_claims = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True
-    )
+    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Strategy

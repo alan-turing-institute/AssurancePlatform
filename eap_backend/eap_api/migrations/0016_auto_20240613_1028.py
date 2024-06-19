@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0015_githubrepository'),
+        ("eap_api", "0015_githubrepository"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='strategy',
-            name='long_description',
+            model_name="strategy",
+            name="long_description",
             field=models.CharField(max_length=3000),
         ),
         migrations.AlterField(
-            model_name='strategy',
-            name='short_description',
+            model_name="strategy",
+            name="short_description",
             field=models.CharField(max_length=1000),
         ),
     ]

@@ -1,8 +1,8 @@
 import json
 
+from django.http import HttpResponse
 from django.test import Client, TestCase
 from django.urls import reverse
-from django.http import HttpResponse
 from eap_api.models import (
     AssuranceCase,
     Context,

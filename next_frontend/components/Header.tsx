@@ -85,7 +85,7 @@ const Header = ({ }: HeaderProps) => {
 
         <div className='flex justify-start items-center gap-4'>
           <CaseNavigation />
-          <Link 
+          <Link
             href={'https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/'}
             target='_blank'
             className='flex justify-center items-center gap-2 bg-indigo-600 text-white py-2 px-3 rounded-md'
