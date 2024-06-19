@@ -74,7 +74,9 @@ class AssuranceCase(models.Model):
     name = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
     created_date = models.DateTimeField(auto_now_add=True)
-    lock_uuid = models.CharField(max_length=50, default=None, null=True, blank=True)
+    lock_uuid = models.CharField(
+        max_length=50, default=None, null=True, blank=True
+    )
     owner = models.ForeignKey(
         EAPUser, related_name="cases", on_delete=models.CASCADE, null=True
     )
@@ -181,11 +183,17 @@ class PropertyClaim(CaseItem):
             [bool(self.goal), bool(self.strategy), bool(self.property_claim)]
         )
 
+        error_message: str = ""
         if parent_count != 1:
-            raise ValueError("A PropertyClaim should have exactly one parent.")
+            error_message = "A PropertyClaim should have exactly one parent."
+            raise ValueError(error_message)
 
-        if self.property_claim is not None and self.property_claim.pk == self.pk:
-            raise ValueError("A PropertyClaim cannot be the parent of itself.")
+        if (
+            self.property_claim is not None
+            and self.property_claim.pk == self.pk
+        ):
+            error_message = "A PropertyClaim cannot be the parent of itself."
+            raise ValueError(error_message)
 
         try:
             parent_level = self.property_claim.level
@@ -200,4 +208,6 @@ class PropertyClaim(CaseItem):
 class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")
+    property_claim = models.ManyToManyField(
+        PropertyClaim, related_name="evidence"
+    )
