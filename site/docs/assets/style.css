@@ -16,3 +16,7 @@ li.md-tabs__item {
 article.md-content__inner {
   padding-bottom: 12rem;
 }
+.youtube-video {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}

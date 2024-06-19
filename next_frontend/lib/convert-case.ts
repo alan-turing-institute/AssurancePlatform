@@ -3,6 +3,8 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
   let identifier = 0
 
+  console.log('Assurance Case', assuranceCase)
+
   // Create nodes for each child array item
   const goals = assuranceCase.goals
 

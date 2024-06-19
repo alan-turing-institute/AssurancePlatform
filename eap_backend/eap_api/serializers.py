@@ -70,8 +70,12 @@ class EAPGroupSerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(
         source="owner", queryset=EAPUser.objects.all()
     )
-    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    viewable_cases = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
+    editable_cases = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = EAPGroup
@@ -131,9 +135,13 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
     context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
     strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
+    type = serializers.CharField(
+        default="TopLevelNormativeGoal", read_only=True
+    )
 
     class Meta:
         model = TopLevelNormativeGoal
@@ -149,6 +157,8 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "property_claims",
             "strategies",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
 
 class ContextSerializer(serializers.ModelSerializer):
@@ -169,29 +179,37 @@ class ContextSerializer(serializers.ModelSerializer):
             "goal_id",
         )
 
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
         source="goal",
         queryset=TopLevelNormativeGoal.objects.all(),
         required=False,
+        allow_null=True,
     )
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
         required=False,
+        allow_null=True,
     )
     strategy_id = serializers.PrimaryKeyRelatedField(
         source="strategy",
         queryset=Strategy.objects.all(),
         required=False,
+        allow_null=True,
     )
 
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
-    # Use SerializerMethodField to handle the possibility of property_claim being None
+    # Use SerializerMethodField to handle the possibility of property_claim
+    #  being None
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -211,6 +229,10 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "evidence",
             "strategy_id",
         )
+
+        extra_kwargs = {
+            "name": {"allow_null": True, "required": False},
+        }
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
@@ -233,6 +255,8 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "property_claim_id",
         )
 
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
 
 class StrategySerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -241,7 +265,9 @@ class StrategySerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = Strategy
@@ -253,3 +279,5 @@ class StrategySerializer(serializers.ModelSerializer):
             "goal_id",
             "property_claims",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
