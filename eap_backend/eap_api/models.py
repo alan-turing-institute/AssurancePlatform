@@ -183,14 +183,17 @@ class PropertyClaim(CaseItem):
             [bool(self.goal), bool(self.strategy), bool(self.property_claim)]
         )
 
+        error_message: str = ""
         if parent_count != 1:
-            raise ValueError("A PropertyClaim should have exactly one parent.")
+            error_message = "A PropertyClaim should have exactly one parent."
+            raise ValueError(error_message)
 
         if (
             self.property_claim is not None
             and self.property_claim.pk == self.pk
         ):
-            raise ValueError("A PropertyClaim cannot be the parent of itself.")
+            error_message = "A PropertyClaim cannot be the parent of itself."
+            raise ValueError(error_message)
 
         try:
             parent_level = self.property_claim.level

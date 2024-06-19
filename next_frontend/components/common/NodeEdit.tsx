@@ -41,7 +41,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
 
   const [token] = useLoginToken();
 
-  let claims: any[] = [] 
+  let claims: any[] = []
   let strategies: any[] = []
 
   if(assuranceCase.goals[0]) {
@@ -194,7 +194,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
             <div className="w-full pt-4">
               <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">Move {node.type}</h3>
               <div className="flex justify-start items-center gap-2">
-                {node.type === 'property' && 
+                {node.type === 'property' &&
                   <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
                     <SelectTrigger>
                       <SelectValue placeholder="Move to" />
@@ -224,7 +224,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
                     </SelectContent>
                   </Select>
                 }
-                {node.type === 'evidence' && 
+                {node.type === 'evidence' &&
                   <Select onValueChange={setSelectedEvidenceMove}> {/* Update state on change */}
                     <SelectTrigger>
                       <SelectValue placeholder="Move to" />

@@ -1,14 +1,13 @@
 import warnings
-
-from django.http import JsonResponse
-from django.forms.models import model_to_dict
-
 from typing import Union
+
+from django.forms.models import model_to_dict
+from django.http import JsonResponse
 
 from . import models
 from .models import (
-    CaseItem,
     AssuranceCase,
+    CaseItem,
     Context,
     EAPGroup,
     Evidence,
@@ -128,7 +127,7 @@ def make_summary(model_data: Union[dict, list, CaseItem]):
     the id and the name
 
     Parameter: serialized_data, dict, or list of dicts
-    Returns: dict, or list of dicts, containing just "name" and "id" 
+    Returns: dict, or list of dicts, containing just "name" and "id"
     key/values.
     """
 
@@ -364,6 +363,4 @@ def get_allowed_groups(user, level="member"):
     list of EAPGroup instances in which the user is a member, or the owner
     """
     all_groups = EAPGroup.objects.all()
-    return [
-        group for group in all_groups if can_view_group(group, user, level)
-    ]
+    return [group for group in all_groups if can_view_group(group, user, level)]

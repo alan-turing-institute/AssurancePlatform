@@ -1,5 +1,7 @@
-from typing import Optional, Callable
+from typing import Callable, Optional, cast
 
+from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -8,9 +10,6 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.db.models.query import QuerySet
-from django.db.models import Q
-from typing import cast
 
 from .models import (
     AssuranceCase,
@@ -235,6 +234,7 @@ def case_list(request):
 #             return HttpResponse(status=403)
 #         case.delete()
 #         return HttpResponse(status=204)
+
 
 #     return None
 @csrf_exempt
@@ -683,8 +683,9 @@ def reply_to_comment(request, comment_id):
 
 def update_identifiers(case_id: Optional[int] = None):
 
+    error_message: str = "Assurance Case ID not provided."
     if case_id is None:
-        raise ValueError("Assurance Case ID not provided.")
+        raise ValueError(error_message)
 
     if TopLevelNormativeGoal.objects.filter(
         assurance_case_id=case_id
@@ -736,7 +737,7 @@ def update_identifiers(case_id: Optional[int] = None):
 
 def get_case_property_claims(
     goal: TopLevelNormativeGoal, strategies: QuerySet
-) -> tuple[list[int], list[int]]:
+) -> tuple:
     strategy_ids: list[int] = [strategy.pk for strategy in strategies]
 
     top_level_claim_ids: list[int] = [
@@ -749,7 +750,9 @@ def get_case_property_claims(
     child_claim_ids: list[int] = []
     for parent_claim_id in top_level_claim_ids:
         traverse_child_property_claims(
-            lambda index, child, parent: child_claim_ids.append(child.pk),
+            lambda _, child, parent: child_claim_ids.append(
+                child.pk
+            ),  # noqa: ARG005
             parent_claim_id,
         )
 
