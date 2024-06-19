@@ -720,7 +720,7 @@ def update_identifiers(case_id: Optional[int] = None):
 
 def get_case_property_claims(
     goal: TopLevelNormativeGoal, strategies: QuerySet
-) -> tuple[list[int], list[int]]:
+) -> tuple:
     strategy_ids: list[int] = [strategy.pk for strategy in strategies]
 
     top_level_claim_ids: list[int] = [
