@@ -256,7 +256,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       name: `E${identifier}`,
       short_description: description,
       long_description: description,
-      URL: 'ww.some-evidence.com',
+      URL: 'www.some-evidence.com',
       property_claim_id
     };
 

@@ -289,9 +289,7 @@ def goal_list(request):
     elif request.method == "POST":
 
         data = JSONParser().parse(request)
-        assurance_case_id = AssuranceCase.objects.get(
-            id=data["assurance_case_id"]
-        )
+        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
@@ -328,9 +326,7 @@ def goal_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(
-            goal, data=data, partial=True
-        )
+        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -665,19 +661,13 @@ def reply_to_comment(request, comment_id):
     if request.method == "POST":
         data = JSONParser().parse(request)
         data["parent"] = comment_id
-        data[
-            "author"
-        ] = request.user.id  # Ensure the author is set to the current user
+        data["author"] = request.user.id  # Ensure the author is set to the current user
         data["assurance_case"] = parent_comment.assurance_case_id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
-        return JsonResponse(
-            serializer.errors, status=status.HTTP_400_BAD_REQUEST
-        )
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -687,26 +677,25 @@ def update_identifiers(case_id: Optional[int] = None):
     if case_id is None:
         raise ValueError(error_message)
 
-    if TopLevelNormativeGoal.objects.filter(
-        assurance_case_id=case_id
-    ).exists():
+    if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
 
-        current_case_goal: TopLevelNormativeGoal = (
-            TopLevelNormativeGoal.objects.get(assurance_case_id=case_id)
+        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
+            assurance_case_id=case_id
         )
         goal_id: int = current_case_goal.pk
 
         update_sequential_identifiers(
-            TopLevelNormativeGoal.objects.filter(id=goal_id), "G"
+            TopLevelNormativeGoal.objects.filter(id=goal_id).order_by("id"),
+            "G",
         )
 
         update_sequential_identifiers(
-            Context.objects.filter(goal_id=goal_id), "C"
+            Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
         )
 
         current_case_strategies: QuerySet = Strategy.objects.filter(
             goal_id=goal_id
-        )
+        ).order_by("id")
         update_sequential_identifiers(current_case_strategies, "S")
 
         top_level_claim_ids, child_claim_ids = get_case_property_claims(
@@ -716,13 +705,13 @@ def update_identifiers(case_id: Optional[int] = None):
         update_sequential_identifiers(
             Evidence.objects.filter(
                 property_claim__id__in=top_level_claim_ids + child_claim_ids
-            ),
+            ).order_by("id"),
             "E",
         )
 
         parent_property_claims: QuerySet = PropertyClaim.objects.filter(
             pk__in=top_level_claim_ids
-        )
+        ).order_by("id")
 
         update_sequential_identifiers(parent_property_claims, "P")
 
@@ -744,19 +733,17 @@ def get_case_property_claims(
         claim.pk
         for claim in PropertyClaim.objects.filter(
             Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-        )
+        ).order_by("id")
     ]
 
     child_claim_ids: list[int] = []
     for parent_claim_id in top_level_claim_ids:
         traverse_child_property_claims(
-            lambda _, child, parent: child_claim_ids.append(
-                child.pk
-            ),  # noqa: ARG005
+            lambda _, child, parent: child_claim_ids.append(child.pk),  # noqa: ARG005
             parent_claim_id,
         )
 
-    return top_level_claim_ids, child_claim_ids
+    return top_level_claim_ids, sorted(child_claim_ids)
 
 
 def traverse_child_property_claims(
@@ -766,7 +753,7 @@ def traverse_child_property_claims(
 
     child_property_claims = PropertyClaim.objects.filter(
         property_claim_id=parent_claim_id
-    )
+    ).order_by("id")
 
     if len(child_property_claims) == 0:
         return
@@ -777,9 +764,7 @@ def traverse_child_property_claims(
                 child_property_claim,
                 PropertyClaim.objects.get(pk=parent_claim_id),
             )
-            traverse_child_property_claims(
-                on_child_claim, child_property_claim.pk
-            )
+            traverse_child_property_claims(on_child_claim, child_property_claim.pk)
 
 
 def update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
