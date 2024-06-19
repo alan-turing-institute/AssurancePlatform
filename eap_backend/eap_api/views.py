@@ -697,16 +697,17 @@ def update_identifiers(case_id: Optional[int] = None):
         goal_id: int = current_case_goal.pk
 
         update_sequential_identifiers(
-            TopLevelNormativeGoal.objects.filter(id=goal_id), "G"
+            TopLevelNormativeGoal.objects.filter(id=goal_id).order_by("id"),
+            "G",
         )
 
         update_sequential_identifiers(
-            Context.objects.filter(goal_id=goal_id), "C"
+            Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
         )
 
         current_case_strategies: QuerySet = Strategy.objects.filter(
             goal_id=goal_id
-        )
+        ).order_by("id")
         update_sequential_identifiers(current_case_strategies, "S")
 
         top_level_claim_ids, child_claim_ids = get_case_property_claims(
@@ -716,13 +717,13 @@ def update_identifiers(case_id: Optional[int] = None):
         update_sequential_identifiers(
             Evidence.objects.filter(
                 property_claim__id__in=top_level_claim_ids + child_claim_ids
-            ),
+            ).order_by("id"),
             "E",
         )
 
         parent_property_claims: QuerySet = PropertyClaim.objects.filter(
             pk__in=top_level_claim_ids
-        )
+        ).order_by("id")
 
         update_sequential_identifiers(parent_property_claims, "P")
 
@@ -744,7 +745,7 @@ def get_case_property_claims(
         claim.pk
         for claim in PropertyClaim.objects.filter(
             Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-        )
+        ).order_by("id")
     ]
 
     child_claim_ids: list[int] = []
@@ -756,7 +757,7 @@ def get_case_property_claims(
             parent_claim_id,
         )
 
-    return top_level_claim_ids, child_claim_ids
+    return top_level_claim_ids, sorted(child_claim_ids)
 
 
 def traverse_child_property_claims(
@@ -766,7 +767,7 @@ def traverse_child_property_claims(
 
     child_property_claims = PropertyClaim.objects.filter(
         property_claim_id=parent_claim_id
-    )
+    ).order_by("id")
 
     if len(child_property_claims) == 0:
         return
