@@ -74,9 +74,7 @@ class AssuranceCase(models.Model):
     name = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
     created_date = models.DateTimeField(auto_now_add=True)
-    lock_uuid = models.CharField(
-        max_length=50, default=None, null=True, blank=True
-    )
+    lock_uuid = models.CharField(max_length=50, default=None, null=True, blank=True)
     owner = models.ForeignKey(
         EAPUser, related_name="cases", on_delete=models.CASCADE, null=True
     )
@@ -186,10 +184,7 @@ class PropertyClaim(CaseItem):
         if parent_count != 1:
             raise ValueError("A PropertyClaim should have exactly one parent.")
 
-        if (
-            self.property_claim is not None
-            and self.property_claim.pk == self.pk
-        ):
+        if self.property_claim is not None and self.property_claim.pk == self.pk:
             raise ValueError("A PropertyClaim cannot be the parent of itself.")
 
         try:
@@ -205,6 +200,4 @@ class PropertyClaim(CaseItem):
 class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
-    property_claim = models.ManyToManyField(
-        PropertyClaim, related_name="evidence"
-    )
+    property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")

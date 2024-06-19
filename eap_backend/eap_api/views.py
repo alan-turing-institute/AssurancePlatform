@@ -1,5 +1,7 @@
-from typing import Optional
+from typing import Callable, Optional, cast
 
+from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -8,11 +10,10 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.db.models.query import QuerySet
-from typing import cast
 
 from .models import (
     AssuranceCase,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -234,6 +235,7 @@ def case_list(request):
 #         case.delete()
 #         return HttpResponse(status=204)
 
+
 #     return None
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
@@ -285,10 +287,9 @@ def goal_list(request):
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
+
         data = JSONParser().parse(request)
-        assurance_case_id = AssuranceCase.objects.get(
-            id=data["assurance_case_id"]
-        )
+        assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
@@ -297,7 +298,9 @@ def goal_list(request):
             )
             update_identifiers(get_case_id(goal_model))
             summary = make_summary(goal_model)
+
             return JsonResponse(summary, status=201)
+
         return JsonResponse(serializer.errors, status=400)
     return None
 
@@ -323,9 +326,7 @@ def goal_detail(request, pk):
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(
-            goal, data=data, partial=True
-        )
+        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -660,19 +661,13 @@ def reply_to_comment(request, comment_id):
     if request.method == "POST":
         data = JSONParser().parse(request)
         data["parent"] = comment_id
-        data[
-            "author"
-        ] = request.user.id  # Ensure the author is set to the current user
+        data["author"] = request.user.id  # Ensure the author is set to the current user
         data["assurance_case"] = parent_comment.assurance_case_id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return JsonResponse(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
-        return JsonResponse(
-            serializer.errors, status=status.HTTP_400_BAD_REQUEST
-        )
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -681,59 +676,96 @@ def update_identifiers(case_id: Optional[int] = None):
     if case_id is None:
         raise ValueError("Assurance Case ID not provided.")
 
-    if TopLevelNormativeGoal.objects.filter(
-        assurance_case_id=case_id
-    ).exists():
-        goal_id: int = TopLevelNormativeGoal.objects.get(
+    if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
+
+        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
             assurance_case_id=case_id
-        ).pk
+        )
+        goal_id: int = current_case_goal.pk
 
         update_sequential_identifiers(
             TopLevelNormativeGoal.objects.filter(id=goal_id), "G"
         )
-        update_sequential_identifiers(
-            Context.objects.filter(goal_id=goal_id), "C"
-        )
-        update_sequential_identifiers(
-            Strategy.objects.filter(goal_id=goal_id), "S"
+
+        update_sequential_identifiers(Context.objects.filter(goal_id=goal_id), "C")
+
+        current_case_strategies: QuerySet = Strategy.objects.filter(goal_id=goal_id)
+        update_sequential_identifiers(current_case_strategies, "S")
+
+        top_level_claim_ids, child_claim_ids = get_case_property_claims(
+            current_case_goal, current_case_strategies
         )
 
-        case_claim_ids: list[int] = [
-            claim.pk
-            for claim in PropertyClaim.objects.all()
-            if get_case_id(claim) == case_id
-        ]
-
         update_sequential_identifiers(
-            Evidence.objects.filter(property_claim__id__in=case_claim_ids), "E"
+            Evidence.objects.filter(
+                property_claim__id__in=top_level_claim_ids + child_claim_ids
+            ),
+            "E",
         )
 
         parent_property_claims: QuerySet = PropertyClaim.objects.filter(
-            pk__in=case_claim_ids
-        ).filter(property_claim_id=None)
+            pk__in=top_level_claim_ids
+        )
 
         update_sequential_identifiers(parent_property_claims, "P")
+
         for _, property_claim in enumerate(parent_property_claims):
-            update_property_claim_identifiers(property_claim)
+            traverse_child_property_claims(
+                lambda index, child, parent: update_item_name(
+                    child, f"{parent.name}.", index + 1
+                ),
+                property_claim.pk,
+            )
 
 
-def update_sequential_identifiers(query_set: QuerySet, prefix: str):
-    for model_index, model in enumerate(query_set):
-        model.name = f"{prefix}{model_index + 1}"
-        model.save()
+def get_case_property_claims(
+    goal: TopLevelNormativeGoal, strategies: QuerySet
+) -> tuple[list[int], list[int]]:
+    strategy_ids: list[int] = [strategy.pk for strategy in strategies]
+
+    top_level_claim_ids: list[int] = [
+        claim.pk
+        for claim in PropertyClaim.objects.filter(
+            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
+        )
+    ]
+
+    child_claim_ids: list[int] = []
+    for parent_claim_id in top_level_claim_ids:
+        traverse_child_property_claims(
+            lambda index, child, parent: child_claim_ids.append(child.pk),
+            parent_claim_id,
+        )
+
+    return top_level_claim_ids, child_claim_ids
 
 
-def update_property_claim_identifiers(parent_property_claim: PropertyClaim):
+def traverse_child_property_claims(
+    on_child_claim: Callable[[int, PropertyClaim, PropertyClaim], None],
+    parent_claim_id: int,
+):
+
     child_property_claims = PropertyClaim.objects.filter(
-        property_claim_id=parent_property_claim.pk
+        property_claim_id=parent_claim_id
     )
 
     if len(child_property_claims) == 0:
         return
     else:
         for index, child_property_claim in enumerate(child_property_claims):
-            child_property_claim.name = (
-                f"{parent_property_claim.name}.{index + 1}"
+            on_child_claim(
+                index,
+                child_property_claim,
+                PropertyClaim.objects.get(pk=parent_claim_id),
             )
-            child_property_claim.save()
-            update_property_claim_identifiers(child_property_claim)
+            traverse_child_property_claims(on_child_claim, child_property_claim.pk)
+
+
+def update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
+    case_item.name = f"{prefix}{number}"
+    case_item.save()
+
+
+def update_sequential_identifiers(query_set: QuerySet, prefix: str):
+    for model_index, model in enumerate(query_set):
+        update_item_name(model, prefix, model_index + 1)
