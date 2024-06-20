@@ -272,6 +272,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             onClose={() => setDeleteOpen(false)}
             onConfirm={handleDelete}
             loading={loading}
+            confirmButtonText={'Delete'}
           />
 
           <AlertModal
@@ -280,6 +281,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             onConfirm={handleClose}
             loading={loading}
             message={'There are unresolved changes, continue to discard these changes.'}
+            confirmButtonText={'Discard Changes'}
           />
         </>
       )}
