@@ -7,10 +7,11 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
+
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ interface NodeEditProps {
   setEditOpen: Dispatch<SetStateAction<boolean>>
 }
 
-const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
+const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [isMounted, setIsMounted] = useState(false);
   const { assuranceCase, setAssuranceCase } = useStore();
   const [selectedLink, setSelectedLink] = useState(false)
@@ -44,7 +45,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
   let claims: any[] = []
   let strategies: any[] = []
 
-  if(assuranceCase.goals[0]) {
+  if (assuranceCase.goals[0]) {
     strategies = assuranceCase.goals[0].strategies
     claims = listPropertyClaims(assuranceCase.goals)
   }
@@ -57,7 +58,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
     return null;
   }
 
-  if(!node) {
+  if (!node) {
     return null
   }
 
@@ -75,7 +76,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
       setLoading(false)
       window.location.reload()
     }
-    
+
     //TODO: Throw error is element didnt delete
     // show toast error?
   }
@@ -87,7 +88,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
   }
 
   const onChange = (open: boolean) => {
-    if(unresolvedChanges) {
+    if (unresolvedChanges) {
       setAlertOpen(true)
     } else {
       handleClose()
@@ -100,8 +101,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
       console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
 
       // Find id for selected move element
-      const type = selectedClaimMove.substring(0,1)
-      if(type === 'P') {
+      const type = selectedClaimMove.substring(0, 1)
+      if (type === 'P') {
         const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
 
         let updateItem = {
@@ -111,11 +112,11 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
-        if(updated) {
+        if (updated) {
           window.location.reload()
         }
       }
-      if(type === 'S') {
+      if (type === 'S') {
         const elementId = strategies.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
 
         let updateItem = {
@@ -125,7 +126,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
-        if(updated) {
+        if (updated) {
           window.location.reload()
         }
 
@@ -147,7 +148,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         property_claim_id: [selectedEvidenceMove],
       }
       const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
-      if(updated) {
+      if (updated) {
         window.location.reload()
       }
       console.log('Something went wrong updating')
@@ -157,7 +158,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
   return (
     <EditSheet
       title={`Editing ${node.data.name}`}
-      description="Use this form to update your goal."
+      description={`Use this form to update your ${caseItemDescription(node.type)}.`}
       isOpen={isOpen}
       onClose={handleClose}
       onChange={onChange}
@@ -166,7 +167,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
         <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} />
       ) : (
         <>
-          <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges}/>
+          <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
 
           {/* Node specific form buttons */}
           {node.type != 'context' && node.type != 'evidence' && (
@@ -205,20 +206,20 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
                     </SelectTrigger>
                     <SelectContent>
                       {strategies.map((strategy: any) => (
-                          <SelectItem key={strategy.id} value={strategy.name}>
-                            <div className="flex flex-col justify-start items-start gap-1">
-                              <span className="font-medium">{strategy.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        <SelectItem key={strategy.id} value={strategy.name}>
+                          <div className="flex flex-col justify-start items-start gap-1">
+                            <span className="font-medium">{strategy.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
                       }
                       {claims && claims.map((claim: any) => (
-                          <SelectItem key={claim.id} value={claim.name}>
-                            <div className="flex flex-col justify-start items-start gap-1">
-                              <span className="font-medium">{claim.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        <SelectItem key={claim.id} value={claim.name}>
+                          <div className="flex flex-col justify-start items-start gap-1">
+                            <span className="font-medium">{claim.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
                       }
                       {strategies.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
@@ -235,12 +236,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
                     </SelectTrigger>
                     <SelectContent>
                       {claims && claims.map((claim: any) => (
-                          <SelectItem key={claim.id} value={claim.id}>
-                            <div className="flex flex-col justify-start items-start gap-1">
-                              <span className="font-medium">{claim.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        <SelectItem key={claim.id} value={claim.id}>
+                          <div className="flex flex-col justify-start items-start gap-1">
+                            <span className="font-medium">{claim.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
                       }
                       {claims && claims.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
@@ -261,7 +262,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen } : NodeEditProps ) => {
               onClick={() => setDeleteOpen(true)}
               className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"
             >
-              <Trash2 className="mr-2"/>
+              <Trash2 className="mr-2" />
               Delete&nbsp;
               <span className='capitalize'>{node.type}</span></Button>
           </div>

@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { CloudFog, Loader, Loader2, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { findItemById, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
 
 const formSchema = z.object({
   URL: z.string().min(2, {
@@ -125,7 +125,7 @@ const EditForm: React.FC<EditFormProps> = ({
             {loading ? (
               <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
             ) : (
-              <span>Update&nbsp;<span className='capitalize'>{node.type}</span></span>
+              <span>Update&nbsp;<span className='capitalize'>{caseItemDescription(node.type)}</span></span>
             )}
           </Button>
         </div>

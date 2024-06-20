@@ -1,4 +1,18 @@
-export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, newPropertyClaim: any ) => {
+interface Map {
+    [key: string]: string | undefined
+}
+
+const DESCRIPTION_FROM_TYPE: Map = {
+    goal: "Goal",
+    context: "Context",
+    strategy: "Strategy",
+    property: "Property Claim",
+    evidence: "Evidence"
+};
+
+export const caseItemDescription = (caseItemName: string) => DESCRIPTION_FROM_TYPE[caseItemName] || caseItemName;
+
+export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, newPropertyClaim: any) => {
     // Iterate through the property claims array
     for (let i = 0; i < propertyClaims.length; i++) {
         const propertyClaim = propertyClaims[i];
@@ -40,7 +54,7 @@ export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, new
     return false; // Indicates the parent property claim was not found
 }
 
-export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim: any ) => {
+export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim: any) => {
     // Iterate through the property claims array
     for (let i = 0; i < array.length; i++) {
         let propertyClaim = array[i];
@@ -132,14 +146,14 @@ export const addEvidenceToClaim = (array: any, parentId: any, newEvidence: any) 
 
         // If this property claim has strategies, recursively search within them
         if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-        for (const strategy of propertyClaim.strategies) {
-            if (strategy.property_claims && strategy.property_claims.length > 0) {
-                const found = addEvidenceToClaim(strategy.property_claims, parentId, newEvidence);
-                if (found) {
-                    return true; // Indicates the property claim was found and updated within nested property claims of strategy
+            for (const strategy of propertyClaim.strategies) {
+                if (strategy.property_claims && strategy.property_claims.length > 0) {
+                    const found = addEvidenceToClaim(strategy.property_claims, parentId, newEvidence);
+                    if (found) {
+                        return true; // Indicates the property claim was found and updated within nested property claims of strategy
+                    }
                 }
             }
-        }
         }
     }
 
@@ -157,21 +171,21 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
             return array; // Return the updated array
         }
 
-        if(item.evidence && item.evidence.length > 0) {
+        if (item.evidence && item.evidence.length > 0) {
             const updatedNestedArray = updateEvidenceNested(item.evidence, id, newEvidence)
             if (updatedNestedArray) {
                 return array
             }
         }
 
-        if(item.property_claims && item.property_claims.length > 0) {
+        if (item.property_claims && item.property_claims.length > 0) {
             const updatedNestedArray = updateEvidenceNested(item.property_claims, id, newEvidence)
             if (updatedNestedArray) {
                 return array
             }
         }
 
-        if(item.strategies && item.strategies.length > 0) {
+        if (item.strategies && item.strategies.length > 0) {
             for (const strategy of item.strategies) {
                 if (strategy.property_claims && strategy.property_claims.length > 0) {
                     const updatedNestedArray = updateEvidenceNested(strategy.property_claims, id, newEvidence)
@@ -188,7 +202,7 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
 };
 
 export const createAssuranceCaseNode = async (entity: string, newItem: any, token: string | null) => {
-    if(!token) return console.log('No token')
+    if (!token) return console.log('No token')
 
     try {
         let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/`
@@ -203,7 +217,7 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
         };
         const response = await fetch(url, requestOptions);
 
-        if(!response.ok) {
+        if (!response.ok) {
             return { error: `Something went wrong ${response.status}` }
         }
 
@@ -222,7 +236,7 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
 }
 
 export const deleteAssuranceCaseNode = async (type: string, id: any, token: string | null) => {
-    if(!token) return console.log('No token')
+    if (!token) return console.log('No token')
 
     let entity = null
     switch (type) {
@@ -255,7 +269,7 @@ export const deleteAssuranceCaseNode = async (type: string, id: any, token: stri
         };
         const response = await fetch(url, requestOptions);
 
-        if(response.ok) {
+        if (response.ok) {
             return true
         }
     } catch (error) {
@@ -265,7 +279,7 @@ export const deleteAssuranceCaseNode = async (type: string, id: any, token: stri
 }
 
 export const updateAssuranceCaseNode = async (type: string, id: any, token: string | null, updateItem: any) => {
-    if(!token) return console.log('No token')
+    if (!token) return console.log('No token')
 
     let entity = null
     switch (type) {
@@ -299,7 +313,7 @@ export const updateAssuranceCaseNode = async (type: string, id: any, token: stri
         };
         const response = await fetch(url, requestOptions);
 
-        if(response.ok) {
+        if (response.ok) {
             return true
         }
     } catch (error) {
@@ -346,7 +360,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
     switch (type) {
         case 'context':
             const newContext = assuranceCase.goals[0].context.map((context: any) => {
-                if(context.id === id) {
+                if (context.id === id) {
                     return {
                         ...context,
                         ...updatedItem
@@ -363,7 +377,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
         case 'strategy':
             // Create a new strategy array by adding the new context item
             const newStrategy = assuranceCase.goals[0].strategies.map((strategy: any) => {
-                if(strategy.id === id) {
+                if (strategy.id === id) {
                     return {
                         ...strategy,
                         ...updatedItem
@@ -400,7 +414,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
         default:
             updatedAssuranceCase = {
                 ...assuranceCase,
-                goals: [ {
+                goals: [{
                     ...assuranceCase.goals[0],
                     ...updatedItem
                 }]
@@ -432,10 +446,10 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
             break;
     }
 
-    if(newArray.length > 0) {
+    if (newArray.length > 0) {
         const lastItem = newArray.pop()
 
-        if(newNodeType === 'property' && parentNode.type === 'property') {
+        if (newNodeType === 'property' && parentNode.type === 'property') {
             const lastIdentifier = parseFloat(lastItem.name.substring(1)).toString()
             const subIdentifier = lastIdentifier.split('.')[1]
             identifier = parseInt(subIdentifier) + 1;
