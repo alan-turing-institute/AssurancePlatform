@@ -90,25 +90,25 @@ export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim:
     return null; // Indicates the parent property claim was not found
 }
 
-export const listPropertyClaims = (array: any, claims: any[] = []) => {
+export const listPropertyClaims = (array: any, currentClaimName: string, claims: any[] = []) => {
     // Iterate through the property claims array
     for (let i = 0; i < array.length; i++) {
         const item = array[i];
 
-        if (item.type === 'PropertyClaim') {
+        if (item.type === 'PropertyClaim' && item.name !== currentClaimName) {
             claims.push(item);
         }
 
         // If this item has nested property claims, recursively search within them
         if (item.property_claims && item.property_claims.length > 0) {
-            listPropertyClaims(item.property_claims, claims);
+            listPropertyClaims(item.property_claims, currentClaimName, claims);
         }
 
         // If this property claim has strategies, recursively search within them
         if (item.strategies && item.strategies.length > 0) {
             for (const strategy of item.strategies) {
                 if (strategy.property_claims && strategy.property_claims.length > 0) {
-                    listPropertyClaims(strategy.property_claims, claims);
+                    listPropertyClaims(strategy.property_claims, currentClaimName, claims);
                 }
             }
         }

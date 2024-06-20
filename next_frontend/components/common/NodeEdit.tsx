@@ -45,9 +45,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let claims: any[] = []
   let strategies: any[] = []
 
-  if (assuranceCase.goals[0]) {
+  if (assuranceCase.goals[0] && node != null) {
     strategies = assuranceCase.goals[0].strategies
-    claims = listPropertyClaims(assuranceCase.goals)
+    claims = listPropertyClaims(assuranceCase.goals, node.data.name)
   }
 
   useEffect(() => {
