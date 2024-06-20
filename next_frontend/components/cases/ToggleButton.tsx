@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import React, { useState } from 'react'
 import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
 
@@ -104,7 +104,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   return (
     <button onClick={(e) => handleToggle(e)}>
       <div className='infline-flex hover:bg-slate-900/10 p-1 rounded-full'>
-      {hidden ? <ChevronUp size={18}/> : <ChevronDown size={18}/> }
+      {hidden ? <ChevronRight size={18}/> : <ChevronDown size={18}/> }
       </div>
     </button>
   )
