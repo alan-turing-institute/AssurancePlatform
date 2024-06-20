@@ -37,7 +37,8 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
       type: nodeType,
       data: { id: item.id, name: item.name, type: item.type, description: item.short_description, ...item },
       position: { x: 0, y: 50 },
-      hidden: false,
+      hidden: nodeType === 'goal' ? false : true,
+      // hidden: false,
       height: 64,
       width: 288
     };
