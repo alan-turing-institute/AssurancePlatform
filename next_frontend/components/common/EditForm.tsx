@@ -73,6 +73,7 @@ const EditForm: React.FC<EditFormProps> = ({
       const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node)
       if(updatedAssuranceCase) {
         // setAssuranceCase(updatedAssuranceCase)
+        setLoading(false)
         window.location.reload()
         onClose()
       }
