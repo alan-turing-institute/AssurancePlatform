@@ -90,6 +90,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
         onClose={() => setOpen(false)}
         onConfirm={onDelete}
         loading={loading}
+        confirmButtonText={'Delete'}
       />
     </div>
   )

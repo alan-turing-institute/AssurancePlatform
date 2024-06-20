@@ -167,6 +167,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         onClose={() => setDeleteOpen(false)}
         onConfirm={onDelete}
         loading={loading}
+        confirmButtonText={'Delete'}
       />
     </div>
     </div>
