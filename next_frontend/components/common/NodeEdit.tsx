@@ -69,12 +69,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   /** Function used to handle deletion of the current selected item */
   const handleDelete = async () => {
+    setLoading(true)
     const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
 
-    if (deleted) {
-      // TODO: Remove node from selected Nodes
+    if(deleted) {
+      setLoading(false)
       window.location.reload()
     }
+
+    //TODO: Throw error is element didnt delete
+    // show toast error?
   }
 
   const handleClose = () => {

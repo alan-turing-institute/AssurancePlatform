@@ -1,4 +1,6 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import {
   Form,
   FormControl,
@@ -9,7 +11,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { z } from "zod"
+import { boolean, z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
@@ -39,6 +41,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
+  const [loading, setLoading] = useState<boolean>(false)
 
   const { setSelectedLink, setLinkToCreate, handleClose } = actions
 
@@ -84,6 +87,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     // Update Assurance Case in state
     // setAssuranceCase(updatedAssuranceCase)
     reset()
+    setLoading(false)
     window.location.reload()
   }
 
@@ -124,6 +128,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     // Update Assurance Case in state
     // setAssuranceCase(updatedAssuranceCase)
     reset()
+    setLoading(false)
     window.location.reload()
   }
 
@@ -197,6 +202,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         // Update Assurance Case in state
         // setAssuranceCase(updatedAssuranceCase);
         reset()
+        setLoading(false)
         window.location.reload()
       }
     }
@@ -219,6 +225,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
       // setAssuranceCase(updatedAssuranceCase)
       reset()
+      setLoading(false)
       window.location.reload()
     }
 
@@ -241,6 +248,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // Update Assurance Case in state
       // setAssuranceCase(updatedAssuranceCase)
       reset()
+      setLoading(false)
       window.location.reload()
     }
   }
@@ -282,6 +290,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
     // setAssuranceCase(updatedAssuranceCase)
     reset()
+    setLoading(false)
     window.location.reload()
   }
 
@@ -293,6 +302,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setLoading(true)
     switch (linkType) {
       case 'context':
         handleContextAdd(values.description)
@@ -332,7 +342,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
             )}
           />
           <div className='flex justify-start items-center gap-3'>
-            <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white">Add</Button>
+            <Button type="submit" disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 dark:text-white">Add</Button>
             <Button variant={"outline"} onClick={() => {
               setSelectedLink(false)
               setLinkToCreate('')
