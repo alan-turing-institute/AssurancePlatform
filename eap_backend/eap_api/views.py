@@ -293,11 +293,11 @@ def goal_list(request):
         data["assurance_case"] = assurance_case_id
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
-            goal_model: TopLevelNormativeGoal = cast(
+            model_instance: TopLevelNormativeGoal = cast(
                 TopLevelNormativeGoal, serializer.save()
             )
-            update_identifiers(get_case_id(goal_model))
-            summary = make_summary(goal_model)
+            update_identifiers(model_instance=model_instance)
+            summary = make_summary(model_instance)
 
             return JsonResponse(summary, status=201)
 
@@ -356,9 +356,9 @@ def context_list(request):
         data = JSONParser().parse(request)
         serializer = ContextSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            update_identifiers(get_case_id(serializer.instance))
+            model_instance: Context = cast(Context, serializer.save())
+            update_identifiers(model_instance=model_instance)
+            summary = make_summary(model_instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -392,7 +392,7 @@ def context_detail(request, pk):
     elif request.method == "DELETE":
         case_id: Optional[int] = get_case_id(context)
         context.delete()
-        update_identifiers(case_id)
+        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -412,9 +412,9 @@ def property_claim_list(request):
         data = JSONParser().parse(request)
         serializer = PropertyClaimSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            update_identifiers(get_case_id(serializer.instance))
+            model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
+            update_identifiers(model_instance=model_instance)
+            summary = make_summary(model_instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -440,15 +440,21 @@ def property_claim_detail(request, pk):
         data = JSONParser().parse(request)
         serializer = PropertyClaimSerializer(claim, data=data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            data = serializer.data
+            model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
+            update_identifiers(model_instance=model_instance)
+
+            data: dict = cast(
+                dict,
+                PropertyClaimSerializer(model_instance).data,
+            )
             data["shape"] = shape
+
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         case_id: Optional[int] = get_case_id(claim)
         claim.delete()
-        update_identifiers(case_id)
+        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -468,9 +474,9 @@ def evidence_list(request):
         data = JSONParser().parse(request)
         serializer = EvidenceSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            update_identifiers(get_case_id(serializer.instance))
+            model_instance: Evidence = cast(Evidence, serializer.save())
+            update_identifiers(model_instance=model_instance)
+            summary = make_summary(model_instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -504,7 +510,7 @@ def evidence_detail(request, pk):
     elif request.method == "DELETE":
         case_id: Optional[int] = get_case_id(evidence)
         evidence.delete()
-        update_identifiers(case_id)
+        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -541,9 +547,10 @@ def strategies_list(request):
         data = JSONParser().parse(request)
         serializer = StrategySerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            summary = make_summary(serializer.data)
-            update_identifiers(get_case_id(serializer.instance))
+            model_instance: Strategy = cast(Strategy, serializer.save())
+            update_identifiers(model_instance=model_instance)
+
+            summary = make_summary(model_instance)
             return JsonResponse(summary, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -572,7 +579,7 @@ def strategy_detail(request, pk):
     elif request.method == "DELETE":
         case_id: Optional[int] = get_case_id(strategy)
         strategy.delete()
-        update_identifiers(case_id)
+        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -671,9 +678,14 @@ def reply_to_comment(request, comment_id):
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-def update_identifiers(case_id: Optional[int] = None):
+def update_identifiers(
+    case_id: Optional[int] = None, model_instance: Optional[CaseItem] = None
+):
 
     error_message: str = "Assurance Case ID not provided."
+    if case_id is None and model_instance is not None:
+        case_id = get_case_id(model_instance)
+
     if case_id is None:
         raise ValueError(error_message)
 
@@ -722,6 +734,9 @@ def update_identifiers(case_id: Optional[int] = None):
                 ),
                 property_claim.pk,
             )
+
+        if model_instance is not None:
+            model_instance.refresh_from_db()
 
 
 def get_case_property_claims(

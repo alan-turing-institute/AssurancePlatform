@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from django.http import HttpResponse
 from django.test import Client, TestCase
@@ -118,6 +119,7 @@ class GoalViewTest(TestCase):
 
         self.goal.delete()
         goal_bad_name: dict = GOAL_INFO
+        goal_bad_name["name"] = ""
 
         response_post: HttpResponse = self.client.post(
             reverse("goal_list"),
@@ -125,7 +127,14 @@ class GoalViewTest(TestCase):
             content_type="application/json",
         )
 
-        assert response_post.json()["name"] == "G1"
+        expected_name: str = "G1"
+
+        assert response_post.json()["name"] == expected_name
+        goals_created: list[TopLevelNormativeGoal] = list(
+            TopLevelNormativeGoal.objects.all()
+        )
+        assert len(goals_created) == 1
+        assert goals_created[0].name == expected_name
 
     def test_goal_list_view_get(self):
         response_get = self.client.get(reverse("goal_list"))
@@ -210,7 +219,6 @@ class PropertyClaimViewTest(TestCase):
         self.pclaim1 = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
         self.pclaim2 = PropertyClaim.objects.create(**PROPERTYCLAIM2_INFO)
         self.update = {
-            "name": "TestPropertyClaim_updated",
             "short_description": "description is updated",
         }
         # get data from DB
@@ -247,7 +255,33 @@ class PropertyClaimViewTest(TestCase):
             content_type="application/json",
         )
         assert response_put.status_code == 200
-        assert response_put.json()["name"] == self.update["name"]
+        assert (
+            response_put.json()["short_description"] == self.update["short_description"]
+        )
+
+    def test_identifier_update_on_move(self):
+        self.pclaim1.name = "P1"
+        self.pclaim1.save()
+
+        move_update: dict[str, Any] = {
+            "goal_id": None,
+            "property_claim_id": self.pclaim1.pk,
+            "strategy_id": None,
+        }
+
+        update_response: HttpResponse = self.client.put(
+            reverse("property_claim_detail", kwargs={"pk": self.pclaim2.pk}),
+            data=json.dumps(move_update),
+            content_type="application/json",
+        )
+
+        self.pclaim2.refresh_from_db()
+
+        expected_name: str = f"{self.pclaim1.name}.1"
+
+        assert self.pclaim2.name == expected_name
+        assert update_response.status_code == 200
+        assert update_response.json()["name"] == expected_name
 
     def test_property_claim_delete_with_standard_permission(self):
         url = reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk})

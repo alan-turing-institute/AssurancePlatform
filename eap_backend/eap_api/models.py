@@ -60,7 +60,7 @@ class CaseItem(models.Model):
     table.
     """
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, blank=True)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape

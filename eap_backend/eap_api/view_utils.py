@@ -133,7 +133,6 @@ def make_summary(model_data: Union[dict, list, CaseItem]):
 
     def summarize_one(data: Union[dict, CaseItem]):
         if isinstance(data, CaseItem):
-            data.refresh_from_db()
             data = model_to_dict(data)
 
         if not (isinstance(data, dict) and "id" in data and "name" in data):
