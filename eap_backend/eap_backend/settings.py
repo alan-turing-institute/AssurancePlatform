@@ -21,32 +21,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
-# TODO(cgavidia): Move DEBUG and SECRET_KEY to environment variables.
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g"
+SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(32))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "on") == "on"
 
 # Keys needed for OAuth
 GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
-# TODO(cgavidia): This should also come from environment variables.
-ALLOWED_HOSTS = ["*"]
-
+ALLOWED_HOSTS = (
+    [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
+)
 
 # Application definition
 
 INSTALLED_APPS = [
     "eap_api.apps.ApiConfig",
-    "django.contrib.admin",  # TODO(cgavidia):  Apparently, we don't need this.
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",  # TODO(cgavidia): Apparently, we don't need this.
-    "django.contrib.messages",  # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.sessions",
+    "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
@@ -63,13 +61,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",  # TODO(cgavidia): This line is duplicated.
     "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
-    "django.contrib.messages.middleware.MessageMiddleware",  # TODO(cgavidia): Apparently, we don't need this.
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
 ]
