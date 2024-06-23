@@ -21,11 +21,13 @@ urlpatterns = [
         views.property_claim_list,
         name="property_claim_list",
     ),
-    path(
-        "comments/<int:assurance_case_id>/",
-        views.comment_list,
-        name="comment_list",
-    ),
+    # path(
+    #     "comments/<int:assurance_case_id>/",
+    #     views.comment_list,
+    #     name="comment_list",
+    # ),
+    path('assurance_case/<int:assurance_case_id>/comments/', views.comment_list, name='comment_list'),
+    path('comments/<int:pk>/', views.comment_detail, name='comment_detail'),
     path(
         "comments/<int:comment_id>/reply/",
         views.reply_to_comment,
