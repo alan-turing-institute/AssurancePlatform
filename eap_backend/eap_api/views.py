@@ -642,14 +642,16 @@ def comment_list(request, assurance_case_id):
 
     elif request.method == "POST":
         data = request.data.copy()
-        data['assurance_case_id'] = assurance_case_id  # Ensure assurance_case_id is set in the data
+        data["assurance_case_id"] = (
+            assurance_case_id  # Ensure assurance_case_id is set in the data
+        )
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             # Ensure the author is set to the current user
             serializer.save(author=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -666,18 +668,18 @@ def comment_detail(request, pk):
     if request.method == "GET":
         serializer = CommentSerializer(comment)
         return Response(serializer.data)
-    
+
     elif request.method == "PUT":
         serializer = CommentSerializer(comment, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         comment.delete()
         return HttpResponse(status=204)
-    
+
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -139,7 +139,7 @@ export default function NotesFeed({ }) {
                     ) : (
                       <p className="whitespace-normal">{activityItem.content}</p>
                     )}
-                    
+
                   </div>
                 </div>
                 {!edit && (

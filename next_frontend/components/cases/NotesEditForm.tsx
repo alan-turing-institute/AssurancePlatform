@@ -68,7 +68,7 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = assuranceCase.comments.map((comment:any) => 
+      const updatedComments = assuranceCase.comments.map((comment:any) =>
           comment.id === updatedComment.id ? updatedComment : comment
       );
 
