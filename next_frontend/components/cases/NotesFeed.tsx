@@ -63,7 +63,6 @@ export default function NotesFeed({ }) {
   useEffect(() => {
     //@ts-ignore
     assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    console.log('Comments', assuranceCase.comments)
   },[assuranceCase])
 
   const handleNoteDelete = async (id: number) => {
@@ -84,7 +83,6 @@ export default function NotesFeed({ }) {
       }
 
       const updatedComments = assuranceCase.comments.filter((comment:any) => comment.id !== id)
-      console.log('Updated Comments', updatedComments)
 
       const updatedAssuranceCase = {
         ...assuranceCase,
