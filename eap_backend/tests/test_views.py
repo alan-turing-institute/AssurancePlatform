@@ -11,6 +11,7 @@ from eap_api.models import (
     EAPUser,
     Evidence,
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 from eap_api.serializers import (
@@ -164,6 +165,40 @@ class GoalViewTest(TestCase):
         self.client.delete(url)
         response_get = self.client.get(reverse("goal_list"))
         assert len(response_get.json()) == 0
+
+
+class StrategyViewTest(TestCase):
+    def setUp(self):
+        self.assurance_case: AssuranceCase = AssuranceCase.objects.create(**CASE1_INFO)
+
+        self.goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
+            **GOAL_INFO
+        )
+
+    def test_identifier_update_follows_order(self):
+        number_of_strategies: int = 3
+        for strategy_number in range(1, number_of_strategies + 1):
+            post_data = {
+                "name": "",
+                "short_description": "Strategy for The Goal",
+                "long_description": "A longer description of the strategy",
+                "goal_id": 1,
+            }
+            response_post: HttpResponse = self.client.post(
+                reverse("strategies_list"),
+                data=json.dumps(post_data),
+                content_type="application/json",
+            )
+
+            assert response_post.status_code == 201
+            assert response_post.json()["name"] == f"S{strategy_number}"
+
+            created_strategy: Strategy = Strategy.objects.get(
+                pk=response_post.json()["id"]
+            )
+
+            assert created_strategy.pk == response_post.json()["id"]
+            assert created_strategy.name == f"S{strategy_number}"
 
 
 class ContextViewTest(TestCase):

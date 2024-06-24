@@ -45,7 +45,7 @@ Please remember to enable `pre-commit` and run it before any push or PR.
 
 ```bash
 pre-commit install
-pre-commit run a--all-files
+pre-commit run --all-files
 ```
 
 ### Contributing to the Documentation
