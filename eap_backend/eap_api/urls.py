@@ -21,13 +21,8 @@ urlpatterns = [
         views.property_claim_list,
         name="property_claim_list",
     ),
-    # path(
-    #     "comments/<int:assurance_case_id>/",
-    #     views.comment_list,
-    #     name="comment_list",
-    # ),
     path(
-        "assurance_case/<int:assurance_case_id>/comments/",
+        "cases/<int:assurance_case_id>/comments/",
         views.comment_list,
         name="comment_list",
     ),
