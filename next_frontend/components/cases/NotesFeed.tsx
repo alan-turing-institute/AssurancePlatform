@@ -55,6 +55,7 @@ export default function NotesFeed({ }) {
   const { assuranceCase, setAssuranceCase } = useStore()
   const [token] = useLoginToken();
   const [edit, setEdit] = useState<boolean>()
+  const [editId, setEditId] = useState<number>()
   const [newComment, setNewComment] = useState<string>()
 
   //@ts-ignore
@@ -132,7 +133,7 @@ export default function NotesFeed({ }) {
                     <p className="mt-0.5 text-sm text-foreground/70">Created On: {moment(new Date(activityItem.created_at)).format('DD/MM/YYYY')}</p>
                   </div>
                   <div className="mt-2 text-sm text-foreground">
-                    {edit ? (
+                    {edit && editId === activityItem.id ? (
                       <NotesEditForm note={activityItem} setEdit={setEdit} />
                     ) : (
                       <p className="whitespace-normal">{activityItem.content}</p>
@@ -142,7 +143,10 @@ export default function NotesFeed({ }) {
                 </div>
                 {!edit && (
                 <div className='hidden group-hover:flex justify-center items-center gap-2'>
-                  <Button onClick={() => setEdit(!edit)} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
+                  <Button onClick={() => {
+                    setEdit(!edit)
+                    setEditId(activityItem.id)
+                  }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
                     <PencilLine className='w-4 h-4'/>
                   </Button>
                   <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
