@@ -1,8 +1,15 @@
-import { Fragment, useEffect } from 'react'
+'use client'
+
+import { Fragment, useEffect, useState } from 'react'
 import { ChatBubbleLeftEllipsisIcon, TagIcon, UserCircleIcon } from '@heroicons/react/20/solid'
-import { User2Icon } from 'lucide-react'
+import { Edit2, Pencil, PencilLine, PhoneOffIcon, Save, Trash2, User2Icon, X } from 'lucide-react'
 import moment from 'moment'
 import useStore from '@/data/store'
+import { Button } from '../ui/button'
+import { useLoginToken } from '@/hooks/useAuth'
+import { boolean } from 'zod'
+import NotesEditField from './NotesEditForm'
+import NotesEditForm from './NotesEditForm'
 
 // const activity = [
 //   {
@@ -45,7 +52,10 @@ import useStore from '@/data/store'
 // ]
 
 export default function NotesFeed({ }) {
-  const { assuranceCase } = useStore()
+  const { assuranceCase, setAssuranceCase } = useStore()
+  const [token] = useLoginToken();
+  const [edit, setEdit] = useState<boolean>()
+  const [newComment, setNewComment] = useState<string>()
 
   //@ts-ignore
   assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -55,6 +65,36 @@ export default function NotesFeed({ }) {
     assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   },[assuranceCase])
 
+  const handleNoteDelete = async (id: number) => {
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
+
+      const requestOptions: RequestInit = {
+          method: "DELETE",
+          headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+          }
+      };
+      const response = await fetch(url, requestOptions);
+
+      if(!response.ok) {
+          console.log('error')
+      }
+
+      const updatedComments = assuranceCase.comments.filter((comment:any) => comment.id !== id)
+
+      const updatedAssuranceCase = {
+        ...assuranceCase,
+        comments: updatedComments
+      }
+
+      setAssuranceCase(updatedAssuranceCase)
+    } catch (error) {
+        console.log('Error', error)
+    }
+  }
+
   return (
     <div className="mt-4 py-8 px-4">
       <ul role="list" className="-mb-8">
@@ -63,11 +103,11 @@ export default function NotesFeed({ }) {
         )}
         {assuranceCase.comments.map((activityItem: any, activityItemIdx: any) => (
           <li key={crypto.randomUUID()}>
-            <div className="relative pb-8">
+            <div className="relative pb-8 group">
               {activityItemIdx !== assuranceCase.comments.length - 1 ? (
-                <span className="absolute left-5 top-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-800" aria-hidden="true" />
+                <span className="absolute left-9 top-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-800" aria-hidden="true" />
               ) : null}
-              <div className="relative flex items-start space-x-3">
+              <div className="relative flex justify-start items-start space-x-3 p-4 rounded-md group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
                 <div className="relative mr-4">
                   {/* <img
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-400 ring-8 ring-white"
@@ -92,9 +132,22 @@ export default function NotesFeed({ }) {
                     <p className="mt-0.5 text-sm text-foreground/70">Created On: {moment(new Date(activityItem.created_at)).format('DD/MM/YYYY')}</p>
                   </div>
                   <div className="mt-2 text-sm text-foreground">
-                    <p className="whitespace-normal">{activityItem.content}</p> {/* Apply whitespace-normal to force text wrapping */}
+                    {edit ? (
+                      <NotesEditForm note={activityItem} setEdit={setEdit} />
+                    ) : (
+                      <p className="whitespace-normal">{activityItem.content}</p>
+                    )}
+
                   </div>
                 </div>
+                {!edit && (
+                <div className='hidden group-hover:flex justify-center items-center gap-2'>
+                  <Button onClick={() => setEdit(!edit)} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
+                    <PencilLine className='w-4 h-4'/>
+                  </Button>
+                  <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
+                </div>
+                )}
               </div>
             </div>
           </li>
