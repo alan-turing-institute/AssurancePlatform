@@ -42,10 +42,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   const [token] = useLoginToken();
 
+  let goal: any = null
   let claims: any[] = []
   let strategies: any[] = []
 
   if (assuranceCase.goals[0] && node != null) {
+    goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
     claims = listPropertyClaims(assuranceCase.goals, node.data.name)
   }
@@ -102,6 +104,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
       // Find id for selected move element
       const type = selectedClaimMove.substring(0, 1)
+      if (type === 'G') {
+        let updateItem = {
+          goal_id: goal.id,
+          strategy_id: null,
+          property_claim_id: null,
+        }
+
+        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        if (updated) {
+          window.location.reload()
+        }
+      }
       if (type === 'P') {
         const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
 
@@ -132,15 +146,6 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
         console.log('Something went wrong updating')
       }
-
-      // const updateItem = {
-      //   strategy_id: selectedClaimMove,
-      // }
-      // const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
-      // if(updated) {
-      //   window.location.reload()
-      // }
-      // console.log('Something went wrong updating')
     }
     if (selectedEvidenceMove) {
       console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
@@ -205,6 +210,11 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       <SelectValue placeholder="Move to" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem key={goal.id} value={goal.name}>
+                        <div className="flex flex-col justify-start items-start gap-1">
+                          <span className="font-medium">{goal.name}</span>
+                        </div>
+                      </SelectItem>
                       {strategies.map((strategy: any) => (
                         <SelectItem key={strategy.id} value={strategy.name}>
                           <div className="flex flex-col justify-start items-start gap-1">
