@@ -282,7 +282,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             onClose={() => setDeleteOpen(false)}
             onConfirm={handleDelete}
             loading={loading}
-            confirmButtonText={'Delete'}
+            message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
+            confirmButtonText={'Yes, delete this element!'}
+            cancelButtonText={'No, keep the element'}
           />
 
           <AlertModal
@@ -290,8 +292,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             onClose={() => setAlertOpen(false)}
             onConfirm={handleClose}
             loading={loading}
-            message={'There are unresolved changes, continue to discard these changes.'}
-            confirmButtonText={'Discard Changes'}
+            message={'You have changes that have not been updated, would you like to discard these changes?'}
+            confirmButtonText={'Yes, discard changes!'}
+            cancelButtonText={'No, keep editing'}
           />
         </>
       )}
