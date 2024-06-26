@@ -707,3 +707,91 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
 
     return identifier.toString()
 }
+
+// Removing elements from Assurance Case
+const removeItemFromNestedStructure = (array: any, id: any) => {
+    return array.map((item: any) => {
+        // Remove from property_claims
+        if (item.property_claims) {
+            item.property_claims = item.property_claims.filter((claim: any) => claim.id !== id);
+            item.property_claims = removeItemFromNestedStructure(item.property_claims, id);
+        }
+
+        // Remove from strategies
+        if (item.strategies) {
+            item.strategies = item.strategies.map((strategy: any) => {
+                if (strategy.property_claims) {
+                    strategy.property_claims = strategy.property_claims.filter((claim: any) => claim.id !== id);
+                    strategy.property_claims = removeItemFromNestedStructure(strategy.property_claims, id);
+                }
+                return strategy;
+            }).filter((strategy: any) => strategy.id !== id);
+        }
+
+        // Remove from contexts
+        if (item.context) {
+            item.context = item.context.filter((context: any) => context.id !== id);
+            item.context = removeItemFromNestedStructure(item.context, id);
+        }
+
+        // Remove from evidence
+        if (item.evidence) {
+            item.evidence = item.evidence.filter((evidence: any) => evidence.id !== id);
+            item.evidence = removeItemFromNestedStructure(item.evidence, id);
+        }
+
+        return item;
+    }).filter((item: any) => item.id !== id);
+};
+
+export const removeAssuranceCaseNode = (assuranceCase: any, id: any) => {
+    const updatedGoals = removeItemFromNestedStructure(assuranceCase.goals, id);
+    return {
+        ...assuranceCase,
+        goals: updatedGoals
+    };
+}
+
+export const extractGoalsClaimsStrategies = (array: any) => {
+    const result = {
+        goals: <any[]>[],
+        claims: <any[]>[],
+        strategies: <any[]>[]
+    };
+
+    const traverse = (items: any) => {
+        items.forEach((item: any) => {
+            // Collect goals
+            if (item.type === "TopLevelNormativeGoal") {
+                result.goals.push(item);
+            }
+
+            // Collect property claims
+            if (item.type === "PropertyClaim") {
+                result.claims.push(item);
+            }
+
+            // Collect strategies
+            if (item.type !== "Evidence" && item.type !== "Context") {
+                result.strategies.push(item);
+            }
+
+            // Traverse nested structures
+            if (item.property_claims) {
+                traverse(item.property_claims);
+            }
+            if (item.strategies) {
+                traverse(item.strategies);
+            }
+            if (item.context) {
+                traverse(item.context);
+            }
+            if (item.evidence) {
+                traverse(item.evidence);
+            }
+        });
+    };
+
+    traverse(array);
+    return result;
+};

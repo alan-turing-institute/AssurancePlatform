@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -42,15 +42,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   const [token] = useLoginToken();
 
-  let goal: any = null
-  let claims: any[] = []
-  let strategies: any[] = []
+  const [goal, setGoal] = useState<any>()
+  const [strategies, setStrategies] = useState<any[]>()
+  const [claims, setClaims] = useState<any[]>()
 
-  if (assuranceCase.goals[0] && node != null) {
-    goal = assuranceCase.goals[0]
-    strategies = assuranceCase.goals[0].strategies
-    claims = listPropertyClaims(assuranceCase.goals, node.data.name)
-  }
+  useEffect(() => {
+      const {goals, claims, strategies} = extractGoalsClaimsStrategies(assuranceCase.goals)
+      setGoal(goals[0])
+      setClaims(claims)
+      setStrategies(strategies)
+  },[assuranceCase])
 
   useEffect(() => {
     setIsMounted(true);
@@ -75,12 +76,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
 
     if(deleted) {
-      setLoading(false)
-      window.location.reload()
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
+      console.log('updatedAssuranceCase', updatedAssuranceCase)
+      if(updatedAssuranceCase) {
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          setDeleteOpen(false)
+          handleClose()
+          return
+      }
     }
-
-    //TODO: Throw error is element didnt delete
-    // show toast error?
   }
 
   const handleClose = () => {
@@ -127,7 +132,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'P') {
-        const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
+        const elementId = claims?.filter((claim: any) => claim.name === selectedClaimMove)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -151,7 +156,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'S') {
-        const elementId = strategies.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
+        const elementId = strategies?.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -252,7 +257,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                           <span className="font-medium">{goal.name}</span>
                         </div>
                       </SelectItem>
-                      {strategies.map((strategy: any) => (
+                      {strategies?.map((strategy: any) => (
                         <SelectItem key={strategy.id} value={strategy.name}>
                           <div className="flex flex-col justify-start items-start gap-1">
                             <span className="font-medium">{strategy.name}</span>
@@ -268,7 +273,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                         </SelectItem>
                       ))
                       }
-                      {strategies.length === 0 && (
+                      {strategies?.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
                           No strategies found.
                         </SelectItem>

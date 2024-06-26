@@ -100,7 +100,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "short_description": description,
       "long_description": description,
       "goal_id": assuranceCase.goals[0].id,
-      "property_claims": []
+      "property_claims": [],
     };
 
     const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, token)
