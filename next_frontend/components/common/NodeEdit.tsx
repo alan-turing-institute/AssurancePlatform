@@ -183,7 +183,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     if (selectedEvidenceMove) {
       console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
       const updateItem = {
-        property_claim_id: [selectedEvidenceMove],
+        property_claim_id: [selectedEvidenceMove.id],
       }
       const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
       // if (updated) {
@@ -248,21 +248,33 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <div className="flex flex-col justify-start items-left gap-2">
                 {node.type === 'property' &&
                   <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
-                    <SelectTrigger className="h-20">
-                      <SelectValue placeholder="Move to" />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an element" />
                     </SelectTrigger>
                     <SelectContent>
                       {goal && (
                       <SelectItem key={goal.id} value={goal}>
                         <div className="flex flex-col justify-start items-start gap-1">
-                          <span className="font-medium">{goal.name}</span>
+                          <div className="flex items-center">
+                            <span className="font-medium">{goal.name}</span>
+                            <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                              <circle cx={1} cy={1} r={1} />
+                            </svg>
+                            <span className="max-w-[200px] truncate">{goal.short_description}</span>
+                          </div>
                         </div>
                       </SelectItem>
                       )}
                       {strategies?.map((strategy: any) => (
                         <SelectItem key={strategy.id} value={strategy}>
-                          <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{strategy.name}</span>
+                          <div className="flex justify-start items-start gap-1">
+                            <div className="flex items-center">
+                              <span className="font-medium">{strategy.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{strategy.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
@@ -270,8 +282,13 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       {claims && claims.map((claim: any) => (
                         <SelectItem key={claim.id} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{claim.name}</span>
-                            <span className="max-w-[200px] truncate">{claim.short_description}</span>
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{claim.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
@@ -291,9 +308,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim.id}>
+                        <SelectItem key={claim.id} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{claim.name}</span>
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{claim.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
