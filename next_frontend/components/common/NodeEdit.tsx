@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -112,8 +112,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          console.log('updatedAssuranceCase', updatedAssuranceCase)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
       }
       if (type === 'P') {
@@ -126,8 +136,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          console.log('updatedAssuranceCase', updatedAssuranceCase)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
       }
       if (type === 'S') {
@@ -140,11 +160,19 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          console.log('updatedAssuranceCase', updatedAssuranceCase)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
-
-        console.log('Something went wrong updating')
       }
     }
     if (selectedEvidenceMove) {
@@ -153,10 +181,19 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         property_claim_id: [selectedEvidenceMove],
       }
       const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
+      // if (updated) {
+      //   window.location.reload()
+      // }
       if (updated) {
-        window.location.reload()
+        const updatedAssuranceCase = await updateAssuranceCase('evidence', assuranceCase, updateItem, node.data.id, node, true)
+        console.log('updatedAssuranceCase', updatedAssuranceCase)
+        if(updatedAssuranceCase) {
+            setAssuranceCase(updatedAssuranceCase)
+            setLoading(false)
+            // window.location.reload()
+            handleClose()
+        }
       }
-      console.log('Something went wrong updating')
     }
   }
 

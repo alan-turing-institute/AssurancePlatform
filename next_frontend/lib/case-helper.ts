@@ -54,6 +54,9 @@ export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, new
     return false; // Indicates the parent property claim was not found
 }
 
+// UPDATE PROPERTY CLAIMS 
+// TODO: Evidence and Property Claims are doing a similar actions when moving this can be refactored.
+
 export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim: any) => {
     // Iterate through the property claims array
     for (let i = 0; i < array.length; i++) {
@@ -89,6 +92,136 @@ export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim:
 
     return null; // Indicates the parent property claim was not found
 }
+
+const removePropertyClaimFromOldLocation = (array: any, id: any) => {
+    return array.map((item: any) => {
+        if (item.property_claims) {
+            // Filter out the claim with the given id
+            item.property_claims = item.property_claims.filter((claim: any) => claim.id !== id);
+            // Recursively remove the claim from nested property_claims
+            item.property_claims = removePropertyClaimFromOldLocation(item.property_claims, id);
+        }
+
+        if (item.strategies) {
+            // Recursively process each strategy
+            item.strategies = item.strategies.map((strategy: any) => {
+                if (strategy.property_claims) {
+                    // Filter out the claim with the given id from the strategy's property_claims
+                    strategy.property_claims = strategy.property_claims.filter((claim: any) => claim.id !== id);
+                    // Recursively remove the claim from the strategy's nested property_claims
+                    strategy.property_claims = removePropertyClaimFromOldLocation(strategy.property_claims, id);
+                }
+                return strategy;
+            });
+        }
+
+        return item;
+    });
+};
+
+const addPropertyClaimToLocation = (array: any, property_claim: any, newParentId: any) => {
+    return array.map((item: any) => {
+        if (item.id === newParentId) {
+            if (!item.property_claims) {
+                item.property_claims = [];
+            }
+            item.property_claims.push(property_claim);
+        }
+
+        if (item.property_claims) {
+            item.property_claims = addPropertyClaimToLocation(item.property_claims, property_claim, newParentId);
+        }
+
+        if (item.strategies) {
+            item.strategies = item.strategies.map((strategy: any) => {
+                if (strategy.id === newParentId) {
+                    if (!strategy.property_claims) {
+                        strategy.property_claims = [];
+                    }
+                    strategy.property_claims.push(property_claim);
+                }
+                
+                if (strategy.property_claims) {
+                    strategy.property_claims = addPropertyClaimToLocation(strategy.property_claims, property_claim, newParentId);
+                }
+                return strategy;
+            });
+        }
+
+        return item;
+    });
+};
+
+export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyClaim: any) => {
+    console.log('updateEPropertyClaimNested called with array:', array, 'id:', id, 'newPropertyClaim:', newPropertyClaim);
+
+    // Find the existing property claim item
+    let existingPropertyClaim = null;
+    const findExstingPropertyClaim = (arr: any) => {
+        for (let i = 0; i < arr.length; i++) {
+            let item = arr[i];
+
+            if (item.id === id) {
+                existingPropertyClaim = item;
+                return;
+            }
+
+            // if (item.property_claims) {
+            //     for (let j = 0; j < item.property_claims.length; j++) {
+            //         if (item.property_claims[j].id === id) {
+            //             existingPropertyClaim = item.property_claims[j];
+            //             return;
+            //         }
+            //     }
+            // }
+            if (item.property_claims) {
+                findExstingPropertyClaim(item.property_claims);
+            }
+            if (item.strategies) {
+                for (const strategy of item.strategies) {
+                    if (strategy.property_claims) {
+                        findExstingPropertyClaim(strategy.property_claims);
+                    }
+                }
+            }
+        }
+    };
+    findExstingPropertyClaim(array);
+
+    console.log('existingPropertyClaim', existingPropertyClaim)
+
+    // Remove evidence from its old location
+    const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(array, id)
+    console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim)
+
+    // Merge existing evidence properties with updated ones
+    const updatedPropertyClaim = { ...existingPropertyClaim as any, ...newPropertyClaim };
+    console.log('updatedPropertyClaim', updatedPropertyClaim)
+
+    // Add evidence to the new location
+    // const newClaimId = newPropertyClaim.property_claim_id[0];
+
+    let newParentId = null
+    let newParentType = null
+
+    if(updatedPropertyClaim.goal_id !== null) {
+        newParentId = updatedPropertyClaim.goal_id
+    }
+    if(updatedPropertyClaim.strategy_id !== null) {
+        newParentId = updatedPropertyClaim.strategy_id
+    }
+    if(updatedPropertyClaim.property_claim_id !== null) {
+        newParentId = updatedPropertyClaim.property_claim_id
+    }
+
+    // console.log('newParentId', newParentId)
+    // console.log('newParentType', newParentType)
+    // console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim)
+
+    const updatedArray = addPropertyClaimToLocation(arrayWithoutOldPropertyClaim, updatedPropertyClaim, newParentId);
+
+    return updatedArray;
+};
 
 export const listPropertyClaims = (array: any, currentClaimName: string, claims: any[] = []) => {
     // Iterate through the property claims array
@@ -160,6 +293,9 @@ export const addEvidenceToClaim = (array: any, parentId: any, newEvidence: any) 
     return false; // Indicates the parent property claim was not found
 }
 
+// UPDATE EVIDENCE
+// TODO: Evidence and Property Claims are doing a similar actions when moving this can be refactored.
+
 export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
     // Iterate through the array
     for (let i = 0; i < array.length; i++) {
@@ -199,6 +335,98 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
 
     // If evidence with the given ID is not found, return null
     return null;
+};
+
+const removeEvidenceFromOldLocation = (array: any, id: any) => {
+    return array.map((item: any) => {
+        if (item.evidence) {
+            item.evidence = item.evidence.filter((evidence: any) => evidence.id !== id);
+        }
+
+        if (item.property_claims) {
+            item.property_claims = removeEvidenceFromOldLocation(item.property_claims, id);
+        }
+
+        if (item.strategies) {
+            item.strategies = item.strategies.map((strategy: any) => {
+                if (strategy.property_claims) {
+                    strategy.property_claims = removeEvidenceFromOldLocation(strategy.property_claims, id);
+                }
+                return strategy;
+            });
+        }
+
+        return item;
+    });
+};
+
+const addEvidenceToNewLocation = (array: any, evidence: any, newClaimId: any) => {
+    return array.map((item: any) => {
+        if (item.id === newClaimId) {
+            if (!item.evidence) {
+                item.evidence = [];
+            }
+            item.evidence.push(evidence);
+        }
+
+        if (item.property_claims) {
+            item.property_claims = addEvidenceToNewLocation(item.property_claims, evidence, newClaimId);
+        }
+
+        if (item.strategies) {
+            item.strategies = item.strategies.map((strategy:any) => {
+                if (strategy.property_claims) {
+                    strategy.property_claims = addEvidenceToNewLocation(strategy.property_claims, evidence, newClaimId);
+                }
+                return strategy;
+            });
+        }
+
+        return item;
+    });
+};
+
+export const updateEvidenceNestedMove = (array: any, id: any, newEvidence: any) => {
+    console.log('updateEvidenceNested called with array:', array, 'id:', id, 'newEvidence:', newEvidence);
+
+    // Find the existing evidence item
+    let existingEvidence = null;
+    const findExistingEvidence = (arr: any) => {
+        for (let i = 0; i < arr.length; i++) {
+            let item = arr[i];
+            if (item.evidence) {
+                for (let j = 0; j < item.evidence.length; j++) {
+                    if (item.evidence[j].id === id) {
+                        existingEvidence = item.evidence[j];
+                        return;
+                    }
+                }
+            }
+            if (item.property_claims) {
+                findExistingEvidence(item.property_claims);
+            }
+            if (item.strategies) {
+                for (const strategy of item.strategies) {
+                    if (strategy.property_claims) {
+                        findExistingEvidence(strategy.property_claims);
+                    }
+                }
+            }
+        }
+    };
+    findExistingEvidence(array);
+
+    // Remove evidence from its old location
+    const arrayWithoutOldEvidence = removeEvidenceFromOldLocation(array, id)
+
+    // Merge existing evidence properties with updated ones
+    const updatedEvidence = { ...existingEvidence as any, ...newEvidence };
+
+    // Add evidence to the new location
+    const newClaimId = newEvidence.property_claim_id[0];
+    const updatedArray = addEvidenceToNewLocation(arrayWithoutOldEvidence, updatedEvidence, newClaimId);
+
+    return updatedArray;
 };
 
 export const createAssuranceCaseNode = async (entity: string, newItem: any, token: string | null) => {
@@ -353,7 +581,7 @@ export const findItemById = async (item: any, id: any) => {
     return null
 }
 
-export const updateAssuranceCase = async (type: string, assuranceCase: any, updatedItem: any, id: any, node: any) => {
+export const updateAssuranceCase = async (type: string, assuranceCase: any, updatedItem: any, id: any, node: any, move: boolean = false) => {
     let updatedAssuranceCase: any
     let updatedGoals: any
 
@@ -398,14 +626,25 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
             }
             return updatedAssuranceCase
         case 'property':
-            updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
+            // updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
+            if(move) {
+                updatedGoals = updatePropertyClaimNestedMove(assuranceCase.goals, id, updatedItem);
+            } else {
+                updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
+            }
             updatedAssuranceCase = {
                 ...assuranceCase,
                 goals: updatedGoals
             }
             return updatedAssuranceCase
         case 'evidence':
-            updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
+            // updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
+            if(move) {
+                updatedGoals = updateEvidenceNestedMove(assuranceCase.goals, id, updatedItem);
+            } else {
+                updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
+            }
+            console.log(updatedGoals)
             updatedAssuranceCase = {
                 ...assuranceCase,
                 goals: updatedGoals
