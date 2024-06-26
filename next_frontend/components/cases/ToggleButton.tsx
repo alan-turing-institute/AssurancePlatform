@@ -70,9 +70,13 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     })
 
     layoutNodes(updatedNodes, updatedEdges)
-    window.requestAnimationFrame(() => {
-      fitView();
-    });
+
+    // If toggle on Goal node will force focus
+    if(node.type === 'goal') {
+      window.requestAnimationFrame(() => {
+        fitView();
+      });
+    }
 
     setHidden(!hidden);
   }
