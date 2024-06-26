@@ -73,10 +73,10 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       goals: [ result.data ]
     }
 
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     onClose()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   return (

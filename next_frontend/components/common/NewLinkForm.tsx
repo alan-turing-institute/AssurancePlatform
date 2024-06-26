@@ -79,16 +79,15 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         {
           ...assuranceCase.goals[0],
           context: newContext
-        },
-        // Copy other goals if needed
+        }
       ]
     }
 
     // Update Assurance Case in state
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   /** Function used to handle creation of a strategy node linked to a goal */
@@ -126,10 +125,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
@@ -200,10 +199,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         });
 
         // Update Assurance Case in state
-        // setAssuranceCase(updatedAssuranceCase);
+        setAssuranceCase(updatedAssuranceCase);
         reset()
         setLoading(false)
-        window.location.reload()
+        // window.location.reload()
       }
     }
 
@@ -223,10 +222,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         ]
       }
 
-      // setAssuranceCase(updatedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
-      window.location.reload()
+      // window.location.reload()
     }
 
     if(node.type === 'goal') {
@@ -246,10 +245,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       }
 
       // Update Assurance Case in state
-      // setAssuranceCase(updatedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
-      window.location.reload()
+      // window.location.reload()
     }
   }
 
@@ -288,10 +287,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       ]
     }
 
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
