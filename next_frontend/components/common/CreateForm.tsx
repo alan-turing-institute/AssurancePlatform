@@ -58,7 +58,8 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       "assurance_case_id": assuranceCase.id,
       "context":[],
       "property_claims":[],
-      "strategies":[]
+      "strategies":[],
+      "type": "TopLevelNormativeGoal"
     }
 
     const result: any = await createAssuranceCaseNode('goals', newGoal, token)

@@ -450,6 +450,7 @@ export const createAssuranceCaseNode = async (entity: string, newItem: any, toke
         }
 
         const result = await response.json()
+        console.log('Node Create Result', result)
 
         const data = {
             ...newItem,
@@ -754,7 +755,7 @@ export const removeAssuranceCaseNode = (assuranceCase: any, id: any) => {
 
 export const extractGoalsClaimsStrategies = (array: any) => {
     const result = {
-        goals: <any[]>[],
+        goal: null,
         claims: <any[]>[],
         strategies: <any[]>[]
     };
@@ -763,7 +764,7 @@ export const extractGoalsClaimsStrategies = (array: any) => {
         items.forEach((item: any) => {
             // Collect goals
             if (item.type === "TopLevelNormativeGoal") {
-                result.goals.push(item);
+                result.goal = item;
             }
 
             // Collect property claims

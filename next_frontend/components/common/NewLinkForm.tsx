@@ -60,7 +60,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "name": `C${identifier}`,
       "short_description": description,
       "long_description": description,
-      "goal_id": assuranceCase.goals[0].id
+      "goal_id": assuranceCase.goals[0].id,
+      "type": "Context"
     };
 
     const result: any = await createAssuranceCaseNode('contexts', newContextItem, token)
@@ -101,6 +102,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "long_description": description,
       "goal_id": assuranceCase.goals[0].id,
       "property_claims": [],
+      "type": "Strategy"
     };
 
     const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, token)
@@ -142,7 +144,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       long_description: description,
       claim_type: 'Property Claim',
       property_claims: [],
-      evidence: []
+      evidence: [],
+      type: "PropertyClaim"
     };
 
     switch (node.type) {
@@ -264,7 +267,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       short_description: description,
       long_description: description,
       URL: 'www.some-evidence.com',
-      property_claim_id
+      property_claim_id,
+      type: "Evidence"
     };
 
     const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, token)

@@ -36,22 +36,22 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [alertOpen, setAlertOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const [selectedClaimMove, setSelectedClaimMove] = useState<string | null>(null); // State for selected strategy
-  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<string | null>(null); // State for selected strategy
+  const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
+  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
   const [moveElementType, setMoveElementType] = useState<string | null>(null); // State for selected strategy
 
   const [token] = useLoginToken();
 
-  const [goal, setGoal] = useState<any>()
-  const [strategies, setStrategies] = useState<any[]>()
-  const [claims, setClaims] = useState<any[]>()
+  let goal: any
+  let strategies: any[] = []
+  let claims: any[] = []
 
-  useEffect(() => {
-      const {goals, claims, strategies} = extractGoalsClaimsStrategies(assuranceCase.goals)
-      setGoal(goals[0])
-      setClaims(claims)
-      setStrategies(strategies)
-  },[assuranceCase])
+  if(assuranceCase.goals) {
+    goal = assuranceCase.goals[0]
+    strategies = assuranceCase.goals[0].strategies
+    const lookups = extractGoalsClaimsStrategies(assuranceCase.goals)
+    claims = lookups.claims
+  }
 
   useEffect(() => {
     setIsMounted(true);
@@ -108,10 +108,10 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
 
       // Find id for selected move element
-      const type = selectedClaimMove.substring(0, 1)
+      const type = selectedClaimMove.name.substring(0, 1)
       if (type === 'G') {
         let updateItem = {
-          goal_id: goal.id,
+          goal_id: goal ? goal.id : null,
           strategy_id: null,
           property_claim_id: null,
         }
@@ -132,7 +132,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'P') {
-        const elementId = claims?.filter((claim: any) => claim.name === selectedClaimMove)[0].id
+        const elementId = claims?.filter((claim: any) => claim.name === selectedClaimMove.name)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -156,7 +156,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'S') {
-        const elementId = strategies?.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
+        const elementId = strategies?.filter((strategy: any) => strategy.name === selectedClaimMove.name)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -245,20 +245,22 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
               <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">Move {node.type}</h3>
-              <div className="flex justify-start items-center gap-2">
+              <div className="flex flex-col justify-start items-left gap-2">
                 {node.type === 'property' &&
                   <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
-                    <SelectTrigger>
+                    <SelectTrigger className="h-20">
                       <SelectValue placeholder="Move to" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem key={goal.id} value={goal.name}>
+                      {goal && (
+                      <SelectItem key={goal.id} value={goal}>
                         <div className="flex flex-col justify-start items-start gap-1">
                           <span className="font-medium">{goal.name}</span>
                         </div>
                       </SelectItem>
+                      )}
                       {strategies?.map((strategy: any) => (
-                        <SelectItem key={strategy.id} value={strategy.name}>
+                        <SelectItem key={strategy.id} value={strategy}>
                           <div className="flex flex-col justify-start items-start gap-1">
                             <span className="font-medium">{strategy.name}</span>
                           </div>
@@ -266,9 +268,10 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       ))
                       }
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim.name}>
+                        <SelectItem key={claim.id} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
                             <span className="font-medium">{claim.name}</span>
+                            <span className="max-w-[200px] truncate">{claim.short_description}</span>
                           </div>
                         </SelectItem>
                       ))
@@ -303,7 +306,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                <Button variant={"outline"} onClick={handleMove}>Move</Button>
+                <Button className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" onClick={handleMove}>Move</Button>
               </div>
             </div>
           ) : null}
