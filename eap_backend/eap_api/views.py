@@ -358,8 +358,9 @@ def context_list(request):
         if serializer.is_valid():
             model_instance: Context = cast(Context, serializer.save())
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+
+            serialised_model = ContextSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 

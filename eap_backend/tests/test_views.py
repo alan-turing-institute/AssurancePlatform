@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from django.http import HttpResponse
@@ -290,6 +291,32 @@ class ContextViewTest(TestCase):
         self.data = Context.objects.all()
         # convert it to JSON
         self.serializer = ContextSerializer(self.data, many=True)
+
+    def test_create_context_with_post(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("context_list"),
+            data=json.dumps(CONTEXT_INFO),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        context_name: str = "C2"
+        context_created: Context = Context.objects.get(name=context_name)
+        json_response = response_post.json()
+
+        assert json_response["id"] == context_created.pk
+        assert json_response["type"] == "Context"
+        assert json_response["name"] == context_name
+        assert json_response["short_description"] == CONTEXT_INFO["short_description"]
+        assert json_response["long_description"] == CONTEXT_INFO["long_description"]
+        assert (
+            datetime.fromisoformat(
+                json_response["created_date"],
+            )
+            == context_created.created_date
+        )
+        assert json_response["goal_id"] == CONTEXT_INFO["goal_id"]
 
     def test_context_list_view_get(self):
         response_get = self.client.get(reverse("context_list"))
