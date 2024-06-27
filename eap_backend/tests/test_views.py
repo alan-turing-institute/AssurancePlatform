@@ -206,7 +206,32 @@ class StrategyViewTest(TestCase):
             **GOAL_INFO
         )
 
-    def test_strategy_serialisation(self):
+    def test_create_strategy_with_post(self):
+
+        response_post: HttpResponse = self.client.post(
+            reverse("strategies_list"),
+            data=json.dumps(STRATEGY_INFO),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        strategies_created: list[Strategy] = list(Strategy.objects.all())
+        assert len(strategies_created) == 1
+
+        current_strategy: Strategy = strategies_created[0]
+        json_response: dict = response_post.json()
+
+        assert json_response["id"] == current_strategy.pk
+        assert json_response["type"] == "Strategy"
+
+        assert json_response["name"] == STRATEGY_INFO["name"]
+        assert json_response["short_description"] == STRATEGY_INFO["short_description"]
+        assert json_response["long_description"] == STRATEGY_INFO["long_description"]
+        assert json_response["goal_id"] == self.goal.pk
+        assert json_response["property_claims"] == []
+
+    def test_retrieve_strategy_with_get(self):
 
         strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
 
