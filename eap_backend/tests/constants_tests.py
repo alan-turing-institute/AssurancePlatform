@@ -34,6 +34,13 @@ CONTEXT_INFO = {
     "goal_id": 1,
 }
 
+STRATEGY_INFO = {
+    "name": "S1",
+    "short_description": "A strategy for The Goal",
+    "long_description": "A longer description of the strategy",
+    "goal_id": 1,
+}
+
 PROPERTYCLAIM1_INFO = {
     "name": "PropertyClaim 1",
     "short_description": "Goal 1 should be x",

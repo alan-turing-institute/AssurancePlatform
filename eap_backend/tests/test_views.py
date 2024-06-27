@@ -36,6 +36,7 @@ from .constants_tests import (
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
     PROPERTYCLAIM2_INFO,
+    STRATEGY_INFO,
     USER1_INFO,
 )
 
@@ -174,6 +175,25 @@ class StrategyViewTest(TestCase):
         self.goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
             **GOAL_INFO
         )
+
+    def test_strategy_serialisation(self):
+
+        strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
+
+        response_get: HttpResponse = self.client.get(
+            reverse("strategy_detail", kwargs={"pk": strategy.pk})
+        )
+        assert response_get.status_code == 200
+        response_data = response_get.json()
+
+        assert response_data["id"] == strategy.pk
+        assert response_data["type"] == "Strategy"
+
+        assert response_data["name"] == STRATEGY_INFO["name"]
+        assert response_data["short_description"] == STRATEGY_INFO["short_description"]
+        assert response_data["long_description"] == STRATEGY_INFO["long_description"]
+        assert response_data["goal_id"] == self.goal.pk
+        assert response_data["property_claims"] == []
 
     def test_identifier_update_follows_order(self):
         number_of_strategies: int = 3

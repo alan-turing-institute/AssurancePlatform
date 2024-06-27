@@ -255,12 +255,14 @@ class StrategySerializer(serializers.ModelSerializer):
         required=False,
     )
 
+    type = serializers.CharField(default="Strategy", read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Strategy
         fields = (
             "id",
+            "type",
             "name",
             "short_description",
             "long_description",
