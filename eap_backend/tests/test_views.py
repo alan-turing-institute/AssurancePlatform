@@ -117,6 +117,36 @@ class GoalViewTest(TestCase):
         # convert it to JSON
         self.serializer = TopLevelNormativeGoalSerializer(self.data, many=True)
 
+    def test_create_goal_with_post(self):
+
+        self.goal.delete()
+
+        response_post: HttpResponse = self.client.post(
+            reverse("goal_list"),
+            data=json.dumps(GOAL_INFO),
+            content_type="application/json",
+        )
+
+        goals_created: list[TopLevelNormativeGoal] = list(
+            TopLevelNormativeGoal.objects.all()
+        )
+        assert len(goals_created) == 1
+        current_goal: TopLevelNormativeGoal = goals_created[0]
+
+        json_response: dict = response_post.json()
+
+        assert current_goal.pk == json_response["id"]
+        assert json_response["type"] == "TopLevelNormativeGoal"
+        assert current_goal.name == json_response["name"]
+        assert current_goal.short_description == json_response["short_description"]
+        assert current_goal.long_description == json_response["long_description"]
+        assert current_goal.keywords == json_response["keywords"]
+        assert current_goal.assurance_case.pk == json_response["assurance_case_id"]
+
+        assert [] == json_response["context"]
+        assert [] == json_response["property_claims"]
+        assert [] == json_response["strategies"]
+
     def test_goal_list_view_post_with_id_update(self):
 
         self.goal.delete()

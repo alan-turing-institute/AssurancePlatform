@@ -297,9 +297,9 @@ def goal_list(request):
                 TopLevelNormativeGoal, serializer.save()
             )
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
 
-            return JsonResponse(summary, status=201)
+            serialised_model = TopLevelNormativeGoalSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
 
         return JsonResponse(serializer.errors, status=400)
     return None
