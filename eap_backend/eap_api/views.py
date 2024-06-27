@@ -414,8 +414,9 @@ def property_claim_list(request):
         if serializer.is_valid():
             model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+
+            serialised_model = PropertyClaimSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 

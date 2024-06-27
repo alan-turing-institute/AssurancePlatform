@@ -369,6 +369,43 @@ class PropertyClaimViewTest(TestCase):
             response_put.json()["short_description"] == self.update["short_description"]
         )
 
+    def test_create_property_claim_with_post(self):
+
+        response_post: HttpResponse = self.client.post(
+            reverse("property_claim_list"),
+            data=json.dumps(PROPERTYCLAIM1_INFO),
+            content_type="application/json",
+        )
+
+        property_claim_name: str = "P3"
+        property_claim_created: list[PropertyClaim] = list(
+            PropertyClaim.objects.filter(name=property_claim_name)
+        )
+
+        assert len(property_claim_created) == 1
+        current_property_claim: PropertyClaim = property_claim_created[0]
+
+        json_response = response_post.json()
+
+        assert json_response["id"] == current_property_claim.pk
+        assert json_response["type"] == "PropertyClaim"
+        assert json_response["name"] == property_claim_name
+        assert (
+            json_response["short_description"]
+            == PROPERTYCLAIM1_INFO["short_description"]
+        )
+        assert (
+            json_response["long_description"] == PROPERTYCLAIM1_INFO["long_description"]
+        )
+
+        assert json_response["goal_id"] == PROPERTYCLAIM1_INFO["goal_id"]
+        assert json_response["property_claim_id"] is None
+        assert json_response["level"] == 1
+        assert json_response["claim_type"] == "Project claim"
+        assert json_response["property_claims"] == []
+        assert json_response["evidence"] == []
+        assert json_response["strategy_id"] is None
+
     def test_identifier_update_on_move(self):
         self.pclaim1.name = "P1"
         self.pclaim1.save()
