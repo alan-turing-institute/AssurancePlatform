@@ -460,6 +460,36 @@ class EvidenceViewTest(TestCase):
         # convert it to JSON
         self.serializer = EvidenceSerializer(self.data, many=True)
 
+    def test_create_evidence_with_post(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("evidence_list"),
+            data=json.dumps(
+                EVIDENCE1_INFO_NO_ID | {"property_claim_id": [self.pclaim.pk]}
+            ),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        evidence_name: str = "E3"
+        evidence_created: Evidence = Evidence.objects.get(name=evidence_name)
+        json_response = response_post.json()
+
+        assert json_response["id"] == evidence_created.pk
+        assert json_response["type"] == "Evidence"
+        assert json_response["name"] == evidence_name
+        assert (
+            json_response["short_description"]
+            == EVIDENCE1_INFO_NO_ID["short_description"]
+        )
+        assert (
+            json_response["long_description"]
+            == EVIDENCE1_INFO_NO_ID["long_description"]
+        )
+
+        assert json_response["URL"] == EVIDENCE1_INFO_NO_ID["URL"]
+        assert json_response["property_claim_id"] == [self.pclaim.pk]
+
     def test_evidence_list_view_get(self):
         response_get = self.client.get(reverse("evidence_list"))
         assert response_get.status_code == 200
