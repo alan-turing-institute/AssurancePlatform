@@ -297,9 +297,9 @@ def goal_list(request):
                 TopLevelNormativeGoal, serializer.save()
             )
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
 
-            return JsonResponse(summary, status=201)
+            serialised_model = TopLevelNormativeGoalSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
 
         return JsonResponse(serializer.errors, status=400)
     return None
@@ -358,8 +358,9 @@ def context_list(request):
         if serializer.is_valid():
             model_instance: Context = cast(Context, serializer.save())
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+
+            serialised_model = ContextSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 
@@ -414,8 +415,9 @@ def property_claim_list(request):
         if serializer.is_valid():
             model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+
+            serialised_model = PropertyClaimSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 
@@ -476,8 +478,9 @@ def evidence_list(request):
         if serializer.is_valid():
             model_instance: Evidence = cast(Evidence, serializer.save())
             update_identifiers(model_instance=model_instance)
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+
+            serialised_model = EvidenceSerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 
@@ -550,8 +553,8 @@ def strategies_list(request):
             model_instance: Strategy = cast(Strategy, serializer.save())
             update_identifiers(model_instance=model_instance)
 
-            summary = make_summary(model_instance)
-            return JsonResponse(summary, status=201)
+            serialised_model = StrategySerializer(model_instance)
+            return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
     return None
 

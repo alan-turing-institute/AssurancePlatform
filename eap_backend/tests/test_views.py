@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import Any
 
 from django.http import HttpResponse
@@ -36,6 +37,7 @@ from .constants_tests import (
     GROUP1_INFO,
     PROPERTYCLAIM1_INFO,
     PROPERTYCLAIM2_INFO,
+    STRATEGY_INFO,
     USER1_INFO,
 )
 
@@ -116,6 +118,36 @@ class GoalViewTest(TestCase):
         # convert it to JSON
         self.serializer = TopLevelNormativeGoalSerializer(self.data, many=True)
 
+    def test_create_goal_with_post(self):
+
+        self.goal.delete()
+
+        response_post: HttpResponse = self.client.post(
+            reverse("goal_list"),
+            data=json.dumps(GOAL_INFO),
+            content_type="application/json",
+        )
+
+        goals_created: list[TopLevelNormativeGoal] = list(
+            TopLevelNormativeGoal.objects.all()
+        )
+        assert len(goals_created) == 1
+        current_goal: TopLevelNormativeGoal = goals_created[0]
+
+        json_response: dict = response_post.json()
+
+        assert current_goal.pk == json_response["id"]
+        assert json_response["type"] == "TopLevelNormativeGoal"
+        assert current_goal.name == json_response["name"]
+        assert current_goal.short_description == json_response["short_description"]
+        assert current_goal.long_description == json_response["long_description"]
+        assert current_goal.keywords == json_response["keywords"]
+        assert current_goal.assurance_case.pk == json_response["assurance_case_id"]
+
+        assert [] == json_response["context"]
+        assert [] == json_response["property_claims"]
+        assert [] == json_response["strategies"]
+
     def test_goal_list_view_post_with_id_update(self):
 
         self.goal.delete()
@@ -175,6 +207,50 @@ class StrategyViewTest(TestCase):
             **GOAL_INFO
         )
 
+    def test_create_strategy_with_post(self):
+
+        response_post: HttpResponse = self.client.post(
+            reverse("strategies_list"),
+            data=json.dumps(STRATEGY_INFO),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        strategies_created: list[Strategy] = list(Strategy.objects.all())
+        assert len(strategies_created) == 1
+
+        current_strategy: Strategy = strategies_created[0]
+        json_response: dict = response_post.json()
+
+        assert json_response["id"] == current_strategy.pk
+        assert json_response["type"] == "Strategy"
+
+        assert json_response["name"] == STRATEGY_INFO["name"]
+        assert json_response["short_description"] == STRATEGY_INFO["short_description"]
+        assert json_response["long_description"] == STRATEGY_INFO["long_description"]
+        assert json_response["goal_id"] == self.goal.pk
+        assert json_response["property_claims"] == []
+
+    def test_retrieve_strategy_with_get(self):
+
+        strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
+
+        response_get: HttpResponse = self.client.get(
+            reverse("strategy_detail", kwargs={"pk": strategy.pk})
+        )
+        assert response_get.status_code == 200
+        response_data = response_get.json()
+
+        assert response_data["id"] == strategy.pk
+        assert response_data["type"] == "Strategy"
+
+        assert response_data["name"] == STRATEGY_INFO["name"]
+        assert response_data["short_description"] == STRATEGY_INFO["short_description"]
+        assert response_data["long_description"] == STRATEGY_INFO["long_description"]
+        assert response_data["goal_id"] == self.goal.pk
+        assert response_data["property_claims"] == []
+
     def test_identifier_update_follows_order(self):
         number_of_strategies: int = 3
         for strategy_number in range(1, number_of_strategies + 1):
@@ -215,6 +291,30 @@ class ContextViewTest(TestCase):
         self.data = Context.objects.all()
         # convert it to JSON
         self.serializer = ContextSerializer(self.data, many=True)
+
+    def test_create_context_with_post(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("context_list"),
+            data=json.dumps(CONTEXT_INFO),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        context_name: str = "C2"
+        context_created: Context = Context.objects.get(name=context_name)
+        json_response = response_post.json()
+
+        assert json_response["id"] == context_created.pk
+        assert json_response["type"] == "Context"
+        assert json_response["name"] == context_name
+        assert json_response["short_description"] == CONTEXT_INFO["short_description"]
+        assert json_response["long_description"] == CONTEXT_INFO["long_description"]
+        assert (
+            datetime.strptime(json_response["created_date"], "%Y-%m-%dT%H:%M:%S.%f%z")
+            == context_created.created_date
+        )
+        assert json_response["goal_id"] == CONTEXT_INFO["goal_id"]
 
     def test_context_list_view_get(self):
         response_get = self.client.get(reverse("context_list"))
@@ -294,6 +394,43 @@ class PropertyClaimViewTest(TestCase):
             response_put.json()["short_description"] == self.update["short_description"]
         )
 
+    def test_create_property_claim_with_post(self):
+
+        response_post: HttpResponse = self.client.post(
+            reverse("property_claim_list"),
+            data=json.dumps(PROPERTYCLAIM1_INFO),
+            content_type="application/json",
+        )
+
+        property_claim_name: str = "P3"
+        property_claim_created: list[PropertyClaim] = list(
+            PropertyClaim.objects.filter(name=property_claim_name)
+        )
+
+        assert len(property_claim_created) == 1
+        current_property_claim: PropertyClaim = property_claim_created[0]
+
+        json_response = response_post.json()
+
+        assert json_response["id"] == current_property_claim.pk
+        assert json_response["type"] == "PropertyClaim"
+        assert json_response["name"] == property_claim_name
+        assert (
+            json_response["short_description"]
+            == PROPERTYCLAIM1_INFO["short_description"]
+        )
+        assert (
+            json_response["long_description"] == PROPERTYCLAIM1_INFO["long_description"]
+        )
+
+        assert json_response["goal_id"] == PROPERTYCLAIM1_INFO["goal_id"]
+        assert json_response["property_claim_id"] is None
+        assert json_response["level"] == 1
+        assert json_response["claim_type"] == "Project claim"
+        assert json_response["property_claims"] == []
+        assert json_response["evidence"] == []
+        assert json_response["strategy_id"] is None
+
     def test_identifier_update_on_move(self):
         self.pclaim1.name = "P1"
         self.pclaim1.save()
@@ -347,6 +484,36 @@ class EvidenceViewTest(TestCase):
         self.data = Evidence.objects.all()
         # convert it to JSON
         self.serializer = EvidenceSerializer(self.data, many=True)
+
+    def test_create_evidence_with_post(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("evidence_list"),
+            data=json.dumps(
+                EVIDENCE1_INFO_NO_ID | {"property_claim_id": [self.pclaim.pk]}
+            ),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 201
+
+        evidence_name: str = "E3"
+        evidence_created: Evidence = Evidence.objects.get(name=evidence_name)
+        json_response = response_post.json()
+
+        assert json_response["id"] == evidence_created.pk
+        assert json_response["type"] == "Evidence"
+        assert json_response["name"] == evidence_name
+        assert (
+            json_response["short_description"]
+            == EVIDENCE1_INFO_NO_ID["short_description"]
+        )
+        assert (
+            json_response["long_description"]
+            == EVIDENCE1_INFO_NO_ID["long_description"]
+        )
+
+        assert json_response["URL"] == EVIDENCE1_INFO_NO_ID["URL"]
+        assert json_response["property_claim_id"] == [self.pclaim.pk]
 
     def test_evidence_list_view_get(self):
         response_get = self.client.get(reverse("evidence_list"))
