@@ -311,9 +311,7 @@ class ContextViewTest(TestCase):
         assert json_response["short_description"] == CONTEXT_INFO["short_description"]
         assert json_response["long_description"] == CONTEXT_INFO["long_description"]
         assert (
-            datetime.fromisoformat(
-                json_response["created_date"],
-            )
+            datetime.strptime(json_response["created_date"], "%Y-%m-%dT%H:%M:%S.%f%z")
             == context_created.created_date
         )
         assert json_response["goal_id"] == CONTEXT_INFO["goal_id"]
