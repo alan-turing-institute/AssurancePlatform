@@ -1,3 +1,5 @@
+import { AssuranceCase } from "@/types";
+
 interface Map {
     [key: string]: string | undefined
 }
@@ -796,3 +798,64 @@ export const extractGoalsClaimsStrategies = (array: any) => {
     traverse(array);
     return result;
 };
+
+export const addHiddenProp = async (assuranceCase: any) => {
+    if (Array.isArray(assuranceCase)) {
+        assuranceCase.forEach(addHiddenProp);
+    } else if (typeof assuranceCase === 'object' && assuranceCase !== null) {
+        assuranceCase.hidden = false;
+
+        Object.keys(assuranceCase).forEach(key => {
+            addHiddenProp(assuranceCase[key]);
+        });
+    }
+    return assuranceCase
+}
+
+export function toggleHiddenForChildren(assuranceCase: AssuranceCase, parentId: number): AssuranceCase {
+    function toggleChildren(obj: any, parentId: number, parentFound: boolean, hide: boolean): void {
+        if (Array.isArray(obj)) {
+            obj.forEach(item => toggleChildren(item, parentId, parentFound, hide));
+        } else if (typeof obj === 'object' && obj !== null) {
+            // Check if current object is the parent or one of its descendants
+            const isParentOrDescendant = parentFound || obj.id === parentId;
+
+            // Reset childrenHidden if it's a descendant and not the direct parent
+            if (isParentOrDescendant && obj.id !== parentId) {
+                obj.childrenHidden = false;
+            }
+
+            if (obj.id === parentId) {
+                parentFound = true;
+                hide = !obj.childrenHidden; // Toggle childrenHidden for the parent
+                obj.childrenHidden = hide;  // Track the state of children visibility
+            }
+
+            if (parentFound && obj.id !== parentId) {
+                if (hide) {
+                    if (obj.originalHidden === undefined) {
+                        obj.originalHidden = !!obj.hidden; // Record the original hidden state
+                    }
+                    obj.hidden = true; // Force hidden
+                } else {
+                    if (obj.originalHidden !== undefined) {
+                        obj.hidden = obj.originalHidden; // Reset to original hidden state
+                        delete obj.originalHidden; // Clean up originalHidden property
+                    } else {
+                        obj.hidden = false; // If no original hidden state, set to visible
+                    }
+                }
+            }
+
+            Object.keys(obj).forEach(key => toggleChildren(obj[key], parentId, parentFound, hide));
+        }
+    }
+
+    // Create a deep copy of the assuranceCase to ensure immutability
+    const newAssuranceCase = JSON.parse(JSON.stringify(assuranceCase));
+
+    // Toggle hidden property for the children
+    toggleChildren(newAssuranceCase, parentId, false, false);
+
+    return newAssuranceCase;
+}

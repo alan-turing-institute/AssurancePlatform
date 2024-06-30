@@ -18,7 +18,7 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
-import { createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
+import { addHiddenProp, createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
@@ -74,7 +74,8 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       goals: [ result.data ]
     }
 
-    setAssuranceCase(updatedAssuranceCase)
+    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+    setAssuranceCase(formattedAssuranceCase)
     onClose()
     setLoading(false)
     // window.location.reload()

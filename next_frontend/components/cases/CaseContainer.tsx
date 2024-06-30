@@ -9,6 +9,7 @@ import Header from '../Header';
 import { ReactFlowProvider } from 'reactflow';
 
 import useStore from '@/data/store';
+import { addHiddenProp } from '@/lib/case-helper';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -39,7 +40,9 @@ const CaseContainer = () => {
     if(response.status === 401) return unauthorized()
 
     const result = await response.json()
-    return result
+
+    const formattedAssuranceCase = await addHiddenProp(result)
+    return formattedAssuranceCase
 
   }
 

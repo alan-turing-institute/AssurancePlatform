@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -85,7 +85,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    setAssuranceCase(updatedAssuranceCase)
+    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+    setAssuranceCase(formattedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()
@@ -127,7 +128,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    setAssuranceCase(updatedAssuranceCase)
+    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+    setAssuranceCase(formattedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()
@@ -202,7 +204,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         });
 
         // Update Assurance Case in state
-        setAssuranceCase(updatedAssuranceCase);
+        const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+        setAssuranceCase(formattedAssuranceCase);
         reset()
         setLoading(false)
         // window.location.reload()
@@ -225,7 +228,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         ]
       }
 
-      setAssuranceCase(updatedAssuranceCase)
+      const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+      setAssuranceCase(formattedAssuranceCase)
       reset()
       setLoading(false)
       // window.location.reload()
@@ -248,7 +252,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       }
 
       // Update Assurance Case in state
-      setAssuranceCase(updatedAssuranceCase)
+      const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+      setAssuranceCase(formattedAssuranceCase)
       reset()
       setLoading(false)
       // window.location.reload()
@@ -291,7 +296,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       ]
     }
 
-    setAssuranceCase(updatedAssuranceCase)
+    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+    setAssuranceCase(formattedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()

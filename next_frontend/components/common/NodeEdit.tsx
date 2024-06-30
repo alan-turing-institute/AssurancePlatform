@@ -77,7 +77,6 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
     if(deleted) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
-      console.log('updatedAssuranceCase', updatedAssuranceCase)
       if(updatedAssuranceCase) {
           setAssuranceCase(updatedAssuranceCase)
           setLoading(false)

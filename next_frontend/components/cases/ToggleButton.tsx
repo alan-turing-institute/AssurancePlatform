@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
 
 import useStore from '@/data/store';
+import { toggleHiddenForChildren } from '@/lib/case-helper';
 
 interface ToggleButtonProps {
   node: any
@@ -12,7 +13,7 @@ interface ToggleButtonProps {
 
 const ToggleButton = ({ node } : ToggleButtonProps) => {
   const [hidden, setHidden] = useState<boolean>(true);
-  const { nodes, edges, layoutNodes } = useStore();
+  const { nodes, edges, layoutNodes, assuranceCase, setAssuranceCase } = useStore();
   const { fitView } = useReactFlow();
 
   let stack: any[] = []
@@ -161,8 +162,19 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   //   setHidden(!hidden);
   // }
 
+  const handleToggle2 = async (e: any) => {
+    e.stopPropagation();
+    const currentNode = nodes.find(n => n.id === node.id);
+    
+    if (currentNode) {
+        // Toggle hidden property for the children of the element with currentNode.data.id
+        const updatedAssuranceCase = toggleHiddenForChildren(assuranceCase, currentNode.data.id);
+        setAssuranceCase(updatedAssuranceCase);
+    }
+  }
+
   return (
-    <button onClick={(e) => handleToggle(e)}>
+    <button onClick={(e) => handleToggle2(e)}>
       <div className='infline-flex hover:bg-slate-900/10 p-1 rounded-full'>
       {!hidden ? <ChevronRight size={18}/> : <ChevronDown size={18}/> }
       </div>
