@@ -70,6 +70,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
+    result.data.hidden = false
+
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
 
@@ -85,8 +87,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-    setAssuranceCase(formattedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()
@@ -112,6 +113,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
+    result.data.hidden = false
+
     // Create a new strategy array by adding the new context item
     const newStrategy = [...assuranceCase.goals[0].strategies, result.data];
 
@@ -128,8 +131,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-    setAssuranceCase(formattedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()
@@ -169,6 +171,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       return
     }
 
+    result.data.hidden = false
+
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
       const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === result.data.strategy_id));
@@ -204,8 +208,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         });
 
         // Update Assurance Case in state
-        const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-        setAssuranceCase(formattedAssuranceCase);
+        setAssuranceCase(updatedAssuranceCase);
         reset()
         setLoading(false)
         // window.location.reload()
@@ -228,8 +231,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         ]
       }
 
-      const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-      setAssuranceCase(formattedAssuranceCase)
+      // const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
       // window.location.reload()
@@ -252,8 +255,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       }
 
       // Update Assurance Case in state
-      const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-      setAssuranceCase(formattedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
       // window.location.reload()
@@ -282,6 +284,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
+    result.data.hidden = false
+
     const added = addEvidenceToClaim(assuranceCase.goals, result.data.property_claim_id[0], result.data);
     if (!added) {
       return console.error("Parent property claim not found!");
@@ -296,8 +300,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       ]
     }
 
-    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-    setAssuranceCase(formattedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
     // window.location.reload()

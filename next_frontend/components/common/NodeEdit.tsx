@@ -46,7 +46,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let strategies: any[] = []
   let claims: any[] = []
 
-  if(assuranceCase.goals) {
+  if(assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
     const lookups = extractGoalsClaimsStrategies(assuranceCase.goals)
