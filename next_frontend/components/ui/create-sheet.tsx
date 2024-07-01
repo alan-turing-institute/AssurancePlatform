@@ -12,15 +12,16 @@ import {
 interface CreateSheetProps {
   isOpen: boolean
   onClose: () => void
+  onChange: (open:boolean) => void
   children?: React.ReactNode
 }
 
-const CreateSheet = ({ isOpen, onClose, children } : CreateSheetProps ) => {
-  const onChange = (open: boolean) => {
-    if (!open) {
-      onClose();
-    }
-  };
+const CreateSheet = ({ isOpen, onClose, onChange, children } : CreateSheetProps ) => {
+  // const onChange = (open: boolean) => {
+  //   if (!open) {
+  //     onClose();
+  //   }
+  // };
 
   return (
     <Sheet open={isOpen} onOpenChange={onChange}>

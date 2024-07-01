@@ -90,6 +90,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const handleClose = () => {
     setEditOpen(false)
     setAlertOpen(false)
+    setSelectedLink(false)
     setUnresolvedChanges(false)
   }
 
@@ -215,7 +216,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       onChange={onChange}
     >
       {selectedLink ? (
-        <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} />
+        <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
       ) : (
         <>
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
@@ -358,18 +359,17 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             confirmButtonText={'Yes, delete this element!'}
             cancelButtonText={'No, keep the element'}
           />
-
-          <AlertModal
-            isOpen={alertOpen}
-            onClose={() => setAlertOpen(false)}
-            onConfirm={handleClose}
-            loading={loading}
-            message={'You have changes that have not been updated, would you like to discard these changes?'}
-            confirmButtonText={'Yes, discard changes!'}
-            cancelButtonText={'No, keep editing'}
-          />
         </>
       )}
+      <AlertModal
+        isOpen={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleClose}
+        loading={loading}
+        message={'You have changes that have not been updated. Would you like to discard these changes?'}
+        confirmButtonText={'Yes, discard changes!'}
+        cancelButtonText={'No, keep editing'}
+      />
     </EditSheet>
   )
 }
