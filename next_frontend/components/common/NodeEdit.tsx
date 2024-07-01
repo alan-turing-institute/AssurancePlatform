@@ -3,14 +3,14 @@
 import { Button } from "@/components/ui/button"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import EditSheet from "../ui/edit-sheet";
-import { CloudFog, Plus, Trash2 } from "lucide-react"
+import { CloudFog, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
-import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
+import useStore from '@/data/store';
 
 import {
   Select,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@radix-ui/react-select";
 
 interface NodeEditProps {
   node: Node | any
@@ -28,13 +29,15 @@ interface NodeEditProps {
 
 const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  const { assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase, nodes } = useStore();
   const [selectedLink, setSelectedLink] = useState(false)
   const [linkToCreate, setLinkToCreate] = useState('')
   const [unresolvedChanges, setUnresolvedChanges] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [alertOpen, setAlertOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [toggleParentDescription, setToggleParentDescription] = useState(true)
+  // const [parentNode, setParentNode] = useState(nodes.filter(n => n.data.id === node.data.goal_id)[0])
 
   const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
   const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
@@ -91,6 +94,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     setEditOpen(false)
     setAlertOpen(false)
     setSelectedLink(false)
+    setToggleParentDescription(true)
     setUnresolvedChanges(false)
   }
 
@@ -207,6 +211,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     }
   }
 
+  const parentNode: any = findParentNode(nodes, node)
+
   return (
     <EditSheet
       title={`Editing ${node.data.name}`}
@@ -215,6 +221,21 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       onClose={handleClose}
       onChange={onChange}
     >
+      {node.type !== 'goal' && parentNode && (
+        <div className="mt-4 flex flex-col text-sm">
+          <div className="mb-2 flex justify-start items-center gap-2">
+            <p>Parent Description</p>
+            {toggleParentDescription ? 
+            (
+              <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+            ) :
+            (
+              <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+            )}
+          </div>
+          {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
+        </div>
+      )}
       {selectedLink ? (
         <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
       ) : (
