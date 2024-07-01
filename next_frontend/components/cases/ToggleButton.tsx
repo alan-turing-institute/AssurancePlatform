@@ -21,7 +21,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     if (currentNode) {
         const { property_claims, strategies } = currentNode.data
 
-        if(property_claims.length > 0) {
+        if(property_claims && property_claims.length > 0) {
           setHidden(property_claims[0].hidden)
         }
 
