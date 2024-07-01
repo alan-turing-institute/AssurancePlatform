@@ -56,7 +56,7 @@ export const addPropertyClaimToNested = (propertyClaims: any, parentId: any, new
     return false; // Indicates the parent property claim was not found
 }
 
-// UPDATE PROPERTY CLAIMS 
+// UPDATE PROPERTY CLAIMS
 // TODO: Evidence and Property Claims are doing a similar actions when moving this can be refactored.
 
 export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim: any) => {
@@ -142,7 +142,7 @@ const addPropertyClaimToLocation = (array: any, property_claim: any, newParentId
                     }
                     strategy.property_claims.push(property_claim);
                 }
-                
+
                 if (strategy.property_claims) {
                     strategy.property_claims = addPropertyClaimToLocation(strategy.property_claims, property_claim, newParentId);
                 }
