@@ -893,10 +893,17 @@ export function getChildrenHiddenStatus(element: any): boolean[] {
 export const findSiblingHiddenState = (assuranceCase: AssuranceCase, parentId: number) => {
     const element = findElementById(assuranceCase, parentId);
     if (element) {
-        // console.log(`Element with ID ${parentId} found:`, element);
+        console.log(`Element with ID ${parentId} found:`, element);
         const hiddenStatus = getChildrenHiddenStatus(element);
-        return hiddenStatus[0]
-        // console.log(`Hidden statuses of children:`, hiddenStatus);
+        console.log(`Hidden statuses of children:`, hiddenStatus);
+
+        if(hiddenStatus.length === 0) {
+            // then get parents hidden value
+            return element.hidden
+        } else {
+            return hiddenStatus[0]
+        }
+
     } else {
         console.log(`Element with ID ${parentId} not found.`);
     }
