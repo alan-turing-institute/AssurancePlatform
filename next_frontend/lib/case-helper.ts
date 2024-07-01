@@ -903,7 +903,7 @@ export const findSiblingHiddenState = (assuranceCase: AssuranceCase, parentId: n
         } else {
             return hiddenStatus[0]
         }
-        
+
     } else {
         console.log(`Element with ID ${parentId} not found.`);
     }
