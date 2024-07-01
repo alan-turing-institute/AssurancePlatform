@@ -1,6 +1,6 @@
 'use client'
 
-import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2 } from "lucide-react";
 import { Node } from "reactflow";
 import { useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
@@ -130,6 +130,27 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     }
   }
 
+  const handleNameReset = async () => {
+    try {
+      setLoading(true);
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+        method: "POST",
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/update-ids`, requestOptions)
+      if(response.ok) {
+        window.location.reload()
+      }
+    } catch (error) {
+      console.log('Something went wrong', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
@@ -143,13 +164,16 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         <ActionTooltip label='Focus'>
           <button id='FocusBtn' onClick={() => onLayout('TB')} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Group className='w-5 h-5' /><span className="sr-only">Focus</span></button>
         </ActionTooltip>
+        <ActionTooltip label='Reset Names'>
+          <button onClick={handleNameReset} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Names</span></button>
+        </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">
         <ActionTooltip label='Export'>
           <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip>
-        <ActionTooltip label='Share'>
+        {/* <ActionTooltip label='Share'>
           <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Share2 className='w-5 h-5' /><span className="sr-only">Share</span></button>
-        </ActionTooltip>
+        </ActionTooltip> */}
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
         </ActionTooltip>
