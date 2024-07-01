@@ -158,28 +158,22 @@ class CaseViewTest(TestCase):
         child_property_claim.refresh_from_db()
         assert child_property_claim.name == "P1.1"
 
-    def test_goal_list_view_post_with_id_update(self):
+    def test_goal_identifier_after_update(self):
 
-        self.goal = TopLevelNormativeGoal.objects.create()
-
-        self.goal.delete()
-        goal_bad_name: dict = GOAL_INFO
-        goal_bad_name["name"] = ""
+        goal_created: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
+            **GOAL_INFO
+        )
 
         response_post: HttpResponse = self.client.post(
-            reverse("goal_list"),
-            data=json.dumps(goal_bad_name),
+            reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
         )
 
-        expected_name: str = "G1"
+        assert response_post.status_code == 200
 
-        assert response_post.json()["name"] == expected_name
-        goals_created: list[TopLevelNormativeGoal] = list(
-            TopLevelNormativeGoal.objects.all()
-        )
-        assert len(goals_created) == 1
-        assert goals_created[0].name == expected_name
+        goal_created.refresh_from_db()
+
+        assert goal_created.name == "G1"
 
 
 class GoalViewTest(TestCase):
