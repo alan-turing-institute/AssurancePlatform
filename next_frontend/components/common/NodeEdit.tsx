@@ -98,6 +98,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   };
 
   const handleMove = async () => {
+    setLoading(true)
     if (selectedClaimMove) {
       let updatedItem = null
       console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
