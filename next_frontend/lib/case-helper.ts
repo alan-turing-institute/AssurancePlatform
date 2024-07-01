@@ -908,3 +908,24 @@ export const findSiblingHiddenState = (assuranceCase: AssuranceCase, parentId: n
         console.log(`Element with ID ${parentId} not found.`);
     }
 }
+
+export const findParentNode = (nodes: any, node: any) => {
+    let parent = null
+
+    if(node.data.goal_id) {
+        // search for goal
+        return parent = nodes.filter((n: any) => n.data.id === node.data.goal_id)[0]
+    }
+    if(node.data.property_claim_id) {
+        if(node.type === 'evidence') {
+            return parent = nodes.filter((n: any) => n.data.id === node.data.property_claim_id[0])[0]
+        }
+        // search for property claim
+        return parent = nodes.filter((n: any) => n.data.id === node.data.property_claim_id)[0]
+    }
+    if(node.data.strategy_id) {
+        // search for strategy
+        return parent = nodes.filter((n: any) => n.data.id === node.data.strategy_id)[0]
+    }
+    return parent
+}
