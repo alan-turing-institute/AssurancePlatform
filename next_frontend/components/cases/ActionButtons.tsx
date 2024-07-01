@@ -184,7 +184,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
           <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
         </ActionTooltip>
       </div>
-      <NodeCreate isOpen={open} onClose={() => setOpen(false)} />
+      <NodeCreate isOpen={open} setOpen={setOpen} />
       <CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
       <AlertModal
         isOpen={deleteOpen}

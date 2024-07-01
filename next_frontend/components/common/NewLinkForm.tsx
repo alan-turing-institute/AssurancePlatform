@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
@@ -32,12 +32,14 @@ interface NewLinkFormProps {
   node: any;
   linkType: string
   actions: any
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
 };
 
 const NewLinkForm: React.FC<NewLinkFormProps> = ({
   node,
   linkType,
-  actions
+  actions,
+  setUnresolvedChanges
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
@@ -332,6 +334,14 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         break;
     }
   }
+
+  useEffect(() => {
+    form.watch((values, { name }) => {
+      if (name === 'description' || name === 'URL') {
+        setUnresolvedChanges(true);
+      }
+    });
+  }, [form.watch, setUnresolvedChanges]);
 
   return (
     <div className='my-4 border-t'>

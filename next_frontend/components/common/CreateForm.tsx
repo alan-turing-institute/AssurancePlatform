@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
@@ -32,9 +32,10 @@ const formSchema = z.object({
 
 interface CreateFormProps {
   onClose: () => void
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
 };
 
-const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
+const CreateForm: React.FC<CreateFormProps> = ({ onClose, setUnresolvedChanges }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
   const [loading, setLoading] = useState<boolean>(false)
@@ -46,6 +47,14 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       description: ''
     }
   });
+
+  useEffect(() => {
+    form.watch((values, { name }) => {
+      if (name === 'description' || name === 'URL') {
+        setUnresolvedChanges(true);
+      }
+    });
+  }, [form.watch, setUnresolvedChanges]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const identifier = await setNodeIdentifier(null, 'goal')
