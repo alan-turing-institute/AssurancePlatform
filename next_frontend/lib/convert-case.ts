@@ -3,7 +3,7 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
   let identifier = 0
 
-  console.log('Assurance Case', assuranceCase)
+  // console.log('Assurance Case', assuranceCase)
 
   // Create nodes for each child array item
   const goals = assuranceCase.goals
@@ -38,7 +38,7 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
       data: { id: item.id, name: item.name, type: item.type, description: item.short_description, ...item },
       position: { x: 0, y: 50 },
       // hidden: nodeType === 'goal' ? false : true,
-      hidden: false,
+      hidden: item.hidden,
       height: 64,
       width: 288
     };

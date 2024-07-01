@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -36,20 +36,21 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [alertOpen, setAlertOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const [selectedClaimMove, setSelectedClaimMove] = useState<string | null>(null); // State for selected strategy
-  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<string | null>(null); // State for selected strategy
+  const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
+  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
   const [moveElementType, setMoveElementType] = useState<string | null>(null); // State for selected strategy
 
   const [token] = useLoginToken();
 
-  let goal: any = null
-  let claims: any[] = []
+  let goal: any
   let strategies: any[] = []
+  let claims: any[] = []
 
-  if (assuranceCase.goals[0] && node != null) {
+  if(assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
-    claims = listPropertyClaims(assuranceCase.goals, node.data.name)
+    const lookups = extractGoalsClaimsStrategies(assuranceCase.goals)
+    claims = lookups.claims
   }
 
   useEffect(() => {
@@ -75,12 +76,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
 
     if(deleted) {
-      setLoading(false)
-      window.location.reload()
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
+      if(updatedAssuranceCase) {
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          setDeleteOpen(false)
+          handleClose()
+          return
+      }
     }
-
-    //TODO: Throw error is element didnt delete
-    // show toast error?
   }
 
   const handleClose = () => {
@@ -103,60 +107,101 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
 
       // Find id for selected move element
-      const type = selectedClaimMove.substring(0, 1)
+      const type = selectedClaimMove.name.substring(0, 1)
       if (type === 'G') {
         let updateItem = {
-          goal_id: goal.id,
+          goal_id: goal ? goal.id : null,
           strategy_id: null,
           property_claim_id: null,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
       }
       if (type === 'P') {
-        const elementId = claims.filter((claim: any) => claim.name === selectedClaimMove)[0].id
+        const elementId = claims?.filter((claim: any) => claim.name === selectedClaimMove.name)[0].id
 
         let updateItem = {
           goal_id: null,
           strategy_id: null,
           property_claim_id: elementId,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
       }
       if (type === 'S') {
-        const elementId = strategies.filter((strategy: any) => strategy.name === selectedClaimMove)[0].id
+        const elementId = strategies?.filter((strategy: any) => strategy.name === selectedClaimMove.name)[0].id
 
         let updateItem = {
           goal_id: null,
           strategy_id: elementId,
           property_claim_id: null,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        // if (updated) {
+        //   window.location.reload()
+        // }
         if (updated) {
-          window.location.reload()
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
+          const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
+          if(updatedAssuranceCase) {
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              // window.location.reload()
+              handleClose()
+          }
         }
-
-        console.log('Something went wrong updating')
       }
     }
     if (selectedEvidenceMove) {
       console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
       const updateItem = {
-        property_claim_id: [selectedEvidenceMove],
-      }
+        property_claim_id: [selectedEvidenceMove.id],
+        hidden: false
+      } as any
       const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
+      // if (updated) {
+      //   window.location.reload()
+      // }
       if (updated) {
-        window.location.reload()
+        updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedEvidenceMove.id)
+        const updatedAssuranceCase = await updateAssuranceCase('evidence', assuranceCase, updateItem, node.data.id, node, true)
+        if(updatedAssuranceCase) {
+            setAssuranceCase(updatedAssuranceCase)
+            setLoading(false)
+            // window.location.reload()
+            handleClose()
+        }
       }
-      console.log('Something went wrong updating')
     }
   }
 
@@ -203,35 +248,55 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
               <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">Move {node.type}</h3>
-              <div className="flex justify-start items-center gap-2">
+              <div className="flex flex-col justify-start items-left gap-2">
                 {node.type === 'property' &&
                   <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
                     <SelectTrigger>
-                      <SelectValue placeholder="Move to" />
+                      <SelectValue placeholder="Select an element" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem key={goal.id} value={goal.name}>
+                      {goal && (
+                      <SelectItem key={goal.id} value={goal}>
                         <div className="flex flex-col justify-start items-start gap-1">
-                          <span className="font-medium">{goal.name}</span>
+                          <div className="flex items-center">
+                            <span className="font-medium">{goal.name}</span>
+                            <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                              <circle cx={1} cy={1} r={1} />
+                            </svg>
+                            <span className="max-w-[200px] truncate">{goal.short_description}</span>
+                          </div>
                         </div>
                       </SelectItem>
-                      {strategies.map((strategy: any) => (
-                        <SelectItem key={strategy.id} value={strategy.name}>
-                          <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{strategy.name}</span>
+                      )}
+                      {strategies?.map((strategy: any) => (
+                        <SelectItem key={strategy.id} value={strategy}>
+                          <div className="flex justify-start items-start gap-1">
+                            <div className="flex items-center">
+                              <span className="font-medium">{strategy.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{strategy.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
                       }
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim.name}>
+                        <SelectItem key={claim.id} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{claim.name}</span>
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{claim.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
                       }
-                      {strategies.length === 0 && (
+                      {strategies?.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
                           No strategies found.
                         </SelectItem>
@@ -246,9 +311,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim.id}>
+                        <SelectItem key={claim.id} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
-                            <span className="font-medium">{claim.name}</span>
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">{claim.short_description}</span>
+                            </div>
                           </div>
                         </SelectItem>
                       ))
@@ -261,7 +332,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                <Button variant={"outline"} onClick={handleMove}>Move</Button>
+                <Button className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" onClick={handleMove}>Move</Button>
               </div>
             </div>
           ) : null}

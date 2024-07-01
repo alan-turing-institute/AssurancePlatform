@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -60,7 +60,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "name": `C${identifier}`,
       "short_description": description,
       "long_description": description,
-      "goal_id": assuranceCase.goals[0].id
+      "goal_id": assuranceCase.goals[0].id,
+      "type": "Context"
     };
 
     const result: any = await createAssuranceCaseNode('contexts', newContextItem, token)
@@ -68,6 +69,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     if(result.error) {
       // TODO: Rendering error
     }
+
+    result.data.hidden = false
 
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
@@ -79,16 +82,15 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         {
           ...assuranceCase.goals[0],
           context: newContext
-        },
-        // Copy other goals if needed
+        }
       ]
     }
 
     // Update Assurance Case in state
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   /** Function used to handle creation of a strategy node linked to a goal */
@@ -101,7 +103,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "short_description": description,
       "long_description": description,
       "goal_id": assuranceCase.goals[0].id,
-      "property_claims": []
+      "property_claims": [],
+      "type": "Strategy"
     };
 
     const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, token)
@@ -109,6 +112,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     if(result.error) {
       // TODO: Rendering error
     }
+
+    result.data.hidden = false
 
     // Create a new strategy array by adding the new context item
     const newStrategy = [...assuranceCase.goals[0].strategies, result.data];
@@ -126,10 +131,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     // Update Assurance Case in state
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
@@ -143,7 +148,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       long_description: description,
       claim_type: 'Property Claim',
       property_claims: [],
-      evidence: []
+      evidence: [],
+      type: "PropertyClaim"
     };
 
     switch (node.type) {
@@ -164,6 +170,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       console.log('RESULT ERROR', result.error)
       return
     }
+
+    result.data.hidden = false
 
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
@@ -200,10 +208,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         });
 
         // Update Assurance Case in state
-        // setAssuranceCase(updatedAssuranceCase);
+        setAssuranceCase(updatedAssuranceCase);
         reset()
         setLoading(false)
-        window.location.reload()
+        // window.location.reload()
       }
     }
 
@@ -223,10 +231,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         ]
       }
 
-      // setAssuranceCase(updatedAssuranceCase)
+      // const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
-      window.location.reload()
+      // window.location.reload()
     }
 
     if(node.type === 'goal') {
@@ -246,10 +255,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       }
 
       // Update Assurance Case in state
-      // setAssuranceCase(updatedAssuranceCase)
+      setAssuranceCase(updatedAssuranceCase)
       reset()
       setLoading(false)
-      window.location.reload()
+      // window.location.reload()
     }
   }
 
@@ -265,7 +274,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       short_description: description,
       long_description: description,
       URL: 'www.some-evidence.com',
-      property_claim_id
+      property_claim_id,
+      type: "Evidence"
     };
 
     const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, token)
@@ -273,6 +283,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     if(result.error) {
       // TODO: Rendering error
     }
+
+    result.data.hidden = false
 
     const added = addEvidenceToClaim(assuranceCase.goals, result.data.property_claim_id[0], result.data);
     if (!added) {
@@ -288,10 +300,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       ]
     }
 
-    // setAssuranceCase(updatedAssuranceCase)
+    setAssuranceCase(updatedAssuranceCase)
     reset()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
