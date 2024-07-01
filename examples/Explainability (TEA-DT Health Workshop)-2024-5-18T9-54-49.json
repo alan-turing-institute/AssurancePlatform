@@ -1,593 +1,549 @@
 {
-  
-  "type":"AssuranceCase",
-  "name":"Explainability (TEA-DT Health Workshop)",
-  "description":"A starter file for the TEA-DT Health Workshop",
-  "created_date":"2024-06-18T08:32:20.276472Z",
-  "lock_uuid":null,
-  "goals":[
+  "type": "AssuranceCase",
+  "name": "Explainability (TEA-DT Health Workshop)",
+  "description": "A starter file for the TEA-DT Health Workshop",
+  "created_date": "2024-06-18T08:32:20.276472Z",
+  "lock_uuid": null,
+  "goals": [
     {
-      
-      "type":"TopLevelNormativeGoal",
-      "name":"G1",
-      "short_description":"The outputs of the digital twin are explainable to patients.",
-      "long_description":"N/A",
-      "keywords":"N/A",
-      "assurance_case_id":15,
-      "context":[
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "The outputs of the digital twin are explainable to patients.",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 15,
+      "context": [
         {
-          
-          "type":"Context",
-          "name":"C1",
-          "short_description":"A clinical use case (e.g. hospital or GP surgery), where the explanation will be provided by a trained healthcare professional (e.g. consultant).",
-          "long_description":"First Context",
-          "created_date":"2024-06-18T08:32:34.246987Z",
-          "goal_id":18
+          "type": "Context",
+          "name": "C1",
+          "short_description": "A clinical use case (e.g. hospital or GP surgery), where the explanation will be provided by a trained healthcare professional (e.g. consultant).",
+          "long_description": "First Context",
+          "created_date": "2024-06-18T08:32:34.246987Z",
+          "goal_id": 18
         }
       ],
-      "property_claims":[],
-      "strategies":[
+      "property_claims": [],
+      "strategies": [
         {
-          
-          "name":"S3",
-          "short_description":"Argument Over Communication Method",
-          "long_description":"First Strategy",
-          "goal_id":18,
-          "property_claims":[
+          "name": "S3",
+          "short_description": "Argument Over Communication Method",
+          "long_description": "First Strategy",
+          "goal_id": 18,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P2",
-              "short_description":"The outputs are explainable to patients through verbal communication during a consultation.",
-              "long_description":"The outputs are explainable to patients through verbal communication during a consultation.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":22
+              "type": "PropertyClaim",
+              "name": "P2",
+              "short_description": "The outputs are explainable to patients through verbal communication during a consultation.",
+              "long_description": "The outputs are explainable to patients through verbal communication during a consultation.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 22
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P9",
-              "short_description":"The outputs are explainable to patients through visual aids (e.g., diagrams, charts).",
-              "long_description":"The outputs are explainable to patients through visual aids (e.g., diagrams, charts).",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":22
+              "type": "PropertyClaim",
+              "name": "P9",
+              "short_description": "The outputs are explainable to patients through visual aids (e.g., diagrams, charts).",
+              "long_description": "The outputs are explainable to patients through visual aids (e.g., diagrams, charts).",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 22
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P11",
-              "short_description":"The outputs are explainable to patients through written reports.",
-              "long_description":"The outputs are explainable to patients through written reports.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":22
+              "type": "PropertyClaim",
+              "name": "P11",
+              "short_description": "The outputs are explainable to patients through written reports.",
+              "long_description": "The outputs are explainable to patients through written reports.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 22
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P10",
-              "short_description":"The user interface supports timely delivery of explanations.",
-              "long_description":"The user interface supports timely delivery of explanations.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":22
+              "type": "PropertyClaim",
+              "name": "P10",
+              "short_description": "The user interface supports timely delivery of explanations.",
+              "long_description": "The user interface supports timely delivery of explanations.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 22
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P8",
-              "short_description":"The user interface is intuitive and meets the needs of the healthcare professional.",
-              "long_description":"The user interface is intuitive and meets the needs of the healthcare professional.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":22
+              "type": "PropertyClaim",
+              "name": "P8",
+              "short_description": "The user interface is intuitive and meets the needs of the healthcare professional.",
+              "long_description": "The user interface is intuitive and meets the needs of the healthcare professional.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 22
             }
           ]
         },
         {
-          
-          "name":"S4",
-          "short_description":"Argument Over Patient Understanding",
-          "long_description":"Second Strategy",
-          "goal_id":18,
-          "property_claims":[
+          "name": "S4",
+          "short_description": "Argument Over Patient Understanding",
+          "long_description": "Second Strategy",
+          "goal_id": 18,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P6",
-              "short_description":"The outputs are explainable to patients with a basic understanding of medical terms.",
-              "long_description":"The outputs are explainable to patients with a basic understanding of medical terms.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":23
+              "type": "PropertyClaim",
+              "name": "P6",
+              "short_description": "The outputs are explainable to patients with a basic understanding of medical terms.",
+              "long_description": "The outputs are explainable to patients with a basic understanding of medical terms.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 23
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P1",
-              "short_description":"The outputs are explainable to patients of varying demographics.",
-              "long_description":"The outputs are explainable to patients of varying demographics.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P1",
+              "short_description": "The outputs are explainable to patients of varying demographics.",
+              "long_description": "The outputs are explainable to patients of varying demographics.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.1",
-                  "short_description":"The outputs are explainable to patients of varying age groups.",
-                  "long_description":"The outputs are explainable to patients of varying age groups.",
-                  "goal_id":null,
-                  "property_claim_id":55,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P1.1",
+                  "short_description": "The outputs are explainable to patients of varying age groups.",
+                  "long_description": "The outputs are explainable to patients of varying age groups.",
+                  "goal_id": null,
+                  "property_claim_id": 55,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.2",
-                  "short_description":"The outputs are explainable to patients with different cultural backgrounds.",
-                  "long_description":"The outputs are explainable to patients with different cultural backgrounds.",
-                  "goal_id":null,
-                  "property_claim_id":55,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P1.2",
+                  "short_description": "The outputs are explainable to patients with different cultural backgrounds.",
+                  "long_description": "The outputs are explainable to patients with different cultural backgrounds.",
+                  "goal_id": null,
+                  "property_claim_id": 55,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.3",
-                  "short_description":"The outputs are explainable to patients with different levels of education.",
-                  "long_description":"The outputs are explainable to patients with different levels of education.",
-                  "goal_id":null,
-                  "property_claim_id":55,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P1.3",
+                  "short_description": "The outputs are explainable to patients with different levels of education.",
+                  "long_description": "The outputs are explainable to patients with different levels of education.",
+                  "goal_id": null,
+                  "property_claim_id": 55,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":23
+              "evidence": [],
+              "strategy_id": 23
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P17",
-              "short_description":"Any uncertainty arising from the use of probabilistic techniques can be communicated appropriately to patients.",
-              "long_description":"Any uncertainty arising from the use of probabilistic techniques can be communicated appropriately to patients.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":23
+              "type": "PropertyClaim",
+              "name": "P17",
+              "short_description": "Any uncertainty arising from the use of probabilistic techniques can be communicated appropriately to patients.",
+              "long_description": "Any uncertainty arising from the use of probabilistic techniques can be communicated appropriately to patients.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 23
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P7",
-              "short_description":"The features used by the system are meaningful and intelligible to patients.",
-              "long_description":"The features used by the system are meaningful and intelligible to patients.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":23
+              "type": "PropertyClaim",
+              "name": "P7",
+              "short_description": "The features used by the system are meaningful and intelligible to patients.",
+              "long_description": "The features used by the system are meaningful and intelligible to patients.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 23
             }
           ]
         },
         {
-          
-          "name":"S1",
-          "short_description":"Argument Over User Training",
-          "long_description":"Argument Over User Training",
-          "goal_id":18,
-          "property_claims":[
+          "name": "S1",
+          "short_description": "Argument Over User Training",
+          "long_description": "Argument Over User Training",
+          "goal_id": 18,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P3",
-              "short_description":"Users are trained to explain the process behind the digital twin's development and deployment.",
-              "long_description":"Users are trained to explain the process behind the digital twin's development and deployment.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":28
+              "type": "PropertyClaim",
+              "name": "P3",
+              "short_description": "Users are trained to explain the process behind the digital twin's development and deployment.",
+              "long_description": "Users are trained to explain the process behind the digital twin's development and deployment.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 28
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P5",
-              "short_description":"The model is sufficiently interpretable by relevant users.",
-              "long_description":"The model is sufficiently interpretable by relevant users.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":28
+              "type": "PropertyClaim",
+              "name": "P5",
+              "short_description": "The model is sufficiently interpretable by relevant users.",
+              "long_description": "The model is sufficiently interpretable by relevant users.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 28
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P23",
-              "short_description":"The digital twin includes features that help users generate patient-friendly explanations.",
-              "long_description":"The digital twin includes features that help users generate patient-friendly explanations.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P23",
+              "short_description": "The digital twin includes features that help users generate patient-friendly explanations.",
+              "long_description": "The digital twin includes features that help users generate patient-friendly explanations.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P23.1",
-                  "short_description":"The digital twin pipeline provides real-time support for users in explaining complex outputs.",
-                  "long_description":"The digital twin pipeline provides real-time support for users in explaining complex outputs.",
-                  "goal_id":null,
-                  "property_claim_id":63,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P23.1",
+                  "short_description": "The digital twin pipeline provides real-time support for users in explaining complex outputs.",
+                  "long_description": "The digital twin pipeline provides real-time support for users in explaining complex outputs.",
+                  "goal_id": null,
+                  "property_claim_id": 63,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P23.2",
-                  "short_description":"The digital twin integrates with other tools that aid in patient communication (e.g., translation services, interactive visual aids).",
-                  "long_description":"The digital twin integrates with other tools that aid in patient communication (e.g., translation services, interactive visual aids).",
-                  "goal_id":null,
-                  "property_claim_id":63,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P23.2",
+                  "short_description": "The digital twin integrates with other tools that aid in patient communication (e.g., translation services, interactive visual aids).",
+                  "long_description": "The digital twin integrates with other tools that aid in patient communication (e.g., translation services, interactive visual aids).",
+                  "goal_id": null,
+                  "property_claim_id": 63,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":28
+              "evidence": [],
+              "strategy_id": 28
             }
           ]
         },
         {
-          
-          "name":"S2",
-          "short_description":"Argument Over Adequate Scope of Explanations",
-          "long_description":"Argument Over Adequate Scope of Explanations",
-          "goal_id":18,
-          "property_claims":[
+          "name": "S2",
+          "short_description": "Argument Over Adequate Scope of Explanations",
+          "long_description": "Argument Over Adequate Scope of Explanations",
+          "goal_id": 18,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P4",
-              "short_description":"The {statistical model} used by the digital twin is interpretable.",
-              "long_description":"The {statistical model} used by the digital twin is interpretable.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P4",
+              "short_description": "The {statistical model} used by the digital twin is interpretable.",
+              "long_description": "The {statistical model} used by the digital twin is interpretable.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.1",
-                  "short_description":"All features used by the {statistical model} are clinically relevant and meaningful.",
-                  "long_description":"All features used by the {statistical model} are clinically relevant and meaningful.",
-                  "goal_id":null,
-                  "property_claim_id":66,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P4.1",
+                  "short_description": "All features used by the {statistical model} are clinically relevant and meaningful.",
+                  "long_description": "All features used by the {statistical model} are clinically relevant and meaningful.",
+                  "goal_id": null,
+                  "property_claim_id": 66,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.2",
-                  "short_description":"The {statistical model} is intrinsically interpretable (e.g., logistic regression, decision trees).",
-                  "long_description":"The {statistical model} is intrinsically interpretable (e.g., logistic regression, decision trees).",
-                  "goal_id":null,
-                  "property_claim_id":66,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P4.2",
+                  "short_description": "The {statistical model} is intrinsically interpretable (e.g., logistic regression, decision trees).",
+                  "long_description": "The {statistical model} is intrinsically interpretable (e.g., logistic regression, decision trees).",
+                  "goal_id": null,
+                  "property_claim_id": 66,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.3",
-                  "short_description":"The {statistical model} uses post hoc techniques to ensure interpretability (e.g. feature importance for neural networks).",
-                  "long_description":"The {statistical model} uses post hoc techniques to ensure interpretability (e.g. feature importance for neural networks).",
-                  "goal_id":null,
-                  "property_claim_id":66,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P4.3",
+                  "short_description": "The {statistical model} uses post hoc techniques to ensure interpretability (e.g. feature importance for neural networks).",
+                  "long_description": "The {statistical model} uses post hoc techniques to ensure interpretability (e.g. feature importance for neural networks).",
+                  "goal_id": null,
+                  "property_claim_id": 66,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.4",
-                  "short_description":"The user interface has clear explanations for how the input features influence the digital twin's outputs (e.g. recommendations, visualisations)",
-                  "long_description":"The user interface has clear explanations for how the input features influence the digital twin's outputs (e.g. recommendations, visualisations)",
-                  "goal_id":null,
-                  "property_claim_id":66,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P4.4",
+                  "short_description": "The user interface has clear explanations for how the input features influence the digital twin's outputs (e.g. recommendations, visualisations)",
+                  "long_description": "The user interface has clear explanations for how the input features influence the digital twin's outputs (e.g. recommendations, visualisations)",
+                  "goal_id": null,
+                  "property_claim_id": 66,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":29
+              "evidence": [],
+              "strategy_id": 29
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P21",
-              "short_description":"The process of how the digital twin was designed, developed, and deployed is explainable.",
-              "long_description":"The process of how the digital twin was designed, developed, and deployed is explainable.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P21",
+              "short_description": "The process of how the digital twin was designed, developed, and deployed is explainable.",
+              "long_description": "The process of how the digital twin was designed, developed, and deployed is explainable.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P21.1",
-                  "short_description":"Information about the project's governance is accessible to relevant parties.",
-                  "long_description":"Information about the project's governance is accessible to relevant parties.",
-                  "goal_id":null,
-                  "property_claim_id":71,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P21.1",
+                  "short_description": "Information about the project's governance is accessible to relevant parties.",
+                  "long_description": "Information about the project's governance is accessible to relevant parties.",
+                  "goal_id": null,
+                  "property_claim_id": 71,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P21.2",
-                  "short_description":"Information about the project's governance is sufficient to support appropriate explanations as needed.",
-                  "long_description":"Information about the project's governance is sufficient to support appropriate explanations as needed.",
-                  "goal_id":null,
-                  "property_claim_id":71,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P21.2",
+                  "short_description": "Information about the project's governance is sufficient to support appropriate explanations as needed.",
+                  "long_description": "Information about the project's governance is sufficient to support appropriate explanations as needed.",
+                  "goal_id": null,
+                  "property_claim_id": 71,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":29
+              "evidence": [],
+              "strategy_id": 29
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P13",
-              "short_description":"Automated explanations (or explantion-supporting information) are accurate.",
-              "long_description":"Automated explanations (or explantion-supporting information) are accurate.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P13",
+              "short_description": "Automated explanations (or explantion-supporting information) are accurate.",
+              "long_description": "Automated explanations (or explantion-supporting information) are accurate.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P13.1",
-                  "short_description":"Methods for deriving explanations achieve a sufficient level of predictive consistency and reliability.",
-                  "long_description":"Methods for deriving explanations achieve a sufficient level of predictive consistency and reliability.",
-                  "goal_id":null,
-                  "property_claim_id":74,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P13.1",
+                  "short_description": "Methods for deriving explanations achieve a sufficient level of predictive consistency and reliability.",
+                  "long_description": "Methods for deriving explanations achieve a sufficient level of predictive consistency and reliability.",
+                  "goal_id": null,
+                  "property_claim_id": 74,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P13.2",
-                  "short_description":"Methods for deriving explanations are sufficiently representative of the actual underlying architecture.",
-                  "long_description":"Methods for deriving explanations are sufficiently representative of the actual underlying architecture.",
-                  "goal_id":null,
-                  "property_claim_id":74,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P13.2",
+                  "short_description": "Methods for deriving explanations are sufficiently representative of the actual underlying architecture.",
+                  "long_description": "Methods for deriving explanations are sufficiently representative of the actual underlying architecture.",
+                  "goal_id": null,
+                  "property_claim_id": 74,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":29
+              "evidence": [],
+              "strategy_id": 29
             }
           ]
         },
         {
-          
-          "name":"S5",
-          "short_description":"Argument Over Transparency",
-          "long_description":"Argument Over Transparency",
-          "goal_id":18,
-          "property_claims":[
+          "name": "S5",
+          "short_description": "Argument Over Transparency",
+          "long_description": "Argument Over Transparency",
+          "goal_id": 18,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P14",
-              "short_description":"Data governance processes have been clearly documented.",
-              "long_description":"Data governance processes have been clearly documented.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P14",
+              "short_description": "Data governance processes have been clearly documented.",
+              "long_description": "Data governance processes have been clearly documented.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P15",
-              "short_description":"Patients can provide feedback on the explanations given, and this feedback is used to improve future explanations.",
-              "long_description":"Patients can provide feedback on the explanations given, and this feedback is used to improve future explanations.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P15",
+              "short_description": "Patients can provide feedback on the explanations given, and this feedback is used to improve future explanations.",
+              "long_description": "Patients can provide feedback on the explanations given, and this feedback is used to improve future explanations.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P18",
-              "short_description":"Mechanisms exist to support contestability of decisions by patients.",
-              "long_description":"Mechanisms exist to support contestability of decisions by patients.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P18",
+              "short_description": "Mechanisms exist to support contestability of decisions by patients.",
+              "long_description": "Mechanisms exist to support contestability of decisions by patients.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P22",
-              "short_description":"There is a mechanism to assess patient understanding after explanations are provided.",
-              "long_description":"There is a mechanism to assess patient understanding after explanations are provided.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P22",
+              "short_description": "There is a mechanism to assess patient understanding after explanations are provided.",
+              "long_description": "There is a mechanism to assess patient understanding after explanations are provided.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P20",
-              "short_description":"There is a mechanism to assess patient understanding after explanations are provided.",
-              "long_description":"There is a mechanism to assess patient understanding after explanations are provided.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P20",
+              "short_description": "There is a mechanism to assess patient understanding after explanations are provided.",
+              "long_description": "There is a mechanism to assess patient understanding after explanations are provided.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P12",
-              "short_description":"Explanations are refined based on patient feedback.",
-              "long_description":"Explanations are refined based on patient feedback.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P12",
+              "short_description": "Explanations are refined based on patient feedback.",
+              "long_description": "Explanations are refined based on patient feedback.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P19",
-              "short_description":"Methods for scrutinising ongoing behaviour of system are available to appropriate auditors or assessors.",
-              "long_description":"Methods for scrutinising ongoing behaviour of system are available to appropriate auditors or assessors.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P19",
+              "short_description": "Methods for scrutinising ongoing behaviour of system are available to appropriate auditors or assessors.",
+              "long_description": "Methods for scrutinising ongoing behaviour of system are available to appropriate auditors or assessors.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P16",
-              "short_description":"A clear audit trail will be established to ensure decision traceability.",
-              "long_description":"A clear audit trail will be established to ensure decision traceability.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":31
+              "type": "PropertyClaim",
+              "name": "P16",
+              "short_description": "A clear audit trail will be established to ensure decision traceability.",
+              "long_description": "A clear audit trail will be established to ensure decision traceability.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 31
             }
           ]
         }
       ]
     }
   ],
-  "owner":3,
-  "edit_groups":[],
-  "view_groups":[],
-  "color_profile":"default",
-  "comments":[],
-  "permissions":"manage"
+  "owner": 3,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
 }
