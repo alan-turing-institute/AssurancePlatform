@@ -179,9 +179,9 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
 
   const handleToggle2 = async (e: any) => {
     e.stopPropagation()
-    
+
     setHidden(!hidden)
-    
+
     const currentNode = nodes.find(n => n.id === node.id);
     if (currentNode) {
         // Toggle hidden property for the children of the element with currentNode.data.id
