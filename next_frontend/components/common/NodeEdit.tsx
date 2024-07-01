@@ -225,7 +225,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         <div className="mt-4 flex flex-col text-sm">
           <div className="mb-2 flex justify-start items-center gap-2">
             <p>Parent Description</p>
-            {toggleParentDescription ? 
+            {toggleParentDescription ?
             (
               <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
             ) :
