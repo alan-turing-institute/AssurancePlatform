@@ -1,20 +1,35 @@
 'use client'
 
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
 
 import useStore from '@/data/store';
-import { toggleHiddenForChildren } from '@/lib/case-helper';
+import { findSiblingHiddenState, toggleHiddenForChildren } from '@/lib/case-helper';
 
 interface ToggleButtonProps {
   node: any
 }
 
 const ToggleButton = ({ node } : ToggleButtonProps) => {
-  const [hidden, setHidden] = useState<boolean>(true);
+  const [hidden, setHidden] = useState<boolean>(false);
   const { nodes, edges, layoutNodes, assuranceCase, setAssuranceCase } = useStore();
   const { fitView } = useReactFlow();
+
+  useEffect(() => {
+    const currentNode = nodes.find(n => n.id === node.id);
+    if (currentNode) {
+        const { property_claims, strategies } = currentNode.data
+
+        if(property_claims.length > 0) {
+          setHidden(property_claims[0].hidden)
+        }
+
+        if(strategies && strategies.length > 0) {
+          setHidden(strategies[0].hidden)
+        }
+    }
+  },[])
 
   let stack: any[] = []
   let outgoers: any[] = [];
@@ -163,9 +178,11 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   // }
 
   const handleToggle2 = async (e: any) => {
-    e.stopPropagation();
-    const currentNode = nodes.find(n => n.id === node.id);
+    e.stopPropagation()
     
+    setHidden(!hidden)
+    
+    const currentNode = nodes.find(n => n.id === node.id);
     if (currentNode) {
         // Toggle hidden property for the children of the element with currentNode.data.id
         const updatedAssuranceCase = toggleHiddenForChildren(assuranceCase, currentNode.data.id);
@@ -176,7 +193,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   return (
     <button onClick={(e) => handleToggle2(e)}>
       <div className='infline-flex hover:bg-slate-900/10 p-1 rounded-full'>
-      {!hidden ? <ChevronRight size={18}/> : <ChevronDown size={18}/> }
+      {hidden ? <ChevronRight size={18}/> : <ChevronDown size={18}/> }
       </div>
     </button>
   )

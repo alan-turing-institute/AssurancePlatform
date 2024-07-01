@@ -7,7 +7,7 @@ import { CloudFog, Plus, Trash2 } from "lucide-react"
 import EditForm from "./EditForm";
 import useStore from '@/data/store';
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -113,15 +113,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           goal_id: goal ? goal.id : null,
           strategy_id: null,
           property_claim_id: null,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
         if (updated) {
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
           const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
-          console.log('updatedAssuranceCase', updatedAssuranceCase)
           if(updatedAssuranceCase) {
               setAssuranceCase(updatedAssuranceCase)
               setLoading(false)
@@ -137,15 +138,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           goal_id: null,
           strategy_id: null,
           property_claim_id: elementId,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
         if (updated) {
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
           const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
-          console.log('updatedAssuranceCase', updatedAssuranceCase)
           if(updatedAssuranceCase) {
               setAssuranceCase(updatedAssuranceCase)
               setLoading(false)
@@ -161,15 +163,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           goal_id: null,
           strategy_id: elementId,
           property_claim_id: null,
-        }
+          hidden: false
+        } as any
 
         const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
         if (updated) {
+          updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedClaimMove.id)
           const updatedAssuranceCase = await updateAssuranceCase('property', assuranceCase, updateItem, node.data.id, node, true)
-          console.log('updatedAssuranceCase', updatedAssuranceCase)
           if(updatedAssuranceCase) {
               setAssuranceCase(updatedAssuranceCase)
               setLoading(false)
@@ -183,14 +186,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       console.log(`Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`);
       const updateItem = {
         property_claim_id: [selectedEvidenceMove.id],
-      }
+        hidden: false
+      } as any
       const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
       // if (updated) {
       //   window.location.reload()
       // }
       if (updated) {
+        updateItem.hidden = findSiblingHiddenState(assuranceCase, selectedEvidenceMove.id)
         const updatedAssuranceCase = await updateAssuranceCase('evidence', assuranceCase, updateItem, node.data.id, node, true)
-        console.log('updatedAssuranceCase', updatedAssuranceCase)
         if(updatedAssuranceCase) {
             setAssuranceCase(updatedAssuranceCase)
             setLoading(false)

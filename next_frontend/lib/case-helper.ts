@@ -155,8 +155,6 @@ const addPropertyClaimToLocation = (array: any, property_claim: any, newParentId
 };
 
 export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyClaim: any) => {
-    console.log('updateEPropertyClaimNested called with array:', array, 'id:', id, 'newPropertyClaim:', newPropertyClaim);
-
     // Find the existing property claim item
     let existingPropertyClaim = null;
     const findExstingPropertyClaim = (arr: any) => {
@@ -190,15 +188,11 @@ export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyCl
     };
     findExstingPropertyClaim(array);
 
-    console.log('existingPropertyClaim', existingPropertyClaim)
-
     // Remove evidence from its old location
     const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(array, id)
-    console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim)
 
     // Merge existing evidence properties with updated ones
     const updatedPropertyClaim = { ...existingPropertyClaim as any, ...newPropertyClaim };
-    console.log('updatedPropertyClaim', updatedPropertyClaim)
 
     // Add evidence to the new location
     // const newClaimId = newPropertyClaim.property_claim_id[0];
@@ -215,10 +209,6 @@ export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyCl
     if(updatedPropertyClaim.property_claim_id !== null) {
         newParentId = updatedPropertyClaim.property_claim_id
     }
-
-    // console.log('newParentId', newParentId)
-    // console.log('newParentType', newParentType)
-    // console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim)
 
     const updatedArray = addPropertyClaimToLocation(arrayWithoutOldPropertyClaim, updatedPropertyClaim, newParentId);
 
@@ -858,4 +848,56 @@ export function toggleHiddenForChildren(assuranceCase: AssuranceCase, parentId: 
     toggleChildren(newAssuranceCase, parentId, false, false);
 
     return newAssuranceCase;
+}
+
+export function findElementById(assuranceCase: AssuranceCase, id: number): any {
+    // Recursive function to search for the element with the given ID
+    function searchElement(element: any, id: number): any {
+        if (element.id === id) {
+            return element;
+        }
+        let childrenKeys = ['goals', 'context', 'property_claims', 'strategies', 'evidence', 'comments'];
+        for (let key of childrenKeys) {
+            if (element[key]) {
+                for (let child of element[key]) {
+                    let result = searchElement(child, id);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    return searchElement(assuranceCase, id);
+}
+
+export function getChildrenHiddenStatus(element: any): boolean[] {
+    let hiddenStatus: boolean[] = [];
+    let childrenKeys = ['context', 'property_claims', 'strategies', 'evidence', 'comments'];
+    for (let key of childrenKeys) {
+        if (element[key]) {
+            for (let child of element[key]) {
+                hiddenStatus.push(child.hidden);
+                // Recursively check nested property claims and strategies
+                if (key === 'property_claims' || key === 'strategies') {
+                    hiddenStatus = hiddenStatus.concat(getChildrenHiddenStatus(child));
+                }
+            }
+        }
+    }
+    return hiddenStatus;
+}
+
+export const findSiblingHiddenState = (assuranceCase: AssuranceCase, parentId: number) => {
+    const element = findElementById(assuranceCase, parentId);
+    if (element) {
+        // console.log(`Element with ID ${parentId} found:`, element);
+        const hiddenStatus = getChildrenHiddenStatus(element);
+        return hiddenStatus[0]
+        // console.log(`Hidden statuses of children:`, hiddenStatus);
+    } else {
+        console.log(`Element with ID ${parentId} not found.`);
+    }
 }
