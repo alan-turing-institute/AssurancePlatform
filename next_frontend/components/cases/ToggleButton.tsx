@@ -187,6 +187,12 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
         // Toggle hidden property for the children of the element with currentNode.data.id
         const updatedAssuranceCase = toggleHiddenForChildren(assuranceCase, currentNode.data.id);
         setAssuranceCase(updatedAssuranceCase);
+
+        if(node.type === 'goal') {
+          window.requestAnimationFrame(() => {
+            fitView();
+          })
+        }
     }
   }
 
