@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Dialog,
   DialogClose,
@@ -47,6 +47,10 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
     focusNode(nodeId)
     setSearchOpen(false)
   }
+
+  useEffect(() => {
+    setFilteredNodes(nodes)
+  },[nodes])
 
   return (
     <>
