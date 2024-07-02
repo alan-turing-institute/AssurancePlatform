@@ -1,22 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
-import { ArrowLeft, Check, MessageSquareMore, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Copy, MessageSquareMore, Search, SearchIcon, X } from 'lucide-react';
 import { ModeToggle } from './ui/theme-toggle';
 import { useRouter } from 'next/navigation';
 import { useLoginToken } from '@/hooks/useAuth';
 import useStore from '@/data/store';
 import { CaseNavigation } from './cases/CaseNavigation';
 import Link from 'next/link';
+import { useReactFlow } from 'reactflow';
+import SearchNodes from './common/SearchNodes';
 
 interface HeaderProps {}
 
 const Header = ({ }: HeaderProps) => {
-  const { assuranceCase, setAssuranceCase } = useStore();
+  const { nodes, assuranceCase, setAssuranceCase } = useStore();
   const router = useRouter();
   const [editName, setEditName] = useState<boolean>(false);
   const [newCaseName, setNewCaseName] = useState<string>(assuranceCase.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const { fitView, setViewport, setCenter } = useReactFlow();
 
   const [token] = useLoginToken();
 
@@ -54,6 +57,37 @@ const Header = ({ }: HeaderProps) => {
     }
   }
 
+  const focusNode = (value: string) => {
+    console.log('Focus Node');
+    let nodeId: any = nodes.filter(n => n.id === value)[0].id
+
+    // nodes.map(n => {
+    //   (n.data.name === 'P2') ? nodeId = n.id : null
+    // })
+
+    if (nodeId) {
+      const node = nodes.find(n => n.id === nodeId);
+      console.log(node);
+      if (node) {
+        const zoomLevel = 1.5; // Adjust the zoom level as needed
+
+        // Assuming node dimensions (update these with actual dimensions if available)
+        const nodeWidth = node.width || 0;
+        const nodeHeight = node.height || 0;
+
+        // Calculate center position
+        const centerX = node.position.x + nodeWidth / 2;
+        const centerY = node.position.y + nodeHeight / 2;
+
+        setCenter(centerX, centerY)
+      } else {
+        console.error('Node is null');
+      }
+    } else {
+      console.error('Node ID is undefined');
+    }
+  }
+
   return (
     <div className='fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50'>
       <div className='container py-3 flex justify-between items-center'>
@@ -84,6 +118,7 @@ const Header = ({ }: HeaderProps) => {
         </div>
 
         <div className='flex justify-start items-center gap-4'>
+          <SearchNodes nodes={nodes} focusNode={focusNode} />
           <CaseNavigation />
           <Link
             href={'https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/'}
