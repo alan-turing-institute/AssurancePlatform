@@ -21,8 +21,8 @@ type SearchNodesProps = {
   focusNode: (value: string) => void
 }
 const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
-  const [value, setValue] = useState("") 
-  const [searchOpen, setSearchOpen] = useState(false) 
+  const [value, setValue] = useState("")
+  const [searchOpen, setSearchOpen] = useState(false)
   const [filteredNodes, setFilteredNodes] = useState(nodes);
 
   const handleSearch = (searchValue: string) => {
@@ -50,7 +50,7 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
 
   return (
     <>
-      <Button 
+      <Button
         variant={'ghost'}
         onClick={() => setSearchOpen(true)}
       >
@@ -81,8 +81,8 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
           </div>
           <div className='max-h-[300px] overflow-y-auto'>
             {filteredNodes.map((node) => (
-              <div 
-                key={node.id} 
+              <div
+                key={node.id}
                 className="flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
                 onClick={() => handleSelection(node.id)}
               >
