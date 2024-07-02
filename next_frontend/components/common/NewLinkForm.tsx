@@ -25,7 +25,10 @@ import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssu
 const formSchema = z.object({
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
-  })
+  }),
+  URL: z.string().min(2, {
+    message: "url must be at least 2 characters.",
+  }).optional(),
 })
 
 interface NewLinkFormProps {
@@ -265,7 +268,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   }
 
   /** Function used to handle creation of a evidence node linked to a property claim */
-  const handleEvidenceAdd = async (description: string) => {
+  const handleEvidenceAdd = async (description: string, url?: string) => {
     const identifier = await setNodeIdentifier(node, 'evidence')
 
     let property_claim_id: any = [node.data.id]
@@ -275,7 +278,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       name: `E${identifier}`,
       short_description: description,
       long_description: description,
-      URL: 'www.some-evidence.com',
+      URL: url,
       property_claim_id,
       type: "Evidence"
     };
@@ -328,7 +331,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         handleStrategyAdd(values.description)
         break;
       case 'evidence':
-        handleEvidenceAdd(values.description)
+        handleEvidenceAdd(values.description, values.URL)
         break;
       default:
         break;
@@ -349,7 +352,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         Create new <span className='font-bold'>{linkType}</span>.
       </div>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
           <FormField
             control={form.control}
             name="description"
@@ -363,7 +366,22 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
               </FormItem>
             )}
           />
-          <div className='flex justify-start items-center gap-3'>
+          {linkType === 'evidence' && (
+            <FormField
+              control={form.control}
+              name="URL"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Evidence URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="www.sample.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+          <div className='flex justify-start items-center gap-3 pt-4'>
             <Button type="submit" disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 dark:text-white">Add</Button>
             <Button variant={"outline"} onClick={() => {
               setSelectedLink(false)

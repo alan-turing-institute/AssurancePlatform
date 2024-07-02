@@ -41,7 +41,7 @@ export function useEnforceLogout() {
  * @returns {void}
  */
 export function unauthorized() {
-  window.location.replace("/logout/expired");
+  window.location.replace("/login");
 }
 
 /**
