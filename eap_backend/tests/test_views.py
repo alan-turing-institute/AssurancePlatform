@@ -88,6 +88,32 @@ class CaseViewTest(TestCase):
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
 
+    def test_view_case_sandbox(self):
+        TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        context: Context = Context.objects.create(**CONTEXT_INFO)
+        response_get: HttpResponse = self.client.get(
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+        assert response_data == {"contexts": []}
+
+        SandboxUtils.detach_context(context.pk)
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+
+        assert len(response_data["contexts"]) == 1
+        assert response_data["contexts"][0]["id"] == context.pk
+        assert response_data["contexts"][0]["in_sandbox"]
+
     def test_view_case_without_detached_items(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         context: Context = Context.objects.create(

@@ -31,6 +31,7 @@ from .serializers import (
     GitHubRepositorySerializer,
     GithubSocialAuthSerializer,
     PropertyClaimSerializer,
+    SandboxSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -271,6 +272,17 @@ def case_detail(request, pk):
         return HttpResponse(status=204)
 
     return None
+
+
+@csrf_exempt
+@api_view(["GET"])
+def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
+        serializer = SandboxSerializer(assurance_case)
+        return JsonResponse(serializer.data)
+    except AssuranceCase.DoesNotExist:
+        return HttpResponse(status=404)
 
 
 @api_view(["POST"])
