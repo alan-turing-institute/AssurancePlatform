@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
@@ -18,7 +18,7 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
-import { createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
+import { addHiddenProp, createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
@@ -32,9 +32,10 @@ const formSchema = z.object({
 
 interface CreateFormProps {
   onClose: () => void
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
 };
 
-const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
+const CreateForm: React.FC<CreateFormProps> = ({ onClose, setUnresolvedChanges }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
   const [loading, setLoading] = useState<boolean>(false)
@@ -47,6 +48,14 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
     }
   });
 
+  useEffect(() => {
+    form.watch((values, { name }) => {
+      if (name === 'description' || name === 'URL') {
+        setUnresolvedChanges(true);
+      }
+    });
+  }, [form.watch, setUnresolvedChanges]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const identifier = await setNodeIdentifier(null, 'goal')
 
@@ -58,7 +67,8 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       "assurance_case_id": assuranceCase.id,
       "context":[],
       "property_claims":[],
-      "strategies":[]
+      "strategies":[],
+      "type": "TopLevelNormativeGoal"
     }
 
     const result: any = await createAssuranceCaseNode('goals', newGoal, token)
@@ -73,10 +83,11 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose }) => {
       goals: [ result.data ]
     }
 
-    // setAssuranceCase(updatedAssuranceCase)
+    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+    setAssuranceCase(formattedAssuranceCase)
     onClose()
     setLoading(false)
-    window.location.reload()
+    // window.location.reload()
   }
 
   return (

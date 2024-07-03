@@ -23,67 +23,64 @@ import { useLoginToken } from '@/hooks/useAuth'
 import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
 
 const formSchema = z.object({
-  URL: z.string().min(2, {
-    message: "url must be at least 2 characters.",
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
   }).optional(),
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
   })
 })
 
-interface EditFormProps {
-  node: any;
+interface CaseEditFormProps {
   onClose: () => void
   setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
 };
 
-const EditForm: React.FC<EditFormProps> = ({
-  node,
+const CaseEditForm: React.FC<CaseEditFormProps> = ({
   onClose,
   setUnresolvedChanges
 }) => {
-  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase } = useStore();
   const [token] = useLoginToken();
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: node.data || {
-      URL: '',
+    defaultValues: assuranceCase || {
+      name: '',
       description: ''
     }
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true)
-    // Update item via api
     const updateItem = {
-      short_description: values.description,
+      name: values.name,
+      description: values.description
     }
 
-    if(node.type === 'evidence') {
-      //@ts-ignore
-      updateItem.URL = values.URL
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`
+    const requestOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateItem)
+    }
+    const response = await fetch(url, requestOptions);
+    if(!response.ok) {
+      console.log('Render a new error')
     }
 
-    const updated = await updateAssuranceCaseNode(node.type, node.data.id, token, updateItem)
-
-    if(updated) {
-      // Assurance Case Update
-      const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node)
-      if(updatedAssuranceCase) {
-        setAssuranceCase(updatedAssuranceCase)
-        setLoading(false)
-        // window.location.reload()
-        onClose()
-      }
-    }
-
+    setLoading(false)
+    setAssuranceCase({ ...assuranceCase, name: updateItem.name, description: updateItem.description })
+    onClose()
   }
 
   useEffect(() => {
     form.watch((values, { name }) => {
-      if (name === 'description' || name === 'URL') {
+      if (name === 'description' || name === 'name') {
         setUnresolvedChanges(true);
       }
     });
@@ -94,38 +91,36 @@ const EditForm: React.FC<EditFormProps> = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
         <FormField
           control={form.control}
-          name="description"
+          name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Name</FormLabel>
               <FormControl>
-                <Textarea placeholder="Type your message here." {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        {node.type === 'evidence' && (
-          <FormField
-            control={form.control}
-            name="URL"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Evidence URL</FormLabel>
-                <FormControl>
-                  <Input placeholder="www.sample.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea rows={8} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className='flex justify-start items-center gap-3'>
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
               <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
             ) : (
-              <span>Update&nbsp;<span className='capitalize'>{caseItemDescription(node.type)}</span></span>
+              <span>Update</span>
             )}
           </Button>
         </div>
@@ -134,4 +129,4 @@ const EditForm: React.FC<EditFormProps> = ({
   )
 }
 
-export default EditForm
+export default CaseEditForm

@@ -9,27 +9,23 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 
-interface CreateSheetProps {
+interface CaseSheetProps {
+  title: string
+  description: string
   isOpen: boolean
   onClose: () => void
   onChange: (open:boolean) => void
   children?: React.ReactNode
 }
 
-const CreateSheet = ({ isOpen, onClose, onChange, children } : CreateSheetProps ) => {
-  // const onChange = (open: boolean) => {
-  //   if (!open) {
-  //     onClose();
-  //   }
-  // };
-
+const CaseSheet = ({ title, description, isOpen, onClose, onChange, children } : CaseSheetProps ) => {
   return (
     <Sheet open={isOpen} onOpenChange={onChange}>
       <SheetContent className="overflow-y-scroll">
         <SheetHeader>
-          <SheetTitle>Create new Goal</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
-            Please provide some additional information about your goal.
+            {description}
           </SheetDescription>
         </SheetHeader>
         {children}
@@ -38,4 +34,4 @@ const CreateSheet = ({ isOpen, onClose, onChange, children } : CreateSheetProps 
   )
 }
 
-export default CreateSheet
+export default CaseSheet

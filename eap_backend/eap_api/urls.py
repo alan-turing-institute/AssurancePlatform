@@ -12,6 +12,11 @@ urlpatterns = [
     path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
+    path(
+        "cases/<int:pk>/update-ids",
+        views.case_update_identifiers,
+        name="update_identifiers",
+    ),
     path("goals/", views.goal_list, name="goal_list"),
     path("goals/<int:pk>/", views.goal_detail, name="goal_detail"),
     path("contexts/", views.context_list, name="context_list"),

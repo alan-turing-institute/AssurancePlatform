@@ -1,7 +1,5 @@
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
-from django.db.models import Q
-from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -13,7 +11,6 @@ from rest_framework.response import Response
 
 from .models import (
     AssuranceCase,
-    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -49,6 +46,7 @@ from .view_utils import (
     make_case_summary,
     make_summary,
     save_json_tree,
+    update_identifiers,
 )
 
 
@@ -275,6 +273,18 @@ def case_detail(request, pk):
     return None
 
 
+@api_view(["POST"])
+def case_update_identifiers(_, pk: int):
+    try:
+        assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
+        update_identifiers(case_id=assurance_case.pk)
+
+    except AssuranceCase.DoesNotExist:
+        return HttpResponse(status=404)
+
+    return HttpResponse(status=200)
+
+
 @csrf_exempt
 def goal_list(request):
     """
@@ -296,7 +306,6 @@ def goal_list(request):
             model_instance: TopLevelNormativeGoal = cast(
                 TopLevelNormativeGoal, serializer.save()
             )
-            update_identifiers(model_instance=model_instance)
 
             serialised_model = TopLevelNormativeGoalSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
@@ -334,9 +343,7 @@ def goal_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        case_id: Optional[int] = get_case_id(goal)
         goal.delete()
-        update_identifiers(case_id)
         return HttpResponse(status=204)
     return None
 
@@ -357,7 +364,6 @@ def context_list(request):
         serializer = ContextSerializer(data=data)
         if serializer.is_valid():
             model_instance: Context = cast(Context, serializer.save())
-            update_identifiers(model_instance=model_instance)
 
             serialised_model = ContextSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
@@ -391,9 +397,7 @@ def context_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        case_id: Optional[int] = get_case_id(context)
         context.delete()
-        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -453,7 +457,6 @@ def property_claim_list(request):
         serializer = PropertyClaimSerializer(data=data)
         if serializer.is_valid():
             model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
-            update_identifiers(model_instance=model_instance)
 
             serialised_model = PropertyClaimSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
@@ -482,7 +485,6 @@ def property_claim_detail(request, pk):
         serializer = PropertyClaimSerializer(claim, data=data, partial=True)
         if serializer.is_valid():
             model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
-            update_identifiers(model_instance=model_instance)
 
             data: dict = cast(
                 dict,
@@ -493,9 +495,7 @@ def property_claim_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        case_id: Optional[int] = get_case_id(claim)
         claim.delete()
-        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -516,7 +516,6 @@ def evidence_list(request):
         serializer = EvidenceSerializer(data=data)
         if serializer.is_valid():
             model_instance: Evidence = cast(Evidence, serializer.save())
-            update_identifiers(model_instance=model_instance)
 
             serialised_model = EvidenceSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
@@ -550,9 +549,7 @@ def evidence_detail(request, pk):
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
-        case_id: Optional[int] = get_case_id(evidence)
         evidence.delete()
-        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -590,7 +587,6 @@ def strategies_list(request):
         serializer = StrategySerializer(data=data)
         if serializer.is_valid():
             model_instance: Strategy = cast(Strategy, serializer.save())
-            update_identifiers(model_instance=model_instance)
 
             serialised_model = StrategySerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
@@ -619,9 +615,7 @@ def strategy_detail(request, pk):
         return JsonResponse(serializer.errors, status=400)
 
     elif request.method == "DELETE":
-        case_id: Optional[int] = get_case_id(strategy)
         strategy.delete()
-        update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
 
@@ -751,117 +745,3 @@ def reply_to_comment(request, comment_id):
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-def update_identifiers(
-    case_id: Optional[int] = None, model_instance: Optional[CaseItem] = None
-):
-
-    error_message: str = "Assurance Case ID not provided."
-    if case_id is None and model_instance is not None:
-        case_id = get_case_id(model_instance)
-
-    if case_id is None:
-        raise ValueError(error_message)
-
-    if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
-
-        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
-            assurance_case_id=case_id
-        )
-        goal_id: int = current_case_goal.pk
-
-        update_sequential_identifiers(
-            TopLevelNormativeGoal.objects.filter(id=goal_id).order_by("id"),
-            "G",
-        )
-
-        update_sequential_identifiers(
-            Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
-        )
-
-        current_case_strategies: QuerySet = Strategy.objects.filter(
-            goal_id=goal_id
-        ).order_by("id")
-        update_sequential_identifiers(current_case_strategies, "S")
-
-        top_level_claim_ids, child_claim_ids = get_case_property_claims(
-            current_case_goal, current_case_strategies
-        )
-
-        update_sequential_identifiers(
-            Evidence.objects.filter(
-                property_claim__id__in=top_level_claim_ids + child_claim_ids
-            ).order_by("id"),
-            "E",
-        )
-
-        parent_property_claims: QuerySet = PropertyClaim.objects.filter(
-            pk__in=top_level_claim_ids
-        ).order_by("id")
-
-        update_sequential_identifiers(parent_property_claims, "P")
-
-        for _, property_claim in enumerate(parent_property_claims):
-            traverse_child_property_claims(
-                lambda index, child, parent: update_item_name(
-                    child, f"{parent.name}.", index + 1
-                ),
-                property_claim.pk,
-            )
-
-        if model_instance is not None:
-            model_instance.refresh_from_db()
-
-
-def get_case_property_claims(
-    goal: TopLevelNormativeGoal, strategies: QuerySet
-) -> tuple:
-    strategy_ids: list[int] = [strategy.pk for strategy in strategies]
-
-    top_level_claim_ids: list[int] = [
-        claim.pk
-        for claim in PropertyClaim.objects.filter(
-            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-        ).order_by("id")
-    ]
-
-    child_claim_ids: list[int] = []
-    for parent_claim_id in top_level_claim_ids:
-        traverse_child_property_claims(
-            lambda _, child, parent: child_claim_ids.append(child.pk),  # noqa: ARG005
-            parent_claim_id,
-        )
-
-    return top_level_claim_ids, sorted(child_claim_ids)
-
-
-def traverse_child_property_claims(
-    on_child_claim: Callable[[int, PropertyClaim, PropertyClaim], None],
-    parent_claim_id: int,
-):
-
-    child_property_claims = PropertyClaim.objects.filter(
-        property_claim_id=parent_claim_id
-    ).order_by("id")
-
-    if len(child_property_claims) == 0:
-        return
-    else:
-        for index, child_property_claim in enumerate(child_property_claims):
-            on_child_claim(
-                index,
-                child_property_claim,
-                PropertyClaim.objects.get(pk=parent_claim_id),
-            )
-            traverse_child_property_claims(on_child_claim, child_property_claim.pk)
-
-
-def update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
-    case_item.name = f"{prefix}{number}"
-    case_item.save()
-
-
-def update_sequential_identifiers(query_set: QuerySet, prefix: str):
-    for model_index, model in enumerate(query_set):
-        update_item_name(model, prefix, model_index + 1)

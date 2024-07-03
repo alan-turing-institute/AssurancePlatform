@@ -9,11 +9,14 @@ import Header from '../Header';
 import { ReactFlowProvider } from 'reactflow';
 
 import useStore from '@/data/store';
+import { addHiddenProp } from '@/lib/case-helper';
+import CaseDetails from './CaseDetails';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
   const [loading, setLoading] = useState(true)
   const { assuranceCase, setAssuranceCase } = useStore();
+  const [open, setOpen] = useState(false);
 
   const params = useParams()
   const { caseId } = params
@@ -39,7 +42,9 @@ const CaseContainer = () => {
     if(response.status === 401) return unauthorized()
 
     const result = await response.json()
-    return result
+
+    const formattedAssuranceCase = await addHiddenProp(result)
+    return formattedAssuranceCase
 
   }
 
@@ -63,8 +68,9 @@ const CaseContainer = () => {
       ) : (
         assuranceCase ? (
           <ReactFlowProvider>
-            <Header />
+            <Header setOpen={setOpen} />
             <Flow />
+            <CaseDetails isOpen={open} setOpen={setOpen} />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>
