@@ -23,6 +23,7 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
+from eap_api.view_utils import SandboxUtils
 from eap_api.views import make_case_summary, make_summary
 from rest_framework.authtoken.models import Token
 
@@ -83,8 +84,52 @@ class CaseViewTest(TestCase):
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
+
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
+
+    def test_view_case_without_detached_items(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        context: Context = Context.objects.create(
+            goal=None, assurance_case=self.assurance_case, name="C1"
+        )
+
+        SandboxUtils.attach_context(context_id=context.pk, goal_id=goal.pk)
+
+        # Testing with attachment response
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+
+        goals_from_response: list = response_data["goals"]
+        assert len(goals_from_response) == 1
+        assert goals_from_response[0]["id"] == goal.pk
+
+        contexts_from_response: list = goals_from_response[0]["context"]
+        assert len(contexts_from_response) == 1
+        assert contexts_from_response[0]["id"] == context.pk
+
+        # Testing after detachment
+
+        SandboxUtils.detach_context(context.pk)
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+        goals_from_response: list = response_data["goals"]
+        assert len(goals_from_response) == 1
+        assert goals_from_response[0]["id"] == goal.pk
+
+        contexts_from_response: list = goals_from_response[0]["context"]
+        assert len(contexts_from_response) == 0
 
     def test_case_detail_view_put(self):
         response_put = self.client.put(

@@ -36,11 +36,11 @@ from .serializers import (
 )
 from .view_utils import (
     TYPE_DICT,
+    SandboxUtils,
     can_view_group,
     filter_by_case_id,
     get_allowed_cases,
     get_allowed_groups,
-    get_case_id,
     get_case_permissions,
     get_json_tree,
     make_case_summary,
@@ -407,14 +407,7 @@ def context_detail(request, pk):
 def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
 
     try:
-        context: Context = Context.objects.get(pk=pk)
-        assurance_case_id: Optional[int] = get_case_id(context)
-
-        context.assurance_case = AssuranceCase.objects.get(pk=assurance_case_id)
-        context.goal = None
-        context.in_sandbox = True
-
-        context.save()
+        SandboxUtils.detach_context(context_id=pk)
 
         return HttpResponse(status=200)
     except (Context.DoesNotExist, AssuranceCase.DoesNotExist):
@@ -426,14 +419,7 @@ def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
 def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
 
     try:
-        context: Context = Context.objects.get(pk=pk)
-        new_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
-            pk=request.data["goal_id"]  # type: ignore[attr-defined]
-        )
-
-        context.goal = new_goal
-        context.assurance_case = None
-        context.save()
+        SandboxUtils.attach_context(context_id=pk, goal_id=request.data["goal_id"])  # type: ignore[attr-defined]
 
     except (Context.DoesNotExist, TopLevelNormativeGoal.DoesNotExist):
         return HttpResponse(status=400)

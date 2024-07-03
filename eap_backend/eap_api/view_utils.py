@@ -91,6 +91,28 @@ for k, v in tuple(TYPE_DICT.items()):
     TYPE_DICT[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
 
 
+class SandboxUtils:
+    @staticmethod
+    def detach_context(context_id: int) -> None:
+        context: Context = Context.objects.get(pk=context_id)
+        assurance_case_id: Optional[int] = get_case_id(context)
+
+        context.assurance_case = AssuranceCase.objects.get(pk=assurance_case_id)
+        context.goal = None
+        context.in_sandbox = True
+
+        context.save()
+
+    @staticmethod
+    def attach_context(context_id: int, goal_id: int) -> None:
+        context: Context = Context.objects.get(pk=context_id)
+        new_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+
+        context.goal = new_goal
+        context.assurance_case = None
+        context.save()
+
+
 def get_case_id(item):
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
