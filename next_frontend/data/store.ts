@@ -22,6 +22,7 @@ import Dagre from '@dagrejs/dagre';
 
 type Store = {
   assuranceCase: any;
+  orphanedElements: any[]
   nodes: Node[];
   edges: Edge[];
   nodeTypes: NodeTypes;
@@ -84,6 +85,16 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<Store>((set, get) => ({
   assuranceCase: null,
+  orphanedElements: [
+    { id: crypto.randomUUID(), name: 'P1', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    { id: crypto.randomUUID(), name: 'P3', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    { id: crypto.randomUUID(), name: 'P4.5', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    { id: crypto.randomUUID(), name: 'P2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    { id: crypto.randomUUID(), name: 'S8', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    { id: crypto.randomUUID(), name: 'S1', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    { id: crypto.randomUUID(), name: 'P3.2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    { id: crypto.randomUUID(), name: 'E99', description: 'Lorem ipsum blah blah woof woof', type:'evidence' },
+  ],
   nodes: initNodes,
   edges: initEdges,
   nodeTypes: nodeTypes,

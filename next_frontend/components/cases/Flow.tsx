@@ -13,7 +13,7 @@ import NodeEdit from '@/components/common/NodeEdit';
 import ActionButtons from './ActionButtons';
 
 import useStore from '@/data/store';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Unplug } from 'lucide-react';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
 
@@ -25,10 +25,21 @@ interface FlowProps {}
 
 function Flow({}: FlowProps) {
   const { fitView } = useReactFlow();
-  const { nodes, edges, nodeTypes, onNodesChange, setNodes, setEdges, layoutNodes, assuranceCase } = useStore();
+  const { 
+    nodes, 
+    edges, 
+    nodeTypes, 
+    onNodesChange, 
+    setNodes, 
+    setEdges, 
+    layoutNodes, 
+    assuranceCase, 
+    orphanedElements 
+  } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | any>(null);
   const [loading, setLoading] = useState(true);
+
   const { theme } = useTheme();
   const { toast } = useToast();
 
@@ -188,6 +199,14 @@ function Flow({}: FlowProps) {
             notifyError={notifyError}
           />
           <NodeEdit node={selectedNode} isOpen={editOpen} setEditOpen={setEditOpen} />
+          {orphanedElements && orphanedElements.length > 0 && (
+            <div className='absolute top-16 px-8 py-4 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm'>
+              <div className='container mx-auto flex justify-center items-center gap-2'>
+                <Unplug className='w-4 h-4'/>
+                <p>You have orphaned elements for this assurance case.</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
