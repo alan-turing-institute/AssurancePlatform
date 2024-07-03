@@ -73,10 +73,13 @@ const CaseContainer = () => {
       setAssuranceCase(result)
       setLoading(false)
     })
+  },[])
+
+  useEffect(() => {
     fetchOrphanedElements(caseId).then(result => {
       setOrphanedElements(result)
     })
-  },[])
+  },[assuranceCase])
 
   return (
     <>

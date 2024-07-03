@@ -225,7 +225,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
     if(detached) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
-      handleClose()
+      if(updatedAssuranceCase) {
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          setDeleteOpen(false)
+          handleClose()
+      }
     }
   }
 
@@ -452,7 +457,24 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           </div>
         </>
       )}
-      
+      <AlertModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        loading={loading}
+        message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
+        confirmButtonText={'Yes, delete this element!'}
+        cancelButtonText={'No, keep the element'}
+      />
+      <AlertModal
+        isOpen={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleClose}
+        loading={loading}
+        message={'You have changes that have not been updated. Would you like to discard these changes?'}
+        confirmButtonText={'Yes, discard changes!'}
+        cancelButtonText={'No, keep editing'}
+      />
     </EditSheet>
   )
 }
