@@ -16,6 +16,8 @@ urlpatterns = [
     path("goals/<int:pk>/", views.goal_detail, name="goal_detail"),
     path("contexts/", views.context_list, name="context_list"),
     path("contexts/<int:pk>/", views.context_detail, name="context_detail"),
+    path("contexts/<int:pk>/detach", views.detach_context, name="detach_context"),
+    path("contexts/<int:pk>/attach", views.attach_context, name="attach_context"),
     path(
         "propertyclaims/",
         views.property_claim_list,

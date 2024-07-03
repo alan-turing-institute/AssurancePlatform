@@ -2,7 +2,7 @@ from typing import Callable, Optional, cast
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, permission_classes
@@ -396,6 +396,45 @@ def context_detail(request, pk):
         update_identifiers(case_id=case_id)
         return HttpResponse(status=204)
     return None
+
+
+@csrf_exempt
+@api_view(["POST"])
+def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
+
+    try:
+        context: Context = Context.objects.get(pk=pk)
+        assurance_case_id: Optional[int] = get_case_id(context)
+
+        context.assurance_case = AssuranceCase.objects.get(pk=assurance_case_id)
+        context.goal = None
+        context.in_sandbox = True
+
+        context.save()
+
+        return HttpResponse(status=200)
+    except (Context.DoesNotExist, AssuranceCase.DoesNotExist):
+        return HttpResponse(status=404)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
+
+    try:
+        context: Context = Context.objects.get(pk=pk)
+        new_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
+            pk=request.data["goal_id"]  # type: ignore[attr-defined]
+        )
+
+        context.goal = new_goal
+        context.assurance_case = None
+        context.save()
+
+    except (Context.DoesNotExist, TopLevelNormativeGoal.DoesNotExist):
+        return HttpResponse(status=400)
+
+    return HttpResponse(status=200)
 
 
 @csrf_exempt

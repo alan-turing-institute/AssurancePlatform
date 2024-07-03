@@ -144,9 +144,9 @@ class GoalViewTest(TestCase):
         assert current_goal.keywords == json_response["keywords"]
         assert current_goal.assurance_case.pk == json_response["assurance_case_id"]
 
-        assert [] == json_response["context"]
-        assert [] == json_response["property_claims"]
-        assert [] == json_response["strategies"]
+        assert json_response["context"] == []
+        assert json_response["property_claims"] == []
+        assert json_response["strategies"] == []
 
     def test_goal_list_view_post_with_id_update(self):
 
@@ -291,6 +291,51 @@ class ContextViewTest(TestCase):
         self.data = Context.objects.all()
         # convert it to JSON
         self.serializer = ContextSerializer(self.data, many=True)
+
+    def test_detach_context(self):
+        path: str = reverse("detach_context", kwargs={"pk": self.context.pk})
+        response_get: HttpResponse = self.client.get(
+            path,
+            content_type="application/json",
+        )
+
+        assert response_get.status_code == 405
+
+        response_post: HttpResponse = self.client.post(
+            path,
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.context.refresh_from_db()
+
+        assert self.context.in_sandbox
+        assert self.context.assurance_case == self.case
+        assert self.context.goal is None
+
+    def test_attach_context(self):
+        detached_context: Context = Context.objects.create(
+            goal=None,
+            assurance_case=self.case,
+        )
+
+        response_post: HttpResponse = self.client.post(
+            reverse("attach_context", kwargs={"pk": detached_context.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        detached_context.refresh_from_db()
+
+        assert detached_context.goal == TopLevelNormativeGoal.objects.get(
+            pk=self.goal.pk
+        )
+
+        assert detached_context.assurance_case is None
+        assert not detached_context.in_sandbox
 
     def test_create_context_with_post(self):
         response_post: HttpResponse = self.client.post(

@@ -65,6 +65,7 @@ class CaseItem(models.Model):
     long_description = models.CharField(max_length=3000)
     shape = Shape
     created_date = models.DateTimeField(auto_now_add=True)
+    in_sandbox = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
@@ -125,7 +126,18 @@ class TopLevelNormativeGoal(CaseItem):
 class Context(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
+        TopLevelNormativeGoal,
+        related_name="context",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="contexts",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
     )
 
 
@@ -135,6 +147,14 @@ class Strategy(CaseItem):
         TopLevelNormativeGoal,
         related_name="strategies",
         on_delete=models.CASCADE,
+    )
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="strategies",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
     )
 
     def __str__(self):
@@ -174,6 +194,14 @@ class PropertyClaim(CaseItem):
         on_delete=models.CASCADE,
     )
 
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+
     level = models.PositiveIntegerField()
 
     def save(self, *args, **kwargs):
@@ -204,3 +232,11 @@ class Evidence(CaseItem):
     URL = models.CharField(max_length=3000)
     shape = Shape.CYLINDER
     property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="evidence",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
