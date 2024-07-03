@@ -30,6 +30,7 @@ type Store = {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   setAssuranceCase: (assuranceCase: any) => void;
+  setOrphanedElements: (orphanedElements: any) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
@@ -86,14 +87,14 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 const useStore = create<Store>((set, get) => ({
   assuranceCase: null,
   orphanedElements: [
-    { id: crypto.randomUUID(), name: 'P1', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    { id: crypto.randomUUID(), name: 'P3', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    { id: crypto.randomUUID(), name: 'P4.5', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    { id: crypto.randomUUID(), name: 'P2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    { id: crypto.randomUUID(), name: 'S8', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
-    { id: crypto.randomUUID(), name: 'S1', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
-    { id: crypto.randomUUID(), name: 'P3.2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    { id: crypto.randomUUID(), name: 'E99', description: 'Lorem ipsum blah blah woof woof', type:'evidence' },
+    // { id: crypto.randomUUID(), name: 'P1', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P3', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P4.5', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'S8', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    // { id: crypto.randomUUID(), name: 'S1', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    // { id: crypto.randomUUID(), name: 'P3.2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'E99', description: 'Lorem ipsum blah blah woof woof', type:'evidence' },
   ],
   nodes: initNodes,
   edges: initEdges,
@@ -115,6 +116,17 @@ const useStore = create<Store>((set, get) => ({
   },
   setAssuranceCase: (assuranceCase: any) => {
     set({ assuranceCase })
+  },
+  setOrphanedElements: (orphanedElements: any) => {
+    let newArray: any[] = []
+
+    if(orphanedElements.contexts && orphanedElements.contexts.length > 0) {
+      orphanedElements.contexts.map((context: any) => {
+        newArray.push(context)
+      })
+    }
+
+    set({ orphanedElements: newArray })
   },
   setNodes: (nodes: Node[]) => {
     // const { nodes: layoutedNodes } = layoutNodesVertically(nodes, []);

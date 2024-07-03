@@ -929,3 +929,45 @@ export const findParentNode = (nodes: any, node: any) => {
     }
     return parent
 }
+
+export const detachCaseElement = async (type: string, id: any, token: string | null): Promise<any>  => {
+    if (!token) return { error: 'No token' }
+
+    let entity = null
+    switch (type) {
+        case 'context':
+            entity = 'contexts'
+            break;
+        case 'strategy':
+            entity = 'strategies'
+            break;
+        case 'property':
+            entity = 'propertyclaims'
+            break;
+        case 'evidence':
+            entity = 'evidence'
+            break;
+    }
+
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/detach`
+
+        const requestOptions: RequestInit = {
+            method: "POST",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            }
+        };
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+            return { error: `Something went wrong ${response.status}` }
+        }
+
+        return { detached: true }
+    } catch (error) {
+        console.log('Error', error)
+        return { error }
+    }
+}

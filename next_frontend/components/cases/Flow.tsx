@@ -43,6 +43,8 @@ function Flow({}: FlowProps) {
   const { theme } = useTheme();
   const { toast } = useToast();
 
+  console.log('orphanedElements',orphanedElements)
+
   const onLayout = (direction: any) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
 

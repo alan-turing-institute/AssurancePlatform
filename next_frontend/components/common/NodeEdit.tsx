@@ -6,7 +6,7 @@ import EditSheet from "../ui/edit-sheet";
 import { CloudFog, Eye, EyeOff, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -217,6 +217,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   const parentNode: any = findParentNode(nodes, node)
 
+  const handleDetach = async () => {
+    const { detached, error }: any = await detachCaseElement(node.type, node.data.id, token)
+    if(error) {
+      console.error(error)
+    }
+
+    if(detached) {
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
+      handleClose()
+    }
+  }
+
   return (
     <EditSheet
       title={`Editing ${node.data.name}`}
@@ -273,6 +285,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               Delete&nbsp;
               <span className='capitalize'>{node.type}</span></Button>
           </div>
+          {node.type === 'context' && (
+            <Button onClick={handleDetach} className="w-full my-8">Detach</Button>
+          )}
         </div>
       )}
       {action === 'new' && (
@@ -437,6 +452,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           </div>
         </>
       )}
+      
     </EditSheet>
   )
 }
