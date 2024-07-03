@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
 import { Button } from './ui/button';
 import { ArrowLeft, Check, ChevronsUpDown, Copy, MessageSquareMore, Search, SearchIcon, X } from 'lucide-react';
 import { ModeToggle } from './ui/theme-toggle';
@@ -10,9 +10,11 @@ import Link from 'next/link';
 import { useReactFlow } from 'reactflow';
 import SearchNodes from './common/SearchNodes';
 
-interface HeaderProps {}
+interface HeaderProps {
+  setOpen: Dispatch<SetStateAction<boolean>>
+}
 
-const Header = ({ }: HeaderProps) => {
+const Header = ({ setOpen }: HeaderProps) => {
   const { nodes, assuranceCase, setAssuranceCase } = useStore();
   const router = useRouter();
   const [editName, setEditName] = useState<boolean>(false);
@@ -95,7 +97,7 @@ const Header = ({ }: HeaderProps) => {
           <Button variant={'ghost'} size={'icon'} onClick={() => router.push('/dashboard')} className='hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white'>
             <ArrowLeft className='w-4 h-4' />
           </Button>
-          {editName ? (
+          {/* {editName ? (
             <div className='flex justify-start items-center gap-4'>
               <input
                 ref={inputRef}
@@ -114,7 +116,8 @@ const Header = ({ }: HeaderProps) => {
             <p className='font-semibold' onClick={handleEditClick}>
               {assuranceCase.name}
             </p>
-          )}
+          )} */}
+          <p onClick={() => setOpen(true)} className='font-semibold hover:cursor-pointer'>{assuranceCase.name}</p>
         </div>
 
         <div className='flex justify-start items-center gap-4'>

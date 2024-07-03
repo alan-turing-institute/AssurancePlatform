@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 type SearchNodesProps = {
   nodes: any[]
@@ -62,7 +63,7 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
         <span className=''>Search</span>
       </Button>
       <Dialog open={searchOpen} onOpenChange={handleSearchClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Search Nodes</DialogTitle>
             <DialogDescription>
@@ -83,21 +84,24 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
               />
             </div>
           </div>
-          <div className='max-h-[300px] overflow-y-auto'>
+          <div className='max-h-[320px] overflow-y-auto'>
             {filteredNodes.map((node) => (
+              <>
               <div
                 key={node.id}
-                className="flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
+                className="group flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
                 onClick={() => handleSelection(node.id)}
               >
-                <div className="flex items-center">
-                  <span className="font-medium">{node.data.name}</span>
-                  <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+                <div className="flex flex-col items-start">
+                  <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">Identifier: {node.data.name}</span>
+                  {/* <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                     <circle cx={1} cy={1} r={1} />
-                  </svg>
-                  <span className="max-w-[300px] truncate">{node.data.short_description}</span>
+                  </svg> */}
+                  <span className="w-full line-clamp-2 text-sm">{node.data.short_description}</span>
                 </div>
               </div>
+              <Separator />
+              </>
             ))}
           </div>
           {/* <DialogFooter className="sm:justify-start">

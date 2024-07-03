@@ -67,7 +67,7 @@ const CaseList = ({ assuranceCases } : CaseListProps) => {
           </button>
         </div>
       </div>
-      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 w-full'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 w-full'>
         <button onClick={() => createCaseModal.onOpen()} className='group min-h-[420px]'>
           <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
             <CardContent className='flex flex-col justify-center items-center gap-2 py-20'>

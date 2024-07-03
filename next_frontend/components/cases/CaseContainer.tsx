@@ -10,11 +10,13 @@ import { ReactFlowProvider } from 'reactflow';
 
 import useStore from '@/data/store';
 import { addHiddenProp } from '@/lib/case-helper';
+import CaseDetails from './CaseDetails';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
   const [loading, setLoading] = useState(true)
   const { assuranceCase, setAssuranceCase } = useStore();
+  const [open, setOpen] = useState(false);
 
   const params = useParams()
   const { caseId } = params
@@ -66,8 +68,9 @@ const CaseContainer = () => {
       ) : (
         assuranceCase ? (
           <ReactFlowProvider>
-            <Header />
+            <Header setOpen={setOpen} />
             <Flow />
+            <CaseDetails isOpen={open} setOpen={setOpen} />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>

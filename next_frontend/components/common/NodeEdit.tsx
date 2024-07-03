@@ -221,31 +221,33 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       onClose={handleClose}
       onChange={onChange}
     >
-      {node.type !== 'goal' && parentNode && (
-        <div className="mt-4 flex flex-col text-sm">
-          <div className="mb-2 flex justify-start items-center gap-2">
-            <p>Parent Description</p>
-            {toggleParentDescription ?
-            (
-              <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
-            ) :
-            (
-              <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
-            )}
-          </div>
-          {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
-        </div>
-      )}
       {selectedLink ? (
         <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
       ) : (
         <>
+
+        {node.type !== 'goal' && parentNode && (
+          <div className="mt-6 flex flex-col text-sm">
+            <div className="mb-2 flex justify-start items-center gap-2">
+              <p>Parent Description</p>
+              {toggleParentDescription ?
+              (
+                <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+              ) :
+              (
+                <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+              )}
+            </div>
+            {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
+          </div>
+        )}
+          
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
 
           {/* Node specific form buttons */}
           {node.type != 'context' && node.type != 'evidence' && (
             <div className="flex flex-col justify-start items-start mt-8">
-              <h3 className="text-lg font-semibold mb-2">Link to {node.data.name}</h3>
+              <h3 className="text-lg font-semibold mb-2">Add New</h3>
               <div className="flex flex-col justify-start items-center gap-4 w-full">
                 {node.type === 'goal' && (
                   <>
@@ -275,7 +277,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                 {node.type === 'property' &&
                   <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
                     <SelectTrigger>
-                      <SelectValue placeholder="Select an element" />
+                      <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
                     <SelectContent>
                       {goal && (
@@ -330,7 +332,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                 {node.type === 'evidence' &&
                   <Select onValueChange={setSelectedEvidenceMove}> {/* Update state on change */}
                     <SelectTrigger>
-                      <SelectValue placeholder="Move to" />
+                      <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
                     <SelectContent>
                       {claims && claims.map((claim: any) => (
@@ -355,7 +357,13 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                <Button className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" onClick={handleMove}>Move</Button>
+                <Button 
+                  variant={"outline"}
+                  // className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" 
+                  onClick={handleMove}
+                >
+                  Move
+                </Button>
               </div>
             </div>
           ) : null}
