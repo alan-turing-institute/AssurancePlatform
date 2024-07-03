@@ -241,7 +241,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
           </div>
         )}
-          
+
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
 
           {/* Node specific form buttons */}
@@ -357,9 +357,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                <Button 
+                <Button
                   variant={"outline"}
-                  // className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" 
+                  // className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
                   onClick={handleMove}
                 >
                   Move
