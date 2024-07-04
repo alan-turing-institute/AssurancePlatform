@@ -4,9 +4,11 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import { Separator } from '../ui/separator'
 import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
-import { attachCaseElement, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Trash, Trash2 } from 'lucide-react'
+import { Button } from '../ui/button'
+import { AlertModal } from '../modals/alertModal'
 
 type OrphanElementsProps = {
   node: any
@@ -15,12 +17,14 @@ type OrphanElementsProps = {
     loading: boolean
     setLoading: Dispatch<SetStateAction<boolean>>
   }
+  setAction: Dispatch<SetStateAction<string | null>>
 }
 
-const OrphanElements = ({ node, handleClose, loadingState } : OrphanElementsProps) => {
+const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanElementsProps) => {
   const { loading, setLoading } = loadingState
-  const { orphanedElements, assuranceCase, setAssuranceCase } = useStore();
+  const { orphanedElements, setOrphanedElements, assuranceCase, setAssuranceCase } = useStore();
   const [filteredOrphanElements, setFilteredOrphanElements] = useState<any[]>([])
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [token] = useLoginToken();
 
@@ -70,6 +74,47 @@ const OrphanElements = ({ node, handleClose, loadingState } : OrphanElementsProp
     }
   }
 
+  const handleDelete = async () => {
+    setLoading(true);
+
+    try {
+        // Collect all deletion promises
+        const deletionPromises = filteredOrphanElements.map(async (orphan: any) => {
+            const deleted = await deleteAssuranceCaseNode(orphan.type, orphan.id, token);
+
+            // if (deleted) {
+            //     const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, orphan.id);
+            //     return updatedAssuranceCase;
+            // }
+
+            return { deleted, orphanId: orphan.id };
+        });
+
+        // Wait for all deletion promises to resolve
+        const deletedResults = await Promise.all(deletionPromises);
+        console.log('Deleted Results', deletedResults)
+
+        // Extract the ids of the deleted orphans
+        const deletedIds = deletedResults
+            .filter(result => result.deleted)
+            .map(result => result.orphanId);
+
+        // Filter out the orphaned elements whose ids are in the deletedIds array
+        const updatedOrphanedElements = orphanedElements.filter((item: any) => !deletedIds.includes(item.id));
+
+        // Update state with the filtered orphaned elements
+        setOrphanedElements(updatedOrphanedElements);
+        
+        setDeleteOpen(false);
+        handleClose();
+    } catch (error) {
+        console.error("Error during deletion process:", error);
+    } finally {
+        setLoading(false);
+    }
+  }
+
+
   useEffect(() => {
     filterOrphanElements(node.type).then(result => {
       setFilteredOrphanElements(result)
@@ -107,6 +152,31 @@ const OrphanElements = ({ node, handleClose, loadingState } : OrphanElementsProp
         </div>
       </ScrollArea>
       {loading && <p className='flex justify-start items-center mt-4'><Loader2 className='w-4 h-4 mr-2 animate-spin'/>Adding Element...</p>}
+      <div className='w-full flex justify-start items-center gap-3'>
+        <Button 
+          variant={"outline"} 
+          onClick={() => setAction(null)}
+          className="w-full my-6"
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant={"destructive"} 
+          onClick={() => setDeleteOpen(true)}
+          className="w-full my-6"
+        >
+          <Trash2 className='w-4 h-4 mr-2'/>Delete All
+        </Button>
+      </div>
+      <AlertModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        loading={loading}
+        message={'Are you sure you want to delete all orphaned elements. This cannot be undone.'}
+        confirmButtonText={'Yes, delete all'}
+        cancelButtonText={'No, keep them'}
+      />
     </div>
   )
 }

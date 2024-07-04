@@ -335,17 +335,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         )
       )}
       {action === 'existing' && (
-        orphanedElements.length > 0 && node.type !== 'evidence' && node.type !== 'context' && (
-          <>
-            <OrphanElements node={node} handleClose={handleClose} loadingState={{ loading, setLoading }} />
-            <Button 
-              variant={"outline"} 
-              onClick={() => setAction(null)}
-              className="my-6"
-            >
-              Cancel
-            </Button>
-          </>
+        node.type !== 'evidence' && node.type !== 'context' && (
+          <OrphanElements 
+            node={node} 
+            handleClose={handleClose} 
+            loadingState={{ loading, setLoading }}
+            setAction={setAction} />
         )
       )}
       {action === 'move' && (

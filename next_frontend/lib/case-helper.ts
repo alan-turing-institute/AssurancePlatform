@@ -460,7 +460,7 @@ export const deleteAssuranceCaseNode = async (type: string, id: any, token: stri
     if (!token) return console.log('No token')
 
     let entity = null
-    switch (type) {
+    switch (type.toLowerCase()) {
         case 'context':
             entity = 'contexts'
             break;
