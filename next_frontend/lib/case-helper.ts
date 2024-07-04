@@ -971,3 +971,46 @@ export const detachCaseElement = async (type: string, id: any, token: string | n
         return { error }
     }
 }
+
+export const attachCaseElement = async (type: string, id: any, token: string | null, parentId: number): Promise<any>  => {
+    if (!token) return { error: 'No token' }
+
+    let entity = null
+    switch (type.toLowerCase()) {
+        case 'context':
+            entity = 'contexts'
+            break;
+        case 'strategy':
+            entity = 'strategies'
+            break;
+        case 'propertyclaim':
+            entity = 'propertyclaims'
+            break;
+        case 'evidence':
+            entity = 'evidence'
+            break;
+    }
+
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/attach`
+
+        const requestOptions: RequestInit = {
+            method: "POST",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ goal_id: parentId }),
+        };
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+            return { error: `Something went wrong ${response.status}` }
+        }
+
+        return { attached: true }
+    } catch (error) {
+        console.log('Error', error)
+        return { error }
+    }
+}

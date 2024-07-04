@@ -1,13 +1,28 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import { Separator } from '../ui/separator'
 import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
+import { attachCaseElement, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { useLoginToken } from '@/hooks/useAuth'
+import { Loader2 } from 'lucide-react'
 
-const OrphanElements = ({ node } : { node: any }) => {
-  const { orphanedElements } = useStore();
+type OrphanElementsProps = {
+  node: any
+  handleClose: () => void
+  loadingState: {
+    loading: boolean
+    setLoading: Dispatch<SetStateAction<boolean>>
+  }
+}
+
+const OrphanElements = ({ node, handleClose, loadingState } : OrphanElementsProps) => {
+  const { loading, setLoading } = loadingState
+  const { orphanedElements, assuranceCase, setAssuranceCase } = useStore();
   const [filteredOrphanElements, setFilteredOrphanElements] = useState<any[]>([])
+
+  const [token] = useLoginToken();
 
   const filterOrphanElements = async (currentNodeType: string) => {
     switch (currentNodeType.toLowerCase()) {
@@ -22,8 +37,37 @@ const OrphanElements = ({ node } : { node: any }) => {
     }
   }
 
-  const handleOrphanSelection = (orphan: any) => {
-    alert(`Link to ${orphan.name}`)
+  const handleOrphanSelection = async (orphan: any) => {
+    setLoading(true)
+    console.log(`Selected Orphan Element`, orphan)
+    const parentId = node.data.id
+    orphan.goal_id = parentId
+
+    const result = await attachCaseElement(orphan.type, orphan.id, token, parentId)
+    if(result.error) {
+      console.error(result.error)
+    }
+    if(result.attached) {
+      console.log('Orphan Attached')
+      // Create a new context array by adding the new context item
+      const newContext = [...assuranceCase.goals[0].context, orphan];
+
+      // Create a new assuranceCase object with the updated context array
+      const updatedAssuranceCase = {
+        ...assuranceCase,
+        goals: [
+          {
+            ...assuranceCase.goals[0],
+            context: newContext
+          }
+        ]
+      }
+
+      // Update Assurance Case in state
+      setAssuranceCase(updatedAssuranceCase)
+      setLoading(false)
+      handleClose()
+    }
   }
 
   useEffect(() => {
@@ -37,6 +81,13 @@ const OrphanElements = ({ node } : { node: any }) => {
       <h3 className="text-lg font-semibold mb-2">Existing Elements</h3>
       <ScrollArea className={`${filteredOrphanElements.length > 3 ? 'h-80' : 'h-auto'} w-full rounded-md border`}>
         <div className="p-1">
+          {filteredOrphanElements.length === 0 && (
+              <div
+                className="p-2 rounded-md text-sm flex items-center"
+              >
+                No items found.
+              </div>
+          )}
           {filteredOrphanElements.map((el: any) => (
             <>
               <div 
@@ -55,6 +106,7 @@ const OrphanElements = ({ node } : { node: any }) => {
           ))}
         </div>
       </ScrollArea>
+      {loading && <p className='flex justify-start items-center mt-4'><Loader2 className='w-4 h-4 mr-2 animate-spin'/>Adding Element...</p>}
     </div>
   )
 }
