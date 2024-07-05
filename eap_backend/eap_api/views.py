@@ -564,7 +564,9 @@ def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
-def attach_evidence(_: HttpRequest, __: int) -> HttpResponse:
+def attach_evidence(_: HttpRequest, pk: int) -> HttpResponse:
+    # Remove later!
+    print(f"{pk=}")
     return HttpResponse(status=200)
 
 
