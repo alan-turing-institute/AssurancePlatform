@@ -676,6 +676,47 @@ class EvidenceViewTest(TestCase):
         response_get = self.client.get(reverse("evidence_list"))
         assert len(response_get.json()) == 1
 
+    def test_detach_evidence(self):
+
+        assert self.evidence1.property_claim.count() == 1
+        assert self.evidence1.property_claim.first() == self.pclaim
+        assert self.pclaim.goal == self.goal
+        assert self.goal.assurance_case == self.case
+        assert not self.evidence1.in_sandbox
+        assert self.evidence1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_evidence", kwargs={"pk": self.evidence1.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.evidence1.refresh_from_db()
+
+        assert self.evidence1.property_claim.count() == 0
+        assert self.evidence1.in_sandbox
+        assert self.evidence1.assurance_case == self.case
+
+    def test_attach_evidence(self):
+        detached_evidence: Evidence = Evidence.objects.create(URL="detached.co.uk")
+        detached_evidence.in_sandbox = True
+        detached_evidence.assurance_case = self.case
+
+        evidence_count: int = self.pclaim.evidence.count()  # type: ignore[attr-defined]
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("attach_evidence", kwargs={"pk": detached_evidence.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.pclaim.refresh_from_db()
+        assert (self.pclaim.evidence.count() - evidence_count) == 1  # type: ignore[attr-defined]
+
 
 class FullCaseDetailViewTest(TestCase):
     def setUp(self):

@@ -321,8 +321,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   </>
                 )}
               </div>
-              <Button 
-                variant={"outline"} 
+              <Button
+                variant={"outline"}
                 onClick={() => setAction(null)}
                 className="my-6"
               >
@@ -337,8 +337,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         orphanedElements.length > 0 && node.type !== 'evidence' && node.type !== 'context' && (
           <>
             <OrphanElements node={node} />
-            <Button 
-              variant={"outline"} 
+            <Button
+              variant={"outline"}
               onClick={() => setAction(null)}
               className="my-6"
             >
@@ -409,7 +409,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   </Select>
                 }
                 {node.type === 'evidence' &&
-                  <Select onValueChange={setSelectedEvidenceMove}> 
+                  <Select onValueChange={setSelectedEvidenceMove}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
@@ -436,7 +436,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                
+
               </div>
             </div>
           ) : null}
@@ -447,8 +447,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             >
               Move
             </Button>
-            <Button 
-              variant={"outline"} 
+            <Button
+              variant={"outline"}
               onClick={() => setAction(null)}
               className="my-6"
             >

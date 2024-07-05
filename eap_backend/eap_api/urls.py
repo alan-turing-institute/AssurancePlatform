@@ -50,6 +50,8 @@ urlpatterns = [
     ),
     path("evidence/", views.evidence_list, name="evidence_list"),
     path("evidence/<int:pk>/", views.evidence_detail, name="evidence_detail"),
+    path("evidence/<int:pk>/detach", views.detach_evidence, name="detach_evidence"),
+    path("evidence/<int:pk>/attach", views.attach_evidence, name="attach_evidence"),
     path(
         "parents/<str:item_type>/<int:pk>",
         views.parents,

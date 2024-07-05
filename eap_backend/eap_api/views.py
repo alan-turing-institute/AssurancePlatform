@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import cast
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -52,7 +52,7 @@ from .view_utils import (
 
 
 @csrf_exempt
-def user_list(request) -> Optional[HttpResponse]:
+def user_list(request: HttpRequest) -> HttpResponse:
     """
     List all users, or make a new user
     """
@@ -298,7 +298,7 @@ def case_update_identifiers(_, pk: int):
 
 
 @csrf_exempt
-def goal_list(request):
+def goal_list(request: HttpRequest) -> HttpResponse:
     """
     List all goals, or make a new goal
     """
@@ -327,7 +327,7 @@ def goal_list(request):
 
 
 @csrf_exempt
-def goal_detail(request, pk):
+def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a TopLevelNormativeGoal, by primary key
     """
@@ -357,11 +357,11 @@ def goal_detail(request, pk):
     elif request.method == "DELETE":
         goal.delete()
         return HttpResponse(status=204)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
-def context_list(request):
+def context_list(request: HttpRequest) -> HttpResponse:
     """
     List all contexts, or make a new context
     """
@@ -380,11 +380,11 @@ def context_list(request):
             serialised_model = ContextSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
-def context_detail(request, pk):
+def context_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a Context, by primary key
     """
@@ -411,7 +411,7 @@ def context_detail(request, pk):
     elif request.method == "DELETE":
         context.delete()
         return HttpResponse(status=204)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
@@ -463,7 +463,7 @@ def property_claim_list(request):
 
 
 @csrf_exempt
-def property_claim_detail(request, pk):
+def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a PropertyClaim, by primary key
     """
@@ -495,11 +495,11 @@ def property_claim_detail(request, pk):
     elif request.method == "DELETE":
         claim.delete()
         return HttpResponse(status=204)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
-def evidence_list(request):
+def evidence_list(request: HttpRequest) -> HttpResponse:
     """
     List all evidences, or make a new evidence
     """
@@ -518,11 +518,11 @@ def evidence_list(request):
             serialised_model = EvidenceSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
-def evidence_detail(request, pk):
+def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete Evidence, by primary key
     """
@@ -549,7 +549,23 @@ def evidence_detail(request, pk):
     elif request.method == "DELETE":
         evidence.delete()
         return HttpResponse(status=204)
-    return None
+    return HttpResponse(status=400)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        SandboxUtils.detach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
+        return HttpResponse(status=200)
+    except (Evidence.DoesNotExist, AssuranceCase.DoesNotExist):
+        return HttpResponse(status=404)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def attach_evidence(_: HttpRequest, __: int) -> HttpResponse:
+    return HttpResponse(status=200)
 
 
 @csrf_exempt
@@ -570,7 +586,7 @@ def parents(request, item_type, pk):
 
 
 @csrf_exempt
-def strategies_list(request):
+def strategies_list(request: HttpRequest) -> HttpResponse:
     """
     List all strategies, or make a new strategy
     """
@@ -589,11 +605,11 @@ def strategies_list(request):
             serialised_model = StrategySerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
-def strategy_detail(request, pk):
+def strategy_detail(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         strategy = Strategy.objects.get(pk=pk)
     except Strategy.DoesNotExist:
@@ -615,7 +631,7 @@ def strategy_detail(request, pk):
     elif request.method == "DELETE":
         strategy.delete()
         return HttpResponse(status=204)
-    return None
+    return HttpResponse(status=400)
 
 
 @permission_classes((AllowAny,))

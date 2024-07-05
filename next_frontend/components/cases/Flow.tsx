@@ -25,16 +25,16 @@ interface FlowProps {}
 
 function Flow({}: FlowProps) {
   const { fitView } = useReactFlow();
-  const { 
-    nodes, 
-    edges, 
-    nodeTypes, 
-    onNodesChange, 
-    setNodes, 
-    setEdges, 
-    layoutNodes, 
-    assuranceCase, 
-    orphanedElements 
+  const {
+    nodes,
+    edges,
+    nodeTypes,
+    onNodesChange,
+    setNodes,
+    setEdges,
+    layoutNodes,
+    assuranceCase,
+    orphanedElements
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | any>(null);

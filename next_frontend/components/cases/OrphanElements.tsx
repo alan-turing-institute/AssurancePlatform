@@ -39,8 +39,8 @@ const OrphanElements = ({ node } : { node: any }) => {
         <div className="p-1">
           {filteredOrphanElements.map((el: any) => (
             <>
-              <div 
-                key={el.id} 
+              <div
+                key={el.id}
                 className="p-2 rounded-md text-sm flex items-center hover:bg-indigo-500 hover:cursor-pointer"
                 onClick={() => handleOrphanSelection(el)}
               >
