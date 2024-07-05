@@ -210,8 +210,8 @@ class PropertyClaim(CaseItem):
         )
 
         error_message: str = ""
-        if parent_count != 1:
-            error_message = "A PropertyClaim should have exactly one parent."
+        if parent_count > 1:
+            error_message = "A PropertyClaim should have at most one parent."
             raise ValueError(error_message)
 
         if self.property_claim is not None and self.property_claim.pk == self.pk:
@@ -219,7 +219,7 @@ class PropertyClaim(CaseItem):
             raise ValueError(error_message)
 
         try:
-            parent_level = self.property_claim.level
+            parent_level = self.property_claim.level  # type:ignore[attr-defined]
         except AttributeError:
             parent_level = 0
 

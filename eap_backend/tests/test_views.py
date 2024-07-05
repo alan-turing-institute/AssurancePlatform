@@ -616,6 +616,78 @@ class PropertyClaimViewTest(TestCase):
         response_get = self.client.get(reverse("property_claim_list"))
         assert len(response_get.json()) == 1
 
+    def test_detach_property_claim_from_goal(self):
+
+        assert self.pclaim1 in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.pclaim1.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.goal.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert self.pclaim1 not in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.pclaim1.assurance_case == self.case
+        assert self.pclaim1.in_sandbox
+
+    def test_detach_property_claim_from_property_claim(self):
+
+        new_property_claim: PropertyClaim = PropertyClaim.objects.create(
+            name="P.1.1", property_claim=self.pclaim1
+        )
+
+        assert new_property_claim in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert not new_property_claim.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": new_property_claim.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim1.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        new_property_claim.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert new_property_claim not in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim.assurance_case == self.case
+        assert new_property_claim.in_sandbox
+
+    def test_detach_property_claim_from_strategy(self):
+        new_strategy: Strategy = Strategy.objects.create(name="S1", goal=self.goal)
+
+        self.pclaim1.goal = None
+        self.pclaim1.strategy = new_strategy
+        self.pclaim1.save()
+
+        assert self.pclaim1 in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.pclaim1.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"strategy_id": new_strategy.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        new_strategy.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert self.pclaim1 not in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.pclaim1.assurance_case == self.case
+        assert self.pclaim1.in_sandbox
+
 
 class EvidenceViewTest(TestCase):
     def setUp(self):

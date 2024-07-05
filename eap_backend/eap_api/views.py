@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -440,7 +440,7 @@ def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
-def property_claim_list(request):
+def property_claim_list(request: HttpRequest) -> HttpResponse:
     """
     List all claims, or make a new claim
     """
@@ -459,7 +459,7 @@ def property_claim_list(request):
             serialised_model = PropertyClaimSerializer(model_instance)
             return JsonResponse(serialised_model.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
@@ -496,6 +496,22 @@ def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
         claim.delete()
         return HttpResponse(status=204)
     return HttpResponse(status=400)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
+
+    try:
+        incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
+        SandboxUtils.detach_property_claim(
+            property_claim_id=pk, parent_info=incoming_json
+        )
+        return HttpResponse(status=200)
+    except (PropertyClaim.DoesNotExist, TopLevelNormativeGoal.DoesNotExist):
+        return HttpResponse(status=404)
+    except ValueError:
+        return HttpResponse(status=400)
 
 
 @csrf_exempt

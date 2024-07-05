@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -97,9 +97,8 @@ class SandboxUtils:
         context: Context = Context.objects.get(pk=context_id)
         assurance_case_id: Optional[int] = get_case_id(context)
 
-        context.assurance_case = AssuranceCase.objects.get(pk=assurance_case_id)
         context.goal = None
-        context.in_sandbox = True
+        SandboxUtils._move_to_sandbox(context, assurance_case_id)
 
         context.save()
 
@@ -117,15 +116,19 @@ class SandboxUtils:
     def detach_evidence(evidence_id: int, property_claim_id: int) -> None:
         evidence: Evidence = Evidence.objects.get(pk=evidence_id)
         assurance_case_id: Optional[int] = get_case_id(evidence)
-        assurance_case = AssuranceCase.objects.get(pk=assurance_case_id)
+
+        if evidence.property_claim.filter(pk=property_claim_id).count() == 0:
+            error_message: str = (
+                f"Property claim with id {property_claim_id} is not the parent of Evidence with id {evidence_id}"
+            )
+            raise ValueError(error_message)
 
         evidence.property_claim.set(
             evidence.property_claim.exclude(pk=property_claim_id)
         )
 
         if evidence.property_claim.count() == 0:
-            evidence.assurance_case = assurance_case
-            evidence.in_sandbox = True
+            SandboxUtils._move_to_sandbox(evidence, assurance_case_id)
 
         evidence.save()
 
@@ -141,8 +144,65 @@ class SandboxUtils:
         evidence.in_sandbox = False
         evidence.save()
 
+    @staticmethod
+    def detach_property_claim(property_claim_id: int, parent_info: dict[str, Any]):
+        property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
+        assurance_case_id: Optional[int] = get_case_id(property_claim)
 
-def get_case_id(item):
+        goal_id: Optional[int] = parent_info.get("goal_id")
+        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
+        strategy_id: Optional[int] = parent_info.get("strategy_id")
+
+        error_message: str = ""
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+
+            if goal.property_claims.filter(pk=property_claim_id).count() == 0:  # type: ignore[attr-defined]
+                error_message = f"Property claim {property_claim_id} is not attached to Goal {goal_id}"
+                raise ValueError(error_message)
+
+            property_claim.goal = None
+            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+        elif parent_property_claim_id is not None:
+            parent_property_claim: PropertyClaim = PropertyClaim.objects.get(
+                pk=parent_property_claim_id
+            )
+
+            if property_claim.property_claim != parent_property_claim:
+                error_message = f"Property claim {parent_property_claim.pk} is not the parent of Property Claim {property_claim.pk}"
+                raise ValueError(error_message)
+
+            property_claim.property_claim = None
+            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+        elif strategy_id is not None:
+            strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+
+            if property_claim.strategy != strategy:
+                error_message = f"Strategy {strategy.pk} is not the parent of Property Claim {property_claim.pk}"
+                raise ValueError(error_message)
+
+            property_claim.strategy = None
+            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+        else:
+            error_message = "Parent information missing"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def _move_to_sandbox(case_item: CaseItem, assurance_case_id: Optional[int]):
+        if assurance_case_id is None:
+            error_message: str = (
+                f"Cannot find assurance case id for element with id {case_item.pk}"
+            )
+            raise ValueError(error_message)
+
+        case_item.in_sandbox = True
+        case_item.assurance_case = AssuranceCase.objects.get(  # type: ignore[attr-defined]
+            pk=assurance_case_id
+        )
+        case_item.save()
+
+
+def get_case_id(item) -> Optional[int]:
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
     # an iterable that can potentially list all the parents. In that case, just pick the

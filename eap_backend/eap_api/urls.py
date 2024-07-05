@@ -30,6 +30,16 @@ urlpatterns = [
         name="property_claim_list",
     ),
     path(
+        "propertyclaims/<int:pk>/",
+        views.property_claim_detail,
+        name="property_claim_detail",
+    ),
+    path(
+        "propertyclaims/<int:pk>/detach",
+        views.detach_property_claim,
+        name="detach_property_claim",
+    ),
+    path(
         "cases/<int:assurance_case_id>/comments/",
         views.comment_list,
         name="comment_list",
@@ -43,11 +53,6 @@ urlpatterns = [
     path(
         "comments/<int:pk>/", views.CommentEdit.as_view(), name="comment_edit"
     ),  # Use the view class
-    path(
-        "propertyclaims/<int:pk>/",
-        views.property_claim_detail,
-        name="property_claim_detail",
-    ),
     path("evidence/", views.evidence_list, name="evidence_list"),
     path("evidence/<int:pk>/", views.evidence_detail, name="evidence_detail"),
     path("evidence/<int:pk>/detach", views.detach_evidence, name="detach_evidence"),
