@@ -280,7 +280,10 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <Separator className="my-6"/>
             </>
           )}
-          <div className="mt-12">
+          <div className="mt-12 flex justify-start items-center gap-4">
+            {node.type === 'context' && (
+              <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
+            )}
             <Button
               variant={"destructive"}
               onClick={() => setDeleteOpen(true)}
@@ -288,11 +291,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             >
               <Trash2 className="mr-2" />
               Delete&nbsp;
-              <span className='capitalize'>{node.type}</span></Button>
+              <span className='capitalize'>{node.type}</span>
+            </Button>
           </div>
-          {node.type === 'context' && (
-            <Button onClick={handleDetach} className="w-full my-8">Detach</Button>
-          )}
         </div>
       )}
       {action === 'new' && (
@@ -334,17 +335,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         )
       )}
       {action === 'existing' && (
-        orphanedElements.length > 0 && node.type !== 'evidence' && node.type !== 'context' && (
-          <>
-            <OrphanElements node={node} />
-            <Button
-              variant={"outline"}
-              onClick={() => setAction(null)}
-              className="my-6"
-            >
-              Cancel
-            </Button>
-          </>
+        node.type !== 'evidence' && node.type !== 'context' && (
+          <OrphanElements
+            node={node}
+            handleClose={handleClose}
+            loadingState={{ loading, setLoading }}
+            setAction={setAction} />
         )
       )}
       {action === 'move' && (
