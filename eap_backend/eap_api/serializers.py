@@ -1,5 +1,8 @@
+from typing import cast
+
 from django.db.models.query import QuerySet
 from rest_framework import serializers
+from rest_framework.serializers import ReturnDict
 
 from .github import Github, register_social_user
 from .models import (
@@ -130,15 +133,21 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
 class SandboxSerializer(serializers.ModelSerializer):
 
     contexts = serializers.SerializerMethodField()
+    evidence = serializers.SerializerMethodField()
 
     class Meta:
         model = AssuranceCase
-        fields = ["contexts"]
+        fields = ["contexts", "evidence"]
 
-    def get_contexts(self, assurance_case: AssuranceCase):
+    def get_contexts(self, assurance_case: AssuranceCase) -> ReturnDict:
         sandbox_contexts: QuerySet = assurance_case.contexts.filter(in_sandbox=True)  # type: ignore[attr-defined]
         context_serializer = ContextSerializer(sandbox_contexts, many=True)
-        return context_serializer.data
+        return cast(ReturnDict, context_serializer.data)
+
+    def get_evidence(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_evidence: QuerySet = assurance_case.evidence.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        evidence_serializer = EvidenceSerializer(sandbox_evidence, many=True)
+        return cast(ReturnDict, evidence_serializer.data)
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
@@ -259,6 +268,7 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "long_description",
             "URL",
             "property_claim_id",
+            "in_sandbox",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}

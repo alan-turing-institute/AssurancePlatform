@@ -564,9 +564,13 @@ def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
-def attach_evidence(_: HttpRequest, pk: int) -> HttpResponse:
-    # Remove later!
-    print(f"{pk=}")
+def attach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        SandboxUtils.attach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
+
+    except (Evidence.DoesNotExist, PropertyClaim.DoesNotExist):
+        return HttpResponse(status=400)
+
     return HttpResponse(status=200)
 
 

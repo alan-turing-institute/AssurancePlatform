@@ -91,6 +91,13 @@ class CaseViewTest(TestCase):
     def test_view_case_sandbox(self):
         TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         context: Context = Context.objects.create(**CONTEXT_INFO)
+        property_claim: PropertyClaim = PropertyClaim.objects.create(
+            **PROPERTYCLAIM1_INFO
+        )
+        evidence: Evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
+        evidence.property_claim.add(property_claim)
+        evidence.save()
+
         response_get: HttpResponse = self.client.get(
             reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
         )
@@ -98,9 +105,10 @@ class CaseViewTest(TestCase):
         assert response_get.status_code == 200
 
         response_data: dict = response_get.json()
-        assert response_data == {"contexts": []}
+        assert response_data == {"contexts": [], "evidence": []}
 
         SandboxUtils.detach_context(context.pk)
+        SandboxUtils.detach_evidence(evidence.pk, property_claim_id=property_claim.pk)
 
         response_get: HttpResponse = self.client.get(
             reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
@@ -114,13 +122,28 @@ class CaseViewTest(TestCase):
         assert response_data["contexts"][0]["id"] == context.pk
         assert response_data["contexts"][0]["in_sandbox"]
 
+        assert len(response_data["evidence"]) == 1
+        assert response_data["evidence"][0]["id"] == evidence.pk
+        assert response_data["evidence"][0]["in_sandbox"]
+
     def test_view_case_without_detached_items(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         context: Context = Context.objects.create(
-            goal=None, assurance_case=self.assurance_case, name="C1"
+            goal=None, assurance_case=self.assurance_case, name="C1", in_sandbox=True
+        )
+        property_claim: PropertyClaim = PropertyClaim.objects.create(
+            goal=goal, assurance_case=self.assurance_case, name="P1"
+        )
+        evidence: Evidence = Evidence.objects.create(
+            assurance_case=self.assurance_case,
+            name="E1",
+            in_sandbox=True,
         )
 
         SandboxUtils.attach_context(context_id=context.pk, goal_id=goal.pk)
+        SandboxUtils.attach_evidence(
+            evidence_id=evidence.pk, property_claim_id=property_claim.pk
+        )
 
         # Testing with attachment response
         response_get: HttpResponse = self.client.get(
@@ -139,9 +162,16 @@ class CaseViewTest(TestCase):
         assert len(contexts_from_response) == 1
         assert contexts_from_response[0]["id"] == context.pk
 
+        evidence_from_response: list = goals_from_response[0]["property_claims"][0][
+            "evidence"
+        ]
+        assert len(evidence_from_response) == 1
+        assert evidence_from_response[0]["id"] == evidence.pk
+
         # Testing after detachment
 
         SandboxUtils.detach_context(context.pk)
+        SandboxUtils.detach_evidence(evidence.pk, property_claim_id=property_claim.pk)
 
         response_get: HttpResponse = self.client.get(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
@@ -156,6 +186,11 @@ class CaseViewTest(TestCase):
 
         contexts_from_response: list = goals_from_response[0]["context"]
         assert len(contexts_from_response) == 0
+
+        evidence_from_response: list = goals_from_response[0]["property_claims"][0][
+            "evidence"
+        ]
+        assert len(evidence_from_response) == 0
 
     def test_case_detail_view_put(self):
         response_put = self.client.put(
@@ -704,7 +739,7 @@ class EvidenceViewTest(TestCase):
         detached_evidence.in_sandbox = True
         detached_evidence.assurance_case = self.case
 
-        # evidence_count: int = self.pclaim.evidence.count()  # type: ignore[attr-defined]
+        evidence_count: int = self.pclaim.evidence.count()  # type: ignore[attr-defined]
 
         response_post: HttpResponse = self.client.post(
             path=reverse("attach_evidence", kwargs={"pk": detached_evidence.pk}),
@@ -715,7 +750,11 @@ class EvidenceViewTest(TestCase):
         assert response_post.status_code == 200
 
         self.pclaim.refresh_from_db()
-        # assert (self.pclaim.evidence.count() - evidence_count) == 1  # type: ignore[attr-defined]
+        detached_evidence.refresh_from_db()
+
+        assert (self.pclaim.evidence.count() - evidence_count) == 1  # type: ignore[attr-defined]
+        assert detached_evidence in self.pclaim.evidence.all()  # type: ignore[attr-defined]
+        assert not detached_evidence.in_sandbox
 
 
 class FullCaseDetailViewTest(TestCase):

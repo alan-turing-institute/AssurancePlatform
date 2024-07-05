@@ -110,6 +110,7 @@ class SandboxUtils:
 
         context.goal = new_goal
         context.assurance_case = None
+        context.in_sandbox = False
         context.save()
 
     @staticmethod
@@ -128,6 +129,18 @@ class SandboxUtils:
 
         evidence.save()
 
+    @staticmethod
+    def attach_evidence(evidence_id: int, property_claim_id: int) -> None:
+        evidence: Evidence = Evidence.objects.get(pk=evidence_id)
+        new_property_claim: PropertyClaim = PropertyClaim.objects.get(
+            pk=property_claim_id
+        )
+
+        evidence.property_claim.add(new_property_claim)
+        evidence.assurance_case = None
+        evidence.in_sandbox = False
+        evidence.save()
+
 
 def get_case_id(item):
     """Return the id of the case in which this item is. Works for all item types."""
@@ -135,7 +148,6 @@ def get_case_id(item):
     # an iterable that can potentially list all the parents. In that case, just pick the
     # first.
     if hasattr(item, "first"):
-        print("Getting first item")
         item = item.first()
 
     if isinstance(item, models.AssuranceCase):
