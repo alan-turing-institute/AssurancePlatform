@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, cast
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -127,8 +127,12 @@ class SandboxUtils:
             evidence.property_claim.exclude(pk=property_claim_id)
         )
 
-        if evidence.property_claim.count() == 0:
-            SandboxUtils._move_to_sandbox(evidence, assurance_case_id)
+        SandboxUtils._move_to_sandbox(
+            evidence,
+            assurance_case_id,
+            lambda evidence: evidence.property_claim.count()  # type:ignore[attr-defined]
+            == 0,
+        )
 
         evidence.save()
 
@@ -143,6 +147,17 @@ class SandboxUtils:
         evidence.assurance_case = None
         evidence.in_sandbox = False
         evidence.save()
+
+    @staticmethod
+    def _can_detach_property_claim(case_item: CaseItem) -> bool:
+
+        property_claim: PropertyClaim = cast(PropertyClaim, case_item)
+
+        return (
+            property_claim.goal is None
+            and property_claim.property_claim is None
+            and property_claim.strategy is None
+        )
 
     @staticmethod
     def detach_property_claim(property_claim_id: int, parent_info: dict[str, Any]):
@@ -162,7 +177,11 @@ class SandboxUtils:
                 raise ValueError(error_message)
 
             property_claim.goal = None
-            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
         elif parent_property_claim_id is not None:
             parent_property_claim: PropertyClaim = PropertyClaim.objects.get(
                 pk=parent_property_claim_id
@@ -173,7 +192,11 @@ class SandboxUtils:
                 raise ValueError(error_message)
 
             property_claim.property_claim = None
-            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
         elif strategy_id is not None:
             strategy: Strategy = Strategy.objects.get(pk=strategy_id)
 
@@ -182,24 +205,33 @@ class SandboxUtils:
                 raise ValueError(error_message)
 
             property_claim.strategy = None
-            SandboxUtils._move_to_sandbox(property_claim, assurance_case_id)
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
         else:
             error_message = "Parent information missing"
             raise ValueError(error_message)
 
     @staticmethod
-    def _move_to_sandbox(case_item: CaseItem, assurance_case_id: Optional[int]):
+    def _move_to_sandbox(
+        case_item: CaseItem,
+        assurance_case_id: Optional[int],
+        is_ready: Optional[Callable[[CaseItem], bool]] = None,
+    ):
         if assurance_case_id is None:
             error_message: str = (
                 f"Cannot find assurance case id for element with id {case_item.pk}"
             )
             raise ValueError(error_message)
 
-        case_item.in_sandbox = True
-        case_item.assurance_case = AssuranceCase.objects.get(  # type: ignore[attr-defined]
-            pk=assurance_case_id
-        )
-        case_item.save()
+        if is_ready is None or is_ready(case_item):
+            case_item.in_sandbox = True
+            case_item.assurance_case = AssuranceCase.objects.get(  # type: ignore[attr-defined]
+                pk=assurance_case_id
+            )
+            case_item.save()
 
 
 def get_case_id(item) -> Optional[int]:
