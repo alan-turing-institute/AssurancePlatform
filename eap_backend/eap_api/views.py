@@ -508,10 +508,15 @@ def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
             property_claim_id=pk, parent_info=incoming_json
         )
         return HttpResponse(status=200)
-    except (PropertyClaim.DoesNotExist, TopLevelNormativeGoal.DoesNotExist):
-        return HttpResponse(status=404)
-    except ValueError:
-        return HttpResponse(status=400)
+    except (
+        PropertyClaim.DoesNotExist,
+        TopLevelNormativeGoal.DoesNotExist,
+    ):
+        return JsonResponse(
+            {"error_message": "Could not locate case element."}, status=404
+        )
+    except ValueError as value_error:
+        return JsonResponse({"error_message": str(value_error)}, status=400)
 
 
 @csrf_exempt
