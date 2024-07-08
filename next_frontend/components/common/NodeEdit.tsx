@@ -3,10 +3,10 @@
 import { Button } from "@/components/ui/button"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import EditSheet from "../ui/edit-sheet";
-import { CloudFog, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
+import { CloudFog, Eye, EyeOff, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
-import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode } from "@/lib/case-helper";
+import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
 import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
@@ -19,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@radix-ui/react-select";
+import { ScrollArea } from "../ui/scroll-area";
+import { Separator } from "../ui/separator";
+import OrphanElements from "../cases/OrphanElements";
 
 interface NodeEditProps {
   node: Node | any
@@ -29,7 +31,7 @@ interface NodeEditProps {
 
 const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  const { assuranceCase, setAssuranceCase, nodes } = useStore();
+  const { assuranceCase, setAssuranceCase, nodes, orphanedElements } = useStore();
   const [selectedLink, setSelectedLink] = useState(false)
   const [linkToCreate, setLinkToCreate] = useState('')
   const [unresolvedChanges, setUnresolvedChanges] = useState(false)
@@ -37,6 +39,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [alertOpen, setAlertOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toggleParentDescription, setToggleParentDescription] = useState(true)
+  const [action, setAction] = useState<string | null>(null)
   // const [parentNode, setParentNode] = useState(nodes.filter(n => n.data.id === node.data.goal_id)[0])
 
   const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
@@ -91,6 +94,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   }
 
   const handleClose = () => {
+    setAction(null)
     setEditOpen(false)
     setAlertOpen(false)
     setSelectedLink(false)
@@ -213,6 +217,23 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   const parentNode: any = findParentNode(nodes, node)
 
+  const handleDetach = async () => {
+    const { detached, error }: any = await detachCaseElement(node, node.type, node.data.id, token)
+    if(error) {
+      console.error(error)
+    }
+
+    if(detached) {
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id, node.data.type)
+      if(updatedAssuranceCase) {
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          setDeleteOpen(false)
+          handleClose()
+      }
+    }
+  }
+
   return (
     <EditSheet
       title={`Editing ${node.data.name}`}
@@ -221,36 +242,66 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       onClose={handleClose}
       onChange={onChange}
     >
-      {selectedLink ? (
-        <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
-      ) : (
-        <>
-
-        {node.type !== 'goal' && parentNode && (
-          <div className="mt-6 flex flex-col text-sm">
-            <div className="mb-2 flex justify-start items-center gap-2">
-              <p>Parent Description</p>
-              {toggleParentDescription ?
-              (
-                <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
-              ) :
-              (
-                <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
-              )}
-            </div>
-            {toggleParentDescription && (
-              <div className="flex flex-col justify-start items-start">
-                <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">Identifier: {parentNode.data.name}</span>
-                <p className="">{parentNode.data.short_description}</p>
+      {!action && (
+        <div>
+          {node.type !== 'goal' && parentNode && (
+            <div className="mt-6 flex flex-col text-sm">
+              <div className="mb-2 flex justify-start items-center gap-2">
+                <p>Parent Description</p>
+                {toggleParentDescription ?
+                (
+                  <Eye className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+                ) :
+                (
+                  <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
+                )}
               </div>
-            )}
-          </div>
-        )}
-
+              {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
+            </div>
+          )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
-
-          {/* Node specific form buttons */}
-          {node.type != 'context' && node.type != 'evidence' && (
+          {node.type !== 'context' && (
+            <>
+              <Separator className="my-6"/>
+              <div className="">
+                <h3 className="text-lg font-semibold mb-2">Actions</h3>
+                <div className="flex flex-col justify-around items-center gap-2">
+                  {node.type !== 'context' && node.type !== 'evidence' && (
+                    <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New</Button>
+                  )}
+                  {node.type !== 'context' && node.type !== 'evidence' && (
+                    <Button variant={'outline'} onClick={() => setAction('existing')} className="w-full"><Unplug className="w-4 h-4 mr-2"/>Add Existing</Button>
+                  )}
+                  {node.type !== 'context' && node.type !== 'goal' && node.type !== 'strategy' && (
+                    <Button variant={'outline'} onClick={() => setAction('move')} className="w-full"><Move className="w-4 h-4 mr-2"/>Move Item</Button>
+                  )}
+                </div>
+              </div>
+              <Separator className="my-6"/>
+            </>
+          )}
+          <div className="mt-12 flex justify-start items-center gap-4">
+            {node.type !== 'goal' && (
+              <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
+            )}
+            <Button
+              variant={"destructive"}
+              onClick={() => setDeleteOpen(true)}
+              className="w-full flex justify-center items-center"
+            >
+              <Trash2 className="mr-2" />
+              Delete&nbsp;
+              <span className='capitalize'>{node.type}</span>
+            </Button>
+          </div>
+        </div>
+      )}
+      {action === 'new' && (
+        selectedLink ? (
+          <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
+        ) : (
+          <>
+            {node.type != 'context' && node.type != 'evidence' && (
             <div className="flex flex-col justify-start items-start mt-8">
               <h3 className="text-lg font-semibold mb-2">Add New</h3>
               <div className="flex flex-col justify-start items-center gap-4 w-full">
@@ -271,16 +322,35 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   </>
                 )}
               </div>
+              <Button
+                variant={"outline"}
+                onClick={() => setAction(null)}
+                className="my-6"
+              >
+                Cancel
+              </Button>
             </div>
           )}
-
-          {/* Moving element options */}
-          {node.type === 'property' || node.type === 'evidence' ? (
+          </>
+        )
+      )}
+      {action === 'existing' && (
+        node.type !== 'evidence' && node.type !== 'context' && (
+          <OrphanElements
+            node={node}
+            handleClose={handleClose}
+            loadingState={{ loading, setLoading }}
+            setAction={setAction} />
+        )
+      )}
+      {action === 'move' && (
+        <>
+        {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
               <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">Move {node.type}</h3>
               <div className="flex flex-col justify-start items-left gap-2">
                 {node.type === 'property' &&
-                  <Select onValueChange={setSelectedClaimMove}> {/* Update state on change */}
+                  <Select onValueChange={setSelectedClaimMove}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
@@ -335,7 +405,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   </Select>
                 }
                 {node.type === 'evidence' &&
-                  <Select onValueChange={setSelectedEvidenceMove}> {/* Update state on change */}
+                  <Select onValueChange={setSelectedEvidenceMove}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
@@ -362,39 +432,36 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectContent>
                   </Select>
                 }
-                <Button
-                  variant={"outline"}
-                  // className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
-                  onClick={handleMove}
-                >
-                  Move
-                </Button>
+
               </div>
             </div>
           ) : null}
-
-          {/* Handle Delete */}
-          <div className="mt-12">
-            <Button variant={'ghost'}
-              onClick={() => setDeleteOpen(true)}
-              className="text-red-500 flex justify-center items-center hover:text-red-500 hover:bg-red-400/10"
+          <div className="flex justify-start items-center gap-2">
+            <Button
+              className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+              onClick={handleMove}
             >
-              <Trash2 className="mr-2" />
-              Delete&nbsp;
-              <span className='capitalize'>{node.type}</span></Button>
+              Move
+            </Button>
+            <Button
+              variant={"outline"}
+              onClick={() => setAction(null)}
+              className="my-6"
+            >
+              Cancel
+            </Button>
           </div>
-
-          <AlertModal
-            isOpen={deleteOpen}
-            onClose={() => setDeleteOpen(false)}
-            onConfirm={handleDelete}
-            loading={loading}
-            message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
-            confirmButtonText={'Yes, delete this element!'}
-            cancelButtonText={'No, keep the element'}
-          />
         </>
       )}
+      <AlertModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        loading={loading}
+        message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
+        confirmButtonText={'Yes, delete this element!'}
+        cancelButtonText={'No, keep the element'}
+      />
       <AlertModal
         isOpen={alertOpen}
         onClose={() => setAlertOpen(false)}

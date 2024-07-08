@@ -22,6 +22,7 @@ import Dagre from '@dagrejs/dagre';
 
 type Store = {
   assuranceCase: any;
+  orphanedElements: any[]
   nodes: Node[];
   edges: Edge[];
   nodeTypes: NodeTypes;
@@ -29,6 +30,7 @@ type Store = {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   setAssuranceCase: (assuranceCase: any) => void;
+  setOrphanedElements: (orphanedElements: any) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
@@ -84,6 +86,16 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<Store>((set, get) => ({
   assuranceCase: null,
+  orphanedElements: [
+    // { id: crypto.randomUUID(), name: 'P1', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P3', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P4.5', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'P2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'S8', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    // { id: crypto.randomUUID(), name: 'S1', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
+    // { id: crypto.randomUUID(), name: 'P3.2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
+    // { id: crypto.randomUUID(), name: 'E99', description: 'Lorem ipsum blah blah woof woof', type:'evidence' },
+  ],
   nodes: initNodes,
   edges: initEdges,
   nodeTypes: nodeTypes,
@@ -104,6 +116,36 @@ const useStore = create<Store>((set, get) => ({
   },
   setAssuranceCase: (assuranceCase: any) => {
     set({ assuranceCase })
+  },
+  setOrphanedElements: (orphanedElements: any) => {
+    console.log('orphanedElements_Sandbox', orphanedElements)
+    let newArray: any[] = []
+
+    if(orphanedElements.contexts && orphanedElements.contexts.length > 0) {
+      orphanedElements.contexts.map((context: any) => {
+        newArray.push(context)
+      })
+    }
+
+    if(orphanedElements.property_claims && orphanedElements.property_claims.length > 0) {
+      orphanedElements.property_claims.map((claim: any) => {
+        newArray.push(claim)
+      })
+    }
+
+    if(orphanedElements.stratgies && orphanedElements.stratgies.length > 0) {
+      orphanedElements.stratgies.map((strategy: any) => {
+        newArray.push(strategy)
+      })
+    }
+
+    if(orphanedElements.evidence && orphanedElements.evidence.length > 0) {
+      orphanedElements.evidence.map((evidence: any) => {
+        newArray.push(evidence)
+      })
+    }
+
+    set({ orphanedElements: newArray })
   },
   setNodes: (nodes: Node[]) => {
     // const { nodes: layoutedNodes } = layoutNodesVertically(nodes, []);

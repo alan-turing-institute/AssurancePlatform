@@ -456,7 +456,7 @@ export const deleteAssuranceCaseNode = async (type: string, id: any, token: stri
     if (!token) return console.log('No token')
 
     let entity = null
-    switch (type) {
+    switch (type.toLowerCase()) {
         case 'context':
             entity = 'contexts'
             break;
@@ -927,4 +927,132 @@ export const findParentNode = (nodes: any, node: any) => {
         return parent = nodes.filter((n: any) => n.data.id === node.data.strategy_id)[0]
     }
     return parent
+}
+
+export const detachCaseElement = async (node: any, type: string, id: any, token: string | null): Promise<any>  => {
+    if (!token) return { error: 'No token' }
+
+    console.log('Detaching Node', node)
+
+    const payload: any = {
+        goal_id: null,
+        strategy_id: null,
+        property_claim_id: null
+    }
+
+    let entity = null
+    switch (type) {
+        case 'context':
+            entity = 'contexts'
+            break;
+        case 'strategy':
+            entity = 'strategies'
+            break;
+        case 'property':
+            entity = 'propertyclaims'
+            if(node.data.goal_id !== null) {
+                payload.goal_id = node.data.goal_id
+            }
+            if(node.data.strategy_id !== null) {
+                payload.strategy_id = node.data.strategy_id
+            }
+            if(node.data.property_claim_id !== null) {
+                payload.property_claim_id = node.data.property_claim_id
+            }
+            break;
+        case 'evidence':
+            entity = 'evidence'
+            payload.property_claim_id = node.data.property_claim_id[0]
+            break;
+    }
+
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/detach`
+
+        const requestOptions: RequestInit = {
+            method: "POST",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload)
+        };
+
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+            return { error: `Something went wrong ${response.status}` }
+        }
+
+        return { detached: true }
+    } catch (error) {
+        console.log('Error', error)
+        return { error }
+    }
+}
+
+export const attachCaseElement = async (orphan: any, id: any, token: string | null, parent: any): Promise<any>  => {
+    if (!token) return { error: 'No token' }
+
+    console.log('Parent', parent)
+
+    const payload: any = {
+        goal_id: null,
+        strategy_id: null,
+        property_claim_id: null
+    }
+
+    let entity = null
+    switch (orphan.type.toLowerCase()) {
+        case 'context':
+            entity = 'contexts'
+            payload.goal_id = parent.data.id
+            break;
+        case 'strategy':
+            entity = 'strategies'
+            payload.strategy_id = parent.data.id
+            break;
+        case 'propertyclaim':
+            entity = 'propertyclaims'
+
+            if(parent.type === 'property') {
+                payload.property_claim_id = parent.data.id
+            }
+            if(parent.type === 'strategy') {
+                payload.strategy_id = parent.data.id
+            }
+            if(parent.type === 'goal') {
+                payload.goal_id = parent.data.id
+            }
+            break;
+        case 'evidence':
+            entity = 'evidence'
+            payload.property_claim_id = parent.data.id
+            break;
+    }
+
+    console.log('Payload', payload)
+
+    try {
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/attach`
+
+        const requestOptions: RequestInit = {
+            method: "POST",
+            headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        };
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+            return { error: `Something went wrong ${response.status}` }
+        }
+
+        return { attached: true }
+    } catch (error) {
+        console.log('Error', error)
+        return { error }
+    }
 }
