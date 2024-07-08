@@ -700,6 +700,26 @@ def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
 
+@csrf_exempt
+@api_view(["POST"])
+def attach_strategy(request: HttpRequest, pk: int):
+    try:
+        incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
+        SandboxUtils.attach_strategy(strategy_id=pk, parent_info=incoming_json)  # type: ignore[attr-defined]
+
+    except (
+        TopLevelNormativeGoal.DoesNotExist,
+        Strategy.DoesNotExist,
+    ):
+        return JsonResponse(
+            {"error_message": "Could not locate case element."}, status=404
+        )
+    except ValueError as value_error:
+        return JsonResponse({"error_message": str(value_error)}, status=400)
+
+    return HttpResponse(status=200)
+
+
 @permission_classes((AllowAny,))
 class GithubSocialAuthView(GenericAPIView):
     serializer_class = GithubSocialAuthSerializer

@@ -246,6 +246,20 @@ class SandboxUtils:
         )
 
     @staticmethod
+    def attach_strategy(strategy_id: int, parent_info: dict[str, Any]) -> None:
+
+        strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+        goal_id: Optional[int] = parent_info.get("goal_id")
+
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+            strategy.goal = goal
+            SandboxUtils._remove_from_sandbox(strategy)
+        else:
+            error_message = f"Cannot attach strategy {strategy} to parent {parent_info}"
+            raise ValueError(error_message)
+
+    @staticmethod
     def _remove_from_sandbox(case_item: CaseItem) -> None:
         case_item.assurance_case = None  # type: ignore[attr-defined]
         case_item.in_sandbox = False

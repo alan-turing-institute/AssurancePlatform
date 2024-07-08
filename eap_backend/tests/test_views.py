@@ -98,6 +98,8 @@ class CaseViewTest(TestCase):
         evidence.property_claim.add(property_claim)
         evidence.save()
 
+        strategy: Strategy = Strategy.objects.create(name="S1", goal=goal)
+
         response_get: HttpResponse = self.client.get(
             reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
         )
@@ -105,13 +107,19 @@ class CaseViewTest(TestCase):
         assert response_get.status_code == 200
 
         response_data: dict = response_get.json()
-        assert response_data == {"contexts": [], "evidence": [], "property_claims": []}
+        assert response_data == {
+            "contexts": [],
+            "evidence": [],
+            "property_claims": [],
+            "strategies": [],
+        }
 
         SandboxUtils.detach_context(context.pk)
         SandboxUtils.detach_evidence(evidence.pk, property_claim_id=property_claim.pk)
         SandboxUtils.detach_property_claim(
             property_claim.pk, parent_info={"goal_id": goal.pk}
         )
+        SandboxUtils.detach_strategy(strategy.pk)
 
         response_get: HttpResponse = self.client.get(
             reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
@@ -133,6 +141,10 @@ class CaseViewTest(TestCase):
         assert response_data["property_claims"][0]["id"] == evidence.pk
         assert response_data["property_claims"][0]["in_sandbox"]
 
+        assert len(response_data["strategies"]) == 1
+        assert response_data["strategies"][0]["id"] == strategy.pk
+        assert response_data["strategies"][0]["in_sandbox"]
+
     def test_view_case_with_attached_items(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         detached_context: Context = Context.objects.create(
@@ -149,6 +161,11 @@ class CaseViewTest(TestCase):
             name="E1",
             in_sandbox=True,
         )
+        detached_strategy: Strategy = Strategy.objects.create(
+            assurance_case=self.assurance_case,
+            name="S1",
+            in_sandbox=True,
+        )
 
         SandboxUtils.attach_context(context_id=detached_context.pk, goal_id=goal.pk)
         SandboxUtils.attach_evidence(
@@ -157,6 +174,7 @@ class CaseViewTest(TestCase):
         SandboxUtils.attach_property_claim(
             detached_property_claim.pk, {"goal_id": goal.pk}
         )
+        SandboxUtils.attach_strategy(detached_strategy.pk, {"goal_id": goal.pk})
 
         response_get: HttpResponse = self.client.get(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
@@ -173,6 +191,10 @@ class CaseViewTest(TestCase):
         contexts_from_response: list = goals_from_response[0]["context"]
         assert len(contexts_from_response) == 1
         assert contexts_from_response[0]["id"] == detached_context.pk
+
+        strategies_from_response: list = goals_from_response[0]["strategies"]
+        assert len(strategies_from_response) == 1
+        assert strategies_from_response[0]["id"] == detached_strategy.pk
 
         property_claims_from_response: list = goals_from_response[0]["property_claims"]
         assert len(property_claims_from_response) == 2
@@ -438,7 +460,10 @@ class StrategyViewTest(TestCase):
 
         strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
 
-        assert strategy.goal.assurance_case == self.assurance_case
+        assert (
+            strategy.goal.assurance_case
+            == self.assurance_case  # type:ignore[attr-defined]
+        )
         assert strategy.goal == self.goal
         assert strategy.assurance_case is None
         assert not strategy.in_sandbox
@@ -455,6 +480,28 @@ class StrategyViewTest(TestCase):
         assert strategy.in_sandbox
         assert strategy.goal is None
         assert strategy.assurance_case == self.assurance_case
+
+    def test_attach_strategy(self) -> None:
+
+        detached_strategy: Strategy = Strategy.objects.create(
+            name="S1", in_sandbox=True, goal=None, assurance_case=None
+        )
+
+        assert self.goal.strategies.count() == 0  # type: ignore [attr-defined]
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("attach_strategy", kwargs={"pk": detached_strategy.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        detached_strategy.refresh_from_db()
+
+        assert not detached_strategy.in_sandbox
+        assert detached_strategy.assurance_case is None
+        assert detached_strategy.goal == self.goal
 
 
 class ContextViewTest(TestCase):
