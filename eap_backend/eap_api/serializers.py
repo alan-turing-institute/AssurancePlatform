@@ -135,10 +135,11 @@ class SandboxSerializer(serializers.ModelSerializer):
     contexts = serializers.SerializerMethodField()
     evidence = serializers.SerializerMethodField()
     property_claims = serializers.SerializerMethodField()
+    strategies = serializers.SerializerMethodField()
 
     class Meta:
         model = AssuranceCase
-        fields = ["contexts", "evidence", "property_claims"]
+        fields = ["contexts", "evidence", "property_claims", "strategies"]
 
     def get_contexts(self, assurance_case: AssuranceCase) -> ReturnDict:
         sandbox_contexts: QuerySet = assurance_case.contexts.filter(in_sandbox=True)  # type: ignore[attr-defined]
@@ -156,6 +157,11 @@ class SandboxSerializer(serializers.ModelSerializer):
             sandbox_property_claims, many=True
         )
         return cast(ReturnDict, property_claim_serializer.data)
+
+    def get_strategies(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_strategies: QuerySet = assurance_case.strategies.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        strategy_serializer = StrategySerializer(sandbox_strategies, many=True)
+        return cast(ReturnDict, strategy_serializer.data)
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
@@ -303,6 +309,7 @@ class StrategySerializer(serializers.ModelSerializer):
             "long_description",
             "goal_id",
             "property_claims",
+            "in_sandbox",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}

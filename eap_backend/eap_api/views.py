@@ -686,7 +686,38 @@ def strategy_detail(request: HttpRequest, pk: int) -> HttpResponse:
 @csrf_exempt
 @api_view(["POST"])
 def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
-    return HttpResponse(f"strategy id {pk}", status=200)
+    try:
+        SandboxUtils.detach_strategy(strategy_id=pk)
+        return HttpResponse(status=200)
+    except (
+        Strategy.DoesNotExist,
+        TopLevelNormativeGoal.DoesNotExist,
+    ):
+        return JsonResponse(
+            {"error_message": "Could not locate case element."}, status=404
+        )
+    except ValueError as value_error:
+        return JsonResponse({"error_message": str(value_error)}, status=400)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def attach_strategy(request: HttpRequest, pk: int):
+    try:
+        incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
+        SandboxUtils.attach_strategy(strategy_id=pk, parent_info=incoming_json)  # type: ignore[attr-defined]
+
+    except (
+        TopLevelNormativeGoal.DoesNotExist,
+        Strategy.DoesNotExist,
+    ):
+        return JsonResponse(
+            {"error_message": "Could not locate case element."}, status=404
+        )
+    except ValueError as value_error:
+        return JsonResponse({"error_message": str(value_error)}, status=400)
+
+    return HttpResponse(status=200)
 
 
 @permission_classes((AllowAny,))

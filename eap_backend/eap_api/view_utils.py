@@ -100,8 +100,6 @@ class SandboxUtils:
         context.goal = None
         SandboxUtils._move_to_sandbox(context, assurance_case_id)
 
-        context.save()
-
     @staticmethod
     def attach_context(context_id: int, goal_id: int) -> None:
         context: Context = Context.objects.get(pk=context_id)
@@ -131,8 +129,6 @@ class SandboxUtils:
             lambda evidence: evidence.property_claim.count()  # type:ignore[attr-defined]
             == 0,
         )
-
-        evidence.save()
 
     @staticmethod
     def attach_evidence(evidence_id: int, property_claim_id: int) -> None:
@@ -236,6 +232,31 @@ class SandboxUtils:
             SandboxUtils._remove_from_sandbox(property_claim)
         else:
             error_message = f"Cannot attach property claim {property_claim_id} to parent {parent_info}"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def detach_strategy(strategy_id: int) -> None:
+        strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+        assurance_case_id: Optional[int] = get_case_id(strategy)
+
+        strategy.goal = None
+        SandboxUtils._move_to_sandbox(
+            strategy,
+            assurance_case_id,
+        )
+
+    @staticmethod
+    def attach_strategy(strategy_id: int, parent_info: dict[str, Any]) -> None:
+
+        strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+        goal_id: Optional[int] = parent_info.get("goal_id")
+
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+            strategy.goal = goal
+            SandboxUtils._remove_from_sandbox(strategy)
+        else:
+            error_message = f"Cannot attach strategy {strategy} to parent {parent_info}"
             raise ValueError(error_message)
 
     @staticmethod

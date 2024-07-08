@@ -146,6 +146,8 @@ class Strategy(CaseItem):
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
         related_name="strategies",
+        null=True,
+        blank=True,
         on_delete=models.CASCADE,
     )
 
