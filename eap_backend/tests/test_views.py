@@ -23,6 +23,7 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
+from eap_api.view_utils import SandboxUtils
 from eap_api.views import make_case_summary, make_summary
 from rest_framework.authtoken.models import Token
 
@@ -83,8 +84,139 @@ class CaseViewTest(TestCase):
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
+
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
+
+    def test_view_case_sandbox(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        context: Context = Context.objects.create(**CONTEXT_INFO)
+        property_claim: PropertyClaim = PropertyClaim.objects.create(
+            **PROPERTYCLAIM1_INFO
+        )
+        evidence: Evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
+        evidence.property_claim.add(property_claim)
+        evidence.save()
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+        assert response_data == {"contexts": [], "evidence": [], "property_claims": []}
+
+        SandboxUtils.detach_context(context.pk)
+        SandboxUtils.detach_evidence(evidence.pk, property_claim_id=property_claim.pk)
+        SandboxUtils.detach_property_claim(
+            property_claim.pk, parent_info={"goal_id": goal.pk}
+        )
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+
+        assert len(response_data["contexts"]) == 1
+        assert response_data["contexts"][0]["id"] == context.pk
+        assert response_data["contexts"][0]["in_sandbox"]
+
+        assert len(response_data["evidence"]) == 1
+        assert response_data["evidence"][0]["id"] == evidence.pk
+        assert response_data["evidence"][0]["in_sandbox"]
+
+        assert len(response_data["property_claims"]) == 1
+        assert response_data["property_claims"][0]["id"] == evidence.pk
+        assert response_data["property_claims"][0]["in_sandbox"]
+
+    def test_view_case_with_attached_items(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        detached_context: Context = Context.objects.create(
+            goal=None, assurance_case=self.assurance_case, name="C1", in_sandbox=True
+        )
+        property_claim: PropertyClaim = PropertyClaim.objects.create(
+            goal=goal, name="P1"
+        )
+        detached_property_claim: PropertyClaim = PropertyClaim.objects.create(
+            assurance_case=self.assurance_case, name="P2", in_sandbox=True
+        )
+        detached_evidence: Evidence = Evidence.objects.create(
+            assurance_case=self.assurance_case,
+            name="E1",
+            in_sandbox=True,
+        )
+
+        SandboxUtils.attach_context(context_id=detached_context.pk, goal_id=goal.pk)
+        SandboxUtils.attach_evidence(
+            evidence_id=detached_evidence.pk, property_claim_id=property_claim.pk
+        )
+        SandboxUtils.attach_property_claim(
+            detached_property_claim.pk, {"goal_id": goal.pk}
+        )
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+
+        goals_from_response: list = response_data["goals"]
+        assert len(goals_from_response) == 1
+        assert goals_from_response[0]["id"] == goal.pk
+
+        contexts_from_response: list = goals_from_response[0]["context"]
+        assert len(contexts_from_response) == 1
+        assert contexts_from_response[0]["id"] == detached_context.pk
+
+        property_claims_from_response: list = goals_from_response[0]["property_claims"]
+        assert len(property_claims_from_response) == 2
+
+        evidence_from_response: list = property_claims_from_response[0]["evidence"]
+        assert len(evidence_from_response) == 1
+        assert evidence_from_response[0]["id"] == detached_evidence.pk
+
+        assert property_claims_from_response[1]["id"] == detached_property_claim.pk
+
+    def test_view_case_without_detached_items(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        Context.objects.create(
+            goal=None, assurance_case=self.assurance_case, name="C1", in_sandbox=True
+        )
+        PropertyClaim.objects.create(goal=goal, name="P1")
+        PropertyClaim.objects.create(
+            assurance_case=self.assurance_case, name="P2", in_sandbox=True
+        )
+        Evidence.objects.create(
+            assurance_case=self.assurance_case,
+            name="E1",
+            in_sandbox=True,
+        )
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+        goals_from_response: list = response_data["goals"]
+        assert len(goals_from_response) == 1
+        assert goals_from_response[0]["id"] == goal.pk
+
+        contexts_from_response: list = goals_from_response[0]["context"]
+        assert len(contexts_from_response) == 0
+
+        property_claims_from_response: list = goals_from_response[0]["property_claims"]
+        assert len(property_claims_from_response) == 1
+
+        evidence_from_response: list = property_claims_from_response[0]["evidence"]
+        assert len(evidence_from_response) == 0
 
     def test_case_detail_view_put(self):
         response_put = self.client.put(
@@ -216,9 +348,9 @@ class GoalViewTest(TestCase):
         assert current_goal.keywords == json_response["keywords"]
         assert current_goal.assurance_case.pk == json_response["assurance_case_id"]
 
-        assert [] == json_response["context"]
-        assert [] == json_response["property_claims"]
-        assert [] == json_response["strategies"]
+        assert json_response["context"] == []
+        assert json_response["property_claims"] == []
+        assert json_response["strategies"] == []
 
     def test_goal_list_view_get(self):
         response_get = self.client.get(reverse("goal_list"))
@@ -302,6 +434,21 @@ class StrategyViewTest(TestCase):
         assert response_data["goal_id"] == self.goal.pk
         assert response_data["property_claims"] == []
 
+    def test_detach_strategy(self) -> None:
+
+        strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
+
+        assert strategy.goal == self.goal
+        assert strategy.assurance_case is None
+        assert not strategy.in_sandbox
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_strategy", kwargs={"pk": strategy.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
 
 class ContextViewTest(TestCase):
     def setUp(self):
@@ -317,6 +464,51 @@ class ContextViewTest(TestCase):
         self.data = Context.objects.all()
         # convert it to JSON
         self.serializer = ContextSerializer(self.data, many=True)
+
+    def test_detach_context(self):
+        path: str = reverse("detach_context", kwargs={"pk": self.context.pk})
+        response_get: HttpResponse = self.client.get(
+            path,
+            content_type="application/json",
+        )
+
+        assert response_get.status_code == 405
+
+        response_post: HttpResponse = self.client.post(
+            path,
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.context.refresh_from_db()
+
+        assert self.context.in_sandbox
+        assert self.context.assurance_case == self.case
+        assert self.context.goal is None
+
+    def test_attach_context(self):
+        detached_context: Context = Context.objects.create(
+            goal=None,
+            assurance_case=self.case,
+        )
+
+        response_post: HttpResponse = self.client.post(
+            reverse("attach_context", kwargs={"pk": detached_context.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        detached_context.refresh_from_db()
+
+        assert detached_context.goal == TopLevelNormativeGoal.objects.get(
+            pk=self.goal.pk
+        )
+
+        assert detached_context.assurance_case is None
+        assert not detached_context.in_sandbox
 
     def test_create_context_with_post(self):
         self.context.delete()
@@ -465,6 +657,116 @@ class PropertyClaimViewTest(TestCase):
         response_get = self.client.get(reverse("property_claim_list"))
         assert len(response_get.json()) == 1
 
+    def test_detach_property_claim_from_goal(self):
+
+        assert self.pclaim1 in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.pclaim1.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.goal.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert self.pclaim1 not in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.pclaim1.assurance_case == self.case
+        assert self.pclaim1.in_sandbox
+
+        response_post = self.client.post(
+            path=reverse("attach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"goal_id": self.goal.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.goal.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert self.pclaim1 in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.pclaim1.assurance_case is None
+        assert not self.pclaim1.in_sandbox
+
+    def test_detach_property_claim_from_property_claim(self):
+
+        new_property_claim: PropertyClaim = PropertyClaim.objects.create(
+            name="P.1.1", property_claim=self.pclaim1
+        )
+
+        assert new_property_claim in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert not new_property_claim.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": new_property_claim.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim1.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        new_property_claim.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert new_property_claim not in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim.assurance_case == self.case
+        assert new_property_claim.in_sandbox
+
+        response_post = self.client.post(
+            path=reverse("attach_property_claim", kwargs={"pk": new_property_claim.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim1.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        new_property_claim.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert new_property_claim in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim.assurance_case is None
+        assert not new_property_claim.in_sandbox
+
+    def test_detach_property_claim_from_strategy(self):
+        new_strategy: Strategy = Strategy.objects.create(name="S1", goal=self.goal)
+
+        self.pclaim1.goal = None
+        self.pclaim1.strategy = new_strategy
+        self.pclaim1.save()
+
+        assert self.pclaim1 in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.pclaim1.in_sandbox
+        assert self.pclaim1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"strategy_id": new_strategy.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        new_strategy.refresh_from_db()
+        self.pclaim1.refresh_from_db()
+
+        assert self.pclaim1 not in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.pclaim1.assurance_case == self.case
+        assert self.pclaim1.in_sandbox
+
+        response_post = self.client.post(
+            path=reverse("attach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            data=json.dumps({"strategy_id": new_strategy.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
 
 class EvidenceViewTest(TestCase):
     def setUp(self):
@@ -559,6 +861,51 @@ class EvidenceViewTest(TestCase):
         self.client.delete(url)
         response_get = self.client.get(reverse("evidence_list"))
         assert len(response_get.json()) == 1
+
+    def test_detach_evidence(self):
+
+        assert self.evidence1.property_claim.count() == 1
+        assert self.evidence1.property_claim.first() == self.pclaim
+        assert self.pclaim.goal == self.goal
+        assert self.goal.assurance_case == self.case
+        assert not self.evidence1.in_sandbox
+        assert self.evidence1.assurance_case is None
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_evidence", kwargs={"pk": self.evidence1.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.evidence1.refresh_from_db()
+
+        assert self.evidence1.property_claim.count() == 0
+        assert self.evidence1.in_sandbox
+        assert self.evidence1.assurance_case == self.case
+
+    def test_attach_evidence(self):
+        detached_evidence: Evidence = Evidence.objects.create(URL="detached.co.uk")
+        detached_evidence.in_sandbox = True
+        detached_evidence.assurance_case = self.case
+
+        evidence_count: int = self.pclaim.evidence.count()  # type: ignore[attr-defined]
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("attach_evidence", kwargs={"pk": detached_evidence.pk}),
+            data=json.dumps({"property_claim_id": self.pclaim.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        self.pclaim.refresh_from_db()
+        detached_evidence.refresh_from_db()
+
+        assert (self.pclaim.evidence.count() - evidence_count) == 1  # type: ignore[attr-defined]
+        assert detached_evidence in self.pclaim.evidence.all()  # type: ignore[attr-defined]
+        assert not detached_evidence.in_sandbox
 
 
 class FullCaseDetailViewTest(TestCase):
