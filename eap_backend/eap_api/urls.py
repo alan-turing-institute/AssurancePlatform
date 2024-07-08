@@ -40,6 +40,11 @@ urlpatterns = [
         name="detach_property_claim",
     ),
     path(
+        "propertyclaims/<int:pk>/attach",
+        views.attach_property_claim,
+        name="attach_property_claim",
+    ),
+    path(
         "cases/<int:assurance_case_id>/comments/",
         views.comment_list,
         name="comment_list",

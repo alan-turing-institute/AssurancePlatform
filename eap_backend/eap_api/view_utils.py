@@ -108,9 +108,7 @@ class SandboxUtils:
         new_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
 
         context.goal = new_goal
-        context.assurance_case = None
-        context.in_sandbox = False
-        context.save()
+        SandboxUtils._remove_from_sandbox(context)
 
     @staticmethod
     def detach_evidence(evidence_id: int, property_claim_id: int) -> None:
@@ -144,9 +142,7 @@ class SandboxUtils:
         )
 
         evidence.property_claim.add(new_property_claim)
-        evidence.assurance_case = None
-        evidence.in_sandbox = False
-        evidence.save()
+        SandboxUtils._remove_from_sandbox(evidence)
 
     @staticmethod
     def _can_detach_property_claim(case_item: CaseItem) -> bool:
@@ -211,8 +207,42 @@ class SandboxUtils:
                 SandboxUtils._can_detach_property_claim,
             )
         else:
-            error_message = "Parent information missing"
+            error_message = f"Cannot detach property claim {property_claim_id} to parent {parent_info}"
             raise ValueError(error_message)
+
+    @staticmethod
+    def attach_property_claim(
+        property_claim_id: int, parent_info: dict[str, Any]
+    ) -> None:
+        property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
+
+        goal_id: Optional[int] = parent_info.get("goal_id")
+        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
+        strategy_id: Optional[int] = parent_info.get("strategy_id")
+
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+            property_claim.goal = goal
+            SandboxUtils._remove_from_sandbox(property_claim)
+        elif parent_property_claim_id is not None:
+            parent_property_claim: PropertyClaim = PropertyClaim.objects.get(
+                pk=parent_property_claim_id
+            )
+            property_claim.property_claim = parent_property_claim  # type: ignore[attr-defined]
+            SandboxUtils._remove_from_sandbox(property_claim)
+        elif strategy_id is not None:
+            strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+            property_claim.strategy = strategy
+            SandboxUtils._remove_from_sandbox(property_claim)
+        else:
+            error_message = f"Cannot attach property claim {property_claim_id} to parent {parent_info}"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def _remove_from_sandbox(case_item: CaseItem) -> None:
+        case_item.assurance_case = None  # type: ignore[attr-defined]
+        case_item.in_sandbox = False
+        case_item.save()
 
     @staticmethod
     def _move_to_sandbox(

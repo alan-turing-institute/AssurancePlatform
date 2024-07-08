@@ -511,12 +511,34 @@ def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
     except (
         PropertyClaim.DoesNotExist,
         TopLevelNormativeGoal.DoesNotExist,
+        Strategy.DoesNotExist,
     ):
         return JsonResponse(
             {"error_message": "Could not locate case element."}, status=404
         )
     except ValueError as value_error:
         return JsonResponse({"error_message": str(value_error)}, status=400)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def attach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
+        SandboxUtils.attach_property_claim(property_claim_id=pk, parent_info=incoming_json)  # type: ignore[attr-defined]
+
+    except (
+        PropertyClaim.DoesNotExist,
+        TopLevelNormativeGoal.DoesNotExist,
+        Strategy.DoesNotExist,
+    ):
+        return JsonResponse(
+            {"error_message": "Could not locate case element."}, status=404
+        )
+    except ValueError as value_error:
+        return JsonResponse({"error_message": str(value_error)}, status=400)
+
+    return HttpResponse(status=200)
 
 
 @csrf_exempt

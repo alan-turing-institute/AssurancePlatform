@@ -134,10 +134,11 @@ class SandboxSerializer(serializers.ModelSerializer):
 
     contexts = serializers.SerializerMethodField()
     evidence = serializers.SerializerMethodField()
+    property_claims = serializers.SerializerMethodField()
 
     class Meta:
         model = AssuranceCase
-        fields = ["contexts", "evidence"]
+        fields = ["contexts", "evidence", "property_claims"]
 
     def get_contexts(self, assurance_case: AssuranceCase) -> ReturnDict:
         sandbox_contexts: QuerySet = assurance_case.contexts.filter(in_sandbox=True)  # type: ignore[attr-defined]
@@ -148,6 +149,13 @@ class SandboxSerializer(serializers.ModelSerializer):
         sandbox_evidence: QuerySet = assurance_case.evidence.filter(in_sandbox=True)  # type: ignore[attr-defined]
         evidence_serializer = EvidenceSerializer(sandbox_evidence, many=True)
         return cast(ReturnDict, evidence_serializer.data)
+
+    def get_property_claims(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_property_claims: QuerySet = assurance_case.property_claims.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        property_claim_serializer = PropertyClaimSerializer(
+            sandbox_property_claims, many=True
+        )
+        return cast(ReturnDict, property_claim_serializer.data)
 
 
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
@@ -243,6 +251,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claims",
             "evidence",
             "strategy_id",
+            "in_sandbox",
         )
 
         extra_kwargs = {
