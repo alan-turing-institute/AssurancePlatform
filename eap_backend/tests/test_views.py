@@ -438,6 +438,7 @@ class StrategyViewTest(TestCase):
 
         strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
 
+        assert strategy.goal.assurance_case == self.assurance_case
         assert strategy.goal == self.goal
         assert strategy.assurance_case is None
         assert not strategy.in_sandbox
@@ -448,6 +449,12 @@ class StrategyViewTest(TestCase):
         )
 
         assert response_post.status_code == 200
+
+        strategy.refresh_from_db()
+
+        assert strategy.in_sandbox
+        assert strategy.goal is None
+        assert strategy.assurance_case == self.assurance_case
 
 
 class ContextViewTest(TestCase):
