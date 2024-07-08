@@ -82,7 +82,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
 
     if(deleted) {
-      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id, node.data.type)
       if(updatedAssuranceCase) {
           setAssuranceCase(updatedAssuranceCase)
           setLoading(false)
@@ -114,7 +114,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     setLoading(true)
     if (selectedClaimMove) {
       let updatedItem = null
-      console.log(`Move Property to Strategy with ID: ${selectedClaimMove}`);
+      console.log(`Move Property to Strategy with ID`, selectedClaimMove);
 
       // Find id for selected move element
       const type = selectedClaimMove.name.substring(0, 1)
@@ -142,7 +142,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'P') {
-        const elementId = claims?.filter((claim: any) => claim.name === selectedClaimMove.name)[0].id
+        const elementId = claims?.filter((claim: any) => claim.id === selectedClaimMove.id)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -167,7 +167,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         }
       }
       if (type === 'S') {
-        const elementId = strategies?.filter((strategy: any) => strategy.name === selectedClaimMove.name)[0].id
+        const elementId = strategies?.filter((strategy: any) => strategy.id === selectedClaimMove.id)[0].id
 
         let updateItem = {
           goal_id: null,
@@ -356,7 +356,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {goal && (
-                      <SelectItem key={goal.id} value={goal}>
+                      <SelectItem key={crypto.randomUUID()} value={goal}>
                         <div className="flex flex-col justify-start items-start gap-1">
                           <div className="flex items-center">
                             <span className="font-medium">{goal.name}</span>
@@ -369,7 +369,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       </SelectItem>
                       )}
                       {strategies?.map((strategy: any) => (
-                        <SelectItem key={strategy.id} value={strategy}>
+                        <SelectItem key={crypto.randomUUID()} value={strategy}>
                           <div className="flex justify-start items-start gap-1">
                             <div className="flex items-center">
                               <span className="font-medium">{strategy.name}</span>
@@ -383,7 +383,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       ))
                       }
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim}>
+                        <SelectItem key={crypto.randomUUID()} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
                             <div className="flex items-center">
                               <span className="font-medium">{claim.name}</span>
@@ -411,7 +411,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {claims && claims.map((claim: any) => (
-                        <SelectItem key={claim.id} value={claim}>
+                        <SelectItem key={crypto.randomUUID()} value={claim}>
                           <div className="flex flex-col justify-start items-start gap-1">
                             <div className="flex items-center">
                               <span className="font-medium">{claim.name}</span>

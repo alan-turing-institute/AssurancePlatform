@@ -65,7 +65,7 @@ export const updatePropertyClaimNested = (array: any, id: any, newPropertyClaim:
         let propertyClaim = array[i];
 
         // Check if this property claim matches the parent ID
-        if (propertyClaim.id === id) {
+        if (propertyClaim.id === id && propertyClaim.type === 'PropertyClaim') {
             array[i] = { ...propertyClaim, ...newPropertyClaim };
 
             return array; // Return the updated array
@@ -161,19 +161,11 @@ export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyCl
         for (let i = 0; i < arr.length; i++) {
             let item = arr[i];
 
-            if (item.id === id) {
+            if (item.id === id && item.type === 'PropertyClaim') {
                 existingPropertyClaim = item;
                 return;
             }
 
-            // if (item.property_claims) {
-            //     for (let j = 0; j < item.property_claims.length; j++) {
-            //         if (item.property_claims[j].id === id) {
-            //             existingPropertyClaim = item.property_claims[j];
-            //             return;
-            //         }
-            //     }
-            // }
             if (item.property_claims) {
                 findExstingPropertyClaim(item.property_claims);
             }
@@ -189,7 +181,9 @@ export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyCl
     findExstingPropertyClaim(array);
 
     // Remove evidence from its old location
+    console.log('Remove Element')
     const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(array, id)
+    console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim)
 
     // Merge existing evidence properties with updated ones
     const updatedPropertyClaim = { ...existingPropertyClaim as any, ...newPropertyClaim };
@@ -209,6 +203,8 @@ export const updatePropertyClaimNestedMove = (array: any, id: any, newPropertyCl
     if(updatedPropertyClaim.property_claim_id !== null) {
         newParentId = updatedPropertyClaim.property_claim_id
     }
+
+    console.log('New Parent Id', newParentId)
 
     const updatedArray = addPropertyClaimToLocation(arrayWithoutOldPropertyClaim, updatedPropertyClaim, newParentId);
 
@@ -581,7 +577,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
     switch (type) {
         case 'context':
             const newContext = assuranceCase.goals[0].context.map((context: any) => {
-                if (context.id === id) {
+                if (context.id === id && context.type === 'Context') {
                     return {
                         ...context,
                         ...updatedItem
@@ -598,7 +594,7 @@ export const updateAssuranceCase = async (type: string, assuranceCase: any, upda
         case 'strategy':
             // Create a new strategy array by adding the new context item
             const newStrategy = assuranceCase.goals[0].strategies.map((strategy: any) => {
-                if (strategy.id === id) {
+                if (strategy.id === id && strategy.type === 'Strategy') {
                     return {
                         ...strategy,
                         ...updatedItem
@@ -702,43 +698,46 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
 }
 
 // Removing elements from Assurance Case
-const removeItemFromNestedStructure = (array: any, id: any) => {
+const removeItemFromNestedStructure = (array: any[], id: any, type: string): any[] => {
     return array.map((item: any) => {
         // Remove from property_claims
         if (item.property_claims) {
-            item.property_claims = item.property_claims.filter((claim: any) => claim.id !== id);
-            item.property_claims = removeItemFromNestedStructure(item.property_claims, id);
+            item.property_claims = item.property_claims.filter((claim: any) => !(claim.id === id && claim.type === type));
+            item.property_claims = removeItemFromNestedStructure(item.property_claims, id, type);
         }
 
         // Remove from strategies
         if (item.strategies) {
             item.strategies = item.strategies.map((strategy: any) => {
                 if (strategy.property_claims) {
-                    strategy.property_claims = strategy.property_claims.filter((claim: any) => claim.id !== id);
-                    strategy.property_claims = removeItemFromNestedStructure(strategy.property_claims, id);
+                    strategy.property_claims = strategy.property_claims.filter((claim: any) => !(claim.id === id && claim.type === type));
+                    strategy.property_claims = removeItemFromNestedStructure(strategy.property_claims, id, type);
                 }
                 return strategy;
-            }).filter((strategy: any) => strategy.id !== id);
+            }).filter((strategy: any) => !(strategy.id === id && strategy.type === type));
         }
 
         // Remove from contexts
         if (item.context) {
-            item.context = item.context.filter((context: any) => context.id !== id);
-            item.context = removeItemFromNestedStructure(item.context, id);
+            item.context = item.context.filter((context: any) => !(context.id === id && context.type === type));
+            item.context = removeItemFromNestedStructure(item.context, id, type);
         }
 
         // Remove from evidence
         if (item.evidence) {
-            item.evidence = item.evidence.filter((evidence: any) => evidence.id !== id);
-            item.evidence = removeItemFromNestedStructure(item.evidence, id);
+            item.evidence = item.evidence.filter((evidence: any) => !(evidence.id === id && evidence.type === type));
+            item.evidence = removeItemFromNestedStructure(item.evidence, id, type);
         }
 
         return item;
-    }).filter((item: any) => item.id !== id);
+    }).filter((item: any) => !(item.id === id && item.type === type));
 };
 
-export const removeAssuranceCaseNode = (assuranceCase: any, id: any) => {
-    const updatedGoals = removeItemFromNestedStructure(assuranceCase.goals, id);
+
+export const removeAssuranceCaseNode = (assuranceCase: any, id: any, type: string) => {
+    console.log(`Remove id: ${id} type: ${type}`)
+    const updatedGoals = removeItemFromNestedStructure(assuranceCase.goals, id, type);
+    console.log('updatedGoals', updatedGoals)
     return {
         ...assuranceCase,
         goals: updatedGoals

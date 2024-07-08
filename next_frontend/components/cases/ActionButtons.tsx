@@ -28,6 +28,7 @@ interface ActionButtonProps {
 
 const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionButtonProps) => {
   const [open, setOpen] = useState(false)
+  const [alertOpen, setAlertOpen] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false);
@@ -164,8 +165,8 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         <ActionTooltip label='Focus'>
           <button id='FocusBtn' onClick={() => onLayout('TB')} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Group className='w-5 h-5' /><span className="sr-only">Focus</span></button>
         </ActionTooltip>
-        <ActionTooltip label='Reset Names'>
-          <button onClick={handleNameReset} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Names</span></button>
+        <ActionTooltip label='Reset Identifiers'>
+          <button onClick={() => setAlertOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Identifiers</span></button>
         </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">
@@ -192,6 +193,15 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         onConfirm={onDelete}
         loading={loading}
         confirmButtonText={'Delete'}
+      />
+       <AlertModal
+        isOpen={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleNameReset}
+        loading={loading}
+        message={'Updating the identifiers will systematically reset all of the unique labels that are displayed for each of the elements (e.g. P1, E1), so that they are continuous. This cannot be undone.'}
+        confirmButtonText={'Yes, reset all identifiers'}
+        cancelButtonText={'No, keep current identifiers'}
       />
     </div>
     </div>
