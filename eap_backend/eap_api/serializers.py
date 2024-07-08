@@ -1,4 +1,8 @@
+from typing import cast
+
+from django.db.models.query import QuerySet
 from rest_framework import serializers
+from rest_framework.serializers import ReturnDict
 
 from .github import Github, register_social_user
 from .models import (
@@ -126,6 +130,34 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
         )
 
 
+class SandboxSerializer(serializers.ModelSerializer):
+
+    contexts = serializers.SerializerMethodField()
+    evidence = serializers.SerializerMethodField()
+    property_claims = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssuranceCase
+        fields = ["contexts", "evidence", "property_claims"]
+
+    def get_contexts(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_contexts: QuerySet = assurance_case.contexts.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        context_serializer = ContextSerializer(sandbox_contexts, many=True)
+        return cast(ReturnDict, context_serializer.data)
+
+    def get_evidence(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_evidence: QuerySet = assurance_case.evidence.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        evidence_serializer = EvidenceSerializer(sandbox_evidence, many=True)
+        return cast(ReturnDict, evidence_serializer.data)
+
+    def get_property_claims(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_property_claims: QuerySet = assurance_case.property_claims.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        property_claim_serializer = PropertyClaimSerializer(
+            sandbox_property_claims, many=True
+        )
+        return cast(ReturnDict, property_claim_serializer.data)
+
+
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     assurance_case_id = serializers.PrimaryKeyRelatedField(
         source="assurance_case", queryset=AssuranceCase.objects.all()
@@ -169,6 +201,7 @@ class ContextSerializer(serializers.ModelSerializer):
             "long_description",
             "created_date",
             "goal_id",
+            "in_sandbox",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
@@ -218,6 +251,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claims",
             "evidence",
             "strategy_id",
+            "in_sandbox",
         )
 
         extra_kwargs = {
@@ -243,6 +277,7 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "long_description",
             "URL",
             "property_claim_id",
+            "in_sandbox",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}

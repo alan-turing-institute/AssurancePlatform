@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, cast
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -91,13 +91,187 @@ for k, v in tuple(TYPE_DICT.items()):
     TYPE_DICT[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
 
 
-def get_case_id(item):
+class SandboxUtils:
+    @staticmethod
+    def detach_context(context_id: int) -> None:
+        context: Context = Context.objects.get(pk=context_id)
+        assurance_case_id: Optional[int] = get_case_id(context)
+
+        context.goal = None
+        SandboxUtils._move_to_sandbox(context, assurance_case_id)
+
+        context.save()
+
+    @staticmethod
+    def attach_context(context_id: int, goal_id: int) -> None:
+        context: Context = Context.objects.get(pk=context_id)
+        new_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+
+        context.goal = new_goal
+        SandboxUtils._remove_from_sandbox(context)
+
+    @staticmethod
+    def detach_evidence(evidence_id: int, property_claim_id: int) -> None:
+        evidence: Evidence = Evidence.objects.get(pk=evidence_id)
+        assurance_case_id: Optional[int] = get_case_id(evidence)
+
+        if evidence.property_claim.filter(pk=property_claim_id).count() == 0:
+            error_message: str = (
+                f"Property claim with id {property_claim_id} is not the parent of Evidence with id {evidence_id}"
+            )
+            raise ValueError(error_message)
+
+        evidence.property_claim.set(
+            evidence.property_claim.exclude(pk=property_claim_id)
+        )
+
+        SandboxUtils._move_to_sandbox(
+            evidence,
+            assurance_case_id,
+            lambda evidence: evidence.property_claim.count()  # type:ignore[attr-defined]
+            == 0,
+        )
+
+        evidence.save()
+
+    @staticmethod
+    def attach_evidence(evidence_id: int, property_claim_id: int) -> None:
+        evidence: Evidence = Evidence.objects.get(pk=evidence_id)
+        new_property_claim: PropertyClaim = PropertyClaim.objects.get(
+            pk=property_claim_id
+        )
+
+        evidence.property_claim.add(new_property_claim)
+        SandboxUtils._remove_from_sandbox(evidence)
+
+    @staticmethod
+    def _can_detach_property_claim(case_item: CaseItem) -> bool:
+
+        property_claim: PropertyClaim = cast(PropertyClaim, case_item)
+
+        return (
+            property_claim.goal is None
+            and property_claim.property_claim is None
+            and property_claim.strategy is None
+        )
+
+    @staticmethod
+    def detach_property_claim(property_claim_id: int, parent_info: dict[str, Any]):
+        property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
+        assurance_case_id: Optional[int] = get_case_id(property_claim)
+
+        goal_id: Optional[int] = parent_info.get("goal_id")
+        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
+        strategy_id: Optional[int] = parent_info.get("strategy_id")
+
+        error_message: str = ""
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+
+            if goal.property_claims.filter(pk=property_claim_id).count() == 0:  # type: ignore[attr-defined]
+                error_message = f"Property claim {property_claim_id} is not attached to Goal {goal_id}"
+                raise ValueError(error_message)
+
+            property_claim.goal = None
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
+        elif parent_property_claim_id is not None:
+            parent_property_claim: PropertyClaim = PropertyClaim.objects.get(
+                pk=parent_property_claim_id
+            )
+
+            if property_claim.property_claim != parent_property_claim:
+                error_message = f"Property claim {parent_property_claim.pk} is not the parent of Property Claim {property_claim.pk}"
+                raise ValueError(error_message)
+
+            property_claim.property_claim = None
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
+        elif strategy_id is not None:
+            strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+
+            if property_claim.strategy != strategy:
+                error_message = f"Strategy {strategy.pk} is not the parent of Property Claim {property_claim.pk}"
+                raise ValueError(error_message)
+
+            property_claim.strategy = None
+            SandboxUtils._move_to_sandbox(
+                property_claim,
+                assurance_case_id,
+                SandboxUtils._can_detach_property_claim,
+            )
+        else:
+            error_message = f"Cannot detach property claim {property_claim_id} to parent {parent_info}"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def attach_property_claim(
+        property_claim_id: int, parent_info: dict[str, Any]
+    ) -> None:
+        property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
+
+        goal_id: Optional[int] = parent_info.get("goal_id")
+        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
+        strategy_id: Optional[int] = parent_info.get("strategy_id")
+
+        if goal_id is not None:
+            goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
+            property_claim.goal = goal
+            SandboxUtils._remove_from_sandbox(property_claim)
+        elif parent_property_claim_id is not None:
+            parent_property_claim: PropertyClaim = PropertyClaim.objects.get(
+                pk=parent_property_claim_id
+            )
+            property_claim.property_claim = parent_property_claim  # type: ignore[attr-defined]
+            SandboxUtils._remove_from_sandbox(property_claim)
+        elif strategy_id is not None:
+            strategy: Strategy = Strategy.objects.get(pk=strategy_id)
+            property_claim.strategy = strategy
+            SandboxUtils._remove_from_sandbox(property_claim)
+        else:
+            error_message = f"Cannot attach property claim {property_claim_id} to parent {parent_info}"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def _remove_from_sandbox(case_item: CaseItem) -> None:
+        case_item.assurance_case = None  # type: ignore[attr-defined]
+        case_item.in_sandbox = False
+        case_item.save()
+
+    @staticmethod
+    def _move_to_sandbox(
+        case_item: CaseItem,
+        assurance_case_id: Optional[int],
+        is_ready: Optional[Callable[[CaseItem], bool]] = None,
+    ):
+        if assurance_case_id is None:
+            error_message: str = (
+                f"Cannot find assurance case id for element with id {case_item.pk}"
+            )
+            raise ValueError(error_message)
+
+        if is_ready is None or is_ready(case_item):
+            case_item.in_sandbox = True
+            case_item.assurance_case = AssuranceCase.objects.get(  # type: ignore[attr-defined]
+                pk=assurance_case_id
+            )
+            case_item.save()
+
+
+def get_case_id(item) -> Optional[int]:
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
     # an iterable that can potentially list all the parents. In that case, just pick the
     # first.
     if hasattr(item, "first"):
         item = item.first()
+
     if isinstance(item, models.AssuranceCase):
         return item.id
     for _k, v in TYPE_DICT.items():
