@@ -434,6 +434,21 @@ class StrategyViewTest(TestCase):
         assert response_data["goal_id"] == self.goal.pk
         assert response_data["property_claims"] == []
 
+    def test_detach_strategy(self) -> None:
+
+        strategy: Strategy = Strategy.objects.create(**STRATEGY_INFO)
+
+        assert strategy.goal == self.goal
+        assert strategy.assurance_case is None
+        assert not strategy.in_sandbox
+
+        response_post: HttpResponse = self.client.post(
+            path=reverse("detach_strategy", kwargs={"pk": strategy.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
 
 class ContextViewTest(TestCase):
     def setUp(self):

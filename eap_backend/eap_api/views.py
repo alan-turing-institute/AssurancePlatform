@@ -683,6 +683,12 @@ def strategy_detail(request: HttpRequest, pk: int) -> HttpResponse:
     return HttpResponse(status=400)
 
 
+@csrf_exempt
+@api_view(["POST"])
+def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
+    return HttpResponse(f"strategy id {pk}", status=200)
+
+
 @permission_classes((AllowAny,))
 class GithubSocialAuthView(GenericAPIView):
     serializer_class = GithubSocialAuthSerializer
