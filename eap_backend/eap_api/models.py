@@ -201,6 +201,6 @@ class PropertyClaim(CaseItem):
 
 
 class Evidence(CaseItem):
-    URL = models.CharField(max_length=3000)
+    URL = models.CharField(max_length=3000, null=True, blank=True)
     shape = Shape.CYLINDER
     property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")
