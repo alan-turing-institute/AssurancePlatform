@@ -1010,7 +1010,7 @@ export const attachCaseElement = async (orphan: any, id: any, token: string | nu
             break;
         case 'strategy':
             entity = 'strategies'
-            payload.strategy_id = parent.data.id
+            payload.goal_id = parent.data.id
             break;
         case 'propertyclaim':
             entity = 'propertyclaims'

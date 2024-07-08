@@ -133,8 +133,8 @@ const useStore = create<Store>((set, get) => ({
       })
     }
 
-    if(orphanedElements.stratgies && orphanedElements.stratgies.length > 0) {
-      orphanedElements.stratgies.map((strategy: any) => {
+    if(orphanedElements.strategies && orphanedElements.strategies.length > 0) {
+      orphanedElements.strategies.map((strategy: any) => {
         newArray.push(strategy)
       })
     }
