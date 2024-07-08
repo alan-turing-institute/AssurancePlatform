@@ -4,7 +4,7 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import { Separator } from '../ui/separator'
 import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
-import { attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addPropertyClaimToNested, attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 import { Loader2, Trash, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -33,9 +33,9 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
       case 'goal':
         return orphanedElements
         case 'strategy':
-          return orphanedElements.filter((item: any) => item.type === 'claims')
+          return orphanedElements.filter((item: any) => item.type.toLowerCase() === 'propertyclaim')
       case 'property':
-        return orphanedElements.filter((item: any) => item.type === 'evidence' || item.type === 'claims')
+        return orphanedElements.filter((item: any) => item.type.toLowerCase() === 'evidence' || item.type.toLowerCase() === 'propertyclaim')
       default:
         return orphanedElements
     }
@@ -44,33 +44,173 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
   const handleOrphanSelection = async (orphan: any) => {
     setLoading(true)
     console.log(`Selected Orphan Element`, orphan)
-    const parentId = node.data.id
-    orphan.goal_id = parentId
+  
+    const result = await attachCaseElement(orphan, orphan.id, token, node)
 
-    const result = await attachCaseElement(orphan.type, orphan.id, token, parentId)
     if(result.error) {
       console.error(result.error)
     }
+
     if(result.attached) {
       console.log('Orphan Attached')
-      // Create a new context array by adding the new context item
-      const newContext = [...assuranceCase.goals[0].context, orphan];
 
-      // Create a new assuranceCase object with the updated context array
-      const updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: [
-          {
-            ...assuranceCase.goals[0],
-            context: newContext
+      //TODO: Update this to update all different element types
+      let updatedAssuranceCase
+
+      switch (orphan.type.toLowerCase()) {
+        case 'context':
+          orphan.goal_id = node.data.id
+          // Create a new context array by adding the new context item
+          const newContext = [...assuranceCase.goals[0].context, orphan];
+
+          // Create a new assuranceCase object with the updated context array
+          updatedAssuranceCase = {
+            ...assuranceCase,
+            goals: [
+              {
+                ...assuranceCase.goals[0],
+                context: newContext
+              }
+            ]
           }
-        ]
-      }
 
-      // Update Assurance Case in state
-      setAssuranceCase(updatedAssuranceCase)
-      setLoading(false)
-      handleClose()
+          // Update Assurance Case in state
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          handleClose()
+          break;
+        case 'strategy':
+          orphan.strategy_id = node.data.id
+          // Create a new strategy array by adding the new context item
+          const newStrategy = [...assuranceCase.goals[0].strategies, orphan];
+
+          // Create a new assuranceCase object with the updated strategy array
+          updatedAssuranceCase = {
+            ...assuranceCase,
+            goals: [
+              {
+                ...assuranceCase.goals[0],
+                strategies: newStrategy
+              },
+              // Copy other goals if needed
+            ]
+          }
+
+          // Update Assurance Case in state
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          handleClose()
+          break;
+        case 'propertyclaim':
+            if(node.type === 'goal') {
+              orphan.goal_id = node.data.id
+              // TODO: This needs to include the orphaned children also
+              // Create a new property claim array by adding the new property claims item
+              const newPropertyClaim = [...assuranceCase.goals[0].property_claims, orphan];
+
+              // Create a new assuranceCase object with the updated property claims array
+              updatedAssuranceCase = {
+                ...assuranceCase,
+                goals: [
+                  {
+                    ...assuranceCase.goals[0],
+                    property_claims: newPropertyClaim
+                  },
+                ]
+              }
+
+              // Update Assurance Case in state
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              handleClose()
+            }
+            if(node.type === 'property') {
+              orphan.property_claim_id = node.data.id
+              // Call the function to add the new property claim to the nested structure
+              const added = addPropertyClaimToNested(assuranceCase.goals, node.data.id, orphan);
+              if (!added) {
+                  return console.error("Parent property claim not found!");
+              }
+        
+              const updatedAssuranceCase = {
+                ...assuranceCase,
+                goals: [
+                  {
+                    ...assuranceCase.goals[0],
+                  }
+                ]
+              }
+        
+              // const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
+              setAssuranceCase(updatedAssuranceCase)
+              setLoading(false)
+              handleClose()
+            }
+            if(node.type === 'strategy') {
+              orphan.strategy_id = node.data.id
+              // Find the goal containing the specific strategy
+              const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === node.data.id));
+        
+              if (goalContainingStrategy) {
+                // Clone the assuranceCase to avoid mutating the state directly
+                const updatedAssuranceCase = { ...assuranceCase };
+        
+                // Update the strategies array in the goal containing the specific strategy
+                const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
+                  if (strategy.id === node.data.id) {
+                    // Add the new property claim to the corresponding strategy
+                    return {
+                      ...strategy,
+                      property_claims: [...strategy.property_claims, orphan]
+                    };
+                  }
+                  return strategy;
+                });
+        
+                // Update the goal containing the specific strategy with the updated strategies array
+                const updatedGoalContainingStrategy = {
+                  ...goalContainingStrategy,
+                  strategies: updatedStrategies
+                };
+        
+                // Update the assuranceCase goals array with the updated goal containing the specific strategy
+                updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
+                  if (goal === goalContainingStrategy) {
+                    return updatedGoalContainingStrategy;
+                  }
+                  return goal;
+                });
+        
+                // Update Assurance Case in state
+                setAssuranceCase(updatedAssuranceCase);
+                setLoading(false)
+                handleClose()
+              }
+            }
+          break;
+        case 'evidence':
+            orphan.property_claim_id = [node.data.id]
+            const added = addEvidenceToClaim(assuranceCase.goals, node.data.id, orphan);
+            if (!added) {
+              return console.error("Parent property claim not found!");
+            }
+
+            updatedAssuranceCase = {
+              ...assuranceCase,
+              goals: [
+                {
+                  ...assuranceCase.goals[0],
+                }
+              ]
+            }
+
+            setAssuranceCase(updatedAssuranceCase)
+            setLoading(false)
+            handleClose()
+          break;
+        default:
+          break;
+      }
     }
   }
 

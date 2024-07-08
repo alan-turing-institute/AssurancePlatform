@@ -118,11 +118,30 @@ const useStore = create<Store>((set, get) => ({
     set({ assuranceCase })
   },
   setOrphanedElements: (orphanedElements: any) => {
+    console.log('orphanedElements_Sandbox', orphanedElements)
     let newArray: any[] = []
 
     if(orphanedElements.contexts && orphanedElements.contexts.length > 0) {
       orphanedElements.contexts.map((context: any) => {
         newArray.push(context)
+      })
+    }
+
+    if(orphanedElements.property_claims && orphanedElements.property_claims.length > 0) {
+      orphanedElements.property_claims.map((claim: any) => {
+        newArray.push(claim)
+      })
+    }
+
+    if(orphanedElements.stratgies && orphanedElements.stratgies.length > 0) {
+      orphanedElements.stratgies.map((strategy: any) => {
+        newArray.push(strategy)
+      })
+    }
+
+    if(orphanedElements.evidence && orphanedElements.evidence.length > 0) {
+      orphanedElements.evidence.map((evidence: any) => {
+        newArray.push(evidence)
       })
     }
 

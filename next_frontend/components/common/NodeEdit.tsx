@@ -218,13 +218,13 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const parentNode: any = findParentNode(nodes, node)
 
   const handleDetach = async () => {
-    const { detached, error }: any = await detachCaseElement(node.type, node.data.id, token)
+    const { detached, error }: any = await detachCaseElement(node, node.type, node.data.id, token)
     if(error) {
       console.error(error)
     }
 
     if(detached) {
-      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id)
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id, node.data.type)
       if(updatedAssuranceCase) {
           setAssuranceCase(updatedAssuranceCase)
           setLoading(false)
@@ -281,7 +281,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </>
           )}
           <div className="mt-12 flex justify-start items-center gap-4">
-            {node.type === 'context' && (
+            {node.type !== 'goal' && (
               <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
             )}
             <Button
