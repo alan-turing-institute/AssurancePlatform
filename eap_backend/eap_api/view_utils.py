@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+from rest_framework.serializers import ReturnDict
 
 from . import models
 from .models import (
@@ -22,6 +23,7 @@ from .serializers import (
     ContextSerializer,
     EvidenceSerializer,
     PropertyClaimSerializer,
+    SandboxSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -260,6 +262,23 @@ class SandboxUtils:
             raise ValueError(error_message)
 
     @staticmethod
+    def serialise_sandbox(assurance_case: AssuranceCase) -> ReturnDict:
+        serializer = SandboxSerializer(assurance_case)
+        serialized_sandbox: ReturnDict = cast(ReturnDict, serializer.data)
+
+        for property_claim in serialized_sandbox["property_claims"]:
+            property_claim["property_claims"] = get_json_tree(
+                property_claim["property_claims"], "property_claims"
+            )
+
+        for strategy in serialized_sandbox["strategies"]:
+            strategy["property_claims"] = get_json_tree(
+                strategy["property_claims"], "property_claims"
+            )
+
+        return serialized_sandbox
+
+    @staticmethod
     def _remove_from_sandbox(case_item: CaseItem) -> None:
         case_item.assurance_case = None  # type: ignore[attr-defined]
         case_item.in_sandbox = False
@@ -369,7 +388,7 @@ def make_case_summary(serialized_data):
         return summarize_one(serialized_data)
 
 
-def get_json_tree(id_list, obj_type):
+def get_json_tree(id_list: list, obj_type: str) -> list:
     """
     Recursive function for populating the full JSON data for goals, used
     in the case_detail view (i.e. one API call returns the full case data).
@@ -384,7 +403,9 @@ def get_json_tree(id_list, obj_type):
     objs: list of json objects
     """
     objs = []
+
     for obj_id in id_list:
+
         obj = TYPE_DICT[obj_type]["model"].objects.get(pk=obj_id)
         obj_serializer = TYPE_DICT[obj_type]["serializer"](obj)
         obj_data = obj_serializer.data

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Any
 
 from django.http import HttpResponse
 from django.test import Client, TestCase
@@ -94,11 +95,18 @@ class CaseViewTest(TestCase):
         property_claim: PropertyClaim = PropertyClaim.objects.create(
             **PROPERTYCLAIM1_INFO
         )
+        sub_property_claim: PropertyClaim = PropertyClaim.objects.create(
+            name="P1.1", property_claim=property_claim
+        )
+
         evidence: Evidence = Evidence.objects.create(**EVIDENCE1_INFO_NO_ID)
         evidence.property_claim.add(property_claim)
         evidence.save()
 
         strategy: Strategy = Strategy.objects.create(name="S1", goal=goal)
+        strategy_property_claim: PropertyClaim = PropertyClaim.objects.create(
+            name="P2", strategy=strategy
+        )
 
         response_get: HttpResponse = self.client.get(
             reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
@@ -130,20 +138,43 @@ class CaseViewTest(TestCase):
         response_data: dict = response_get.json()
 
         assert len(response_data["contexts"]) == 1
-        assert response_data["contexts"][0]["id"] == context.pk
-        assert response_data["contexts"][0]["in_sandbox"]
+        context_json: dict[str, Any] = response_data["contexts"][0]
+        assert context_json["id"] == context.pk
+        assert context_json["name"] == context.name
+        assert context_json["in_sandbox"]
 
         assert len(response_data["evidence"]) == 1
-        assert response_data["evidence"][0]["id"] == evidence.pk
-        assert response_data["evidence"][0]["in_sandbox"]
+        evidence_json: dict[str, Any] = response_data["evidence"][0]
+        assert evidence_json["id"] == evidence.pk
+        assert evidence_json["name"] == evidence.name
+        assert evidence_json["in_sandbox"]
 
         assert len(response_data["property_claims"]) == 1
-        assert response_data["property_claims"][0]["id"] == evidence.pk
-        assert response_data["property_claims"][0]["in_sandbox"]
+
+        property_claim_json: dict[str, Any] = response_data["property_claims"][0]
+        assert property_claim_json["id"] == property_claim.pk
+        assert property_claim_json["name"] == property_claim.name
+        assert property_claim_json["in_sandbox"]
+
+        assert len(property_claim_json["property_claims"]) == 1
+        sub_property_claim_json: dict[str, Any] = property_claim_json[
+            "property_claims"
+        ][0]
+        assert sub_property_claim_json["id"] == sub_property_claim.pk
+        assert sub_property_claim_json["name"] == sub_property_claim.name
 
         assert len(response_data["strategies"]) == 1
-        assert response_data["strategies"][0]["id"] == strategy.pk
-        assert response_data["strategies"][0]["in_sandbox"]
+        strategy_json: dict[str, Any] = response_data["strategies"][0]
+        assert strategy_json["id"] == strategy.pk
+        assert strategy_json["name"] == strategy.name
+        assert strategy_json["in_sandbox"]
+
+        assert len(strategy_json["property_claims"]) == 1
+        strategy_property_claim_json: dict[str, Any] = strategy_json["property_claims"][
+            0
+        ]
+        assert strategy_property_claim_json["id"] == strategy_property_claim.pk
+        assert strategy_property_claim_json["name"] == strategy_property_claim.name
 
     def test_view_case_with_attached_items(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
