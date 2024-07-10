@@ -44,7 +44,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
   const handleOrphanSelection = async (orphan: any) => {
     setLoading(true)
     console.log(`Selected Orphan Element`, orphan)
-  
+
     const result = await attachCaseElement(orphan, orphan.id, token, node)
 
     if(result.error) {
@@ -129,7 +129,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
               if (!added) {
                   return console.error("Parent property claim not found!");
               }
-        
+
               const updatedAssuranceCase = {
                 ...assuranceCase,
                 goals: [
@@ -138,7 +138,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
                   }
                 ]
               }
-        
+
               // const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
               setAssuranceCase(updatedAssuranceCase)
               setLoading(false)
@@ -148,11 +148,11 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
               orphan.strategy_id = node.data.id
               // Find the goal containing the specific strategy
               const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === node.data.id));
-        
+
               if (goalContainingStrategy) {
                 // Clone the assuranceCase to avoid mutating the state directly
                 const updatedAssuranceCase = { ...assuranceCase };
-        
+
                 // Update the strategies array in the goal containing the specific strategy
                 const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
                   if (strategy.id === node.data.id) {
@@ -164,13 +164,13 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
                   }
                   return strategy;
                 });
-        
+
                 // Update the goal containing the specific strategy with the updated strategies array
                 const updatedGoalContainingStrategy = {
                   ...goalContainingStrategy,
                   strategies: updatedStrategies
                 };
-        
+
                 // Update the assuranceCase goals array with the updated goal containing the specific strategy
                 updatedAssuranceCase.goals = assuranceCase.goals.map((goal: any) => {
                   if (goal === goalContainingStrategy) {
@@ -178,7 +178,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
                   }
                   return goal;
                 });
-        
+
                 // Update Assurance Case in state
                 setAssuranceCase(updatedAssuranceCase);
                 setLoading(false)

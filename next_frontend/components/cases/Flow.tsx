@@ -210,8 +210,8 @@ function Flow({}: FlowProps) {
                   <Unplug className='w-4 h-4'/>
                   <p>You have orphaned elements for this assurance case.</p>
                 </div>
-                <Button 
-                  variant={'ghost'} 
+                <Button
+                  variant={'ghost'}
                   size={'icon'}
                   className='hover:bg-gray-400/10 dark:hover:bg-slate-900/10'
                   onClick={() => setShowOrphanMessage(false)}
