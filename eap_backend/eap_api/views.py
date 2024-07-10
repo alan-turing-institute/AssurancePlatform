@@ -38,6 +38,7 @@ from .serializers import (
 from .view_utils import (
     TYPE_DICT,
     SandboxUtils,
+    UpdateIdentifierUtils,
     can_view_group,
     filter_by_case_id,
     get_allowed_cases,
@@ -47,7 +48,6 @@ from .view_utils import (
     make_case_summary,
     make_summary,
     save_json_tree,
-    update_identifiers,
 )
 
 
@@ -252,7 +252,7 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
 def case_update_identifiers(_, pk: int):
     try:
         assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
-        update_identifiers(case_id=assurance_case.pk)
+        UpdateIdentifierUtils.update_identifiers(case_id=assurance_case.pk)
 
     except AssuranceCase.DoesNotExist:
         return HttpResponse(status=404)

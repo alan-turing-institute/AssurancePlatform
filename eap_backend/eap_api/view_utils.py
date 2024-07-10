@@ -1,3 +1,4 @@
+import functools
 import warnings
 from typing import Any, Callable, Optional, Union, cast
 
@@ -304,6 +305,179 @@ class SandboxUtils:
             case_item.save()
 
 
+class UpdateIdentifierUtils:
+    @staticmethod
+    def update_identifiers(
+        case_id: Optional[int] = None, model_instance: Optional[CaseItem] = None
+    ):
+        """Traverses the case and ensures the identifiers follow a sequence
+
+        Args:
+            case_id: Identifier of the case where we perform the update.
+            model_instance: The case element that triggered this method.
+        """
+
+        error_message: str = "Assurance Case ID not provided."
+        if case_id is None and model_instance is not None:
+            case_id = get_case_id(model_instance)
+
+        if case_id is None:
+            raise ValueError(error_message)
+
+        if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
+
+            current_case_goal: TopLevelNormativeGoal = (
+                TopLevelNormativeGoal.objects.get(assurance_case_id=case_id)
+            )
+            goal_id: int = current_case_goal.pk
+
+            UpdateIdentifierUtils._update_sequential_identifiers(
+                TopLevelNormativeGoal.objects.filter(id=goal_id).order_by("id"),
+                "G",
+            )
+
+            UpdateIdentifierUtils._update_sequential_identifiers(
+                Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
+            )
+
+            current_case_strategies: QuerySet = Strategy.objects.filter(
+                goal_id=goal_id
+            ).order_by("id")
+            UpdateIdentifierUtils._update_sequential_identifiers(
+                current_case_strategies, "S"
+            )
+
+            (
+                top_level_claim_ids,
+                child_claim_ids,
+            ) = UpdateIdentifierUtils._get_case_property_claims(
+                current_case_goal, current_case_strategies
+            )
+
+            UpdateIdentifierUtils._update_sequential_identifiers(
+                Evidence.objects.filter(
+                    property_claim__id__in=top_level_claim_ids + child_claim_ids
+                ).order_by("id"),
+                "E",
+            )
+
+            parent_property_claims: list = sorted(
+                PropertyClaim.objects.filter(pk__in=top_level_claim_ids),
+                key=functools.cmp_to_key(
+                    UpdateIdentifierUtils._compare_property_claims
+                ),
+            )
+
+            UpdateIdentifierUtils._update_sequential_identifiers(
+                parent_property_claims, "P"
+            )
+
+            for _, property_claim in enumerate(parent_property_claims):
+                UpdateIdentifierUtils._traverse_child_property_claims(
+                    lambda index, child, parent: UpdateIdentifierUtils._update_item_name(
+                        child, f"{parent.name}.", index + 1
+                    ),
+                    property_claim.pk,
+                )
+
+            if model_instance is not None:
+                model_instance.refresh_from_db()
+
+    @staticmethod
+    def _traverse_child_property_claims(
+        on_child_claim: Callable[[int, PropertyClaim, PropertyClaim], None],
+        parent_claim_id: int,
+    ):
+        """Applies a function to all the children of a Property Claim.
+
+        Args:
+            on_child_claim: The function to call on each child claim.
+            parent_claim_id: The id of the claim we will traverse.
+        """
+        child_property_claims = PropertyClaim.objects.filter(
+            property_claim_id=parent_claim_id
+        ).order_by("id")
+
+        if len(child_property_claims) == 0:
+            return
+        else:
+            for index, child_property_claim in enumerate(child_property_claims):
+                on_child_claim(
+                    index,
+                    child_property_claim,
+                    PropertyClaim.objects.get(pk=parent_claim_id),
+                )
+                UpdateIdentifierUtils._traverse_child_property_claims(
+                    on_child_claim, child_property_claim.pk
+                )
+
+    @staticmethod
+    def _compare_property_claims(
+        one_claim: PropertyClaim, another_claim: PropertyClaim
+    ) -> int:
+        ONE_CLAIM_LEFT: int = -1
+        ONE_CLAIM_RIGHT: int = 1
+        result: int = 0
+
+        if one_claim.strategy is None and another_claim.strategy is not None:
+            result = ONE_CLAIM_LEFT
+        elif one_claim.strategy is None and another_claim.strategy is None:
+            result = one_claim.pk - another_claim.pk
+        elif one_claim.strategy is not None and another_claim.strategy is None:
+            result = ONE_CLAIM_RIGHT
+        elif one_claim.strategy is not None and another_claim.strategy is not None:
+            if one_claim.strategy != another_claim.strategy:
+                result = one_claim.strategy.pk - another_claim.strategy.pk
+            else:
+                result = one_claim.pk - another_claim.pk
+
+        return result
+
+    @staticmethod
+    def _get_case_property_claims(
+        goal: TopLevelNormativeGoal, strategies: QuerySet
+    ) -> tuple:
+        """Retrieves all the property claims associated to a goal and a list of strategies.
+
+        Args:
+            goal: Goal whose property claims we will extract.
+            strategies: Strategies whose property claims we will extract.
+
+        Returns:
+            A tuple containing parent property claims and child property claims, all sorted
+            by primary key.
+        """
+        strategy_ids: list[int] = [strategy.pk for strategy in strategies]
+        top_level_claims: QuerySet = PropertyClaim.objects.filter(
+            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
+        )
+
+        top_level_claim_ids: list[int] = [claim.pk for claim in top_level_claims]
+
+        child_claim_ids: list[int] = []
+        for parent_claim_id in top_level_claim_ids:
+            UpdateIdentifierUtils._traverse_child_property_claims(
+                lambda _, child, parent: child_claim_ids.append(  # noqa: ARG005
+                    child.pk
+                ),
+                parent_claim_id,
+            )
+
+        return top_level_claim_ids, sorted(child_claim_ids)
+
+    @staticmethod
+    def _update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
+        """Updates the name of a case item, given a prefix and a sequence number."""
+        case_item.name = f"{prefix}{number}"
+        case_item.save()
+
+    @staticmethod
+    def _update_sequential_identifiers(query_set: QuerySet | list, prefix: str):
+        """For a list of case items, it updates their name according to its order."""
+        for model_index, model in enumerate(query_set):
+            UpdateIdentifierUtils._update_item_name(model, prefix, model_index + 1)
+
+
 def get_case_id(item) -> Optional[int]:
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
@@ -581,140 +755,3 @@ def get_allowed_groups(user, level="member"):
     """
     all_groups = EAPGroup.objects.all()
     return [group for group in all_groups if can_view_group(group, user, level)]
-
-
-def update_identifiers(
-    case_id: Optional[int] = None, model_instance: Optional[CaseItem] = None
-):
-    """Traverses the case and ensures the identifiers follow a sequence
-
-    Args:
-        case_id: Identifier of the case where we perform the update.
-        model_instance: The case element that triggered this method.
-    """
-
-    error_message: str = "Assurance Case ID not provided."
-    if case_id is None and model_instance is not None:
-        case_id = get_case_id(model_instance)
-
-    if case_id is None:
-        raise ValueError(error_message)
-
-    if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
-
-        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
-            assurance_case_id=case_id
-        )
-        goal_id: int = current_case_goal.pk
-
-        _update_sequential_identifiers(
-            TopLevelNormativeGoal.objects.filter(id=goal_id).order_by("id"),
-            "G",
-        )
-
-        _update_sequential_identifiers(
-            Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
-        )
-
-        current_case_strategies: QuerySet = Strategy.objects.filter(
-            goal_id=goal_id
-        ).order_by("id")
-        _update_sequential_identifiers(current_case_strategies, "S")
-
-        top_level_claim_ids, child_claim_ids = _get_case_property_claims(
-            current_case_goal, current_case_strategies
-        )
-
-        _update_sequential_identifiers(
-            Evidence.objects.filter(
-                property_claim__id__in=top_level_claim_ids + child_claim_ids
-            ).order_by("id"),
-            "E",
-        )
-
-        parent_property_claims: QuerySet = PropertyClaim.objects.filter(
-            pk__in=top_level_claim_ids
-        ).order_by("id")
-
-        _update_sequential_identifiers(parent_property_claims, "P")
-
-        for _, property_claim in enumerate(parent_property_claims):
-            _traverse_child_property_claims(
-                lambda index, child, parent: _update_item_name(
-                    child, f"{parent.name}.", index + 1
-                ),
-                property_claim.pk,
-            )
-
-        if model_instance is not None:
-            model_instance.refresh_from_db()
-
-
-def _traverse_child_property_claims(
-    on_child_claim: Callable[[int, PropertyClaim, PropertyClaim], None],
-    parent_claim_id: int,
-):
-    """Applies a function to all the children of a Property Claim.
-
-    Args:
-        on_child_claim: The function to call on each child claim.
-        parent_claim_id: The id of the claim we will traverse.
-    """
-    child_property_claims = PropertyClaim.objects.filter(
-        property_claim_id=parent_claim_id
-    ).order_by("id")
-
-    if len(child_property_claims) == 0:
-        return
-    else:
-        for index, child_property_claim in enumerate(child_property_claims):
-            on_child_claim(
-                index,
-                child_property_claim,
-                PropertyClaim.objects.get(pk=parent_claim_id),
-            )
-            _traverse_child_property_claims(on_child_claim, child_property_claim.pk)
-
-
-def _get_case_property_claims(
-    goal: TopLevelNormativeGoal, strategies: QuerySet
-) -> tuple:
-    """Retrieves all the property claims associated to a goal and a list of strategies.
-
-    Args:
-        goal: Goal whose property claims we will extract.
-        strategies: Strategies whose property claims we will extract.
-
-    Returns:
-        A tuple containing parent property claims and child property claims, all sorted
-        by primary key.
-    """
-    strategy_ids: list[int] = [strategy.pk for strategy in strategies]
-
-    top_level_claim_ids: list[int] = [
-        claim.pk
-        for claim in PropertyClaim.objects.filter(
-            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-        ).order_by("id")
-    ]
-
-    child_claim_ids: list[int] = []
-    for parent_claim_id in top_level_claim_ids:
-        _traverse_child_property_claims(
-            lambda _, child, parent: child_claim_ids.append(child.pk),  # noqa: ARG005
-            parent_claim_id,
-        )
-
-    return top_level_claim_ids, sorted(child_claim_ids)
-
-
-def _update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
-    """Updates the name of a case item, given a prefix and a sequence number."""
-    case_item.name = f"{prefix}{number}"
-    case_item.save()
-
-
-def _update_sequential_identifiers(query_set: QuerySet, prefix: str):
-    """For a list of case items, it updates their name according to its order."""
-    for model_index, model in enumerate(query_set):
-        _update_item_name(model, prefix, model_index + 1)

@@ -287,6 +287,59 @@ class CaseViewTest(TestCase):
         response_get = self.client.get(reverse("case_list"))
         assert len(response_get.json()) == 0
 
+    def test_identifier_update_left_to_right(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
+            assurance_case=self.assurance_case,
+            name="G0",
+        )
+
+        first_strategy: Strategy = Strategy.objects.create(goal=goal, name="S01")
+
+        second_strategy: Strategy = Strategy.objects.create(goal=goal, name="S02")
+
+        second_strategy_claim: PropertyClaim = PropertyClaim.objects.create(
+            strategy=second_strategy, name="P1_S2"
+        )
+
+        top_level_claim: PropertyClaim = PropertyClaim.objects.create(
+            goal=goal, name="P01"
+        )
+
+        first_strategy_claim: PropertyClaim = PropertyClaim.objects.create(
+            strategy=first_strategy, name="P1_S1"
+        )
+
+        sub_claim: PropertyClaim = PropertyClaim.objects.create(
+            property_claim=top_level_claim, name="P1_P01"
+        )
+
+        response_post: HttpResponse = self.client.post(
+            reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+        )
+
+        assert response_post.status_code == 200
+
+        top_level_claim.refresh_from_db()
+        assert (
+            top_level_claim.name == "P1"
+        ), f"Claim name should be P1 instead of {top_level_claim.name}"
+
+        sub_claim.refresh_from_db()
+        assert (
+            sub_claim.name == "P1.1"
+        ), f"Sub-claim name should be P1.1 instead of {sub_claim.name}"
+
+        first_strategy_claim.refresh_from_db()
+        assert (
+            first_strategy_claim.name == "P2"
+        ), f"Claim under S1 should be P2 instead of {first_strategy_claim.name}"
+
+        second_strategy_claim.refresh_from_db()
+        assert (
+            second_strategy_claim.name == "P3"
+        ), f"Claim under S2 should be P3 instead of {second_strategy_claim.name}"
+
     def test_identifier_update_follows_order(self):
         number_of_strategies: int = 3
 
@@ -316,7 +369,7 @@ class CaseViewTest(TestCase):
             strategy.refresh_from_db()
             assert strategy.name == f"S{index + 1}"
 
-    def test_identifier_update_on_subclaims(self):
+    def test_identifier_update_on_sub_claims(self):
 
         TopLevelNormativeGoal.objects.create(**GOAL_INFO)
 
