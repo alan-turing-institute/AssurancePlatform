@@ -270,7 +270,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New</Button>
                   )}
                   {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button variant={'outline'} onClick={() => setAction('existing')} className="w-full"><Unplug className="w-4 h-4 mr-2"/>Add Existing</Button>
+                    <Button variant={'outline'} onClick={() => setAction('existing')} className="w-full"><Unplug className="w-4 h-4 mr-2"/>Reattach Element(s)</Button>
                   )}
                   {node.type !== 'context' && node.type !== 'goal' && node.type !== 'strategy' && (
                     <Button variant={'outline'} onClick={() => setAction('move')} className="w-full"><Move className="w-4 h-4 mr-2"/>Move Item</Button>

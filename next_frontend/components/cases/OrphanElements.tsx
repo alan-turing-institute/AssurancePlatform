@@ -6,7 +6,7 @@ import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
 import { addEvidenceToClaim, addPropertyClaimToNested, attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { Loader2, Trash, Trash2 } from 'lucide-react'
+import { BookOpenText, Database, FolderOpenDot, Loader2, Route, Trash, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { AlertModal } from '../modals/alertModal'
 
@@ -53,8 +53,6 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
 
     if(result.attached) {
       console.log('Orphan Attached')
-
-      //TODO: Update this to update all different element types
       let updatedAssuranceCase
 
       switch (orphan.type.toLowerCase()) {
@@ -254,7 +252,6 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
     }
   }
 
-
   useEffect(() => {
     filterOrphanElements(node.type).then(result => {
       setFilteredOrphanElements(result)
@@ -274,20 +271,23 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
               </div>
           )}
           {filteredOrphanElements.map((el: any) => (
-            <>
+            <div key={el.id}>
               <div
-                key={el.id}
                 className="p-2 rounded-md text-sm flex items-center hover:bg-indigo-500 hover:cursor-pointer"
                 onClick={() => handleOrphanSelection(el)}
               >
-                <span className="font-medium">{el.name}</span>
+                {/* <span className="font-medium">{el.name}</span> */}
+                {el.type === 'Evidence' && <Database className='w-6 h-6' />}
+                {el.type === 'Strategy' && <Route className='w-6 h-6' />}
+                {el.type === 'PropertyClaim' && <FolderOpenDot className='w-6 h-6' />}
+                {el.type === 'Context' && <BookOpenText className='w-6 h-6' />}
                 <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                   <circle cx={1} cy={1} r={1} />
                 </svg>
                 <span className="w-full truncate">{el.short_description}</span>
               </div>
               <Separator className="my-2" />
-            </>
+            </div>
           ))}
         </div>
       </ScrollArea>

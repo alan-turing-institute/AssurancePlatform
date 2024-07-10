@@ -13,13 +13,14 @@ import NodeEdit from '@/components/common/NodeEdit';
 import ActionButtons from './ActionButtons';
 
 import useStore from '@/data/store';
-import { Loader2, Unplug } from 'lucide-react';
+import { Loader2, Unplug, X } from 'lucide-react';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from 'next-themes';
 import { useToast } from '../ui/use-toast';
+import { Button } from '../ui/button';
 
 interface FlowProps {}
 
@@ -39,6 +40,7 @@ function Flow({}: FlowProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | any>(null);
   const [loading, setLoading] = useState(true);
+  const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true)
 
   const { theme } = useTheme();
   const { toast } = useToast();
@@ -201,11 +203,21 @@ function Flow({}: FlowProps) {
             notifyError={notifyError}
           />
           <NodeEdit node={selectedNode} isOpen={editOpen} setEditOpen={setEditOpen} />
-          {orphanedElements && orphanedElements.length > 0 && (
+          {orphanedElements && orphanedElements.length > 0 && showOrphanMessage && (
             <div className='absolute top-16 px-8 py-4 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm'>
-              <div className='container mx-auto flex justify-center items-center gap-2'>
-                <Unplug className='w-4 h-4'/>
-                <p>You have orphaned elements for this assurance case.</p>
+              <div className='flex justify-center items-center'>
+                <div className='container mx-auto flex justify-center items-center gap-2'>
+                  <Unplug className='w-4 h-4'/>
+                  <p>You have orphaned elements for this assurance case.</p>
+                </div>
+                <Button 
+                  variant={'ghost'} 
+                  size={'icon'}
+                  className='hover:bg-gray-400/10 dark:hover:bg-slate-900/10'
+                  onClick={() => setShowOrphanMessage(false)}
+                >
+                  <X className='w-4 h-4'/>
+                </Button>
               </div>
             </div>
           )}
