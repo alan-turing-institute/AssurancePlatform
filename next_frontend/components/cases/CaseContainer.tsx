@@ -15,7 +15,7 @@ import CaseDetails from './CaseDetails';
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
   const [loading, setLoading] = useState(true)
-  const { assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
   const [open, setOpen] = useState(false);
 
   const params = useParams()
@@ -45,7 +45,26 @@ const CaseContainer = () => {
 
     const formattedAssuranceCase = await addHiddenProp(result)
     return formattedAssuranceCase
+  }
 
+  const fetchOrphanedElements = async (id: any) => {
+    const requestOptions: RequestInit = {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    };
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/sandbox`, requestOptions);
+
+    if(response.status === 404 || response.status === 403 ) {
+      console.log('Render Not Found Page')
+      return
+    }
+
+    if(response.status === 401) return unauthorized()
+
+    const result = await response.json()
+    return result
   }
 
   useEffect(() => {
@@ -55,6 +74,12 @@ const CaseContainer = () => {
       setLoading(false)
     })
   },[])
+
+  useEffect(() => {
+    fetchOrphanedElements(caseId).then(result => {
+      setOrphanedElements(result)
+    })
+  },[assuranceCase])
 
   return (
     <>

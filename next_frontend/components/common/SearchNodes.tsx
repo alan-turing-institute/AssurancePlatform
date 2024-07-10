@@ -86,9 +86,8 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
           </div>
           <div className='max-h-[320px] overflow-y-auto'>
             {filteredNodes.map((node) => (
-              <>
+              <div key={node.id }>
               <div
-                key={node.id}
                 className="group flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
                 onClick={() => handleSelection(node.id)}
               >
@@ -101,7 +100,7 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
                 </div>
               </div>
               <Separator />
-              </>
+              </div>
             ))}
           </div>
           {/* <DialogFooter className="sm:justify-start">
