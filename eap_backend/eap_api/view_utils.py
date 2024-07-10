@@ -1,3 +1,4 @@
+import functools
 import warnings
 from typing import Any, Callable, Optional, Union, cast
 
@@ -360,9 +361,12 @@ class UpdateIdentifierUtils:
                 "E",
             )
 
-            parent_property_claims: QuerySet = PropertyClaim.objects.filter(
-                pk__in=top_level_claim_ids
-            ).order_by("id")
+            parent_property_claims: list = sorted(
+                PropertyClaim.objects.filter(pk__in=top_level_claim_ids),
+                key=functools.cmp_to_key(
+                    UpdateIdentifierUtils._compare_property_claims
+                ),
+            )
 
             UpdateIdentifierUtils._update_sequential_identifiers(
                 parent_property_claims, "P"
@@ -408,6 +412,25 @@ class UpdateIdentifierUtils:
                 )
 
     @staticmethod
+    def _compare_property_claims(
+        one_claim: PropertyClaim, another_claim: PropertyClaim
+    ) -> int:
+        ONE_CLAIM_LEFT: int = -1
+        ONE_CLAIM_RIGHT: int = 1
+        result: int = 0
+
+        if one_claim.strategy is None and another_claim.strategy is not None:
+            result = ONE_CLAIM_LEFT
+        elif one_claim.strategy is None and another_claim.strategy is None:
+            result = one_claim.pk - another_claim.pk
+        elif one_claim.strategy is not None and another_claim.strategy is None:
+            result = ONE_CLAIM_RIGHT
+        elif one_claim.strategy is not None and another_claim.strategy is not None:
+            result = one_claim.strategy.pk - another_claim.strategy.pk
+
+        return result
+
+    @staticmethod
     def _get_case_property_claims(
         goal: TopLevelNormativeGoal, strategies: QuerySet
     ) -> tuple:
@@ -422,13 +445,11 @@ class UpdateIdentifierUtils:
             by primary key.
         """
         strategy_ids: list[int] = [strategy.pk for strategy in strategies]
+        top_level_claims: QuerySet = PropertyClaim.objects.filter(
+            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
+        )
 
-        top_level_claim_ids: list[int] = [
-            claim.pk
-            for claim in PropertyClaim.objects.filter(
-                Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-            ).order_by("id")
-        ]
+        top_level_claim_ids: list[int] = [claim.pk for claim in top_level_claims]
 
         child_claim_ids: list[int] = []
         for parent_claim_id in top_level_claim_ids:
@@ -448,7 +469,7 @@ class UpdateIdentifierUtils:
         case_item.save()
 
     @staticmethod
-    def _update_sequential_identifiers(query_set: QuerySet, prefix: str):
+    def _update_sequential_identifiers(query_set: QuerySet | list, prefix: str):
         """For a list of case items, it updates their name according to its order."""
         for model_index, model in enumerate(query_set):
             UpdateIdentifierUtils._update_item_name(model, prefix, model_index + 1)
