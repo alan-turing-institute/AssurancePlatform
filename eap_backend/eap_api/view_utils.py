@@ -426,7 +426,10 @@ class UpdateIdentifierUtils:
         elif one_claim.strategy is not None and another_claim.strategy is None:
             result = ONE_CLAIM_RIGHT
         elif one_claim.strategy is not None and another_claim.strategy is not None:
-            result = one_claim.strategy.pk - another_claim.strategy.pk
+            if one_claim.strategy != another_claim.strategy:
+                result = one_claim.strategy.pk - another_claim.strategy.pk
+            else:
+                result = one_claim.pk - another_claim.pk
 
         return result
 
