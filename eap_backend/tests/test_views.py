@@ -89,6 +89,33 @@ class CaseViewTest(TestCase):
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
 
+    def test_sandbox_with_claim_and_evidence(self):
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
+        property_claim: PropertyClaim = PropertyClaim.objects.create(
+            name="P1", goal=goal
+        )
+
+        evidence: Evidence = Evidence.objects.create(name="E1")
+        evidence.property_claim.add(property_claim)
+
+        SandboxUtils.detach_property_claim(property_claim.pk, {"goal_id": goal.pk})
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+        )
+
+        assert response_get.status_code == 200
+
+        response_data: dict = response_get.json()
+
+        assert len(response_data["property_claims"]) == 1
+        property_claim_json: dict[str, Any] = response_data["property_claims"][0]
+
+        assert len(property_claim_json["evidence"]) == 1
+        evidence_json: dict[str, Any] = property_claim_json["evidence"][0]
+        assert evidence_json["id"] == evidence.pk
+        assert evidence_json["name"] == evidence.name
+
     def test_view_case_sandbox(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
         context: Context = Context.objects.create(**CONTEXT_INFO)

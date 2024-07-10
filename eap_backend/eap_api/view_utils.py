@@ -272,6 +272,10 @@ class SandboxUtils:
                 property_claim["property_claims"], "property_claims"
             )
 
+            property_claim["evidence"] = get_json_tree(
+                property_claim["evidence"], "evidence"
+            )
+
         for strategy in serialized_sandbox["strategies"]:
             strategy["property_claims"] = get_json_tree(
                 strategy["property_claims"], "property_claims"
