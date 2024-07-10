@@ -8,6 +8,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.serializers import ReturnDict
 
 from .models import (
     AssuranceCase,
@@ -31,7 +32,6 @@ from .serializers import (
     GitHubRepositorySerializer,
     GithubSocialAuthSerializer,
     PropertyClaimSerializer,
-    SandboxSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
 )
@@ -199,43 +199,6 @@ def case_list(request):
     return None
 
 
-# @csrf_exempt
-# @api_view(["GET", "POST", "PUT", "DELETE"])
-# def case_detail(request, pk):
-#     """
-#     Retrieve, update, or delete an AssuranceCase, by primary key
-#     """
-#     try:
-#         case = AssuranceCase.objects.get(pk=pk)
-#     except AssuranceCase.DoesNotExist:
-#         return HttpResponse(status=404)
-#     permissions = get_case_permissions(case, request.user)
-#     if not permissions:
-#         return HttpResponse(status=403)
-#     if request.method == "GET":
-#         serializer = AssuranceCaseSerializer(case)
-#         case_data = serializer.data
-#         goals = get_json_tree(case_data["goals"], "goals")
-#         case_data["goals"] = goals
-#         case_data["permissions"] = permissions
-#         return JsonResponse(case_data)
-#     elif request.method == "PUT":
-#         if permissions not in ["manage", "edit"]:
-#             return HttpResponse(status=403)
-#         data = JSONParser().parse(request)
-#         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse(serializer.data)
-#         return JsonResponse(serializer.errors, status=400)
-#     elif request.method == "DELETE":
-#         if permissions not in ["manage", "edit"]:
-#             return HttpResponse(status=403)
-#         case.delete()
-#         return HttpResponse(status=204)
-
-
-#     return None
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
 def case_detail(request, pk):
@@ -279,8 +242,8 @@ def case_detail(request, pk):
 def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
     try:
         assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
-        serializer = SandboxSerializer(assurance_case)
-        return JsonResponse(serializer.data)
+        serialized_sandbox: ReturnDict = SandboxUtils.serialise_sandbox(assurance_case)
+        return JsonResponse(serialized_sandbox)
     except AssuranceCase.DoesNotExist:
         return HttpResponse(status=404)
 
