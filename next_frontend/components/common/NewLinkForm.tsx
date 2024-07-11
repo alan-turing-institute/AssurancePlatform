@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -50,6 +50,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   const { setSelectedLink, setLinkToCreate, handleClose } = actions
 
+  const parentNode: any = findParentNode(nodes, node)
+
   const reset = () => {
     setLinkToCreate('')
     setSelectedLink(false)
@@ -75,7 +77,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
-    result.data.hidden = false
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
 
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
@@ -118,7 +120,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
-    result.data.hidden = false
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
 
     // Create a new strategy array by adding the new context item
     const newStrategy = [...assuranceCase.goals[0].strategies, result.data];
@@ -176,7 +178,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       return
     }
 
-    result.data.hidden = false
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
 
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
@@ -289,7 +291,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       // TODO: Rendering error
     }
 
-    result.data.hidden = false
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
 
     const added = addEvidenceToClaim(assuranceCase.goals, result.data.property_claim_id[0], result.data);
     if (!added) {
