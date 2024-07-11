@@ -256,7 +256,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   <EyeOff className="w-4 h-4" onClick={() => setToggleParentDescription(!toggleParentDescription)} />
                 )}
               </div>
-              {toggleParentDescription && <p className="text-muted-foreground">{parentNode.data.short_description}</p>}
+              {toggleParentDescription &&
+              <>
+                <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">Identifier: {parentNode.data.name}</span>
+                <p className="text-muted-foreground">{parentNode.data.short_description}
+                </p>
+              </>}
             </div>
           )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
