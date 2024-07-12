@@ -60,11 +60,12 @@ class CaseItem(models.Model):
     table.
     """
 
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, blank=True)
     short_description = models.CharField(max_length=1000)
     long_description = models.CharField(max_length=3000)
     shape = Shape
     created_date = models.DateTimeField(auto_now_add=True)
+    in_sandbox = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
@@ -125,14 +126,37 @@ class TopLevelNormativeGoal(CaseItem):
 class Context(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="context", on_delete=models.CASCADE
+        TopLevelNormativeGoal,
+        related_name="context",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="contexts",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
     )
 
 
 class Strategy(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
     goal = models.ForeignKey(
-        TopLevelNormativeGoal, related_name="strategies", on_delete=models.CASCADE
+        TopLevelNormativeGoal,
+        related_name="strategies",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+    )
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="strategies",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
     )
 
     def __str__(self):
@@ -172,6 +196,14 @@ class PropertyClaim(CaseItem):
         on_delete=models.CASCADE,
     )
 
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="property_claims",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+
     level = models.PositiveIntegerField()
 
     def save(self, *args, **kwargs):
@@ -179,12 +211,17 @@ class PropertyClaim(CaseItem):
             [bool(self.goal), bool(self.strategy), bool(self.property_claim)]
         )
 
-        if parent_count != 1:
-            msg = "A PropertyClaim should have exactly one parent."
-            raise ValueError(msg)
+        error_message: str = ""
+        if parent_count > 1:
+            error_message = "A PropertyClaim should have at most one parent."
+            raise ValueError(error_message)
+
+        if self.property_claim is not None and self.property_claim.pk == self.pk:
+            error_message = "A PropertyClaim cannot be the parent of itself."
+            raise ValueError(error_message)
 
         try:
-            parent_level = self.property_claim.level
+            parent_level = self.property_claim.level  # type:ignore[attr-defined]
         except AttributeError:
             parent_level = 0
 
@@ -194,6 +231,14 @@ class PropertyClaim(CaseItem):
 
 
 class Evidence(CaseItem):
-    URL = models.CharField(max_length=3000)
+    URL = models.CharField(max_length=3000, null=True, blank=True)
     shape = Shape.CYLINDER
     property_claim = models.ManyToManyField(PropertyClaim, related_name="evidence")
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="evidence",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )

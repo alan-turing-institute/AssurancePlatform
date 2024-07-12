@@ -18,7 +18,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/
 lib64/
 parts/
 sdist/
@@ -140,7 +140,14 @@ dmypy.json
 *.env
 DO_NOT_COMMIT
 frontend/.env
+frontend/.env.local
+frontend/next-env.d.ts
 ENV_Testing_Vars.sh
 .aider*
 
 site/site
+
+# next.js
+.next
+/.next/
+/out/

@@ -11,7 +11,7 @@ on:
       - published
 defaults:
   run:
-    working-directory: ./frontend
+    working-directory: ./_frontend
 jobs:
   test:
     runs-on: ubuntu-latest

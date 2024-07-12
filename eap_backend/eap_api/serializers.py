@@ -1,4 +1,8 @@
+from typing import cast
+
+from django.db.models.query import QuerySet
 from rest_framework import serializers
+from rest_framework.serializers import ReturnDict
 
 from .github import Github, register_social_user
 from .models import (
@@ -126,6 +130,40 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
         )
 
 
+class SandboxSerializer(serializers.ModelSerializer):
+
+    contexts = serializers.SerializerMethodField()
+    evidence = serializers.SerializerMethodField()
+    property_claims = serializers.SerializerMethodField()
+    strategies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssuranceCase
+        fields = ["contexts", "evidence", "property_claims", "strategies"]
+
+    def get_contexts(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_contexts: QuerySet = assurance_case.contexts.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        context_serializer = ContextSerializer(sandbox_contexts, many=True)
+        return cast(ReturnDict, context_serializer.data)
+
+    def get_evidence(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_evidence: QuerySet = assurance_case.evidence.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        evidence_serializer = EvidenceSerializer(sandbox_evidence, many=True)
+        return cast(ReturnDict, evidence_serializer.data)
+
+    def get_property_claims(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_property_claims: QuerySet = assurance_case.property_claims.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        property_claim_serializer = PropertyClaimSerializer(
+            sandbox_property_claims, many=True
+        )
+        return cast(ReturnDict, property_claim_serializer.data)
+
+    def get_strategies(self, assurance_case: AssuranceCase) -> ReturnDict:
+        sandbox_strategies: QuerySet = assurance_case.strategies.filter(in_sandbox=True)  # type: ignore[attr-defined]
+        strategy_serializer = StrategySerializer(sandbox_strategies, many=True)
+        return cast(ReturnDict, strategy_serializer.data)
+
+
 class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     assurance_case_id = serializers.PrimaryKeyRelatedField(
         source="assurance_case", queryset=AssuranceCase.objects.all()
@@ -150,6 +188,8 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "strategies",
         )
 
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
 
 class ContextSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -167,7 +207,10 @@ class ContextSerializer(serializers.ModelSerializer):
             "long_description",
             "created_date",
             "goal_id",
+            "in_sandbox",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
@@ -175,23 +218,27 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         source="goal",
         queryset=TopLevelNormativeGoal.objects.all(),
         required=False,
+        allow_null=True,
     )
     property_claim_id = serializers.PrimaryKeyRelatedField(
         source="property_claim",
         queryset=PropertyClaim.objects.all(),
         required=False,
+        allow_null=True,
     )
     strategy_id = serializers.PrimaryKeyRelatedField(
         source="strategy",
         queryset=Strategy.objects.all(),
         required=False,
+        allow_null=True,
     )
 
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
-    # Use SerializerMethodField to handle the possibility of property_claim being None
+    # Use SerializerMethodField to handle the possibility of property_claim
+    #  being None
     evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
@@ -210,7 +257,12 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "property_claims",
             "evidence",
             "strategy_id",
+            "in_sandbox",
         )
+
+        extra_kwargs = {
+            "name": {"allow_null": True, "required": False},
+        }
 
 
 class EvidenceSerializer(serializers.ModelSerializer):
@@ -231,7 +283,10 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "long_description",
             "URL",
             "property_claim_id",
+            "in_sandbox",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
 
 class StrategySerializer(serializers.ModelSerializer):
@@ -241,15 +296,20 @@ class StrategySerializer(serializers.ModelSerializer):
         required=False,
     )
 
+    type = serializers.CharField(default="Strategy", read_only=True)
     property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Strategy
         fields = (
             "id",
+            "type",
             "name",
             "short_description",
             "long_description",
             "goal_id",
             "property_claims",
+            "in_sandbox",
         )
+
+        extra_kwargs = {"name": {"allow_null": True, "required": False}}

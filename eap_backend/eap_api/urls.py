@@ -12,12 +12,44 @@ urlpatterns = [
     path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
+    path("cases/<int:pk>/sandbox", views.case_sandbox, name="case_sandbox"),
+    path(
+        "cases/<int:pk>/update-ids",
+        views.case_update_identifiers,
+        name="update_identifiers",
+    ),
     path("goals/", views.goal_list, name="goal_list"),
     path("goals/<int:pk>/", views.goal_detail, name="goal_detail"),
     path("contexts/", views.context_list, name="context_list"),
     path("contexts/<int:pk>/", views.context_detail, name="context_detail"),
-    path("propertyclaims/", views.property_claim_list, name="property_claim_list"),
-    path("comments/<int:assurance_case_id>/", views.comment_list, name="comment_list"),
+    path("contexts/<int:pk>/detach", views.detach_context, name="detach_context"),
+    path("contexts/<int:pk>/attach", views.attach_context, name="attach_context"),
+    path(
+        "propertyclaims/",
+        views.property_claim_list,
+        name="property_claim_list",
+    ),
+    path(
+        "propertyclaims/<int:pk>/",
+        views.property_claim_detail,
+        name="property_claim_detail",
+    ),
+    path(
+        "propertyclaims/<int:pk>/detach",
+        views.detach_property_claim,
+        name="detach_property_claim",
+    ),
+    path(
+        "propertyclaims/<int:pk>/attach",
+        views.attach_property_claim,
+        name="attach_property_claim",
+    ),
+    path(
+        "cases/<int:assurance_case_id>/comments/",
+        views.comment_list,
+        name="comment_list",
+    ),
+    path("comments/<int:pk>/", views.comment_detail, name="comment_detail"),
     path(
         "comments/<int:comment_id>/reply/",
         views.reply_to_comment,
@@ -26,13 +58,10 @@ urlpatterns = [
     path(
         "comments/<int:pk>/", views.CommentEdit.as_view(), name="comment_edit"
     ),  # Use the view class
-    path(
-        "propertyclaims/<int:pk>/",
-        views.property_claim_detail,
-        name="property_claim_detail",
-    ),
     path("evidence/", views.evidence_list, name="evidence_list"),
     path("evidence/<int:pk>/", views.evidence_detail, name="evidence_detail"),
+    path("evidence/<int:pk>/detach", views.detach_evidence, name="detach_evidence"),
+    path("evidence/<int:pk>/attach", views.attach_evidence, name="attach_evidence"),
     path(
         "parents/<str:item_type>/<int:pk>",
         views.parents,
@@ -41,6 +70,8 @@ urlpatterns = [
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
     path("strategies/", views.strategies_list, name="strategies_list"),
     path("strategies/<int:pk>/", views.strategy_detail, name="strategy_detail"),
+    path("strategies/<int:pk>/detach", views.detach_strategy, name="detach_strategy"),
+    path("strategies/<int:pk>/attach", views.attach_strategy, name="attach_strategy"),
     path("auth/github/", views.GithubSocialAuthView.as_view()),
     path(
         "users/<int:pk>/github_repositories/",

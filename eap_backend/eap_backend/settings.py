@@ -22,19 +22,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-)@nls8m9den@jbfjkee2h343^=a8#jzq+@^nweds$s#%_1ia_g"
+SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(32))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "on") == "on"
 
 # Keys needed for OAuth
 GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
-
-ALLOWED_HOSTS = ["*"]
-
+ALLOWED_HOSTS = (
+    [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
+)
 
 # Application definition
 
@@ -61,7 +61,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -104,6 +103,7 @@ TEMPLATES = [
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
+    # TODO(cgavidia): Can we use IsAuthenticated instead?
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     # "DEFAULT_PERMISSION_CLASSES": [
     #    "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
