@@ -4,15 +4,6 @@ FROM node:18-alpine AS base
 # 1. Install dependencies only when needed
 FROM base AS deps
 
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_STORAGESASTOKEN
-ARG NEXT_PUBLIC_STORAGESOURCENAME
-
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_STORAGESASTOKEN=$NEXT_PUBLIC_STORAGESASTOKEN
-ENV NEXT_PUBLIC_STORAGESOURCENAME=$NEXT_PUBLIC_STORAGESOURCENAME
-
-
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 
@@ -34,14 +25,17 @@ WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link . .
 # This will do the trick, use the corresponding env file for each environment.
-COPY --link .env.local .env.production
+COPY --link .env.local .env.local
+COPY --link .env.development .env.development
+COPY --link .env.production .env.production
+
 RUN yarn build
 
 # 3. Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
+# ENV NODE_ENV=production
 
 RUN \
   addgroup -g 1001 -S nodejs; \
