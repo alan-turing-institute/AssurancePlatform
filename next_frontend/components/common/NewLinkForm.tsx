@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode, updateSiblings } from '@/lib/case-helper'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -178,7 +178,13 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       return
     }
 
-    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    const { hidden, siblings } = findSiblingHiddenState(assuranceCase, node.data.id)
+    result.data.hidden = hidden
+
+    if(siblings && siblings.length > 0) {
+      const siblingUpdate = await updateSiblings(siblings, assuranceCase)
+      setAssuranceCase(siblingUpdate)
+    }
 
     if(node.type === 'strategy') {
       // Find the goal containing the specific strategy
