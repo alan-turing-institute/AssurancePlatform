@@ -24,7 +24,7 @@ The UK's Responsible Technology Adoption Unit (Department of Science, Innovation
 
 To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
 
-> [!WARNING]  
+> [!WARNING]
 > The TEA platform is made available as a research preview, and should not be used for any business critical tasks. Future breaking changes should be expected.
 
 To view the documentation site, please go to
@@ -77,7 +77,7 @@ Ethical Assurance framework and methodology:
 
 ## Funding Statements
 
-From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project. 
+From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project.
 
 Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
 

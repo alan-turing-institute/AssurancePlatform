@@ -1,784 +1,728 @@
 {
-  
-  "type":"AssuranceCase",
-  "name":"Accuracy (TEA-DT Natural Environment Workshop)",
-  "description":"A partial assurance case to use as a template for the TEA-DT workshop.",
-  "created_date":"2024-06-20T09:23:49.828208Z",
-  "lock_uuid":null,
-  "goals":[
+  "type": "AssuranceCase",
+  "name": "Accuracy (TEA-DT Natural Environment Workshop)",
+  "description": "A partial assurance case to use as a template for the TEA-DT workshop.",
+  "created_date": "2024-06-20T09:23:49.828208Z",
+  "lock_uuid": null,
+  "goals": [
     {
-      
-      "type":"TopLevelNormativeGoal",
-      "name":"G1",
-      "short_description":"The digital twin provides sufficiently accurate representations across all operational use cases.",
-      "long_description":"N/A",
-      "keywords":"N/A",
-      "assurance_case_id":53,
-      "context":[],
-      "property_claims":[],
-      "strategies":[
+      "type": "TopLevelNormativeGoal",
+      "name": "G1",
+      "short_description": "The digital twin provides sufficiently accurate representations across all operational use cases.",
+      "long_description": "N/A",
+      "keywords": "N/A",
+      "assurance_case_id": 53,
+      "context": [],
+      "property_claims": [],
+      "strategies": [
         {
-          
-          "name":"S1",
-          "short_description":"Argument Over Data Sources and Integration",
-          "long_description":"Argument Over Data Sources and Integration",
-          "goal_id":79,
-          "property_claims":[
+          "name": "S1",
+          "short_description": "Argument Over Data Sources and Integration",
+          "long_description": "Argument Over Data Sources and Integration",
+          "goal_id": 79,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P1",
-              "short_description":"The data used by the digital twin has sufficient quality.",
-              "long_description":"The data used by the digital twin has sufficient quality.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P1",
+              "short_description": "The data used by the digital twin has sufficient quality.",
+              "long_description": "The data used by the digital twin has sufficient quality.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.1",
-                  "short_description":"The digital twin uses data from reliable sources.",
-                  "long_description":"The digital twin uses data from reliable sources.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.1",
+                  "short_description": "The digital twin uses data from reliable sources.",
+                  "long_description": "The digital twin uses data from reliable sources.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.1.1",
-                      "short_description":"{Information source 1} produces reliable data.",
-                      "long_description":"{Information source 1} produces reliable data.",
-                      "goal_id":null,
-                      "property_claim_id":875,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.1.1",
+                      "short_description": "{Information source 1} produces reliable data.",
+                      "long_description": "{Information source 1} produces reliable data.",
+                      "goal_id": null,
+                      "property_claim_id": 875,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.1.2",
-                      "short_description":"{Information source N} produces reliable data.",
-                      "long_description":"{Information source N} produces reliable data.",
-                      "goal_id":null,
-                      "property_claim_id":875,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.1.2",
+                      "short_description": "{Information source N} produces reliable data.",
+                      "long_description": "{Information source N} produces reliable data.",
+                      "goal_id": null,
+                      "property_claim_id": 875,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.2",
-                  "short_description":"The data used by the digital twin are sufficiently complete.",
-                  "long_description":"The data used by the digital twin are sufficiently complete.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.2",
+                  "short_description": "The data used by the digital twin are sufficiently complete.",
+                  "long_description": "The data used by the digital twin are sufficiently complete.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.2.1",
-                      "short_description":"Imputation method for dealing with missingness is appropriate.",
-                      "long_description":"Imputation method for dealing with missingness is appropriate.",
-                      "goal_id":null,
-                      "property_claim_id":878,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.2.1",
+                      "short_description": "Imputation method for dealing with missingness is appropriate.",
+                      "long_description": "Imputation method for dealing with missingness is appropriate.",
+                      "goal_id": null,
+                      "property_claim_id": 878,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.2.2",
-                      "short_description":"Regular audits are conducted to ensure data completeness.",
-                      "long_description":"Regular audits are conducted to ensure data completeness.",
-                      "goal_id":null,
-                      "property_claim_id":878,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.2.2",
+                      "short_description": "Regular audits are conducted to ensure data completeness.",
+                      "long_description": "Regular audits are conducted to ensure data completeness.",
+                      "goal_id": null,
+                      "property_claim_id": 878,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.3",
-                  "short_description":"The data used by the digital twin are unique.",
-                  "long_description":"The data used by the digital twin are unique.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.3",
+                  "short_description": "The data used by the digital twin are unique.",
+                  "long_description": "The data used by the digital twin are unique.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.3.1",
-                      "short_description":"The digital twin has mechanisms to detect and prevent data redundancy.",
-                      "long_description":"The digital twin has mechanisms to detect and prevent data redundancy.",
-                      "goal_id":null,
-                      "property_claim_id":881,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.3.1",
+                      "short_description": "The digital twin has mechanisms to detect and prevent data redundancy.",
+                      "long_description": "The digital twin has mechanisms to detect and prevent data redundancy.",
+                      "goal_id": null,
+                      "property_claim_id": 881,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.4",
-                  "short_description":"The data used by the digital twin have sufficient timeliness.",
-                  "long_description":"The data used by the digital twin have sufficient timeliness.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.4",
+                  "short_description": "The data used by the digital twin have sufficient timeliness.",
+                  "long_description": "The data used by the digital twin have sufficient timeliness.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.4.1",
-                      "short_description":"The digital twin gathers data in { real-time / near real-time / just-in-time}.",
-                      "long_description":"The digital twin gathers data in { real-time / near real-time / just-in-time}.",
-                      "goal_id":null,
-                      "property_claim_id":883,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.4.1",
+                      "short_description": "The digital twin gathers data in { real-time / near real-time / just-in-time}.",
+                      "long_description": "The digital twin gathers data in { real-time / near real-time / just-in-time}.",
+                      "goal_id": null,
+                      "property_claim_id": 883,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.5",
-                  "short_description":"The data used by the digital twin are consistent.",
-                  "long_description":"The data used by the digital twin are consistent.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.5",
+                  "short_description": "The data used by the digital twin are consistent.",
+                  "long_description": "The data used by the digital twin are consistent.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.5.1",
-                      "short_description":"Data is standardised across all systems and sources used by the digital twin.",
-                      "long_description":"Data is standardised across all systems and sources used by the digital twin.",
-                      "goal_id":null,
-                      "property_claim_id":885,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.5.1",
+                      "short_description": "Data is standardised across all systems and sources used by the digital twin.",
+                      "long_description": "Data is standardised across all systems and sources used by the digital twin.",
+                      "goal_id": null,
+                      "property_claim_id": 885,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P1.6",
-                  "short_description":"The data used by the digital twin are valid.",
-                  "long_description":"The data used by the digital twin are valid.",
-                  "goal_id":null,
-                  "property_claim_id":874,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P1.6",
+                  "short_description": "The data used by the digital twin are valid.",
+                  "long_description": "The data used by the digital twin are valid.",
+                  "goal_id": null,
+                  "property_claim_id": 874,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.6.1",
-                      "short_description":"Data conforms to predefined rules, formats, and standards.",
-                      "long_description":"Data conforms to predefined rules, formats, and standards.",
-                      "goal_id":null,
-                      "property_claim_id":887,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.6.1",
+                      "short_description": "Data conforms to predefined rules, formats, and standards.",
+                      "long_description": "Data conforms to predefined rules, formats, and standards.",
+                      "goal_id": null,
+                      "property_claim_id": 887,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P1.6.2",
-                      "short_description":"The digital twin only accepts data that meets validity criteria.",
-                      "long_description":"The digital twin only accepts data that meets validity criteria.",
-                      "goal_id":null,
-                      "property_claim_id":887,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P1.6.2",
+                      "short_description": "The digital twin only accepts data that meets validity criteria.",
+                      "long_description": "The digital twin only accepts data that meets validity criteria.",
+                      "goal_id": null,
+                      "property_claim_id": 887,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":170
+              "evidence": [],
+              "strategy_id": 170
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P2",
-              "short_description":"Data integration methods are appropriate for the context of use.",
-              "long_description":"Data integration methods are appropriate for the context of use.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P2",
+              "short_description": "Data integration methods are appropriate for the context of use.",
+              "long_description": "Data integration methods are appropriate for the context of use.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P2.1",
-                  "short_description":"Data normalisation methods remove undesirable redundancy.",
-                  "long_description":"Data normalisation methods remove undesirable redundancy.",
-                  "goal_id":null,
-                  "property_claim_id":890,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P2.1",
+                  "short_description": "Data normalisation methods remove undesirable redundancy.",
+                  "long_description": "Data normalisation methods remove undesirable redundancy.",
+                  "goal_id": null,
+                  "property_claim_id": 890,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P2.2",
-                  "short_description":"Data harmonisaton methods use suitable conversion standards or ontologies.",
-                  "long_description":"Data harmonisaton methods use suitable conversion standards or ontologies.",
-                  "goal_id":null,
-                  "property_claim_id":890,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P2.2",
+                  "short_description": "Data harmonisaton methods use suitable conversion standards or ontologies.",
+                  "long_description": "Data harmonisaton methods use suitable conversion standards or ontologies.",
+                  "goal_id": null,
+                  "property_claim_id": 890,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":170
+              "evidence": [],
+              "strategy_id": 170
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P3",
-              "short_description":"Information about the data pipeline is suitably communicated.",
-              "long_description":"Information about the data pipeline is suitably communicated.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P3",
+              "short_description": "Information about the data pipeline is suitably communicated.",
+              "long_description": "Information about the data pipeline is suitably communicated.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P3.1",
-                  "short_description":"Technical documentation about the data pipeline is complete and accurate.",
-                  "long_description":"Technical documentation about the data pipeline is complete and accurate.",
-                  "goal_id":null,
-                  "property_claim_id":894,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P3.1",
+                  "short_description": "Technical documentation about the data pipeline is complete and accurate.",
+                  "long_description": "Technical documentation about the data pipeline is complete and accurate.",
+                  "goal_id": null,
+                  "property_claim_id": 894,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P3.2",
-                  "short_description":"Technical documentation about the data pipeline is accessible to all relevant parties.",
-                  "long_description":"Technical documentation about the data pipeline is accessible to all relevant parties.",
-                  "goal_id":null,
-                  "property_claim_id":894,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P3.2",
+                  "short_description": "Technical documentation about the data pipeline is accessible to all relevant parties.",
+                  "long_description": "Technical documentation about the data pipeline is accessible to all relevant parties.",
+                  "goal_id": null,
+                  "property_claim_id": 894,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":170
+              "evidence": [],
+              "strategy_id": 170
             }
           ]
         },
         {
-          
-          "name":"S2",
-          "short_description":"Argument Over Utility",
-          "long_description":"Argument Over Utility",
-          "goal_id":79,
-          "property_claims":[
+          "name": "S2",
+          "short_description": "Argument Over Utility",
+          "long_description": "Argument Over Utility",
+          "goal_id": 79,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P4",
-              "short_description":"The digital twin has sufficient utility in all intended use cases.",
-              "long_description":"The digital twin has sufficient utility in all intended use cases.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P4",
+              "short_description": "The digital twin has sufficient utility in all intended use cases.",
+              "long_description": "The digital twin has sufficient utility in all intended use cases.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.1",
-                  "short_description":"The digital twin has sufficient utility in {use case 1}.",
-                  "long_description":"The digital twin has sufficient utility in {use case 1}.",
-                  "goal_id":null,
-                  "property_claim_id":897,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P4.1",
+                  "short_description": "The digital twin has sufficient utility in {use case 1}.",
+                  "long_description": "The digital twin has sufficient utility in {use case 1}.",
+                  "goal_id": null,
+                  "property_claim_id": 897,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P4.1.1",
-                      "short_description":"The features used by the system are suitable for the physical system being modelled.",
-                      "long_description":"The features used by the system are suitable for the physical system being modelled.",
-                      "goal_id":null,
-                      "property_claim_id":898,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P4.1.1",
+                      "short_description": "The features used by the system are suitable for the physical system being modelled.",
+                      "long_description": "The features used by the system are suitable for the physical system being modelled.",
+                      "goal_id": null,
+                      "property_claim_id": 898,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P4.1.2",
-                      "short_description":"The functional outputs of the digital twin enable actionable insights.",
-                      "long_description":"The functional outputs of the digital twin enable actionable insights.",
-                      "goal_id":null,
-                      "property_claim_id":898,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P4.1.2",
+                      "short_description": "The functional outputs of the digital twin enable actionable insights.",
+                      "long_description": "The functional outputs of the digital twin enable actionable insights.",
+                      "goal_id": null,
+                      "property_claim_id": 898,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P4.1.3",
-                      "short_description":"The digital twin has sufficient utility in all intended operational conditions.",
-                      "long_description":"The digital twin has sufficient utility in all intended operational conditions.",
-                      "goal_id":null,
-                      "property_claim_id":898,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[
+                      "type": "PropertyClaim",
+                      "name": "P4.1.3",
+                      "short_description": "The digital twin has sufficient utility in all intended operational conditions.",
+                      "long_description": "The digital twin has sufficient utility in all intended operational conditions.",
+                      "goal_id": null,
+                      "property_claim_id": 898,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [
                         {
-                          
-                          "type":"PropertyClaim",
-                          "name":"P4.1.3.1",
-                          "short_description":"The digital twin provides accurate representations under normal conditions.",
-                          "long_description":"The digital twin provides accurate representations under normal conditions.",
-                          "goal_id":null,
-                          "property_claim_id":902,
-                          "level":4,
-                          "claim_type":"Property Claim",
-                          "property_claims":[],
-                          "evidence":[],
-                          "strategy_id":null
+                          "type": "PropertyClaim",
+                          "name": "P4.1.3.1",
+                          "short_description": "The digital twin provides accurate representations under normal conditions.",
+                          "long_description": "The digital twin provides accurate representations under normal conditions.",
+                          "goal_id": null,
+                          "property_claim_id": 902,
+                          "level": 4,
+                          "claim_type": "Property Claim",
+                          "property_claims": [],
+                          "evidence": [],
+                          "strategy_id": null
                         },
                         {
-                          
-                          "type":"PropertyClaim",
-                          "name":"P4.1.3.2",
-                          "short_description":"The digital twin provides accurate representations under extreme conditions.",
-                          "long_description":"The digital twin provides accurate representations under extreme conditions.",
-                          "goal_id":null,
-                          "property_claim_id":902,
-                          "level":4,
-                          "claim_type":"Property Claim",
-                          "property_claims":[],
-                          "evidence":[],
-                          "strategy_id":null
+                          "type": "PropertyClaim",
+                          "name": "P4.1.3.2",
+                          "short_description": "The digital twin provides accurate representations under extreme conditions.",
+                          "long_description": "The digital twin provides accurate representations under extreme conditions.",
+                          "goal_id": null,
+                          "property_claim_id": 902,
+                          "level": 4,
+                          "claim_type": "Property Claim",
+                          "property_claims": [],
+                          "evidence": [],
+                          "strategy_id": null
                         },
                         {
-                          
-                          "type":"PropertyClaim",
-                          "name":"P4.1.3.3",
-                          "short_description":"The digital twin provides accurate representations under transitional conditions (e.g., changing seasons).",
-                          "long_description":"The digital twin provides accurate representations under transitional conditions (e.g., changing seasons).",
-                          "goal_id":null,
-                          "property_claim_id":902,
-                          "level":4,
-                          "claim_type":"Property Claim",
-                          "property_claims":[],
-                          "evidence":[],
-                          "strategy_id":null
+                          "type": "PropertyClaim",
+                          "name": "P4.1.3.3",
+                          "short_description": "The digital twin provides accurate representations under transitional conditions (e.g., changing seasons).",
+                          "long_description": "The digital twin provides accurate representations under transitional conditions (e.g., changing seasons).",
+                          "goal_id": null,
+                          "property_claim_id": 902,
+                          "level": 4,
+                          "claim_type": "Property Claim",
+                          "property_claims": [],
+                          "evidence": [],
+                          "strategy_id": null
                         }
                       ],
-                      "evidence":[],
-                      "strategy_id":null
+                      "evidence": [],
+                      "strategy_id": null
                     },
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P4.1.4",
-                      "short_description":"The purpose of the system has been clearly formulated and documented.",
-                      "long_description":"The purpose of the system has been clearly formulated and documented.",
-                      "goal_id":null,
-                      "property_claim_id":898,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[
+                      "type": "PropertyClaim",
+                      "name": "P4.1.4",
+                      "short_description": "The purpose of the system has been clearly formulated and documented.",
+                      "long_description": "The purpose of the system has been clearly formulated and documented.",
+                      "goal_id": null,
+                      "property_claim_id": 898,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [
                         {
-                          
-                          "type":"PropertyClaim",
-                          "name":"P4.1.4.1",
-                          "short_description":"All intended operational conditions have been specified.",
-                          "long_description":"All intended operational conditions have been specified.",
-                          "goal_id":null,
-                          "property_claim_id":906,
-                          "level":4,
-                          "claim_type":"Property Claim",
-                          "property_claims":[],
-                          "evidence":[],
-                          "strategy_id":null
+                          "type": "PropertyClaim",
+                          "name": "P4.1.4.1",
+                          "short_description": "All intended operational conditions have been specified.",
+                          "long_description": "All intended operational conditions have been specified.",
+                          "goal_id": null,
+                          "property_claim_id": 906,
+                          "level": 4,
+                          "claim_type": "Property Claim",
+                          "property_claims": [],
+                          "evidence": [],
+                          "strategy_id": null
                         },
                         {
-                          
-                          "type":"PropertyClaim",
-                          "name":"P4.1.4.2",
-                          "short_description":"Limitations of the system have been clearly communicated.",
-                          "long_description":"Limitations of the system have been clearly communicated.",
-                          "goal_id":null,
-                          "property_claim_id":906,
-                          "level":4,
-                          "claim_type":"Property Claim",
-                          "property_claims":[],
-                          "evidence":[],
-                          "strategy_id":null
+                          "type": "PropertyClaim",
+                          "name": "P4.1.4.2",
+                          "short_description": "Limitations of the system have been clearly communicated.",
+                          "long_description": "Limitations of the system have been clearly communicated.",
+                          "goal_id": null,
+                          "property_claim_id": 906,
+                          "level": 4,
+                          "claim_type": "Property Claim",
+                          "property_claims": [],
+                          "evidence": [],
+                          "strategy_id": null
                         }
                       ],
-                      "evidence":[],
-                      "strategy_id":null
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P4.2",
-                  "short_description":"The digital twin has sufficient utility in {use case N}.",
-                  "long_description":"The digital twin has sufficient utility in {use case N}.",
-                  "goal_id":null,
-                  "property_claim_id":897,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P4.2",
+                  "short_description": "The digital twin has sufficient utility in {use case N}.",
+                  "long_description": "The digital twin has sufficient utility in {use case N}.",
+                  "goal_id": null,
+                  "property_claim_id": 897,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":171
+              "evidence": [],
+              "strategy_id": 171
             }
           ]
         },
         {
-          
-          "name":"S3",
-          "short_description":"Argument Over Verification and Validation",
-          "long_description":"Argument Over Verification and Validation",
-          "goal_id":79,
-          "property_claims":[
+          "name": "S3",
+          "short_description": "Argument Over Verification and Validation",
+          "long_description": "Argument Over Verification and Validation",
+          "goal_id": 79,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P5",
-              "short_description":"The digital twin's performance has been sufficiently verified.",
-              "long_description":"The digital twin's performance has been sufficiently verified.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P5",
+              "short_description": "The digital twin's performance has been sufficiently verified.",
+              "long_description": "The digital twin's performance has been sufficiently verified.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P5.1",
-                  "short_description":"All performance requirements or thresholds have been met or exceeded.",
-                  "long_description":"All performance requirements or thresholds have been met or exceeded.",
-                  "goal_id":null,
-                  "property_claim_id":911,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P5.1",
+                  "short_description": "All performance requirements or thresholds have been met or exceeded.",
+                  "long_description": "All performance requirements or thresholds have been met or exceeded.",
+                  "goal_id": null,
+                  "property_claim_id": 911,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P5.2",
-                  "short_description":"The digital twin meets the agreed upon specifications.",
-                  "long_description":"The digital twin meets the agreed upon specifications.",
-                  "goal_id":null,
-                  "property_claim_id":911,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P5.2",
+                  "short_description": "The digital twin meets the agreed upon specifications.",
+                  "long_description": "The digital twin meets the agreed upon specifications.",
+                  "goal_id": null,
+                  "property_claim_id": 911,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":172
+              "evidence": [],
+              "strategy_id": 172
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P6",
-              "short_description":"The performance of the digital twin is robust.",
-              "long_description":"The performance of the digital twin is robust.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P6",
+              "short_description": "The performance of the digital twin is robust.",
+              "long_description": "The performance of the digital twin is robust.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P6.1",
-                  "short_description":"The digital twin has been externally validated in an environment that is not sufficiently varied from the environment represented within the training data.",
-                  "long_description":"The digital twin has been externally validated in an environment that is not sufficiently varied from the environment represented within the training data.",
-                  "goal_id":null,
-                  "property_claim_id":912,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P6.1",
+                  "short_description": "The digital twin has been externally validated in an environment that is not sufficiently varied from the environment represented within the training data.",
+                  "long_description": "The digital twin has been externally validated in an environment that is not sufficiently varied from the environment represented within the training data.",
+                  "goal_id": null,
+                  "property_claim_id": 912,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":172
+              "evidence": [],
+              "strategy_id": 172
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P7",
-              "short_description":"The digital twin has sufficient performance against external benchmarks.",
-              "long_description":"The digital twin has sufficient performance against external benchmarks.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[],
-              "evidence":[],
-              "strategy_id":172
+              "type": "PropertyClaim",
+              "name": "P7",
+              "short_description": "The digital twin has sufficient performance against external benchmarks.",
+              "long_description": "The digital twin has sufficient performance against external benchmarks.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [],
+              "evidence": [],
+              "strategy_id": 172
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P8",
-              "short_description":"The digital twin's usability has been sufficiently validated.",
-              "long_description":"The digital twin's usability has been sufficiently validated.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P8",
+              "short_description": "The digital twin's usability has been sufficiently validated.",
+              "long_description": "The digital twin's usability has been sufficiently validated.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P8.1",
-                  "short_description":"The digital twin's usability has been independently validated through expert reviews and feedback.",
-                  "long_description":"The digital twin's usability has been independently validated through expert reviews and feedback.",
-                  "goal_id":null,
-                  "property_claim_id":914,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P8.1",
+                  "short_description": "The digital twin's usability has been independently validated through expert reviews and feedback.",
+                  "long_description": "The digital twin's usability has been independently validated through expert reviews and feedback.",
+                  "goal_id": null,
+                  "property_claim_id": 914,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P8.2",
-                  "short_description":"The digital twin's usability meets design specifications.",
-                  "long_description":"The digital twin's usability meets design specifications.",
-                  "goal_id":null,
-                  "property_claim_id":914,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P8.2",
+                  "short_description": "The digital twin's usability meets design specifications.",
+                  "long_description": "The digital twin's usability meets design specifications.",
+                  "goal_id": null,
+                  "property_claim_id": 914,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":172
+              "evidence": [],
+              "strategy_id": 172
             }
           ]
         },
         {
-          
-          "name":"S4",
-          "short_description":"Argument Over Sustainability",
-          "long_description":"Argument Over Sustainability",
-          "goal_id":79,
-          "property_claims":[
+          "name": "S4",
+          "short_description": "Argument Over Sustainability",
+          "long_description": "Argument Over Sustainability",
+          "goal_id": 79,
+          "property_claims": [
             {
-              
-              "type":"PropertyClaim",
-              "name":"P9",
-              "short_description":"All biases have been proportionately mitigated.",
-              "long_description":"All biases have been proportionately mitigated.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P9",
+              "short_description": "All biases have been proportionately mitigated.",
+              "long_description": "All biases have been proportionately mitigated.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P9.1",
-                  "short_description":"All relevant biases have been identified.",
-                  "long_description":"All relevant biases have been identified.",
-                  "goal_id":null,
-                  "property_claim_id":920,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P9.1",
+                  "short_description": "All relevant biases have been identified.",
+                  "long_description": "All relevant biases have been identified.",
+                  "goal_id": null,
+                  "property_claim_id": 920,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P9.2",
-                  "short_description":"Bias mitigation techniques are sufficient for identified risks.",
-                  "long_description":"Bias mitigation techniques are sufficient for identified risks.",
-                  "goal_id":null,
-                  "property_claim_id":920,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[
+                  "type": "PropertyClaim",
+                  "name": "P9.2",
+                  "short_description": "Bias mitigation techniques are sufficient for identified risks.",
+                  "long_description": "Bias mitigation techniques are sufficient for identified risks.",
+                  "goal_id": null,
+                  "property_claim_id": 920,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [
                     {
-                      
-                      "type":"PropertyClaim",
-                      "name":"P9.2.1",
-                      "short_description":"{Bias mitigation technique N} is sufficient for  {risk N}.",
-                      "long_description":"{Bias mitigation technique N} is sufficient for  {risk N}.",
-                      "goal_id":null,
-                      "property_claim_id":922,
-                      "level":3,
-                      "claim_type":"Property Claim",
-                      "property_claims":[],
-                      "evidence":[],
-                      "strategy_id":null
+                      "type": "PropertyClaim",
+                      "name": "P9.2.1",
+                      "short_description": "{Bias mitigation technique N} is sufficient for  {risk N}.",
+                      "long_description": "{Bias mitigation technique N} is sufficient for  {risk N}.",
+                      "goal_id": null,
+                      "property_claim_id": 922,
+                      "level": 3,
+                      "claim_type": "Property Claim",
+                      "property_claims": [],
+                      "evidence": [],
+                      "strategy_id": null
                     }
                   ],
-                  "evidence":[],
-                  "strategy_id":null
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":173
+              "evidence": [],
+              "strategy_id": 173
             },
             {
-              
-              "type":"PropertyClaim",
-              "name":"P10",
-              "short_description":"Unintended consequences caused by digital twin are unlikely.",
-              "long_description":"Unintended consequences caused by digital twin are unlikely.",
-              "goal_id":null,
-              "property_claim_id":null,
-              "level":1,
-              "claim_type":"Property Claim",
-              "property_claims":[
+              "type": "PropertyClaim",
+              "name": "P10",
+              "short_description": "Unintended consequences caused by digital twin are unlikely.",
+              "long_description": "Unintended consequences caused by digital twin are unlikely.",
+              "goal_id": null,
+              "property_claim_id": null,
+              "level": 1,
+              "claim_type": "Property Claim",
+              "property_claims": [
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P10.1",
-                  "short_description":"Ongoing monitoring has been established to detected undesirable model drift.",
-                  "long_description":"Ongoing monitoring has been established to detected undesirable model drift.",
-                  "goal_id":null,
-                  "property_claim_id":924,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P10.1",
+                  "short_description": "Ongoing monitoring has been established to detected undesirable model drift.",
+                  "long_description": "Ongoing monitoring has been established to detected undesirable model drift.",
+                  "goal_id": null,
+                  "property_claim_id": 924,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 },
                 {
-                  
-                  "type":"PropertyClaim",
-                  "name":"P10.2",
-                  "short_description":"Feedback mechanisms have been established to enable users to log errors or issues.",
-                  "long_description":"Feedback mechanisms have been established to enable users to log errors or issues.",
-                  "goal_id":null,
-                  "property_claim_id":924,
-                  "level":2,
-                  "claim_type":"Property Claim",
-                  "property_claims":[],
-                  "evidence":[],
-                  "strategy_id":null
+                  "type": "PropertyClaim",
+                  "name": "P10.2",
+                  "short_description": "Feedback mechanisms have been established to enable users to log errors or issues.",
+                  "long_description": "Feedback mechanisms have been established to enable users to log errors or issues.",
+                  "goal_id": null,
+                  "property_claim_id": 924,
+                  "level": 2,
+                  "claim_type": "Property Claim",
+                  "property_claims": [],
+                  "evidence": [],
+                  "strategy_id": null
                 }
               ],
-              "evidence":[],
-              "strategy_id":173
+              "evidence": [],
+              "strategy_id": 173
             }
           ]
         }
       ]
     }
   ],
-  "owner":3,
-  "edit_groups":[],
-  "view_groups":[],
-  "color_profile":"default",
-  "comments":[],
-  "permissions":"manage"
+  "owner": 3,
+  "edit_groups": [],
+  "view_groups": [],
+  "color_profile": "default",
+  "comments": [],
+  "permissions": "manage"
 }
