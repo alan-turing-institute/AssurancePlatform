@@ -1,6 +1,6 @@
 # Trustworthy and Ethical Assurance Platform
 
-![A stylised illustration of an assurance case diagram. The diagram has a hierarchical tree structure with various shapes connected by lines, representing the logical argumentation and evidence supporting the assurance claim.](site/docs/assets/images/assurance-case-large.png)
+![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](site/docs/assets/images/hero.gif)
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
@@ -20,14 +20,15 @@ ethical assurance cases, developed by researchers at the
 [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
 and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
+The UK's Responsible Technology Adoption Unit (Department of Science, Innovation, and Technology) is also a project partner.
+
 To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
+
+> [!WARNING]  
+> The TEA platform is made available as a research preview, and should not be used for any business critical tasks. Future breaking changes should be expected.
 
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
-
-### Quickstart install instructions
-
-To get started quickly with installing this platform visit the [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/) and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/) installation instructions.
 
 ## What is Trustworthy and Ethical Assurance? 🤝
 
@@ -56,6 +57,8 @@ developing, and deploying their technology or system.
 
 ## Installation Instructions 💻
 
+To get started quickly with installing this platform visit the [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/) and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/) installation instructions.
+
 The Trustworthy and Ethical Assurance application can be run locally or deployed
 on your own server or a cloud-based service (e.g. Azure). To view the different
 installation instructions, please visit our documentation site for the
@@ -77,7 +80,9 @@ Ethical Assurance framework and methodology:
 
 ## Funding Statements
 
-Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project. 
+
+Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
 
 Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
 (Grant number: TAS_PP_00040).
