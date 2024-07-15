@@ -70,13 +70,10 @@ and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platfor
 The following resources provide additional information about the Trustworthy and
 Ethical Assurance framework and methodology:
 
-- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the
-  responsible design, development, and deployment of data-driven technologies.
-  AI and Ethics.
-  [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
-- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental
-  Healthcare. The Alan Turing Institute.
-  [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+- Burr, C., Arana, S., Gould Van Praag, C., Habli, I., Kaas, M., Katell, M., Laher, S., Leslie, D., Niederer, S., Ozturk, B., Polo, N., Porter, Z., Ryan, P., Sharan, M., Solis Lemus, J. A., Strocchi, M., Westerling, K., (2024) Trustworthy and Ethical Assurance of Digital Health and Healthcare. [https://doi.org/10.5281/zenodo.10532573](https://doi.org/10.5281/zenodo.10532573)
+- Porter, Z., Habli, I., McDermid, J. et al. A principles-based ethics assurance argument pattern for AI and autonomous systems. AI Ethics 4, 593–616 (2024). [https://doi.org/10.1007/s43681-023-00297-2](https://doi.org/10.1007/s43681-023-00297-2)
+- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
 
 ## Funding Statements
 
