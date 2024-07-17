@@ -107,9 +107,6 @@ const Header = ({ setOpen }: HeaderProps) => {
       // const { nodes } = useStore();
       const node = nodes.find((n) => n.id === nodeId);
 
-      // TODO(cgavidia): Remove later
-      console.log("Node for Zoom", node);
-
       if (node) {
         const zoomLevel = 1.5; // Adjust the zoom level as needed
 
