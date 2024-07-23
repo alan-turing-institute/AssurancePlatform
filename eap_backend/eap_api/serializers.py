@@ -1,13 +1,15 @@
-from typing import cast
+import warnings
+from typing import Any, Optional, cast
 
 from django.db.models.query import QuerySet
 from rest_framework import serializers
 from rest_framework.serializers import ReturnDict
 
+from . import models
 from .github import Github, register_social_user
+from .model_utils import get_case_property_claims
 from .models import (
     AssuranceCase,
-    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -194,15 +196,10 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     def create(self, validated_data: dict) -> TopLevelNormativeGoal:
 
         assurance_case_id: int = validated_data["assurance_case"].pk
-        candidate_index: int = (
-            TopLevelNormativeGoal.objects.filter(
-                assurance_case_id=assurance_case_id
-            ).count()
-            + 1
-        )
 
-        validated_data["name"] = get_unique_name(
-            candidate_index, "G", TopLevelNormativeGoal
+        validated_data["name"] = _get_unique_name(
+            TopLevelNormativeGoal.objects.filter(assurance_case_id=assurance_case_id),
+            "G",
         )
 
         return super().create(validated_data)
@@ -230,10 +227,9 @@ class ContextSerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict):
-        candidate_index: int = (
-            Context.objects.filter(goal_id=validated_data["goal"].pk).count() + 1
+        validated_data["name"] = _get_unique_name(
+            Context.objects.filter(goal_id=validated_data["goal"].pk), "C"
         )
-        validated_data["name"] = get_unique_name(candidate_index, "C", Context)
 
         return super().create(validated_data)
 
@@ -313,6 +309,35 @@ class EvidenceSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
+    def create(self, validated_data: dict) -> Evidence:
+
+        case_id: int | None = get_case_id(validated_data["property_claim"][0])
+        if case_id is None:
+            error_message: str = "Cannot find assurance case for Evidence"
+            raise ValueError(error_message)
+
+        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
+            assurance_case_id=case_id
+        )
+
+        current_case_strategies: QuerySet = Strategy.objects.filter(
+            goal_id=current_case_goal.pk
+        )
+
+        (
+            top_level_claim_ids,
+            child_claim_ids,
+        ) = get_case_property_claims(current_case_goal, current_case_strategies)
+
+        validated_data["name"] = _get_unique_name(
+            Evidence.objects.filter(
+                property_claim__id__in=top_level_claim_ids + child_claim_ids
+            ),
+            "E",
+        )
+
+        return super().create(validated_data)
+
 
 class StrategySerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -340,20 +365,112 @@ class StrategySerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict) -> Strategy:
-        candidate_index: int = (
-            Strategy.objects.filter(goal_id=validated_data["goal"].pk).count() + 1
-        )
 
-        validated_data["name"] = get_unique_name(candidate_index, "S", Strategy)
+        validated_data["name"] = _get_unique_name(
+            Strategy.objects.filter(goal_id=validated_data["goal"].pk), "S"
+        )
         return super().create(validated_data)
 
 
-def get_unique_name(
-    candidate_index: int, name_prefix: str, model_class: type[CaseItem]
-) -> str:
-    while (
-        model_class.objects.filter(name=f"{name_prefix}{candidate_index}").count() != 0
-    ):
+def _get_unique_name(base_query_set: QuerySet, name_prefix: str) -> str:
+
+    candidate_index: int = base_query_set.count() + 1
+    while base_query_set.filter(name=f"{name_prefix}{candidate_index}").count() != 0:
         candidate_index += 1
 
     return f"{name_prefix}{candidate_index}"
+
+
+def get_type_dictionary() -> dict[str, Any]:
+    type_dictionary: dict[str, Any] = {
+        "assurance_case": {
+            "serializer": AssuranceCaseSerializer,
+            "model": AssuranceCase,
+            "children": ["goals"],
+            "fields": (
+                "name",
+                "description",
+                "lock_uuid",
+                "owner",
+                "color_profile",
+            ),
+        },
+        "goal": {
+            "serializer": TopLevelNormativeGoalSerializer,
+            "model": TopLevelNormativeGoal,
+            "children": ["context", "property_claims", "strategies"],
+            "fields": (
+                "name",
+                "short_description",
+                "long_description",
+                "keywords",
+            ),
+            "parent_types": [("assurance_case", False)],
+        },
+        "context": {
+            "serializer": ContextSerializer,
+            "model": Context,
+            "children": [],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [("goal", False)],
+        },
+        "property_claim": {
+            "serializer": PropertyClaimSerializer,
+            "model": PropertyClaim,
+            "children": ["property_claims", "evidence"],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [
+                ("goal", False),
+                ("property_claim", False),
+                ("strategy", False),
+            ],
+        },
+        "strategy": {
+            "serializer": StrategySerializer,
+            "model": Strategy,
+            "children": ["property_claims"],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [
+                ("goal", False),
+            ],
+        },
+        "evidence": {
+            "serializer": EvidenceSerializer,
+            "model": Evidence,
+            "children": [],
+            "fields": ("name", "short_description", "long_description", "URL"),
+            "parent_types": [("property_claim", True)],
+        },
+    }
+
+    # Pluralising the name of the type should be irrelevant.
+    for k, v in tuple(type_dictionary.items()):
+        type_dictionary[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
+
+    return type_dictionary
+
+
+TYPE_DICT = get_type_dictionary()
+
+
+def get_case_id(item) -> Optional[int]:
+    """Return the id of the case in which this item is. Works for all item types."""
+    # In some cases, when there's a ManyToManyField, instead of the parent item, we get
+    # an iterable that can potentially list all the parents. In that case, just pick the
+    # first.
+    if hasattr(item, "first"):
+        item = item.first()
+
+    if isinstance(item, models.AssuranceCase):
+        return item.id
+    for _k, v in TYPE_DICT.items():
+        if isinstance(item, v["model"]):
+            for parent_type, _ in v["parent_types"]:
+                parent = getattr(item, parent_type)
+                if parent is not None:
+                    return get_case_id(parent)
+    # TODO This should probably be an error raise rather than a warning, but currently
+    # there are dead items in the database without parents which hit this branch.
+    msg = f"Can't figure out the case ID of {item}."
+    warnings.warn(msg)
+    return None

@@ -985,35 +985,36 @@ class EvidenceViewTest(TestCase):
     def test_create_evidence_with_post(self):
 
         self.evidence1.delete()
+        evidence_information: dict[str, Any] = dict(EVIDENCE1_INFO_NO_ID)
+        evidence_information["name"] = "Wrong name"
 
         response_post: HttpResponse = self.client.post(
             reverse("evidence_list"),
             data=json.dumps(
-                EVIDENCE1_INFO_NO_ID | {"property_claim_id": [self.pclaim.pk]}
+                evidence_information | {"property_claim_id": [self.pclaim.pk]}
             ),
             content_type="application/json",
         )
 
         assert response_post.status_code == 201
 
-        evidence_created: Evidence = Evidence.objects.get(
-            name=EVIDENCE1_INFO_NO_ID["name"]
-        )
+        evidence_created: Evidence = Evidence.objects.get(name="E2")
         json_response = response_post.json()
 
         assert json_response["id"] == evidence_created.pk
+        assert json_response["name"] == evidence_created.name
+
         assert json_response["type"] == "Evidence"
-        assert json_response["name"] == EVIDENCE1_INFO_NO_ID["name"]
         assert (
             json_response["short_description"]
-            == EVIDENCE1_INFO_NO_ID["short_description"]
+            == evidence_information["short_description"]
         )
         assert (
             json_response["long_description"]
-            == EVIDENCE1_INFO_NO_ID["long_description"]
+            == evidence_information["long_description"]
         )
 
-        assert json_response["URL"] == EVIDENCE1_INFO_NO_ID["URL"]
+        assert json_response["URL"] == evidence_information["URL"]
         assert json_response["property_claim_id"] == [self.pclaim.pk]
 
     def test_evidence_list_view_get(self):

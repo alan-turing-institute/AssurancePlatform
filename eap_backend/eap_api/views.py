@@ -23,6 +23,7 @@ from .models import (
     TopLevelNormativeGoal,
 )
 from .serializers import (
+    TYPE_DICT,
     AssuranceCaseSerializer,
     CommentSerializer,
     ContextSerializer,
@@ -36,7 +37,6 @@ from .serializers import (
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
-    TYPE_DICT,
     SandboxUtils,
     UpdateIdentifierUtils,
     can_view_group,
