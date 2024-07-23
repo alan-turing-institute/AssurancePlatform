@@ -683,28 +683,36 @@ class ContextViewTest(TestCase):
     def test_create_context_with_post(self):
         self.context.delete()
 
+        context_information: dict[str, Any] = dict(CONTEXT_INFO)
+        context_information["name"] = "Wrong name"
+
         response_post: HttpResponse = self.client.post(
             reverse("context_list"),
-            data=json.dumps(CONTEXT_INFO),
+            data=json.dumps(context_information),
             content_type="application/json",
         )
 
         assert response_post.status_code == 201
 
-        context_created: Context = Context.objects.get(name=CONTEXT_INFO["name"])
+        context_created: Context = Context.objects.get(name="C1")
 
         json_response = response_post.json()
 
         assert json_response["id"] == context_created.pk
+        assert json_response["name"] == context_created.name
         assert json_response["type"] == "Context"
-        assert json_response["name"] == CONTEXT_INFO["name"]
-        assert json_response["short_description"] == CONTEXT_INFO["short_description"]
-        assert json_response["long_description"] == CONTEXT_INFO["long_description"]
+        assert (
+            json_response["short_description"]
+            == context_information["short_description"]
+        )
+        assert (
+            json_response["long_description"] == context_information["long_description"]
+        )
         assert (
             datetime.strptime(json_response["created_date"], "%Y-%m-%dT%H:%M:%S.%f%z")
             == context_created.created_date
         )
-        assert json_response["goal_id"] == CONTEXT_INFO["goal_id"]
+        assert json_response["goal_id"] == context_information["goal_id"]
 
     def test_context_list_view_get(self):
         response_get = self.client.get(reverse("context_list"))

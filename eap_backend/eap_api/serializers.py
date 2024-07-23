@@ -192,7 +192,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict) -> TopLevelNormativeGoal:
-        goal: TopLevelNormativeGoal = TopLevelNormativeGoal(**validated_data)
 
         assurance_case_id: int = validated_data["assurance_case"].pk
         candidate_index: int = (
@@ -202,10 +201,11 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             + 1
         )
 
-        goal.name = get_unique_name(candidate_index, "G", TopLevelNormativeGoal)
-        goal.save()
+        validated_data["name"] = get_unique_name(
+            candidate_index, "G", TopLevelNormativeGoal
+        )
 
-        return goal
+        return super().create(validated_data)
 
 
 class ContextSerializer(serializers.ModelSerializer):
@@ -228,6 +228,14 @@ class ContextSerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
+    def create(self, validated_data: dict):
+        candidate_index: int = (
+            Context.objects.filter(goal_id=validated_data["goal"].pk).count() + 1
+        )
+        validated_data["name"] = get_unique_name(candidate_index, "C", Context)
+
+        return super().create(validated_data)
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
