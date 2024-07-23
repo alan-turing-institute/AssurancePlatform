@@ -530,9 +530,12 @@ class StrategyViewTest(TestCase):
 
     def test_create_strategy_with_post(self):
 
+        strategy_information: dict[str, Any] = dict(STRATEGY_INFO)
+        strategy_information["name"] = "Wrong name"
+
         response_post: HttpResponse = self.client.post(
             reverse("strategies_list"),
-            data=json.dumps(STRATEGY_INFO),
+            data=json.dumps(strategy_information),
             content_type="application/json",
         )
 
@@ -542,14 +545,23 @@ class StrategyViewTest(TestCase):
         assert len(strategies_created) == 1
 
         current_strategy: Strategy = strategies_created[0]
+        assert current_strategy.name == "S1"
+
         json_response: dict = response_post.json()
 
         assert json_response["id"] == current_strategy.pk
+        assert json_response["name"] == current_strategy.name
+
         assert json_response["type"] == "Strategy"
 
-        assert json_response["name"] == STRATEGY_INFO["name"]
-        assert json_response["short_description"] == STRATEGY_INFO["short_description"]
-        assert json_response["long_description"] == STRATEGY_INFO["long_description"]
+        assert (
+            json_response["short_description"]
+            == strategy_information["short_description"]
+        )
+        assert (
+            json_response["long_description"]
+            == strategy_information["long_description"]
+        )
         assert json_response["goal_id"] == self.goal.pk
         assert json_response["property_claims"] == []
 

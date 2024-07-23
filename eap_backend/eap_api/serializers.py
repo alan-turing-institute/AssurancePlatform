@@ -339,6 +339,14 @@ class StrategySerializer(serializers.ModelSerializer):
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
+    def create(self, validated_data: dict) -> Strategy:
+        candidate_index: int = (
+            Strategy.objects.filter(goal_id=validated_data["goal"].pk).count() + 1
+        )
+
+        validated_data["name"] = get_unique_name(candidate_index, "S", Strategy)
+        return super().create(validated_data)
+
 
 def get_unique_name(
     candidate_index: int, name_prefix: str, model_class: type[CaseItem]
