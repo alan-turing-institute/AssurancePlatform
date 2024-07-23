@@ -7,6 +7,7 @@ from rest_framework.serializers import ReturnDict
 from .github import Github, register_social_user
 from .models import (
     AssuranceCase,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -190,6 +191,22 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
+    def create(self, validated_data: dict) -> TopLevelNormativeGoal:
+        goal: TopLevelNormativeGoal = TopLevelNormativeGoal(**validated_data)
+
+        assurance_case_id: int = validated_data["assurance_case"].pk
+        candidate_index: int = (
+            TopLevelNormativeGoal.objects.filter(
+                assurance_case_id=assurance_case_id
+            ).count()
+            + 1
+        )
+
+        goal.name = get_unique_name(candidate_index, "G", TopLevelNormativeGoal)
+        goal.save()
+
+        return goal
+
 
 class ContextSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -313,3 +330,14 @@ class StrategySerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
+
+def get_unique_name(
+    candidate_index: int, name_prefix: str, model_class: type[CaseItem]
+) -> str:
+    while (
+        model_class.objects.filter(name=f"{name_prefix}{candidate_index}").count() != 0
+    ):
+        candidate_index += 1
+
+    return f"{name_prefix}{candidate_index}"

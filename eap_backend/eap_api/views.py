@@ -279,7 +279,8 @@ def goal_list(request: HttpRequest) -> HttpResponse:
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             model_instance: TopLevelNormativeGoal = cast(
-                TopLevelNormativeGoal, serializer.save()
+                TopLevelNormativeGoal,
+                serializer.save(),
             )
 
             serialised_model = TopLevelNormativeGoalSerializer(model_instance)

@@ -459,9 +459,12 @@ class GoalViewTest(TestCase):
 
         self.goal.delete()
 
+        goal_information: dict[str, Any] = dict(GOAL_INFO)
+        goal_information["name"] = "Wrong Name"
+
         response_post: HttpResponse = self.client.post(
             reverse("goal_list"),
-            data=json.dumps(GOAL_INFO),
+            data=json.dumps(goal_information),
             content_type="application/json",
         )
 
@@ -473,9 +476,11 @@ class GoalViewTest(TestCase):
 
         json_response: dict = response_post.json()
 
+        assert json_response["name"] == "G1"
+        assert current_goal.name == json_response["name"]
+
         assert current_goal.pk == json_response["id"]
         assert json_response["type"] == "TopLevelNormativeGoal"
-        assert current_goal.name == json_response["name"]
         assert current_goal.short_description == json_response["short_description"]
         assert current_goal.long_description == json_response["long_description"]
         assert current_goal.keywords == json_response["keywords"]
@@ -687,6 +692,7 @@ class ContextViewTest(TestCase):
         assert response_post.status_code == 201
 
         context_created: Context = Context.objects.get(name=CONTEXT_INFO["name"])
+
         json_response = response_post.json()
 
         assert json_response["id"] == context_created.pk
