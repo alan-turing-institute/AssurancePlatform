@@ -7,9 +7,10 @@ from rest_framework.serializers import ReturnDict
 
 from . import models
 from .github import Github, register_social_user
-from .model_utils import get_case_property_claims
+from .model_utils import get_property_claims_by_case_id
 from .models import (
     AssuranceCase,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -285,6 +286,33 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "name": {"allow_null": True, "required": False},
         }
 
+    def create(self, validated_data: dict[str, Any]) -> PropertyClaim:
+
+        if (
+            validated_data.get("strategy") is not None
+            or validated_data.get("goal") is not None
+        ):
+            top_level_claim_ids, _ = get_property_claims_by_case_id(
+                get_case_id(PropertyClaim(**validated_data))
+            )
+            validated_data["name"] = _get_unique_name(
+                PropertyClaim.objects.filter(pk__in=top_level_claim_ids),
+                name_prefix="P",
+            )
+        elif validated_data.get("property_claim") is not None:
+            parent_property_claim: PropertyClaim | None = validated_data.get(
+                "property_claim"
+            )
+            if parent_property_claim is not None:
+                validated_data["name"] = _get_unique_name(
+                    PropertyClaim.objects.filter(
+                        property_claim_id=parent_property_claim.pk
+                    ),
+                    name_prefix=f"{parent_property_claim.name}.",
+                )
+
+        return super().create(validated_data)
+
 
 class EvidenceSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
@@ -311,23 +339,12 @@ class EvidenceSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> Evidence:
 
-        case_id: int | None = get_case_id(validated_data["property_claim"][0])
-        if case_id is None:
-            error_message: str = "Cannot find assurance case for Evidence"
-            raise ValueError(error_message)
-
-        current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
-            assurance_case_id=case_id
-        )
-
-        current_case_strategies: QuerySet = Strategy.objects.filter(
-            goal_id=current_case_goal.pk
-        )
-
         (
             top_level_claim_ids,
             child_claim_ids,
-        ) = get_case_property_claims(current_case_goal, current_case_strategies)
+        ) = get_property_claims_by_case_id(
+            case_id=get_case_id(validated_data["property_claim"][0])
+        )
 
         validated_data["name"] = _get_unique_name(
             Evidence.objects.filter(
@@ -453,7 +470,7 @@ def get_type_dictionary() -> dict[str, Any]:
 TYPE_DICT = get_type_dictionary()
 
 
-def get_case_id(item) -> Optional[int]:
+def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
     # an iterable that can potentially list all the parents. In that case, just pick the

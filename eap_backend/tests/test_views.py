@@ -761,8 +761,8 @@ class PropertyClaimViewTest(TestCase):
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
-        self.pclaim1 = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
-        self.pclaim2 = PropertyClaim.objects.create(**PROPERTYCLAIM2_INFO)
+        self.first_property_claim = PropertyClaim.objects.create(**PROPERTYCLAIM1_INFO)
+        self.second_property_claim = PropertyClaim.objects.create(**PROPERTYCLAIM2_INFO)
         self.update = {
             "short_description": "description is updated",
         }
@@ -779,14 +779,18 @@ class PropertyClaimViewTest(TestCase):
 
     def test_property_claim_detail_view_get(self):
         response_get = self.client.get(
-            reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk})
+            reverse(
+                "property_claim_detail", kwargs={"pk": self.first_property_claim.pk}
+            )
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
         response_get = self.client.get(
-            reverse("property_claim_detail", kwargs={"pk": self.pclaim2.pk})
+            reverse(
+                "property_claim_detail", kwargs={"pk": self.second_property_claim.pk}
+            )
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
@@ -795,7 +799,9 @@ class PropertyClaimViewTest(TestCase):
 
     def test_property_claim_detail_view_put(self):
         response_put = self.client.put(
-            reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk}),
+            reverse(
+                "property_claim_detail", kwargs={"pk": self.first_property_claim.pk}
+            ),
             data=json.dumps(self.update),
             content_type="application/json",
         )
@@ -806,35 +812,41 @@ class PropertyClaimViewTest(TestCase):
 
     def test_create_property_claim_with_post(self):
 
-        self.pclaim1.delete()
+        self.first_property_claim.delete()
+
+        property_claim_info: dict[str, Any] = dict(PROPERTYCLAIM1_INFO)
+        property_claim_info["name"] = "Wrong Name"
 
         response_post: HttpResponse = self.client.post(
             reverse("property_claim_list"),
-            data=json.dumps(PROPERTYCLAIM1_INFO),
+            data=json.dumps(property_claim_info),
             content_type="application/json",
         )
 
         property_claim_created: list[PropertyClaim] = list(
-            PropertyClaim.objects.filter(name=PROPERTYCLAIM1_INFO["name"])
+            PropertyClaim.objects.filter(name="P2")
         )
 
-        assert len(property_claim_created) == 1
+        assert (
+            len(property_claim_created) == 1
+        ), f"Expected 1 property claim created, found {len(property_claim_created)}"
         current_property_claim: PropertyClaim = property_claim_created[0]
 
         json_response = response_post.json()
 
         assert json_response["id"] == current_property_claim.pk
+        assert json_response["name"] == current_property_claim.name
+
         assert json_response["type"] == "PropertyClaim"
-        assert json_response["name"] == PROPERTYCLAIM1_INFO["name"]
         assert (
             json_response["short_description"]
-            == PROPERTYCLAIM1_INFO["short_description"]
+            == property_claim_info["short_description"]
         )
         assert (
-            json_response["long_description"] == PROPERTYCLAIM1_INFO["long_description"]
+            json_response["long_description"] == property_claim_info["long_description"]
         )
 
-        assert json_response["goal_id"] == PROPERTYCLAIM1_INFO["goal_id"]
+        assert json_response["goal_id"] == property_claim_info["goal_id"]
         assert json_response["property_claim_id"] is None
         assert json_response["level"] == 1
         assert json_response["claim_type"] == "Project claim"
@@ -842,20 +854,61 @@ class PropertyClaimViewTest(TestCase):
         assert json_response["evidence"] == []
         assert json_response["strategy_id"] is None
 
+    def test_create_sub_property_claim_with_post(self):
+        self.first_property_claim.delete()
+        self.second_property_claim.name = "P.1"
+        self.second_property_claim.save()
+
+        property_claim_info: dict[str, Any] = dict(PROPERTYCLAIM1_INFO)
+        property_claim_info["name"] = "Wrong Name"
+        property_claim_info["property_claim_id"] = self.second_property_claim.pk
+        property_claim_info.pop("goal_id", None)
+
+        response_post: HttpResponse = self.client.post(
+            reverse("property_claim_list"),
+            data=json.dumps(property_claim_info),
+            content_type="application/json",
+        )
+
+        expected_name: str = f"{self.second_property_claim.name}.1"
+        property_claim_created: list[PropertyClaim] = list(
+            PropertyClaim.objects.filter(name=expected_name)
+        )
+
+        assert (
+            len(property_claim_created) == 1
+        ), f"Expected 1 property claim with name {expected_name}, found {len(property_claim_created)}"
+        current_property_claim: PropertyClaim = property_claim_created[0]
+        assert current_property_claim.property_claim == self.second_property_claim
+        assert current_property_claim.strategy is None
+        assert current_property_claim.goal is None
+
+        json_response = response_post.json()
+
+        assert json_response["id"] == current_property_claim.pk
+        assert json_response["name"] == current_property_claim.name
+        assert json_response["property_claim_id"] == self.second_property_claim.pk
+        assert json_response["strategy_id"] is None
+        assert json_response["goal_id"] is None
+
     def test_property_claim_delete_with_standard_permission(self):
-        url = reverse("property_claim_detail", kwargs={"pk": self.pclaim1.pk})
+        url = reverse(
+            "property_claim_detail", kwargs={"pk": self.first_property_claim.pk}
+        )
         self.client.delete(url)
         response_get = self.client.get(reverse("property_claim_list"))
         assert len(response_get.json()) == 1
 
     def test_detach_property_claim_from_goal(self):
 
-        assert self.pclaim1 in self.goal.property_claims.all()  # type: ignore[attr-ignore]
-        assert not self.pclaim1.in_sandbox
-        assert self.pclaim1.assurance_case is None
+        assert self.first_property_claim in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.first_property_claim.in_sandbox
+        assert self.first_property_claim.assurance_case is None
 
         response_post: HttpResponse = self.client.post(
-            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            path=reverse(
+                "detach_property_claim", kwargs={"pk": self.first_property_claim.pk}
+            ),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
         )
@@ -863,14 +916,16 @@ class PropertyClaimViewTest(TestCase):
         assert response_post.status_code == 200
 
         self.goal.refresh_from_db()
-        self.pclaim1.refresh_from_db()
+        self.first_property_claim.refresh_from_db()
 
-        assert self.pclaim1 not in self.goal.property_claims.all()  # type: ignore[attr-ignore]
-        assert self.pclaim1.assurance_case == self.case
-        assert self.pclaim1.in_sandbox
+        assert self.first_property_claim not in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.first_property_claim.assurance_case == self.case
+        assert self.first_property_claim.in_sandbox
 
         response_post = self.client.post(
-            path=reverse("attach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            path=reverse(
+                "attach_property_claim", kwargs={"pk": self.first_property_claim.pk}
+            ),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
         )
@@ -878,65 +933,67 @@ class PropertyClaimViewTest(TestCase):
         assert response_post.status_code == 200
 
         self.goal.refresh_from_db()
-        self.pclaim1.refresh_from_db()
+        self.first_property_claim.refresh_from_db()
 
-        assert self.pclaim1 in self.goal.property_claims.all()  # type: ignore[attr-ignore]
-        assert self.pclaim1.assurance_case is None
-        assert not self.pclaim1.in_sandbox
+        assert self.first_property_claim in self.goal.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.first_property_claim.assurance_case is None
+        assert not self.first_property_claim.in_sandbox
 
     def test_detach_property_claim_from_property_claim(self):
 
         new_property_claim: PropertyClaim = PropertyClaim.objects.create(
-            name="P.1.1", property_claim=self.pclaim1
+            name="P.1.1", property_claim=self.first_property_claim
         )
 
-        assert new_property_claim in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim in self.first_property_claim.property_claims.all()  # type: ignore[attr-ignore]
         assert not new_property_claim.in_sandbox
-        assert self.pclaim1.assurance_case is None
+        assert self.first_property_claim.assurance_case is None
 
         response_post: HttpResponse = self.client.post(
             path=reverse("detach_property_claim", kwargs={"pk": new_property_claim.pk}),
-            data=json.dumps({"property_claim_id": self.pclaim1.pk}),
+            data=json.dumps({"property_claim_id": self.first_property_claim.pk}),
             content_type="application/json",
         )
 
         assert response_post.status_code == 200
 
         new_property_claim.refresh_from_db()
-        self.pclaim1.refresh_from_db()
+        self.first_property_claim.refresh_from_db()
 
-        assert new_property_claim not in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim not in self.first_property_claim.property_claims.all()  # type: ignore[attr-ignore]
         assert new_property_claim.assurance_case == self.case
         assert new_property_claim.in_sandbox
 
         response_post = self.client.post(
             path=reverse("attach_property_claim", kwargs={"pk": new_property_claim.pk}),
-            data=json.dumps({"property_claim_id": self.pclaim1.pk}),
+            data=json.dumps({"property_claim_id": self.first_property_claim.pk}),
             content_type="application/json",
         )
 
         assert response_post.status_code == 200
 
         new_property_claim.refresh_from_db()
-        self.pclaim1.refresh_from_db()
+        self.first_property_claim.refresh_from_db()
 
-        assert new_property_claim in self.pclaim1.property_claims.all()  # type: ignore[attr-ignore]
+        assert new_property_claim in self.first_property_claim.property_claims.all()  # type: ignore[attr-ignore]
         assert new_property_claim.assurance_case is None
         assert not new_property_claim.in_sandbox
 
     def test_detach_property_claim_from_strategy(self):
         new_strategy: Strategy = Strategy.objects.create(name="S1", goal=self.goal)
 
-        self.pclaim1.goal = None
-        self.pclaim1.strategy = new_strategy
-        self.pclaim1.save()
+        self.first_property_claim.goal = None
+        self.first_property_claim.strategy = new_strategy
+        self.first_property_claim.save()
 
-        assert self.pclaim1 in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
-        assert not self.pclaim1.in_sandbox
-        assert self.pclaim1.assurance_case is None
+        assert self.first_property_claim in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert not self.first_property_claim.in_sandbox
+        assert self.first_property_claim.assurance_case is None
 
         response_post: HttpResponse = self.client.post(
-            path=reverse("detach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            path=reverse(
+                "detach_property_claim", kwargs={"pk": self.first_property_claim.pk}
+            ),
             data=json.dumps({"strategy_id": new_strategy.pk}),
             content_type="application/json",
         )
@@ -944,14 +1001,16 @@ class PropertyClaimViewTest(TestCase):
         assert response_post.status_code == 200
 
         new_strategy.refresh_from_db()
-        self.pclaim1.refresh_from_db()
+        self.first_property_claim.refresh_from_db()
 
-        assert self.pclaim1 not in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
-        assert self.pclaim1.assurance_case == self.case
-        assert self.pclaim1.in_sandbox
+        assert self.first_property_claim not in new_strategy.property_claims.all()  # type: ignore[attr-ignore]
+        assert self.first_property_claim.assurance_case == self.case
+        assert self.first_property_claim.in_sandbox
 
         response_post = self.client.post(
-            path=reverse("attach_property_claim", kwargs={"pk": self.pclaim1.pk}),
+            path=reverse(
+                "attach_property_claim", kwargs={"pk": self.first_property_claim.pk}
+            ),
             data=json.dumps({"strategy_id": new_strategy.pk}),
             content_type="application/json",
         )

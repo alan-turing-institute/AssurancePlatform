@@ -5,13 +5,35 @@ from django.db.models.query import QuerySet
 
 from .models import (
     PropertyClaim,
+    Strategy,
     TopLevelNormativeGoal,
 )
 
 
+def get_property_claims_by_case_id(case_id: int | None) -> tuple[list[int], list[int]]:
+    if case_id is None:
+        error_message: str = "Please provide an assurance case id."
+        raise ValueError(error_message)
+
+    current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
+        assurance_case_id=case_id
+    )
+
+    current_case_strategies: QuerySet = Strategy.objects.filter(
+        goal_id=current_case_goal.pk
+    )
+
+    (
+        top_level_claim_ids,
+        child_claim_ids,
+    ) = get_case_property_claims(current_case_goal, current_case_strategies)
+
+    return top_level_claim_ids, child_claim_ids
+
+
 def get_case_property_claims(
     goal: TopLevelNormativeGoal, strategies: QuerySet
-) -> tuple:
+) -> tuple[list[int], list[int]]:
     """Retrieves all the property claims associated to a goal and a list of strategies.
 
     Args:
