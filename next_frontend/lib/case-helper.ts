@@ -589,7 +589,7 @@ export const createAssuranceCaseNode = async (
     console.log("Node Create Result", result);
 
     const data = {
-      ...newItem,
+      ...result,
       id: result.id,
     };
 
