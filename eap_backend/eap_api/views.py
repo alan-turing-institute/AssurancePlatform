@@ -23,6 +23,7 @@ from .models import (
     TopLevelNormativeGoal,
 )
 from .serializers import (
+    TYPE_DICT,
     AssuranceCaseSerializer,
     CommentSerializer,
     ContextSerializer,
@@ -36,7 +37,6 @@ from .serializers import (
     TopLevelNormativeGoalSerializer,
 )
 from .view_utils import (
-    TYPE_DICT,
     SandboxUtils,
     UpdateIdentifierUtils,
     can_view_group,
@@ -279,7 +279,8 @@ def goal_list(request: HttpRequest) -> HttpResponse:
         serializer = TopLevelNormativeGoalSerializer(data=data)
         if serializer.is_valid():
             model_instance: TopLevelNormativeGoal = cast(
-                TopLevelNormativeGoal, serializer.save()
+                TopLevelNormativeGoal,
+                serializer.save(),
             )
 
             serialised_model = TopLevelNormativeGoalSerializer(model_instance)
