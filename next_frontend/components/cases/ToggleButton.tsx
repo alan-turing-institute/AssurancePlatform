@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react'
 import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
 
 import useStore from '@/data/store';
-import { findSiblingHiddenState, toggleHiddenForChildren } from '@/lib/case-helper';
+import { findSiblingHiddenState, getChildrenHiddenStatus, toggleHiddenForChildren } from '@/lib/case-helper';
 
 interface ToggleButtonProps {
   node: any
@@ -18,6 +18,9 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
 
   useEffect(() => {
     const currentNode = nodes.find(n => n.id === node.id);
+
+    console.log('CURRENT', currentNode?.data)
+
     if (currentNode) {
         const { property_claims, strategies } = currentNode.data
 
@@ -97,90 +100,8 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     setHidden(!hidden);
   }
 
-
-  // const handleToggle = (e: any) => {
-  //   e.stopPropagation();
-
-  //   let currentNodeID = node.id;
-  //   let stack = [node];
-  //   let outgoersSet = new Set();
-  //   let connectedEdgesSet = new Set();
-  //   let allDescendantsSet = new Set();
-
-  //   if (!hidden) {
-  //       // Traverse to hide all children and their descendants
-  //       while (stack.length > 0) {
-  //           let lastNode = stack.pop();
-  //           let childNodes = getOutgoers(lastNode, nodes, edges);
-  //           let childEdges = checkTarget(
-  //               getConnectedEdges([lastNode], edges),
-  //               currentNodeID
-  //           );
-
-  //           childNodes.forEach((goer) => {
-  //               stack.push(goer);
-  //               allDescendantsSet.add(goer.id);
-  //           });
-
-  //           childEdges.forEach((edge: any) => {
-  //               connectedEdgesSet.add(edge.id);
-  //           });
-  //       }
-  //   } else {
-  //       // Identify direct children to show
-  //       let childNodes = getOutgoers(node, nodes, edges);
-  //       let childEdges = checkTarget(
-  //           getConnectedEdges([node], edges),
-  //           currentNodeID
-  //       );
-
-  //       childNodes.forEach((goer) => {
-  //           outgoersSet.add(goer.id);
-  //       });
-
-  //       childEdges.forEach((edge: any) => {
-  //           connectedEdgesSet.add(edge.id);
-  //       });
-  //   }
-
-  //   // Ensure the selected node is never hidden
-  //   outgoersSet.delete(currentNodeID);
-  //   allDescendantsSet.delete(currentNodeID);
-
-  //   const updatedNodes = nodes.map((n) => {
-  //       if (n.id === currentNodeID) {
-  //           // Ensure the selected node is always visible
-  //           return { ...n, hidden: false };
-  //       } else if (outgoersSet.has(n.id)) {
-  //           // Show direct children when toggling to show
-  //           return { ...n, hidden: false };
-  //       } else if (allDescendantsSet.has(n.id)) {
-  //           // Hide all descendants when toggling to hide
-  //           return { ...n, hidden: true };
-  //       }
-  //       return n;
-  //   });
-
-  //   const updatedEdges = edges.map((e) => {
-  //       if (connectedEdgesSet.has(e.id)) {
-  //           // Toggle visibility of edges connected to direct children or descendants
-  //           return { ...e, hidden: !hidden };
-  //       }
-  //       return e;
-  //   });
-
-  //   layoutNodes(updatedNodes, updatedEdges);
-  //   window.requestAnimationFrame(() => {
-  //       fitView();
-  //   });
-
-  //   setHidden(!hidden);
-  // }
-
   const handleToggle2 = async (e: any) => {
     e.stopPropagation()
-
-    setHidden(!hidden)
 
     const currentNode = nodes.find(n => n.id === node.id);
     if (currentNode) {
@@ -190,10 +111,12 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
 
         if(node.type === 'goal') {
           window.requestAnimationFrame(() => {
-            fitView();
+            fitView(); 
           })
         }
     }
+
+    setHidden(!hidden)
   }
 
   return (
