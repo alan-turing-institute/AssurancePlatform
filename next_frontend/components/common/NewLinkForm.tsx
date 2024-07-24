@@ -60,11 +60,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to handle creation of a context node linked to a goal */
   const handleContextAdd = async (description: string) => {
-    const identifier = await setNodeIdentifier(node, 'context')
 
     // Create a new context object to add - this should be created by calling the api
     const newContextItem = {
-      "name": `C${identifier}`,
       "short_description": description,
       "long_description": description,
       "goal_id": assuranceCase.goals[0].id,
@@ -78,6 +76,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+
+    console.log('RESULT', result)
 
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
@@ -102,11 +102,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to handle creation of a strategy node linked to a goal */
   const handleStrategyAdd = async (description: string) => {
-    const identifier = await setNodeIdentifier(node, 'strategy')
 
     // Create a new strategy object to add
     const newStrategyItem = {
-      "name": `S${identifier}`,
       "short_description": description,
       "long_description": description,
       "goal_id": assuranceCase.goals[0].id,
@@ -146,11 +144,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
   const handleClaimAdd = async (description: string) => {
-    const identifier = await setNodeIdentifier(node, 'property')
 
     // Create a new property claims object to add
     const newPropertyClaimItem: any = {
-      name: `P${identifier}`,
       short_description: description,
       long_description: description,
       claim_type: 'Property Claim',
@@ -271,13 +267,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to handle creation of a evidence node linked to a property claim */
   const handleEvidenceAdd = async (description: string, url?: string) => {
-    const identifier = await setNodeIdentifier(node, 'evidence')
 
     let property_claim_id: any = [node.data.id]
 
     // Create a new evidence object to add
     const newEvidenceItem = {
-      name: `E${identifier}`,
       short_description: description,
       long_description: description,
       URL: url,
