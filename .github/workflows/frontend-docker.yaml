@@ -21,13 +21,9 @@ jobs:
         run: |
           docker build -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:main
-        env:
-          NODE_ENV: production
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: next_frontend
         run: |
           docker build -t turingassuranceplatform/eap_frontend:develop -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
-        env:
-          NODE_ENV: development
