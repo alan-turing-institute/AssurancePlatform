@@ -1,7 +1,9 @@
 import json
 from datetime import datetime
 from typing import Any
+from unittest.mock import MagicMock, patch
 
+from django.db.models.query import QuerySet
 from django.http import HttpResponse
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -27,6 +29,7 @@ from eap_api.serializers import (
 from eap_api.view_utils import SandboxUtils
 from eap_api.views import make_case_summary, make_summary
 from rest_framework.authtoken.models import Token
+from social_core.exceptions import AuthForbidden
 
 from .constants_tests import (
     CASE1_INFO,
@@ -1514,3 +1517,91 @@ class GroupViewWithAuthTest(TestCase):
         )
         assert response_delete.status_code == 204
         assert len(EAPGroup.objects.all()) == 0
+
+
+class AccessTokenRegistrationTest(TestCase):
+    @patch("social_core.backends.github.GithubOAuth2.do_auth")
+    def test_invalid_github_token(self, mock_do_auth: MagicMock):
+
+        mock_do_auth.side_effect = AuthForbidden(backend="github")
+
+        access_token: dict[str, str] = {"access_token": "wrong-value"}
+
+        response_post: HttpResponse = self.client.post(
+            reverse("register_by_access_token", kwargs={"backend": "github"}),
+            content_type="application/json",
+            data=json.dumps(access_token),
+        )
+
+        assert (
+            response_post.status_code == 404
+        ), f"Expected status 404, but was {response_post}"
+
+        response_as_json: dict = response_post.json()
+        assert (
+            response_as_json["error_message"]
+            == "The provided access token is not valid."
+        )
+
+    @patch("social_core.backends.github.GithubOAuth2.do_auth")
+    def test_new_github_user(self, mock_do_auth: MagicMock):
+        user_email: str = "user@github.com"
+        github_user: EAPUser = EAPUser(email=user_email)
+        mock_do_auth.return_value = github_user
+
+        response_post: HttpResponse = self.client.post(
+            reverse("register_by_access_token", kwargs={"backend": "github"}),
+            content_type="application/json",
+            data=json.dumps({"access_token": "valid-token"}),
+        )
+
+        assert response_post.status_code == 200
+        response_as_json: dict = response_post.json()
+        token_key: str = response_as_json["key"]
+        assert token_key != ""
+
+        created_user_query: QuerySet = EAPUser.objects.filter(
+            email=user_email, auth_provider="github"
+        )
+
+        assert created_user_query.count() == 1
+
+        created_user: EAPUser | None = created_user_query.first()
+        assert created_user is not None
+        assert created_user.username != ""
+        assert created_user.password != ""
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_list"), HTTP_AUTHORIZATION=f"Token {token_key}"
+        )
+        assert (
+            response_get.status_code == 200
+        ), f"Expected status 200, but was {response_get}"
+
+    @patch("social_core.backends.github.GithubOAuth2.do_auth")
+    def test_returning_github_user(self, mock_do_auth: MagicMock):
+        user_email: str = "user@github.com"
+        github_user: EAPUser = EAPUser(email=user_email)
+        mock_do_auth.return_value = github_user
+
+        user_in_database: EAPUser = EAPUser.objects.create_user(
+            username="random_username",
+            email=user_email,
+            auth_provider="github",
+        )
+        user_in_database.save()
+
+        assert EAPUser.objects.all().count() == 1
+
+        response_post: HttpResponse = self.client.post(
+            reverse("register_by_access_token", kwargs={"backend": "github"}),
+            content_type="application/json",
+            data=json.dumps({"access_token": "valid-token"}),
+        )
+
+        assert response_post.status_code == 200
+        response_as_json: dict = response_post.json()
+        token_key: str = response_as_json["key"]
+        assert token_key != ""
+
+        assert EAPUser.objects.all().count() == 1

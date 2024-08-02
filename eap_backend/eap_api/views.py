@@ -1,7 +1,6 @@
 from typing import Any, cast
 
-from django.contrib.auth import login
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
@@ -9,6 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.request import HttpRequest
 from rest_framework.response import Response
 from rest_framework.serializers import ReturnDict
 from social_core.exceptions import AuthForbidden
@@ -42,6 +42,7 @@ from .serializers import (
 )
 from .view_utils import (
     SandboxUtils,
+    SocialAuthenticationUtils,
     UpdateIdentifierUtils,
     can_view_group,
     filter_by_case_id,
@@ -196,6 +197,7 @@ def case_list(request):
     """
 
     if request.method == "GET":
+
         cases = get_allowed_cases(request.user)
         serializer = AssuranceCaseSerializer(cases, many=True)
         summaries = make_case_summary(serializer.data)
@@ -718,22 +720,17 @@ def attach_strategy(request: HttpRequest, pk: int):
 @permission_classes([AllowAny])
 @psa("")
 def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG001
+
     access_token: str = request.data.get("access_token")
-    # TODO(cgavidia): Remove later.
-    print(f"{access_token=}")
+
     try:
         github_user: EAPUser = request.backend.do_auth(access_token)
-        # TODO(cgavidia) Remove later
-        # github_user.save()
-        # EAPUser.objects.get(pk=2).delete()
 
-        login(request, github_user)
+        eap_user: EAPUser = SocialAuthenticationUtils.register_social_user(
+            github_user, backend
+        )
 
-        token, _ = Token.objects.get_or_create(user=github_user)
-        # TODO(cgavidia): Remove later.
-        print(f"{github_user=}")
-        print(f"{type(github_user)=}")
-
+        token, _ = Token.objects.get_or_create(user=eap_user)
         return JsonResponse({"key": token.key}, status=200)
 
     except AuthForbidden:

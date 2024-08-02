@@ -76,6 +76,7 @@ urlpatterns = [
     path(
         "auth/<str:backend>/register-by-token/",
         views.register_by_access_token,
+        name="register_by_access_token",
     ),
     path(
         "users/<int:pk>/github_repositories/",
