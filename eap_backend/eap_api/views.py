@@ -1,14 +1,18 @@
 from typing import Any, cast
 
+from django.contrib.auth import login
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.serializers import ReturnDict
+from social_core.exceptions import AuthForbidden
+from social_django.utils import psa
 
 from .models import (
     AssuranceCase,
@@ -52,6 +56,7 @@ from .view_utils import (
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def user_list(request: HttpRequest) -> HttpResponse:
     """
     List all users, or make a new user
@@ -72,6 +77,7 @@ def user_list(request: HttpRequest) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def self_detail(request):
     """
     Retrieve, update, or delete a User by primary key
@@ -183,10 +189,12 @@ def group_detail(request, pk):
 
 @csrf_exempt
 @api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
 def case_list(request):
     """
     List all cases, or make a new case
     """
+
     if request.method == "GET":
         cases = get_allowed_cases(request.user)
         serializer = AssuranceCaseSerializer(cases, many=True)
@@ -201,6 +209,7 @@ def case_list(request):
 
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
 def case_detail(request, pk):
     """
     Retrieve, update, or delete an AssuranceCase, by primary key
@@ -239,6 +248,7 @@ def case_detail(request, pk):
 
 @csrf_exempt
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
     try:
         assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
@@ -249,6 +259,7 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def case_update_identifiers(_, pk: int):
     try:
         assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
@@ -261,6 +272,7 @@ def case_update_identifiers(_, pk: int):
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def goal_list(request: HttpRequest) -> HttpResponse:
     """
     List all goals, or make a new goal
@@ -287,10 +299,11 @@ def goal_list(request: HttpRequest) -> HttpResponse:
             return JsonResponse(serialised_model.data, status=201)
 
         return JsonResponse(serializer.errors, status=400)
-    return None
+    return HttpResponse(status=400)
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a TopLevelNormativeGoal, by primary key
@@ -325,6 +338,7 @@ def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def context_list(request: HttpRequest) -> HttpResponse:
     """
     List all contexts, or make a new context
@@ -348,6 +362,7 @@ def context_list(request: HttpRequest) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def context_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a Context, by primary key
@@ -380,6 +395,7 @@ def context_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
 
     try:
@@ -392,6 +408,7 @@ def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
 
     try:
@@ -404,6 +421,7 @@ def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def property_claim_list(request: HttpRequest) -> HttpResponse:
     """
     List all claims, or make a new claim
@@ -427,6 +445,7 @@ def property_claim_list(request: HttpRequest) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete a PropertyClaim, by primary key
@@ -464,6 +483,7 @@ def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
 
     try:
@@ -486,6 +506,7 @@ def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def attach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
@@ -506,6 +527,7 @@ def attach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def evidence_list(request: HttpRequest) -> HttpResponse:
     """
     List all evidences, or make a new evidence
@@ -529,6 +551,7 @@ def evidence_list(request: HttpRequest) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     Retrieve, update, or delete Evidence, by primary key
@@ -561,6 +584,7 @@ def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         SandboxUtils.detach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
@@ -571,6 +595,7 @@ def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def attach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         SandboxUtils.attach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
@@ -582,6 +607,7 @@ def attach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def parents(request, item_type, pk):
     """Return all the parents of an item."""
     if request.method != "GET":
@@ -599,6 +625,7 @@ def parents(request, item_type, pk):
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def strategies_list(request: HttpRequest) -> HttpResponse:
     """
     List all strategies, or make a new strategy
@@ -622,6 +649,7 @@ def strategies_list(request: HttpRequest) -> HttpResponse:
 
 
 @csrf_exempt
+@permission_classes([IsAuthenticated])
 def strategy_detail(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         strategy = Strategy.objects.get(pk=pk)
@@ -649,6 +677,7 @@ def strategy_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
     try:
         SandboxUtils.detach_strategy(strategy_id=pk)
@@ -666,6 +695,7 @@ def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
 
 @csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def attach_strategy(request: HttpRequest, pk: int):
     try:
         incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
@@ -682,6 +712,34 @@ def attach_strategy(request: HttpRequest, pk: int):
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
     return HttpResponse(status=200)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@psa("")
+def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG001
+    access_token: str = request.data.get("access_token")
+    # TODO(cgavidia): Remove later.
+    print(f"{access_token=}")
+    try:
+        github_user: EAPUser = request.backend.do_auth(access_token)
+        # TODO(cgavidia) Remove later
+        # github_user.save()
+        # EAPUser.objects.get(pk=2).delete()
+
+        login(request, github_user)
+
+        token, _ = Token.objects.get_or_create(user=github_user)
+        # TODO(cgavidia): Remove later.
+        print(f"{github_user=}")
+        print(f"{type(github_user)=}")
+
+        return JsonResponse({"key": token.key}, status=200)
+
+    except AuthForbidden:
+        return JsonResponse(
+            {"error_message": "The provided access token is not valid."}, status=404
+        )
 
 
 @permission_classes((AllowAny,))
@@ -705,6 +763,7 @@ class CommentEdit(generics.UpdateAPIView):
 
 
 @api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
 def github_repository_list(request):
     """
     GET: List all GitHub repositories for a user.
@@ -727,6 +786,7 @@ def github_repository_list(request):
 
 
 @api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
 def comment_list(request, assurance_case_id):
     """
     List all comments for an assurance case, or create a new comment.
@@ -756,6 +816,7 @@ def comment_list(request, assurance_case_id):
 
 
 @api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
 def comment_detail(request, pk):
     """
     Retrieve, update or delete a specific comment.
@@ -784,6 +845,7 @@ def comment_detail(request, pk):
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def reply_to_comment(request, comment_id):
     """
     Reply to an existing comment.

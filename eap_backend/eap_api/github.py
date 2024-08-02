@@ -24,7 +24,13 @@ class Github:
             "code": auth_token,
         }
         headers = {"Accept": "application/json"}
+
         response = requests.post(url, headers=headers, params=params)
+
+        # TODO(cgavidia): Remove later
+        print(f"{params=}")
+        print(f"{response.json()=}")
+
         response.raise_for_status()  # Will raise an error if not a 2XX response
         access_token = response.json().get("access_token")
 
@@ -49,7 +55,7 @@ class Github:
         return github_username, user_emails[0], access_token
 
 
-def register_social_user(provider, email, username):
+def register_social_user(provider, email, username) -> dict:
     filtered_user_by_email = EAPUser.objects.filter(email=email)
     if filtered_user_by_email.exists():
         if provider == filtered_user_by_email[0].auth_provider:

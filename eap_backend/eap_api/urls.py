@@ -74,6 +74,10 @@ urlpatterns = [
     path("strategies/<int:pk>/attach", views.attach_strategy, name="attach_strategy"),
     path("auth/github/", views.GithubSocialAuthView.as_view()),
     path(
+        "auth/<str:backend>/register-by-token/",
+        views.register_by_access_token,
+    ),
+    path(
         "users/<int:pk>/github_repositories/",
         views.github_repository_list,
         name="github_repository_list",

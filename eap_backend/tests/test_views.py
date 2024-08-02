@@ -45,6 +45,10 @@ from .constants_tests import (
 
 class CaseViewTest(TestCase):
     def setUp(self):
+
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         # Mock Entries to be modified and tested
         self.assurance_case: AssuranceCase = AssuranceCase.objects.create(**CASE1_INFO)
         self.update = {
@@ -67,21 +71,30 @@ class CaseViewTest(TestCase):
             reverse("case_list"),
             data=json.dumps(post_data),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_post.status_code == 201
         assert response_post.json()["name"] == post_data["name"]
         # check we now have two cases in the db
-        response_get = self.client.get(reverse("case_list"))
-        assert len(response_get.json()) == 2
+        response_get = self.client.get(
+            reverse("case_list"), HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        assert (
+            len(response_get.json()) == 2
+        ), f"Expected 2 cases, but got {response_get}"
 
     def test_case_list_view_get(self):
-        response_get = self.client.get(reverse("case_list"))
+        response_get = self.client.get(
+            reverse("case_list"),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
+        )
         assert response_get.status_code == 200
         assert response_get.json() == make_case_summary(self.serializer.data)
 
     def test_case_detail_view_get(self):
         response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
@@ -101,7 +114,8 @@ class CaseViewTest(TestCase):
         SandboxUtils.detach_property_claim(property_claim.pk, {"goal_id": goal.pk})
 
         response_get: HttpResponse = self.client.get(
-            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_get.status_code == 200
@@ -136,7 +150,8 @@ class CaseViewTest(TestCase):
         )
 
         response_get: HttpResponse = self.client.get(
-            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_get.status_code == 200
@@ -157,7 +172,8 @@ class CaseViewTest(TestCase):
         SandboxUtils.detach_strategy(strategy.pk)
 
         response_get: HttpResponse = self.client.get(
-            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_sandbox", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_get.status_code == 200
@@ -235,7 +251,8 @@ class CaseViewTest(TestCase):
         SandboxUtils.attach_strategy(detached_strategy.pk, {"goal_id": goal.pk})
 
         response_get: HttpResponse = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_get.status_code == 200
@@ -279,10 +296,13 @@ class CaseViewTest(TestCase):
         )
 
         response_get: HttpResponse = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
-        assert response_get.status_code == 200
+        assert (
+            response_get.status_code == 200
+        ), f"Expected status 200 but was {response_get}"
 
         response_data: dict = response_get.json()
         goals_from_response: list = response_data["goals"]
@@ -303,16 +323,26 @@ class CaseViewTest(TestCase):
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
             data=json.dumps(self.update),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_put.status_code == 200
         assert response_put.json()["name"] == self.update["name"]
 
     def test_case_delete_with_standard_permission(self):
         url = reverse("case_detail", kwargs={"pk": self.assurance_case.pk})
-        self.client.delete(url)
+        response_delete = self.client.delete(
+            url, HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        assert (
+            response_delete.status_code == 204
+        ), f"Expected status 204, but was {response_delete}"
 
-        response_get = self.client.get(reverse("case_list"))
-        assert len(response_get.json()) == 0
+        response_get = self.client.get(
+            reverse("case_list"), HTTP_AUTHORIZATION=f"Token {self.token.key}"
+        )
+        assert (
+            len(response_get.json()) == 0
+        ), f"Expected empty response, but was {response_get.json()}"
 
     def test_identifier_update_left_to_right(self):
         goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
@@ -343,6 +373,7 @@ class CaseViewTest(TestCase):
         response_post: HttpResponse = self.client.post(
             reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -388,6 +419,7 @@ class CaseViewTest(TestCase):
         response_post: HttpResponse = self.client.post(
             reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -413,6 +445,7 @@ class CaseViewTest(TestCase):
         post_response: HttpResponse = self.client.post(
             reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert post_response.status_code == 200
@@ -432,6 +465,7 @@ class CaseViewTest(TestCase):
         response_post: HttpResponse = self.client.post(
             reverse("update_identifiers", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -522,6 +556,9 @@ class GoalViewTest(TestCase):
 
 class StrategyViewTest(TestCase):
     def setUp(self):
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         self.assurance_case: AssuranceCase = AssuranceCase.objects.create(**CASE1_INFO)
 
         self.goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.create(
@@ -599,9 +636,12 @@ class StrategyViewTest(TestCase):
         response_post: HttpResponse = self.client.post(
             path=reverse("detach_strategy", kwargs={"pk": strategy.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
-        assert response_post.status_code == 200
+        assert (
+            response_post.status_code == 200
+        ), f"Expected status 200, but was {response_post}"
 
         strategy.refresh_from_db()
 
@@ -621,9 +661,10 @@ class StrategyViewTest(TestCase):
             path=reverse("attach_strategy", kwargs={"pk": detached_strategy.pk}),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
-        assert response_post.status_code == 200
+        assert response_post.status_code == 200, f"Expected 200 but was {response_post}"
 
         detached_strategy.refresh_from_db()
 
@@ -634,6 +675,9 @@ class StrategyViewTest(TestCase):
 
 class ContextViewTest(TestCase):
     def setUp(self):
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
@@ -652,13 +696,17 @@ class ContextViewTest(TestCase):
         response_get: HttpResponse = self.client.get(
             path,
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
-        assert response_get.status_code == 405
+        assert (
+            response_get.status_code == 405
+        ), f"Expected status 405, but was {response_get}"
 
         response_post: HttpResponse = self.client.post(
             path,
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -679,6 +727,7 @@ class ContextViewTest(TestCase):
             reverse("attach_context", kwargs={"pk": detached_context.pk}),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -758,6 +807,10 @@ class ContextViewTest(TestCase):
 
 class PropertyClaimViewTest(TestCase):
     def setUp(self):
+
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
@@ -911,6 +964,7 @@ class PropertyClaimViewTest(TestCase):
             ),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
         assert response_post.status_code == 200
@@ -928,6 +982,7 @@ class PropertyClaimViewTest(TestCase):
             ),
             data=json.dumps({"goal_id": self.goal.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
         assert response_post.status_code == 200
@@ -953,6 +1008,7 @@ class PropertyClaimViewTest(TestCase):
             path=reverse("detach_property_claim", kwargs={"pk": new_property_claim.pk}),
             data=json.dumps({"property_claim_id": self.first_property_claim.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
         assert response_post.status_code == 200
@@ -968,6 +1024,7 @@ class PropertyClaimViewTest(TestCase):
             path=reverse("attach_property_claim", kwargs={"pk": new_property_claim.pk}),
             data=json.dumps({"property_claim_id": self.first_property_claim.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
         assert response_post.status_code == 200
@@ -996,9 +1053,12 @@ class PropertyClaimViewTest(TestCase):
             ),
             data=json.dumps({"strategy_id": new_strategy.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
-        assert response_post.status_code == 200
+        assert (
+            response_post.status_code == 200
+        ), f"Expected status 200, but was {response_post}"
 
         new_strategy.refresh_from_db()
         self.first_property_claim.refresh_from_db()
@@ -1013,13 +1073,19 @@ class PropertyClaimViewTest(TestCase):
             ),
             data=json.dumps({"strategy_id": new_strategy.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token}",
         )
 
-        assert response_post.status_code == 200
+        assert (
+            response_post.status_code == 200
+        ), f"Expected status 200, but was {response_post}"
 
 
 class EvidenceViewTest(TestCase):
     def setUp(self):
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
@@ -1126,9 +1192,12 @@ class EvidenceViewTest(TestCase):
             path=reverse("detach_evidence", kwargs={"pk": self.evidence1.pk}),
             data=json.dumps({"property_claim_id": self.pclaim.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
-        assert response_post.status_code == 200
+        assert (
+            response_post.status_code == 200
+        ), f"Expected status 200, but was {response_post}"
 
         self.evidence1.refresh_from_db()
 
@@ -1147,6 +1216,7 @@ class EvidenceViewTest(TestCase):
             path=reverse("attach_evidence", kwargs={"pk": detached_evidence.pk}),
             data=json.dumps({"property_claim_id": self.pclaim.pk}),
             content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
 
         assert response_post.status_code == 200
@@ -1161,6 +1231,9 @@ class EvidenceViewTest(TestCase):
 
 class FullCaseDetailViewTest(TestCase):
     def setUp(self):
+        user: EAPUser = EAPUser.objects.create(**USER1_INFO)
+        self.token, _ = Token.objects.get_or_create(user=user)
+
         # Mock Entries to be modified and tested
         self.case = AssuranceCase.objects.create(**CASE1_INFO)
         self.goal = TopLevelNormativeGoal.objects.create(**GOAL_INFO)
@@ -1179,14 +1252,18 @@ class FullCaseDetailViewTest(TestCase):
 
     def test_full_case_detail_view_get(self):
         response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.case.pk})
+            reverse("case_detail", kwargs={"pk": self.case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
-        assert response_get.status_code == 200
+        assert (
+            response_get.status_code == 200
+        ), f"Expected status 200 but was {response_get}"
         response_data = response_get.json()
         serializer_data = self.serializer.data[0]
         assert response_data["name"] == serializer_data["name"]
         response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.case.pk})
+            reverse("case_detail", kwargs={"pk": self.case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_get.status_code == 200
         response_data = response_get.json()
@@ -1202,6 +1279,7 @@ class UserViewNoAuthTest(TestCase):
     def setUp(self):
         # Mock Entries to be modified and tested
         self.user = EAPUser.objects.create(**USER1_INFO)
+
         self.update = {
             "username": "user1_updated",
             "password": "password is updated",
@@ -1246,7 +1324,9 @@ class UserViewNoAuthTest(TestCase):
         response_get = self.client.put(
             reverse("user_detail", kwargs={"pk": self.user.pk})
         )
-        assert response_get.status_code == 403
+        assert (
+            response_get.status_code == 403
+        ), f"Expected status 403, but was {response_get}"
 
     def test_user_detail_view_delete(self):
         # Shouldn't be able to do this without being logged in!
@@ -1322,7 +1402,9 @@ class GroupViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         # shouldn't be possible - no logged in user to assign as owner
-        assert response_post.status_code == 400
+        assert (
+            response_post.status_code == 400
+        ), f"Expected status 400, but was {response_post}"
 
     def test_group_list_view_get(self):
         response_get = self.client.get(
