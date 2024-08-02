@@ -24,13 +24,7 @@ class Github:
             "code": auth_token,
         }
         headers = {"Accept": "application/json"}
-
         response = requests.post(url, headers=headers, params=params)
-
-        # TODO(cgavidia): Remove later
-        print(f"{params=}")
-        print(f"{response.json()=}")
-
         response.raise_for_status()  # Will raise an error if not a 2XX response
         access_token = response.json().get("access_token")
 
