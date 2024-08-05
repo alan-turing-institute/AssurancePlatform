@@ -15,61 +15,36 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-      // // Check For Existing User
-      // const res = await fetch(`${process.env.API_URL}/auth/check-user`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ email: user.email }),
-      // });
 
-      //// Check if you need to login or register
-      // if (res.ok) {
-      //   const data = await res.json();
+      // Send GitHub Token to Endpoint
+      // api/register-by-access-token/social/github/
 
-      //   if (data.exists) {
-      //     // User exists, log them in
-      //     const loginRes = await fetch(`${process.env.API_URL}/auth/login`, {
-      //       method: 'POST',
-      //       headers: {
-      //         'Content-Type': 'application/json',
-      //       },
-      //       body: JSON.stringify({ email: user.email, githubId: profile.id }),
-      //     });
+      const gitHubToken = {
+        access_token: account?.access_token
+      }
 
-      //     if (loginRes.ok) {
-      //       const loginData = await loginRes.json();
-      //       user.accessToken = loginData.token;
-      //       return true;
-      //     } else {
-      //       return false;
-      //     }
-      //   } else {
-      //     // User does not exist, register them
-      //     const registerRes = await fetch(`${process.env.API_URL}/auth/register`, {
-      //       method: 'POST',
-      //       headers: {
-      //         'Content-Type': 'application/json',
-      //       },
-      //       body: JSON.stringify({ email: user.email, githubId: profile.id }),
-      //     });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_UR}/api/register-by-access-token/social/github/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gitHubToken)
+      })
 
-      //     if (registerRes.ok) {
-      //       const registerData = await registerRes.json();
-      //       user.accessToken = registerData.token;
-      //       return true;
-      //     } else {
-      //       return false;
-      //     }
-      //   }
-      // } else {
-      //   return false;
-      // }
+      if(response.ok) {
+        const result = await response.json()
+        console.log('Result', result)
+
+        // pass the token to user so it can be added to the session
+        user.accessToken = result.token;
+
+        return true
+      }
+
       return true
     },
     async redirect({ url, baseUrl }) {
-      return 'http://localhost:3000/dashboard'
+      return `${process.env.NEXTAUTH_URL}/dashboard`
     },
     async session({ session, user, token }) {
         // Include access_token in the session

@@ -287,6 +287,8 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
               </h2>
             </div>
 
+            {data?.user?.name}
+
             <div className="flex justify-end gap-x-4 self-stretch lg:gap-x-6">
               <div className="flex items-center gap-x-4 lg:gap-x-6">
                 <button type="button" className="-m-2.5 p-2.5 text-foreground hover:text-foreground/80">
