@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ModalProvider } from "@/providers/modal-provider";
 import { Toaster } from "@/components/ui/toaster"
+import { authOptions } from "@/lib/authOptions";
+import { getServerSession } from "next-auth";
+import SessionProvider from "@/providers/session-provider";
 
 export const fontSans = FontSans({
   subsets: ["latin"],
@@ -16,28 +19,32 @@ export const metadata: Metadata = {
   description: "Platform for generating assurance cases",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en">
       <body className={cn(
           "min-h-screen bg-background font-sans antialiased",
           fontSans.variable
         )}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-             <ModalProvider />
-            {children}
+          <SessionProvider session={session}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <ModalProvider />
+              {children}
+              <Toaster />
+            </ThemeProvider>
             <Toaster />
-          </ThemeProvider>
-          <Toaster />
+          </SessionProvider>
       </body>
     </html>
   );
