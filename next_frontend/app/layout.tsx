@@ -41,6 +41,7 @@ export default async function RootLayout({
             >
               <ModalProvider />
               {children}
+              test
               <Toaster />
             </ThemeProvider>
             <Toaster />
