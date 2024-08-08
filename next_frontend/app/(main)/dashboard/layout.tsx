@@ -38,7 +38,6 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
 
   useEffect(() => {
     console.log('Token', token)
-    // if(!token) router.push('/login')
     if(token) return
 
     if(data?.user && token === null) {
@@ -360,7 +359,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   </Transition>
                 </Menu> */}
 
-                {/* {data?.user?.name} */}
+                {data?.user?.name}
                 <LogoutButton />
               </div>
             </div>
