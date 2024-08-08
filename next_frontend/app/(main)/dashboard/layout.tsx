@@ -45,7 +45,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
     } else if (!data?.user || token === null) {
       router.push('/login')
     }
-  },[])
+  },[token])
 
   return (
     <>
