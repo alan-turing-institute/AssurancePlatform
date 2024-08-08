@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ModalProvider } from "@/providers/modal-provider";
 import { Toaster } from "@/components/ui/toaster"
-import { authOptions } from "@/lib/authOptions";
-import { getServerSession } from "next-auth";
-import SessionProvider from "@/providers/session-provider";
+// import { authOptions } from "@/lib/authOptions";
+// import { getServerSession } from "next-auth";
+// import SessionProvider from "@/providers/session-provider";
 
 export const fontSans = FontSans({
   subsets: ["latin"],
@@ -24,7 +24,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
+  // const session = await getServerSession(authOptions);
 
   return (
     <html lang="en">
@@ -32,7 +32,7 @@ export default async function RootLayout({
           "min-h-screen bg-background font-sans antialiased",
           fontSans.variable
         )}>
-          <SessionProvider session={session}>
+          {/* <SessionProvider session={session}> */}
             <ThemeProvider
               attribute="class"
               defaultTheme="system"
@@ -44,7 +44,7 @@ export default async function RootLayout({
               <Toaster />
             </ThemeProvider>
             <Toaster />
-          </SessionProvider>
+          {/* </SessionProvider> */}
       </body>
     </html>
   );
