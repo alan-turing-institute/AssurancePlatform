@@ -25,8 +25,8 @@ WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link . .
 # This will do the trick, use the corresponding env file for each environment.
-COPY --link .env.local .env.local
-COPY --link .env.production .env.production
+COPY --link .env.local .env.production
+# COPY --link .env.production .env.production
 
 RUN yarn build
 
