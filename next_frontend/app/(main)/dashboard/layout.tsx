@@ -34,17 +34,18 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
 
   const [token, setToken] = useLoginToken();
 
-  const { data } = useSession()
+  // const { data } = useSession()
 
   useEffect(() => {
     console.log('Token', token)
+    if(!token) router.push('/login')
     if(token) return
 
-    if(data?.user && token === null) {
-      setToken(data?.accessToken);
-    } else if (!data?.user || token === null) {
-      router.push('/login')
-    }
+    // if(data?.user && token === null) {
+    //   setToken(data?.accessToken);
+    // } else if (!data?.user || token === null) {
+    //   router.push('/login')
+    // }
   },[])
 
   return (
@@ -359,7 +360,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   </Transition>
                 </Menu> */}
 
-                {data?.user?.name}
+                {/* {data?.user?.name} */}
                 <LogoutButton />
               </div>
             </div>
