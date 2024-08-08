@@ -36,16 +36,26 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
 
   const { data } = useSession()
 
+  // useEffect(() => {
+  //   console.log('Token', token)
+  //   if(token) return
+
+  //   if(data?.user && token === null) {
+  //     setToken(data?.accessToken);
+  //   } else if (!data?.user || token === null) {
+  //     router.push('/login')
+  //   }
+  // },[token])
+
   useEffect(() => {
     console.log('Token', token)
-    if(token) return
 
-    if(data?.user && token === null) {
-      setToken(data?.accessToken);
-    } else if (!data?.user || token === null) {
+    if (!token && data?.user) {
+      setToken(data.accessToken);
+    } else if (!data?.user || !token) {
       router.push('/login')
     }
-  },[token])
+  }, [token, data, router])
 
   return (
     <>
