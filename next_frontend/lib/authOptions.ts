@@ -19,24 +19,24 @@ export const authOptions: NextAuthOptions = {
       // Send GitHub Token to Endpoint
       // api/register-by-access-token/social/github/
 
-      const gitHubToken = {
-        access_token: account?.access_token
+      const payload = {
+        "access_token": account?.access_token
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_UR}/api/register-by-access-token/social/github/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/github/register-by-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(gitHubToken)
+        body: JSON.stringify(payload)
       })
 
       if(response.ok) {
         const result = await response.json()
-        console.log('Result', result)
 
         // pass the token to user so it can be added to the session
-        user.accessToken = result.token;
+        user.accessToken = result.key;
+        user.provider = account?.provider
 
         return true
       }
@@ -49,16 +49,15 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user, token }) {
         // Include access_token in the session
         session.accessToken = token.accessToken;
+        session.provider = token.provider
         return session;
     },
     async jwt({ token, user, account, profile, isNewUser }) {
         // Initial sign-in
         if (account && user) {
-            token.accessToken = account.access_token;
+            token.accessToken = user.accessToken;
+            token.provider = user.provider
         }
-        // if (user) {
-        //   token.accessToken = user.accessToken;
-        // }
         return token;
     },
   }
