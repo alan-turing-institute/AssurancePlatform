@@ -1,6 +1,6 @@
 'use client'
 
-import { FolderX, TriangleAlert } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
 import React from 'react'
 
 const SharedWithMePage = () => {

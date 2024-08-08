@@ -4,7 +4,7 @@ import CaseList from '@/components/cases/CaseList'
 import NoCasesFound from '@/components/cases/NoCasesFound'
 import { useLoginToken } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+// import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
@@ -17,7 +17,7 @@ const Dashboard = () => {
 
   const [token] = useLoginToken();
   const router = useRouter()
-  const { data } = useSession()
+  // const { data } = useSession()
 
   const fetchAssuranceCases = async (token: any) => {
     var myHeaders = new Headers();
