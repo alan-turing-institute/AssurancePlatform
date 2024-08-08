@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional, Union, cast
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+from django.utils.crypto import get_random_string
 from rest_framework.serializers import ReturnDict
 
 from .model_utils import (
@@ -15,6 +16,7 @@ from .models import (
     CaseItem,
     Context,
     EAPGroup,
+    EAPUser,
     Evidence,
     PropertyClaim,
     Strategy,
@@ -351,6 +353,36 @@ class UpdateIdentifierUtils:
         """For a list of case items, it updates their name according to its order."""
         for model_index, model in enumerate(query_set):
             UpdateIdentifierUtils._update_item_name(model, prefix, model_index + 1)
+
+
+class SocialAuthenticationUtils:
+    @staticmethod
+    def register_social_user(social_user: EAPUser, auth_provider: str) -> EAPUser:
+        matching_users: QuerySet = EAPUser.objects.filter(
+            email=social_user.email, auth_provider=auth_provider
+        )
+
+        if matching_users.count() == 0:
+            username_length: int = 15
+            password_length: int = 45
+
+            new_github_user: EAPUser = EAPUser.objects.create_user(
+                username=get_random_string(username_length),
+                email=social_user.email,
+                auth_provider=auth_provider,
+            )
+            new_github_user.set_password(get_random_string(password_length))
+            new_github_user.save()
+
+            return new_github_user
+
+        elif matching_users.count() == 1:
+            return cast(EAPUser, matching_users.first())
+        else:
+            error_message: str = (
+                f"{matching_users.count()} accounts for email {social_user.email} and provider {auth_provider}"
+            )
+            raise Exception(error_message)
 
 
 def filter_by_case_id(items, request):
