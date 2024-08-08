@@ -14,6 +14,10 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,8 +32,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(32))
 DEBUG = os.environ.get("DEBUG", "on") == "on"
 
 # Keys needed for OAuth
-GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
-GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+SOCIAL_AUTH_GITHUB_KEY: str | None = os.environ.get("GITHUB_CLIENT_ID")
+SOCIAL_AUTH_GITHUB_SECRET: str | None = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
 ALLOWED_HOSTS = (
@@ -39,24 +43,25 @@ ALLOWED_HOSTS = (
 # Application definition
 
 INSTALLED_APPS = [
+    "allauth",
+    "allauth.socialaccount",
+    "allauth.account",
+    "corsheaders",
     "eap_api.apps.ApiConfig",
+    "eap_backend",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sites",
     "django.contrib.staticfiles",
+    "rest_auth",
+    "rest_auth.registration",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_auth",
-    "django.contrib.sites",
-    "allauth",
-    "allauth.socialaccount",
-    "allauth.account",
-    "rest_auth.registration",
-    "corsheaders",
-    "eap_backend",
-    # "frontend.apps.FrontendConfig"
+    "rest_social_auth",
+    "social_django",
 ]
 
 MIDDLEWARE = [
@@ -200,8 +205,9 @@ AUTH_USER_MODEL = "eap_api.EAPUser"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
+    "django.contrib.auth.backends.ModelBackend",
+    "social_core.backends.github.GithubOAuth2",
 )
 
 SITE_ID = 1
