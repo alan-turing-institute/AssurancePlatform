@@ -34,7 +34,8 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
 
   const [token, setToken] = useLoginToken();
 
-  const { data } = useSession()
+  // const { data } = useSession()
+  const { data, status } = useSession()
 
   // useEffect(() => {
   //   console.log('Token', token)
@@ -48,14 +49,17 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
   // },[token])
 
   useEffect(() => {
-    console.log('Token', token)
+    // Check if the session is still loading
+    if (status === 'loading') return;
+
+    console.log('Token', token);
 
     if (!token && data?.user) {
       setToken(data.accessToken);
     } else if (!data?.user || !token) {
-      router.push('/login')
+      router.push('/login');
     }
-  }, [token, data, router])
+  }, [token, data, status, router]);
 
   return (
     <>
