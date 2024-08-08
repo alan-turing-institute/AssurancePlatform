@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
         "access_token": account?.access_token
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/github/register-by-token/`, {
+      const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/github/register-by-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
