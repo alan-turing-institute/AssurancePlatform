@@ -4,13 +4,13 @@ import { useEnforceLogin, useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import React, { useCallback } from 'react'
 import { Button } from '../ui/button';
-// import { signOut, useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 
 const LogoutButton = () => {
   // useEnforceLogin();
   const [token, setToken] = useLoginToken();
   const router = useRouter()
-  // const { data } = useSession()
+  const { data } = useSession()
 
   const handleLogout = async () => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
@@ -23,9 +23,9 @@ const LogoutButton = () => {
     if(response.status === 200) {
       setToken(null);
 
-      // if(data?.provider === 'github') {
-      //   signOut()
-      // }
+      if(data?.provider === 'github') {
+        signOut()
+      }
 
       router.push('/login')
     }
