@@ -5,7 +5,7 @@ export const authOptions: NextAuthOptions = {
   // Secret for Next-auth, without this JWT encryption/decryption won't work
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
-  
+
   // Configure one or more authentication providers
   providers: [
     GithubProvider({
