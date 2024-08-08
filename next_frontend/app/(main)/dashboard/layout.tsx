@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Dialog, Menu, Transition } from '@headlessui/react'
 import {
   Bars3Icon,
@@ -19,6 +19,8 @@ import { Toaster } from "@/components/ui/sonner"
 import FeedbackBanner from '@/components/FeedbackBanner'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { useLoginToken } from '@/hooks/useAuth'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -28,6 +30,22 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname();
   const pageName = pathname === '/' ? 'assurance cases' : pathname.split('/')[1]
+  const router = useRouter()
+
+  const [token, setToken] = useLoginToken();
+
+  const { data } = useSession()
+
+  useEffect(() => {
+    console.log('Token', token)
+    if(token) return
+
+    if(data?.user && token === null) {
+      setToken(data?.accessToken);
+    } else if (!data?.user || token === null) {
+      router.push('/login')
+    }
+  },[])
 
   return (
     <>
@@ -341,6 +359,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                   </Transition>
                 </Menu> */}
 
+                {data?.user?.name}
                 <LogoutButton />
               </div>
             </div>

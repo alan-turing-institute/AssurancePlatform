@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { signIn } from 'next-auth/react';
 
 const formSchema = z.object({
   username: z.string().min(2).max(50),
@@ -156,8 +157,8 @@ const SignInForm = () => {
               <span className="text-sm font-semibold leading-6">Google</span>
             </a>
 
-            <a
-              href="#"
+            <button
+              onClick={() => signIn('github')}
               className="flex w-full items-center justify-center gap-3 rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-800 hover:bg-foreground/10 focus-visible:ring-transparent"
             >
               <svg className="h-5 w-5 fill-[#24292F] dark:fill-[#FFFFFF]" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
@@ -168,7 +169,7 @@ const SignInForm = () => {
                 />
               </svg>
               <span className="text-sm font-semibold leading-6">GitHub</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>

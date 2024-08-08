@@ -4,6 +4,7 @@ import CaseList from '@/components/cases/CaseList'
 import NoCasesFound from '@/components/cases/NoCasesFound'
 import { useLoginToken } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
@@ -16,6 +17,7 @@ const Dashboard = () => {
 
   const [token] = useLoginToken();
   const router = useRouter()
+  const { data } = useSession()
 
   const fetchAssuranceCases = async (token: any) => {
     var myHeaders = new Headers();
@@ -31,6 +33,7 @@ const Dashboard = () => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
 
     if(response.status === 401) {
+      console.log('Invalid Token')
       localStorage.removeItem('token')
       router.push('login')
     }
@@ -40,7 +43,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     if(token === null) {
-      router.push('login')
+      // console.log('No token found')
+      // router.push('login')
     } else {
       setIsLoggedIn(token != null);
       fetchAssuranceCases(token).then(result => {
@@ -48,7 +52,7 @@ const Dashboard = () => {
         setLoading(false)
       })
     }
-  },[])
+  },[token])
 
   return isLoggedIn ? (
     <>
