@@ -99,6 +99,7 @@ import React, { useEffect, useState } from 'react'
 const Dashboard = () => {
   const [assuranceCases, setAssuranceCases] = useState([])
   const [loading, setLoading] = useState(true)
+  const [tokenChecked, setTokenChecked] = useState(false) // New state to ensure token check is complete
 
   const [token] = useLoginToken();
   const router = useRouter()
@@ -120,8 +121,8 @@ const Dashboard = () => {
 
       if(response.status === 401) {
         console.log('Invalid Token')
-        // localStorage.removeItem('token')
-        // router.push('login')
+        localStorage.removeItem('token')
+        router.push('login')
         return;
       }
 
@@ -129,7 +130,7 @@ const Dashboard = () => {
       return result;
     } catch (error) {
       console.error("Failed to fetch assurance cases:", error);
-      // router.push('login');
+      router.push('login');
     }
   }
 
@@ -143,9 +144,14 @@ const Dashboard = () => {
       })
     } else {
       console.log('No valid token')
-      router.push('login');
+      if (tokenChecked) {
+        router.push('login');
+      }
     }
-  }, [token, router])
+
+    // Set token check to complete
+    setTokenChecked(true);
+  }, [token, router, tokenChecked])
 
   return (
     <>
