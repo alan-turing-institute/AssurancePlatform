@@ -13,11 +13,12 @@ const LogoutButton = () => {
   const { data } = useSession()
 
   const handleLogout = async () => {
+    const storedToken = token || localStorage.getItem('token');
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${storedToken}`,
       },
     })
     if(response.status === 200) {
@@ -27,7 +28,7 @@ const LogoutButton = () => {
         signOut()
       }
 
-      router.push('/login')
+      // router.push('/login')
     }
   }
 
