@@ -52,17 +52,22 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
     if (status === 'loading') return; // Wait until session loading is complete
 
     const storedToken = token || localStorage.getItem('token'); // Check if token is already set or stored in local storage
+    console.log('storedToken', storedToken)
 
     if (!storedToken) {
       // If no token in state or local storage, try to set it from session data
       if (data?.user && data.accessToken) {
+        console.log('Set token from Session')
         setToken(data.accessToken); // Set the token from session data
+        return
       } else {
         // If no session token either, redirect to login
         router.push('/login');
       }
     } else {
+      console.log('Set token from local storage')
       setToken(storedToken); // Ensure the token is set if it exists in local storage
+      return
     }
   }, [status, data, token, router, setToken]);
 
