@@ -55,7 +55,6 @@ const Dashboard = () => {
         setLoading(false)
       })
     } else {
-      console.log('No valid token')
       if (tokenChecked) {
         router.push('login');
       }
