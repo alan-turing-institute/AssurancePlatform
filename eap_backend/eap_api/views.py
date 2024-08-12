@@ -42,6 +42,7 @@ from .serializers import (
 )
 from .view_utils import (
     SandboxUtils,
+    ShareAssuranceCaseUtils,
     SocialAuthenticationUtils,
     UpdateIdentifierUtils,
     can_view_group,
@@ -273,32 +274,15 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
         for share_request in request.data
     ]
 
+    read_only_group: EAPGroup = ShareAssuranceCaseUtils.get_read_only_group(
+        assurance_case
+    )
+
     for user_to_share, read_only in share_requests:
         if read_only:
-            owner_view_group_name: str = (
-                f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
-            )
+            read_only_group.member.add(user_to_share)
 
-            view_groups = assurance_case.view_groups.filter(
-                owner=assurance_case.owner, name=owner_view_group_name
-            )
-
-            if view_groups.count() == 0:
-                view_group: EAPGroup = EAPGroup.objects.create(
-                    owner=assurance_case.owner, name=owner_view_group_name
-                )
-                view_group.member.add(user_to_share)
-                assurance_case.view_groups.add(view_group)
-                assurance_case.save()
-            elif view_groups.count() == 1:
-                view_group = cast(EAPGroup, view_groups.first())
-                view_group.member.add(user_to_share)
-                view_group.save()
-            else:
-                return JsonResponse(
-                    {"message": "Cannot locate the corresponding group"}, status=400
-                )
-
+    read_only_group.save()
     return HttpResponse(status=200)
 
 
