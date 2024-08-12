@@ -42,10 +42,14 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    fetchAssuranceCases(token).then(result => {
-      setAssuranceCases(result)
-      setLoading(false)
-    })
+    if(token) {
+      fetchAssuranceCases(token).then(result => {
+        setAssuranceCases(result)
+        setLoading(false)
+      })
+    } else {
+      console.log('No valid token')
+    }
     // if(token === null) {
     //   // console.log('No token found')
     //   // router.push('login')
