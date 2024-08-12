@@ -120,8 +120,8 @@ const Dashboard = () => {
 
       if(response.status === 401) {
         console.log('Invalid Token')
-        localStorage.removeItem('token')
-        router.push('login')
+        // localStorage.removeItem('token')
+        // router.push('login')
         return;
       }
 
@@ -129,7 +129,7 @@ const Dashboard = () => {
       return result;
     } catch (error) {
       console.error("Failed to fetch assurance cases:", error);
-      router.push('login');
+      // router.push('login');
     }
   }
 
