@@ -1677,5 +1677,6 @@ class ShareAssuranceCaseViewTest(TestCase):
         assert view_group_query.count() == 1
 
         view_group: EAPGroup = cast(EAPGroup, view_group_query.first())
+        assert view_group.member.count() == 2
         assert self.tea_user in view_group.member.all()
         assert another_tea_user in view_group.member.all()

@@ -385,6 +385,36 @@ class SocialAuthenticationUtils:
             raise Exception(error_message)
 
 
+class ShareAssuranceCaseUtils:
+    @staticmethod
+    def get_read_only_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        view_group: EAPGroup | None = None
+        owner_view_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
+        )
+
+        view_groups = assurance_case.view_groups.filter(
+            owner=assurance_case.owner, name=owner_view_group_name
+        )
+
+        if view_groups.count() == 0:
+            view_group = EAPGroup.objects.create(
+                owner=assurance_case.owner, name=owner_view_group_name
+            )
+            assurance_case.view_groups.add(view_group)
+            assurance_case.save()
+        elif view_groups.count() == 1:
+            view_group = cast(EAPGroup, view_groups.first())
+        else:
+            error_message: str = (
+                f"Found {view_groups.count()} read only groups for case {assurance_case.pk}"
+            )
+            raise ValueError(error_message)
+
+        return view_group
+
+
 def filter_by_case_id(items, request):
     """Filter an iterable of case items, based on whether they are in the case specified
     in the request query string.
