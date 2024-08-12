@@ -12,7 +12,7 @@ const Dashboard = () => {
   // const assuranceCases = await fetchAssuranceCases()
 
   const [assuranceCases, setAssuranceCases] = useState([])
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
   const [loading, setLoading] = useState(true)
 
   const [token] = useLoginToken();
@@ -42,16 +42,20 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    if(token === null) {
-      // console.log('No token found')
-      // router.push('login')
-    } else {
-      setIsLoggedIn(token != null);
-      fetchAssuranceCases(token).then(result => {
-        setAssuranceCases(result)
-        setLoading(false)
-      })
-    }
+    fetchAssuranceCases(token).then(result => {
+      setAssuranceCases(result)
+      setLoading(false)
+    })
+    // if(token === null) {
+    //   // console.log('No token found')
+    //   // router.push('login')
+    // } else {
+    //   // setIsLoggedIn(token != null);
+    //   fetchAssuranceCases(token).then(result => {
+    //     setAssuranceCases(result)
+    //     setLoading(false)
+    //   })
+    // }
   },[token])
 
   return isLoggedIn ? (
