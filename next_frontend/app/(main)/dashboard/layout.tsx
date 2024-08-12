@@ -51,25 +51,22 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
   useEffect(() => {
     if (status === 'loading') return; // Wait until session loading is complete
 
-    const storedToken = token || localStorage.getItem('token'); // Check if token is already set or stored in local storage
-    console.log('storedToken', storedToken)
+    const storedToken = localStorage.getItem('token'); // Check local storage for token
 
-    if (!storedToken) {
-      // If no token in state or local storage, try to set it from session data
-      if (data?.user && data.accessToken) {
-        console.log('Set token from Session')
-        setToken(data.accessToken); // Set the token from session data
-        return
-      } else {
-        // If no session token either, redirect to login
-        router.push('/login');
-      }
+    if (storedToken) {
+      setToken(storedToken); // Set token from local storage if available
+    } else if (data?.user && data.accessToken) {
+      setToken(data.accessToken); // Set token from session data
+      localStorage.setItem('token', data.accessToken); // Store token in local storage
     } else {
-      console.log('Set token from local storage')
-      setToken(storedToken); // Ensure the token is set if it exists in local storage
-      return
+      router.push('/login'); // Redirect to login if no token found
     }
-  }, [status, data, token, router, setToken]);
+  }, [status, data, router]);
+
+  // Ensure component doesn't render until token is set
+  if (!token) {
+    return null; // Render nothing or a loading state until token is set
+  }
 
   return (
     <>
