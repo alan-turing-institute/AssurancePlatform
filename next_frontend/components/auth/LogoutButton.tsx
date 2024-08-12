@@ -28,7 +28,7 @@ const LogoutButton = () => {
         signOut()
       }
 
-      // router.push('/login')
+      router.push('/login')
     }
   }
 
