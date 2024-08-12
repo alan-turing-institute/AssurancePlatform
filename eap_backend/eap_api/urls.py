@@ -13,6 +13,7 @@ urlpatterns = [
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
     path("cases/<int:pk>/sandbox", views.case_sandbox, name="case_sandbox"),
+    path("cases/<int:pk>/sharedwith", views.share_case_with, name="share_case_with"),
     path(
         "cases/<int:pk>/update-ids",
         views.case_update_identifiers,

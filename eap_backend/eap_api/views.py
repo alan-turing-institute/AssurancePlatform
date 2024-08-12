@@ -260,6 +260,48 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
         return HttpResponse(status=404)
 
 
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
+    assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
+    if assurance_case.owner != request.user:
+        return HttpResponse(status=403)
+
+    share_requests: list[tuple[EAPUser, bool]] = [
+        (EAPUser.objects.get(email=share_request["email"]), share_request["read_only"])
+        for share_request in request.data
+    ]
+
+    for user_to_share, read_only in share_requests:
+        if read_only:
+            owner_view_group_name: str = (
+                f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
+            )
+
+            view_groups = assurance_case.view_groups.filter(
+                owner=assurance_case.owner, name=owner_view_group_name
+            )
+
+            if view_groups.count() == 0:
+                view_group: EAPGroup = EAPGroup.objects.create(
+                    owner=assurance_case.owner, name=owner_view_group_name
+                )
+                view_group.member.add(user_to_share)
+                assurance_case.view_groups.add(view_group)
+                assurance_case.save()
+            elif view_groups.count() == 1:
+                view_group = cast(EAPGroup, view_groups.first())
+                view_group.member.add(user_to_share)
+                view_group.save()
+            else:
+                return JsonResponse(
+                    {"message": "Cannot locate the corresponding group"}, status=400
+                )
+
+    return HttpResponse(status=200)
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def case_update_identifiers(_, pk: int):

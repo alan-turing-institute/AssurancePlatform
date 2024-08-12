@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from django.db.models.query import QuerySet
@@ -1605,3 +1605,77 @@ class AccessTokenRegistrationTest(TestCase):
         assert token_key != ""
 
         assert EAPUser.objects.all().count() == 1
+
+
+class ShareAssuranceCaseViewTest(TestCase):
+    def setUp(self) -> None:
+        self.case_owner: EAPUser = EAPUser.objects.create(
+            username="owner", email="owner@tea.turing.ac.uk"
+        )
+        self.assurance_case: AssuranceCase = AssuranceCase.objects.create(
+            name="Assurance Case", owner=self.case_owner
+        )
+
+        self.tea_user: EAPUser = EAPUser.objects.create(
+            username="user", email="user@tea.turing.ac.uk"
+        )
+
+    def test_unauthorised_share_case(self):
+
+        user_token, _ = Token.objects.get_or_create(user=self.tea_user)
+
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": self.tea_user.email}]),
+            HTTP_AUTHORIZATION=f"Token {user_token.key}",
+        )
+
+        assert (
+            response_post.status_code == 403
+        ), f"Expected a 403 response, but it was {response_post}"
+
+    def test_authorised_share_case_read_only(self):
+        owner_token, _ = Token.objects.get_or_create(user=self.case_owner)
+
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": self.tea_user.email, "read_only": True}]),
+            HTTP_AUTHORIZATION=f"Token {owner_token.key}",
+        )
+
+        assert (
+            response_post.status_code == 200
+        ), f"Expected a 200 response, but it was {response_post}"
+
+        self.assurance_case.refresh_from_db()
+        expected_read_only_group: str = (
+            f"owner-case-{self.assurance_case.pk}-view-group"
+        )
+
+        view_group_query: QuerySet = self.assurance_case.view_groups.filter(
+            owner=self.case_owner,
+            name=expected_read_only_group,
+        )
+        assert (
+            view_group_query.count() == 1
+        ), f"Expected one view group. Saved {self.assurance_case.view_groups.all().first()}"
+
+        another_tea_user: EAPUser = EAPUser.objects.create(
+            username="person", email="person@tea.turing.ac.uk"
+        )
+
+        response_post = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": another_tea_user.email, "read_only": True}]),
+            HTTP_AUTHORIZATION=f"Token {owner_token.key}",
+        )
+
+        self.assurance_case.refresh_from_db()
+        assert view_group_query.count() == 1
+
+        view_group: EAPGroup = cast(EAPGroup, view_group_query.first())
+        assert self.tea_user in view_group.member.all()
+        assert another_tea_user in view_group.member.all()
