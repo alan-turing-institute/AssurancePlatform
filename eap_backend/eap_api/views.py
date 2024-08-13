@@ -262,42 +262,46 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
 
 
 @csrf_exempt
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
     assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
     if assurance_case.owner != request.user:
         return HttpResponse(status=403)
 
-    view_additions: list[EAPUser] = []
-    view_removals: list[EAPUser] = []
-    edit_additions: list[EAPUser] = []
-    edit_removals: list[EAPUser] = []
+    if request.method == "GET":
+        case_users: dict = ShareAssuranceCaseUtils.get_case_permissions(assurance_case)
+        return JsonResponse(case_users)
+    elif request.method == "POST":
 
-    for share_request in request.data:
-        user: EAPUser = EAPUser.objects.get(email=share_request["email"])
-        if "view" in share_request and share_request["view"]:
-            view_additions.append(user)
-        elif "view" in share_request and not share_request["view"]:
-            view_removals.append(user)
-        elif "edit" in share_request and share_request["edit"]:
-            edit_additions.append(user)
-        elif "edit" in share_request and not share_request["edit"]:
-            edit_removals.append(user)
+        view_additions, view_removals, edit_additions, edit_removals = [], [], [], []
 
-    ShareAssuranceCaseUtils.add_and_remove_from_group(
-        group=ShareAssuranceCaseUtils.get_view_group(assurance_case),
-        add=view_additions,
-        remove=view_removals,
-    )
+        for share_request in request.data:
+            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+            if "view" in share_request and share_request["view"]:
+                view_additions.append(user)
+            elif "view" in share_request and not share_request["view"]:
+                view_removals.append(user)
+            elif "edit" in share_request and share_request["edit"]:
+                edit_additions.append(user)
+            elif "edit" in share_request and not share_request["edit"]:
+                edit_removals.append(user)
 
-    ShareAssuranceCaseUtils.add_and_remove_from_group(
-        group=ShareAssuranceCaseUtils.get_edit_group(assurance_case),
-        add=edit_additions,
-        remove=edit_removals,
-    )
+        ShareAssuranceCaseUtils.add_and_remove_from_group(
+            group=ShareAssuranceCaseUtils.get_view_group(assurance_case),
+            add=view_additions,
+            remove=view_removals,
+        )
 
-    return HttpResponse(status=200)
+        ShareAssuranceCaseUtils.add_and_remove_from_group(
+            group=ShareAssuranceCaseUtils.get_edit_group(assurance_case),
+            add=edit_additions,
+            remove=edit_removals,
+        )
+
+        return HttpResponse(status=200)
+
+    return HttpResponse(status=400)
 
 
 @api_view(["POST"])

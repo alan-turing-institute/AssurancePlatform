@@ -1811,3 +1811,45 @@ class ShareAssuranceCaseViewTest(TestCase):
         self.assurance_case.refresh_from_db()
         assert self.tea_user not in self.view_group_query.first().member.all()
         assert self.another_tea_user not in self.edit_group_query.first().member.all()
+
+    def test_retrieve_users_for_case(self):
+        ShareAssuranceCaseUtils.get_view_group(self.assurance_case).member.add(
+            self.tea_user
+        )
+        ShareAssuranceCaseUtils.get_edit_group(self.assurance_case).member.add(
+            self.another_tea_user
+        )
+        self.assurance_case.save()
+
+        response_get: HttpResponse = self.client.get(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+
+        assert (
+            response_get.status_code == 403
+        ), f"Expected status 403 but was {response_get}"
+
+        response_get = self.client.get(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert response_get.status_code == 200
+        response_body: dict[str, list[dict]] = response_get.json()
+
+        users_with_view: list[dict] = response_body["view"]
+        assert len(users_with_view) == 1, f"Expected two entries, got {users_with_view}"
+        assert users_with_view[0] == {
+            "id": self.tea_user.pk,
+            "email": self.tea_user.email,
+        }
+
+        users_with_edit: list[dict] = response_body["edit"]
+        assert len(users_with_edit) == 1, f"Expected two entries, got {users_with_edit}"
+        assert users_with_edit[0] == {
+            "id": self.another_tea_user.pk,
+            "email": self.another_tea_user.email,
+        }
