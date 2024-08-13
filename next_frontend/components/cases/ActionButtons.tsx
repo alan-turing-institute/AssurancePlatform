@@ -17,6 +17,7 @@ import html2canvas from 'html2canvas'
 import { capture, test } from "@/actions/capture";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useShareModal } from "@/hooks/useShareModal";
 
 
 interface ActionButtonProps {
@@ -38,6 +39,8 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   const router = useRouter()
 
   const { onLayout } = actions
+  
+  const shareModal = useShareModal();
 
   const onDelete = async () => {
     try {
@@ -170,11 +173,11 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">
-        <ActionTooltip label='Export'>
-          <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip>
-        {/* <ActionTooltip label='Share'>
-          <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Share2 className='w-5 h-5' /><span className="sr-only">Share</span></button>
-        </ActionTooltip> */}
+        {/* <ActionTooltip label='Export'>
+          <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip> */}
+        <ActionTooltip label='Share & Export'>
+          <button onClick={() => shareModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Share & Export</span></button>
+        </ActionTooltip>
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
         </ActionTooltip>

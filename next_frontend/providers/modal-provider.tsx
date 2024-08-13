@@ -2,6 +2,7 @@
 
 import { CaseCreateModal } from "@/components/modals/CaseCreateModal";
 import { ImportModal } from "@/components/modals/ImportModal";
+import { ShareModal } from "@/components/modals/ShareModal";
 import { useEffect, useState } from "react";
 
 export const ModalProvider = () => {
@@ -19,6 +20,7 @@ export const ModalProvider = () => {
     <>
       <CaseCreateModal />
       <ImportModal />
+      <ShareModal />
     </>
   );
 }
