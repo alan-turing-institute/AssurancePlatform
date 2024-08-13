@@ -42,6 +42,7 @@ from .serializers import (
 )
 from .view_utils import (
     SandboxUtils,
+    ShareAssuranceCaseUtils,
     SocialAuthenticationUtils,
     UpdateIdentifierUtils,
     can_view_group,
@@ -258,6 +259,51 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
         return JsonResponse(serialized_sandbox)
     except AssuranceCase.DoesNotExist:
         return HttpResponse(status=404)
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
+    assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
+    if assurance_case.owner != request.user:
+        return HttpResponse(status=403)
+
+    if request.method == "GET":
+        case_users: dict = ShareAssuranceCaseUtils.get_case_permissions(assurance_case)
+        return JsonResponse(case_users)
+    elif request.method == "POST":
+
+        view_additions, view_removals, edit_additions, edit_removals = [], [], [], []
+
+        for share_request in request.data:
+            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+            if "view" in share_request and share_request["view"]:
+                view_additions.append(user)
+            if "view" in share_request and not share_request["view"]:
+                view_removals.append(user)
+            if "edit" in share_request and share_request["edit"]:
+                edit_additions.append(user)
+            if "edit" in share_request and not share_request["edit"]:
+                edit_removals.append(user)
+
+        ShareAssuranceCaseUtils.add_and_remove_permissions(
+            permission="view",
+            assurance_case=assurance_case,
+            add=view_additions,
+            remove=view_removals,
+        )
+
+        ShareAssuranceCaseUtils.add_and_remove_permissions(
+            permission="edit",
+            assurance_case=assurance_case,
+            add=edit_additions,
+            remove=edit_removals,
+        )
+
+        return HttpResponse(status=200)
+
+    return HttpResponse(status=400)
 
 
 @api_view(["POST"])

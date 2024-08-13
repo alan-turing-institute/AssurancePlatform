@@ -385,6 +385,130 @@ class SocialAuthenticationUtils:
             raise Exception(error_message)
 
 
+class ShareAssuranceCaseUtils:
+    @staticmethod
+    def get_case_permissions(
+        assurance_case: AssuranceCase,
+    ) -> dict[str, list[dict[str, Any]]]:
+
+        return {
+            "view": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.view_groups
+            ),
+            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.edit_groups
+            ),
+        }
+
+    @staticmethod
+    def _get_users_from_group_list(group_manager: QuerySet) -> list[dict[str, Any]]:
+        user_dictionary: dict[int, dict[str, Any]] = {}
+        for current_group in group_manager.all():
+            group_users = {
+                user.pk: {"id": user.pk, "email": user.email}
+                for user in current_group.member.all()
+            }
+
+            user_dictionary = user_dictionary | group_users
+
+        return list(user_dictionary.values())
+
+    @staticmethod
+    def get_edit_group(assurance_case: AssuranceCase) -> EAPGroup:
+        edit_group: EAPGroup | None = None
+        owner_edit_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-edit-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.edit_groups.filter(
+            owner=assurance_case.owner, name=owner_edit_group_name
+        )
+
+        (
+            edit_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_edit_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.edit_groups.add(edit_group)
+            assurance_case.save()
+
+        return edit_group
+
+    @staticmethod
+    def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        view_group: EAPGroup | None = None
+        owner_view_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.view_groups.filter(
+            owner=assurance_case.owner, name=owner_view_group_name
+        )
+
+        (
+            view_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_view_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.view_groups.add(view_group)
+            assurance_case.save()
+
+        return view_group
+
+    @staticmethod
+    def add_and_remove_permissions(
+        permission: str,
+        assurance_case: AssuranceCase,
+        add: list[EAPUser] | None = None,
+        remove: list[EAPUser] | None = None,
+    ) -> None:
+
+        default_group: EAPGroup
+        all_groups: QuerySet
+        if permission == "view":
+            default_group = ShareAssuranceCaseUtils.get_view_group(assurance_case)
+            all_groups = assurance_case.view_groups.all()
+
+        elif permission == "edit":
+            default_group = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
+            all_groups = assurance_case.edit_groups.all()
+
+        if add is not None:
+            default_group.member.add(*add)
+            default_group.save()
+        if remove is not None:
+            for current_group in all_groups:
+                current_group.member.remove(*remove)
+                current_group.save()
+
+    @staticmethod
+    def _get_or_create_permission_group(
+        assurance_case: AssuranceCase, group_name: str, group_query_set: QuerySet
+    ) -> tuple[EAPGroup, bool]:
+        new_group: bool = False
+        if group_query_set.count() == 0:
+            new_group = True
+            return (
+                EAPGroup.objects.create(owner=assurance_case.owner, name=group_name),
+                new_group,
+            )
+
+        elif group_query_set.count() == 1:
+            return cast(EAPGroup, group_query_set.first()), new_group
+        else:
+            error_message: str = (
+                f"Found {group_query_set.count()} permission groups for case {assurance_case.pk}"
+            )
+            raise ValueError(error_message)
+
+
 def filter_by_case_id(items, request):
     """Filter an iterable of case items, based on whether they are in the case specified
     in the request query string.
