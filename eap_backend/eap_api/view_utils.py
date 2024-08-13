@@ -411,7 +411,7 @@ class ShareAssuranceCaseUtils:
         return edit_group
 
     @staticmethod
-    def get_read_only_group(assurance_case: AssuranceCase) -> EAPGroup:
+    def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
 
         view_group: EAPGroup | None = None
         owner_view_group_name: str = (
@@ -434,6 +434,19 @@ class ShareAssuranceCaseUtils:
             assurance_case.save()
 
         return view_group
+
+    @staticmethod
+    def add_and_remove_from_group(
+        group: EAPGroup,
+        add: list[EAPUser] | None = None,
+        remove: list[EAPUser] | None = None,
+    ) -> None:
+
+        if add is not None:
+            group.member.add(*add)
+        if remove is not None:
+            group.member.remove(*remove)
+        group.save()
 
     @staticmethod
     def _get_or_create_permission_group(
