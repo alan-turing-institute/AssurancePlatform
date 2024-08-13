@@ -123,3 +123,15 @@ export interface AssuranceCase {
   comments: any[];
   permissions: string;
 }
+
+export type User = {
+  id: number;
+  username: string;
+  email: string;
+  last_login: string;
+  date_joined: string;
+  is_staff: boolean;
+  all_groups: any[];  // Adjust the type if you know the structure of the groups
+  owned_groups: any[]; // Adjust the type if you know the structure of the groups
+  github_repositories: any[]; // Adjust the type if you know the structure of the repositories
+};

@@ -94,7 +94,6 @@ const useStore = create<Store>((set, get) => ({
     get().layoutNodes(nodes, edges);
   },
   setOrphanedElements: (orphanedElements: any) => {
-    console.log('orphanedElements_Sandbox', orphanedElements)
     let newArray: any[] = []
 
     if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {

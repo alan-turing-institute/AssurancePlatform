@@ -1,39 +1,133 @@
 "use client";
 
 import { Modal } from "@/components/ui/modal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useShareModal } from "@/hooks/useShareModal";
 import { Separator } from "../ui/separator";
-import { Download, FileIcon, Share2, User2, X } from "lucide-react";
+import { Download, FileIcon, Share2, User2, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "../ui/button";
-import AutoComplete, { User } from "../ui/autocomplete";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
 import useStore from "@/data/store";
+import { unauthorized, useLoginToken } from "@/hooks/useAuth";
+import { User } from "@/types";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { useToast } from "../ui/use-toast";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+
+type ShareItem = {
+  email: string
+  view?: boolean
+  edit?: boolean
+}
+
+type ShareItemArray = ShareItem[]
+
+const FormSchema = z.object({
+  email: z.string().min(2, {
+    message: "Email must be at least 2 characters.",
+  }).email(),
+  accessLevel: z.string().min(1)
+})
 
 export const ShareModal = () => {
-  const { assuranceCase, setAssuranceCase } = useStore()
+  const { assuranceCase } = useStore()
   const shareModal = useShareModal();
 
   const [loading, setLoading] = useState(false)
   const [isDisabled, setIsDisabled] = useState(false)
-  const [errors, setErrors] = useState<string[]>([]);
+  const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
-
-  const router = useRouter()
-
-  const users = [
-    { name: 'Rich', email: 'rich.griffiths@gmail.com' },
-    { name: 'Marlon', email: 'mdedakis@gmail.com' },
-    { name: 'Carlos', email: 'carlos@gmail.com' },
-    { name: 'Chris', email: 'chrisburr@gmail.com' },
-    { name: 'Kalle', email: 'kalle@gmail.com' },
-  ];
   
-  const handleRemove = (email: string) => {
-    const removedItem = selectedUsers.filter(item => item.email !== email)
-    setSelectedUsers(removedItem)
+  const [token] = useLoginToken();
+  const router = useRouter()
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      email: "",
+      accessLevel: "Read"
+    },
+  })
+
+  const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+    setLoading(true)
+    const payload: ShareItemArray = []
+
+    const newShareItem: ShareItem = { email: data.email }
+
+    if(data.accessLevel === 'Edit') {
+      newShareItem.edit = true
+    } else {
+      newShareItem.view = true
+    }
+
+    payload.push(newShareItem)
+    console.log(JSON.stringify(payload))
+
+    //TODO: Send user email to api endpoint to share case with them
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/sharedwith`;
+  
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      };
+      const response = await fetch(url, requestOptions);
+  
+      if (!response.ok) {
+        console.log(`Something went wrong ${response.status}`)
+
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Something went wrong',
+        });
+
+        setLoading(false)
+        return
+      }
+  
+      const result = await response.json();
+      console.log("Shared Result", result);
+
+      toast({
+        variant: 'success',
+        title: 'Shared Case with:',
+        description: `${data.email}`,
+      });
+  
+      form.reset()
+    } catch (error) {
+      console.log("Error", error);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong',
+      });
+    }
+
+    setLoading(false)
   }
 
   const handleExport = () => {
@@ -71,6 +165,31 @@ export const ShareModal = () => {
     setLoading(false);
   }
 
+  // const fetchAllUsers = async () => {
+  //   const requestOptions: RequestInit = {
+  //     headers: {
+  //       Authorization: `Token ${token}`,
+  //     },
+  //   };
+
+  //   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`, requestOptions);
+
+  //   if(response.status === 404 || response.status === 403 ) {
+  //     // TODO: 404 NOT FOUND PAGE
+  //     console.log('Render Not Found Page')
+  //     return
+  //   }
+
+  //   if(response.status === 401) return unauthorized()
+
+  //   const result = await response.json()
+  //   return result
+  // }
+
+  // useEffect(() => {
+  //   fetchAllUsers().then(result => console.log(result.filter((user: any) => user.email.includes('rich.griffiths'))))
+  // },[])
+
   return (
     <Modal
       title="Share / Export Case"
@@ -78,30 +197,96 @@ export const ShareModal = () => {
       isOpen={shareModal.isOpen}
       onClose={shareModal.onClose}
     >
+      {error && (
+        <div className="w-full bg-rose-500/20 border-2 border-rose-700 text-rose-600 py-1 px-3 rounded-md flex justify-start items-center gap-2">
+          <UserX className="w-4 h-4"/>{error}
+        </div>
+      )}
+      {successMessage && (
+        <div className="w-full bg-emerald-500/20 border-2 border-emerald-700 text-emerald-600 py-1 px-3 rounded-md flex justify-start items-center gap-2">
+          <UserCheck className="w-4 h-4"/>{successMessage}
+        </div>
+      )}
       <div className="my-4 space-y-2">
         <h2 className="flex justify-start items-center gap-2"><User2 className="w-4 h-4"/> Share with users</h2>
-        <AutoComplete
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="hidden">Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter email address" {...field} autoComplete="off" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+                control={form.control}
+                name="accessLevel"
+                render={({ field }) => (
+                  <FormItem className="pb-2">
+                    <FormLabel>Access Level</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex justify-start items-center space-x-2"
+                      >
+                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value={'Read'} />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Read
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value={'Edit'} />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Edit
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            <Button type="submit" disabled={loading}><Share2 className="w-4 h-4 mr-2"/>Share</Button>
+          </form>
+        </Form>
+        {/* <AutoComplete
           options={users}
           selectedUsers={selectedUsers}
           setSelectedUsers={setSelectedUsers}
-        />
-        {selectedUsers.length > 0 ? (
+        /> */}
+        {/* {selectedUsers.length > 0 ? (
           <div className="py-4 max-h-[250px] overflow-y-auto">
             {selectedUsers && selectedUsers.map((user: any) => (
               <div className="flex justify-start items-center gap-4 p-1 px-3 rounded-md hover:bg-indigo-600 hover:cursor-pointer group hover:text-white">
                 <User2 className="w-4 h-4" />
                 <div className="flex-1">
-                  <p>{user.name}<span className="mx-2 text-muted-foreground group-hover:text-white">({user.email})</span></p>
+                  <p>{user.username}
+                  {user.email ? (
+                    <span className="mx-2 text-xs text-muted-foreground group-hover:text-white">({user.email})</span>
+                  ) : null}
+                  </p>
                 </div>
-                <Button onClick={() => handleRemove(user.email)} size={"icon"} variant={"ghost"} className="hover:bg-indigo-700/50 hover:text-white"><X className="w-4 h-4"/></Button>
+                <Button onClick={() => handleRemove(user.id)} size={"icon"} variant={"ghost"} className="hover:bg-indigo-700/50 hover:text-white"><X className="w-4 h-4"/></Button>
               </div>
             ))}
           </div>
         ) : (
           <p className="pb-3 text-sm text-muted-foreground">No users selected</p>
-        )}
+        )} */}
         
-        <Button className="my-2"><Share2 className="w-4 h-4 mr-2"/>Share</Button>
+        {/* <Button onClick={handleShare} className="my-2"><Share2 className="w-4 h-4 mr-2"/>Share</Button> */}
       </div>
       <Separator />
       <div className="my-4">
