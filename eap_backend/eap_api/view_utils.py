@@ -387,6 +387,30 @@ class SocialAuthenticationUtils:
 
 class ShareAssuranceCaseUtils:
     @staticmethod
+    def get_edit_group(assurance_case: AssuranceCase) -> EAPGroup:
+        edit_group: EAPGroup | None = None
+        owner_edit_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-edit-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.edit_groups.filter(
+            owner=assurance_case.owner, name=owner_edit_group_name
+        )
+
+        (
+            edit_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_edit_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.edit_groups.add(edit_group)
+            assurance_case.save()
+
+        return edit_group
+
+    @staticmethod
     def get_read_only_group(assurance_case: AssuranceCase) -> EAPGroup:
 
         view_group: EAPGroup | None = None
@@ -394,25 +418,42 @@ class ShareAssuranceCaseUtils:
             f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
         )
 
-        view_groups = assurance_case.view_groups.filter(
+        group_query_set: QuerySet = assurance_case.view_groups.filter(
             owner=assurance_case.owner, name=owner_view_group_name
         )
 
-        if view_groups.count() == 0:
-            view_group = EAPGroup.objects.create(
-                owner=assurance_case.owner, name=owner_view_group_name
-            )
+        (
+            view_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_view_group_name, group_query_set
+        )
+
+        if new_group:
             assurance_case.view_groups.add(view_group)
             assurance_case.save()
-        elif view_groups.count() == 1:
-            view_group = cast(EAPGroup, view_groups.first())
-        else:
-            error_message: str = (
-                f"Found {view_groups.count()} read only groups for case {assurance_case.pk}"
-            )
-            raise ValueError(error_message)
 
         return view_group
+
+    @staticmethod
+    def _get_or_create_permission_group(
+        assurance_case: AssuranceCase, group_name: str, group_query_set: QuerySet
+    ) -> tuple[EAPGroup, bool]:
+        new_group: bool = False
+        if group_query_set.count() == 0:
+            new_group = True
+            return (
+                EAPGroup.objects.create(owner=assurance_case.owner, name=group_name),
+                new_group,
+            )
+
+        elif group_query_set.count() == 1:
+            return cast(EAPGroup, group_query_set.first()), new_group
+        else:
+            error_message: str = (
+                f"Found {group_query_set.count()} permission groups for case {assurance_case.pk}"
+            )
+            raise ValueError(error_message)
 
 
 def filter_by_case_id(items, request):

@@ -269,20 +269,27 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
     if assurance_case.owner != request.user:
         return HttpResponse(status=403)
 
-    share_requests: list[tuple[EAPUser, bool]] = [
-        (EAPUser.objects.get(email=share_request["email"]), share_request["read_only"])
+    read_only_requests: list[EAPUser] = [
+        EAPUser.objects.get(email=share_request["email"])
         for share_request in request.data
+        if share_request.get("view")
     ]
 
     read_only_group: EAPGroup = ShareAssuranceCaseUtils.get_read_only_group(
         assurance_case
     )
-
-    for user_to_share, read_only in share_requests:
-        if read_only:
-            read_only_group.member.add(user_to_share)
-
+    read_only_group.member.add(*read_only_requests)
     read_only_group.save()
+
+    edit_requests: list[EAPUser] = [
+        EAPUser.objects.get(email=share_request["email"])
+        for share_request in request.data
+        if share_request.get("edit")
+    ]
+    edit_group: EAPGroup = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
+    edit_group.member.add(*edit_requests)
+    edit_group.save()
+
     return HttpResponse(status=200)
 
 

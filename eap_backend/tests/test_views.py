@@ -1612,6 +1612,8 @@ class ShareAssuranceCaseViewTest(TestCase):
         self.case_owner: EAPUser = EAPUser.objects.create(
             username="owner", email="owner@tea.turing.ac.uk"
         )
+        self.case_owner_token, _ = Token.objects.get_or_create(user=self.case_owner)
+
         self.assurance_case: AssuranceCase = AssuranceCase.objects.create(
             name="Assurance Case", owner=self.case_owner
         )
@@ -1619,30 +1621,46 @@ class ShareAssuranceCaseViewTest(TestCase):
         self.tea_user: EAPUser = EAPUser.objects.create(
             username="user", email="user@tea.turing.ac.uk"
         )
+        self.tea_user_token, _ = Token.objects.get_or_create(user=self.tea_user)
+
+        self.another_tea_user: EAPUser = EAPUser.objects.create(
+            username="person", email="person@tea.turing.ac.uk"
+        )
+
+        self.another_user_token, _ = Token.objects.get_or_create(
+            user=self.another_tea_user
+        )
 
     def test_unauthorised_share_case(self):
-
-        user_token, _ = Token.objects.get_or_create(user=self.tea_user)
 
         response_post: HttpResponse = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
             data=json.dumps([{"email": self.tea_user.email}]),
-            HTTP_AUTHORIZATION=f"Token {user_token.key}",
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
 
         assert (
             response_post.status_code == 403
         ), f"Expected a 403 response, but it was {response_post}"
 
-    def test_authorised_share_case_read_only(self):
-        owner_token, _ = Token.objects.get_or_create(user=self.case_owner)
+    def test_authorised_share_case_editor(self):
+
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_put.status_code == 403
 
         response_post: HttpResponse = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
-            data=json.dumps([{"email": self.tea_user.email, "read_only": True}]),
-            HTTP_AUTHORIZATION=f"Token {owner_token.key}",
+            data=json.dumps(
+                [
+                    {"email": self.tea_user.email, "edit": True},
+                ]
+            ),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
         )
 
         assert (
@@ -1650,27 +1668,82 @@ class ShareAssuranceCaseViewTest(TestCase):
         ), f"Expected a 200 response, but it was {response_post}"
 
         self.assurance_case.refresh_from_db()
-        expected_read_only_group: str = (
-            f"owner-case-{self.assurance_case.pk}-view-group"
+
+        edit_group_query: QuerySet = self.assurance_case.edit_groups.filter(
+            owner=self.case_owner,
+            name=f"owner-case-{self.assurance_case.pk}-edit-group",
         )
+
+        assert (
+            edit_group_query.count() == 1
+        ), f"Expected one view group. Saved {self.assurance_case.edit_groups.all()}"
+
+        response_get = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_get.status_code == 200
+
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert (
+            response_put.status_code == 200
+        ), f"Expected status 200 but obtained {response_put}"
+
+        edit_group: EAPGroup = cast(EAPGroup, edit_group_query.first())
+        assert edit_group.member.count() == 1
+        assert self.tea_user in edit_group.member.all()
+
+    def test_authorised_share_case_read_only(self):
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_get.status_code == 403
+
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": self.tea_user.email, "view": True}]),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert (
+            response_post.status_code == 200
+        ), f"Expected a 200 response, but it was {response_post}"
+
+        self.assurance_case.refresh_from_db()
 
         view_group_query: QuerySet = self.assurance_case.view_groups.filter(
             owner=self.case_owner,
-            name=expected_read_only_group,
+            name=f"owner-case-{self.assurance_case.pk}-view-group",
         )
         assert (
             view_group_query.count() == 1
         ), f"Expected one view group. Saved {self.assurance_case.view_groups.all().first()}"
 
-        another_tea_user: EAPUser = EAPUser.objects.create(
-            username="person", email="person@tea.turing.ac.uk"
+        response_get = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
+        assert response_get.status_code == 200
+
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_put.status_code == 403
 
         response_post = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
-            data=json.dumps([{"email": another_tea_user.email, "read_only": True}]),
-            HTTP_AUTHORIZATION=f"Token {owner_token.key}",
+            data=json.dumps([{"email": self.another_tea_user.email, "view": True}]),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
         )
 
         self.assurance_case.refresh_from_db()
@@ -1679,4 +1752,4 @@ class ShareAssuranceCaseViewTest(TestCase):
         view_group: EAPGroup = cast(EAPGroup, view_group_query.first())
         assert view_group.member.count() == 2
         assert self.tea_user in view_group.member.all()
-        assert another_tea_user in view_group.member.all()
+        assert self.another_tea_user in view_group.member.all()
