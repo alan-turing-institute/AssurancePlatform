@@ -1,6 +1,6 @@
 'use client'
 
-import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2 } from "lucide-react";
+import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2, Users2 } from "lucide-react";
 import { Node } from "reactflow";
 import { useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
@@ -18,6 +18,7 @@ import { capture, test } from "@/actions/capture";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useShareModal } from "@/hooks/useShareModal";
+import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 
 
 interface ActionButtonProps {
@@ -41,6 +42,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   const { onLayout } = actions
   
   const shareModal = useShareModal();
+  const permissionModal = usePermissionsModal();
 
   const onDelete = async () => {
     try {
@@ -177,6 +179,9 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
           <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip> */}
         <ActionTooltip label='Share & Export'>
           <button onClick={() => shareModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Share & Export</span></button>
+        </ActionTooltip>
+        <ActionTooltip label='Permissions'>
+          <button onClick={() => permissionModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Users2 className='w-5 h-5' /><span className="sr-only">Permissions</span></button>
         </ActionTooltip>
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>

@@ -1,12 +1,8 @@
 'use client'
 
 import { cn } from '@/lib/utils';
+import { User } from '@/types';
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
-
-export type User = {
-  name: string;
-  email: string;
-};
 
 type AutoCompleteProps = {
   options: User[];
@@ -22,8 +18,8 @@ const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoComplete
   useEffect(() => {
     if (inputValue.length > 0) {
       const filtered = options.filter((option) =>
-        option.email.toLowerCase().includes(inputValue.toLowerCase()) &&
-        !selectedUsers.some(selectedUser => selectedUser.email === option.email) // Exclude already selected users
+        option.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        !selectedUsers.some(selectedUser => selectedUser.username === option.username) // Exclude already selected users
       );
       setFilteredOptions(filtered);
       setIsOpen(true);
@@ -39,7 +35,7 @@ const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoComplete
   const handleOptionClick = (option: User) => {
     // Check if the user is already selected
     const isAlreadySelected = selectedUsers.some(
-      (user) => user.email === option.email
+      (user) => user.username === option.username
     );
 
     if (!isAlreadySelected) {
@@ -73,10 +69,12 @@ const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoComplete
               onClick={() => handleOptionClick(option)}
               className="hover:bg-indigo-600 hover:cursor-pointer group hover:text-white p-2 rounded-md"
             >
-              {option.name}
-              <span className="ml-2 text-sm text-muted-foreground group-hover:text-white">
-                ({option.email})
-              </span>
+              {option.username}
+              {option.email ? (
+                <span className="ml-2 text-xs text-muted-foreground group-hover:text-white">
+                  ({option.email})
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>
