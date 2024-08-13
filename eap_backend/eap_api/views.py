@@ -269,26 +269,33 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
     if assurance_case.owner != request.user:
         return HttpResponse(status=403)
 
-    read_only_requests: list[EAPUser] = [
-        EAPUser.objects.get(email=share_request["email"])
-        for share_request in request.data
-        if share_request.get("view")
-    ]
+    view_additions: list[EAPUser] = []
+    view_removals: list[EAPUser] = []
+    edit_additions: list[EAPUser] = []
+    edit_removals: list[EAPUser] = []
 
-    read_only_group: EAPGroup = ShareAssuranceCaseUtils.get_read_only_group(
-        assurance_case
+    for share_request in request.data:
+        user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+        if "view" in share_request and share_request["view"]:
+            view_additions.append(user)
+        elif "view" in share_request and not share_request["view"]:
+            view_removals.append(user)
+        elif "edit" in share_request and share_request["edit"]:
+            edit_additions.append(user)
+        elif "edit" in share_request and not share_request["edit"]:
+            edit_removals.append(user)
+
+    ShareAssuranceCaseUtils.add_and_remove_from_group(
+        group=ShareAssuranceCaseUtils.get_view_group(assurance_case),
+        add=view_additions,
+        remove=view_removals,
     )
-    read_only_group.member.add(*read_only_requests)
-    read_only_group.save()
 
-    edit_requests: list[EAPUser] = [
-        EAPUser.objects.get(email=share_request["email"])
-        for share_request in request.data
-        if share_request.get("edit")
-    ]
-    edit_group: EAPGroup = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
-    edit_group.member.add(*edit_requests)
-    edit_group.save()
+    ShareAssuranceCaseUtils.add_and_remove_from_group(
+        group=ShareAssuranceCaseUtils.get_edit_group(assurance_case),
+        add=edit_additions,
+        remove=edit_removals,
+    )
 
     return HttpResponse(status=200)
 

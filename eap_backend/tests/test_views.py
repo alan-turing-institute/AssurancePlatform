@@ -26,7 +26,7 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
-from eap_api.view_utils import SandboxUtils
+from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils
 from eap_api.views import make_case_summary, make_summary
 from rest_framework.authtoken.models import Token
 from social_core.exceptions import AuthForbidden
@@ -1631,6 +1631,16 @@ class ShareAssuranceCaseViewTest(TestCase):
             user=self.another_tea_user
         )
 
+        self.view_group_query: QuerySet = self.assurance_case.view_groups.filter(
+            owner=self.case_owner,
+            name=f"owner-case-{self.assurance_case.pk}-view-group",
+        )
+
+        self.edit_group_query: QuerySet = self.assurance_case.edit_groups.filter(
+            owner=self.case_owner,
+            name=f"owner-case-{self.assurance_case.pk}-edit-group",
+        )
+
     def test_unauthorised_share_case(self):
 
         response_post: HttpResponse = self.client.post(
@@ -1644,7 +1654,7 @@ class ShareAssuranceCaseViewTest(TestCase):
             response_post.status_code == 403
         ), f"Expected a 403 response, but it was {response_post}"
 
-    def test_authorised_share_case_editor(self):
+    def test_give_users_edit_access(self):
 
         response_put: HttpResponse = self.client.put(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
@@ -1669,13 +1679,8 @@ class ShareAssuranceCaseViewTest(TestCase):
 
         self.assurance_case.refresh_from_db()
 
-        edit_group_query: QuerySet = self.assurance_case.edit_groups.filter(
-            owner=self.case_owner,
-            name=f"owner-case-{self.assurance_case.pk}-edit-group",
-        )
-
         assert (
-            edit_group_query.count() == 1
+            self.edit_group_query.count() == 1
         ), f"Expected one view group. Saved {self.assurance_case.edit_groups.all()}"
 
         response_get = self.client.get(
@@ -1694,11 +1699,11 @@ class ShareAssuranceCaseViewTest(TestCase):
             response_put.status_code == 200
         ), f"Expected status 200 but obtained {response_put}"
 
-        edit_group: EAPGroup = cast(EAPGroup, edit_group_query.first())
+        edit_group: EAPGroup = cast(EAPGroup, self.edit_group_query.first())
         assert edit_group.member.count() == 1
         assert self.tea_user in edit_group.member.all()
 
-    def test_authorised_share_case_read_only(self):
+    def test_give_users_view_access(self):
 
         response_get: HttpResponse = self.client.get(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
@@ -1719,12 +1724,8 @@ class ShareAssuranceCaseViewTest(TestCase):
 
         self.assurance_case.refresh_from_db()
 
-        view_group_query: QuerySet = self.assurance_case.view_groups.filter(
-            owner=self.case_owner,
-            name=f"owner-case-{self.assurance_case.pk}-view-group",
-        )
         assert (
-            view_group_query.count() == 1
+            self.view_group_query.count() == 1
         ), f"Expected one view group. Saved {self.assurance_case.view_groups.all().first()}"
 
         response_get = self.client.get(
@@ -1747,9 +1748,66 @@ class ShareAssuranceCaseViewTest(TestCase):
         )
 
         self.assurance_case.refresh_from_db()
-        assert view_group_query.count() == 1
+        assert self.view_group_query.count() == 1
 
-        view_group: EAPGroup = cast(EAPGroup, view_group_query.first())
+        view_group: EAPGroup = cast(EAPGroup, self.view_group_query.first())
         assert view_group.member.count() == 2
         assert self.tea_user in view_group.member.all()
         assert self.another_tea_user in view_group.member.all()
+
+    def test_remove_access_from_users(self):
+        ShareAssuranceCaseUtils.get_view_group(self.assurance_case).member.add(
+            self.tea_user
+        )
+        ShareAssuranceCaseUtils.get_edit_group(self.assurance_case).member.add(
+            self.another_tea_user
+        )
+        self.assurance_case.save()
+
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_get.status_code == 200
+
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.another_user_token.key}",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        assert response_put.status_code == 200
+
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps(
+                [
+                    {"email": self.tea_user.email, "view": False},
+                    {"email": self.another_tea_user.email, "edit": False},
+                ]
+            ),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert response_post.status_code == 200
+
+        response_get = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert (
+            response_get.status_code == 403
+        ), f"Expecting status 403 but was {response_get}"
+
+        response_put = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.another_user_token.key}",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        assert response_put.status_code == 403
+
+        self.assurance_case.refresh_from_db()
+        assert self.tea_user not in self.view_group_query.first().member.all()
+        assert self.another_tea_user not in self.edit_group_query.first().member.all()
