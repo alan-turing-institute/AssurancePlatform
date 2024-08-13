@@ -280,21 +280,23 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
             user: EAPUser = EAPUser.objects.get(email=share_request["email"])
             if "view" in share_request and share_request["view"]:
                 view_additions.append(user)
-            elif "view" in share_request and not share_request["view"]:
+            if "view" in share_request and not share_request["view"]:
                 view_removals.append(user)
-            elif "edit" in share_request and share_request["edit"]:
+            if "edit" in share_request and share_request["edit"]:
                 edit_additions.append(user)
-            elif "edit" in share_request and not share_request["edit"]:
+            if "edit" in share_request and not share_request["edit"]:
                 edit_removals.append(user)
 
-        ShareAssuranceCaseUtils.add_and_remove_from_group(
-            group=ShareAssuranceCaseUtils.get_view_group(assurance_case),
+        ShareAssuranceCaseUtils.add_and_remove_permissions(
+            permission="view",
+            assurance_case=assurance_case,
             add=view_additions,
             remove=view_removals,
         )
 
-        ShareAssuranceCaseUtils.add_and_remove_from_group(
-            group=ShareAssuranceCaseUtils.get_edit_group(assurance_case),
+        ShareAssuranceCaseUtils.add_and_remove_permissions(
+            permission="edit",
+            assurance_case=assurance_case,
             add=edit_additions,
             remove=edit_removals,
         )

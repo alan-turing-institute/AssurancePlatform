@@ -463,17 +463,30 @@ class ShareAssuranceCaseUtils:
         return view_group
 
     @staticmethod
-    def add_and_remove_from_group(
-        group: EAPGroup,
+    def add_and_remove_permissions(
+        permission: str,
+        assurance_case: AssuranceCase,
         add: list[EAPUser] | None = None,
         remove: list[EAPUser] | None = None,
     ) -> None:
 
+        default_group: EAPGroup
+        all_groups: QuerySet
+        if permission == "view":
+            default_group = ShareAssuranceCaseUtils.get_view_group(assurance_case)
+            all_groups = assurance_case.view_groups.all()
+
+        elif permission == "edit":
+            default_group = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
+            all_groups = assurance_case.edit_groups.all()
+
         if add is not None:
-            group.member.add(*add)
+            default_group.member.add(*add)
+            default_group.save()
         if remove is not None:
-            group.member.remove(*remove)
-        group.save()
+            for current_group in all_groups:
+                current_group.member.remove(*remove)
+                current_group.save()
 
     @staticmethod
     def _get_or_create_permission_group(
