@@ -387,6 +387,33 @@ class SocialAuthenticationUtils:
 
 class ShareAssuranceCaseUtils:
     @staticmethod
+    def get_case_permissions(
+        assurance_case: AssuranceCase,
+    ) -> dict[str, list[dict[str, Any]]]:
+
+        return {
+            "view": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.view_groups
+            ),
+            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.edit_groups
+            ),
+        }
+
+    @staticmethod
+    def _get_users_from_group_list(group_manager: QuerySet) -> list[dict[str, Any]]:
+        user_dictionary: dict[int, dict[str, Any]] = {}
+        for current_group in group_manager.all():
+            group_users = {
+                user.pk: {"id": user.pk, "email": user.email}
+                for user in current_group.member.all()
+            }
+
+            user_dictionary = user_dictionary | group_users
+
+        return list(user_dictionary.values())
+
+    @staticmethod
     def get_edit_group(assurance_case: AssuranceCase) -> EAPGroup:
         edit_group: EAPGroup | None = None
         owner_edit_group_name: str = (
