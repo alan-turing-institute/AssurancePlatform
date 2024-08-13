@@ -1783,8 +1783,12 @@ class ShareAssuranceCaseViewTest(TestCase):
             content_type="application/json",
             data=json.dumps(
                 [
-                    {"email": self.tea_user.email, "view": False},
-                    {"email": self.another_tea_user.email, "edit": False},
+                    {"email": self.tea_user.email, "view": False, "edit": False},
+                    {
+                        "email": self.another_tea_user.email,
+                        "view": False,
+                        "edit": False,
+                    },
                 ]
             ),
             HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
@@ -1806,7 +1810,9 @@ class ShareAssuranceCaseViewTest(TestCase):
             data=json.dumps({}),
             content_type="application/json",
         )
-        assert response_put.status_code == 403
+        assert (
+            response_put.status_code == 403
+        ), f"Expected status 403, but got {response_put}"
 
         self.assurance_case.refresh_from_db()
         assert self.tea_user not in self.view_group_query.first().member.all()
