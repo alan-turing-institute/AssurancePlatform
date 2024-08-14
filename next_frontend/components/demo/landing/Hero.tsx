@@ -153,13 +153,15 @@ export default function Hero() {
           </div>
           <div className="overflow-hidden">
             <div className="mx-auto max-w-7xl px-6 pb-32 pt-36 sm:pt-60 lg:px-8 lg:pt-40">
-              <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center">
-                <div className="relative w-full max-w-xl lg:shrink-0 xl:max-w-2xl">
+              <div className="mx-auto w-full lg:grid lg:grid-cols-2 lg:items-center gap-8">
+              {/* <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center"> */}
+                <div className="relative w-full">
+                  {/* max-w-xl lg:shrink-0 xl:max-w-2xl */}
                   <div className='bg-indigo-100 border border-indigo-300 text-indigo-500 text-xs font-semibold rounded-md inline-flex py-2 px-3 mb-6'>Available as a Research Preview</div>
                   <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
                     Build trust, collaboratively.
                   </h1>
-                  <p className="mt-6 text-lg leading-8 text-gray-600 sm:max-w-md lg:max-w-none">
+                  <p className="mt-6 text-lg leading-8 text-gray-600 sm:max-w-full lg:max-w-none">
                     The Trustworthy and Ethical Assurance (TEA) Platform is an innovative, open-source tool designed to facilite the process of creating, managing and sharing assurance cases for data-driven technologies, such as digital twins or AI.
                   </p>
                   <div className="mt-10 flex items-center gap-x-6">
@@ -174,7 +176,8 @@ export default function Hero() {
                     </a>
                   </div>
                 </div>
-                <div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">
+                {/* sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0 */}
+                <div className="mt-14 flex justify-end gap-8">
                   <div className='w-full rounded-lg overflow-hidden shadow-xl'>
                     <video
                       src="/images/building-an-assurance-case.mp4"
