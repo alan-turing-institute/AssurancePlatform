@@ -36,6 +36,7 @@ from .serializers import (
     EvidenceSerializer,
     GitHubRepositorySerializer,
     GithubSocialAuthSerializer,
+    PasswordChangeSerializer,
     PropertyClaimSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
@@ -133,6 +134,35 @@ def user_detail(request, pk=None):
         return JsonResponse(repo_serializer.errors, status=400)
 
     return None
+
+
+@csrf_exempt
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def change_user_password(request: HttpRequest, pk: int) -> HttpResponse:
+    user_to_update: EAPUser = EAPUser.objects.get(pk=pk)
+
+    if request.user != user_to_update:
+        return Response(
+            {"error": "You are not authorized to perform this operation"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = PasswordChangeSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user_to_update.check_password(
+        raw_password=cast(str, serializer.validated_data.get("password"))
+    ):
+        return Response(
+            {"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user_to_update.set_password(serializer.validated_data.get("new_password"))
+    user_to_update.save()
+
+    return HttpResponse({"message": "Password updated!"}, status=200)
 
 
 @csrf_exempt
