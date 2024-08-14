@@ -2,7 +2,7 @@
 
 import { Modal } from "@/components/ui/modal";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useShareModal } from "@/hooks/useShareModal";
 import { Separator } from "../ui/separator";
 import { Download, FileIcon, Share2, Trash2, User2, UserCheck, UserX, X } from "lucide-react";
@@ -29,16 +29,19 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 
 export const PermissionsModal = () => {
-  const { assuranceCase } = useStore()
+  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers } = useStore()
   const permissionModal = usePermissionsModal();
 
   const [loading, setLoading] = useState(false)
   const [isDisabled, setIsDisabled] = useState(false)
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
-  const [viewMembers, setViewMembers] = useState<any[]>([])
-  const [editMembers, setEditMembers] = useState<any[]>([])
+  // const [viewMembers, setViewMembers] = useState<any[]>([])
+  // const [editMembers, setEditMembers] = useState<any[]>([])
   
+  const params = useParams()
+  const { caseId } = params
+
   const [token] = useLoginToken();
   const router = useRouter()
   const { toast } = useToast();
@@ -50,7 +53,7 @@ export const PermissionsModal = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/sharedwith`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`, requestOptions);
 
     if(response.status === 401) return unauthorized()
 
@@ -58,14 +61,71 @@ export const PermissionsModal = () => {
     return result
   }
 
-  useEffect(() => {
-    if(assuranceCase) {
-      fetchCaseMembers().then(result => {
-        setViewMembers(result.view)
-        setEditMembers(result.edit)
-      })
+  const handleRemovePermissions = async (member: any, level: string) => {
+    try {
+      setLoading(true)
+      const payload = []
+
+      const item = { 
+        email: member.email,
+        edit: false,
+        view: false
+      }
+
+      payload.push(item)
+
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`;
+  
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      };
+      const response = await fetch(url, requestOptions);
+  
+      if (!response.ok) {
+        console.log(`Something went wrong ${response.status}`)
+
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Something went wrong',
+        });
+
+        setLoading(false)
+        return
+      }
+
+      if(level === 'read') {
+        const removedMembers = viewMembers.filter(item => item.email !== member.email)
+        setViewMembers(removedMembers)
+      }
+
+      if(level === 'edit') {
+        const removedMembers = editMembers.filter(item => item.email !== member.email)
+        setEditMembers(removedMembers)
+      }
+
+    } catch (error) {
+      console.log("Error", error);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong',
+      });
     }
-  },[assuranceCase])
+  }
+
+  useEffect(() => {
+    fetchCaseMembers().then(result => {
+      setViewMembers(result.view)
+      setEditMembers(result.edit)
+    })
+  },[])
 
   return (
     <Modal
@@ -80,12 +140,12 @@ export const PermissionsModal = () => {
       <div className="my-4">
         {editMembers.length > 0 ? (
           editMembers.map((member: any) => (
-            <div className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group">
+            <div key={member.id} className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group">
               <User2 className="w-4 h-4" />
               <div className="flex-1">
                 <p>{member.email}</p>
               </div>
-              <Button size={"icon"} variant={"ghost"} className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"><Trash2 className="w-4 h-4"/></Button>
+              <Button onClick={() => handleRemovePermissions(member, 'edit')} size={"icon"} variant={"ghost"} className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"><Trash2 className="w-4 h-4"/></Button>
             </div>
           ))
         ) : (
@@ -99,12 +159,12 @@ export const PermissionsModal = () => {
       <div className="my-4">
         {viewMembers.length > 0 ? (
           viewMembers.map((member: any) => (
-            <div className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group">
+            <div key={member.id} className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group">
               <User2 className="w-4 h-4" />
               <div className="flex-1">
                 <p>{member.email}</p>
               </div>
-              <Button size={"icon"} variant={"ghost"} className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"><Trash2 className="w-4 h-4"/></Button>
+              <Button onClick={() => handleRemovePermissions(member, 'read')} size={"icon"} variant={"ghost"} className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"><Trash2 className="w-4 h-4"/></Button>
             </div>
           ))
         ) : (

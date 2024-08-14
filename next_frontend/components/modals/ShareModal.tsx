@@ -43,7 +43,7 @@ const FormSchema = z.object({
 })
 
 export const ShareModal = () => {
-  const { assuranceCase } = useStore()
+  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers } = useStore()
   const shareModal = useShareModal();
 
   const [loading, setLoading] = useState(false)
@@ -78,9 +78,7 @@ export const ShareModal = () => {
     }
 
     payload.push(newShareItem)
-    console.log(JSON.stringify(payload))
 
-    //TODO: Send user email to api endpoint to share case with them
     try {
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/sharedwith`;
   
@@ -107,14 +105,21 @@ export const ShareModal = () => {
         return
       }
   
-      const result = await response.json();
-      console.log("Shared Result", result);
+      // const result = await response.json();
+      // console.log("Shared Result", result);
 
       toast({
         variant: 'success',
         title: 'Shared Case with:',
         description: `${data.email}`,
       });
+
+      if(newShareItem.view) {
+        setViewMembers([...viewMembers, newShareItem ])
+      }
+      if(newShareItem.edit) {
+        setEditMembers([...editMembers, newShareItem ])
+      }
   
       form.reset()
     } catch (error) {
