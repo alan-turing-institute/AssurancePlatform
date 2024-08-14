@@ -358,8 +358,10 @@ class UpdateIdentifierUtils:
 class SocialAuthenticationUtils:
     @staticmethod
     def register_social_user(social_user: EAPUser, auth_provider: str) -> EAPUser:
+
         matching_users: QuerySet = EAPUser.objects.filter(
-            email=social_user.email, auth_provider=auth_provider
+            auth_provider=auth_provider,
+            auth_username=social_user.username,
         )
 
         if matching_users.count() == 0:
@@ -369,6 +371,7 @@ class SocialAuthenticationUtils:
             new_github_user: EAPUser = EAPUser.objects.create_user(
                 username=get_random_string(username_length),
                 email=social_user.email,
+                auth_username=social_user.username,
                 auth_provider=auth_provider,
             )
             new_github_user.set_password(get_random_string(password_length))
