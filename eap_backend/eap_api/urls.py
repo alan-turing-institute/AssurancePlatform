@@ -8,6 +8,11 @@ urlpatterns = [
     path("user/", views.self_detail, name="self_detail"),
     path("users/", views.user_list, name="user_list"),
     path("users/<int:pk>/", views.user_detail, name="user_detail"),
+    path(
+        "users/<int:pk>/change-password",
+        views.change_user_password,
+        name="change_user_password",
+    ),
     path("groups/", views.group_list, name="group_list"),
     path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),

@@ -1342,8 +1342,8 @@ class UserViewNoAuthTest(TestCase):
 class UserDetailViewWithAuthTest(TestCase):
     def setUp(self):
         # login
-        user = EAPUser.objects.create(**USER1_INFO)
-        token, created = Token.objects.get_or_create(user=user)
+        self.user = EAPUser.objects.create(**USER1_INFO)
+        token, created = Token.objects.get_or_create(user=self.user)
         key = token.key
         self.headers = {"HTTP_AUTHORIZATION": f"Token {key}"}
         self.update = {
@@ -1371,6 +1371,9 @@ class UserDetailViewWithAuthTest(TestCase):
         response_json = response_put.json()
         assert response_json["username"] == self.update["username"]
 
+        updated_user: EAPUser = EAPUser.objects.get(pk=1)
+        assert updated_user.username == self.update["username"]
+
     def test_user_detail_view_delete(self):
         client = Client(**self.headers)
         response_delete = client.delete(
@@ -1379,6 +1382,29 @@ class UserDetailViewWithAuthTest(TestCase):
         )
         assert response_delete.status_code == 204
         assert len(EAPUser.objects.all()) == 0
+
+    def test_unauthorised_password_change(self):
+
+        response_put: HttpResponse = self.client.put(
+            reverse("change_user_password", kwargs={"pk": self.user.pk})
+        )
+
+        assert response_put.status_code == 401
+
+        another_user: EAPUser = EAPUser.objects.create(username="person")
+        another_user_token, _ = Token.objects.get_or_create(user=another_user)
+
+        response_put: HttpResponse = self.client.put(
+            reverse(
+                "change_user_password",
+                kwargs={"pk": self.user.pk},
+            ),
+            HTTP_AUTHORIZATION=f"Token {another_user_token.key}",
+        )
+
+        assert (
+            response_put.status_code == 403
+        ), f"Expected status 403, but was {response_put}"
 
 
 class GroupViewNoAuthTest(TestCase):
