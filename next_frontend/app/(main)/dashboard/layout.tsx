@@ -36,14 +36,18 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
   const { data, status } = useSession()
 
   useEffect(() => {
-    if(token) return
+    // If a token is present, do nothing (continue rendering the component)
+    if (token) return;
 
-    if(data?.user && token === null) {
+    // If there's user data and no token, set the token
+    if (data?.user && token === null) {
       setToken(data?.accessToken);
-    } else if (!data?.user || token === null) {
-      router.push('/login')
+    } 
+    // If no user data or token is null, redirect to the login page
+    else if (!data?.user || token === null) {
+      router.push('/login');
     }
-  },[token])
+  }, [token, data, router]);
 
   return (
     <>

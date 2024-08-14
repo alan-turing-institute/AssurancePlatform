@@ -5,9 +5,10 @@ import SettingsNav from './_components/SettingsNav'
 import { PersonalInfoForm } from './_components/PeronsalInfoForm'
 import { PasswordForm } from './_components/PasswordForm'
 import { unauthorized, useLoginToken } from '@/hooks/useAuth'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Router } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { AlertModal } from '@/components/modals/alertModal'
+import { useRouter } from 'next/navigation'
 
 const SettingsPage = () => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -15,7 +16,8 @@ const SettingsPage = () => {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false)
 
-  const [token, setToken] = useLoginToken();
+  const router = useRouter()
+  const [token, setToken] = useLoginToken()
   const { toast } = useToast()
 
   const notify = (message: string) => {
@@ -54,7 +56,6 @@ const SettingsPage = () => {
   }
 
   const handleDeleteUser = async () => {
-    console.log('Delete')
     try {
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/users/${currentUser.id}/`;
 
@@ -71,10 +72,9 @@ const SettingsPage = () => {
         notifyError('Something went wrong')
         return
       }
-
-      const result = await response.json();
-      notify('User Deleted Successfully!')
-      setToken(null)
+      
+      setToken(null);
+      router.push('/login')
     } catch (error) {
       console.log(error)
     }
