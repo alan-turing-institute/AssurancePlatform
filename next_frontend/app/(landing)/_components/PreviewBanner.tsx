@@ -20,7 +20,7 @@ export default function PreviewBanner() {
             <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
               <circle cx={1} cy={1} r={1} />
             </svg>
-            <p>As this is <span className='font-bold'>preview only</span> it should not to be used for business critical use cases.</p>
+            <span>As this is <span className='font-bold'>preview only</span> it should not to be used for business critical use cases.</span>
           </Link>
         </p>
         {/* <div className="flex flex-1 justify-end">
