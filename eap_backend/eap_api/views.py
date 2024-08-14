@@ -136,6 +136,19 @@ def user_detail(request, pk=None):
 
 
 @csrf_exempt
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def change_user_password(request: HttpRequest, pk: int) -> HttpResponse:
+    user_to_update: EAPUser = EAPUser.objects.get(pk=pk)
+
+    if request.user != user_to_update:
+        return Response(
+            {"error": "You are not authorized to perform this operation"}, status=403
+        )
+    return HttpResponse(status=200)
+
+
+@csrf_exempt
 @api_view(["GET", "POST"])
 def group_list(request):
     """
