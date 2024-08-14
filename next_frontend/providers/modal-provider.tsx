@@ -2,6 +2,8 @@
 
 import { CaseCreateModal } from "@/components/modals/CaseCreateModal";
 import { ImportModal } from "@/components/modals/ImportModal";
+import { PermissionsModal } from "@/components/modals/PermissionsModal";
+import { ShareModal } from "@/components/modals/ShareModal";
 import { useEffect, useState } from "react";
 
 export const ModalProvider = () => {
@@ -19,6 +21,8 @@ export const ModalProvider = () => {
     <>
       <CaseCreateModal />
       <ImportModal />
+      <ShareModal />
+      <PermissionsModal />
     </>
   );
 }
