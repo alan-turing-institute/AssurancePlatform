@@ -23,15 +23,28 @@ const ACCEPTED_FILE_TYPES = ["jpg"];
 
 const FormSchema = z.object({
   currentPassword: z.string().min(2, {
-    message: "Firstname must be at least 2 characters.",
+    message: "Current password must be at least 2 characters.",
   }),
-  newPassword: z.string().min(2, {
-    message: "Lastname must be at least 2 characters.",
-  }),
+  newPassword: z.string()
+    .min(8, {
+      message: "New password must be at least 8 characters long.",
+    })
+    .regex(/[A-Z]/, {
+      message: "New password must contain at least one uppercase letter.",
+    })
+    .regex(/\d/, {
+      message: "New password must contain at least one number.",
+    })
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+      message: "New password must contain at least one special character.",
+    }),
   confirmPassword: z.string().min(2, {
-    message: "Email must be at least 2 characters.",
+    message: "Confirm password must be at least 2 characters.",
   }),
-})
+}).refine(data => data.newPassword === data.confirmPassword, {
+  path: ['confirmPassword'], // Field to which the error is attached
+  message: "Passwords do not match.",
+});
 
 export function PasswordForm() {
   const router = useRouter()
@@ -72,6 +85,9 @@ export function PasswordForm() {
                     <FormControl>
                       <Input type='password' {...field} />
                     </FormControl>
+                    <FormDescription>
+                      Please enter your existing password.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -103,7 +119,7 @@ export function PasswordForm() {
                 )}
               />
             </div>
-            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">Save</Button>
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">Update</Button>
           </form>
         </Form>
       </div>
