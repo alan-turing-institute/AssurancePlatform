@@ -12,6 +12,7 @@ import {
 import { PlusCircleIcon } from '@heroicons/react/24/outline'
 import { useCreateCaseModal } from '@/hooks/useCreateCaseModal'
 import { useImportModal } from '@/hooks/useImportModal'
+import { useShareModal } from '@/hooks/useShareModal'
 import { Input } from '../ui/input'
 
 interface CaseListProps {
@@ -21,6 +22,7 @@ interface CaseListProps {
 const CaseList = ({ assuranceCases } : CaseListProps) => {
   const createCaseModal = useCreateCaseModal();
   const importModal = useImportModal();
+  const shareModal = useShareModal()
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filteredCases, setFilteredCases] = useState(assuranceCases);

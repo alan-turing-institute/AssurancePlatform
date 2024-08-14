@@ -32,6 +32,10 @@ type Store = {
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
+  viewMembers: any[],
+  editMembers: any[]
+  setViewMembers: (members: any[]) => void,
+  setEditMembers: (members: any[]) => void
 };
 
 export type NodeData = {
@@ -94,7 +98,6 @@ const useStore = create<Store>((set, get) => ({
     get().layoutNodes(nodes, edges);
   },
   setOrphanedElements: (orphanedElements: any) => {
-    console.log('orphanedElements_Sandbox', orphanedElements)
     let newArray: any[] = []
 
     if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
@@ -136,6 +139,14 @@ const useStore = create<Store>((set, get) => ({
 
     // Set the layouted nodes and edges
     set({ nodes: layoutedNodes, edges: layoutedEdges });
+  },
+  viewMembers: [],
+  editMembers: [],
+  setViewMembers: (members: any[]) => {
+    set({viewMembers: members});
+  },
+  setEditMembers: (members: any[]) => {
+    set({editMembers: members});
   },
 }));
 
