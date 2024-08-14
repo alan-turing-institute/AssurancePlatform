@@ -52,7 +52,7 @@ export const ShareModal = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
-  
+
   const [token] = useLoginToken();
   const router = useRouter()
   const { toast } = useToast();
@@ -81,7 +81,7 @@ export const ShareModal = () => {
 
     try {
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/sharedwith`;
-  
+
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
@@ -91,7 +91,7 @@ export const ShareModal = () => {
         body: JSON.stringify(payload),
       };
       const response = await fetch(url, requestOptions);
-  
+
       if (!response.ok) {
         console.log(`Something went wrong ${response.status}`)
 
@@ -104,7 +104,7 @@ export const ShareModal = () => {
         setLoading(false)
         return
       }
-  
+
       // const result = await response.json();
       // console.log("Shared Result", result);
 
@@ -120,7 +120,7 @@ export const ShareModal = () => {
       if(newShareItem.edit) {
         setEditMembers([...editMembers, newShareItem ])
       }
-  
+
       form.reset()
     } catch (error) {
       console.log("Error", error);
@@ -290,7 +290,7 @@ export const ShareModal = () => {
         ) : (
           <p className="pb-3 text-sm text-muted-foreground">No users selected</p>
         )} */}
-        
+
         {/* <Button onClick={handleShare} className="my-2"><Share2 className="w-4 h-4 mr-2"/>Share</Button> */}
       </div>
       <Separator />

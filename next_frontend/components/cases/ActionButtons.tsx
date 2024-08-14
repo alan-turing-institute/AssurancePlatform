@@ -40,7 +40,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   const router = useRouter()
 
   const { onLayout } = actions
-  
+
   const shareModal = useShareModal();
   const permissionModal = usePermissionsModal();
 

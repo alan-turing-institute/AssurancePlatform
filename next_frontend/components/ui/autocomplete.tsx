@@ -80,7 +80,7 @@ const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoComplete
         </ul>
       )}
     </div>
-  );  
+  );
 };
 
 export default AutoComplete;
