@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -14,11 +15,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { MoveLeft } from "lucide-react"
+import { Lock, MoveLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLoginToken } from "@/hooks/useAuth"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
+import { useSession } from "next-auth/react"
 
 const ACCEPTED_FILE_TYPES = ["jpg"];
 
@@ -61,6 +63,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
   const router = useRouter()
   const [token] = useLoginToken();
   const { toast } = useToast()
+  const { data: session } = useSession()
 
   const notify = (message: string) => {
     toast({
@@ -78,13 +81,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: data,
-    // defaultValues: {
-    //   firstname: 'Richard',
-    //   lastname: 'Griffiths',
-    //   email: 'rich.griffiths@gmail.com',
-    //   username: 'Rich'
-    // },
+    defaultValues: data
   })
 
   async function onSubmit(values: z.infer<typeof FormSchema>) {
@@ -199,8 +196,9 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 <FormItem className="col-span-full">
                   <FormLabel>Username</FormLabel>
                   <FormControl>
-                    <Input placeholder="example@gmail.com" {...field} />
+                    <Input placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
                   </FormControl>
+                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
                   <FormMessage />
                 </FormItem>
               )}
@@ -212,16 +210,19 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 <FormItem className="col-span-full">
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} />
+                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
                   </FormControl>
+                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            {loading ? 'Updating' : 'Update'}
-          </Button>
+          {!session && (
+            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              {loading ? 'Updating' : 'Update'}
+            </Button>
+          )}
         </form>
       </Form>
       </div>

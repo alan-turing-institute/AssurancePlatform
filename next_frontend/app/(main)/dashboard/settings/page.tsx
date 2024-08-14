@@ -103,8 +103,8 @@ const SettingsPage = () => {
       ) : (
         <>
           <div className="divide-y divide-foreground/5 min-h-screen">
-            <PersonalInfoForm data={currentUser}/>
-            <PasswordForm />
+            <PersonalInfoForm data={currentUser} />
+            <PasswordForm data={currentUser} />
             <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
               <div>
                 <h2 className="text-base font-semibold leading-7 text-foreground">Delete account</h2>
