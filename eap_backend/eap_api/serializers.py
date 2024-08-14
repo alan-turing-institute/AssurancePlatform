@@ -47,6 +47,11 @@ class GitHubRepositorySerializer(serializers.ModelSerializer):
         fields = ("id", "name", "url", "description", "created_date", "owner")
 
 
+class PasswordChangeSerializer(serializers.Serializer):
+    password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
     all_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
