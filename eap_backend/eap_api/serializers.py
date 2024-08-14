@@ -72,6 +72,8 @@ class EAPUserSerializer(serializers.ModelSerializer):
             "is_staff",
             "all_groups",
             "owned_groups",
+            "auth_provider",
+            "auth_username",
             "github_repositories",  # Add this line to include GitHub repositories
         )
 

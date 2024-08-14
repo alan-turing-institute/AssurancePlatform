@@ -10,6 +10,7 @@ from django.utils import timezone
 
 class EAPUser(AbstractUser):
     auth_provider = models.CharField(max_length=200, default="legacy")
+    auth_username = models.CharField(max_length=200, default="")
 
     def __str__(self):
         return self.username
