@@ -28,6 +28,7 @@ from eap_api.serializers import (
 )
 from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils
 from eap_api.views import make_case_summary, make_summary
+from rest_framework import status
 from rest_framework.authtoken.models import Token
 from social_core.exceptions import AuthForbidden
 
@@ -1342,9 +1343,9 @@ class UserViewNoAuthTest(TestCase):
 class UserDetailViewWithAuthTest(TestCase):
     def setUp(self):
         # login
-        user = EAPUser.objects.create(**USER1_INFO)
-        token, created = Token.objects.get_or_create(user=user)
-        key = token.key
+        self.user = EAPUser.objects.create(**USER1_INFO)
+        self.user_token, _ = Token.objects.get_or_create(user=self.user)
+        key = self.user_token.key
         self.headers = {"HTTP_AUTHORIZATION": f"Token {key}"}
         self.update = {
             "username": "user1_updated",
@@ -1371,6 +1372,9 @@ class UserDetailViewWithAuthTest(TestCase):
         response_json = response_put.json()
         assert response_json["username"] == self.update["username"]
 
+        updated_user: EAPUser = EAPUser.objects.get(pk=1)
+        assert updated_user.username == self.update["username"]
+
     def test_user_detail_view_delete(self):
         client = Client(**self.headers)
         response_delete = client.delete(
@@ -1379,6 +1383,75 @@ class UserDetailViewWithAuthTest(TestCase):
         )
         assert response_delete.status_code == 204
         assert len(EAPUser.objects.all()) == 0
+
+    def test_unauthorised_password_change(self):
+
+        response_put: HttpResponse = self.client.put(
+            reverse("change_user_password", kwargs={"pk": self.user.pk})
+        )
+
+        assert response_put.status_code == status.HTTP_401_UNAUTHORIZED
+
+        another_user: EAPUser = EAPUser.objects.create(username="person")
+        another_user_token, _ = Token.objects.get_or_create(user=another_user)
+
+        response_put: HttpResponse = self.client.put(
+            reverse(
+                "change_user_password",
+                kwargs={"pk": self.user.pk},
+            ),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {another_user_token.key}",
+        )
+
+        assert (
+            response_put.status_code == status.HTTP_403_FORBIDDEN
+        ), f"Expected status 403, but was {response_put}"
+
+    def test_authorised_password_change(self):
+
+        self.user.set_password(USER1_INFO["password"])
+        self.user.save()
+        assert self.user.check_password(USER1_INFO["password"])
+
+        response_put: HttpResponse = self.client.put(
+            reverse("change_user_password", kwargs={"pk": self.user.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.user_token.key}",
+            content_type="application/json",
+            data=json.dumps(
+                {"password": "wrong password!", "new_password": "new password"}
+            ),
+        )
+
+        assert (
+            response_put.status_code == status.HTTP_400_BAD_REQUEST
+        ), f"Expected 400 status, but was {response_put}"
+
+        response_put = self.client.put(
+            reverse("change_user_password", kwargs={"pk": self.user.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.user_token.key}",
+            content_type="application/json",
+            data=json.dumps({"password": USER1_INFO["password"]}),
+        )
+
+        assert (
+            response_put.status_code == status.HTTP_400_BAD_REQUEST
+        ), f"Expected bad request, but was {response_put}"
+
+        response_put = self.client.put(
+            reverse("change_user_password", kwargs={"pk": self.user.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.user_token.key}",
+            content_type="application/json",
+            data=json.dumps(
+                {"password": USER1_INFO["password"], "new_password": "new password"}
+            ),
+        )
+
+        assert response_put.status_code == status.HTTP_200_OK
+
+        self.user.refresh_from_db()
+
+        assert self.user.check_password("new password"), "Password didn't change"
 
 
 class GroupViewNoAuthTest(TestCase):
