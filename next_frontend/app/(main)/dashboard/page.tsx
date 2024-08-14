@@ -75,7 +75,7 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {assuranceCases.length === 0 ? <NoCasesFound /> : <CaseList assuranceCases={assuranceCases} />}
+          {assuranceCases.length === 0 ? <NoCasesFound message={'Get started by creating a new assurance case.'} /> : <CaseList assuranceCases={assuranceCases} />}
         </>
       )}
     </>

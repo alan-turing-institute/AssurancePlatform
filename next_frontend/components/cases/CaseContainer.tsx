@@ -42,6 +42,7 @@ const CaseContainer = () => {
     if(response.status === 401) return unauthorized()
 
     const result = await response.json()
+    console.log('AssuranceCase', result)
 
     const formattedAssuranceCase = await addHiddenProp(result)
     return formattedAssuranceCase
