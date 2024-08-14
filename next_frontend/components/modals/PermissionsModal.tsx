@@ -38,7 +38,7 @@ export const PermissionsModal = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
   // const [viewMembers, setViewMembers] = useState<any[]>([])
   // const [editMembers, setEditMembers] = useState<any[]>([])
-  
+
   const params = useParams()
   const { caseId } = params
 
@@ -66,7 +66,7 @@ export const PermissionsModal = () => {
       setLoading(true)
       const payload = []
 
-      const item = { 
+      const item = {
         email: member.email,
         edit: false,
         view: false
@@ -75,7 +75,7 @@ export const PermissionsModal = () => {
       payload.push(item)
 
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`;
-  
+
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
@@ -85,7 +85,7 @@ export const PermissionsModal = () => {
         body: JSON.stringify(payload),
       };
       const response = await fetch(url, requestOptions);
-  
+
       if (!response.ok) {
         console.log(`Something went wrong ${response.status}`)
 
@@ -136,7 +136,7 @@ export const PermissionsModal = () => {
     >
       <p className="uppercase text-xs mb-2">Edit members</p>
       <Separator />
-      
+
       <div className="my-4">
         {editMembers.length > 0 ? (
           editMembers.map((member: any) => (
@@ -171,7 +171,7 @@ export const PermissionsModal = () => {
           <p className="text-sm text-muted-foreground">No members found.</p>
         )}
       </div>
-      
+
     </Modal>
   );
 };
