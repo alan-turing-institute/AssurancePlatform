@@ -83,7 +83,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
     setLoading(true)
 
     const newDetails = {
-      password: values.currentPassword, 
+      password: values.currentPassword,
       new_password: values.newPassword
     }
 
@@ -98,7 +98,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
         },
         body: JSON.stringify(newDetails),
       };
-    
+
       const response = await fetch(url, requestOptions)
 
       if(response.status === 400) {

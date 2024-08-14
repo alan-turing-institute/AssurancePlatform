@@ -42,7 +42,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
     // If there's user data and no token, set the token
     if (data?.user && token === null) {
       setToken(data?.accessToken);
-    } 
+    }
     // If no user data or token is null, redirect to the login page
     else if (!data?.user || token === null) {
       router.push('/login');

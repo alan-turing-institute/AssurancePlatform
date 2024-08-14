@@ -89,7 +89,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
     const userId = data.id
 
     const newUserDetails = {
-      username: values.username, 
+      username: values.username,
       email: values.email
     }
 
@@ -104,7 +104,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
         },
         body: JSON.stringify(newUserDetails),
       };
-    
+
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {

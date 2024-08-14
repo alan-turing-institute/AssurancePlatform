@@ -65,14 +65,14 @@ const SettingsPage = () => {
           Authorization: `Token ${token}`
         }
       }
-    
+
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {
         notifyError('Something went wrong')
         return
       }
-      
+
       setToken(null);
       router.push('/login')
     } catch (error) {
@@ -140,7 +140,7 @@ const SettingsPage = () => {
         confirmButtonText={'Yes, delete my account!'}
         cancelButtonText={'No, keep my account'}
       />
-      
+
     </main>
   )
 }
