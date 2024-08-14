@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -16,55 +15,110 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { MoveLeft } from "lucide-react"
+import { Lock, MoveLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useLoginToken } from "@/hooks/useAuth"
+import { useState } from "react"
+import { useToast } from "@/components/ui/use-toast"
+import { useSession } from "next-auth/react"
 
 const ACCEPTED_FILE_TYPES = ["jpg"];
 
 const FormSchema = z.object({
-  firstname: z.string().min(2, {
-    message: "Firstname must be at least 2 characters.",
-  }),
-  lastname: z.string().min(2, {
-    message: "Lastname must be at least 2 characters.",
+  // firstname: z.string().min(2, {
+  //   message: "Firstname must be at least 2 characters.",
+  // }),
+  // lastname: z.string().min(2, {
+  //   message: "Lastname must be at least 2 characters.",
+  // }),
+  username: z.string().min(2, {
+    message: "Username must be at least 2 characters.",
   }),
   email: z.string().min(2, {
     message: "Email must be at least 2 characters.",
   }),
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
-  avatar: z.any()
-    .refine(files => {
-      if (!files) {
-        return "Please select a file.";
-      }
-      if (!(files instanceof FileList)) {
-        return "Expected a file.";
-      }
-      const filesArray = Array.from(files);
-      if (!filesArray.every(file => ACCEPTED_FILE_TYPES.includes(file.type))) {
-        return "Only JPG files are allowed.";
-      }
-      return true; // Validation passed
-    })
+  // avatar: z.any()
+  //   .refine(files => {
+  //     if (!files) {
+  //       return "Please select a file.";
+  //     }
+  //     if (!(files instanceof FileList)) {
+  //       return "Expected a file.";
+  //     }
+  //     const filesArray = Array.from(files);
+  //     if (!filesArray.every(file => ACCEPTED_FILE_TYPES.includes(file.type))) {
+  //       return "Only JPG files are allowed.";
+  //     }
+  //     return true; // Validation passed
+  //   })
 })
 
-export function PersonalInfoForm() {
+type PersonalInfoFormProps = {
+  data: any
+}
+
+export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
+  const [loading, setLoading] = useState<boolean>(false)
+
   const router = useRouter()
+  const [token] = useLoginToken();
+  const { toast } = useToast()
+  const { data: session } = useSession()
+
+  const notify = (message: string) => {
+    toast({
+      description: message,
+    });
+  };
+
+  const notifyError = (message: string) => {
+    toast({
+      variant: 'destructive',
+      title: 'Uh oh! Something went wrong.',
+      description: message,
+    });
+  };
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: {
-      firstname: 'Richard',
-      lastname: 'Griffiths',
-      email: 'rich.griffiths@gmail.com',
-      username: 'Rich'
-    },
+    defaultValues: data
   })
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log(data)
+  async function onSubmit(values: z.infer<typeof FormSchema>) {
+    setLoading(true)
+    const userId = data.id
+
+    const newUserDetails = {
+      username: values.username,
+      email: values.email
+    }
+
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/`;
+
+      const requestOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUserDetails),
+      };
+
+      const response = await fetch(url, requestOptions);
+
+      if (!response.ok) {
+        notifyError('Something went wrong')
+        return
+      }
+
+      const result = await response.json();
+      notify('User Updated Successfully!')
+    } catch (error) {
+      console.log(error)
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -81,12 +135,11 @@ export function PersonalInfoForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
           <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
-            <FormField
+            {/* <FormField
               control={form.control}
               name="avatar"
               render={({ field: { value, onChange, ...fieldProps } }) => (
                 <FormItem className="col-span-full">
-                  {/* <FormLabel>Change Avatar</FormLabel> */}
                   <FormControl>
                     <div className="flex justify-start items-center gap-6">
                       <img
@@ -109,8 +162,8 @@ export function PersonalInfoForm() {
                   <FormMessage />
                 </FormItem>
               )}
-            />
-            <FormField
+            /> */}
+            {/* <FormField
               control={form.control}
               name="firstname"
               render={({ field }) => (
@@ -135,6 +188,20 @@ export function PersonalInfoForm() {
                   <FormMessage />
                 </FormItem>
               )}
+            /> */}
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem className="col-span-full">
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
+                  </FormControl>
+                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
+                  <FormMessage />
+                </FormItem>
+              )}
             />
             <FormField
               control={form.control}
@@ -143,27 +210,19 @@ export function PersonalInfoForm() {
                 <FormItem className="col-span-full">
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} />
+                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem className="col-span-full">
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="example@gmail.com" {...field} />
-                  </FormControl>
+                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">Save</Button>
+          {!session && (
+            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              {loading ? 'Updating' : 'Update'}
+            </Button>
+          )}
         </form>
       </Form>
       </div>
