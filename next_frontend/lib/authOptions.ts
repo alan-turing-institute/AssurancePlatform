@@ -20,7 +20,8 @@ export const authOptions: NextAuthOptions = {
       // api/register-by-access-token/social/github/
 
       const payload = {
-        "access_token": account?.access_token
+        access_token: account?.access_token,
+        email: profile?.email
       }
 
       const response = await fetch(`https://staging-eap-backend.azurewebsites.net/api/auth/github/register-by-token/`, {
