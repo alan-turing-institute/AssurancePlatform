@@ -48,7 +48,6 @@ from .view_utils import (
     UpdateIdentifierUtils,
     can_view_group,
     filter_by_case_id,
-    get_allowed_cases,
     get_allowed_groups,
     get_case_permissions,
     get_json_tree,
@@ -227,9 +226,15 @@ def case_list(request):
     List all cases, or make a new case
     """
 
+    owner: bool = request.query_params.get("owner", "true").lower() == "true"
+    view: bool = request.query_params.get("view", "true").lower() == "true"
+    edit: bool = request.query_params.get("edit", "true").lower() == "true"
+
     if request.method == "GET":
 
-        cases = get_allowed_cases(request.user)
+        cases = ShareAssuranceCaseUtils.get_user_cases(
+            request.user, owner=owner, view=view, edit=edit
+        )
         serializer = AssuranceCaseSerializer(cases, many=True)
         summaries = make_case_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
