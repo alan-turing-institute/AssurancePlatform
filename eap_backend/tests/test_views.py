@@ -1947,7 +1947,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         view_group.member.add(self.tea_user)
 
         response_get: HttpResponse = self.client.get(
-            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            f'{reverse("case_list")}?{urlencode({"view": "true", "owner": "false", "edit": "false"})}',
             HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
 
@@ -1962,7 +1962,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         assert response_body[0]["id"] == self.assurance_case.pk
 
         response_get = self.client.get(
-            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            f'{reverse("case_list")}?{urlencode({"view": "true", "owner": "false", "edit": "false"})}',
             HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
         )
 
@@ -1983,7 +1983,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         edit_group.member.add(self.tea_user)
 
         response_get: HttpResponse = self.client.get(
-            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            f'{reverse("case_list")}?{urlencode({"edit": "true", "view": "false", "owner": "false"})}',
             HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
 
@@ -2008,7 +2008,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         )
 
         response_get: HttpResponse = self.client.get(
-            f'{reverse("case_list")}?{urlencode({"shared": "false"})}',
+            f'{reverse("case_list")}?{urlencode({"owner": "true", "view": "true", "edit": "true"})}',
             HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
 

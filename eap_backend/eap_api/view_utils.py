@@ -404,25 +404,26 @@ class ShareAssuranceCaseUtils:
         }
 
     @staticmethod
-    def get_user_cases(user: EAPUser, shared: bool = False) -> list[AssuranceCase]:
+    def get_user_cases(
+        user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
+    ) -> list[AssuranceCase]:
         case_catalog: dict[int, AssuranceCase] = {}
-
         group_ids: list[int] = [group.pk for group in user.all_groups.all()]
-        view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-            view_groups__in=group_ids
-        )
-        edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-            edit_groups__in=group_ids
-        )
 
-        case_catalog = {case.pk: case for case in list(view_cases) + list(edit_cases)}
+        if view:
+            view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
+                view_groups__in=group_ids
+            )
+            case_catalog = case_catalog | {case.pk: case for case in list(view_cases)}
 
-        if not shared:
-            cases_owned: dict[int, AssuranceCase] = {
-                case.pk: case for case in user.cases.all()
-            }
+        if edit:
+            edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
+                edit_groups__in=group_ids
+            )
+            case_catalog = case_catalog | {case.pk: case for case in list(edit_cases)}
 
-            case_catalog = case_catalog | cases_owned
+        if owner:
+            case_catalog = case_catalog | {case.pk: case for case in user.cases.all()}
 
         return list(case_catalog.values())
 
