@@ -40,6 +40,7 @@ from .serializers import (
     PropertyClaimSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
+    UsernameAwareUserSerializer,
 )
 from .view_utils import (
     SandboxUtils,
@@ -92,7 +93,7 @@ def self_detail(request):
     if request.user != user:
         return HttpResponse(status=403)
     if request.method == "GET":
-        serializer = EAPUserSerializer(user)
+        serializer = UsernameAwareUserSerializer(user)
         user_data = serializer.data
         return JsonResponse(user_data)
     return None
