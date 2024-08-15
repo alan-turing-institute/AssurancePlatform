@@ -404,6 +404,30 @@ class ShareAssuranceCaseUtils:
         }
 
     @staticmethod
+    def get_user_cases(
+        user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
+    ) -> list[AssuranceCase]:
+        case_catalog: dict[int, AssuranceCase] = {}
+        group_ids: list[int] = [group.pk for group in user.all_groups.all()]
+
+        if view:
+            view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
+                view_groups__in=group_ids
+            )
+            case_catalog = case_catalog | {case.pk: case for case in list(view_cases)}
+
+        if edit:
+            edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
+                edit_groups__in=group_ids
+            )
+            case_catalog = case_catalog | {case.pk: case for case in list(edit_cases)}
+
+        if owner:
+            case_catalog = case_catalog | {case.pk: case for case in user.cases.all()}
+
+        return list(case_catalog.values())
+
+    @staticmethod
     def _get_users_from_group_list(group_manager: QuerySet) -> list[dict[str, Any]]:
         user_dictionary: dict[int, dict[str, Any]] = {}
         for current_group in group_manager.all():
