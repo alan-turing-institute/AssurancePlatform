@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlencode
 
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
@@ -55,6 +56,9 @@ class CaseViewTest(TestCase):
 
         # Mock Entries to be modified and tested
         self.assurance_case: AssuranceCase = AssuranceCase.objects.create(**CASE1_INFO)
+        self.assurance_case.owner = user
+        self.assurance_case.save()
+
         self.update = {
             "name": "TestAC_updated",
             "description": "description is updated",
@@ -93,7 +97,9 @@ class CaseViewTest(TestCase):
             HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_get.status_code == 200
-        assert response_get.json() == make_case_summary(self.serializer.data)
+        assert response_get.json() == make_case_summary(
+            self.serializer.data
+        ), f"Expected is {make_case_summary(self.serializer.data)} but was {response_get.json()}"
 
     def test_case_detail_view_get(self):
         response_get = self.client.get(
@@ -1932,3 +1938,91 @@ class ShareAssuranceCaseViewTest(TestCase):
             "id": self.another_tea_user.pk,
             "email": self.another_tea_user.email,
         }
+
+    def test_retrieve_shared_cases_for_view(self):
+        view_group: EAPGroup = ShareAssuranceCaseUtils.get_view_group(
+            self.assurance_case
+        )
+
+        view_group.member.add(self.tea_user)
+
+        response_get: HttpResponse = self.client.get(
+            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+
+        assert (
+            response_get.status_code == status.HTTP_200_OK
+        ), f"Expected status 200 but was {response_get}"
+
+        response_body: list[dict] = response_get.json()
+        assert (
+            len(response_body) == 1
+        ), f"Expected one case response but was {response_body}"
+        assert response_body[0]["id"] == self.assurance_case.pk
+
+        response_get = self.client.get(
+            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert (
+            response_get.status_code == status.HTTP_200_OK
+        ), f"Expected status 200 but was {response_get}"
+
+        response_body: list[dict] = response_get.json()
+        assert (
+            len(response_body) == 0
+        ), f"Expected empty response but was {response_body}"
+
+    def test_retrieve_cases_for_edit(self):
+        edit_group: EAPGroup = ShareAssuranceCaseUtils.get_edit_group(
+            self.assurance_case
+        )
+
+        edit_group.member.add(self.tea_user)
+
+        response_get: HttpResponse = self.client.get(
+            f'{reverse("case_list")}?{urlencode({"shared": True})}',
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+
+        assert (
+            response_get.status_code == status.HTTP_200_OK
+        ), f"Expected status 200 but was {response_get}"
+
+        response_body: list[dict] = response_get.json()
+        assert (
+            len(response_body) == 1
+        ), f"Expected one case response but was {response_body}"
+        assert response_body[0]["id"] == self.assurance_case.pk
+
+    def test_retrieve_all_user_cases(self):
+        view_group: EAPGroup = ShareAssuranceCaseUtils.get_view_group(
+            self.assurance_case
+        )
+
+        view_group.member.add(self.tea_user)
+        owned_case: AssuranceCase = AssuranceCase.objects.create(
+            name="My case", owner=self.tea_user
+        )
+
+        response_get: HttpResponse = self.client.get(
+            f'{reverse("case_list")}?{urlencode({"shared": "false"})}',
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+
+        assert (
+            response_get.status_code == status.HTTP_200_OK
+        ), f"Expected status 200 but was {response_get}"
+
+        response_body: list[dict] = response_get.json()
+        assert (
+            len(response_body) == 2
+        ), f"Expected two cases response but was {response_body}"
+
+        assurance_cases: list[int] = [
+            assurance_case["id"] for assurance_case in response_body
+        ]
+        assert self.assurance_case.pk in assurance_cases
+        assert owned_case.pk in assurance_cases
