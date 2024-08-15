@@ -798,12 +798,15 @@ def attach_strategy(request: HttpRequest, pk: int):
 def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG001
 
     access_token: str = request.data.get("access_token")
+    user_email: str = request.data.get("email")
 
     try:
-        github_user: EAPUser = request.backend.do_auth(access_token)
+        social_user: EAPUser = request.backend.do_auth(access_token)
+        if not social_user.email:
+            social_user.email = user_email
 
         eap_user: EAPUser = SocialAuthenticationUtils.register_social_user(
-            github_user, backend
+            social_user, backend
         )
 
         token, _ = Token.objects.get_or_create(user=eap_user)
