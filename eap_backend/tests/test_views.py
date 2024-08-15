@@ -1311,7 +1311,9 @@ class UserViewNoAuthTest(TestCase):
             content_type="application/json",
         )
         assert response_post.status_code == 201
-        assert response_post.json()["username"] == post_data["username"]
+        assert (
+            response_post.json()["username"] == post_data["username"]
+        ), f"Expected 'newUser' but response was {response_post.json()}"
         # check we now have two cases in the db
         response_get = self.client.get(reverse("user_list"))
         assert len(response_get.json()) == 2
@@ -1376,7 +1378,9 @@ class UserDetailViewWithAuthTest(TestCase):
         )
         assert response_put.status_code == 200
         response_json = response_put.json()
-        assert response_json["username"] == self.update["username"]
+        assert (
+            response_json["username"] == self.update["username"]
+        ), f"Expected 'user1_updated' but response was {response_json}"
 
         updated_user: EAPUser = EAPUser.objects.get(pk=1)
         assert updated_user.username == self.update["username"]

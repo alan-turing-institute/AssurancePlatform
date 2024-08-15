@@ -73,9 +73,19 @@ class EAPUserSerializer(serializers.ModelSerializer):
             "all_groups",
             "owned_groups",
             "auth_provider",
-            "auth_username",
             "github_repositories",  # Add this line to include GitHub repositories
         )
+
+
+class UsernameAwareUserSerializer(EAPUserSerializer):
+
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, user: EAPUser) -> str:
+        if user.auth_provider == "legacy":
+            return user.username
+
+        return user.auth_username
 
 
 class EAPGroupSerializer(serializers.ModelSerializer):
