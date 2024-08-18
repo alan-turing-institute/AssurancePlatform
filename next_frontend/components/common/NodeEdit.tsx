@@ -236,7 +236,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   return (
     <EditSheet
-      title={`Editing ${node.data.name}`}
+      title={`${assuranceCase.permissions !== 'view' ? 'Editing' : ''} ${node.data.name}`}
       description={`Use this form to update your ${caseItemDescription(node.type)}.`}
       isOpen={isOpen}
       onClose={handleClose}
@@ -265,7 +265,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </div>
           )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
-          {node.type !== 'context' && (
+          {node.type !== 'context' && assuranceCase.permissions !== 'view' && (
             <>
               <Separator className="my-6"/>
               <div className="">
@@ -285,23 +285,25 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <Separator className="my-6"/>
             </>
           )}
-          <div className="mt-12 flex justify-start items-center gap-4">
-            {node.type !== 'goal' && (
-              <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
-            )}
-            <Button
-              variant={"destructive"}
-              onClick={() => setDeleteOpen(true)}
-              className="w-full flex justify-center items-center"
-            >
-              <Trash2 className="mr-2" />
-              Delete&nbsp;
-              <span className='capitalize'>{node.type}</span>
-            </Button>
-          </div>
+          {assuranceCase.permissions !== 'view' && (
+            <div className="mt-12 flex justify-start items-center gap-4">
+              {node.type !== 'goal' && (
+                <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
+              )}
+              <Button
+                variant={"destructive"}
+                onClick={() => setDeleteOpen(true)}
+                className="w-full flex justify-center items-center"
+              >
+                <Trash2 className="mr-2" />
+                Delete&nbsp;
+                <span className='capitalize'>{node.type}</span>
+              </Button>
+            </div>
+          )}
         </div>
       )}
-      {action === 'new' && (
+      {action === 'new' && assuranceCase.permissions !== 'view' && (
         selectedLink ? (
           <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
         ) : (
@@ -339,7 +341,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           </>
         )
       )}
-      {action === 'existing' && (
+      {action === 'existing' && assuranceCase.permissions !== 'view' && (
         node.type !== 'evidence' && node.type !== 'context' && (
           <OrphanElements
             node={node}
@@ -348,7 +350,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             setAction={setAction} />
         )
       )}
-      {action === 'move' && (
+      {action === 'move' && assuranceCase.permissions !== 'view' && (
         <>
         {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">

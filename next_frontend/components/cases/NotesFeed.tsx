@@ -142,15 +142,17 @@ export default function NotesFeed({ }) {
                   </div>
                 </div>
                 {!edit && (
-                <div className='hidden group-hover:flex justify-center items-center gap-2'>
-                  <Button onClick={() => {
-                    setEdit(!edit)
-                    setEditId(activityItem.id)
-                  }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
-                    <PencilLine className='w-4 h-4'/>
-                  </Button>
-                  <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
-                </div>
+                  assuranceCase.permissions !== 'view' && (
+                    <div className='hidden group-hover:flex justify-center items-center gap-2'>
+                      <Button onClick={() => {
+                        setEdit(!edit)
+                        setEditId(activityItem.id)
+                      }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
+                        <PencilLine className='w-4 h-4'/>
+                      </Button>
+                      <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
+                    </div>
+                  )
                 )}
               </div>
             </div>

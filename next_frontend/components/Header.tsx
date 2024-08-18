@@ -134,7 +134,7 @@ const Header = ({ setOpen }: HeaderProps) => {
           <Button
             variant={"ghost"}
             size={"icon"}
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.back()}
             className="hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white"
           >
             <ArrowLeft className="w-4 h-4" />
