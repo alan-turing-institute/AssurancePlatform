@@ -22,13 +22,15 @@ const SharedWithMePage = () => {
       myHeaders.append("Content-Type", "application/json");
       myHeaders.append("Authorization", `Token ${token}`);
 
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=false&view=true&edit=true`
+
       const requestOptions: RequestInit = {
         method: 'GET',
         headers: myHeaders,
         redirect: 'follow'
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/?shared=true`, requestOptions)
+      const response = await fetch(url, requestOptions)
 
       if(response.status === 401) {
         console.log('Invalid Token')
@@ -38,7 +40,7 @@ const SharedWithMePage = () => {
       }
 
       const result = await response.json();
-      return result;
+      return result
     } catch (error) {
       console.error("Failed to fetch assurance cases:", error);
       router.push('login');
@@ -75,7 +77,7 @@ const SharedWithMePage = () => {
         </div>
       ) : (
         <>
-          {assuranceCases.length === 0 ?  <NoCasesFound message={'No cases shared with you yet.'} shared /> : <CaseList assuranceCases={sharedAssuranceCases} />}
+          {sharedAssuranceCases.length === 0 ?  <NoCasesFound message={'No cases shared with you yet.'} shared /> : <CaseList assuranceCases={sharedAssuranceCases} />}
         </>
       )}
     </>
