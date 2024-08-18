@@ -29,7 +29,7 @@ const Dashboard = () => {
         redirect: 'follow'
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=true&view=false&edit=false`, requestOptions)
 
       if(response.status === 401) {
         console.log('Invalid Token')
@@ -75,7 +75,7 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {assuranceCases.length === 0 ? <NoCasesFound message={'Get started by creating a new assurance case.'} /> : <CaseList assuranceCases={assuranceCases} />}
+          {assuranceCases.length === 0 ? <NoCasesFound message={'Get started by creating your own assurance case.'} /> : <CaseList assuranceCases={assuranceCases} showCreate />}
         </>
       )}
     </>

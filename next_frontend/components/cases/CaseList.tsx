@@ -17,9 +17,10 @@ import { Input } from '../ui/input'
 
 interface CaseListProps {
   assuranceCases: any[]
+  showCreate?: boolean
 }
 
-const CaseList = ({ assuranceCases } : CaseListProps) => {
+const CaseList = ({ assuranceCases, showCreate = false } : CaseListProps) => {
   const createCaseModal = useCreateCaseModal();
   const importModal = useImportModal();
   const shareModal = useShareModal()
@@ -70,17 +71,19 @@ const CaseList = ({ assuranceCases } : CaseListProps) => {
         </div>
       </div>
       <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 w-full'>
-        <button onClick={() => createCaseModal.onOpen()} className='group min-h-[420px]'>
-          <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
-            <CardContent className='flex flex-col justify-center items-center gap-2 py-20'>
-              <PlusCircleIcon className='w-10 h-10 group-hover:-translate-y-1 transition-all' />
-              <div>
-                <h4 className='text-xl text-center mb-1'>Create new case</h4>
-                <p className='text-center text-sm text-foreground/70'>Get started with a new case.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </button>
+        {showCreate && (
+          <button onClick={() => createCaseModal.onOpen()} className='group min-h-[420px]'>
+            <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
+              <CardContent className='flex flex-col justify-center items-center gap-2 py-20'>
+                <PlusCircleIcon className='w-10 h-10 group-hover:-translate-y-1 transition-all' />
+                <div>
+                  <h4 className='text-xl text-center mb-1'>Create new case</h4>
+                  <p className='text-center text-sm text-foreground/70'>Get started with a new case.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </button>
+        )}
         {filteredCases.map((assuranceCase) => (
           <CaseCard key={assuranceCase.id} assuranceCase={assuranceCase} />
         ))}
