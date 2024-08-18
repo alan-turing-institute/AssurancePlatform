@@ -71,12 +71,14 @@ function Flow({}: FlowProps) {
   }, [assuranceCase]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
-    if(assuranceCase.permissions !== 'view') {
-      setSelectedNode(node);
-      setEditOpen(true);
-    } else {
-      return
-    }
+    // if(assuranceCase.permissions !== 'view') {
+    //   setSelectedNode(node);
+    //   setEditOpen(true);
+    // } else {
+    //   return
+    // }
+    setSelectedNode(node);
+    setEditOpen(true);
   };
 
   const showCreateGoal = nodes.length > 0 && nodes[0].type === 'goal' ? false : true;

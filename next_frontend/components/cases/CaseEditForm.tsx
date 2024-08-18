@@ -96,7 +96,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -109,13 +109,14 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea rows={8} {...field} />
+                <Textarea rows={8} {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className='flex justify-start items-center gap-3'>
+        {assuranceCase.permissions !== 'view' && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
               <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
@@ -123,6 +124,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
               <span>Update</span>
             )}
           </Button>
+        )}
         </div>
       </form>
     </Form>
