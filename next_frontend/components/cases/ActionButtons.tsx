@@ -2,7 +2,7 @@
 
 import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2, Users2 } from "lucide-react";
 import { Node } from "reactflow";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
 import useStore from "@/data/store";
 import { useLoginToken } from "@/hooks/useAuth";
@@ -157,6 +157,9 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     }
   }
 
+  if(assuranceCase && assuranceCase.permissions === 'view') {
+    return null
+  } 
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
