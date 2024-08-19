@@ -56,7 +56,7 @@ export const PermissionsModal = () => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`, requestOptions);
 
     if(response.status === 401) return unauthorized()
-    
+
     //TODO: 403 when accessing and not the owner i.e. shared 'Read'
     console.log(response)
 
