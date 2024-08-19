@@ -214,58 +214,68 @@ export const ShareModal = () => {
       )}
       <div className="my-4 space-y-2">
         <h2 className="flex justify-start items-center gap-2"><User2 className="w-4 h-4"/> Share with users</h2>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="hidden">Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter email address" {...field} autoComplete="off" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+        {assuranceCase && assuranceCase.permissions === 'manage' && (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
+              <FormField
                 control={form.control}
-                name="accessLevel"
+                name="email"
                 render={({ field }) => (
-                  <FormItem className="pb-2">
-                    <FormLabel>Access Level</FormLabel>
+                  <FormItem>
+                    <FormLabel className="hidden">Email</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex justify-start items-center space-x-2"
-                      >
-                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value={'Read'} />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Read
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value={'Edit'} />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Edit
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
+                      <Input placeholder="Enter email address" {...field} autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            <Button type="submit" disabled={loading}><Share2 className="w-4 h-4 mr-2"/>Share</Button>
-          </form>
-        </Form>
+              <FormField
+                  control={form.control}
+                  name="accessLevel"
+                  render={({ field }) => (
+                    <FormItem className="pb-2">
+                      <FormLabel>Access Level</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex justify-start items-center space-x-2"
+                        >
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Read'} />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Read
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Edit'} />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Edit
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Reviewer'} disabled />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Reviewer
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              <Button type="submit" disabled={loading}><Share2 className="w-4 h-4 mr-2"/>Share</Button>
+            </form>
+          </Form>
+        )}
         {/* <AutoComplete
           options={users}
           selectedUsers={selectedUsers}
