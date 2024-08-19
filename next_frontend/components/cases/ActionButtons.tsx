@@ -161,7 +161,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
     <div className="w-1/8 m-auto bg-indigo-100 dark:bg-indigo-500/20 shadow-lg text-white py-2 px-4 flex justify-center items-center gap-2 rounded-full">
       <div className="pr-2 border-r-2 border-r-indigo-200 dark:border-r-indigo-800/60 flex justify-center items-center gap-2">
-        {showCreateGoal && assuranceCase.permissions !== 'view' && (
+        {showCreateGoal && (assuranceCase.permissions !== 'view' || assuranceCase.permissions !== 'reviewer') && (
          <ActionTooltip label='New Goal'>
             <button onClick={() => setOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Plus className='w-5 h-5' /><span className="sr-only">Add Goal</span></button>
           </ActionTooltip>
@@ -181,7 +181,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
             <button onClick={() => shareModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Share & Export</span></button>
           </ActionTooltip>
         )}
-        {assuranceCase.permissions !== 'view' && (
+        {assuranceCase.permissions === 'manage' && (
           <ActionTooltip label='Permissions'>
             <button onClick={() => permissionModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Users2 className='w-5 h-5' /><span className="sr-only">Permissions</span></button>
           </ActionTooltip>
@@ -189,12 +189,12 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
         </ActionTooltip>
-        {assuranceCase.permissions !== 'view' && (
+        {(assuranceCase.permissions === 'manage' || assuranceCase.permissions === 'editor') && (
           <ActionTooltip label='Capture'>
             <button onClick={handleCapture} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Camera className='w-5 h-5' /><span className="sr-only">Capture</span></button>
           </ActionTooltip>
         )}
-        {assuranceCase.permissions !== 'view' && (
+        {assuranceCase.permissions === 'manage' && (
           <ActionTooltip label='Delete'>
             <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
           </ActionTooltip>
