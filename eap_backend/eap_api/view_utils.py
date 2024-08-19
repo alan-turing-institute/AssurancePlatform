@@ -24,6 +24,7 @@ from .models import (
 )
 from .serializers import (
     TYPE_DICT,
+    AssuranceCaseSerializer,
     SandboxSerializer,
     get_case_id,
 )
@@ -406,26 +407,61 @@ class ShareAssuranceCaseUtils:
     @staticmethod
     def get_user_cases(
         user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
-    ) -> list[AssuranceCase]:
-        case_catalog: dict[int, AssuranceCase] = {}
+    ) -> list[dict]:
+        case_catalog: dict[int, dict] = {}
         group_ids: list[int] = [group.pk for group in user.all_groups.all()]
 
         if view:
             view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
                 view_groups__in=group_ids
             )
-            case_catalog = case_catalog | {case.pk: case for case in list(view_cases)}
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog, view_cases, "view"
+            )
 
         if edit:
             edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
                 edit_groups__in=group_ids
             )
-            case_catalog = case_catalog | {case.pk: case for case in list(edit_cases)}
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog, edit_cases, "edit"
+            )
 
         if owner:
-            case_catalog = case_catalog | {case.pk: case for case in user.cases.all()}
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog, user.cases.all(), "owner"
+            )
 
-        return list(case_catalog.values())
+        serialized_cases: list[dict] = []
+        for case_entry in case_catalog.values():
+            serialized_cases.append(
+                ShareAssuranceCaseUtils.make_case_summary(
+                    AssuranceCaseSerializer(case_entry["case"]),
+                    case_entry["permissions"],
+                )
+            )
+
+        return serialized_cases
+
+    @staticmethod
+    def make_case_summary(serialized_case, permissions: set) -> dict:
+        case_summary: dict = cast(dict, make_case_summary(serialized_case.data))
+        case_summary["permissions"] = list(permissions)
+        return case_summary
+
+    @staticmethod
+    def _consolidate_case_list(
+        case_catalog: dict[int, dict],
+        new_cases: QuerySet[AssuranceCase],
+        permission: str,
+    ):
+        cases_as_list: list[AssuranceCase] = list(new_cases)
+
+        for case in cases_as_list:
+            if case.pk not in case_catalog:
+                case_catalog[case.pk] = {"case": case, "permissions": {permission}}
+            else:
+                case_catalog[case.pk]["permissions"].add(permission)
 
     @staticmethod
     def _get_users_from_group_list(group_manager: QuerySet) -> list[dict[str, Any]]:
