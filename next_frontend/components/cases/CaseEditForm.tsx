@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
-import { CloudFog, Loader, Loader2, LockIcon, LockKeyhole } from 'lucide-react'
+import { CloudFog, Loader, Loader2, Lock, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
@@ -94,7 +94,12 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel className='flex justify-start items-center gap-2'>
+                Name
+                {assuranceCase.permissions === 'view' && (
+                  <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                )}
+              </FormLabel>
               <FormControl>
                 <Input {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
               </FormControl>
@@ -107,7 +112,12 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className='flex justify-start items-center gap-2'>
+                Description
+                {assuranceCase.permissions === 'view' && (
+                  <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                )}
+              </FormLabel>
               <FormControl>
                 <Textarea rows={8} {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
               </FormControl>
