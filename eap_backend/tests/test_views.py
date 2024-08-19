@@ -27,8 +27,8 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
-from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils
-from eap_api.views import make_case_summary, make_summary
+from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils, make_case_summary
+from eap_api.views import make_summary
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from social_core.exceptions import AuthForbidden
