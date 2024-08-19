@@ -71,6 +71,12 @@ function Flow({}: FlowProps) {
   }, [assuranceCase]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
+    // if(assuranceCase.permissions !== 'view') {
+    //   setSelectedNode(node);
+    //   setEditOpen(true);
+    // } else {
+    //   return
+    // }
     setSelectedNode(node);
     setEditOpen(true);
   };

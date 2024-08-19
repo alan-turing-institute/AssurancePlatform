@@ -39,8 +39,8 @@ export default async function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <ModalProvider />
               {children}
+              <ModalProvider />
               <Toaster />
             </ThemeProvider>
             <Toaster />
