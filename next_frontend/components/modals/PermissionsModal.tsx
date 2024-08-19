@@ -57,6 +57,9 @@ export const PermissionsModal = () => {
 
     if(response.status === 401) return unauthorized()
 
+    //TODO: 403 when accessing and not the owner i.e. shared 'Read'
+    console.log(response)
+
     const result = await response.json()
     return result
   }
@@ -121,11 +124,13 @@ export const PermissionsModal = () => {
   }
 
   useEffect(() => {
-    fetchCaseMembers().then(result => {
-      setViewMembers(result.view)
-      setEditMembers(result.edit)
-    })
-  },[])
+    if(assuranceCase && assuranceCase.permissions !== 'view') {
+      fetchCaseMembers().then(result => {
+        setViewMembers(result.view)
+        setEditMembers(result.edit)
+      })
+    }
+  },[assuranceCase])
 
   return (
     <Modal

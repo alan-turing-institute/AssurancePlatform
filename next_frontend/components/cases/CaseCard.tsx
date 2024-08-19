@@ -82,9 +82,11 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
           </CardFooter>
         </Card>
       </Link>
-      <button disabled={loading} onClick={() => setOpen(true)} className='absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50'>
-        <Trash2 className='w-4 h-4' />
-      </button>
+      {(assuranceCase.permissions.includes('owner') || assuranceCase.permissions.includes('editor')) && (
+        <button disabled={loading} onClick={() => setOpen(true)} className='absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50'>
+          <Trash2 className='w-4 h-4' />
+        </button>
+      )}
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}

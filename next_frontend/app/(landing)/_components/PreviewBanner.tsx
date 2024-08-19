@@ -13,7 +13,7 @@ export default function PreviewBanner() {
   return (
     <div className='fixed bottom-0 left-0 w-full'>
       <div className="flex justify-center items-center gap-x-6 bg-rose-500 px-6 py-4 sm:px-3.5">
-        <p className="text-sm leading-6 text-white">
+        <div className="text-sm leading-6 text-white">
           <Link href="https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/" className='flex justify-start items-center gap-2'>
             <MessageCircleWarning className='hidden md:block w-4 h-4' />
             <div className='flex flex-col md:flex-row justify-start items-start md:items-center gap-2'>
@@ -24,7 +24,7 @@ export default function PreviewBanner() {
               <span>As this is <span className='font-bold'>preview only</span> it should not to be used for business critical use cases.</span>
             </div>
           </Link>
-        </p>
+        </div>
         {/* <div className="flex flex-1 justify-end">
           <button type="button" className="-m-3 p-3 focus-visible:outline-offset-[-4px]">
             <span className="sr-only">Dismiss</span>
