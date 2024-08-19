@@ -52,7 +52,6 @@ from .view_utils import (
     get_allowed_groups,
     get_case_permissions,
     get_json_tree,
-    make_case_summary,
     make_summary,
     save_json_tree,
 )
@@ -233,12 +232,10 @@ def case_list(request):
 
     if request.method == "GET":
 
-        cases = ShareAssuranceCaseUtils.get_user_cases(
+        serialized_cases = ShareAssuranceCaseUtils.get_user_cases(
             request.user, owner=owner, view=view, edit=edit
         )
-        serializer = AssuranceCaseSerializer(cases, many=True)
-        summaries = make_case_summary(serializer.data)
-        return JsonResponse(summaries, safe=False)
+        return JsonResponse(serialized_cases, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
         data["owner"] = request.user.id
