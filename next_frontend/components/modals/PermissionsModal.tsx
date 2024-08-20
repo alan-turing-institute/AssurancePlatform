@@ -124,7 +124,7 @@ export const PermissionsModal = () => {
   }
 
   useEffect(() => {
-    if(assuranceCase && assuranceCase.permissions !== 'view') {
+    if(assuranceCase && assuranceCase.permissions === 'manage') {
       fetchCaseMembers().then(result => {
         setViewMembers(result.view)
         setEditMembers(result.edit)

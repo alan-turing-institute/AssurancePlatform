@@ -12,7 +12,7 @@ import {
 // import { AssuranceCase } from '@/types'
 import Link from 'next/link'
 import moment from 'moment'
-import { Trash2 } from 'lucide-react'
+import { Eye, PencilRuler, ScanEye, Trash2 } from 'lucide-react'
 import { AlertModal } from '@/components/modals/alertModal'
 import { useParams, useRouter } from 'next/navigation'
 import { useLoginToken } from '@/hooks/useAuth'
@@ -77,8 +77,13 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             <CardTitle>{name}</CardTitle>
             <CardDescription className='text-slate-900 dark:text-white'>{description}</CardDescription>
           </CardHeader>
-          <CardFooter className="flex justify-end text-xs text-gray-500 dark:text-gray-300">
+          <CardFooter className="flex w-full justify-between items-center text-xs text-gray-500 dark:text-gray-300">
             <p>Created on: {moment(created_date).format('DD/MM/YYYY')}</p>
+            <div className='flex justify-start items-center gap-2'>
+              {assuranceCase.permissions.includes('view') && <Eye className='w-4 h-4' />}
+              {assuranceCase.permissions.includes('reviewer') && <ScanEye className='w-4 h-4' />}
+              {assuranceCase.permissions.includes('edit') && <PencilRuler className='w-4 h-4' />}
+            </div>
           </CardFooter>
         </Card>
       </Link>

@@ -212,87 +212,71 @@ export const ShareModal = () => {
           <UserCheck className="w-4 h-4"/>{successMessage}
         </div>
       )}
+      {assuranceCase && assuranceCase.permissions === 'manage' && (
       <div className="my-4 space-y-2">
         <h2 className="flex justify-start items-center gap-2"><User2 className="w-4 h-4"/> Share with users</h2>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="hidden">Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter email address" {...field} autoComplete="off" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
+              <FormField
                 control={form.control}
-                name="accessLevel"
+                name="email"
                 render={({ field }) => (
-                  <FormItem className="pb-2">
-                    <FormLabel>Access Level</FormLabel>
+                  <FormItem>
+                    <FormLabel className="hidden">Email</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex justify-start items-center space-x-2"
-                      >
-                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value={'Read'} />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Read
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value={'Edit'} />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Edit
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
+                      <Input placeholder="Enter email address" {...field} autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            <Button type="submit" disabled={loading}><Share2 className="w-4 h-4 mr-2"/>Share</Button>
-          </form>
-        </Form>
-        {/* <AutoComplete
-          options={users}
-          selectedUsers={selectedUsers}
-          setSelectedUsers={setSelectedUsers}
-        /> */}
-        {/* {selectedUsers.length > 0 ? (
-          <div className="py-4 max-h-[250px] overflow-y-auto">
-            {selectedUsers && selectedUsers.map((user: any) => (
-              <div className="flex justify-start items-center gap-4 p-1 px-3 rounded-md hover:bg-indigo-600 hover:cursor-pointer group hover:text-white">
-                <User2 className="w-4 h-4" />
-                <div className="flex-1">
-                  <p>{user.username}
-                  {user.email ? (
-                    <span className="mx-2 text-xs text-muted-foreground group-hover:text-white">({user.email})</span>
-                  ) : null}
-                  </p>
-                </div>
-                <Button onClick={() => handleRemove(user.id)} size={"icon"} variant={"ghost"} className="hover:bg-indigo-700/50 hover:text-white"><X className="w-4 h-4"/></Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="pb-3 text-sm text-muted-foreground">No users selected</p>
-        )} */}
-
-        {/* <Button onClick={handleShare} className="my-2"><Share2 className="w-4 h-4 mr-2"/>Share</Button> */}
+              <FormField
+                  control={form.control}
+                  name="accessLevel"
+                  render={({ field }) => (
+                    <FormItem className="pb-2">
+                      <FormLabel>Access Level</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex justify-start items-center space-x-2"
+                        >
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Read'} />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Read
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Edit'} />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Edit
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={'Reviewer'} disabled />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Reviewer
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              <Button type="submit" disabled={loading}><Share2 className="w-4 h-4 mr-2"/>Share</Button>
+            </form>
+          </Form>
       </div>
+      )}
       <Separator />
       <div className="my-4">
         <h2 className="flex justify-start items-center gap-2 mb-2"><FileIcon className="w-4 h-4"/>Export as JSON</h2>
