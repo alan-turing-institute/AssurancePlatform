@@ -43,7 +43,7 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 
   return (
     <CaseSheet
-      title={`${assuranceCase.permissions !== 'view' ? 'Update' : ''} Assurance Case`}
+      title={`${assuranceCase.permissions === 'manage' ? 'Update' : ''} Assurance Case`}
       description={`Use this form to update your assurance case name and description.`}
       isOpen={isOpen}
       onClose={handleClose}

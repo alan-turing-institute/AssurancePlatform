@@ -4,7 +4,6 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,10 +16,8 @@ import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
-import { CloudFog, Loader, Loader2, Lock, LockIcon, LockKeyhole } from 'lucide-react'
-import { getLayoutedElements } from '@/lib/layout-helper'
+import { Loader2, Lock } from 'lucide-react'
 import { useLoginToken } from '@/hooks/useAuth'
-import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -96,12 +93,12 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel className='flex justify-start items-center gap-2'>
                 Name
-                {assuranceCase.permissions === 'view' && (
+                {assuranceCase.permissions !== 'manage' && (
                   <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
                 )}
               </FormLabel>
               <FormControl>
-                <Input {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
+                <Input {...field} readOnly={assuranceCase.permissions !== 'manage' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -114,19 +111,19 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel className='flex justify-start items-center gap-2'>
                 Description
-                {assuranceCase.permissions === 'view' && (
+                {assuranceCase.permissions !== 'manage' && (
                   <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
                 )}
               </FormLabel>
               <FormControl>
-                <Textarea rows={8} {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
+                <Textarea rows={8} {...field} readOnly={assuranceCase.permissions !== 'manage' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className='flex justify-start items-center gap-3'>
-        {assuranceCase.permissions !== 'view' && (
+        {assuranceCase.permissions === 'manage' && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
               <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
