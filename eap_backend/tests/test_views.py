@@ -27,8 +27,8 @@ from eap_api.serializers import (
     PropertyClaimSerializer,
     TopLevelNormativeGoalSerializer,
 )
-from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils
-from eap_api.views import make_case_summary, make_summary
+from eap_api.view_utils import SandboxUtils, ShareAssuranceCaseUtils, make_case_summary
+from eap_api.views import make_summary
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from social_core.exceptions import AuthForbidden
@@ -97,9 +97,13 @@ class CaseViewTest(TestCase):
             HTTP_AUTHORIZATION=f"Token {self.token.key}",
         )
         assert response_get.status_code == 200
-        assert response_get.json() == make_case_summary(
-            self.serializer.data
-        ), f"Expected is {make_case_summary(self.serializer.data)} but was {response_get.json()}"
+        expected_response: list = [
+            make_case_summary(case) | {"permissions": ["owner"]}
+            for case in self.serializer.data
+        ]
+        assert (
+            response_get.json() == expected_response
+        ), f"Expected is {expected_response} but was {response_get.json()}"
 
     def test_case_detail_view_get(self):
         response_get = self.client.get(
@@ -1964,6 +1968,7 @@ class ShareAssuranceCaseViewTest(TestCase):
             len(response_body) == 1
         ), f"Expected one case response but was {response_body}"
         assert response_body[0]["id"] == self.assurance_case.pk
+        assert response_body[0]["permissions"] == ["view"]
 
         response_get = self.client.get(
             f'{reverse("case_list")}?{urlencode({"view": "true", "owner": "false", "edit": "false"})}',
@@ -2000,6 +2005,7 @@ class ShareAssuranceCaseViewTest(TestCase):
             len(response_body) == 1
         ), f"Expected one case response but was {response_body}"
         assert response_body[0]["id"] == self.assurance_case.pk
+        assert response_body[0]["permissions"] == ["edit"]
 
     def test_retrieve_all_user_cases(self):
         view_group: EAPGroup = ShareAssuranceCaseUtils.get_view_group(
@@ -2025,8 +2031,8 @@ class ShareAssuranceCaseViewTest(TestCase):
             len(response_body) == 2
         ), f"Expected two cases response but was {response_body}"
 
-        assurance_cases: list[int] = [
-            assurance_case["id"] for assurance_case in response_body
-        ]
-        assert self.assurance_case.pk in assurance_cases
-        assert owned_case.pk in assurance_cases
+        assert response_body[0]["id"] == self.assurance_case.pk
+        assert response_body[0]["permissions"] == ["view"]
+
+        assert response_body[1]["id"] == owned_case.pk
+        assert response_body[1]["permissions"] == ["owner"]

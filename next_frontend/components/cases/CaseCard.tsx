@@ -36,8 +36,6 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
 
   // const imageUrl = `https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`
 
-  console.log(assuranceCase)
-
   const onDelete = async () => {
     try {
       setLoading(true);
@@ -84,7 +82,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
           </CardFooter>
         </Card>
       </Link>
-      {assuranceCase.permissions !== 'view' && (
+      {(assuranceCase.permissions.includes('owner') || assuranceCase.permissions.includes('editor')) && (
         <button disabled={loading} onClick={() => setOpen(true)} className='absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50'>
           <Trash2 className='w-4 h-4' />
         </button>
