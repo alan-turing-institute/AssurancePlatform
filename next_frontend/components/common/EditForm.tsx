@@ -116,12 +116,7 @@ const EditForm: React.FC<EditFormProps> = ({
             name="URL"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className='flex justify-start items-center gap-2'>
-                  Evidence URL
-                  {assuranceCase.permissions === 'view' && (
-                    <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
-                  )}
-                </FormLabel>
+                <FormLabel>Evidence URL</FormLabel>
                 <FormControl>
                   <Input placeholder="www.sample.com" {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
                 </FormControl>
