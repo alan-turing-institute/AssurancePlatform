@@ -31,6 +31,7 @@ type ShareItem = {
   email: string
   view?: boolean
   edit?: boolean
+  review?: boolean
 }
 
 type ShareItemArray = ShareItem[]
@@ -71,11 +72,26 @@ export const ShareModal = () => {
 
     const newShareItem: ShareItem = { email: data.email }
 
-    if(data.accessLevel === 'Edit') {
-      newShareItem.edit = true
-    } else {
-      newShareItem.view = true
+    switch (data.accessLevel) {
+      case 'Read':
+        newShareItem.view = true
+        break;
+      case 'Edit':
+        newShareItem.edit = true
+        break;
+      case 'Reviewer':
+        newShareItem.review = true
+        break;
+      default:
+        newShareItem.view = true
+        break;
     }
+
+    // if(data.accessLevel === 'Edit') {
+    //   newShareItem.edit = true
+    // } else {
+    //   newShareItem.view = true
+    // }
 
     payload.push(newShareItem)
 
