@@ -86,6 +86,10 @@ class AssuranceCase(models.Model):
     view_groups = models.ManyToManyField(
         EAPGroup, related_name="viewable_cases", blank=True
     )
+
+    review_groups = models.ManyToManyField(
+        EAPGroup, related_name="reviewable_cases", blank=True
+    )
     shape = None
     color_profile = models.CharField(max_length=200, default="default")
 
