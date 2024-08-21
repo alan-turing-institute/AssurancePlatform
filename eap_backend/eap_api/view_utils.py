@@ -405,6 +405,23 @@ class ShareAssuranceCaseUtils:
         }
 
     @staticmethod
+    def extract_requests(
+        request_serializer, permission_key: str
+    ) -> tuple[list[EAPUser], list[EAPUser]]:
+
+        additions: list[EAPUser] = []
+        removals: list[EAPUser] = []
+
+        for share_request in cast(dict, request_serializer.validated_data):
+            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+            if permission_key in share_request and share_request[permission_key]:
+                additions.append(user)
+            if permission_key in share_request and not share_request[permission_key]:
+                removals.append(user)
+
+        return additions, removals
+
+    @staticmethod
     def get_user_cases(
         user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
     ) -> list[dict]:
@@ -501,6 +518,31 @@ class ShareAssuranceCaseUtils:
         return edit_group
 
     @staticmethod
+    def get_review_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        review_group: EAPGroup | None = None
+        owner_review_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-review-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.review_groups.filter(
+            owner=assurance_case.owner, name=owner_review_group_name
+        )
+
+        (
+            review_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_review_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.review_groups.add(review_group)
+            assurance_case.save()
+
+        return review_group
+
+    @staticmethod
     def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
 
         view_group: EAPGroup | None = None
@@ -527,7 +569,7 @@ class ShareAssuranceCaseUtils:
 
     @staticmethod
     def add_and_remove_permissions(
-        permission: str,
+        permission_key: str,
         assurance_case: AssuranceCase,
         add: list[EAPUser] | None = None,
         remove: list[EAPUser] | None = None,
@@ -535,13 +577,17 @@ class ShareAssuranceCaseUtils:
 
         default_group: EAPGroup
         all_groups: QuerySet
-        if permission == "view":
+        if permission_key == "view":
             default_group = ShareAssuranceCaseUtils.get_view_group(assurance_case)
             all_groups = assurance_case.view_groups.all()
 
-        elif permission == "edit":
+        elif permission_key == "edit":
             default_group = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
             all_groups = assurance_case.edit_groups.all()
+
+        elif permission_key == "review":
+            default_group = ShareAssuranceCaseUtils.get_review_group(assurance_case)
+            all_groups = assurance_case.review_groups.all()
 
         if add is not None:
             default_group.member.add(*add)

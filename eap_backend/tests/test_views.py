@@ -1728,6 +1728,11 @@ class ShareAssuranceCaseViewTest(TestCase):
             name=f"owner-case-{self.assurance_case.pk}-edit-group",
         )
 
+        self.review_group_query: QuerySet = self.assurance_case.review_groups.filter(
+            owner=self.case_owner,
+            name=f"owner-case-{self.assurance_case.pk}-review-group",
+        )
+
     def test_unauthorised_share_case(self):
 
         response_post: HttpResponse = self.client.post(
@@ -1789,6 +1794,30 @@ class ShareAssuranceCaseViewTest(TestCase):
         edit_group: EAPGroup = cast(EAPGroup, self.edit_group_query.first())
         assert edit_group.member.count() == 1
         assert self.tea_user in edit_group.member.all()
+
+    def test_give_users_reviewer_access(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": self.tea_user.email, "review": True}]),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert (
+            response_post.status_code == 200
+        ), f"Expected a 200 response, but it was {response_post}"
+
+        self.assurance_case.refresh_from_db()
+
+        assert (
+            self.review_group_query.count() == 1
+        ), f"Expected one group but was {self.review_group_query.all()}"
+
+        review_group: EAPGroup = cast(EAPGroup, self.review_group_query.first())
+        assert (
+            review_group.member.count() == 1
+        ), f"Expected one member but was {review_group.member.all()}"
+        assert self.tea_user in review_group.member.all()
 
     def test_give_users_view_access(self):
 
