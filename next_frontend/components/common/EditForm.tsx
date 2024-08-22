@@ -106,9 +106,9 @@ const EditForm: React.FC<EditFormProps> = ({
                 )}
               </FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder="Type your message here." {...field} 
-                  readOnly={readOnly} 
+                <Textarea
+                  placeholder="Type your message here." {...field}
+                  readOnly={readOnly}
                 />
               </FormControl>
               <FormMessage />
