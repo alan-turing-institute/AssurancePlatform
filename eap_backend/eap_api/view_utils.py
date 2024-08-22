@@ -402,46 +402,66 @@ class ShareAssuranceCaseUtils:
             "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
                 assurance_case.edit_groups
             ),
+            "review": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.review_groups
+            ),
         }
 
     @staticmethod
-    def get_user_cases(
-        user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
-    ) -> list[dict]:
+    def extract_requests(
+        request_serializer, permission_key: str
+    ) -> tuple[list[EAPUser], list[EAPUser]]:
+
+        additions: list[EAPUser] = []
+        removals: list[EAPUser] = []
+
+        for share_request in cast(dict, request_serializer.validated_data):
+            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+            if permission_key in share_request and share_request[permission_key]:
+                additions.append(user)
+            if permission_key in share_request and not share_request[permission_key]:
+                removals.append(user)
+
+        return additions, removals
+
+    @staticmethod
+    def get_user_cases(user: EAPUser, permission_list: list[str]) -> list[dict]:
         case_catalog: dict[int, dict] = {}
         group_ids: list[int] = [group.pk for group in user.all_groups.all()]
 
-        if view:
-            view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-                view_groups__in=group_ids
-            )
+        if "view" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
-                case_catalog, view_cases, "view"
+                case_catalog,
+                AssuranceCase.objects.filter(view_groups__in=group_ids),
+                "view",
             )
 
-        if edit:
-            edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-                edit_groups__in=group_ids
-            )
+        if "edit" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
-                case_catalog, edit_cases, "edit"
+                case_catalog,
+                AssuranceCase.objects.filter(edit_groups__in=group_ids),
+                "edit",
             )
 
-        if owner:
+        if "review" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog,
+                AssuranceCase.objects.filter(review_groups__in=group_ids),
+                "review",
+            )
+
+        if "owner" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
                 case_catalog, user.cases.all(), "owner"
             )
 
-        serialized_cases: list[dict] = []
-        for case_entry in case_catalog.values():
-            serialized_cases.append(
-                ShareAssuranceCaseUtils.make_case_summary(
-                    AssuranceCaseSerializer(case_entry["case"]),
-                    case_entry["permissions"],
-                )
+        return [
+            ShareAssuranceCaseUtils.make_case_summary(
+                AssuranceCaseSerializer(case_entry["case"]),
+                case_entry["permissions"],
             )
-
-        return serialized_cases
+            for case_entry in case_catalog.values()
+        ]
 
     @staticmethod
     def make_case_summary(serialized_case, permissions: set) -> dict:
@@ -501,6 +521,31 @@ class ShareAssuranceCaseUtils:
         return edit_group
 
     @staticmethod
+    def get_review_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        review_group: EAPGroup | None = None
+        owner_review_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-review-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.review_groups.filter(
+            owner=assurance_case.owner, name=owner_review_group_name
+        )
+
+        (
+            review_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_review_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.review_groups.add(review_group)
+            assurance_case.save()
+
+        return review_group
+
+    @staticmethod
     def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
 
         view_group: EAPGroup | None = None
@@ -527,7 +572,7 @@ class ShareAssuranceCaseUtils:
 
     @staticmethod
     def add_and_remove_permissions(
-        permission: str,
+        permission_key: str,
         assurance_case: AssuranceCase,
         add: list[EAPUser] | None = None,
         remove: list[EAPUser] | None = None,
@@ -535,13 +580,17 @@ class ShareAssuranceCaseUtils:
 
         default_group: EAPGroup
         all_groups: QuerySet
-        if permission == "view":
+        if permission_key == "view":
             default_group = ShareAssuranceCaseUtils.get_view_group(assurance_case)
             all_groups = assurance_case.view_groups.all()
 
-        elif permission == "edit":
+        elif permission_key == "edit":
             default_group = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
             all_groups = assurance_case.edit_groups.all()
+
+        elif permission_key == "review":
+            default_group = ShareAssuranceCaseUtils.get_review_group(assurance_case)
+            all_groups = assurance_case.review_groups.all()
 
         if add is not None:
             default_group.member.add(*add)
@@ -723,7 +772,7 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     return JsonResponse(summary, status=success_http_code)
 
 
-def get_case_permissions(case, user):
+def get_case_permissions(case: AssuranceCase, user: EAPUser) -> str | None:
     """
     See if the user is allowed to view or edit the case.
 
@@ -737,6 +786,7 @@ def get_case_permissions(case, user):
     string
        "manage": if case has no owner or if user is owner
        "edit": if user is a member of a group that has edit rights on the case
+       "review": if user is a member of a group that has review rights on the case
        "view": if user is a member of a group that has view rights on the case
     None otherwise.
     """
@@ -749,11 +799,16 @@ def get_case_permissions(case, user):
 
     # now check groups
     try:
-        user_groups = user.all_groups.get_queryset()
-        edit_groups = case.edit_groups.get_queryset()
+        user_groups: QuerySet = user.all_groups.get_queryset()
+        edit_groups: QuerySet = case.edit_groups.get_queryset()
         # check intersection of two lists
         if set(edit_groups) & set(user_groups):
             return "edit"
+
+        review_groups: QuerySet = case.review_groups.get_queryset()
+        if set(review_groups) & set(user_groups):
+            return "review"
+
         view_groups = case.view_groups.get_queryset()
         if set(view_groups) & set(user_groups):
             return "view"

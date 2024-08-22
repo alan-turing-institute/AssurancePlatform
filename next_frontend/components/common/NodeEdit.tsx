@@ -465,7 +465,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         loading={loading}
-        message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
+        message={'Deleting this element will also remove all of the connected child elements. Please detach any child elements that you wish to keep before deleting, as the current action cannot be undone.'}
         confirmButtonText={'Yes, delete this element!'}
         cancelButtonText={'No, keep the element'}
       />

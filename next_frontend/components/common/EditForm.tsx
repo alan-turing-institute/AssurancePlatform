@@ -100,7 +100,7 @@ const EditForm: React.FC<EditFormProps> = ({
               <FormLabel className='flex justify-start items-center gap-2'>
                 Description
                 {assuranceCase.permissions === 'view' && (
-                  <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
                 )}
               </FormLabel>
               <FormControl>
@@ -129,7 +129,7 @@ const EditForm: React.FC<EditFormProps> = ({
         {assuranceCase.permissions !== 'view' && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
-              <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
+              <span title='Read Only' className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
             ) : (
               <span>Update&nbsp;<span className='capitalize'>{caseItemDescription(node.type)}</span></span>
             )}
