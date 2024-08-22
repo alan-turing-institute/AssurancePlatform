@@ -89,6 +89,8 @@ const EditForm: React.FC<EditFormProps> = ({
     });
   }, [form.watch, setUnresolvedChanges]);
 
+  let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
@@ -99,12 +101,15 @@ const EditForm: React.FC<EditFormProps> = ({
             <FormItem>
               <FormLabel className='flex justify-start items-center gap-2'>
                 Description
-                {assuranceCase.permissions === 'view' && (
+                {readOnly && (
                   <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
                 )}
               </FormLabel>
               <FormControl>
-                <Textarea placeholder="Type your message here." {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
+                <Textarea
+                  placeholder="Type your message here." {...field}
+                  readOnly={readOnly}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,9 +121,14 @@ const EditForm: React.FC<EditFormProps> = ({
             name="URL"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Evidence URL</FormLabel>
+                <FormLabel className='flex justify-start items-center gap-2'>
+                  Evidence URL
+                  {readOnly && (
+                    <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  )}
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="www.sample.com" {...field} readOnly={assuranceCase.permissions === 'view' ? true : false} />
+                  <Input placeholder="www.sample.com" {...field} readOnly={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,7 +136,7 @@ const EditForm: React.FC<EditFormProps> = ({
           />
         )}
         <div className='flex justify-start items-center gap-3'>
-        {assuranceCase.permissions !== 'view' && (
+        {!readOnly && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
               <span title='Read Only' className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>

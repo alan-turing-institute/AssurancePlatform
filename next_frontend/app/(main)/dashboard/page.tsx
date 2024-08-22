@@ -29,7 +29,7 @@ const Dashboard = () => {
         redirect: 'follow'
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=true&view=false&edit=false`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=true&view=false&edit=false&review=false`, requestOptions)
 
       if(response.status === 401) {
         console.log('Invalid Token')

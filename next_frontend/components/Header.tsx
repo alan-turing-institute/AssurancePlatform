@@ -30,6 +30,7 @@ import {
 import SearchNodes from "./common/SearchNodes";
 
 import { toggleHiddenForParent } from "@/lib/case-helper";
+import LogoutButton from "./auth/LogoutButton";
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -170,7 +171,7 @@ const Header = ({ setOpen }: HeaderProps) => {
         <div className="flex justify-start items-center gap-4">
           <SearchNodes nodes={nodes} focusNode={focusNode} />
           <CaseNavigation />
-          <Link
+          {/* <Link
             href={
               "https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
             }
@@ -179,8 +180,9 @@ const Header = ({ setOpen }: HeaderProps) => {
           >
             <MessageSquareMore className="w-4 h-4" />
             <span className="font-medium text-sm">Feedback</span>
-          </Link>
+          </Link> */}
           <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
+          <LogoutButton />
         </div>
       </div>
     </div>
