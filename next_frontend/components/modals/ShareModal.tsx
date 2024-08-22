@@ -44,7 +44,7 @@ const FormSchema = z.object({
 })
 
 export const ShareModal = () => {
-  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers } = useStore()
+  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers, reviewMembers, setReviewMembers } = useStore()
   const shareModal = useShareModal();
 
   const [loading, setLoading] = useState(false)
@@ -81,9 +81,6 @@ export const ShareModal = () => {
         break;
       case 'Reviewer':
         newShareItem.review = true
-        break;
-      default:
-        newShareItem.view = true
         break;
     }
 
@@ -135,6 +132,9 @@ export const ShareModal = () => {
       }
       if(newShareItem.edit) {
         setEditMembers([...editMembers, newShareItem ])
+      }
+      if(newShareItem.review) {
+        setReviewMembers([...reviewMembers, newShareItem ])
       }
 
       form.reset()
@@ -276,7 +276,7 @@ export const ShareModal = () => {
                           </FormItem>
                           <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value={'Reviewer'} disabled />
+                              <RadioGroupItem value={'Reviewer'} />
                             </FormControl>
                             <FormLabel className="font-normal">
                               Reviewer
