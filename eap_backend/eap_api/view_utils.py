@@ -402,6 +402,9 @@ class ShareAssuranceCaseUtils:
             "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
                 assurance_case.edit_groups
             ),
+            "review": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.review_groups
+            ),
         }
 
     @staticmethod
@@ -422,43 +425,43 @@ class ShareAssuranceCaseUtils:
         return additions, removals
 
     @staticmethod
-    def get_user_cases(
-        user: EAPUser, owner: bool = True, view: bool = True, edit: bool = True
-    ) -> list[dict]:
+    def get_user_cases(user: EAPUser, permission_list: list[str]) -> list[dict]:
         case_catalog: dict[int, dict] = {}
         group_ids: list[int] = [group.pk for group in user.all_groups.all()]
 
-        if view:
-            view_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-                view_groups__in=group_ids
-            )
+        if "view" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
-                case_catalog, view_cases, "view"
+                case_catalog,
+                AssuranceCase.objects.filter(view_groups__in=group_ids),
+                "view",
             )
 
-        if edit:
-            edit_cases: QuerySet[AssuranceCase] = AssuranceCase.objects.filter(
-                edit_groups__in=group_ids
-            )
+        if "edit" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
-                case_catalog, edit_cases, "edit"
+                case_catalog,
+                AssuranceCase.objects.filter(edit_groups__in=group_ids),
+                "edit",
             )
 
-        if owner:
+        if "review" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog,
+                AssuranceCase.objects.filter(review_groups__in=group_ids),
+                "review",
+            )
+
+        if "owner" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
                 case_catalog, user.cases.all(), "owner"
             )
 
-        serialized_cases: list[dict] = []
-        for case_entry in case_catalog.values():
-            serialized_cases.append(
-                ShareAssuranceCaseUtils.make_case_summary(
-                    AssuranceCaseSerializer(case_entry["case"]),
-                    case_entry["permissions"],
-                )
+        return [
+            ShareAssuranceCaseUtils.make_case_summary(
+                AssuranceCaseSerializer(case_entry["case"]),
+                case_entry["permissions"],
             )
-
-        return serialized_cases
+            for case_entry in case_catalog.values()
+        ]
 
     @staticmethod
     def make_case_summary(serialized_case, permissions: set) -> dict:
