@@ -1796,6 +1796,12 @@ class ShareAssuranceCaseViewTest(TestCase):
         assert self.tea_user in edit_group.member.all()
 
     def test_give_users_reviewer_access(self):
+        response_get: HttpResponse = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_get.status_code == 403
+
         response_post: HttpResponse = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
             content_type="application/json",
@@ -1818,6 +1824,20 @@ class ShareAssuranceCaseViewTest(TestCase):
             review_group.member.count() == 1
         ), f"Expected one member but was {review_group.member.all()}"
         assert self.tea_user in review_group.member.all()
+
+        response_get = self.client.get(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert (
+            response_get.status_code == status.HTTP_200_OK
+        ), f"Expected status 200 but was {response_get}"
+
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert response_put.status_code == status.HTTP_403_FORBIDDEN
 
     def test_give_users_view_access(self):
 
