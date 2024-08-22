@@ -772,7 +772,7 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     return JsonResponse(summary, status=success_http_code)
 
 
-def get_case_permissions(case, user):
+def get_case_permissions(case: AssuranceCase, user: EAPUser) -> str | None:
     """
     See if the user is allowed to view or edit the case.
 
@@ -786,6 +786,7 @@ def get_case_permissions(case, user):
     string
        "manage": if case has no owner or if user is owner
        "edit": if user is a member of a group that has edit rights on the case
+       "review": if user is a member of a group that has review rights on the case
        "view": if user is a member of a group that has view rights on the case
     None otherwise.
     """
@@ -798,11 +799,16 @@ def get_case_permissions(case, user):
 
     # now check groups
     try:
-        user_groups = user.all_groups.get_queryset()
-        edit_groups = case.edit_groups.get_queryset()
+        user_groups: QuerySet = user.all_groups.get_queryset()
+        edit_groups: QuerySet = case.edit_groups.get_queryset()
         # check intersection of two lists
         if set(edit_groups) & set(user_groups):
             return "edit"
+
+        review_groups: QuerySet = case.review_groups.get_queryset()
+        if set(review_groups) & set(user_groups):
+            return "review"
+
         view_groups = case.view_groups.get_queryset()
         if set(view_groups) & set(user_groups):
             return "view"
