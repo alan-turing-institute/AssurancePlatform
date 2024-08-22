@@ -1728,6 +1728,11 @@ class ShareAssuranceCaseViewTest(TestCase):
             name=f"owner-case-{self.assurance_case.pk}-edit-group",
         )
 
+        self.review_group_query: QuerySet = self.assurance_case.review_groups.filter(
+            owner=self.case_owner,
+            name=f"owner-case-{self.assurance_case.pk}-review-group",
+        )
+
     def test_unauthorised_share_case(self):
 
         response_post: HttpResponse = self.client.post(
@@ -1790,6 +1795,30 @@ class ShareAssuranceCaseViewTest(TestCase):
         assert edit_group.member.count() == 1
         assert self.tea_user in edit_group.member.all()
 
+    def test_give_users_reviewer_access(self):
+        response_post: HttpResponse = self.client.post(
+            reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
+            content_type="application/json",
+            data=json.dumps([{"email": self.tea_user.email, "review": True}]),
+            HTTP_AUTHORIZATION=f"Token {self.case_owner_token.key}",
+        )
+
+        assert (
+            response_post.status_code == 200
+        ), f"Expected a 200 response, but it was {response_post}"
+
+        self.assurance_case.refresh_from_db()
+
+        assert (
+            self.review_group_query.count() == 1
+        ), f"Expected one group but was {self.review_group_query.all()}"
+
+        review_group: EAPGroup = cast(EAPGroup, self.review_group_query.first())
+        assert (
+            review_group.member.count() == 1
+        ), f"Expected one member but was {review_group.member.all()}"
+        assert self.tea_user in review_group.member.all()
+
     def test_give_users_view_access(self):
 
         response_get: HttpResponse = self.client.get(
@@ -1849,6 +1878,9 @@ class ShareAssuranceCaseViewTest(TestCase):
         ShareAssuranceCaseUtils.get_edit_group(self.assurance_case).member.add(
             self.another_tea_user
         )
+        ShareAssuranceCaseUtils.get_review_group(self.assurance_case).member.add(
+            self.another_tea_user
+        )
         self.assurance_case.save()
 
         response_get: HttpResponse = self.client.get(
@@ -1875,6 +1907,7 @@ class ShareAssuranceCaseViewTest(TestCase):
                         "email": self.another_tea_user.email,
                         "view": False,
                         "edit": False,
+                        "review": False,
                     },
                 ]
             ),
@@ -1904,12 +1937,16 @@ class ShareAssuranceCaseViewTest(TestCase):
         self.assurance_case.refresh_from_db()
         assert self.tea_user not in self.view_group_query.first().member.all()
         assert self.another_tea_user not in self.edit_group_query.first().member.all()
+        assert self.another_tea_user not in self.review_group_query.first().member.all()
 
     def test_retrieve_users_for_case(self):
         ShareAssuranceCaseUtils.get_view_group(self.assurance_case).member.add(
             self.tea_user
         )
         ShareAssuranceCaseUtils.get_edit_group(self.assurance_case).member.add(
+            self.another_tea_user
+        )
+        ShareAssuranceCaseUtils.get_review_group(self.assurance_case).member.add(
             self.another_tea_user
         )
         self.assurance_case.save()
@@ -1934,15 +1971,24 @@ class ShareAssuranceCaseViewTest(TestCase):
         response_body: dict[str, list[dict]] = response_get.json()
 
         users_with_view: list[dict] = response_body["view"]
-        assert len(users_with_view) == 1, f"Expected two entries, got {users_with_view}"
+        assert len(users_with_view) == 1, f"Expected one entry, got {users_with_view}"
         assert users_with_view[0] == {
             "id": self.tea_user.pk,
             "email": self.tea_user.email,
         }
 
         users_with_edit: list[dict] = response_body["edit"]
-        assert len(users_with_edit) == 1, f"Expected two entries, got {users_with_edit}"
+        assert len(users_with_edit) == 1, f"Expected one entry, got {users_with_edit}"
         assert users_with_edit[0] == {
+            "id": self.another_tea_user.pk,
+            "email": self.another_tea_user.email,
+        }
+
+        users_with_review: list[dict] = response_body["review"]
+        assert (
+            len(users_with_review) == 1
+        ), f"Expected one entry, got {users_with_review}"
+        assert users_with_review[0] == {
             "id": self.another_tea_user.pk,
             "email": self.another_tea_user.email,
         }
@@ -2011,14 +2057,21 @@ class ShareAssuranceCaseViewTest(TestCase):
         view_group: EAPGroup = ShareAssuranceCaseUtils.get_view_group(
             self.assurance_case
         )
-
         view_group.member.add(self.tea_user)
+
+        review_group: EAPGroup = ShareAssuranceCaseUtils.get_review_group(
+            self.assurance_case
+        )
+        review_group.member.add(self.tea_user)
+
         owned_case: AssuranceCase = AssuranceCase.objects.create(
             name="My case", owner=self.tea_user
         )
 
+        self.assurance_case.save()
+
         response_get: HttpResponse = self.client.get(
-            f'{reverse("case_list")}?{urlencode({"owner": "true", "view": "true", "edit": "true"})}',
+            f'{reverse("case_list")}?{urlencode({"owner": "true", "view": "true", "edit": "true", "review": "true"})}',
             HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
 
@@ -2032,7 +2085,10 @@ class ShareAssuranceCaseViewTest(TestCase):
         ), f"Expected two cases response but was {response_body}"
 
         assert response_body[0]["id"] == self.assurance_case.pk
-        assert response_body[0]["permissions"] == ["view"]
+        assert set(response_body[0]["permissions"]) == {
+            "view",
+            "review",
+        }, f'Expected view and review, but was {response_body[0]["permissions"] }'
 
         assert response_body[1]["id"] == owned_case.pk
         assert response_body[1]["permissions"] == ["owner"]
