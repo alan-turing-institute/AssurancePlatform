@@ -38,6 +38,7 @@ from .serializers import (
     GithubSocialAuthSerializer,
     PasswordChangeSerializer,
     PropertyClaimSerializer,
+    ShareRequestSerializer,
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
     UsernameAwareUserSerializer,
@@ -226,14 +227,16 @@ def case_list(request):
     List all cases, or make a new case
     """
 
-    owner: bool = request.query_params.get("owner", "true").lower() == "true"
-    view: bool = request.query_params.get("view", "true").lower() == "true"
-    edit: bool = request.query_params.get("edit", "true").lower() == "true"
+    permission_list: list[str] = [
+        permission
+        for permission in ["owner", "view", "edit", "review"]
+        if request.query_params.get(permission, "true").lower() == "true"
+    ]
 
     if request.method == "GET":
 
         serialized_cases = ShareAssuranceCaseUtils.get_user_cases(
-            request.user, owner=owner, view=view, edit=edit
+            request.user, permission_list
         )
         return JsonResponse(serialized_cases, safe=False)
     elif request.method == "POST":
@@ -307,32 +310,23 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
         return JsonResponse(case_users)
     elif request.method == "POST":
 
-        view_additions, view_removals, edit_additions, edit_removals = [], [], [], []
+        serializer = ShareRequestSerializer(data=request.data, many=True)
+        if not serializer.is_valid():
+            return JsonResponse(
+                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        for share_request in request.data:
-            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
-            if "view" in share_request and share_request["view"]:
-                view_additions.append(user)
-            if "view" in share_request and not share_request["view"]:
-                view_removals.append(user)
-            if "edit" in share_request and share_request["edit"]:
-                edit_additions.append(user)
-            if "edit" in share_request and not share_request["edit"]:
-                edit_removals.append(user)
+        for permission_key in ["view", "edit", "review"]:
+            additions, removals = ShareAssuranceCaseUtils.extract_requests(
+                serializer, permission_key
+            )
 
-        ShareAssuranceCaseUtils.add_and_remove_permissions(
-            permission="view",
-            assurance_case=assurance_case,
-            add=view_additions,
-            remove=view_removals,
-        )
-
-        ShareAssuranceCaseUtils.add_and_remove_permissions(
-            permission="edit",
-            assurance_case=assurance_case,
-            add=edit_additions,
-            remove=edit_removals,
-        )
+            ShareAssuranceCaseUtils.add_and_remove_permissions(
+                permission_key=permission_key,
+                assurance_case=assurance_case,
+                add=additions,
+                remove=removals,
+            )
 
         return HttpResponse(status=200)
 
