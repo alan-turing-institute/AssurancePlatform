@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useShareModal } from "@/hooks/useShareModal";
 import { Separator } from "../ui/separator";
-import { Download, FileIcon, Share2, Trash2, User2, UserCheck, UserX, X } from "lucide-react";
+import { Download, Eye, FileIcon, MessageCircleMore, PencilRuler, Share2, Trash2, User2, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
@@ -29,7 +29,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 
 export const PermissionsModal = () => {
-  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers } = useStore()
+  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers, reviewMembers, setReviewMembers } = useStore()
   const permissionModal = usePermissionsModal();
 
   const [loading, setLoading] = useState(false)
@@ -72,7 +72,8 @@ export const PermissionsModal = () => {
       const item = {
         email: member.email,
         edit: false,
-        view: false
+        view: false,
+        review: false
       }
 
       payload.push(item)
@@ -112,6 +113,11 @@ export const PermissionsModal = () => {
         setEditMembers(removedMembers)
       }
 
+      if(level === 'review') {
+        const removedMembers = reviewMembers.filter(item => item.email !== member.email)
+        setReviewMembers(removedMembers)
+      }
+
     } catch (error) {
       console.log("Error", error);
 
@@ -128,9 +134,10 @@ export const PermissionsModal = () => {
       fetchCaseMembers().then(result => {
         setViewMembers(result.view)
         setEditMembers(result.edit)
+        setReviewMembers(result.review)
       })
     }
-  },[assuranceCase])
+  },[assuranceCase, reviewMembers])
 
   return (
     <Modal
@@ -139,7 +146,10 @@ export const PermissionsModal = () => {
       isOpen={permissionModal.isOpen}
       onClose={permissionModal.onClose}
     >
-      <p className="uppercase text-xs mb-2">Edit members</p>
+      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
+        <PencilRuler className='w-4 h-4' />
+        Edit members
+      </p>
       <Separator />
 
       <div className="my-4">
@@ -158,7 +168,32 @@ export const PermissionsModal = () => {
         )}
       </div>
 
-      <p className="uppercase text-xs mb-2">View members</p>
+      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
+        <MessageCircleMore className='w-4 h-4' />
+        Review members
+      </p>
+      <Separator />
+
+      <div className="my-4">
+        {reviewMembers.length > 0 ? (
+          reviewMembers.map((member: any) => (
+            <div key={member.id} className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group">
+              <User2 className="w-4 h-4" />
+              <div className="flex-1">
+                <p>{member.email}</p>
+              </div>
+              <Button onClick={() => handleRemovePermissions(member, 'review')} size={"icon"} variant={"ghost"} className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"><Trash2 className="w-4 h-4"/></Button>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">No members found.</p>
+        )}
+      </div>
+
+      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
+        <Eye className='w-4 h-4' />
+        View members
+      </p>
       <Separator />
 
       <div className="my-4">

@@ -4,13 +4,14 @@ import React, { useEffect, useState } from 'react'
 import Flow from './Flow'
 import { unauthorized, useEnforceLogin, useLoginToken } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare, MessagesSquare } from 'lucide-react';
 import Header from '../Header';
 import { ReactFlowProvider } from 'reactflow';
 
 import useStore from '@/data/store';
 import { addHiddenProp } from '@/lib/case-helper';
 import CaseDetails from './CaseDetails';
+import Link from 'next/link';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -97,12 +98,29 @@ const CaseContainer = () => {
             <Header setOpen={setOpen} />
             <Flow />
             <CaseDetails isOpen={open} setOpen={setOpen} />
+            <FeedbackButton />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>
         )
       )}
     </>
+  )
+}
+
+const FeedbackButton = () => {
+  return (
+    <Link
+      href={
+        "https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
+      }
+      target="_blank"
+    >
+      <div className='absolute bottom-4 right-4 w-14 h-14 rounded-full bg-violet-600 shadow-xl flex justify-center items-center hover:cursor-pointer'>
+        <MessagesSquare className='w-6 h-6 text-white' />
+        <div className='absolute w-16 h-16 rounded-full bg-violet-500 -z-10 animate-pulse' />
+      </div>
+    </Link>
   )
 }
 
