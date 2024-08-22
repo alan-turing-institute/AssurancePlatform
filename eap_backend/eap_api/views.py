@@ -227,14 +227,16 @@ def case_list(request):
     List all cases, or make a new case
     """
 
-    owner: bool = request.query_params.get("owner", "true").lower() == "true"
-    view: bool = request.query_params.get("view", "true").lower() == "true"
-    edit: bool = request.query_params.get("edit", "true").lower() == "true"
+    permission_list: list[str] = [
+        permission
+        for permission in ["owner", "view", "edit", "review"]
+        if request.query_params.get(permission, "true").lower() == "true"
+    ]
 
     if request.method == "GET":
 
         serialized_cases = ShareAssuranceCaseUtils.get_user_cases(
-            request.user, owner=owner, view=view, edit=edit
+            request.user, permission_list
         )
         return JsonResponse(serialized_cases, safe=False)
     elif request.method == "POST":
