@@ -81,7 +81,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             <p>Created on: {moment(created_date).format('DD/MM/YYYY')}</p>
             <div className='flex justify-start items-center gap-2'>
               {assuranceCase.permissions.includes('view') && <Eye className='w-4 h-4' />}
-              {assuranceCase.permissions.includes('reviewer') && <MessageCircleMore className='w-4 h-4' />}
+              {assuranceCase.permissions.includes('review') && <MessageCircleMore className='w-4 h-4' />}
               {assuranceCase.permissions.includes('edit') && <PencilRuler className='w-4 h-4' />}
             </div>
           </CardFooter>

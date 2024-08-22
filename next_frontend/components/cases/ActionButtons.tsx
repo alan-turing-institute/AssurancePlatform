@@ -161,7 +161,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
     <div className="w-1/8 m-auto bg-indigo-100 dark:bg-indigo-500/20 shadow-lg text-white py-2 px-4 flex justify-center items-center gap-2 rounded-full">
       <div className="pr-2 border-r-2 border-r-indigo-200 dark:border-r-indigo-800/60 flex justify-center items-center gap-2">
-        {showCreateGoal && (assuranceCase.permissions !== 'view' || assuranceCase.permissions !== 'reviewer') && (
+        {showCreateGoal && (assuranceCase.permissions !== 'view' || assuranceCase.permissions !== 'review') && (
          <ActionTooltip label='New Goal'>
             <button onClick={() => setOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Plus className='w-5 h-5' /><span className="sr-only">Add Goal</span></button>
           </ActionTooltip>
@@ -169,9 +169,11 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         <ActionTooltip label='Focus'>
           <button id='FocusBtn' onClick={() => onLayout('TB')} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Group className='w-5 h-5' /><span className="sr-only">Focus</span></button>
         </ActionTooltip>
+        {(assuranceCase.permissions !== 'view' && assuranceCase.permissions !== 'review') && (
         <ActionTooltip label='Reset Identifiers'>
           <button onClick={() => setAlertOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Identifiers</span></button>
         </ActionTooltip>
+        )}
       </div>
       <div className="flex justify-center items-center gap-2">
         {/* <ActionTooltip label='Export'>

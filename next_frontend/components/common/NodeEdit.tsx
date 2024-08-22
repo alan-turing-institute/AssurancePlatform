@@ -52,6 +52,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let strategies: any[] = []
   let claims: any[] = []
 
+  let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
+
   if(assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
@@ -236,7 +238,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   return (
     <EditSheet
-      title={`${assuranceCase.permissions !== 'view' ? 'Editing' : ''} ${node.data.name}`}
+      title={`${!readOnly ? 'Editing' : ''} ${node.data.name}`}
       description={`Use this form to update your ${caseItemDescription(node.type)}.`}
       isOpen={isOpen}
       onClose={handleClose}
@@ -265,7 +267,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </div>
           )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
-          {node.type !== 'context' && assuranceCase.permissions !== 'view' && (
+          {node.type !== 'context' && !readOnly && (
             <>
               <Separator className="my-6"/>
               <div className="">
@@ -285,7 +287,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <Separator className="my-6"/>
             </>
           )}
-          {assuranceCase.permissions !== 'view' && (
+          {!readOnly && (
             <div className="mt-12 flex justify-start items-center gap-4">
               {node.type !== 'goal' && (
                 <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
@@ -303,7 +305,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           )}
         </div>
       )}
-      {action === 'new' && assuranceCase.permissions !== 'view' && (
+      {action === 'new' && !readOnly && (
         selectedLink ? (
           <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
         ) : (
@@ -341,7 +343,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           </>
         )
       )}
-      {action === 'existing' && assuranceCase.permissions !== 'view' && (
+      {action === 'existing' && !readOnly && (
         node.type !== 'evidence' && node.type !== 'context' && (
           <OrphanElements
             node={node}
@@ -350,7 +352,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             setAction={setAction} />
         )
       )}
-      {action === 'move' && assuranceCase.permissions !== 'view' && (
+      {action === 'move' && !readOnly && (
         <>
         {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
