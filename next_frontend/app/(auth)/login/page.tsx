@@ -8,10 +8,13 @@ export default function SignInPage() {
           <SignInForm />
         </div>
         <div className="relative hidden w-1/2 lg:block">
-          <img
+          {/* <img
             className="absolute inset-0 h-full w-full object-cover"
             src="https://assuranceplatform.azurewebsites.net/static/media/building-an-assurance-case-adjusted-aspect-ratio.24a4b38575eb488728ff.png"
             alt=""
+          /> */}
+          <img className="absolute inset-0 h-full w-full object-cover"
+            src="https://raw.githubusercontent.com/alan-turing-institute/turing-commons/main/docs/assets/images/illustrations/assurance-alt.jpg"
           />
         </div>
       </div>

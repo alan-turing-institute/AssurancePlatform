@@ -94,7 +94,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
               <FormLabel className='flex justify-start items-center gap-2'>
                 Name
                 {assuranceCase.permissions !== 'manage' && (
-                  <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3'/></span>
                 )}
               </FormLabel>
               <FormControl>
@@ -112,7 +112,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
               <FormLabel className='flex justify-start items-center gap-2'>
                 Description
                 {assuranceCase.permissions !== 'manage' && (
-                  <span className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
                 )}
               </FormLabel>
               <FormControl>
