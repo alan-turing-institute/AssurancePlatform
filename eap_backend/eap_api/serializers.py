@@ -52,6 +52,13 @@ class PasswordChangeSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
 
+class ShareRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    view = serializers.BooleanField(required=False)
+    edit = serializers.BooleanField(required=False)
+    review = serializers.BooleanField(required=False)
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
     all_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
