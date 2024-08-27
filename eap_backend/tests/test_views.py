@@ -1746,13 +1746,44 @@ class ShareAssuranceCaseViewTest(TestCase):
             response_post.status_code == 403
         ), f"Expected a 403 response, but it was {response_post}"
 
-    def test_give_users_edit_access(self):
-
-        response_put: HttpResponse = self.client.put(
+    def _check_status_on_view(self, status_code: int):
+        response_get: HttpResponse = self.client.get(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
             HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
         )
-        assert response_put.status_code == 403
+        assert response_get.status_code == status_code
+
+    def _check_status_on_edit(self, status_code: int):
+        response_put: HttpResponse = self.client.put(
+            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert (
+            response_put.status_code == status_code
+        ), f"Expected {status_code} status but was {response_put}"
+
+    def _check_status_on_comment(self, status_code: int):
+        response_post: HttpResponse = self.client.post(
+            reverse(
+                "comment_list", kwargs={"assurance_case_id": self.assurance_case.pk}
+            ),
+            data=json.dumps(
+                {"content": "A comment", "assurance_case": self.assurance_case.pk}
+            ),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
+        )
+        assert (
+            response_post.status_code == status_code
+        ), f"Expected status {status_code} but was {response_post}"
+
+    def test_give_users_edit_access(self):
+
+        self._check_status_on_view(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_edit(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_comment(status.HTTP_403_FORBIDDEN)
 
         response_post: HttpResponse = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
@@ -1766,7 +1797,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         )
 
         assert (
-            response_post.status_code == 200
+            response_post.status_code == status.HTTP_200_OK
         ), f"Expected a 200 response, but it was {response_post}"
 
         self.assurance_case.refresh_from_db()
@@ -1775,32 +1806,18 @@ class ShareAssuranceCaseViewTest(TestCase):
             self.edit_group_query.count() == 1
         ), f"Expected one view group. Saved {self.assurance_case.edit_groups.all()}"
 
-        response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert response_get.status_code == 200
-
-        response_put: HttpResponse = self.client.put(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            data=json.dumps({}),
-            content_type="application/json",
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert (
-            response_put.status_code == 200
-        ), f"Expected status 200 but obtained {response_put}"
+        self._check_status_on_view(status.HTTP_200_OK)
+        self._check_status_on_edit(status.HTTP_200_OK)
+        self._check_status_on_comment(status.HTTP_201_CREATED)
 
         edit_group: EAPGroup = cast(EAPGroup, self.edit_group_query.first())
         assert edit_group.member.count() == 1
         assert self.tea_user in edit_group.member.all()
 
     def test_give_users_reviewer_access(self):
-        response_get: HttpResponse = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert response_get.status_code == 403
+        self._check_status_on_view(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_edit(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_comment(status.HTTP_403_FORBIDDEN)
 
         response_post: HttpResponse = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),
@@ -1810,7 +1827,7 @@ class ShareAssuranceCaseViewTest(TestCase):
         )
 
         assert (
-            response_post.status_code == 200
+            response_post.status_code == status.HTTP_200_OK
         ), f"Expected a 200 response, but it was {response_post}"
 
         self.assurance_case.refresh_from_db()
@@ -1825,21 +1842,15 @@ class ShareAssuranceCaseViewTest(TestCase):
         ), f"Expected one member but was {review_group.member.all()}"
         assert self.tea_user in review_group.member.all()
 
-        response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert (
-            response_get.status_code == status.HTTP_200_OK
-        ), f"Expected status 200 but was {response_get}"
-
-        response_put: HttpResponse = self.client.put(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert response_put.status_code == status.HTTP_403_FORBIDDEN
+        self._check_status_on_view(status.HTTP_200_OK)
+        self._check_status_on_edit(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_comment(status.HTTP_201_CREATED)
 
     def test_give_users_view_access(self):
+
+        self._check_status_on_view(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_edit(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_comment(status.HTTP_403_FORBIDDEN)
 
         response_get: HttpResponse = self.client.get(
             reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
@@ -1864,17 +1875,9 @@ class ShareAssuranceCaseViewTest(TestCase):
             self.view_group_query.count() == 1
         ), f"Expected one view group. Saved {self.assurance_case.view_groups.all().first()}"
 
-        response_get = self.client.get(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert response_get.status_code == 200
-
-        response_put: HttpResponse = self.client.put(
-            reverse("case_detail", kwargs={"pk": self.assurance_case.pk}),
-            HTTP_AUTHORIZATION=f"Token {self.tea_user_token.key}",
-        )
-        assert response_put.status_code == 403
+        self._check_status_on_view(status.HTTP_200_OK)
+        self._check_status_on_edit(status.HTTP_403_FORBIDDEN)
+        self._check_status_on_comment(status.HTTP_403_FORBIDDEN)
 
         response_post = self.client.post(
             reverse("share_case_with", kwargs={"pk": self.assurance_case.pk}),

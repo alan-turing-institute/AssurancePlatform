@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
@@ -772,7 +772,9 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     return JsonResponse(summary, status=success_http_code)
 
 
-def get_case_permissions(case: AssuranceCase, user: EAPUser) -> str | None:
+def get_case_permissions(
+    case: AssuranceCase, user: EAPUser
+) -> Literal["manage"] | Literal["edit"] | Literal["review"] | Literal["view"] | None:
     """
     See if the user is allowed to view or edit the case.
 
