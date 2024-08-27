@@ -865,7 +865,7 @@ def comment_list(request, assurance_case_id):
     List all comments for an assurance case, or create a new comment.
     """
     permissions = get_case_permissions(assurance_case_id, request.user)
-    if not permissions:
+    if permissions is None or permissions == "view":
         return HttpResponse(status=403)
 
     if request.method == "GET":
