@@ -120,8 +120,9 @@ class EAPGroupSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
 
-    def get_author(self, obj):
-        return obj.author.username
+    def get_author(self, comment: Comment) -> str:
+        user: EAPUser = comment.author
+        return user.username if user.auth_provider == "legacy" else user.auth_username
 
     class Meta:
         model = Comment
