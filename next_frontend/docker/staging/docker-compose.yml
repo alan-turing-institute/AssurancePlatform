@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  tea-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/staging/Dockerfile
+    image: tea-frontend-staging
+    ports:
+      - "3001:3000"

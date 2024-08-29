@@ -137,7 +137,7 @@ export const PermissionsModal = () => {
         setReviewMembers(result.review)
       })
     }
-  },[assuranceCase, reviewMembers])
+  },[assuranceCase])
 
   return (
     <Modal

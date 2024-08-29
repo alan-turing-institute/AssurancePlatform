@@ -1,0 +1,10 @@
+version: "3"
+
+services:
+  tea-frontend:
+    build:
+      context: ../..
+      dockerfile: docker/production/Dockerfile
+    image: tea-frontend-production
+    ports:
+      - "3001:3000"
