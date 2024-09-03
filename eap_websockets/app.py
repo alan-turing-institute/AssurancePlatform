@@ -2,7 +2,7 @@ import logging
 import urllib
 import urllib.parse
 from collections import defaultdict
-from typing import Any, Awaitable, cast
+from typing import Any, Awaitable, Union, List, cast
 
 from tornado.httpserver import HTTPServer
 from tornado.httputil import HTTPServerRequest
@@ -10,28 +10,43 @@ from tornado.ioloop import IOLoop
 from tornado.options import define, options, parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketClosedError, WebSocketHandler
+from tornado.web import RequestHandler
 
 define("debug", default=False, type=bool)
 define("port", default=8080, type=int)
 define("allowed_hosts", default="localhost:8080", multiple=True)
 
 
+# class CORSRequestHandler(RequestHandler):
+#     def prepare(self):
+#         # Add CORS headers
+#         self.set_header("Access-Control-Allow-Origin", "*")
+#         self.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+#         self.set_header("Access-Control-Allow-Headers", "Content-Type")
+#         self.set_header("Access-Control-Allow-Credentials", "true")
+        
+#         # Handle OPTIONS request
+#         if self.request.method == "OPTIONS":
+#             self.set_status(204)
+#             self.finish()
+
+#     def get(self):
+#         self.write("CORS headers added")
+
+#     def post(self):
+#         self.write("CORS headers added")
+
 class AssuranceCaseHandler(WebSocketHandler):
     def __init__(
         self, application: Application, request: HTTPServerRequest, **kwargs: Any
     ) -> None:
         super().__init__(application, request, **kwargs)
-        self.case_id: int | None = None
+        self.case_id: Union[int, None] = None
 
+    # Allow all origins, or customize for specific domains
     def check_origin(self, origin: str) -> bool:
-        allowed: bool = super().check_origin(origin)
-        origin_parsed: urllib.parse.ParseResult = urllib.parse.urlparse(origin.lower())
-
-        origins_matched: bool = any(
-            origin_parsed.netloc == host for host in options.allowed_hosts
-        )
-
-        return options.debug or allowed or origins_matched
+        # Allow all origins or specify allowed origins
+        return True  # This will allow all origins; adjust as needed
 
     def open(self, case_id: int):
         self.case_id = case_id
@@ -39,7 +54,7 @@ class AssuranceCaseHandler(WebSocketHandler):
             self.case_id, self
         )
 
-    def on_message(self, message: str | bytes) -> Awaitable[None] | None:
+    def on_message(self, message: Union[str, bytes]) -> Union[Awaitable[None], None]:
         cast(TeaPlatformApplication, self.application).broadcast(
             message, self.case_id, sender=self
         )
@@ -52,11 +67,10 @@ class AssuranceCaseHandler(WebSocketHandler):
 
 class TeaPlatformApplication(Application):
     def __init__(self, **kwargs) -> None:
-
-        routes: list[tuple] = [(r"/(?P<case_id>[0-9]+)", AssuranceCaseHandler)]
+        routes: List[tuple] = [(r"/(?P<case_id>[0-9]+)", AssuranceCaseHandler)]
         super().__init__(routes, **kwargs)
 
-        self.case_subscribers: dict[int, list[AssuranceCaseHandler]] = defaultdict(list)
+        self.case_subscribers: dict[int, List[AssuranceCaseHandler]] = defaultdict(list)
 
     def add_subscriber(
         self, case_id: int, case_handler: "AssuranceCaseHandler"
@@ -64,25 +78,25 @@ class TeaPlatformApplication(Application):
         self.case_subscribers[case_id].append(case_handler)
 
     def remove_subscriber(
-        self, case_id: int | None, case_handler: "AssuranceCaseHandler"
+        self, case_id: Union[int, None], case_handler: "AssuranceCaseHandler"
     ) -> None:
         if case_id is not None:
             self.case_subscribers[case_id].remove(case_handler)
 
-    def get_subscribers(self, case_id: int) -> list[AssuranceCaseHandler]:
+    def get_subscribers(self, case_id: int) -> List[AssuranceCaseHandler]:
         return self.case_subscribers[case_id]
 
     def broadcast(
         self,
-        message: str | bytes,
-        case_id: int | None = None,
-        sender: AssuranceCaseHandler | None = None,
+        message: Union[str, bytes],
+        case_id: Union[int, None] = None,
+        sender: Union[AssuranceCaseHandler, None] = None,
     ):
         if case_id is None:
             for case_id in self.case_subscribers:
                 self.broadcast(message, case_id=case_id, sender=sender)
         else:
-            handlers: list[AssuranceCaseHandler] = self.get_subscribers(case_id)
+            handlers: List[AssuranceCaseHandler] = self.get_subscribers(case_id)
             for case_handler in handlers:
                 if case_handler != sender:
                     try:

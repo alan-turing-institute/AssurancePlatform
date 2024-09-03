@@ -57,9 +57,6 @@ export const PermissionsModal = () => {
 
     if(response.status === 401) return unauthorized()
 
-    //TODO: 403 when accessing and not the owner i.e. shared 'Read'
-    console.log(response)
-
     const result = await response.json()
     return result
   }
