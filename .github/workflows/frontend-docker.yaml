@@ -14,16 +14,29 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
       - uses: actions/checkout@v3
+
       - name: "Build main"
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: next_frontend
         run: |
-          docker build -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
+          docker build \
+            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID }} \
+            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GITHUB_APP_CLIENT_SECRET }} \
+            --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:main
+
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: next_frontend
         run: |
-          docker build -t turingassuranceplatform/eap_frontend:develop -f Dockerfile .
+          docker build \
+            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID }} \
+            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GITHUB_APP_CLIENT_SECRET }} \
+            --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
+            --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            -t turingassuranceplatform/eap_frontend:develop -f Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
