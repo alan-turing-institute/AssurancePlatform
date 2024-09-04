@@ -31,6 +31,7 @@ import SearchNodes from "./common/SearchNodes";
 
 import { toggleHiddenForParent } from "@/lib/case-helper";
 import LogoutButton from "./auth/LogoutButton";
+import WebSocketComponent from "./WebSocket";
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -166,6 +167,7 @@ const Header = ({ setOpen }: HeaderProps) => {
           >
             {assuranceCase.name}
           </p>
+          <WebSocketComponent />
         </div>
 
         <div className="flex justify-start items-center gap-4">

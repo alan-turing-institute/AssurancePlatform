@@ -99,7 +99,6 @@ const CaseContainer = () => {
             <Flow />
             <CaseDetails isOpen={open} setOpen={setOpen} />
             <FeedbackButton />
-            <WebSocket />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>
