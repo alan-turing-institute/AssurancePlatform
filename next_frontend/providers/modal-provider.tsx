@@ -1,6 +1,7 @@
 "use client";
 
 import { CaseCreateModal } from "@/components/modals/CaseCreateModal";
+import { EmailModal } from "@/components/modals/EmailModal";
 import { ImportModal } from "@/components/modals/ImportModal";
 import { PermissionsModal } from "@/components/modals/PermissionsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
@@ -23,6 +24,7 @@ export const ModalProvider = () => {
       <ImportModal />
       <ShareModal />
       <PermissionsModal />
+      <EmailModal />
     </>
   );
 }
