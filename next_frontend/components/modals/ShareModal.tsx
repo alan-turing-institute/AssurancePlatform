@@ -110,8 +110,8 @@ export const ShareModal = () => {
 
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'Something went wrong',
+          title: 'Unable to share case',
+          description: 'The email is not registered to an active user of the TEA platform.',
         });
 
         setLoading(false)
