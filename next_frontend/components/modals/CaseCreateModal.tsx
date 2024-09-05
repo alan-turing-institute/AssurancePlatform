@@ -20,10 +20,7 @@ import { useLoginToken } from "@/hooks/useAuth";
 const formSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  // template: z.enum(["empty", "minimal"], {
-  //   required_error: "You need to select a notification type.",
-  // }),
-  template: z.string().min(1)
+  // template: z.string().min(1)
 });
 
 export const CaseCreateModal = () => {
@@ -33,8 +30,8 @@ export const CaseCreateModal = () => {
 
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState(0);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [defaultValue, setDefaultValue] = useState(0);
+  // const [templates, setTemplates] = useState<any[]>([]);
+  // const [defaultValue, setDefaultValue] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -42,7 +39,7 @@ export const CaseCreateModal = () => {
     defaultValues: {
       name: "",
       description: "",
-      template: ""
+      // template: ""
     },
   });
 
@@ -89,29 +86,35 @@ export const CaseCreateModal = () => {
   }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const newCase = templates[parseInt(values.template)]
-
     try {
-      newCase.name = values.name
-      newCase.description = values.description
+      // const newCase = templates[parseInt(values.template)]
+      // newCase.name = values.name
+      // newCase.description = values.description
+      const newCase = {
+        "name": values.name,
+        "description": values.description,
+        "lock_uuid": null,
+        "goals": [],
+        "color_profile": "default"
+      }
       CreateCase(JSON.stringify(newCase))
     } catch (error) {
       console.log(error)
     }
   };
 
-  const fetchTemplates = async () => {
-    const response = await fetch('/api/templates')
-    const result = await response.json()
-    return result
-  }
+  // const fetchTemplates = async () => {
+  //   const response = await fetch('/api/templates')
+  //   const result = await response.json()
+  //   return result
+  // }
 
-  useEffect(() => {
-    fetchTemplates().then(result => {
-      setTemplates(result.newTemplates);
-      setDefaultValue(result.defaultCase);
-    })
-  },[])
+  // useEffect(() => {
+  //   fetchTemplates().then(result => {
+  //     setTemplates(result.newTemplates);
+  //     setDefaultValue(result.defaultCase);
+  //   })
+  // },[])
 
   return (
     <Modal
@@ -155,7 +158,7 @@ export const CaseCreateModal = () => {
                   </FormItem>
                 )}
               />
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="template"
                 render={({ field }) => (
@@ -182,7 +185,7 @@ export const CaseCreateModal = () => {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
               <div className="pt-6 space-x-2 flex items-center justify-end w-full">
                 <Button disabled={loading} variant="outline" onClick={(e) => handleCancel(e)}>
                   Cancel
