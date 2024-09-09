@@ -1,3 +1,5 @@
+import contextlib
+
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
@@ -18,13 +20,18 @@ class TokenAuthMiddleware(BaseMiddleware):
         super().__init__(inner)
 
     async def __call__(self, scope, receive, send):
-        headers: dict = dict(scope["headers"])
 
-        if b"authorization" in headers:
-            token_name, token_key = headers[b"authorization"].decode().split()
-            if token_name == "Token":
-                scope["user"] = (
-                    AnonymousUser() if token_key is None else await get_user(token_key)
+        query_string_elements: list[str] = scope["query_string"].decode().split("&")
+
+        token_key: str | None = None
+        with contextlib.suppress(ValueError):
+            token_key = (
+                dict(
+                    key_and_value.split("=") for key_and_value in query_string_elements
                 )
+            ).get("token", None)
+        scope["user"] = (
+            AnonymousUser() if token_key is None else await get_user(token_key)
+        )
 
         return await super().__call__(scope, receive, send)
