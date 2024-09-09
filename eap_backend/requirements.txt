@@ -26,7 +26,7 @@ rest-social-auth==8.3.0
 setuptools==69.5.1
 sqlparse==0.4.2
 tomli==1.2.2
-typing-extensions==3.10.0.2
+typing-extensions==4.6.0
 uvicorn==0.30.6
 uvicorn[standard]
 websockets==13.0.1
