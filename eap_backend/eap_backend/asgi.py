@@ -7,21 +7,23 @@ For more information on this file, see
 https://docs.djangoproject.com/en/3.2/howto/deployment/asgi/
 """
 
-import os
+import os  # noqa: I001
 
-from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
-
-import eap_websockets.routing
+from channels.routing import ProtocolTypeRouter, URLRouter
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "eap_backend.settings")
+django_asgi_app = get_asgi_application()
+
+import eap_websockets.routing  # noqa: E402
+from channels.auth import AuthMiddlewareStack  # noqa: E402
+from eap_websockets.middleware import TokenAuthMiddleware  # noqa: E402
 
 application = ProtocolTypeRouter(
     {
-        "http": get_asgi_application(),
-        "websocket": AuthMiddlewareStack(
-            URLRouter(eap_websockets.routing.websocket_urlpatterns)
+        "http": django_asgi_app,
+        "websocket": TokenAuthMiddleware(
+            AuthMiddlewareStack(URLRouter(eap_websockets.routing.websocket_urlpatterns))
         ),
     }
 )
