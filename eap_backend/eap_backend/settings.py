@@ -46,9 +46,11 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.socialaccount",
     "allauth.account",
+    "channels",
     "corsheaders",
     "eap_api.apps.ApiConfig",
     "eap_backend",
+    "eap_websockets",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -217,3 +219,7 @@ ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_AUTHENTICATION_METHOD = "username"
 ACCOUNT_UNIQUE_EMAIL = False
 ACCOUNT_UNIQUE_USERNAME = True
+
+ASGI_APPLICATION = "eap_backend.asgi.application"
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
