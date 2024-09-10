@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head></head>
+  <body></body>
+  <script>
+    const websocket = new WebSocket(
+      "wss://staging-eap-backend.azurewebsites.net/ws/case/1/?token=1b7478aeefe0d5083c4cffb69feb36fe501ad66a",
+    );
+
+    // const websocket = new WebSocket(
+    //   "ws://0.0.0.0:8000/ws/case/1/?token=7a090ddec540b3b3add61b8df46c289fe2600ca7"
+    // );
+
+    console.log(websocket);
+
+    websocket.onopen = function () {
+      websocket.send(
+        JSON.stringify({
+          content: "Hola!",
+        }),
+      );
+    };
+
+    websocket.onmessage = function (event) {
+      alert(event.data);
+    };
+  </script>
+</html>
