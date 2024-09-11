@@ -19,7 +19,7 @@ jobs:
 
       - name: "Build main"
         if: ${{ github.ref == 'refs/heads/main' }}
-        working-directory: next_frontend
+        working-directory: next_frontend/docker/production
         run: |
           docker build \
             --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID }} \
@@ -31,7 +31,7 @@ jobs:
 
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
-        working-directory: next_frontend
+        working-directory: next_frontend/docker/staging
         run: |
           docker build \
             --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID_STAGING }} \
