@@ -23,7 +23,6 @@ interface CaseListProps {
 const CaseList = ({ assuranceCases, showCreate = false } : CaseListProps) => {
   const createCaseModal = useCreateCaseModal();
   const importModal = useImportModal();
-  const shareModal = useShareModal()
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filteredCases, setFilteredCases] = useState(assuranceCases);

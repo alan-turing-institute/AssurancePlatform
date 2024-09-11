@@ -2,7 +2,8 @@
 
 import CaseList from '@/components/cases/CaseList'
 import NoCasesFound from '@/components/cases/NoCasesFound'
-import { useLoginToken } from '@/hooks/useAuth'
+import { unauthorized, useLoginToken } from '@/hooks/useAuth'
+import { useEmailModal } from '@/hooks/useEmailModal'
 import { Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -12,10 +13,12 @@ const Dashboard = () => {
   const [assuranceCases, setAssuranceCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [tokenChecked, setTokenChecked] = useState(false) // New state to ensure token check is complete
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const [token] = useLoginToken();
   const router = useRouter()
   const { data } = useSession()
+  const emailModal = useEmailModal();
 
   const fetchAssuranceCases = async (token: any) => {
     try {
@@ -46,6 +49,27 @@ const Dashboard = () => {
     }
   }
 
+  const fetchCurrentUser = async () => {
+    const requestOptions: RequestInit = {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    };
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, requestOptions);
+
+    if(response.status === 404 || response.status === 403 ) {
+      // TODO: 404 NOT FOUND PAGE
+      console.log('Render Not Found Page')
+      return
+    }
+
+    if(response.status === 401) return unauthorized()
+
+    const result = await response.json()
+    return result
+  }
+
   useEffect(() => {
     const storedToken = token || localStorage.getItem('token');
 
@@ -63,6 +87,13 @@ const Dashboard = () => {
     // Set token check to complete
     setTokenChecked(true);
   }, [token, router, tokenChecked])
+
+  useEffect(() => {
+    fetchCurrentUser().then(result => {
+      setCurrentUser(result)
+      if(!result.email) emailModal.onOpen()
+    })
+  },[])
 
   return (
     <>

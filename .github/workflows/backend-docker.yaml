@@ -33,15 +33,3 @@ jobs:
         run: |
           docker build -t turingassuranceplatform/eap_backend:develop -f Dockerfile .
           docker push turingassuranceplatform/eap_backend:develop
-      - name: "Build main: eap_websockets"
-        if: ${{ github.ref == 'refs/heads/main' }}
-        working-directory: eap_websockets
-        run: |
-          docker build -t turingassuranceplatform/eap_websockets:main -f Dockerfile .
-          docker push turingassuranceplatform/eap_websockets:main
-      - name: "Build develop: eap_websockets"
-        if: ${{ github.ref == 'refs/heads/develop' }}
-        working-directory: eap_websockets
-        run: |
-          docker build -t turingassuranceplatform/eap_websockets:develop -f Dockerfile .
-          docker push turingassuranceplatform/eap_websockets:develop

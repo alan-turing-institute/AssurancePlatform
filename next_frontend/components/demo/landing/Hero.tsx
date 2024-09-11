@@ -6,8 +6,8 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useLoginToken } from '@/hooks/useAuth'
 
 const navigation = [
-  { name: 'Documentation', href: '#' },
-  { name: 'GitHub', href: '#' },
+  { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/' },
+  { name: 'GitHub', href: 'https://github.com/alan-turing-institute/AssurancePlatform' },
 ]
 
 export default function Hero() {
@@ -171,7 +171,7 @@ export default function Hero() {
                     >
                       Get started
                     </a>
-                    <a href="#" className="text-sm font-semibold leading-6 text-gray-900">
+                    <a href="https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/" className="text-sm font-semibold leading-6 text-gray-900">
                       Learn more <span aria-hidden="true">→</span>
                     </a>
                   </div>
