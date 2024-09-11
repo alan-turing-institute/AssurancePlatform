@@ -22,8 +22,8 @@ jobs:
         working-directory: next_frontend/docker/production
         run: |
           docker build \
-            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID }} \
-            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GITHUB_APP_CLIENT_SECRET }} \
+            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID }} \
+            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             -t turingassuranceplatform/eap_frontend:main -f Dockerfile .
@@ -34,10 +34,10 @@ jobs:
         working-directory: next_frontend
         run: |
           docker build \
-            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID_STAGING }} \
-            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GITHUB_APP_CLIENT_SECRET_STAGING }} \
+            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }} \
+            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
-            -t turingassuranceplatform/eap_frontend:develop 
+            -t turingassuranceplatform/eap_frontend:develop
             -f docker/staging/Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
