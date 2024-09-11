@@ -35,10 +35,11 @@ jobs:
         working-directory: next_frontend
         run: |
           docker build \
-            --build-arg GITHUB_APP_CLIENT_ID=Ov23lifa6A8zqHs3MUuj \
-            --build-arg GITHUB_APP_CLIENT_SECRET=92b2bdd435d9d2ec2dd7ad238366ae0368c2fb4b \
+            --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }} \
+            --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
+            --build-arg NEXTAUTH_URL=https://staging-assuranceplatform.azurewebsites.net \
             -t turingassuranceplatform/eap_frontend:develop \
             -f docker/staging/Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
