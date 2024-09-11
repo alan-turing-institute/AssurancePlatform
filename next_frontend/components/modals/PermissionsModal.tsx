@@ -53,7 +53,7 @@ export const PermissionsModal = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`, requestOptions);
 
     if(response.status === 401) return unauthorized()
 
@@ -78,7 +78,7 @@ export const PermissionsModal = () => {
 
       payload.push(item)
 
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/sharedwith`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`;
 
       const requestOptions: RequestInit = {
         method: "POST",

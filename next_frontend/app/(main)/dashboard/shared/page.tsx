@@ -22,7 +22,7 @@ const SharedWithMePage = () => {
       myHeaders.append("Content-Type", "application/json");
       myHeaders.append("Authorization", `Token ${token}`);
 
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=false&view=true&edit=true`
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases?owner=false&view=true&edit=true`
 
       const requestOptions: RequestInit = {
         method: 'GET',

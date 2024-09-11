@@ -94,7 +94,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${userId}/`;
 
       const requestOptions: RequestInit = {
         method: "PUT",

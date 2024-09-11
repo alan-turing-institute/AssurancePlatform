@@ -569,7 +569,7 @@ export const createAssuranceCaseNode = async (
   if (!token) return console.log("No token");
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
 
     const requestOptions: RequestInit = {
       method: "POST",
@@ -627,7 +627,7 @@ export const deleteAssuranceCaseNode = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
       method: "DELETE",
@@ -675,7 +675,7 @@ export const updateAssuranceCaseNode = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
       method: "PUT",
@@ -1297,7 +1297,7 @@ export const detachCaseElement = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/detach`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/detach`;
 
     const requestOptions: RequestInit = {
       method: "POST",
@@ -1369,7 +1369,7 @@ export const attachCaseElement = async (
   console.log("Payload", payload);
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/attach`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
 
     const requestOptions: RequestInit = {
       method: "POST",

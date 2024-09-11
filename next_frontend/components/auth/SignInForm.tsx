@@ -51,7 +51,7 @@ const SignInForm = () => {
       body: JSON.stringify(user),
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, requestOptions)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
     const result = await response.json()
 
     if (result.key) {

@@ -40,7 +40,7 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/comments/`
+        let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/comments/`
 
         const requestOptions: RequestInit = {
             method: "POST",

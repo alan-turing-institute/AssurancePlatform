@@ -93,7 +93,7 @@ export const ShareModal = () => {
     payload.push(newShareItem)
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/sharedwith`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/sharedwith`;
 
       const requestOptions: RequestInit = {
         method: "POST",

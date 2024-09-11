@@ -32,7 +32,7 @@ const CaseContainer = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
       // TODO: 404 NOT FOUND PAGE
@@ -56,7 +56,7 @@ const CaseContainer = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/sandbox`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
       console.log('Render Not Found Page')

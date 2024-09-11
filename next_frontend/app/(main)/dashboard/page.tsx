@@ -32,7 +32,7 @@ const Dashboard = () => {
         redirect: 'follow'
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases?owner=true&view=false&edit=false&review=false`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases?owner=true&view=false&edit=false&review=false`, requestOptions)
 
       if(response.status === 401) {
         console.log('Invalid Token')
@@ -56,7 +56,7 @@ const Dashboard = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/user/`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
       // TODO: 404 NOT FOUND PAGE

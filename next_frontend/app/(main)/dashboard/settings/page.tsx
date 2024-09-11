@@ -41,7 +41,7 @@ const SettingsPage = () => {
       },
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, requestOptions);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/user/`, requestOptions);
 
     if(response.status === 404 || response.status === 403 ) {
       // TODO: 404 NOT FOUND PAGE
@@ -57,7 +57,7 @@ const SettingsPage = () => {
 
   const handleDeleteUser = async () => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/users/${currentUser.id}/`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${currentUser.id}/`;
 
       const requestOptions: RequestInit = {
         method: "DELETE",

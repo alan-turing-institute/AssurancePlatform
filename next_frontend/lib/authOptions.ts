@@ -3,14 +3,14 @@ import GithubProvider from 'next-auth/providers/github';
 
 export const authOptions: NextAuthOptions = {
   // Secret for Next-auth, without this JWT encryption/decryption won't work
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET_STAGING as string,
   session: { strategy: "jwt" },
 
   // Configure one or more authentication providers
   providers: [
     GithubProvider({
-      clientId: process.env.GITHUB_APP_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_APP_CLIENT_SECRET as string,
+      clientId: process.env.GITHUB_APP_CLIENT_ID || process.env.GITHUB_APP_CLIENT_ID_STAGING as string,
+      clientSecret: process.env.GITHUB_APP_CLIENT_SECRET || process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string,
     }),
   ],
   callbacks: {

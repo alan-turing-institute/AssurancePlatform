@@ -56,7 +56,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
       description: values.description
     }
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`
     const requestOptions: RequestInit = {
         method: "PUT",
         headers: {

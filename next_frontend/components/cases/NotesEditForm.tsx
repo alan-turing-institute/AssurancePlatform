@@ -49,7 +49,7 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/comments/${id}/`
 
       const requestOptions: RequestInit = {
           method: "PUT",

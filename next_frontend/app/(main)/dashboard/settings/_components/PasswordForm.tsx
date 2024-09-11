@@ -88,7 +88,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/users/${data.id}/change-password`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${data.id}/change-password`;
 
       const requestOptions: RequestInit = {
         method: "PUT",

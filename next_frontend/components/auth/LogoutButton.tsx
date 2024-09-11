@@ -14,7 +14,7 @@ const LogoutButton = () => {
 
   const handleLogout = async () => {
     const storedToken = token || localStorage.getItem('token');
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/logout/`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/logout/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

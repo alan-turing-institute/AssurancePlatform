@@ -68,7 +68,7 @@ export default function NotesFeed({ }) {
 
   const handleNoteDelete = async (id: number) => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/comments/${id}/`
 
       const requestOptions: RequestInit = {
           method: "DELETE",

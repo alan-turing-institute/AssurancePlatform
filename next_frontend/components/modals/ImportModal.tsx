@@ -66,7 +66,7 @@ export const ImportModal = () => {
 
       setLoading(true);
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, requestOptions)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/`, requestOptions)
         .then((response) => response.json())
         .then((json) => {
           if (json.id) {
