@@ -31,12 +31,13 @@ jobs:
 
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
-        working-directory: next_frontend/docker/staging
+        working-directory: next_frontend
         run: |
           docker build \
             --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GITHUB_APP_CLIENT_ID_STAGING }} \
             --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GITHUB_APP_CLIENT_SECRET_STAGING }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
-            -t turingassuranceplatform/eap_frontend:develop -f Dockerfile .
+            -t turingassuranceplatform/eap_frontend:develop 
+            -f docker/staging/Dockerfile .
           docker push turingassuranceplatform/eap_frontend:develop
