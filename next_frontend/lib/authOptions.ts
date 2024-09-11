@@ -1,6 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
 import GithubProvider from 'next-auth/providers/github';
 
+import dotenv from 'dotenv';
+dotenv.config(); // Explicitly load environment variables
+
 export const authOptions: NextAuthOptions = {
   // Secret for Next-auth, without this JWT encryption/decryption won't work
   secret: process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET_STAGING as string,
@@ -15,7 +18,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-
       // Send GitHub Token to Endpoint
       // api/register-by-access-token/social/github/
 
@@ -45,7 +47,7 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async redirect({ url, baseUrl }) {
-      return `${process.env.NEXTAUTH_URL}/dashboard`
+      return `${process.env.NEXTAUTH_URL}/dashboard`;
     },
     async session({ session, user, token }) {
         // Include access_token in the session
