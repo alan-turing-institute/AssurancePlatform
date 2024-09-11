@@ -1,5 +1,11 @@
-#syntax=docker/dockerfile:1.4
+# syntax=docker/dockerfile:1.4
 FROM node:18-alpine AS base
+
+# Declare build arguments
+ARG GITHUB_APP_CLIENT_ID
+ARG GITHUB_APP_CLIENT_SECRET
+ARG NEXTAUTH_SECRET
+ARG NEXT_PUBLIC_API_URL
 
 # 1. Install dependencies only when needed
 FROM base AS deps
@@ -18,14 +24,18 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-
 # 2. Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link . .
-# This will do the trick, use the corresponding env file for each environment.
-# COPY --link .env.development .env.production
+
+# Expose the build arguments as environment variables
+ENV GITHUB_APP_CLIENT_ID=${GITHUB_APP_CLIENT_ID}
+ENV GITHUB_APP_CLIENT_SECRET=${GITHUB_APP_CLIENT_SECRET}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN yarn build
 
@@ -43,7 +53,6 @@ COPY --from=builder --link /app/public ./public
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
-
 
 USER nextjs
 
