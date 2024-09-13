@@ -40,6 +40,13 @@ ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 
 RUN yarn build
 
+RUN echo "Build-time ENV variables:" && \
+  echo GITHUB_APP_CLIENT_ID=$GITHUB_APP_CLIENT_ID && \
+  echo GITHUB_APP_CLIENT_SECRET=$GITHUB_APP_CLIENT_SECRET && \
+  echo NEXTAUTH_SECRET=$NEXTAUTH_SECRET && \
+  echo NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL && \
+  echo NEXTAUTH_URL=$NEXTAUTH_URL
+
 # 3. Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -64,3 +71,10 @@ USER nextjs
 EXPOSE 3000
 
 CMD ["npm", "start"]
+
+RUN echo "Runtime ENV variables:" && \
+  echo GITHUB_APP_CLIENT_ID=$GITHUB_APP_CLIENT_ID && \
+  echo GITHUB_APP_CLIENT_SECRET=$GITHUB_APP_CLIENT_SECRET && \
+  echo NEXTAUTH_SECRET=$NEXTAUTH_SECRET && \
+  echo NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL && \
+  echo NEXTAUTH_URL=$NEXTAUTH_URL
