@@ -11,7 +11,6 @@ ARG NEXTAUTH_URL
 # 1. Install dependencies only when needed
 FROM base AS deps
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
@@ -32,7 +31,7 @@ WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link . .
 
-# Expose the build arguments as environment variables
+# Expose the build arguments as environment variables for the build process
 ENV GITHUB_APP_CLIENT_ID=${GITHUB_APP_CLIENT_ID}
 ENV GITHUB_APP_CLIENT_SECRET=${GITHUB_APP_CLIENT_SECRET}
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
@@ -50,11 +49,15 @@ RUN \
   adduser -S nextjs -u 1001
 
 COPY --from=builder --link /app/public ./public
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
+
+# Ensure the environment variables are available at runtime
+ENV GITHUB_APP_CLIENT_ID=${GITHUB_APP_CLIENT_ID}
+ENV GITHUB_APP_CLIENT_SECRET=${GITHUB_APP_CLIENT_SECRET}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 
 USER nextjs
 

@@ -6,7 +6,7 @@ dotenv.config(); // Explicitly load environment variables
 
 export const authOptions: NextAuthOptions = {
   // Secret for Next-auth, without this JWT encryption/decryption won't work
-  secret: process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET_STAGING as string,
+  secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
 
   // Configure one or more authentication providers
