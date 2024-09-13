@@ -53,7 +53,7 @@ python manage.py runserver
 from this directory. If you want to also test websocket support, please run:
 
 ```
-uvicorn --host 0.0.0.0 eap_backend.asgi:application
+uvicorn --host 0.0.0.0 eap_backend.asgi:application --reload
 ```
 
 ## Running tests

@@ -10,6 +10,7 @@ from .github import Github, register_social_user
 from .model_utils import get_property_claims_by_case_id
 from .models import (
     AssuranceCase,
+    AssuranceCaseImage,
     CaseItem,
     Comment,
     Context,
@@ -379,6 +380,16 @@ class EvidenceSerializer(serializers.ModelSerializer):
         )
 
         return super().create(validated_data)
+
+
+class AssuranceCaseImageSerializer(serializers.ModelSerializer):
+    assurance_case_id = serializers.PrimaryKeyRelatedField(
+        source="assurance_case", queryset=AssuranceCase.objects.all()
+    )
+
+    class Meta:
+        model = AssuranceCaseImage
+        fields = ("id", "assurance_case_id", "image")
 
 
 class StrategySerializer(serializers.ModelSerializer):

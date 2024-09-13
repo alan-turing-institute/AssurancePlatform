@@ -16,6 +16,7 @@ from social_django.utils import psa
 
 from .models import (
     AssuranceCase,
+    AssuranceCaseImage,
     Comment,
     Context,
     EAPGroup,
@@ -28,6 +29,7 @@ from .models import (
 )
 from .serializers import (
     TYPE_DICT,
+    AssuranceCaseImageSerializer,
     AssuranceCaseSerializer,
     CommentSerializer,
     ContextSerializer,
@@ -244,6 +246,48 @@ def case_list(request):
         data["owner"] = request.user.id
         return save_json_tree(data, "assurance_case")
     return None
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def case_image(request: HttpRequest, pk) -> Response:
+    print(f"{pk=}")
+    if request.method == "GET":
+        try:
+            assurance_case: AssuranceCaseImage = AssuranceCaseImage.objects.get(
+                assurance_case_id=pk
+            )
+            image_serializer = AssuranceCaseImageSerializer(assurance_case)
+            return Response(image_serializer.data, status=status.HTTP_200_OK)
+        except AssuranceCaseImage.DoesNotExist:
+            return Response(
+                {"message": f"There's no image for assurance case {pk}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    elif request.method == "POST":
+        image_serializer = AssuranceCaseImageSerializer(
+            data={
+                "assurance_case_id": pk,
+                "image": request.FILES.get("media"),
+            },
+            context={"request": request},
+        )
+
+        if image_serializer.is_valid():
+            image_serializer.save()
+            return Response(
+                {
+                    "message": "Image uploaded successfully.",
+                    "data": image_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    return Response(
+        {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @csrf_exempt

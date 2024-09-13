@@ -40,6 +40,13 @@ ALLOWED_HOSTS = (
     [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
 )
 
+DEFAULT_FILE_STORAGE: str = "eap_backend.azure_storage.AzureMediaStorage"
+AZURE_ACCOUNT_NAME: str | None = os.getenv("AZURE_ACCOUNT_NAME")
+AZURE_ACCOUNT_KEY: str | None = os.getenv("AZURE_ACCOUNT_KEY")
+AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+MEDIA_URL: str = f"https://{AZURE_CUSTOM_DOMAIN}/media/"
+MEDIA_ROOT: Path = BASE_DIR / "mediafiles"
+
 if DEBUG:
     ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
 
