@@ -148,8 +148,8 @@ const SignInForm = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <a
+          <div className="mt-6 grid grid-cols-1 gap-4">
+            {/* <a
               href="#"
               className="flex w-full items-center justify-center gap-3 rounded-md bg-background px-3 py-2 text-sm font-semibold text-foreground shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-800 hover:bg-foreground/10 focus-visible:ring-transparent"
             >
@@ -172,7 +172,7 @@ const SignInForm = () => {
                 />
               </svg>
               <span className="text-sm font-semibold leading-6">Google</span>
-            </a>
+            </a> */}
 
             <button
               onClick={() => handleProviderLogin('github')}
