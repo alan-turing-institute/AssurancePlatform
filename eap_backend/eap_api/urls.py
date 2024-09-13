@@ -17,6 +17,7 @@ urlpatterns = [
     path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
+    path("cases/<int:pk>/image", views.case_image, name="case_image"),
     path("cases/<int:pk>/sandbox", views.case_sandbox, name="case_sandbox"),
     path("cases/<int:pk>/sharedwith", views.share_case_with, name="share_case_with"),
     path(

@@ -247,3 +247,12 @@ class Evidence(CaseItem):
         default=None,
         null=True,
     )
+
+
+class AssuranceCaseImage(models.Model):
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="case_image",
+        on_delete=models.CASCADE,
+    )
+    image = models.ImageField(upload_to="images/", default=None)
