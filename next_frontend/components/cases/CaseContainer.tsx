@@ -12,6 +12,7 @@ import useStore from '@/data/store';
 import { addHiddenProp } from '@/lib/case-helper';
 import CaseDetails from './CaseDetails';
 import Link from 'next/link';
+import WebSocketComponent from '../Websocket';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -43,7 +44,6 @@ const CaseContainer = () => {
     if(response.status === 401) return unauthorized()
 
     const result = await response.json()
-    console.log('AssuranceCase', result)
 
     const formattedAssuranceCase = await addHiddenProp(result)
     return formattedAssuranceCase
@@ -99,6 +99,7 @@ const CaseContainer = () => {
             <Flow />
             <CaseDetails isOpen={open} setOpen={setOpen} />
             <FeedbackButton />
+            <WebSocketComponent />
           </ReactFlowProvider>
         ) : (
           <p>No Case Found</p>
