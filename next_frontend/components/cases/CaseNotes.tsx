@@ -27,11 +27,11 @@ const CaseNotes = ({ isOpen, onClose } : CaseNotesProps ) => {
     <NotesSheet
       isOpen={isOpen}
       onClose={onClose}
-      title='Manage Case Notes'
-      description='Use this section to view and manage your notes.'
+      title={`${assuranceCase.permissions !== 'view' ? 'Manage' : ''} Case Notes`}
+      description={`Use this section to view ${assuranceCase.permissions !== 'view' ? 'and manage your' : ''} notes.`}
     >
       {/* <CreateForm onClose={onClose} /> */}
-      <NotesForm />
+      {assuranceCase.permissions !== 'view' && <NotesForm />}
       <NotesFeed />
     </NotesSheet>
   )

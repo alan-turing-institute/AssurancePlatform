@@ -12,7 +12,7 @@ import {
 // import { AssuranceCase } from '@/types'
 import Link from 'next/link'
 import moment from 'moment'
-import { Trash2 } from 'lucide-react'
+import { Eye, MessageCircleMore, PencilRuler, ScanEye, Trash2 } from 'lucide-react'
 import { AlertModal } from '@/components/modals/alertModal'
 import { useParams, useRouter } from 'next/navigation'
 import { useLoginToken } from '@/hooks/useAuth'
@@ -47,7 +47,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
         method: "DELETE",
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`, requestOptions)
       if(response.ok) {
         window.location.reload()
       }
@@ -77,14 +77,21 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
             <CardTitle>{name}</CardTitle>
             <CardDescription className='text-slate-900 dark:text-white'>{description}</CardDescription>
           </CardHeader>
-          <CardFooter className="flex justify-end text-xs text-gray-500 dark:text-gray-300">
+          <CardFooter className="flex w-full justify-between items-center text-xs text-gray-500 dark:text-gray-300">
             <p>Created on: {moment(created_date).format('DD/MM/YYYY')}</p>
+            <div className='flex justify-start items-center gap-2'>
+              {assuranceCase.permissions.includes('view') && <Eye className='w-4 h-4' />}
+              {assuranceCase.permissions.includes('review') && <MessageCircleMore className='w-4 h-4' />}
+              {assuranceCase.permissions.includes('edit') && <PencilRuler className='w-4 h-4' />}
+            </div>
           </CardFooter>
         </Card>
       </Link>
-      <button disabled={loading} onClick={() => setOpen(true)} className='absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50'>
-        <Trash2 className='w-4 h-4' />
-      </button>
+      {(assuranceCase.permissions.includes('owner') || assuranceCase.permissions.includes('editor')) && (
+        <button disabled={loading} onClick={() => setOpen(true)} className='absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50'>
+          <Trash2 className='w-4 h-4' />
+        </button>
+      )}
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}

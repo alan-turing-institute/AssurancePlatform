@@ -10,6 +10,7 @@ from django.utils import timezone
 
 class EAPUser(AbstractUser):
     auth_provider = models.CharField(max_length=200, default="legacy")
+    auth_username = models.CharField(max_length=200, default="")
 
     def __str__(self):
         return self.username
@@ -84,6 +85,10 @@ class AssuranceCase(models.Model):
     )
     view_groups = models.ManyToManyField(
         EAPGroup, related_name="viewable_cases", blank=True
+    )
+
+    review_groups = models.ManyToManyField(
+        EAPGroup, related_name="reviewable_cases", blank=True
     )
     shape = None
     color_profile = models.CharField(max_length=200, default="default")
@@ -242,3 +247,12 @@ class Evidence(CaseItem):
         default=None,
         null=True,
     )
+
+
+class AssuranceCaseImage(models.Model):
+    assurance_case = models.ForeignKey(
+        AssuranceCase,
+        related_name="case_image",
+        on_delete=models.CASCADE,
+    )
+    image = models.ImageField(upload_to="images/", default=None)

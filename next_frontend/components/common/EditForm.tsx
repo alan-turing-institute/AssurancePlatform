@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
-import { CloudFog, Loader, Loader2, LockIcon, LockKeyhole } from 'lucide-react'
+import { CloudFog, Loader, Loader2, Lock, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
 import { useLoginToken } from '@/hooks/useAuth'
 import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
@@ -89,6 +89,8 @@ const EditForm: React.FC<EditFormProps> = ({
     });
   }, [form.watch, setUnresolvedChanges]);
 
+  let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
@@ -97,9 +99,17 @@ const EditForm: React.FC<EditFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className='flex justify-start items-center gap-2'>
+                Description
+                {readOnly && (
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                )}
+              </FormLabel>
               <FormControl>
-                <Textarea placeholder="Type your message here." {...field} />
+                <Textarea
+                  placeholder="Type your message here." {...field}
+                  readOnly={readOnly}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -111,9 +121,14 @@ const EditForm: React.FC<EditFormProps> = ({
             name="URL"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Evidence URL</FormLabel>
+                <FormLabel className='flex justify-start items-center gap-2'>
+                  Evidence URL
+                  {readOnly && (
+                    <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  )}
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="www.sample.com" {...field} />
+                  <Input placeholder="www.sample.com" {...field} readOnly={readOnly} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -121,13 +136,15 @@ const EditForm: React.FC<EditFormProps> = ({
           />
         )}
         <div className='flex justify-start items-center gap-3'>
+        {!readOnly && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
-              <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
+              <span title='Read Only' className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
             ) : (
               <span>Update&nbsp;<span className='capitalize'>{caseItemDescription(node.type)}</span></span>
             )}
           </Button>
+        )}
         </div>
       </form>
     </Form>

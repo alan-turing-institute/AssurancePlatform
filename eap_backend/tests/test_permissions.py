@@ -79,7 +79,9 @@ class CasePermissionsTest(TestCase):
         # user1 and user3 should now be able to see it via case_list, user2 should not.
         get_list1 = self.client1.get(reverse("case_list"))
         assert get_list1.status_code == 200
-        assert len(get_list1.json()) == 1
+        assert (
+            len(get_list1.json()) == 1
+        ), f"Expected 1 entry but was {get_list1.json()}"
         get_list2 = self.client2.get(reverse("case_list"))
         assert get_list2.status_code == 200
         assert len(get_list2.json()) == 0

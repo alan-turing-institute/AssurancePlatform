@@ -14,6 +14,10 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -28,35 +32,48 @@ SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(32))
 DEBUG = os.environ.get("DEBUG", "on") == "on"
 
 # Keys needed for OAuth
-GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
-GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+SOCIAL_AUTH_GITHUB_KEY: str | None = os.environ.get("GITHUB_CLIENT_ID")
+SOCIAL_AUTH_GITHUB_SECRET: str | None = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
 ALLOWED_HOSTS = (
     [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
 )
 
+DEFAULT_FILE_STORAGE: str = "eap_backend.azure_storage.AzureMediaStorage"
+AZURE_ACCOUNT_NAME: str | None = os.getenv("AZURE_ACCOUNT_NAME")
+AZURE_ACCOUNT_KEY: str | None = os.getenv("AZURE_ACCOUNT_KEY")
+AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+MEDIA_URL: str = f"https://{AZURE_CUSTOM_DOMAIN}/media/"
+MEDIA_ROOT: Path = BASE_DIR / "mediafiles"
+
+if DEBUG:
+    ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
+
 # Application definition
 
 INSTALLED_APPS = [
+    "allauth",
+    "allauth.socialaccount",
+    "allauth.account",
+    "channels",
+    "corsheaders",
     "eap_api.apps.ApiConfig",
+    "eap_backend",
+    "eap_websockets",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sites",
     "django.contrib.staticfiles",
+    "rest_auth",
+    "rest_auth.registration",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_auth",
-    "django.contrib.sites",
-    "allauth",
-    "allauth.socialaccount",
-    "allauth.account",
-    "rest_auth.registration",
-    "corsheaders",
-    "eap_backend",
-    # "frontend.apps.FrontendConfig"
+    "rest_social_auth",
+    "social_django",
 ]
 
 MIDDLEWARE = [
@@ -200,8 +217,9 @@ AUTH_USER_MODEL = "eap_api.EAPUser"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
+    "django.contrib.auth.backends.ModelBackend",
+    "social_core.backends.github.GithubOAuth2",
 )
 
 SITE_ID = 1
@@ -211,3 +229,7 @@ ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_AUTHENTICATION_METHOD = "username"
 ACCOUNT_UNIQUE_EMAIL = False
 ACCOUNT_UNIQUE_USERNAME = True
+
+ASGI_APPLICATION = "eap_backend.asgi.application"
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

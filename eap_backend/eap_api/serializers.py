@@ -1,12 +1,17 @@
-from typing import cast
+import warnings
+from typing import Any, Optional, cast
 
 from django.db.models.query import QuerySet
 from rest_framework import serializers
 from rest_framework.serializers import ReturnDict
 
+from . import models
 from .github import Github, register_social_user
+from .model_utils import get_property_claims_by_case_id
 from .models import (
     AssuranceCase,
+    AssuranceCaseImage,
+    CaseItem,
     Comment,
     Context,
     EAPGroup,
@@ -43,6 +48,18 @@ class GitHubRepositorySerializer(serializers.ModelSerializer):
         fields = ("id", "name", "url", "description", "created_date", "owner")
 
 
+class PasswordChangeSerializer(serializers.Serializer):
+    password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+
+class ShareRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    view = serializers.BooleanField(required=False)
+    edit = serializers.BooleanField(required=False)
+    review = serializers.BooleanField(required=False)
+
+
 class EAPUserSerializer(serializers.ModelSerializer):
     all_groups = serializers.PrimaryKeyRelatedField(
         many=True, read_only=True, required=False
@@ -63,8 +80,20 @@ class EAPUserSerializer(serializers.ModelSerializer):
             "is_staff",
             "all_groups",
             "owned_groups",
+            "auth_provider",
             "github_repositories",  # Add this line to include GitHub repositories
         )
+
+
+class UsernameAwareUserSerializer(EAPUserSerializer):
+
+    username = serializers.SerializerMethodField()
+
+    def get_username(self, user: EAPUser) -> str:
+        if user.auth_provider == "legacy":
+            return user.username
+
+        return user.auth_username
 
 
 class EAPGroupSerializer(serializers.ModelSerializer):
@@ -92,8 +121,9 @@ class EAPGroupSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
 
-    def get_author(self, obj):
-        return obj.author.username
+    def get_author(self, comment: Comment) -> str:
+        user: EAPUser = comment.author
+        return user.username if user.auth_provider == "legacy" else user.auth_username
 
     class Meta:
         model = Comment
@@ -190,6 +220,17 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
+    def create(self, validated_data: dict) -> TopLevelNormativeGoal:
+
+        assurance_case_id: int = validated_data["assurance_case"].pk
+
+        validated_data["name"] = _get_unique_name(
+            TopLevelNormativeGoal.objects.filter(assurance_case_id=assurance_case_id),
+            "G",
+        )
+
+        return super().create(validated_data)
+
 
 class ContextSerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
@@ -211,6 +252,13 @@ class ContextSerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
+    def create(self, validated_data: dict):
+        validated_data["name"] = _get_unique_name(
+            Context.objects.filter(goal_id=validated_data["goal"].pk), "C"
+        )
+
+        return super().create(validated_data)
 
 
 class PropertyClaimSerializer(serializers.ModelSerializer):
@@ -264,6 +312,33 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "name": {"allow_null": True, "required": False},
         }
 
+    def create(self, validated_data: dict[str, Any]) -> PropertyClaim:
+
+        if (
+            validated_data.get("strategy") is not None
+            or validated_data.get("goal") is not None
+        ):
+            top_level_claim_ids, _ = get_property_claims_by_case_id(
+                get_case_id(PropertyClaim(**validated_data))
+            )
+            validated_data["name"] = _get_unique_name(
+                PropertyClaim.objects.filter(pk__in=top_level_claim_ids),
+                name_prefix="P",
+            )
+        elif validated_data.get("property_claim") is not None:
+            parent_property_claim: PropertyClaim | None = validated_data.get(
+                "property_claim"
+            )
+            if parent_property_claim is not None:
+                validated_data["name"] = _get_unique_name(
+                    PropertyClaim.objects.filter(
+                        property_claim_id=parent_property_claim.pk
+                    ),
+                    name_prefix=f"{parent_property_claim.name}.",
+                )
+
+        return super().create(validated_data)
+
 
 class EvidenceSerializer(serializers.ModelSerializer):
     property_claim_id = serializers.PrimaryKeyRelatedField(
@@ -287,6 +362,34 @@ class EvidenceSerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
+    def create(self, validated_data: dict) -> Evidence:
+
+        (
+            top_level_claim_ids,
+            child_claim_ids,
+        ) = get_property_claims_by_case_id(
+            case_id=get_case_id(validated_data["property_claim"][0])
+        )
+
+        validated_data["name"] = _get_unique_name(
+            Evidence.objects.filter(
+                property_claim__id__in=top_level_claim_ids + child_claim_ids
+            ),
+            "E",
+        )
+
+        return super().create(validated_data)
+
+
+class AssuranceCaseImageSerializer(serializers.ModelSerializer):
+    assurance_case_id = serializers.PrimaryKeyRelatedField(
+        source="assurance_case", queryset=AssuranceCase.objects.all()
+    )
+
+    class Meta:
+        model = AssuranceCaseImage
+        fields = ("id", "assurance_case_id", "image")
 
 
 class StrategySerializer(serializers.ModelSerializer):
@@ -313,3 +416,114 @@ class StrategySerializer(serializers.ModelSerializer):
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
+
+    def create(self, validated_data: dict) -> Strategy:
+
+        validated_data["name"] = _get_unique_name(
+            Strategy.objects.filter(goal_id=validated_data["goal"].pk), "S"
+        )
+        return super().create(validated_data)
+
+
+def _get_unique_name(base_query_set: QuerySet, name_prefix: str) -> str:
+
+    candidate_index: int = base_query_set.count() + 1
+    while base_query_set.filter(name=f"{name_prefix}{candidate_index}").count() != 0:
+        candidate_index += 1
+
+    return f"{name_prefix}{candidate_index}"
+
+
+def get_type_dictionary() -> dict[str, Any]:
+    type_dictionary: dict[str, Any] = {
+        "assurance_case": {
+            "serializer": AssuranceCaseSerializer,
+            "model": AssuranceCase,
+            "children": ["goals"],
+            "fields": (
+                "name",
+                "description",
+                "lock_uuid",
+                "owner",
+                "color_profile",
+            ),
+        },
+        "goal": {
+            "serializer": TopLevelNormativeGoalSerializer,
+            "model": TopLevelNormativeGoal,
+            "children": ["context", "property_claims", "strategies"],
+            "fields": (
+                "name",
+                "short_description",
+                "long_description",
+                "keywords",
+            ),
+            "parent_types": [("assurance_case", False)],
+        },
+        "context": {
+            "serializer": ContextSerializer,
+            "model": Context,
+            "children": [],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [("goal", False)],
+        },
+        "property_claim": {
+            "serializer": PropertyClaimSerializer,
+            "model": PropertyClaim,
+            "children": ["property_claims", "evidence"],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [
+                ("goal", False),
+                ("property_claim", False),
+                ("strategy", False),
+            ],
+        },
+        "strategy": {
+            "serializer": StrategySerializer,
+            "model": Strategy,
+            "children": ["property_claims"],
+            "fields": ("name", "short_description", "long_description"),
+            "parent_types": [
+                ("goal", False),
+            ],
+        },
+        "evidence": {
+            "serializer": EvidenceSerializer,
+            "model": Evidence,
+            "children": [],
+            "fields": ("name", "short_description", "long_description", "URL"),
+            "parent_types": [("property_claim", True)],
+        },
+    }
+
+    # Pluralising the name of the type should be irrelevant.
+    for k, v in tuple(type_dictionary.items()):
+        type_dictionary[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
+
+    return type_dictionary
+
+
+TYPE_DICT = get_type_dictionary()
+
+
+def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
+    """Return the id of the case in which this item is. Works for all item types."""
+    # In some cases, when there's a ManyToManyField, instead of the parent item, we get
+    # an iterable that can potentially list all the parents. In that case, just pick the
+    # first.
+    if hasattr(item, "first"):
+        item = item.first()
+
+    if isinstance(item, models.AssuranceCase):
+        return item.id
+    for _k, v in TYPE_DICT.items():
+        if isinstance(item, v["model"]):
+            for parent_type, _ in v["parent_types"]:
+                parent = getattr(item, parent_type)
+                if parent is not None:
+                    return get_case_id(parent)
+    # TODO This should probably be an error raise rather than a warning, but currently
+    # there are dead items in the database without parents which hit this branch.
+    msg = f"Can't figure out the case ID of {item}."
+    warnings.warn(msg)
+    return None

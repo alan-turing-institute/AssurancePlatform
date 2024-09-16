@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
   username: z.string().min(2).max(50),
+  email: z.string().min(2).email(),
   password1: z.string().min(8),
   password2: z.string().min(8)
 })
@@ -27,6 +28,7 @@ const RegisterForm = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
+      email: ""
     },
   })
 
@@ -41,6 +43,7 @@ const RegisterForm = () => {
 
     const user = {
       username: values.username,
+      email: values.email,
       password1: values.password1,
       password2: values.password2,
     };
@@ -53,7 +56,7 @@ const RegisterForm = () => {
       body: JSON.stringify(user),
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register/`, requestOptions)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`, requestOptions)
     const result = await response.json()
 
     if (result.key) {
@@ -110,6 +113,19 @@ const RegisterForm = () => {
                   <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input placeholder="Alan Turing" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="col-span-full">
+                  <FormLabel>Email Address</FormLabel>
+                  <FormControl>
+                    <Input type='email' placeholder="example@gmail.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

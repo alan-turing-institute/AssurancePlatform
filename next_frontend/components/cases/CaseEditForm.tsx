@@ -4,7 +4,6 @@ import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,10 +16,8 @@ import { useForm } from "react-hook-form"
 import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
-import { CloudFog, Loader, Loader2, LockIcon, LockKeyhole } from 'lucide-react'
-import { getLayoutedElements } from '@/lib/layout-helper'
+import { Loader2, Lock } from 'lucide-react'
 import { useLoginToken } from '@/hooks/useAuth'
-import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -59,7 +56,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
       description: values.description
     }
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`
     const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
@@ -94,9 +91,14 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel className='flex justify-start items-center gap-2'>
+                Name
+                {assuranceCase.permissions !== 'manage' && (
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3'/></span>
+                )}
+              </FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} readOnly={assuranceCase.permissions !== 'manage' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -107,15 +109,21 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className='flex justify-start items-center gap-2'>
+                Description
+                {assuranceCase.permissions !== 'manage' && (
+                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                )}
+              </FormLabel>
               <FormControl>
-                <Textarea rows={8} {...field} />
+                <Textarea rows={8} {...field} readOnly={assuranceCase.permissions !== 'manage' ? true : false} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className='flex justify-start items-center gap-3'>
+        {assuranceCase.permissions === 'manage' && (
           <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
             {loading ? (
               <span className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
@@ -123,6 +131,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
               <span>Update</span>
             )}
           </Button>
+        )}
         </div>
       </form>
     </Form>

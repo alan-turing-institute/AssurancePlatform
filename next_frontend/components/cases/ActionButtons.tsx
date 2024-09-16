@@ -1,8 +1,8 @@
 'use client'
 
-import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2 } from "lucide-react";
+import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2, Users2 } from "lucide-react";
 import { Node } from "reactflow";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
 import useStore from "@/data/store";
 import { useLoginToken } from "@/hooks/useAuth";
@@ -17,6 +17,8 @@ import html2canvas from 'html2canvas'
 import { capture, test } from "@/actions/capture";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useShareModal } from "@/hooks/useShareModal";
+import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 
 
 interface ActionButtonProps {
@@ -39,6 +41,9 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
   const { onLayout } = actions
 
+  const shareModal = useShareModal();
+  const permissionModal = usePermissionsModal();
+
   const onDelete = async () => {
     try {
       setLoading(true);
@@ -49,7 +54,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         method: "DELETE",
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`, requestOptions)
       if(response.ok) {
         router.push('/')
       }
@@ -141,7 +146,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         method: "POST",
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/update-ids`, requestOptions)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/update-ids`, requestOptions)
       if(response.ok) {
         window.location.reload()
       }
@@ -152,12 +157,11 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
     }
   }
 
-
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
     <div className="w-1/8 m-auto bg-indigo-100 dark:bg-indigo-500/20 shadow-lg text-white py-2 px-4 flex justify-center items-center gap-2 rounded-full">
       <div className="pr-2 border-r-2 border-r-indigo-200 dark:border-r-indigo-800/60 flex justify-center items-center gap-2">
-        {showCreateGoal && (
+        {showCreateGoal && (assuranceCase.permissions !== 'view' || assuranceCase.permissions !== 'review') && (
          <ActionTooltip label='New Goal'>
             <button onClick={() => setOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Plus className='w-5 h-5' /><span className="sr-only">Add Goal</span></button>
           </ActionTooltip>
@@ -165,25 +169,38 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         <ActionTooltip label='Focus'>
           <button id='FocusBtn' onClick={() => onLayout('TB')} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Group className='w-5 h-5' /><span className="sr-only">Focus</span></button>
         </ActionTooltip>
+        {(assuranceCase.permissions !== 'view' && assuranceCase.permissions !== 'review') && (
         <ActionTooltip label='Reset Identifiers'>
           <button onClick={() => setAlertOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Identifiers</span></button>
         </ActionTooltip>
+        )}
       </div>
       <div className="flex justify-center items-center gap-2">
-        <ActionTooltip label='Export'>
-          <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip>
-        {/* <ActionTooltip label='Share'>
-          <button onClick={() => alert('reset names')} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Share2 className='w-5 h-5' /><span className="sr-only">Share</span></button>
-        </ActionTooltip> */}
+        {/* <ActionTooltip label='Export'>
+          <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip> */}
+       {assuranceCase.permissions !== 'view' && (
+          <ActionTooltip label='Share & Export'>
+            <button onClick={() => shareModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Share & Export</span></button>
+          </ActionTooltip>
+        )}
+        {assuranceCase.permissions === 'manage' && (
+          <ActionTooltip label='Permissions'>
+            <button onClick={() => permissionModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Users2 className='w-5 h-5' /><span className="sr-only">Permissions</span></button>
+          </ActionTooltip>
+        )}
         <ActionTooltip label='Notes'>
           <button onClick={() => setNotesOpen(true)} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Notebook className='w-5 h-5' /><span className="sr-only">Notes</span></button>
         </ActionTooltip>
-        <ActionTooltip label='Capture'>
-          <button onClick={handleCapture} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Camera className='w-5 h-5' /><span className="sr-only">Capture</span></button>
-        </ActionTooltip>
-        <ActionTooltip label='Delete'>
-          <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
-        </ActionTooltip>
+        {(assuranceCase.permissions === 'manage' || assuranceCase.permissions === 'editor') && (
+          <ActionTooltip label='Capture'>
+            <button onClick={handleCapture} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><Camera className='w-5 h-5' /><span className="sr-only">Capture</span></button>
+          </ActionTooltip>
+        )}
+        {assuranceCase.permissions === 'manage' && (
+          <ActionTooltip label='Delete'>
+            <button onClick={() => setDeleteOpen(true)} className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"><Trash2 className='w-5 h-5' /><span className="sr-only">Delete</span></button>
+          </ActionTooltip>
+        )}
       </div>
       <NodeCreate isOpen={open} setOpen={setOpen} />
       <CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />

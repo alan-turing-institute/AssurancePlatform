@@ -68,7 +68,7 @@ export default function NotesFeed({ }) {
 
   const handleNoteDelete = async (id: number) => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/comments/${id}/`
 
       const requestOptions: RequestInit = {
           method: "DELETE",
@@ -142,15 +142,17 @@ export default function NotesFeed({ }) {
                   </div>
                 </div>
                 {!edit && (
-                <div className='hidden group-hover:flex justify-center items-center gap-2'>
-                  <Button onClick={() => {
-                    setEdit(!edit)
-                    setEditId(activityItem.id)
-                  }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
-                    <PencilLine className='w-4 h-4'/>
-                  </Button>
-                  <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
-                </div>
+                  assuranceCase.permissions !== 'view' && (
+                    <div className='hidden group-hover:flex justify-center items-center gap-2'>
+                      <Button onClick={() => {
+                        setEdit(!edit)
+                        setEditId(activityItem.id)
+                      }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
+                        <PencilLine className='w-4 h-4'/>
+                      </Button>
+                      <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
+                    </div>
+                  )
                 )}
               </div>
             </div>

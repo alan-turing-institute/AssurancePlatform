@@ -52,6 +52,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let strategies: any[] = []
   let claims: any[] = []
 
+  let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
+
   if(assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
@@ -236,7 +238,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   return (
     <EditSheet
-      title={`Editing ${node.data.name}`}
+      title={`${!readOnly ? 'Editing' : ''} ${node.data.name}`}
       description={`Use this form to update your ${caseItemDescription(node.type)}.`}
       isOpen={isOpen}
       onClose={handleClose}
@@ -265,7 +267,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </div>
           )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
-          {node.type !== 'context' && (
+          {node.type !== 'context' && !readOnly && (
             <>
               <Separator className="my-6"/>
               <div className="">
@@ -285,23 +287,25 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <Separator className="my-6"/>
             </>
           )}
-          <div className="mt-12 flex justify-start items-center gap-4">
-            {node.type !== 'goal' && (
-              <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
-            )}
-            <Button
-              variant={"destructive"}
-              onClick={() => setDeleteOpen(true)}
-              className="w-full flex justify-center items-center"
-            >
-              <Trash2 className="mr-2" />
-              Delete&nbsp;
-              <span className='capitalize'>{node.type}</span>
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-12 flex justify-start items-center gap-4">
+              {node.type !== 'goal' && (
+                <Button variant={"outline"} onClick={handleDetach} className="w-full my-8"><Unplug className="w-4 h-4 mr-2"/>Detach</Button>
+              )}
+              <Button
+                variant={"destructive"}
+                onClick={() => setDeleteOpen(true)}
+                className="w-full flex justify-center items-center"
+              >
+                <Trash2 className="mr-2" />
+                Delete&nbsp;
+                <span className='capitalize'>{node.type}</span>
+              </Button>
+            </div>
+          )}
         </div>
       )}
-      {action === 'new' && (
+      {action === 'new' && !readOnly && (
         selectedLink ? (
           <NewLinkForm node={node} linkType={linkToCreate} actions={{ setLinkToCreate, setSelectedLink, handleClose }} setUnresolvedChanges={setUnresolvedChanges} />
         ) : (
@@ -339,7 +343,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           </>
         )
       )}
-      {action === 'existing' && (
+      {action === 'existing' && !readOnly && (
         node.type !== 'evidence' && node.type !== 'context' && (
           <OrphanElements
             node={node}
@@ -348,7 +352,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             setAction={setAction} />
         )
       )}
-      {action === 'move' && (
+      {action === 'move' && !readOnly && (
         <>
         {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
@@ -463,7 +467,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         loading={loading}
-        message={'Deleting this element will also remove all of the connected child elements. This cannot be undone.'}
+        message={'Deleting this element will also remove all of the connected child elements. Please detach any child elements that you wish to keep before deleting, as the current action cannot be undone.'}
         confirmButtonText={'Yes, delete this element!'}
         cancelButtonText={'No, keep the element'}
       />

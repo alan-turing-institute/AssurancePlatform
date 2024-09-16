@@ -50,7 +50,11 @@ To run the API, just run the command:
 python manage.py runserver
 ```
 
-from this directory.
+from this directory. If you want to also test websocket support, please run:
+
+```
+uvicorn --host 0.0.0.0 eap_backend.asgi:application --reload
+```
 
 ## Running tests
 

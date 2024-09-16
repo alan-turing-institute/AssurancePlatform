@@ -8,11 +8,18 @@ urlpatterns = [
     path("user/", views.self_detail, name="self_detail"),
     path("users/", views.user_list, name="user_list"),
     path("users/<int:pk>/", views.user_detail, name="user_detail"),
+    path(
+        "users/<int:pk>/change-password",
+        views.change_user_password,
+        name="change_user_password",
+    ),
     path("groups/", views.group_list, name="group_list"),
     path("groups/<int:pk>/", views.group_detail, name="group_detail"),
     path("cases/", views.case_list, name="case_list"),
     path("cases/<int:pk>/", views.case_detail, name="case_detail"),
+    path("cases/<int:pk>/image", views.case_image, name="case_image"),
     path("cases/<int:pk>/sandbox", views.case_sandbox, name="case_sandbox"),
+    path("cases/<int:pk>/sharedwith", views.share_case_with, name="share_case_with"),
     path(
         "cases/<int:pk>/update-ids",
         views.case_update_identifiers,
@@ -73,6 +80,11 @@ urlpatterns = [
     path("strategies/<int:pk>/detach", views.detach_strategy, name="detach_strategy"),
     path("strategies/<int:pk>/attach", views.attach_strategy, name="attach_strategy"),
     path("auth/github/", views.GithubSocialAuthView.as_view()),
+    path(
+        "auth/<str:backend>/register-by-token/",
+        views.register_by_access_token,
+        name="register_by_access_token",
+    ),
     path(
         "users/<int:pk>/github_repositories/",
         views.github_repository_list,

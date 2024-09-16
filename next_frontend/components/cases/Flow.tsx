@@ -45,8 +45,6 @@ function Flow({}: FlowProps) {
   const { theme } = useTheme();
   const { toast } = useToast();
 
-  console.log('orphanedElements',orphanedElements)
-
   const onLayout = (direction: any) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
 
@@ -73,6 +71,12 @@ function Flow({}: FlowProps) {
   }, [assuranceCase]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
+    // if(assuranceCase.permissions !== 'view') {
+    //   setSelectedNode(node);
+    //   setEditOpen(true);
+    // } else {
+    //   return
+    // }
     setSelectedNode(node);
     setEditOpen(true);
   };
@@ -204,7 +208,7 @@ function Flow({}: FlowProps) {
           />
           <NodeEdit node={selectedNode} isOpen={editOpen} setEditOpen={setEditOpen} />
           {orphanedElements && orphanedElements.length > 0 && showOrphanMessage && (
-            <div className='absolute top-16 px-8 py-4 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm'>
+            <div className='absolute top-16 px-8 py-2 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm'>
               <div className='flex justify-center items-center'>
                 <div className='container mx-auto flex justify-center items-center gap-2'>
                   <Unplug className='w-4 h-4'/>

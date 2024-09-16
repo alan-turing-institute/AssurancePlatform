@@ -1,97 +1,33 @@
 import functools
-import warnings
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Literal, Optional, Union, cast
 
-from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
+from django.utils.crypto import get_random_string
 from rest_framework.serializers import ReturnDict
 
-from . import models
+from .model_utils import (
+    get_case_property_claims,
+    traverse_child_property_claims,
+)
 from .models import (
     AssuranceCase,
     CaseItem,
     Context,
     EAPGroup,
+    EAPUser,
     Evidence,
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
 )
 from .serializers import (
+    TYPE_DICT,
     AssuranceCaseSerializer,
-    ContextSerializer,
-    EvidenceSerializer,
-    PropertyClaimSerializer,
     SandboxSerializer,
-    StrategySerializer,
-    TopLevelNormativeGoalSerializer,
+    get_case_id,
 )
-
-TYPE_DICT = {
-    "assurance_case": {
-        "serializer": AssuranceCaseSerializer,
-        "model": AssuranceCase,
-        "children": ["goals"],
-        "fields": (
-            "name",
-            "description",
-            "lock_uuid",
-            "owner",
-            "color_profile",
-        ),
-    },
-    "goal": {
-        "serializer": TopLevelNormativeGoalSerializer,
-        "model": TopLevelNormativeGoal,
-        "children": ["context", "property_claims", "strategies"],
-        "fields": (
-            "name",
-            "short_description",
-            "long_description",
-            "keywords",
-        ),
-        "parent_types": [("assurance_case", False)],
-    },
-    "context": {
-        "serializer": ContextSerializer,
-        "model": Context,
-        "children": [],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [("goal", False)],
-    },
-    "property_claim": {
-        "serializer": PropertyClaimSerializer,
-        "model": PropertyClaim,
-        "children": ["property_claims", "evidence"],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [
-            ("goal", False),
-            ("property_claim", False),
-            ("strategy", False),
-        ],
-    },
-    "strategy": {
-        "serializer": StrategySerializer,
-        "model": Strategy,
-        "children": ["property_claims"],
-        "fields": ("name", "short_description", "long_description"),
-        "parent_types": [
-            ("goal", False),
-        ],
-    },
-    "evidence": {
-        "serializer": EvidenceSerializer,
-        "model": Evidence,
-        "children": [],
-        "fields": ("name", "short_description", "long_description", "URL"),
-        "parent_types": [("property_claim", True)],
-    },
-}
-# Pluralising the name of the type should be irrelevant.
-for k, v in tuple(TYPE_DICT.items()):
-    TYPE_DICT[k + "s" if not k.endswith("y") else k[:-1] + "ies"] = v
 
 
 class SandboxUtils:
@@ -354,9 +290,7 @@ class UpdateIdentifierUtils:
             (
                 top_level_claim_ids,
                 child_claim_ids,
-            ) = UpdateIdentifierUtils._get_case_property_claims(
-                current_case_goal, current_case_strategies
-            )
+            ) = get_case_property_claims(current_case_goal, current_case_strategies)
 
             UpdateIdentifierUtils._update_sequential_identifiers(
                 Evidence.objects.filter(
@@ -377,7 +311,7 @@ class UpdateIdentifierUtils:
             )
 
             for _, property_claim in enumerate(parent_property_claims):
-                UpdateIdentifierUtils._traverse_child_property_claims(
+                traverse_child_property_claims(
                     lambda index, child, parent: UpdateIdentifierUtils._update_item_name(
                         child, f"{parent.name}.", index + 1
                     ),
@@ -386,34 +320,6 @@ class UpdateIdentifierUtils:
 
             if model_instance is not None:
                 model_instance.refresh_from_db()
-
-    @staticmethod
-    def _traverse_child_property_claims(
-        on_child_claim: Callable[[int, PropertyClaim, PropertyClaim], None],
-        parent_claim_id: int,
-    ):
-        """Applies a function to all the children of a Property Claim.
-
-        Args:
-            on_child_claim: The function to call on each child claim.
-            parent_claim_id: The id of the claim we will traverse.
-        """
-        child_property_claims = PropertyClaim.objects.filter(
-            property_claim_id=parent_claim_id
-        ).order_by("id")
-
-        if len(child_property_claims) == 0:
-            return
-        else:
-            for index, child_property_claim in enumerate(child_property_claims):
-                on_child_claim(
-                    index,
-                    child_property_claim,
-                    PropertyClaim.objects.get(pk=parent_claim_id),
-                )
-                UpdateIdentifierUtils._traverse_child_property_claims(
-                    on_child_claim, child_property_claim.pk
-                )
 
     @staticmethod
     def _compare_property_claims(
@@ -438,38 +344,6 @@ class UpdateIdentifierUtils:
         return result
 
     @staticmethod
-    def _get_case_property_claims(
-        goal: TopLevelNormativeGoal, strategies: QuerySet
-    ) -> tuple:
-        """Retrieves all the property claims associated to a goal and a list of strategies.
-
-        Args:
-            goal: Goal whose property claims we will extract.
-            strategies: Strategies whose property claims we will extract.
-
-        Returns:
-            A tuple containing parent property claims and child property claims, all sorted
-            by primary key.
-        """
-        strategy_ids: list[int] = [strategy.pk for strategy in strategies]
-        top_level_claims: QuerySet = PropertyClaim.objects.filter(
-            Q(goal_id=goal.pk) | Q(strategy__id__in=strategy_ids)
-        )
-
-        top_level_claim_ids: list[int] = [claim.pk for claim in top_level_claims]
-
-        child_claim_ids: list[int] = []
-        for parent_claim_id in top_level_claim_ids:
-            UpdateIdentifierUtils._traverse_child_property_claims(
-                lambda _, child, parent: child_claim_ids.append(  # noqa: ARG005
-                    child.pk
-                ),
-                parent_claim_id,
-            )
-
-        return top_level_claim_ids, sorted(child_claim_ids)
-
-    @staticmethod
     def _update_item_name(case_item: CaseItem, prefix: str, number: int) -> None:
         """Updates the name of a case item, given a prefix and a sequence number."""
         case_item.name = f"{prefix}{number}"
@@ -482,27 +356,269 @@ class UpdateIdentifierUtils:
             UpdateIdentifierUtils._update_item_name(model, prefix, model_index + 1)
 
 
-def get_case_id(item) -> Optional[int]:
-    """Return the id of the case in which this item is. Works for all item types."""
-    # In some cases, when there's a ManyToManyField, instead of the parent item, we get
-    # an iterable that can potentially list all the parents. In that case, just pick the
-    # first.
-    if hasattr(item, "first"):
-        item = item.first()
+class SocialAuthenticationUtils:
+    @staticmethod
+    def register_social_user(social_user: EAPUser, auth_provider: str) -> EAPUser:
 
-    if isinstance(item, models.AssuranceCase):
-        return item.id
-    for _k, v in TYPE_DICT.items():
-        if isinstance(item, v["model"]):
-            for parent_type, _ in v["parent_types"]:
-                parent = getattr(item, parent_type)
-                if parent is not None:
-                    return get_case_id(parent)
-    # TODO This should probably be an error raise rather than a warning, but currently
-    # there are dead items in the database without parents which hit this branch.
-    msg = f"Can't figure out the case ID of {item}."
-    warnings.warn(msg)
-    return None
+        matching_users: QuerySet = EAPUser.objects.filter(
+            auth_provider=auth_provider,
+            auth_username=social_user.username,
+        )
+
+        if matching_users.count() == 0:
+            username_length: int = 15
+            password_length: int = 45
+
+            new_github_user: EAPUser = EAPUser.objects.create_user(
+                username=get_random_string(username_length),
+                email=social_user.email,
+                auth_username=social_user.username,
+                auth_provider=auth_provider,
+            )
+            new_github_user.set_password(get_random_string(password_length))
+            new_github_user.save()
+
+            return new_github_user
+
+        elif matching_users.count() == 1:
+            return cast(EAPUser, matching_users.first())
+        else:
+            error_message: str = (
+                f"{matching_users.count()} accounts for email {social_user.email} and provider {auth_provider}"
+            )
+            raise Exception(error_message)
+
+
+class ShareAssuranceCaseUtils:
+    @staticmethod
+    def get_case_permissions(
+        assurance_case: AssuranceCase,
+    ) -> dict[str, list[dict[str, Any]]]:
+
+        return {
+            "view": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.view_groups
+            ),
+            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.edit_groups
+            ),
+            "review": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.review_groups
+            ),
+        }
+
+    @staticmethod
+    def extract_requests(
+        request_serializer, permission_key: str
+    ) -> tuple[list[EAPUser], list[EAPUser]]:
+
+        additions: list[EAPUser] = []
+        removals: list[EAPUser] = []
+
+        for share_request in cast(dict, request_serializer.validated_data):
+            user: EAPUser = EAPUser.objects.get(email=share_request["email"])
+            if permission_key in share_request and share_request[permission_key]:
+                additions.append(user)
+            if permission_key in share_request and not share_request[permission_key]:
+                removals.append(user)
+
+        return additions, removals
+
+    @staticmethod
+    def get_user_cases(user: EAPUser, permission_list: list[str]) -> list[dict]:
+        case_catalog: dict[int, dict] = {}
+        group_ids: list[int] = [group.pk for group in user.all_groups.all()]
+
+        if "view" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog,
+                AssuranceCase.objects.filter(view_groups__in=group_ids),
+                "view",
+            )
+
+        if "edit" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog,
+                AssuranceCase.objects.filter(edit_groups__in=group_ids),
+                "edit",
+            )
+
+        if "review" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog,
+                AssuranceCase.objects.filter(review_groups__in=group_ids),
+                "review",
+            )
+
+        if "owner" in permission_list:
+            ShareAssuranceCaseUtils._consolidate_case_list(
+                case_catalog, user.cases.all(), "owner"
+            )
+
+        return [
+            ShareAssuranceCaseUtils.make_case_summary(
+                AssuranceCaseSerializer(case_entry["case"]),
+                case_entry["permissions"],
+            )
+            for case_entry in case_catalog.values()
+        ]
+
+    @staticmethod
+    def make_case_summary(serialized_case, permissions: set) -> dict:
+        case_summary: dict = cast(dict, make_case_summary(serialized_case.data))
+        case_summary["permissions"] = list(permissions)
+        return case_summary
+
+    @staticmethod
+    def _consolidate_case_list(
+        case_catalog: dict[int, dict],
+        new_cases: QuerySet[AssuranceCase],
+        permission: str,
+    ):
+        cases_as_list: list[AssuranceCase] = list(new_cases)
+
+        for case in cases_as_list:
+            if case.pk not in case_catalog:
+                case_catalog[case.pk] = {"case": case, "permissions": {permission}}
+            else:
+                case_catalog[case.pk]["permissions"].add(permission)
+
+    @staticmethod
+    def _get_users_from_group_list(group_manager: QuerySet) -> list[dict[str, Any]]:
+        user_dictionary: dict[int, dict[str, Any]] = {}
+        for current_group in group_manager.all():
+            group_users = {
+                user.pk: {"id": user.pk, "email": user.email}
+                for user in current_group.member.all()
+            }
+
+            user_dictionary = user_dictionary | group_users
+
+        return list(user_dictionary.values())
+
+    @staticmethod
+    def get_edit_group(assurance_case: AssuranceCase) -> EAPGroup:
+        edit_group: EAPGroup | None = None
+        owner_edit_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-edit-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.edit_groups.filter(
+            owner=assurance_case.owner, name=owner_edit_group_name
+        )
+
+        (
+            edit_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_edit_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.edit_groups.add(edit_group)
+            assurance_case.save()
+
+        return edit_group
+
+    @staticmethod
+    def get_review_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        review_group: EAPGroup | None = None
+        owner_review_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-review-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.review_groups.filter(
+            owner=assurance_case.owner, name=owner_review_group_name
+        )
+
+        (
+            review_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_review_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.review_groups.add(review_group)
+            assurance_case.save()
+
+        return review_group
+
+    @staticmethod
+    def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
+
+        view_group: EAPGroup | None = None
+        owner_view_group_name: str = (
+            f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
+        )
+
+        group_query_set: QuerySet = assurance_case.view_groups.filter(
+            owner=assurance_case.owner, name=owner_view_group_name
+        )
+
+        (
+            view_group,
+            new_group,
+        ) = ShareAssuranceCaseUtils._get_or_create_permission_group(
+            assurance_case, owner_view_group_name, group_query_set
+        )
+
+        if new_group:
+            assurance_case.view_groups.add(view_group)
+            assurance_case.save()
+
+        return view_group
+
+    @staticmethod
+    def add_and_remove_permissions(
+        permission_key: str,
+        assurance_case: AssuranceCase,
+        add: list[EAPUser] | None = None,
+        remove: list[EAPUser] | None = None,
+    ) -> None:
+
+        default_group: EAPGroup
+        all_groups: QuerySet
+        if permission_key == "view":
+            default_group = ShareAssuranceCaseUtils.get_view_group(assurance_case)
+            all_groups = assurance_case.view_groups.all()
+
+        elif permission_key == "edit":
+            default_group = ShareAssuranceCaseUtils.get_edit_group(assurance_case)
+            all_groups = assurance_case.edit_groups.all()
+
+        elif permission_key == "review":
+            default_group = ShareAssuranceCaseUtils.get_review_group(assurance_case)
+            all_groups = assurance_case.review_groups.all()
+
+        if add is not None:
+            default_group.member.add(*add)
+            default_group.save()
+        if remove is not None:
+            for current_group in all_groups:
+                current_group.member.remove(*remove)
+                current_group.save()
+
+    @staticmethod
+    def _get_or_create_permission_group(
+        assurance_case: AssuranceCase, group_name: str, group_query_set: QuerySet
+    ) -> tuple[EAPGroup, bool]:
+        new_group: bool = False
+        if group_query_set.count() == 0:
+            new_group = True
+            return (
+                EAPGroup.objects.create(owner=assurance_case.owner, name=group_name),
+                new_group,
+            )
+
+        elif group_query_set.count() == 1:
+            return cast(EAPGroup, group_query_set.first()), new_group
+        else:
+            error_message: str = (
+                f"Found {group_query_set.count()} permission groups for case {assurance_case.pk}"
+            )
+            raise ValueError(error_message)
 
 
 def filter_by_case_id(items, request):
@@ -656,7 +772,9 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
     return JsonResponse(summary, status=success_http_code)
 
 
-def get_case_permissions(case, user):
+def get_case_permissions(
+    case: AssuranceCase, user: EAPUser
+) -> Literal["manage"] | Literal["edit"] | Literal["review"] | Literal["view"] | None:
     """
     See if the user is allowed to view or edit the case.
 
@@ -670,6 +788,7 @@ def get_case_permissions(case, user):
     string
        "manage": if case has no owner or if user is owner
        "edit": if user is a member of a group that has edit rights on the case
+       "review": if user is a member of a group that has review rights on the case
        "view": if user is a member of a group that has view rights on the case
     None otherwise.
     """
@@ -682,11 +801,16 @@ def get_case_permissions(case, user):
 
     # now check groups
     try:
-        user_groups = user.all_groups.get_queryset()
-        edit_groups = case.edit_groups.get_queryset()
+        user_groups: QuerySet = user.all_groups.get_queryset()
+        edit_groups: QuerySet = case.edit_groups.get_queryset()
         # check intersection of two lists
         if set(edit_groups) & set(user_groups):
             return "edit"
+
+        review_groups: QuerySet = case.review_groups.get_queryset()
+        if set(review_groups) & set(user_groups):
+            return "review"
+
         view_groups = case.view_groups.get_queryset()
         if set(view_groups) & set(user_groups):
             return "view"

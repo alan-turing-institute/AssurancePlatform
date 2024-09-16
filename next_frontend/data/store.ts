@@ -1,5 +1,3 @@
-'use client'
-
 import { create } from 'zustand';
 import {
   Connection,
@@ -34,6 +32,12 @@ type Store = {
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
+  viewMembers: any[],
+  editMembers: any[]
+  reviewMembers: any[]
+  setViewMembers: (members: any[]) => void,
+  setEditMembers: (members: any[]) => void
+  setReviewMembers: (members: any[]) => void
 };
 
 export type NodeData = {
@@ -43,41 +47,21 @@ export type NodeData = {
 // Define a function to layout nodes vertically using Dagre
 const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-
-  // g.setGraph({ rankdir: 'TB' });
-
-  // edges.forEach((edge: Edge) => g.setEdge(edge.source, edge.target));
-  // nodes.forEach((node: Node | any) => g.setNode(node.id, node));
-
-  // Dagre.layout(g);
-
-  // return {
-  //   nodes: nodes.map((node: any, index: any) => {
-  //     const { x, y } = g.node(node.id);
-  //     return { ...node, position: { x, y } };
-  //   }),
-  //   edges,
-  // };
-
   g.setGraph({ rankdir: 'TB' });
 
-  // Filter out hidden nodes and edges
-  const visibleNodes = nodes.filter((node: any) => !node.hidden);
-  const visibleEdges = edges.filter((edge: any) => !edge.hidden);
+  // Set all nodes in the graph, including hidden ones
+  nodes.forEach((node: any) => g.setNode(node.id, node));
 
+  // Set edges for visible nodes only
+  const visibleEdges = edges.filter((edge: any) => !edge.hidden);
   visibleEdges.forEach((edge: any) => g.setEdge(edge.source, edge.target));
-  visibleNodes.forEach((node: any) => g.setNode(node.id, node));
 
   Dagre.layout(g);
 
   return {
     nodes: nodes.map((node: any) => {
-      // Only update position for visible nodes
-      if (!node.hidden) {
-        const { x, y } = g.node(node.id);
-        return { ...node, position: { x, y } };
-      }
-      return node;
+      const { x, y } = g.node(node.id);
+      return { ...node, position: { x, y } };
     }),
     edges,
   };
@@ -86,16 +70,7 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<Store>((set, get) => ({
   assuranceCase: null,
-  orphanedElements: [
-    // { id: crypto.randomUUID(), name: 'P1', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    // { id: crypto.randomUUID(), name: 'P3', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    // { id: crypto.randomUUID(), name: 'P4.5', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    // { id: crypto.randomUUID(), name: 'P2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    // { id: crypto.randomUUID(), name: 'S8', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
-    // { id: crypto.randomUUID(), name: 'S1', description: 'Lorem ipsum blah blah woof woof', type:'strategy' },
-    // { id: crypto.randomUUID(), name: 'P3.2', description: 'Lorem ipsum blah blah woof woof', type:'claims' },
-    // { id: crypto.randomUUID(), name: 'E99', description: 'Lorem ipsum blah blah woof woof', type:'evidence' },
-  ],
+  orphanedElements: [],
   nodes: initNodes,
   edges: initEdges,
   nodeTypes: nodeTypes,
@@ -115,31 +90,37 @@ const useStore = create<Store>((set, get) => ({
     });
   },
   setAssuranceCase: (assuranceCase: any) => {
-    set({ assuranceCase })
+    // Update the assurance case in the state
+    set({ assuranceCase });
+
+    // Get the current nodes and edges from the state
+    const { nodes, edges } = get();
+
+    // Layout the nodes and edges
+    get().layoutNodes(nodes, edges);
   },
   setOrphanedElements: (orphanedElements: any) => {
-    console.log('orphanedElements_Sandbox', orphanedElements)
     let newArray: any[] = []
 
-    if(orphanedElements.contexts && orphanedElements.contexts.length > 0) {
+    if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
       orphanedElements.contexts.map((context: any) => {
         newArray.push(context)
       })
     }
 
-    if(orphanedElements.property_claims && orphanedElements.property_claims.length > 0) {
+    if (orphanedElements.property_claims && orphanedElements.property_claims.length > 0) {
       orphanedElements.property_claims.map((claim: any) => {
         newArray.push(claim)
       })
     }
 
-    if(orphanedElements.strategies && orphanedElements.strategies.length > 0) {
+    if (orphanedElements.strategies && orphanedElements.strategies.length > 0) {
       orphanedElements.strategies.map((strategy: any) => {
         newArray.push(strategy)
       })
     }
 
-    if(orphanedElements.evidence && orphanedElements.evidence.length > 0) {
+    if (orphanedElements.evidence && orphanedElements.evidence.length > 0) {
       orphanedElements.evidence.map((evidence: any) => {
         newArray.push(evidence)
       })
@@ -148,7 +129,6 @@ const useStore = create<Store>((set, get) => ({
     set({ orphanedElements: newArray })
   },
   setNodes: (nodes: Node[]) => {
-    // const { nodes: layoutedNodes } = layoutNodesVertically(nodes, []);
     set({ nodes });
   },
   setEdges: (edges: Edge[]) => {
@@ -161,6 +141,18 @@ const useStore = create<Store>((set, get) => ({
 
     // Set the layouted nodes and edges
     set({ nodes: layoutedNodes, edges: layoutedEdges });
+  },
+  viewMembers: [],
+  editMembers: [],
+  reviewMembers: [],
+  setViewMembers: (members: any[]) => {
+    set({viewMembers: members});
+  },
+  setEditMembers: (members: any[]) => {
+    set({editMembers: members});
+  },
+  setReviewMembers: (members: any[]) => {
+    set({reviewMembers: members});
   },
 }));
 

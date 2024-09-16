@@ -21,15 +21,27 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - uses: actions/checkout@v3
-      - name: "Build main"
+      - name: Set environment
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+          echo "commit_date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Get environment
+        shell: bash
+        run: |
+          echo "sha_short: ${{ env.sha_short }}"
+          echo "commit_date: ${{ env.commit_date }}"
+          echo "version: ${{ env.commit_date }}.${{ env.sha_short }}"
+      - name: "Build main: eap_backend"
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: eap_backend
         run: |
-          docker build -t turingassuranceplatform/eap_backend:main -f Dockerfile .
+          docker pull turingassuranceplatform/eap_backend:staging
+          docker tag turingassuranceplatform/eap_backend:staging turingassuranceplatform/eap_backend:main
           docker push turingassuranceplatform/eap_backend:main
-      - name: "Build develop"
+      - name: "Build Docker imager: eap_backend"
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: eap_backend
         run: |
-          docker build -t turingassuranceplatform/eap_backend:develop -f Dockerfile .
-          docker push turingassuranceplatform/eap_backend:develop
+          docker build -t turingassuranceplatform/eap_backend:${{ env.commit_date }}.${{ env.sha_short }} -t turingassuranceplatform/eap_backend:staging -f Dockerfile .
+          docker push turingassuranceplatform/eap_backend --all-tags
