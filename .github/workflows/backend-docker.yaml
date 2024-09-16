@@ -26,13 +26,12 @@ jobs:
         run: |
           echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
           echo "now=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "version="${now}.${sha_short}"" >> $GITHUB_ENV
       - name: Get environment
         shell: bash
         run: |
           echo "sha_short: ${{ env.sha_short }}"
           echo "now: ${{ env.now }}"
-          echo "version: ${{ env.version }}"
+          echo "version: ${{ env.now }}.${{ env.sha_short }}"
       - name: "Build main: eap_backend"
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: eap_backend
@@ -43,5 +42,5 @@ jobs:
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: eap_backend
         run: |
-          docker build -t turingassuranceplatform/eap_backend:${{ env.version }} -t turingassuranceplatform/eap_backend:latest -f Dockerfile .
+          docker build -t turingassuranceplatform/eap_backend:${{ env.now }}.${{ env.sha_short }} -t turingassuranceplatform/eap_backend:latest -f Dockerfile .
           docker push turingassuranceplatform/eap_backend --all-tags
