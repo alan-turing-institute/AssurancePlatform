@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from typing import cast
 
@@ -7,9 +8,7 @@ from channels.generic.websocket import WebsocketConsumer
 from channels.layers import get_channel_layer
 from django.contrib.auth.models import AnonymousUser
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from eap_api.models import EAPUser
 from eap_api.serializers import UsernameAwareUserSerializer
@@ -55,11 +54,21 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         return super().disconnect(code)
 
     def receive(self, text_data=None, _=None):
-        data_as_json: dict = json.loads(cast(str, text_data))
-        message_content: str = data_as_json["content"]
+        message_content: str = ""
+        is_ping_message: bool = False
+        try:
+            data_as_json: dict = json.loads(cast(str, text_data))
+            message_content: str = data_as_json["content"]
+            is_ping_message = message_content == "ping"
+        except (json.JSONDecodeError, KeyError) as error:
+            logging.warning(
+                "Cannot parse message", extra={"text_data": text_data, "error": error}
+            )
+            message_content = f"ERROR: Could not parse JSON message: `{text_data}`"
+
         now: datetime = timezone.now()
 
-        if self.user_data is not None:
+        if self.user_data is not None and not is_ping_message:
             async_to_sync(self.channel_layer.group_send)(  # type: ignore  # noqa: PGH003
                 self.case_group_name,
                 {
@@ -102,14 +111,23 @@ def persist_connection(
 def remove_connection(
     user: EAPUser | AnonymousUser, case_group_name: str | None, channel_name: str
 ) -> None:
-    connection = get_object_or_404(
-        AssuranceCaseConnection,
-        Q(user=user),
-        Q(case_group_name=case_group_name),
-        Q(channel_name=channel_name),
-    )
 
-    connection.delete()
+    try:
+        connection = AssuranceCaseConnection.objects.get(
+            user=user,
+            case_group_name=case_group_name,
+            channel_name=channel_name,
+        )
+        connection.delete()
+    except AssuranceCaseConnection.DoesNotExist:
+        logging.warning(
+            "Error on remove: Could locate connection",
+            extra={
+                "user": user,
+                "case_group_name": case_group_name,
+                "channel_name": channel_name,
+            },
+        )
 
 
 def get_current_connections(case_group_name: str) -> list[dict]:
