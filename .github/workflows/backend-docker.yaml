@@ -21,6 +21,16 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - uses: actions/checkout@v3
+      - name: Set environment
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+          echo "now=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Get environment
+        shell: bash
+        run: |
+          echo "SHA_SHORT: ${{ env.sha_short }}"
+          echo "Date: ${{ env.now }}"
       - name: "Build main: eap_backend"
         if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: eap_backend
