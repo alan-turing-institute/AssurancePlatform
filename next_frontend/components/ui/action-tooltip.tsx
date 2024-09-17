@@ -9,7 +9,7 @@ const ActionTooltip = ({ children, label } : { children: React.ReactNode, label:
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>{children}</TooltipTrigger>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
         <TooltipContent>
           <p>{label}</p>
         </TooltipContent>

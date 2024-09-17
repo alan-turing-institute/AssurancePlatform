@@ -8,6 +8,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children?: React.ReactNode;
+  classNames?: string
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,7 +16,8 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   isOpen,
   onClose,
-  children
+  children,
+  classNames
 }) => {
   const onChange = (open: boolean) => {
     if (!open) {
@@ -25,7 +27,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onChange}>
-      <DialogContent>
+      <DialogContent className={classNames}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

@@ -32,12 +32,14 @@ type Store = {
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
-  viewMembers: any[],
+  viewMembers: any[]
   editMembers: any[]
   reviewMembers: any[]
-  setViewMembers: (members: any[]) => void,
+  setViewMembers: (members: any[]) => void
   setEditMembers: (members: any[]) => void
   setReviewMembers: (members: any[]) => void
+  activeUsers: any[]
+  setActiveUsers: (users: any[]) => void
 };
 
 export type NodeData = {
@@ -153,6 +155,10 @@ const useStore = create<Store>((set, get) => ({
   },
   setReviewMembers: (members: any[]) => {
     set({reviewMembers: members});
+  },
+  activeUsers: [],
+  setActiveUsers(users: any) {
+    set({activeUsers: users});
   },
 }));
 
