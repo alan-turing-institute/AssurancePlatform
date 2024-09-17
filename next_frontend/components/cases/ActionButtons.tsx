@@ -21,6 +21,7 @@ import { useShareModal } from "@/hooks/useShareModal";
 import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import SearchNodes from "../common/SearchNodes";
+import { useResourcesModal } from "@/hooks/useResourcesModal";
 
 
 interface ActionButtonProps {
@@ -45,6 +46,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
   const shareModal = useShareModal();
   const permissionModal = usePermissionsModal();
+  const resourcesModal = useResourcesModal();
 
   const onDelete = async () => {
     try {
@@ -177,7 +179,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         </ActionTooltip>
         )}
         <ActionTooltip label='Resources'>
-          <button className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Info className='w-5 h-5' /><span className="sr-only">Resources</span></button>
+          <button onClick={() => resourcesModal.onOpen()} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Info className='w-5 h-5' /><span className="sr-only">Resources</span></button>
         </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">

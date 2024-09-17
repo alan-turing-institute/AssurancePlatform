@@ -6,7 +6,6 @@ import ActionTooltip from '../ui/action-tooltip';
 
 const ActiveUsersList = () => {
   const { activeUsers, setActiveUsers } = useStore();
-  console.log(activeUsers)
 
   useEffect(() => {
     console.log('Compnent remounted')

@@ -1,63 +1,3 @@
-// 'use client';
-
-// import useStore from '@/data/store';
-// import { useLoginToken } from '@/hooks/useAuth';
-// import { useEffect, useRef } from 'react';
-
-// const WebSocketComponent = () => {
-//   const { assuranceCase } = useStore();
-//   const [token] = useLoginToken();
-//   const pingInterval = useRef(null);  // Ref to store the interval ID
-
-//   useEffect(() => {
-//     if (!assuranceCase?.id || !token) return;
-
-//     const socket = new WebSocket(`wss://staging-eap-backend.azurewebsites.net/ws/case/${assuranceCase.id}/?token=${token}`);
-
-//     socket.onopen = (event) => {
-//       console.log('WebSocket connection established: ', event);
-//       const pingMessage = JSON.stringify({ content: "ping" });
-
-//       // Send a ping immediately after connection
-//       socket.send(pingMessage);
-      
-//       // Set up a ping every 12 seconds
-//       pingInterval.current = setInterval(() => {
-//         if (socket.readyState === WebSocket.OPEN) {
-//           socket.send(pingMessage);
-//         }
-//       }, 12000);
-//     };
-
-//     socket.onmessage = (event) => {
-//       console.log('Message received:', JSON.parse(event.data));
-//     };
-
-//     socket.onclose = (event) => {
-//       console.log('WebSocket disconnected', event.code, event.reason);
-//     };
-
-//     socket.onerror = (error) => {
-//       console.error('WebSocket Error:', error);
-//     };
-
-//     // Cleanup function
-//     return () => {
-//       if (pingInterval.current) {
-//         clearInterval(pingInterval.current);  // Clear the ping interval
-//       }
-//       if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
-//         socket.close(1000, 'Client closed the connection');  // Gracefully close WebSocket
-//       }
-//     };
-//   }, [assuranceCase?.id, token]);
-
-//   return null;
-// };
-
-// export default WebSocketComponent;
-
-
 'use client';
 
 import useStore from '@/data/store';
@@ -119,6 +59,7 @@ const WebSocketComponent = () => {
     return () => {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         websocket.close();
+        setActiveUsers([])
       }
       clearInterval(interval);
     };
@@ -128,10 +69,10 @@ const WebSocketComponent = () => {
     <div className={`${!debug ? 'hidden' : 'absolute'} w-full h-full z-50 top-0 left-0 bg-background p-4 rounded-md`}>
       <h1 className='mb-2'>WebSocket | Users</h1>
       <div className="output">
-        {/* {messages.map((message, index) => (
-          <p key={index}>{message}</p>
-        ))} */}
         <p>Active Users: {activeUsers.length}</p>
+        {messages.map((message, index) => (
+          <p key={index}>{message}</p>
+        ))}
       </div>
       <Button 
         variant={'ghost'} 
