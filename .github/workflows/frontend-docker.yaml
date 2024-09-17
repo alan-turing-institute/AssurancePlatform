@@ -39,7 +39,7 @@ jobs:
             --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             -t turingassuranceplatform/eap_frontend:main \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }} \
-            -f Dockerfile .
+            -f docker/staging/Dockerfile .
           docker push turingassuranceplatform/eap_frontend --all-tags
 
       - name: "Build develop"
