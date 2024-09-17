@@ -40,7 +40,7 @@ jobs:
             -t turingassuranceplatform/eap_frontend:main \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }} \
             -f Dockerfile .
-          docker push turingassuranceplatform/eap_frontend:main
+          docker push turingassuranceplatform/eap_frontend --all-tags
 
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
@@ -55,4 +55,4 @@ jobs:
             -t turingassuranceplatform/eap_frontend:develop \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }}\
             -f docker/staging/Dockerfile .
-          docker push turingassuranceplatform/eap_frontend:develop
+          docker push turingassuranceplatform/eap_frontend --all-tags

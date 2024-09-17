@@ -38,7 +38,7 @@ jobs:
         run: |
           docker pull turingassuranceplatform/eap_backend:staging
           docker tag turingassuranceplatform/eap_backend:staging turingassuranceplatform/eap_backend:main
-          docker push turingassuranceplatform/eap_backend:main
+          docker push turingassuranceplatform/eap_backend --all-tags
       - name: "Build Docker imager: eap_backend"
         if: ${{ github.ref == 'refs/heads/develop' }}
         working-directory: eap_backend
