@@ -36,7 +36,7 @@ jobs:
             --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
-            --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            --build-arg NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
             -t turingassuranceplatform/eap_frontend:main \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }} \
             -f docker/staging/Dockerfile .
