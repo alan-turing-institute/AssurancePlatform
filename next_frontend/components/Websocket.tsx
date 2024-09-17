@@ -74,9 +74,9 @@ const WebSocketComponent = () => {
           <p key={index}>{message}</p>
         ))}
       </div>
-      <Button 
-        variant={'ghost'} 
-        size={'sm'} 
+      <Button
+        variant={'ghost'}
+        size={'sm'}
         className='absolute top-2 right-2'
         onClick={() => setDebug(false)}><X className='w-4 h-4'/></Button>
     </div>
