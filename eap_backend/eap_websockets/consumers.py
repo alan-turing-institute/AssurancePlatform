@@ -1,6 +1,5 @@
 import json
 import logging
-from datetime import datetime
 from typing import cast
 
 from asgiref.sync import async_to_sync
@@ -21,39 +20,49 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         self.case_id: int = int(self.scope["url_route"]["kwargs"]["case_id"])
         user: EAPUser | AnonymousUser = self.scope["user"]
         self.case_group_name: str | None = None
-        self.user_data: dict | None = None
+        self.user_data: dict = {}
 
         if user.is_authenticated:
             user_serializer = UsernameAwareUserSerializer(user)
             self.user_data = cast(dict, user_serializer.data)
-
             self.case_group_name = f"assurance_case_{self.case_id}"
 
             async_to_sync(self.channel_layer.group_add)(  # type: ignore  # noqa: PGH003
                 self.case_group_name, self.channel_name
             )
 
-            persist_connection(user, self.case_group_name, self.channel_name)
+            self.persist_connection()
             self.accept()
-            current_connections: str = json.dumps(
-                get_current_connections(self.case_group_name), cls=DjangoJSONEncoder
+            async_to_sync(self.channel_layer.group_send)(  # type: ignore  # noqa: PGH003
+                self.case_group_name,
+                self.get_connections_message(),
             )
-            self.send(text_data=current_connections)
         else:
             self.close()
 
-    def disconnect(self, code):
+    def get_connections_message(self) -> dict:
+        return {
+            "type": "case_message",
+            "content": {"current_connections": self.get_current_connections()},
+            "datetime": timezone.now().isoformat(),
+        }
 
-        user: EAPUser | AnonymousUser = self.scope["user"]
+    def disconnect(self, code):
 
         if self.case_group_name is not None:
             async_to_sync(self.channel_layer.group_discard)(  # type: ignore  # noqa: PGH003
                 self.case_group_name, self.channel_name
             )
-        remove_connection(user, self.case_group_name, self.channel_name)
+            self.remove_connection()
+
+            async_to_sync(self.channel_layer.group_send)(  # type: ignore  # noqa: PGH003
+                self.case_group_name,
+                self.get_connections_message(),
+            )
         return super().disconnect(code)
 
     def receive(self, text_data=None, _=None):
+
         message_content: str = ""
         is_ping_message: bool = False
         try:
@@ -62,11 +71,10 @@ class AssuranceCaseConsumer(WebsocketConsumer):
             is_ping_message = message_content == "ping"
         except (json.JSONDecodeError, KeyError) as error:
             logging.warning(
-                "Cannot parse message", extra={"text_data": text_data, "error": error}
+                "Cannot parse message. Context: %s",
+                {"text_data": text_data, "error": error},
             )
             message_content = f"ERROR: Could not parse JSON message: `{text_data}`"
-
-        now: datetime = timezone.now()
 
         if self.user_data is not None and not is_ping_message:
             async_to_sync(self.channel_layer.group_send)(  # type: ignore  # noqa: PGH003
@@ -75,70 +83,71 @@ class AssuranceCaseConsumer(WebsocketConsumer):
                     "type": "case_message",
                     "content": message_content,
                     "username": self.user_data["username"],
-                    "user_id": self.user_data["id"],
-                    "datetime": now.isoformat(),
+                    "id": self.user_data["id"],
+                    "datetime": timezone.now().isoformat(),
                 },
             )
 
     def case_message(self, event: dict):
-        self.send(text_data=json.dumps(event))
+        self.send(text_data=json.dumps(event, cls=DjangoJSONEncoder))
 
+    def remove_connection(self) -> None:
 
-def persist_connection(
-    user: EAPUser | AnonymousUser,
-    case_group_name: str | None,
-    channel_name: str,
-) -> None:
-    user_connections: QuerySet[AssuranceCaseConnection] = (
-        AssuranceCaseConnection.objects.filter(
-            user__pk=user.pk, case_group_name=case_group_name
-        )
-    )
+        try:
+            connection = AssuranceCaseConnection.objects.get(
+                user=EAPUser.objects.get(pk=self.user_data["id"]),
+                case_group_name=self.case_group_name,
+                channel_name=self.channel_name,
+            )
+            connection.delete()
+        except (AssuranceCaseConnection.DoesNotExist, TypeError) as error:
+            logging.warning(
+                "Error on remove: Could locate connection. Context: %s",
+                {
+                    "user": self.user_data,
+                    "case_group_name": self.case_group_name,
+                    "channel_name": self.channel_name,
+                    "error": error,
+                },
+            )
 
-    channel_layer = get_channel_layer()
-    for user_connection in user_connections:
-        async_to_sync(channel_layer.group_discard)(  # type: ignore  # noqa: PGH003
-            case_group_name, user_connection.channel_name
-        )
-
-        user_connection.delete()
-
-    AssuranceCaseConnection.objects.create(
-        user=user, case_group_name=case_group_name, channel_name=channel_name
-    )
-
-
-def remove_connection(
-    user: EAPUser | AnonymousUser, case_group_name: str | None, channel_name: str
-) -> None:
-
-    try:
-        connection = AssuranceCaseConnection.objects.get(
-            user=user,
-            case_group_name=case_group_name,
-            channel_name=channel_name,
-        )
-        connection.delete()
-    except AssuranceCaseConnection.DoesNotExist:
-        logging.warning(
-            "Error on remove: Could locate connection",
-            extra={
-                "user": user,
-                "case_group_name": case_group_name,
-                "channel_name": channel_name,
-            },
+    def get_current_connections(self) -> list[dict]:
+        current_connections: QuerySet[AssuranceCaseConnection] = (
+            AssuranceCaseConnection.objects.filter(case_group_name=self.case_group_name)
         )
 
+        return [
+            {
+                "user": {
+                    "username": UsernameAwareUserSerializer(connection.user).data[
+                        "username"
+                    ],  # type: ignore  # noqa: PGH003
+                    "id": connection.user.pk,
+                },
+                "connection_date": connection.connection_date,
+            }
+            for connection in current_connections
+        ]
 
-def get_current_connections(case_group_name: str) -> list[dict]:
-    current_connections: QuerySet[AssuranceCaseConnection] = (
-        AssuranceCaseConnection.objects.filter(case_group_name=case_group_name)
-    )
+    def persist_connection(self) -> None:
+        user_model: EAPUser = EAPUser.objects.get(pk=self.user_data["id"])
 
-    return [
-        {
-            "username": UsernameAwareUserSerializer(connection.user).data["username"],
-            "connection_date": connection.connection_date,
-        }
-        for connection in current_connections
-    ]
+        user_connections: QuerySet[
+            AssuranceCaseConnection
+        ] = AssuranceCaseConnection.objects.filter(
+            user=user_model, case_group_name=self.case_group_name  # type: ignore  # noqa: PGH003
+        )
+
+        channel_layer = get_channel_layer()
+        for user_connection in user_connections:
+            async_to_sync(channel_layer.group_discard)(  # type: ignore  # noqa: PGH003
+                self.case_group_name, user_connection.channel_name
+            )
+
+            user_connection.delete()
+
+        AssuranceCaseConnection.objects.create(
+            user=user_model,
+            case_group_name=self.case_group_name,
+            channel_name=self.channel_name,
+        )

@@ -16,19 +16,31 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - uses: actions/checkout@v3
-
+      - name: Set environment
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+          echo "commit_date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Get environment
+        shell: bash
+        run: |
+          echo "sha_short: ${{ env.sha_short }}"
+          echo "commit_date: ${{ env.commit_date }}"
+          echo "version: ${{ env.commit_date }}.${{ env.sha_short }}"
       - name: "Build main"
         if: ${{ github.ref == 'refs/heads/main' }}
-        working-directory: next_frontend/docker/production
+        working-directory: next_frontend
         run: |
           docker build \
             --build-arg GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID }} \
             --build-arg GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             -t turingassuranceplatform/eap_frontend:main \
-            -f Dockerfile .
-          docker push turingassuranceplatform/eap_frontend:main
+            -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }} \
+            -f docker/staging/Dockerfile .
+          docker push turingassuranceplatform/eap_frontend --all-tags
 
       - name: "Build develop"
         if: ${{ github.ref == 'refs/heads/develop' }}
@@ -41,5 +53,6 @@ jobs:
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
             --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
             -t turingassuranceplatform/eap_frontend:develop \
+            -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }}\
             -f docker/staging/Dockerfile .
-          docker push turingassuranceplatform/eap_frontend:develop
+          docker push turingassuranceplatform/eap_frontend --all-tags
