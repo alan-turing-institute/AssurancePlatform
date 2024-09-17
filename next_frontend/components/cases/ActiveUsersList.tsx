@@ -2,6 +2,7 @@
 
 import useStore from '@/data/store';
 import React, { useEffect } from 'react'
+import ActionTooltip from '../ui/action-tooltip';
 
 const ActiveUsersList = () => {
   const { activeUsers, setActiveUsers } = useStore();
@@ -12,11 +13,13 @@ const ActiveUsersList = () => {
   }, [activeUsers])
 
   return (
-    <div>
-      {activeUsers.map((user: any) => (
-        <div className='w-8 h-8 rounded-full bg-emerald-600/30 border border-emerald-600 text-emerald-600 text-sm flex justify-center items-center'>
-          {user.user.username.substring(0, 1)}
-        </div>
+    <div className='flex justify-start items-center mr-6'>
+      {activeUsers.map((user: any, index: number) => (
+        <ActionTooltip label={user.user.username} key={user.user.id}>
+          <div className={`dark:bg-indigo-600 bg-white text-foreground border-4 border-indigo-600 dark:border-slate-900 w-10 h-10 rounded-full uppercase font-semibold text-sm flex justify-center items-center hover:cursor-pointer ${index > 0 ? '-ml-2' : ''}`}>
+            {user.user.username.substring(0, 1)}
+          </div>
+        </ActionTooltip>
       ))}
     </div>
   )

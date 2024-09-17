@@ -20,7 +20,6 @@ import { ModeToggle } from "./ui/theme-toggle";
 import { useRouter } from "next/navigation";
 import { useLoginToken } from "@/hooks/useAuth";
 import useStore from "@/data/store";
-import { CaseNavigation } from "./cases/CaseNavigation";
 import Link from "next/link";
 import {
   useReactFlow,
@@ -32,6 +31,7 @@ import SearchNodes from "./common/SearchNodes";
 import { toggleHiddenForParent } from "@/lib/case-helper";
 import LogoutButton from "./auth/LogoutButton";
 import ActiveUsersList from "./cases/ActiveUsersList";
+import { ResourcesInfo } from "./cases/ResourcesInfo";
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -141,26 +141,6 @@ const Header = ({ setOpen }: HeaderProps) => {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          {/* {editName ? (
-            <div className='flex justify-start items-center gap-4'>
-              <input
-                ref={inputRef}
-                type='text'
-                name='newCaseName'
-                value={newCaseName}
-                onChange={handleInputChange}
-                className={`bg-transparent rounded-md border border-indigo-500 focus:border-indigo-500 outline-none px-4 py-2`}
-              />
-              <div className='flex justify-start items-center'>
-                <Button variant={'ghost'} size={'icon'} onClick={updateAssuranceCaseName}><Check className='w-4 h-4 text-emerald-500'/></Button>
-                <Button variant={'ghost'} size={'icon'} onClick={handleEditClick}><X className='w-4 h-4'/></Button>
-              </div>
-            </div>
-          ) : (
-            <p className='font-semibold' onClick={handleEditClick}>
-              {assuranceCase.name}
-            </p>
-          )} */}
           <p
             onClick={() => setOpen(true)}
             className="font-semibold hover:cursor-pointer"
@@ -169,22 +149,12 @@ const Header = ({ setOpen }: HeaderProps) => {
           </p>
         </div>
 
-        <div className="flex justify-start items-center gap-4">
-          <SearchNodes nodes={nodes} focusNode={focusNode} />
-          <CaseNavigation />
-          {/* <Link
-            href={
-              "https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
-            }
-            target="_blank"
-            className="flex justify-center items-center gap-2 bg-indigo-600 text-white py-2 px-3 rounded-md"
-          >
-            <MessageSquareMore className="w-4 h-4" />
-            <span className="font-medium text-sm">Feedback</span>
-          </Link> */}
+        <div className="flex justify-start items-center gap-2">
+          {/* <ResourcesInfo /> */}
           <ActiveUsersList />
-          <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
+          <SearchNodes nodes={nodes} focusNode={focusNode} />
           <LogoutButton />
+          <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
         </div>
       </div>
     </div>

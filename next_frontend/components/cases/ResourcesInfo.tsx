@@ -52,7 +52,7 @@ const components: { title: string; icon: any; href: string, description: string 
   },
 ]
 
-export function CaseNavigation() {
+export function ResourcesInfo() {
   return (
     <NavigationMenu className="hidden sm:block">
       <NavigationMenuList>
