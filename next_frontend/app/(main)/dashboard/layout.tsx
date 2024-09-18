@@ -173,7 +173,7 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
                         </li>
                         <li className="">
                           <a
-                            href="#"
+                            href="/dashboard/settings"
                             className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
                           >
                             <Cog6ToothIcon
