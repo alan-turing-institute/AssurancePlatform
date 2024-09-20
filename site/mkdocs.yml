@@ -20,7 +20,6 @@ theme:
     static_templates:
         - 404.html
 
-    # Default values, taken from mkdocs_theme.yml
     language: en
     features:
         - announce.dismiss
@@ -145,8 +144,8 @@ nav:
           - TEA Trainee:
                 - What is Trustworthy and Ethical Assurance: learning-modules/tea-trainee/first-sip.md
           - Other Modules:
-                - The Assurance Ecosystem: learning-modules/assurance-ecosystem.md
-                - Standards and their role in assurance: learning-modules/standards.md
+                - The Assurance Ecosystem: learning-modules/other-modules/assurance-ecosystem.md
+                - Standards and their role in assurance: learning-modules/other-modules/standards.md
     - Developer Guide:
           - About: developer-guide/about.md
           - Quick Start with Docker: developer-guide/docker-quickstart.md
@@ -185,3 +184,12 @@ nav:
 
 not_in_nav: |
     _prerequisites.md
+    argument-based-assurance.md
+    case-builder.md
+    case-management.md
+    components.md
+    exporting.md
+    getting-started.md
+    index.md
+    sharing.md
+    what-is-tea.md
