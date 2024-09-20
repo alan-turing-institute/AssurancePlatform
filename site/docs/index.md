@@ -1,7 +1,7 @@
 ---
 hide:
-  - navigation
-  - toc
+    - navigation
+    - toc
 ---
 
 ![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/building-an-assurance-case.png){ align=right width="40%" }
@@ -20,11 +20,17 @@ Welcome to the Trustworthy and Ethical Assurance (TEA) documentation site 👋.
 
 This site contains information about the following:
 
-- An introduction to trustworthy and ethical assurance
-- User guidance for the TEA platform
-- Technical documentation for the TEA platform
+-   An introduction to trustworthy and ethical assurance
+-   User guidance for the TEA platform
+-   Technical documentation for the TEA platform
 
 ## Funding Statement 💶
+
+From March 2024 until September 2024, the project is funded by UKRI's BRAID programme as part of a scoping research award for the Trustworthy and Ethical Assurance of Digital Twins project.
+
+Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
+Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
 
 Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
 
