@@ -16,10 +16,12 @@ Some of the content can be read in any order and independently of each other, bu
 
     This level introduces students to basic concepts and foundations for getting the most from the TEA platform.
 
--   [Your First Sip of TEA: An Introduction to Trustworthy and Ethical Assurance](first-sip.md): an introduction to TEA, including an explanation of the underlying methodology and core elements.
--   [Making a Cup: How to Build an Assurance Case with the TEA Platform](making-a-cup): a walkthrough of the TEA platform, showing new users how to build an assurance case.
--   [Letting the TEA steep: Putting Principles into Practice](tea-steep.md): a deeper dive into the process of building an assurance case, with an emphasis on reflection, deliberation, and justification.
--   [Drinking TEA with others: Collaborating and sharing knowledge](drinking-tea.md): getting more from the TEA platform by engaging the community.
+-   [Your First Sip of TEA: An Introduction to Trustworthy and Ethical Assurance](tea-trainee/first-sip.md): an introduction to TEA, including an explanation of the underlying methodology and core elements.
+<!-- -   [Making a Cup: How to Build an Assurance Case with the TEA Platform](tea-trainee/making-a-cup): a walkthrough of the TEA platform, showing new users how to build an assurance case.
+-   [Letting the TEA steep: Putting Principles into Practice](tea-trainee/tea-steep.md): a deeper dive into the process of building an assurance case, with an emphasis on reflection, deliberation, and justification.
+-   [Drinking TEA with others: Collaborating and sharing knowledge](tea-trainee/drinking-tea.md): getting more from the TEA platform by engaging the community. -->
+
+_more coming soon_
 
 ### Assurance Specialist
 
@@ -39,5 +41,5 @@ _coming soon_
 
 ## Other Learning Resources
 
--   [Understanding the Assurance Ecosystem](assurance-ecosystem.md): an introduction to the broader AI assurance ecosystem
--   [Standards and their role in assurance](standards.md): an introduction to standards, the different types of standards and their role in assurance
+-   [Understanding the Assurance Ecosystem](other-modules/assurance-ecosystem.md): an introduction to the broader AI assurance ecosystem
+-   [Standards and their role in assurance](other-modules/standards.md): an introduction to standards, the different types of standards and their role in assurance
