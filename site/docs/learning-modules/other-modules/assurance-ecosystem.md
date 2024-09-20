@@ -1,7 +1,10 @@
 ---
-status: draft
+draft: true
+authors:
+    - Nuala Polo
+    - Christopher Burr
 tags:
-  - Introductory Resource
+    - Introductory Resource
 ---
 
 # Understanding the Assurance Ecosystem
@@ -72,7 +75,7 @@ As the CDEI's guide acknowledges:
 > which is in fact trustworthy, we incur the opportunity costs of not using good
 > technology.
 
-![](../assets/images/justified-trust.png)
+![](../../assets/images/justified-trust.png)
 
 The concept of justified trust is, understandably, an integral part of
 _trustworthy_ and ethical assurance.
@@ -91,13 +94,13 @@ But, she continues,
 The CDEI's Assurance guide identifies two problems that help explain why active
 checking is challenging:
 
-- **An information problem:** organisations face difficulties in continuously
-  evaluating AI systems and acquiring the evidence base that helps establish
-  whether a system is trustworthy (i.e. whether users or stakeholders should
-  place trust in the system)
-- **A communication problem:** once they have established the trustworthiness of
-  the system, there are additional challenges to communicate this to relevant
-  stakeholders and users such that they trust the claims being made.
+-   **An information problem:** organisations face difficulties in continuously
+    evaluating AI systems and acquiring the evidence base that helps establish
+    whether a system is trustworthy (i.e. whether users or stakeholders should
+    place trust in the system)
+-   **A communication problem:** once they have established the trustworthiness of
+    the system, there are additional challenges to communicate this to relevant
+    stakeholders and users such that they trust the claims being made.
 
 An effective assurance ecosystem should help actors overcome these issues to
 establish _justified trust_. Let's take a look at some of the key actors in an
@@ -113,7 +116,7 @@ various roles and responsibilities will fall short in a number of dimensions.
 However, the following graphic provides us with a good starting point for
 understanding the key actors in an assurance ecosystem.
 
-![This diagram depicts the AI assurance ecosystem, illustrating interactions between AI supply chain participants, AI Assurance Service Providers, Independent Researchers, and Supporting Structures like regulators and standards bodies.](../assets/images/actors.png)
+![This diagram depicts the AI assurance ecosystem, illustrating interactions between AI supply chain participants, AI Assurance Service Providers, Independent Researchers, and Supporting Structures like regulators and standards bodies.](../../assets/images/actors.png)
 _Figure 2. Key actors in the AI Assurance Ecosystem. Reprinted from CDEI (2023)
 AI Assurance Guide.
 https://cdeiuk.github.io/ai-assurance-guide/needs-and-responsibilities_
@@ -147,12 +150,12 @@ admittedly a hard to delineate assurance ecosystem. Because the TEA platform
 emphasises the importance of ethical reflection and deliberation, the resources
 and materials are likely to be of specific interest to the following actors:
 
-- Researchers
-- Journalists/Activists
-- Internal Assurance Teams
-- Developers
-- Frontline User
-- Affected Individuals
+-   Researchers
+-   Journalists/Activists
+-   Internal Assurance Teams
+-   Developers
+-   Frontline User
+-   Affected Individuals
 
 ## Assuring different subject matter
 
@@ -220,13 +223,13 @@ The application of ethical principles in AI governance involves navigating these
 
 -->
 
-![](../assets/images/subject-matter.png) _Figure 3. A graphic showing the four
+![](../../assets/images/subject-matter.png) _Figure 3. A graphic showing the four
 dimensions of assurance subject matter: unobservable/observable,
 subjective/objective, ambiguous/explicit, uncertain/certain._
 
-- In the context of the TEA platform, the different subject matter represent the
-  domain of the assurance case, summarised in the top-level goal claim (e.g.
-  fairness).
+-   In the context of the TEA platform, the different subject matter represent the
+    domain of the assurance case, summarised in the top-level goal claim (e.g.
+    fairness).
 
 To what extent does the TEA methodology and platform align with the CDEI's 5
 elements of assurance: https://cdeiuk.github.io/ai-assurance-guide/five-elements
