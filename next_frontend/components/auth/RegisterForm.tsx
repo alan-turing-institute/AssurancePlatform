@@ -18,13 +18,17 @@ const formSchema = z.object({
   email: z.string()
     .min(2)
     .email(),
-  password1: z.string().min(8),
-  password2: z.string().min(8)
+  password1: z.string()
+    .min(8)
+    .regex(/(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character"),
+  password2: z.string()
+    .min(8)
+    .regex(/(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character")
 });
 
 const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<any>(['Invalid username']);
+  const [errors, setErrors] = useState<any>([]);
   const [_, setToken] = useLoginToken();
 
   const router = useRouter()
@@ -64,7 +68,9 @@ const RegisterForm = () => {
   
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`, requestOptions)
 
-      if(!response.ok) {
+      console.log(response)
+
+      if(!response.ok || response.status === 400) {
         setErrors(['Invalid details, please try again.'])
       }
   
@@ -75,22 +81,22 @@ const RegisterForm = () => {
         router.push('/dashboard')
       }
       else {
-          const currentErrors = [];
+          // const currentErrors = [];
           setLoading(false);
           setToken(null);
-          if (result.username) {
-            currentErrors.push(...result.username.slice(1));
-          }
-          if (result.password1) {
-            currentErrors.push(...result.password1.slice(1));
-          }
-          if (result.password2) {
-            currentErrors.push(...result.password2.slice(1));
-          }
-          if (result.non_field_errors) {
-            currentErrors.push(...result.non_field_errors);
-          }
-          setErrors(currentErrors);
+          // if (result.username) {
+          //   currentErrors.push(...result.username.slice(1));
+          // }
+          // if (result.password1) {
+          //   currentErrors.push(...result.password1.slice(1));
+          // }
+          // if (result.password2) {
+          //   currentErrors.push(...result.password2.slice(1));
+          // }
+          // if (result.non_field_errors) {
+          //   currentErrors.push(...result.non_field_errors);
+          // }
+          // setErrors(currentErrors);
       }
     } catch (error) {
       console.log(error)
