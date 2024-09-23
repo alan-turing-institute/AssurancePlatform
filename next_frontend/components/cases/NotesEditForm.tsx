@@ -24,7 +24,7 @@ type NotesEditFormProps = {
 }
 
 const formSchema = z.object({
-  comment: z.string().min(2).max(50),
+  comment: z.string().min(2).max(500),
 })
 
 const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
