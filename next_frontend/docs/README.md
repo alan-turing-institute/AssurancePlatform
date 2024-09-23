@@ -6,6 +6,6 @@ This file contains some useful documentation around some decisions made for the 
 
 1. [Getting Started](#getting-started)
 2. [NextAuth.js](./next-auth.md)
-3. [Tailwind CSS](#tailwind-css)
-4. [ReactFlow](#reactflow)
+3. [Tailwind CSS](./tailwindcss.md)
+4. [ReactFlow](./reactflow.md)
 5. [Docker](./docker.md)
