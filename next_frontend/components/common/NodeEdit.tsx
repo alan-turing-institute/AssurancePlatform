@@ -54,7 +54,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
 
-  if(assuranceCase.goals.length > 0) {
+  if(assuranceCase.goals && assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0]
     strategies = assuranceCase.goals[0].strategies
     const lookups = extractGoalsClaimsStrategies(assuranceCase.goals)

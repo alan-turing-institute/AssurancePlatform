@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import ActionTooltip from '../ui/action-tooltip';
 
 type SearchNodesProps = {
   nodes: any[]
@@ -55,13 +56,16 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
 
   return (
     <>
-      <Button
-        variant={'ghost'}
-        onClick={() => setSearchOpen(true)}
-      >
-        <Search className='w-4 h-4 mr-2'/>
-        <span className=''>Search</span>
-      </Button>
+      <ActionTooltip label='Search'>
+        <Button
+          size={'sm'}
+          variant={'ghost'}
+          onClick={() => setSearchOpen(true)}
+        >
+          <Search className='w-4 h-4'/>
+          <span className='sr-only'>Search</span>
+        </Button>
+      </ActionTooltip>
       <Dialog open={searchOpen} onOpenChange={handleSearchClose}>
         <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
           <DialogHeader>

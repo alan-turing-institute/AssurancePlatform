@@ -57,12 +57,14 @@ function Flow({}: FlowProps) {
   };
 
   const convert = async () => {
-    const result = await convertAssuranceCase(assuranceCase);
-    const { caseNodes, caseEdges } = result;
+    if (assuranceCase && assuranceCase.goals) {
+      const result = await convertAssuranceCase(assuranceCase);
+      const { caseNodes, caseEdges } = result;
 
-    // Send new nodes & edges to layout function
-    layoutNodes(caseNodes, caseEdges);
-    setLoading(false);
+      // Send new nodes & edges to layout function
+      layoutNodes(caseNodes, caseEdges);
+      setLoading(false);
+    }
   };
 
   // intial conversion of the assurance case on component render

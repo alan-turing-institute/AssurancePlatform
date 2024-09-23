@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
         email: profile?.email
       }
 
-      const response = await fetch(`https://staging-eap-backend.azurewebsites.net/api/auth/github/register-by-token/`, {
+      const response = await fetch(`${process.env.API_URL}/api/auth/github/register-by-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

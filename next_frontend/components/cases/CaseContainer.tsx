@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react'
 import Flow from './Flow'
-import { unauthorized, useEnforceLogin, useLoginToken } from '@/hooks/useAuth';
+import { unauthorized, useLoginToken } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation';
-import { Loader2, MessageSquare, MessagesSquare } from 'lucide-react';
+import { Loader2, MessagesSquare } from 'lucide-react';
 import Header from '../Header';
 import { ReactFlowProvider } from 'reactflow';
 
@@ -12,7 +12,7 @@ import useStore from '@/data/store';
 import { addHiddenProp } from '@/lib/case-helper';
 import CaseDetails from './CaseDetails';
 import Link from 'next/link';
-import WebSocketComponent from '../Websocket';
+import WebSocketComponent from '@/components/Websocket';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
