@@ -1,22 +1,11 @@
-## Documentation Checklist
+# Frontend Documentation
 
-Add JSDoc comments for each of these sections and their children
+This file contains some useful documentation around some decisions made for the frontend as well as details around different technologies used in this project. 
 
-- [x] Actions
-- [x] Hooks
-- [x] Lib
-  - [x] authOptions
-  - [x] Case helper
-  - [x] Convert case
-  - [x] Layout helper
-  - [x] Utils
-- [x] Providers
+### Table of Contents
 
-Provide general documentation for the following:
-
-- [ ] Docker - How we are using it in this project
-- [ ] Getting Started - How to run the frontend locally
-- [ ] ReactFlow - Any supporting documentation
-- [ ] Shadcn UI? - Any supporting documentation
-- [ ] Tailwindcss - Any supporting documentation
-- [ ] NextAuth.js - Any supporting documentation
+1. [Getting Started](#getting-started)
+2. [NextAuth.js](./next-auth.md)
+3. [Tailwind CSS](#tailwind-css)
+4. [ReactFlow](#reactflow)
+5. [Docker](./docker.md)
