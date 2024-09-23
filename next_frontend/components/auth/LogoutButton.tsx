@@ -1,19 +1,25 @@
 'use client'
 
-import { useEnforceLogin, useLoginToken } from '@/hooks/useAuth';
+import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import React, { useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button';
 import { signOut, useSession } from 'next-auth/react';
+import { LogOutIcon } from 'lucide-react';
+import ActionTooltip from '../ui/action-tooltip';
 
 const LogoutButton = () => {
-  // useEnforceLogin();
+  const [isMounted, setIsMounted] = useState(false);
   const [token, setToken] = useLoginToken();
   const router = useRouter()
   const { data } = useSession()
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const handleLogout = async () => {
-    const storedToken = token || localStorage.getItem('token');
+    const storedToken = token || (isMounted && localStorage.getItem('token')); // Safe usage of localStorage
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/logout/`, {
       method: "POST",
       headers: {
@@ -33,12 +39,17 @@ const LogoutButton = () => {
   }
 
   return (
-    <Button
-      onClick={handleLogout}
-      className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-    >
-      Logout
-    </Button>
+    <ActionTooltip label='Logout'>
+      <Button
+        size={'sm'}
+        variant={'ghost'}
+        onClick={handleLogout}
+        // className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      >
+        <LogOutIcon className='w-4 h-4'/>
+        <span className='sr-only'>Logout</span>
+      </Button>
+    </ActionTooltip>
   )
 }
 

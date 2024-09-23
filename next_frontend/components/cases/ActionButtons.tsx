@@ -1,6 +1,6 @@
 'use client'
 
-import { Camera, Expand, ExternalLink, Goal, Group, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, Share2, Trash2, Users2 } from "lucide-react";
+import { Camera, Expand, ExternalLink, Goal, Group, Info, ListTree, Network, Notebook, Plus, RotateCcw, RotateCw, SearchIcon, Share2, Trash2, Users2 } from "lucide-react";
 import { Node } from "reactflow";
 import { useEffect, useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
@@ -19,6 +19,9 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useShareModal } from "@/hooks/useShareModal";
 import { usePermissionsModal } from "@/hooks/usePermissionsModal";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import SearchNodes from "../common/SearchNodes";
+import { useResourcesModal } from "@/hooks/useResourcesModal";
 
 
 interface ActionButtonProps {
@@ -43,6 +46,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
   const shareModal = useShareModal();
   const permissionModal = usePermissionsModal();
+  const resourcesModal = useResourcesModal();
 
   const onDelete = async () => {
     try {
@@ -174,6 +178,9 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
           <button onClick={() => setAlertOpen(true)} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><RotateCw className='w-5 h-5' /><span className="sr-only">Reset Identifiers</span></button>
         </ActionTooltip>
         )}
+        <ActionTooltip label='Resources'>
+          <button onClick={() => resourcesModal.onOpen()} className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"><Info className='w-5 h-5' /><span className="sr-only">Resources</span></button>
+        </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">
         {/* <ActionTooltip label='Export'>

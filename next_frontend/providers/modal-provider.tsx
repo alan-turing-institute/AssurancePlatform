@@ -4,6 +4,7 @@ import { CaseCreateModal } from "@/components/modals/CaseCreateModal";
 import { EmailModal } from "@/components/modals/EmailModal";
 import { ImportModal } from "@/components/modals/ImportModal";
 import { PermissionsModal } from "@/components/modals/PermissionsModal";
+import { ResourcesModal } from "@/components/modals/ResourcesModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { useEffect, useState } from "react";
 
@@ -25,6 +26,7 @@ export const ModalProvider = () => {
       <ShareModal />
       <PermissionsModal />
       <EmailModal />
+      <ResourcesModal />
     </>
   );
 }
