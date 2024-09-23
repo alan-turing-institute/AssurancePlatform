@@ -183,8 +183,6 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
         </ActionTooltip>
       </div>
       <div className="flex justify-center items-center gap-2">
-        {/* <ActionTooltip label='Export'>
-          <button onClick={handleExport} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Export</span></button></ActionTooltip> */}
        {assuranceCase.permissions !== 'view' && (
           <ActionTooltip label='Share & Export'>
             <button onClick={() => shareModal.onOpen()} className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"><ExternalLink className='w-5 h-5' /><span className="sr-only">Share & Export</span></button>

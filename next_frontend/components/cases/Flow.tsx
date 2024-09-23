@@ -42,7 +42,6 @@ function Flow({}: FlowProps) {
   const [loading, setLoading] = useState(true);
   const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true)
 
-  const { theme } = useTheme();
   const { toast } = useToast();
 
   const onLayout = (direction: any) => {
@@ -73,12 +72,6 @@ function Flow({}: FlowProps) {
   }, [assuranceCase]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
-    // if(assuranceCase.permissions !== 'view') {
-    //   setSelectedNode(node);
-    //   setEditOpen(true);
-    // } else {
-    //   return
-    // }
     setSelectedNode(node);
     setEditOpen(true);
   };
@@ -100,85 +93,6 @@ function Flow({}: FlowProps) {
   };
 
   const reactFlowWrapper = useRef(null);
-  //   console.log('Focus Node');
-  //   let nodeId: string | undefined;
-
-  //   nodes.forEach(n => {
-  //     if (n.data.name === 'P2') nodeId = n.id;
-  //   });
-
-  //   if (nodeId) {
-  //     const node = nodes.find(n => n.id === nodeId);
-  //     console.log(node);
-  //     if (node) {
-  //       const zoomLevel = 1.5; // Adjust the zoom level as needed
-
-  //       // Assuming node dimensions (update these with actual dimensions if available)
-  //       const nodeWidth = node.width || 0;
-  //       const nodeHeight = node.height || 0;
-
-  //       // Calculate center position
-  //       const centerX = node.position.x + nodeWidth / 2;
-  //       const centerY = node.position.y + nodeHeight / 2;
-
-  //       // Get wrapper dimensions
-  //       const wrapper: any = reactFlowWrapper.current;
-  //       if (wrapper) {
-  //         const wrapperWidth = wrapper.clientWidth;
-  //         const wrapperHeight = wrapper.clientHeight;
-
-  //         console.log('Wrapper dimensions:', wrapperWidth, wrapperHeight);
-  //         console.log('Node center:', centerX, centerY);
-
-  //         // Adjust viewport settings
-  //         const viewportX = centerX - (wrapperWidth / 2) / zoomLevel;
-  //         const viewportY = centerY - (wrapperHeight / 2) / zoomLevel;
-
-  //         console.log('Viewport:', viewportX, viewportY);
-
-  //         // Set viewport
-  //         setViewport({ x: viewportX, y: viewportY, zoom: zoomLevel });
-  //       } else {
-  //         console.error('Wrapper is null');
-  //       }
-  //     } else {
-  //       console.error('Node is null');
-  //     }
-  //   } else {
-  //     console.error('Node ID is undefined');
-  //   }
-  // };
-
-  // const focusNode = () => {
-  //   console.log('Focus Node');
-  //   let nodeId: string | undefined;
-
-  //   nodes.forEach(n => {
-  //     if (n.data.name === 'P2') nodeId = n.id;
-  //   });
-
-  //   if (nodeId) {
-  //     const node = nodes.find(n => n.id === nodeId);
-  //     console.log(node);
-  //     if (node) {
-  //       const zoomLevel = 1.5; // Adjust the zoom level as needed
-
-  //       // Assuming node dimensions (update these with actual dimensions if available)
-  //       const nodeWidth = node.width || 0;
-  //       const nodeHeight = node.height || 0;
-
-  //       // Calculate center position
-  //       const centerX = node.position.x + nodeWidth / 2;
-  //       const centerY = node.position.y + nodeHeight / 2;
-
-  //       setCenter(centerX, centerY)
-  //     } else {
-  //       console.error('Node is null');
-  //     }
-  //   } else {
-  //     console.error('Node ID is undefined');
-  //   }
-  // };
 
   return (
     <div className="min-h-screen">

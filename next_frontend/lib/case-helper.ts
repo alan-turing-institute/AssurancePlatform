@@ -22,6 +22,14 @@ const DESCRIPTION_FROM_TYPE: Map = {
 export const caseItemDescription = (caseItemName: string) =>
   DESCRIPTION_FROM_TYPE[caseItemName] || caseItemName;
 
+/**
+ * Recursively adds a new property claim to a specified parent property claim by ID.
+ *
+ * @param {any} propertyClaims - The array of property claims to search through.
+ * @param {any} parentId - The ID of the parent property claim to which the new claim will be added.
+ * @param {any} newPropertyClaim - The new property claim to be added.
+ * @returns {boolean} Returns true if the property claim was found and updated, otherwise false.
+ */
 export const addPropertyClaimToNested = (
   propertyClaims: any,
   parentId: any,
@@ -78,10 +86,19 @@ export const addPropertyClaimToNested = (
 
   return false; // Indicates the parent property claim was not found
 };
-
-// UPDATE PROPERTY CLAIMS
 // TODO: Evidence and Property Claims are doing a similar actions when moving this can be refactored.
 
+/**
+ * Recursively updates a property claim in a nested array structure by ID.
+ *
+ * This function searches through the given array of property claims and updates 
+ * the matching property claim with new properties provided in `newPropertyClaim`.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} id - The ID of the property claim to be updated.
+ * @param {any} newPropertyClaim - An object containing the properties to update the property claim with.
+ * @returns {any[] | null} Returns the updated array if the property claim is found and updated, otherwise null.
+ */
 export const updatePropertyClaimNested = (
   array: any,
   id: any,
@@ -133,6 +150,16 @@ export const updatePropertyClaimNested = (
   return null; // Indicates the parent property claim was not found
 };
 
+/**
+ * Recursively removes a property claim from its old location in a nested array structure by ID.
+ *
+ * This function searches through the provided array, filtering out the property claim 
+ * with the specified ID and its occurrences in nested property claims and strategies.
+ *
+ * @param {any[]} array - The array of property claims to process.
+ * @param {any} id - The ID of the property claim to remove.
+ * @returns {any[]} A new array with the specified property claim removed.
+ */
 const removePropertyClaimFromOldLocation = (array: any, id: any) => {
   return array.map((item: any) => {
     if (item.property_claims) {
@@ -169,6 +196,17 @@ const removePropertyClaimFromOldLocation = (array: any, id: any) => {
   });
 };
 
+/**
+ * Recursively adds a property claim to a specified location in a nested array structure.
+ *
+ * This function searches for the parent ID in the provided array and adds the 
+ * new property claim to the property claims of the matching parent item.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} property_claim - The property claim to be added.
+ * @param {any} newParentId - The ID of the parent property claim where the new claim should be added.
+ * @returns {any[]} A new array with the property claim added to the specified location.
+ */
 const addPropertyClaimToLocation = (
   array: any,
   property_claim: any,
@@ -214,6 +252,17 @@ const addPropertyClaimToLocation = (
   });
 };
 
+/**
+ * Updates a property claim's location and properties in a nested array structure.
+ *
+ * This function finds an existing property claim by ID, removes it from its old location, 
+ * merges the new properties, and adds it to the new specified location.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} id - The ID of the property claim to be updated.
+ * @param {any} newPropertyClaim - An object containing the properties to update the property claim with.
+ * @returns {any[]} A new array with the property claim updated and moved to the new location.
+ */
 export const updatePropertyClaimNestedMove = (
   array: any,
   id: any,
@@ -285,6 +334,18 @@ export const updatePropertyClaimNestedMove = (
   return updatedArray;
 };
 
+/**
+ * Recursively lists all property claims except the specified current claim.
+ *
+ * This function traverses a nested array of property claims and collects
+ * all claims that are of type "PropertyClaim" and do not match the current
+ * claim name provided.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {string} currentClaimName - The name of the current claim to exclude.
+ * @param {any[]} claims - An array to accumulate the found property claims (used for recursion).
+ * @returns {any[]} An array of property claims excluding the specified current claim.
+ */
 export const listPropertyClaims = (
   array: any,
   currentClaimName: string,
@@ -320,6 +381,18 @@ export const listPropertyClaims = (
   return claims;
 };
 
+/**
+ * Adds evidence to a specified property claim by ID.
+ *
+ * This function searches for a property claim in a nested structure and, 
+ * upon finding it, adds the new evidence to that claim. If the claim does 
+ * not have an evidence array, it initializes one.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} parentId - The ID of the property claim to which the evidence should be added.
+ * @param {any} newEvidence - The evidence object to add to the property claim.
+ * @returns {boolean} True if the property claim was found and updated; false otherwise.
+ */
 export const addEvidenceToClaim = (
   array: any,
   parentId: any,
@@ -377,10 +450,19 @@ export const addEvidenceToClaim = (
 
   return false; // Indicates the parent property claim was not found
 };
-
-// UPDATE EVIDENCE
 // TODO: Evidence and Property Claims are doing a similar actions when moving this can be refactored.
 
+/**
+ * Updates evidence in a nested structure by ID.
+ *
+ * This function recursively searches through the nested array and updates the 
+ * evidence with the given ID, merging the existing properties with the new ones.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} id - The ID of the evidence to update.
+ * @param {any} newEvidence - An object containing the properties to update the evidence with.
+ * @returns {any[]} The updated array with the evidence modified, or null if not found.
+ */
 export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
   // Iterate through the array
   for (let i = 0; i < array.length; i++) {
@@ -434,6 +516,16 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
   return null;
 };
 
+/**
+ * Recursively removes evidence from its old location in a nested structure by ID.
+ *
+ * This function searches through the array and filters out the evidence 
+ * with the specified ID, including nested structures.
+ *
+ * @param {any[]} array - The array of property claims to process.
+ * @param {any} id - The ID of the evidence to remove.
+ * @returns {any[]} A new array with the specified evidence removed.
+ */
 const removeEvidenceFromOldLocation = (array: any, id: any) => {
   return array.map((item: any) => {
     if (item.evidence) {
@@ -465,6 +557,18 @@ const removeEvidenceFromOldLocation = (array: any, id: any) => {
   });
 };
 
+/**
+ * Adds evidence to a specified property claim by ID in a nested structure.
+ *
+ * This function recursively searches for the property claim with the specified
+ * ID and, upon finding it, adds the new evidence to that claim. If the claim 
+ * does not have an evidence array, it initializes one.
+ *
+ * @param {any[]} array - The array of property claims to search through.
+ * @param {any} evidence - The evidence object to add to the property claim.
+ * @param {any} newClaimId - The ID of the property claim where the evidence should be added.
+ * @returns {any[]} The updated array with the evidence added to the specified claim.
+ */
 const addEvidenceToNewLocation = (
   array: any,
   evidence: any,
@@ -503,6 +607,18 @@ const addEvidenceToNewLocation = (
   });
 };
 
+/**
+ * Updates and moves evidence to a new location within a nested structure.
+ *
+ * This function finds the existing evidence by its ID, removes it from its
+ * old location, merges the existing properties with new ones, and adds it
+ * to a new specified property claim.
+ *
+ * @param {any[]} array - The array of property claims to process.
+ * @param {any} id - The ID of the evidence to be updated and moved.
+ * @param {any} newEvidence - An object containing the properties to update the evidence with.
+ * @returns {any[]} The updated array with the evidence moved to the new location.
+ */
 export const updateEvidenceNestedMove = (
   array: any,
   id: any,
@@ -561,6 +677,14 @@ export const updateEvidenceNestedMove = (
   return updatedArray;
 };
 
+/**
+ * Creates a new assurance case node by sending a POST request to the specified API endpoint.
+ *
+ * @param {string} entity - The type of entity to create (e.g., "context", "strategy").
+ * @param {any} newItem - The data for the new assurance case node to be created.
+ * @param {string | null} token - The authorization token for API access. If null, the function logs an error and exits.
+ * @returns {Promise<{ data?: any, error?: string }>} A promise that resolves to an object containing either the created node data or an error message.
+ */
 export const createAssuranceCaseNode = async (
   entity: string,
   newItem: any,
@@ -600,6 +724,14 @@ export const createAssuranceCaseNode = async (
   }
 };
 
+/**
+ * Deletes an assurance case node by sending a DELETE request to the specified API endpoint.
+ *
+ * @param {string} type - The type of node to delete (e.g., "context", "strategy").
+ * @param {any} id - The unique identifier of the assurance case node to be deleted.
+ * @param {string | null} token - The authorization token for API access. If null, the function logs an error and exits.
+ * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful, otherwise false.
+ */
 export const deleteAssuranceCaseNode = async (
   type: string,
   id: any,
@@ -647,6 +779,15 @@ export const deleteAssuranceCaseNode = async (
   }
 };
 
+/**
+ * Updates an existing assurance case node by sending a PUT request to the specified API endpoint.
+ *
+ * @param {string} type - The type of node to update (e.g., "context", "strategy").
+ * @param {any} id - The unique identifier of the assurance case node to be updated.
+ * @param {string | null} token - The authorization token for API access. If null, the function logs an error and exits.
+ * @param {any} updateItem - The updated data for the assurance case node.
+ * @returns {Promise<boolean>} A promise that resolves to true if the update was successful, otherwise false.
+ */
 export const updateAssuranceCaseNode = async (
   type: string,
   id: any,
@@ -696,6 +837,13 @@ export const updateAssuranceCaseNode = async (
   }
 };
 
+/**
+ * Recursively searches for an item by its ID within a nested structure.
+ *
+ * @param {any} item - The item or node to search within.
+ * @param {any} id - The ID of the item to find.
+ * @returns {Promise<any | null>} The found item if it matches the ID, otherwise null.
+ */
 export const findItemById = async (item: any, id: any) => {
   if (item.id === id) {
     // updateFn(item); // Update the item
@@ -733,6 +881,20 @@ export const findItemById = async (item: any, id: any) => {
   return null;
 };
 
+/**
+ * Updates an assurance case based on the provided type and item details.
+ *
+ * This function modifies the assurance case structure, including contexts, strategies,
+ * property claims, and evidence. It returns the updated assurance case.
+ *
+ * @param {string} type - The type of item to update (e.g., "context", "strategy", "property", "evidence").
+ * @param {any} assuranceCase - The assurance case object containing goals and their respective items.
+ * @param {any} updatedItem - The new data to update the existing item.
+ * @param {any} id - The unique identifier of the item to be updated.
+ * @param {any} node - The node related to the item being updated (currently unused).
+ * @param {boolean} [move=false] - A flag indicating whether the item should be moved (default is false).
+ * @returns {any} The updated assurance case object.
+ */
 export const updateAssuranceCase = async (
   type: string,
   assuranceCase: any,
@@ -886,7 +1048,17 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
   return identifier.toString();
 };
 
-// Removing elements from Assurance Case
+/**
+ * Recursively removes an item with a specific `id` and `type` from a deeply nested array structure.
+ * The item can be located in various properties (`property_claims`, `strategies`, `context`, `evidence`)
+ * within the nested structure, and will be removed from all such occurrences.
+ *
+ * @param {any[]} array - The root array from which to remove the item. This can contain nested structures.
+ * @param {any} id - The unique identifier of the item to be removed.
+ * @param {string} type - The type of the item to be removed, used along with the `id` to match the item.
+ * @returns {any[]} A new array with the specified item removed from all levels of the nested structure.
+ *
+ */
 const removeItemFromNestedStructure = (
   array: any[],
   id: any,
@@ -948,6 +1120,14 @@ const removeItemFromNestedStructure = (
     .filter((item: any) => !(item.id === id && item.type === type));
 };
 
+/**
+ * Removes an assurance case node from the specified assurance case by its ID and type.
+ *
+ * @param {any} assuranceCase - The assurance case object containing goals and other relevant data.
+ * @param {any} id - The unique identifier of the assurance case node to be removed.
+ * @param {string} type - The type of the node to be removed (e.g., "context", "strategy").
+ * @returns {any} A new assurance case object with the specified node removed from its goals.
+ */
 export const removeAssuranceCaseNode = (
   assuranceCase: any,
   id: any,
@@ -966,6 +1146,12 @@ export const removeAssuranceCaseNode = (
   };
 };
 
+/**
+ * Extracts goals, property claims, and strategies from a nested structure.
+ *
+ * @param {any} array - The array of items to traverse.
+ * @returns {{ goal: any | null, claims: any[], strategies: any[] }} An object containing the extracted goal, claims, and strategies.
+ */
 export const extractGoalsClaimsStrategies = (array: any) => {
   const result = {
     goal: null,
@@ -1010,6 +1196,12 @@ export const extractGoalsClaimsStrategies = (array: any) => {
   return result;
 };
 
+/**
+ * Recursively adds a `hidden` property to each node in an assurance case structure.
+ *
+ * @param {any} assuranceCase - The assurance case or node to process.
+ * @returns {Promise<any>} The assurance case with the `hidden` property added to each node.
+ */
 export const addHiddenProp = async (assuranceCase: any) => {
   if (Array.isArray(assuranceCase)) {
     assuranceCase.forEach(addHiddenProp);
@@ -1023,6 +1215,12 @@ export const addHiddenProp = async (assuranceCase: any) => {
   return assuranceCase;
 };
 
+/**
+ * Retrieves the adjacent nodes for a given case node based on its type.
+ *
+ * @param {CaseNode} caseNode - The node for which to find adjacent nodes.
+ * @returns {Array<CaseNode>} An array of adjacent nodes.
+ */
 const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
   if (caseNode.type == "AssuranceCase") {
     return caseNode["goals"];
@@ -1041,6 +1239,13 @@ const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
   return [];
 };
 
+/**
+ * Searches for a target node within an assurance case using a depth-first search algorithm.
+ *
+ * @param {CaseNode} targetNode - The node to search for in the assurance case.
+ * @param {CaseNode} assuranceCase - The assurance case in which to search for the target node.
+ * @returns {Array<any>} An array containing the found node (or null if not found) and a map of parent nodes.
+ */
 export function searchWithDeepFirst(
   targetNode: CaseNode,
   assuranceCase: CaseNode
@@ -1073,6 +1278,13 @@ export function searchWithDeepFirst(
   return [nodeFound, parentMap];
 }
 
+/**
+ * Toggles the visibility of a node and its parent nodes in the assurance case.
+ *
+ * @param {any} node - The node for which to toggle visibility.
+ * @param {AssuranceCase} assuranceCase - The assurance case containing the node.
+ * @returns {AssuranceCase} A new assurance case with updated visibility for the node and its parents.
+ */
 export function toggleHiddenForParent(
   node: any,
   assuranceCase: AssuranceCase
@@ -1095,6 +1307,13 @@ export function toggleHiddenForParent(
   return newAssuranceCase;
 }
 
+/**
+ * Toggles the visibility of all children nodes of a specified parent node in the assurance case.
+ *
+ * @param {AssuranceCase} assuranceCase - The assurance case containing the parent node.
+ * @param {number} parentId - The ID of the parent node whose children visibility will be toggled.
+ * @returns {AssuranceCase} A new assurance case with updated visibility for the children of the specified parent node.
+ */
 export function toggleHiddenForChildren(
   assuranceCase: AssuranceCase,
   parentId: number
@@ -1153,6 +1372,13 @@ export function toggleHiddenForChildren(
   return newAssuranceCase;
 }
 
+/**
+ * Finds an element within an assurance case by its unique ID.
+ *
+ * @param {AssuranceCase} assuranceCase - The assurance case in which to search for the element.
+ * @param {number} id - The unique identifier of the element to find.
+ * @returns {any} The found element, or null if not found.
+ */
 export function findElementById(assuranceCase: AssuranceCase, id: number): any {
   // Recursive function to search for the element with the given ID
   function searchElement(element: any, id: number): any {
@@ -1183,6 +1409,12 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
   return searchElement(assuranceCase, id);
 }
 
+/**
+ * Retrieves the hidden status of all child elements of a specified element.
+ *
+ * @param {any} element - The element whose children's hidden status is to be retrieved.
+ * @returns {boolean[]} An array of boolean values representing the hidden status of each child element.
+ */
 export function getChildrenHiddenStatus(element: any): boolean[] {
   let hiddenStatus: boolean[] = [];
   let childrenKeys = [
@@ -1206,6 +1438,13 @@ export function getChildrenHiddenStatus(element: any): boolean[] {
   return hiddenStatus;
 }
 
+/**
+ * Finds the hidden state of a sibling element by checking the parent node's hidden status.
+ *
+ * @param {AssuranceCase} assuranceCase - The assurance case containing the sibling element.
+ * @param {number} parentId - The ID of the parent element whose siblings' hidden state is to be determined.
+ * @returns {boolean} The hidden state of the sibling element, or undefined if not found.
+ */
 export const findSiblingHiddenState = (
   assuranceCase: AssuranceCase,
   parentId: number
@@ -1225,6 +1464,13 @@ export const findSiblingHiddenState = (
   }
 };
 
+/**
+ * Finds the parent node of a given node within a collection of nodes.
+ *
+ * @param {any} nodes - An array of nodes to search for the parent node.
+ * @param {any} node - The node for which to find the parent.
+ * @returns {any|null} The parent node if found, or null if not found.
+ */
 export const findParentNode = (nodes: any, node: any) => {
   let parent = null;
 
@@ -1254,6 +1500,15 @@ export const findParentNode = (nodes: any, node: any) => {
   return parent;
 };
 
+/**
+ * Detaches a specified node from its parent in the assurance case.
+ *
+ * @param {any} node - The node to detach.
+ * @param {string} type - The type of the node (e.g., "context", "strategy").
+ * @param {any} id - The unique identifier of the node to detach.
+ * @param {string|null} token - The authorization token for the request.
+ * @returns {Promise<any>} A promise that resolves with the result of the detach operation.
+ */
 export const detachCaseElement = async (
   node: any,
   type: string,
@@ -1321,6 +1576,15 @@ export const detachCaseElement = async (
   }
 };
 
+/**
+ * Attaches an orphan node to a specified parent in the assurance case.
+ *
+ * @param {any} orphan - The node to attach.
+ * @param {any} id - The unique identifier of the node to attach.
+ * @param {string|null} token - The authorization token for the request.
+ * @param {any} parent - The parent node to which the orphan will be attached.
+ * @returns {Promise<any>} A promise that resolves with the result of the attach operation.
+ */
 export const attachCaseElement = async (
   orphan: any,
   id: any,
