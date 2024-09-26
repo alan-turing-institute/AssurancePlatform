@@ -52,7 +52,7 @@ urlpatterns = [
         name="attach_property_claim",
     ),
     path(
-        "cases/<int:assurance_case_id>/comments/",
+        "<str:element_name>/<int:element_id>/comments/",
         views.comment_list,
         name="comment_list",
     ),
