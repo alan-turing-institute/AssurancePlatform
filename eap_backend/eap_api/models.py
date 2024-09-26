@@ -247,7 +247,11 @@ class Comment(models.Model):
     )
 
     assurance_case = models.ForeignKey(
-        AssuranceCase, related_name="comments", on_delete=models.CASCADE, null=True
+        AssuranceCase,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
     )
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
