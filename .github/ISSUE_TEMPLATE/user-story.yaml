@@ -38,9 +38,7 @@ body:
     id: acceptance-criteria
     attributes:
       label: Acceptance Criteria
-      description:
-        Please describe the conditions that must be met for this story to be
-        considered complete.
+      description: Please describe the conditions that must be met for this story to be considered complete.
       placeholder: |
         **GIVEN** [precondition]
         **AND** [another precondition if necessary]
@@ -65,9 +63,7 @@ body:
     id: technical-notes
     attributes:
       label: Technical Notes
-      description:
-        Any technical notes, potential challenges, or architectural
-        considerations for implementation?
+      description: Any technical notes, potential challenges, or architectural considerations for implementation?
       placeholder: |
         - Note 1
         - Note 2
@@ -78,19 +74,13 @@ body:
     id: definition-of-done
     attributes:
       label: Definition of Done
-      description:
-        Please confirm the following are completed before this story can be
-        considered done.
+      description: Please confirm the following are completed before this story can be considered done.
       options:
         - label: The feature fulfills all acceptance criteria.
         - label: The code is reviewed and meets team coding standards.
         - label: All unit, integration, and end-to-end tests are passed.
         - label: The feature meets accessibility standards set for the project.
-        - label:
-            The code passes the CI/CD pipeline quality controls (style and
-            linting).
+        - label: The code passes the CI/CD pipeline quality controls (style and linting).
         - label: The feature is merged into the main branch.
         - label: The feature is deployed and functional in the QA environment.
-        - label:
-            The feature was demonstrated to the team and accepted by the product
-            owner.
+        - label: The feature was demonstrated to the team and accepted by the product owner.

@@ -1,8 +1,8 @@
 site_name: Trustworthy and Ethical Assurance Platform
 site_url: https://alan-turing-institute.github.io/AssurancePlatform
 site_description: >-
-    Documentation to support the use of the Trustworthy and Ethical Assurance
-    Methodology and Platform
+  Documentation to support the use of the Trustworthy and Ethical Assurance Methodology and Platform
+
 
 repo_name: alan-turing-institute/AssurancePlatform
 repo_url: https://github.com/alan-turing-institute/AssurancePlatform
@@ -13,116 +13,116 @@ copyright: Copyright &copy; 2023 Alan Turing Institute
 
 # Configuration
 theme:
-    name: material
-    # custom_dir: overrides
+  name: material
+  # custom_dir: overrides
 
-    # Static files
-    static_templates:
-        - 404.html
+  # Static files
+  static_templates:
+    - 404.html
 
-    language: en
-    features:
-        - announce.dismiss
-        - content.code.annotate
-        - content.code.copy
-        # - content.tabs.link
-        # - header.autohide
-        - navigation.expand
-        - navigation.indexes
-        - navigation.footer
-        - navigation.instant
-        - navigation.sections
-        - navigation.path
-        - navigation.tabs
-        - navigation.tabs.sticky
-        - navigation.top
-        - navigation.tracking
-        - search.highlight
-        - search.share
-        - search.suggest
-        - toc.follow
-        # - toc.integrate
+  language: en
+  features:
+    - announce.dismiss
+    - content.code.annotate
+    - content.code.copy
+    # - content.tabs.link
+    # - header.autohide
+    - navigation.expand
+    - navigation.indexes
+    - navigation.footer
+    - navigation.instant
+    - navigation.sections
+    - navigation.path
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    # - toc.integrate
 
-    # Set custom colours
-    palette:
-        primary: custom
-        accent: deep orange
+  # Set custom colours
+  palette:
+    primary: custom
+    accent: deep orange
 
-    font:
-        text: Plus Jakarta Sans
-        code: Source Code Pro
+  font:
+    text: Plus Jakarta Sans
+    code: Source Code Pro
 
-    # favicon: assets/logo.png
+  # favicon: assets/logo.png
 
-    icon:
-        logo: material/vector-circle
-        admonition:
-            bug: octicons/database-16
+  icon:
+    logo: material/vector-circle
+    admonition:
+      bug: octicons/database-16
 
 # Plugins
 plugins:
-    - search
-    - tags:
-          enabled: false
-    - blog:
-          categories: false
-          pagination_per_page: 20
-          authors: true
-          draft: false
-    - table-reader
-    - include-markdown:
-          encoding: ascii
-          preserve_includer_indent: false
-          dedent: false
-          trailing_newlines: true
-          comments: true
-          rewrite_relative_urls: true
-          heading_offset: 0
-          start: <!--start-->
-          end: <!--end-->
+  - search
+  - tags:
+      enabled: false
+  - blog:
+      categories: false
+      pagination_per_page: 20
+      authors: true
+      draft: false
+  - table-reader
+  - include-markdown:
+      encoding: ascii
+      preserve_includer_indent: false
+      dedent: false
+      trailing_newlines: true
+      comments: true
+      rewrite_relative_urls: true
+      heading_offset: 0
+      start: <!--start-->
+      end: <!--end-->
 
 # Customization
 
 # Extensions
 markdown_extensions:
-    - abbr
-    - admonition
-    - attr_list
-    - def_list
-    - footnotes
-    - md_in_html
-    - toc:
-          permalink: true
-    - pymdownx.arithmatex:
-          generic: true
-    - pymdownx.betterem:
-          smart_enable: all
-    - pymdownx.caret
-    - pymdownx.details
-    - pymdownx.emoji:
-          emoji_index: !!python/name:material.extensions.emoji.twemoji
-          emoji_generator: !!python/name:material.extensions.emoji.to_svg
-    - pymdownx.highlight:
-          anchor_linenums: true
-    - pymdownx.inlinehilite
-    - pymdownx.keys
-    - pymdownx.magiclink:
-          repo_url_shorthand: true
-          user: squidfunk
-          repo: mkdocs-material
-    - pymdownx.mark
-    - pymdownx.smartsymbols
-    - pymdownx.superfences:
-          custom_fences:
-              - name: mermaid
-                class: mermaid
-                format: !!python/name:pymdownx.superfences.fence_code_format
-    - pymdownx.tabbed:
-          alternate_style: true
-    - pymdownx.tasklist:
-          custom_checkbox: true
-    - pymdownx.tilde
-    - pymdownx.snippets
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets
 
 # extra_javascript:
 #   - javascripts/mathjax.js
@@ -132,64 +132,64 @@ markdown_extensions:
 #   - javascripts/tablesort.js
 
 extra_css:
-    - assets/style.css
+  - assets/style.css
 
 # Page tree
 
 nav:
-    - Home: index.md
-    - About the TEA Platform: about.md
-    - Learning Modules:
-          - About this Section: learning-modules/index.md
-          - TEA Trainee:
-                - What is Trustworthy and Ethical Assurance: learning-modules/tea-trainee/first-sip.md
-          - Other Modules:
-                - The Assurance Ecosystem: learning-modules/other-modules/assurance-ecosystem.md
-                - Standards and their role in assurance: learning-modules/other-modules/standards.md
-    - Developer Guide:
-          - About: developer-guide/about.md
-          - Quick Start with Docker: developer-guide/docker-quickstart.md
-          - Setting Up Your Development Environment: developer-guide/development-environment.md
-          - Backend:
-                - Backend Documentation for the TEA Platform: developer-guide/backend/index.md
-                - Installation and Setup: developer-guide/backend/installation.md
-                - Django Settings: developer-guide/backend/django-settings.md
-                - Backend Management files: developer-guide/backend/backend-management-files.md
-                - API Documentation:
-                      - API Documentation: developer-guide/backend/api/index.md
-                      - Authentication Endpoints: developer-guide/backend/api/authentication.md
-                      - User Endpoints: developer-guide/backend/api/user.md
-                      - Group Endpoints: developer-guide/backend/api/group.md
-                      - Assurance Case Endpoints: developer-guide/backend/api/assurance-cases.md
-                      - GitHub Repository Endpoints: developer-guide/backend/api/github.md
-                      - Comment Endpoints: developer-guide/backend/api/comment.md
-          - Frontend:
-                - Frontend Documentation for the TEA Platform: developer-guide/frontend/index.md
-                - Installation and Setup: developer-guide/frontend/installation.md
-                - Frontend Configuration: developer-guide/frontend/react-configuration.md
-                - React Components: developer-guide/frontend/react-components.md
-                - Visualizing Assurance Cases with Mermaid.js: developer-guide/frontend/mermaid.md
-          - Deployment:
-                - Microsoft Azure Cloud: developer-guide/deployment/azure.md
-          # - GitHub OAuth: developer-guide/github.md  # TODO: No GitHub access currently
-          - Resetting the Database:
-                - Resetting the Database: developer-guide/reset-database/index.md
-                - Azure Deployments: developer-guide/reset-database/azure.md
-                - Local Deployments: developer-guide/reset-database/local.md
-    - Community Resources:
-          - Community of Practice: community/index.md
-          - Community Support: community/community-support.md
-          # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
-          - Upcoming community events: blog/index.md
+  - Home: index.md
+  - About the TEA Platform: about.md
+  - Learning Modules:
+      - About this Section: learning-modules/index.md
+      - TEA Trainee:
+          - What is Trustworthy and Ethical Assurance: learning-modules/tea-trainee/first-sip.md
+      - Other Modules:
+          - The Assurance Ecosystem: learning-modules/other-modules/assurance-ecosystem.md
+          - Standards and their role in assurance: learning-modules/other-modules/standards.md
+  - Developer Guide:
+      - About: developer-guide/about.md
+      - Quick Start with Docker: developer-guide/docker-quickstart.md
+      - Setting Up Your Development Environment: developer-guide/development-environment.md
+      - Backend:
+          - Backend Documentation for the TEA Platform: developer-guide/backend/index.md
+          - Installation and Setup: developer-guide/backend/installation.md
+          - Django Settings: developer-guide/backend/django-settings.md
+          - Backend Management files: developer-guide/backend/backend-management-files.md
+          - API Documentation:
+              - API Documentation: developer-guide/backend/api/index.md
+              - Authentication Endpoints: developer-guide/backend/api/authentication.md
+              - User Endpoints: developer-guide/backend/api/user.md
+              - Group Endpoints: developer-guide/backend/api/group.md
+              - Assurance Case Endpoints: developer-guide/backend/api/assurance-cases.md
+              - GitHub Repository Endpoints: developer-guide/backend/api/github.md
+              - Comment Endpoints: developer-guide/backend/api/comment.md
+      - Frontend:
+          - Frontend Documentation for the TEA Platform: developer-guide/frontend/index.md
+          - Installation and Setup: developer-guide/frontend/installation.md
+          - Frontend Configuration: developer-guide/frontend/react-configuration.md
+          - React Components: developer-guide/frontend/react-components.md
+          - Visualizing Assurance Cases with Mermaid.js: developer-guide/frontend/mermaid.md
+      - Deployment:
+          - Microsoft Azure Cloud: developer-guide/deployment/azure.md
+      # - GitHub OAuth: developer-guide/github.md  # TODO: No GitHub access currently
+      - Resetting the Database:
+          - Resetting the Database: developer-guide/reset-database/index.md
+          - Azure Deployments: developer-guide/reset-database/azure.md
+          - Local Deployments: developer-guide/reset-database/local.md
+  - Community Resources:
+      - Community of Practice: community/index.md
+      - Community Support: community/community-support.md
+      # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
+      - Upcoming community events: blog/index.md
 
 not_in_nav: |
-    _prerequisites.md
-    argument-based-assurance.md
-    case-builder.md
-    case-management.md
-    components.md
-    exporting.md
-    getting-started.md
-    index.md
-    sharing.md
-    what-is-tea.md
+  _prerequisites.md
+  argument-based-assurance.md
+  case-builder.md
+  case-management.md
+  components.md
+  exporting.md
+  getting-started.md
+  index.md
+  sharing.md
+  what-is-tea.md
