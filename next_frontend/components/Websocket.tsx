@@ -64,7 +64,7 @@
 //       clearInterval(interval);
 //     };
 //   }, []); // Empty dependency array ensures the effect runs only once on mount
-  
+
 
 //   return (
 //     <div className={`${!debug ? 'hidden' : 'absolute'} w-full h-full z-50 top-0 left-0 bg-background p-4 rounded-md`}>
@@ -112,29 +112,29 @@ const WebSocketComponent = () => {
       console.error("AssuranceCase or AssuranceCase ID is undefined, WebSocket cannot be established.");
       return;
     }
-  
+
     let interval: any;
     const wsUrl = `wss://staging-eap-backend.azurewebsites.net/ws/case/${assuranceCase.id}/?token=${token}`;
-    
+
     const setupWebSocket = () => {
       const websocket = new WebSocket(wsUrl);
       websocketRef.current = websocket;  // Store the WebSocket instance in the ref
-  
+
       websocket.addEventListener("open", (event: any) => {
         console.log("WebSocket connection established: ", event);
         const pingMessage = JSON.stringify({ content: "ping" });
-  
+
         // Send an initial ping message and start ping interval
         websocket.send(pingMessage);
         interval = setInterval(() => {
           websocket.send(pingMessage);
         }, pingInterval);
       });
-  
+
       websocket.addEventListener("message", (event: any) => {
         console.log("Message received from server: ", event);
         setMessages((prevMessages) => [...prevMessages, `Received "${event.data}" from server.`]);
-  
+
         const data = JSON.parse(event.data);
 
         // Handle current connections update
@@ -153,20 +153,20 @@ const WebSocketComponent = () => {
           console.log("Updated assurance case goals:", updatedGoals);
         }
       });
-  
+
       websocket.addEventListener("close", (event: any) => {
         console.log("WebSocket connection closed: ", event);
         clearInterval(interval);
       });
-  
+
       websocket.addEventListener("error", (event: any) => {
         console.error("WebSocket error occurred: ", event);
       });
     };
-  
+
     // Initialize the WebSocket connection
     setupWebSocket();
-  
+
     // Cleanup function to close WebSocket and clear interval on unmount
     return () => {
       if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
@@ -175,7 +175,7 @@ const WebSocketComponent = () => {
       clearInterval(interval);
     };
   }, [assuranceCase?.id, token]); // Run effect when assuranceCase.id or token changes
-  
+
 
   const prevAssuranceCaseString = usePrevious(JSON.stringify(assuranceCase));
 
