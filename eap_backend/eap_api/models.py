@@ -100,23 +100,6 @@ class AssuranceCase(models.Model):
         return self.created_date >= timezone.now() - datetime.timedelta(days=1)
 
 
-class Comment(models.Model):
-    author = models.ForeignKey(
-        EAPUser, related_name="comments", on_delete=models.CASCADE
-    )
-    assurance_case = models.ForeignKey(
-        AssuranceCase, related_name="comments", on_delete=models.CASCADE
-    )
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Comment by {self.author} on {self.assurance_case}"
-
-    class Meta:
-        ordering = ["created_at"]
-
-
 class TopLevelNormativeGoal(CaseItem):
     keywords = models.CharField(max_length=3000)
     assurance_case = models.ForeignKey(
@@ -256,3 +239,57 @@ class AssuranceCaseImage(models.Model):
         on_delete=models.CASCADE,
     )
     image = models.ImageField(upload_to="images/", default=None)
+
+
+class Comment(models.Model):
+    author = models.ForeignKey(
+        EAPUser, related_name="comments", on_delete=models.CASCADE
+    )
+
+    assurance_case = models.ForeignKey(
+        AssuranceCase, related_name="comments", on_delete=models.CASCADE, null=True
+    )
+    goal = models.ForeignKey(
+        TopLevelNormativeGoal,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+    strategy = models.ForeignKey(
+        Strategy,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+    property_claim = models.ForeignKey(
+        PropertyClaim,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+    evidence = models.ForeignKey(
+        Evidence,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+    context = models.ForeignKey(
+        Context,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+    )
+
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author} on {self.assurance_case}"
+
+    class Meta:
+        ordering = ["created_at"]

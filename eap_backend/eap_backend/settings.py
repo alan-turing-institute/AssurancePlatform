@@ -40,6 +40,10 @@ ALLOWED_HOSTS = (
     [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
 )
 
+if "FRONTEND_HOSTNAME" in os.environ:
+    ALLOWED_HOSTS += [os.environ["FRONTEND_HOSTNAME"]]
+
+
 DEFAULT_FILE_STORAGE: str = "eap_backend.azure_storage.AzureMediaStorage"
 AZURE_ACCOUNT_NAME: str | None = os.getenv("AZURE_ACCOUNT_NAME")
 AZURE_ACCOUNT_KEY: str | None = os.getenv("AZURE_ACCOUNT_KEY")
