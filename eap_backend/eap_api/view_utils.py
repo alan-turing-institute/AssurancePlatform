@@ -1,6 +1,7 @@
 import functools
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Callable, Literal, Optional, Type, Union, cast
 
+from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
@@ -243,6 +244,34 @@ class SandboxUtils:
                 pk=assurance_case_id
             )
             case_item.save()
+
+
+class CommentUtils:
+    @staticmethod
+    def get_instance_and_attribute(
+        element_name: str, element_id: int
+    ) -> tuple[CaseItem | AssuranceCase]:
+
+        model_class: Type[models.Model] | None = None
+
+        if element_name == "cases":
+            model_class = AssuranceCase
+        elif element_name == "propertyclaims":
+            model_class = PropertyClaim
+        elif element_name == "goals":
+            model_class = TopLevelNormativeGoal
+        elif element_name == "strategies":
+            model_class = Strategy
+        elif element_name == "contexts":
+            model_class = Context
+        elif element_name == "evidence":
+            model_class = Evidence
+
+        if model_class is None:
+            error_message: str = f"Invalid URL {element_name}/{element_id}"
+            raise ValueError(error_message)
+
+        return model_class.objects.get(pk=element_id)
 
 
 class UpdateIdentifierUtils:
@@ -773,7 +802,7 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
 
 
 def get_case_permissions(
-    case: AssuranceCase, user: EAPUser
+    case: AssuranceCase | int | str, user: EAPUser
 ) -> Literal["manage"] | Literal["edit"] | Literal["review"] | Literal["view"] | None:
     """
     See if the user is allowed to view or edit the case.

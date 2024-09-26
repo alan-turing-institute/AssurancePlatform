@@ -131,6 +131,11 @@ class CommentSerializer(serializers.ModelSerializer):
             "id",
             "author",
             "assurance_case",
+            "goal",
+            "strategy",
+            "property_claim",
+            "evidence",
+            "context",
             "content",
             "created_at",
         )

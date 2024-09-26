@@ -57,7 +57,7 @@ const RegisterForm = () => {
         password1: values.password1,
         password2: values.password2,
       };
-  
+
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
@@ -65,7 +65,7 @@ const RegisterForm = () => {
         },
         body: JSON.stringify(user),
       }
-  
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`, requestOptions)
 
       console.log(response)
@@ -73,9 +73,9 @@ const RegisterForm = () => {
       if(!response.ok || response.status === 400) {
         setErrors(['Invalid details, please try again.'])
       }
-  
+
       const result = await response.json()
-  
+
       if (result.key) {
         setToken(result.key);
         router.push('/dashboard')
