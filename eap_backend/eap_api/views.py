@@ -910,23 +910,27 @@ def comment_list(request: HttpRequest, element_name: str, element_id: int):
     """
     List all comments for an case element, or create a new comment.
     """
-    model_instance = CommentUtils.get_instance_and_attribute(element_name, element_id)
+    model_instance = CommentUtils.get_model_instance(element_name, element_id)
     assurance_case_id: int | None = None
     if isinstance(model_instance, AssuranceCase):
         assurance_case_id = model_instance.pk
     else:
         assurance_case_id = get_case_id(model_instance)
 
-    permissions = get_case_permissions(assurance_case_id, request.user)
+    permissions: str | None = get_case_permissions(
+        cast(int, assurance_case_id), cast(EAPUser, request.user)
+    )
 
-    if permissions is None or permissions == "view":
-        return HttpResponse(status=403)
+    if permissions is None:
+        return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":
         serializer = CommentSerializer(model_instance.comments, many=True)
         return Response(serializer.data)
 
     elif request.method == "POST":
+        if permissions not in ["manage", "edit", "review"]:
+            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
         data = request.data.copy()
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
@@ -944,8 +948,9 @@ def comment_detail(request, pk):
     """
     Retrieve, update or delete a specific comment.
     """
+
     try:
-        comment = Comment.objects.get(id=pk)
+        comment = Comment.objects.get(id=pk, author=request.user)
     except Comment.DoesNotExist:
         return HttpResponse(status=404)
 
