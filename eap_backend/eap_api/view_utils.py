@@ -248,9 +248,9 @@ class SandboxUtils:
 
 class CommentUtils:
     @staticmethod
-    def get_instance_and_attribute(
+    def get_model_instance(
         element_name: str, element_id: int
-    ) -> tuple[CaseItem | AssuranceCase]:
+    ) -> CaseItem | AssuranceCase:
 
         model_class: Type[models.Model] | None = None
 
