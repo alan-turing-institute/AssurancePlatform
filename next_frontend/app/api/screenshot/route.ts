@@ -1,70 +1,49 @@
-import fs from 'fs';
-import path from 'path';
-import { BlobServiceClient } from "@azure/storage-blob";
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  const { base64, id } = await request.json()
-  const filename = `chart-screenshot-case-${id}.png`
+type CaptureProps = {
+  base64image: string,
+  id: number,
+  token: string
+}
 
-  const base64Data = base64.replace(/^data:image\/\w+;base64,/, '')
-  const buffer = Buffer.from(base64Data, 'base64')
+export async function POST(request: NextRequest) {
+  const { base64image, id, token }: CaptureProps = await request.json();
+  const filename = `chart-screenshot-case-${id}.png`;
+
+  // Convert base64 string to Blob if needed
+  const blob = base64ToBlob(base64image, 'image/png');
 
   try {
-    const containerName = 'sample-container'
-    const account = process.env.NEXT_PUBLIC_STORAGESOURCENAME
+    const formdata = new FormData();
+    formdata.append("media", blob, filename);
 
-    const blobSasUrl = 'https://teamedia.blob.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=co&sp=rwdlacupiytfx&se=2025-05-06T03:42:08Z&st=2024-05-05T19:42:08Z&spr=https&sig=eAyqjGI6Tz5jzZi%2FWrVr%2BGfMnTR%2Fnbe8HLbDYuoVnMY%3D'
+    const requestOptions: RequestInit = {
+      method: "POST",
+      body: formdata,
+      redirect: "follow",
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    };
 
-    const blobServiceClient = new BlobServiceClient(blobSasUrl)
-
-    // Get a reference to a container
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-
-    const blockBlobClient = containerClient.getBlockBlobClient(filename);
-    await blockBlobClient.uploadData(buffer);
-
-    // Return the URL of the uploaded image
-    const imageUrl = `https://${account}.blob.core.windows.net/${containerName}/${filename}`;
-    return NextResponse.json({ imageUrl })
-
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/image`, requestOptions);
+    const { message, data } = await response.json();
+    return NextResponse.json({ message, data });    
   } catch (error) {
-    console.log(error)
-    return NextResponse.json({ error, message: 'Couldnt upload image' })
+    console.log(error);
+    return NextResponse.json({ error, message: "Couldn't upload image" });
+  }
+}
+
+// Utility function to convert base64 to Blob
+function base64ToBlob(base64: string, mimeType: string) {
+  const byteString = atob(base64.split(",")[1]); // Decode base64
+  const arrayBuffer = new ArrayBuffer(byteString.length);
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  for (let i = 0; i < byteString.length; i++) {
+    uint8Array[i] = byteString.charCodeAt(i);
   }
 
-
-  // try {
-  //   // Remove header from base64 string
-  //   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-
-  //   // Create buffer from base64 string
-  //   const buffer = Buffer.from(base64Data, 'base64');
-
-  //   // Save to azure
-  //   const imageUrl = await saveToStorage(buffer, filename)
-  //   return imageUrl
-  // } catch (error) {
-  //   console.error('Error saving image:', error);
-  //   throw error;
-  // }
-
-  ////Read files from the file system using Node.js fs module
-  // const templatesDir = path.resolve(process.cwd(), 'caseTemplates');
-  // const files = fs.readdirSync(templatesDir);
-
-  // // Filter JSON files
-  // const jsonFiles = files.filter(file => file.endsWith('.json'));
-
-  // // Read JSON content and parse it
-  // const newTemplates = jsonFiles.map(file => {
-  //   const filePath = path.join(templatesDir, file);
-  //   const content = fs.readFileSync(filePath, 'utf-8');
-  //   return JSON.parse(content);
-  // });
-
-  // // Find default case
-  // let defaultCase = newTemplates.find(c => c.name === 'empty') || newTemplates[0];
-
-  // return NextResponse.json({ newTemplates, defaultCase })
+  return new Blob([uint8Array], { type: mimeType });
 }

@@ -30,7 +30,8 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
 
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [imgSrc, setImgSrc] = useState(`https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`);
+  const [imgSrc, setImgSrc] = useState('');
+  // const [imgSrc, setImgSrc] = useState(`https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`);
   // const [imageExists, setImageExists] = useState(true)
   // const [imageUrl, setImageUrl] = useState<string>('')
 
@@ -59,20 +60,47 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
     }
   }
 
+  const fetchScreenshot = async () => {
+    try {
+      const requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+        redirect: "follow"
+      };
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/image`, requestOptions)
+
+      if(response.status == 404) {
+        setImgSrc('/images/assurance-case-medium.png')
+        return
+      }
+
+      const result = await response.json()
+      setImgSrc(result.image)
+    } catch (error) {
+      console.log('Failed to fetch image')
+    }
+  }
+
+  useEffect(() => {
+    fetchScreenshot()
+  })
+
   return (
     <div className='group relative min-h-[420px]'>
       <Link href={`/case/${assuranceCase.id}`}>
         <Card className='flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full'>
           <CardHeader className='flex-1 w-full'>
             <div className='relative flex aspect-video rounded-md mb-4 overflow-hidden'>
-              <Image
-                src={imgSrc}
-                alt={`Assurance Case ${assuranceCase.name} screenshot`}
-                fill
-                onError={() => {
-                  setImgSrc('/images/assurance-case-medium.png');
-                }}
-              />
+              {imgSrc && (
+                <Image
+                  src={imgSrc}
+                  alt={`Assurance Case ${assuranceCase.name} screenshot`}
+                  fill
+                />
+              )}
             </div>
             <CardTitle>{name}</CardTitle>
             <CardDescription className='text-slate-900 dark:text-white'>{description}</CardDescription>

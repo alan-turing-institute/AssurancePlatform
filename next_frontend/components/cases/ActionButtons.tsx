@@ -117,7 +117,8 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
       const newImage = JSON.stringify({
         id: assuranceCase.id,
-        base64: base64image
+        base64image,
+        token
       });
 
       const requestOptions: RequestInit = {
@@ -128,15 +129,13 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
       };
 
       const response = await fetch("/api/screenshot", requestOptions)
-      const { imageUrl, error, message } = await response.json()
+      const { error, message, data } = await response.json()
 
       if(error) {
         notifyError(message)
       }
 
-      if(imageUrl) {
-        notify('Screenshot Saved!')
-      }
+      notify('Screenshot Saved!')
     }
   }
 
