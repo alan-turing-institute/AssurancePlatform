@@ -33,7 +33,7 @@ const NodeComment = ({ node, handleClose, loadingState, setAction, readOnly } : 
   const [token] = useLoginToken();
 
   useEffect(() => {
-    
+
   }, [node])
 
   // Fetch Element Comments
@@ -60,7 +60,7 @@ const NodeComment = ({ node, handleClose, loadingState, setAction, readOnly } : 
 
     try {
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
-  
+
       const requestOptions: RequestInit = {
         method: "GET",
         headers: {

@@ -89,7 +89,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
             <div className='text-muted-foreground group-hover:text-white text-xs flex justify-start items-center gap-2 transition-all duration-300 mt-3'>
               <User2Icon className='w-3 h-3'/>
               <div>
-                {comment.author} 
+                {comment.author}
                 <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                   <circle cx={1} cy={1} r={1} />
                 </svg>
@@ -101,11 +101,11 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
             assuranceCase.permissions !== 'view' && (
               <div className='hidden group-hover:block absolute bottom-2 right-2'>
                 <div className='flex justify-start items-center gap-2'>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setEdit(!edit)
                       setEditId(comment.id)
-                    }} 
+                    }}
                     variant={'ghost'}
                     size={'sm'}
                     className='hover:bg-indigo-800/50'

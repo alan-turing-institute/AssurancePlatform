@@ -368,7 +368,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             node={node}
             handleClose={handleClose}
             loadingState={{ loading, setLoading }}
-            setAction={setAction} 
+            setAction={setAction}
           />
         )
       )}
@@ -487,7 +487,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           node={node}
           handleClose={handleClose}
           loadingState={{ loading, setLoading }}
-          setAction={setAction} 
+          setAction={setAction}
           readOnly={readOnly}
         />
       )}

@@ -72,7 +72,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) 
 
     try {
         let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
-    
+
         const requestOptions: RequestInit = {
           method: "POST",
           headers: {
@@ -115,7 +115,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) 
             </FormItem>
           )}
         />
-        <div className='flex justify-start items-center gap-3'> 
+        <div className='flex justify-start items-center gap-3'>
           <Button type="submit" disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 text-white">
             {loading ? 'Adding...' : 'Add Comment'}
           </Button>
