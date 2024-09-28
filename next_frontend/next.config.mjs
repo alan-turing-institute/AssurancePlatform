@@ -5,9 +5,9 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "teamedia.blob.core.windows.net",
+        hostname: "stagingteastorageaccount.blob.core.windows.net",
         port: "",
-        pathname: "/sample-container/**",
+        pathname: "**/*",
       },
     ],
   },
