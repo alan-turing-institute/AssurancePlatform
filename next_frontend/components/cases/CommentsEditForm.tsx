@@ -18,6 +18,7 @@ import { Textarea } from '../ui/textarea'
 import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store'
 import { updateElementComment } from '@/lib/case-helper'
+import { useToast } from '../ui/use-toast'
 
 type CommentsEditFormProps = {
   node: any
@@ -31,11 +32,12 @@ const formSchema = z.object({
 
 const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) => {
   const [token] = useLoginToken();
-  const { assuranceCase, setAssuranceCase } = useStore()
+  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore()
   const [loading, setLoading] = useState<boolean>(false)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for the textarea
 
-  const { id: commentId, comment: content } = comment
+  const { id: commentId, content } = comment
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,41 +54,59 @@ const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) =
     }
 
     try {
-      const updatedComment = await updateElementComment(node.type, node.id, newComment, commentId, token)
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`
 
-      // TODO: Find the index of the updated comment in the existing comments array
-      // const updatedComments = assuranceCase.comments.map((comment:any) =>
-      //     comment.id === updatedComment.id ? updatedComment : comment
-      // );
+      const requestOptions: RequestInit = {
+          method: "PUT",
+          headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newComment),
+      };
+      const response = await fetch(url, requestOptions);
 
-      // const updatedAssuranceCase = {
-      //     ...assuranceCase,
-      //     comments: updatedComments,
-      // };
+      if(!response.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to update comment',
+          description: 'Something went wrong trying to update the comment.',
+        });
+        return
+      }
 
-      // TODO: Update assurance case
-      // setAssuranceCase(updatedAssuranceCase);
+      const updatedComment = await response.json();
 
+      // Find the index of the updated comment in the existing comments array
+      const updatedComments = nodeComments.map((comment:any) =>
+          comment.id === updatedComment.id ? updatedComment : comment
+      );
+
+      setNodeComments(updatedComments);
       setEdit(false);
-      setLoading(false)
     } catch (error) {
-        console.log('Error', error)
-        setLoading(false)
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update comment',
+        description: 'Something went wrong trying to update the comment.',
+      });
+    } finally {
+      setLoading(false)
     }
   }
 
-    // Function to adjust the textarea height dynamically
-    const autoResizeTextarea = () => {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'; // Reset the height
-        textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; // Set the height to match content
-      }
+  // Function to adjust the textarea height dynamically
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset the height
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; // Set the height to match content
     }
-  
-    // Resize the textarea when the content or the form loads
-    useEffect(() => {
-      autoResizeTextarea(); // Initial resize
-    }, [form.watch('comment')]) // Re-run when the comment changes
+  }
+
+  // Resize the textarea when the content or the form loads
+  useEffect(() => {
+    autoResizeTextarea(); // Initial resize
+  }, [form.watch('comment')]) // Re-run when the comment changes
 
   return (
     <Form {...form}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { Dispatch, SetStateAction, useState } from 'react'
 import {
   Form,
   FormControl,
@@ -27,7 +27,7 @@ interface CommentsFormProps {
 };
 
 const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) => {
-  const { assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore();
   const [token] = useLoginToken();
   const [loading, setLoading] = useState(false)
 
@@ -42,28 +42,60 @@ const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) 
     console.log(values)
     setLoading(true)
 
-    const newComment = {
+    let newComment = {
       content: values.comment
+    } as any
+
+    let entity = null;
+    switch (node.type) {
+      case "context":
+        entity = "contexts";
+        newComment.context = node.data.id
+        break;
+      case "strategy":
+        entity = "strategies";
+        newComment.strategy = node.data.id
+        break;
+      case "property":
+        entity = "propertyclaims";
+        newComment.property_claim = node.data.id
+        break;
+      case "evidence":
+        entity = "evidence";
+        newComment.evidence = node.data.id
+        break;
+      default:
+        entity = "goals";
+        newComment.goal = node.data.id
+        break;
     }
 
     try {
-        const createdComment = await addElementComment(node.type, node.id, newComment, token)
+        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
+    
+        const requestOptions: RequestInit = {
+          method: "POST",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newComment)
+        };
 
-        // TODO: Add new comment to current comments for element
-        // const updatedComments = [ ...assuranceCase.comments, createdComment ]
+        const response = await fetch(url, requestOptions);
+        const result = await response.json()
 
-        // const updatedAssuranceCase = {
-        //   ...assuranceCase,
-        //   comments: updatedComments
-        // }
+        // **Update the comments as an array**
+        const newCommentsList = [...nodeComments, result]
 
-        // TODO: Update Assurance Case with updated 
-        // setAssuranceCase(updatedAssuranceCase)
+        setNodeComments(newCommentsList)
 
         // Clear form input
         form.setValue('comment', '')
     } catch (error) {
         console.log('Error', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -84,7 +116,9 @@ const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) 
           )}
         />
         <div className='flex justify-start items-center gap-3'> 
-          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white">Add Comment</Button>
+          <Button type="submit" disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 text-white">
+            {loading ? 'Adding...' : 'Add Comment'}
+          </Button>
         </div>
       </form>
     </Form>
