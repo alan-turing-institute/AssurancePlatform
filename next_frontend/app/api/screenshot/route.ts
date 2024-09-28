@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/image`, requestOptions);
     const { message, data } = await response.json();
-    return NextResponse.json({ message, data });    
+    return NextResponse.json({ message, data });
   } catch (error) {
     console.log(error);
     return NextResponse.json({ error, message: "Couldn't upload image" });
