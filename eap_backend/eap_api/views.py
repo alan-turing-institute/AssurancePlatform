@@ -254,7 +254,6 @@ def case_list(request):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def case_image(request: HttpRequest, pk) -> Response:
-    print(f"{pk=}")
     if request.method == "GET":
         try:
             assurance_case: AssuranceCaseImage = AssuranceCaseImage.objects.get(
