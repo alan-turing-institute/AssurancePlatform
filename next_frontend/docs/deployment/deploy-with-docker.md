@@ -2,7 +2,7 @@
 
 You can deploy using Docker without Gitub actions. For example to build a `Staging` image you can navigate to `./docker/staging/` and run the following command.
 
-```bash 
+```bash
 docker compose build
 ```
 
@@ -42,4 +42,4 @@ This will build your image based on the values in the Docker compose file. To ru
 docker compose up
 ```
 
-You can also do the same for `production` by navigating to `./docker/production`. Just unsure that your `Dockerfile` for each it correct. 
+You can also do the same for `production` by navigating to `./docker/production`. Just unsure that your `Dockerfile` for each it correct.
