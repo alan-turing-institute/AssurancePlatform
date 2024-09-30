@@ -237,6 +237,7 @@ class AssuranceCaseImage(models.Model):
         AssuranceCase,
         related_name="case_image",
         on_delete=models.CASCADE,
+        unique=True,
     )
     image = models.ImageField(upload_to="images/", default=None)
 

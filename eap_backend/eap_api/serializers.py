@@ -396,6 +396,14 @@ class AssuranceCaseImageSerializer(serializers.ModelSerializer):
         model = AssuranceCaseImage
         fields = ("id", "assurance_case_id", "image")
 
+    def create(self, validated_data: dict):
+        case_image, _ = AssuranceCaseImage.objects.update_or_create(
+            assurance_case=validated_data.get("assurance_case"),
+            defaults={"image": validated_data.get("image")},
+        )
+
+        return case_image
+
 
 class StrategySerializer(serializers.ModelSerializer):
     goal_id = serializers.PrimaryKeyRelatedField(
