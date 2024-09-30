@@ -488,7 +488,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           handleClose={handleClose}
           loadingState={{ loading, setLoading }}
           setAction={setAction}
-          readOnly={readOnly}
+          readOnly={assuranceCase.permissions === 'view' ? true : false}
         />
       )}
       <AlertModal
