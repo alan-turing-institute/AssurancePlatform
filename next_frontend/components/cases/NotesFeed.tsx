@@ -6,69 +6,54 @@ import { Edit2, Pencil, PencilLine, PhoneOffIcon, Save, Trash2, User2Icon, X } f
 import moment from 'moment'
 import useStore from '@/data/store'
 import { Button } from '../ui/button'
-import { useLoginToken } from '@/hooks/useAuth'
+import { unauthorized, useLoginToken } from '@/hooks/useAuth'
 import { boolean } from 'zod'
 import NotesEditField from './NotesEditForm'
 import NotesEditForm from './NotesEditForm'
-
-// const activity = [
-//   {
-//     id: 1,
-//     type: 'comment',
-//     person: { name: 'System User', href: '#' },
-//     imageUrl:
-//       'https://images.unsplash.com/photo-1520785643438-5bf77931f493?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=8&w=256&h=256&q=80',
-//     comment:
-//       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Tincidunt nunc ipsum tempor purus vitae id. Morbi in vestibulum nec varius. Et diam cursus quis sed purus nam. ',
-//     date: '01/01/2001',
-//   },
-//   // {
-//   //   id: 2,
-//   //   type: 'assignment',
-//   //   person: { name: 'Hilary Mahy', href: '#' },
-//   //   assigned: { name: 'Kristin Watson', href: '#' },
-//   //   date: '2d ago',
-//   // },
-//   // {
-//   //   id: 3,
-//   //   type: 'tags',
-//   //   person: { name: 'Hilary Mahy', href: '#' },
-//   //   tags: [
-//   //     { name: 'Bug', href: '#', color: 'fill-red-500' },
-//   //     { name: 'Accessibility', href: '#', color: 'fill-indigo-500' },
-//   //   ],
-//   //   date: '6h ago',
-//   // },
-//   {
-//     id: 4,
-//     type: 'comment',
-//     person: { name: 'System User', href: '#' },
-//     imageUrl:
-//       'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=8&w=256&h=256&q=80',
-//     comment:
-//       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Tincidunt nunc ipsum tempor purus vitae id. Morbi in vestibulum nec varius. Et diam cursus quis sed purus nam. Scelerisque amet elit non sit ut tincidunt condimentum. Nisl ultrices eu venenatis diam.',
-//     date: '01/01/2001',
-//   },
-// ]
+import { useToast } from '../ui/use-toast'
 
 export default function NotesFeed({ }) {
-  const { assuranceCase, setAssuranceCase } = useStore()
+  const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore()
   const [token] = useLoginToken();
   const [edit, setEdit] = useState<boolean>()
   const [editId, setEditId] = useState<number>()
   const [newComment, setNewComment] = useState<string>()
+  const [comments, setComments] = useState([])
+  const { toast } = useToast();
 
   //@ts-ignore
   assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+  const fetchSingleCase = async () => {
+    const requestOptions: RequestInit = {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    };
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`, requestOptions);
+
+    if(response.status === 404 || response.status === 403 ) {
+      // TODO: 404 NOT FOUND PAGE
+      console.log('Render Not Found Page')
+      return
+    }
+
+    if(response.status === 401) return unauthorized()
+
+    const { comments } = await response.json()
+    return comments
+  }
+
   useEffect(() => {
     //@ts-ignore
-    assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  },[assuranceCase])
+    // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    fetchSingleCase().then(comments => setCaseNotes(comments))
+  },[caseNotes])
 
   const handleNoteDelete = async (id: number) => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
 
       const requestOptions: RequestInit = {
           method: "DELETE",
@@ -80,32 +65,69 @@ export default function NotesFeed({ }) {
       const response = await fetch(url, requestOptions);
 
       if(!response.ok) {
-          console.log('error')
+        toast({
+          variant: 'destructive',
+          title: 'Unable to delete comment',
+          description: 'Something went wrong trying to delete the comment.',
+        });
+        return
       }
 
-      const updatedComments = assuranceCase.comments.filter((comment:any) => comment.id !== id)
-
-      const updatedAssuranceCase = {
-        ...assuranceCase,
-        comments: updatedComments
-      }
-
-      setAssuranceCase(updatedAssuranceCase)
+      const updatedComments = caseNotes.filter((comment:any) => comment.id !== id)
+      setCaseNotes(updatedComments)
     } catch (error) {
-        console.log('Error', error)
+        toast({
+          variant: 'destructive',
+          title: 'Unable to delete comment',
+          description: 'Something went wrong trying to delete the comment.',
+        });
     }
   }
+
+  // const handleNoteDelete = async (id: number) => {
+  //   try {
+  //     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}api/comments/${id}/`
+
+  //     const requestOptions: RequestInit = {
+  //         method: "DELETE",
+  //         headers: {
+  //             Authorization: `Token ${token}`,
+  //             "Content-Type": "application/json",
+  //         }
+  //     };
+  //     const response = await fetch(url, requestOptions);
+
+  //     if(!response.ok) {
+  //       console.log('error')
+  //       return
+  //     }
+
+  //     const updateCaseNotes = caseNotes.filter((note:any) => note.id !== id)
+  //     setCaseNotes(updateCaseNotes)
+
+  //     // const updatedComments = assuranceCase.comments.filter((comment:any) => comment.id !== id)
+
+  //     // const updatedAssuranceCase = {
+  //     //   ...assuranceCase,
+  //     //   comments: updatedComments
+  //     // }
+
+  //     // setAssuranceCase(updatedAssuranceCase)
+  //   } catch (error) {
+  //       console.log('Error', error)
+  //   }
+  // }
 
   return (
     <div className="mt-4 py-8 px-4">
       <ul role="list" className="-mb-8">
-        {assuranceCase.comments.length === 0 && (
+        {caseNotes.length === 0 && (
           <p className='text-foreground/70'>No notes have been added.</p>
         )}
-        {assuranceCase.comments.map((activityItem: any, activityItemIdx: any) => (
-          <li key={crypto.randomUUID()}>
+        {caseNotes.map((note: any, index: any) => (
+          <li key={note.id}>
             <div className="relative pb-8 group">
-              {activityItemIdx !== assuranceCase.comments.length - 1 ? (
+              {index !== caseNotes.length - 1 ? (
                 <span className="absolute left-9 top-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-800" aria-hidden="true" />
               ) : null}
               <div className="relative flex justify-start items-start space-x-3 p-4 rounded-md group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
@@ -127,16 +149,16 @@ export default function NotesFeed({ }) {
                   <div>
                     <div className="text-sm">
                       <p className="font-medium text-foreground">
-                        {activityItem.author}
+                        {note.author}
                       </p>
                     </div>
-                    <p className="mt-0.5 text-sm text-foreground/70">Created On: {moment(new Date(activityItem.created_at)).format('DD/MM/YYYY')}</p>
+                    <p className="mt-0.5 text-sm text-foreground/70">Created On: {moment(new Date(note.created_at)).format('DD/MM/YYYY')}</p>
                   </div>
                   <div className="mt-2 text-sm text-foreground">
-                    {edit && editId === activityItem.id ? (
-                      <NotesEditForm note={activityItem} setEdit={setEdit} />
+                    {edit && editId === note.id ? (
+                      <NotesEditForm note={note} setEdit={setEdit} />
                     ) : (
-                      <p className="whitespace-normal">{activityItem.content}</p>
+                      <p className="whitespace-normal">{note.content}</p>
                     )}
 
                   </div>
@@ -146,11 +168,11 @@ export default function NotesFeed({ }) {
                     <div className='hidden group-hover:flex justify-center items-center gap-2'>
                       <Button onClick={() => {
                         setEdit(!edit)
-                        setEditId(activityItem.id)
+                        setEditId(note.id)
                       }} size={'icon'} className='bg-background hover:bg-background/50 text-foreground'>
                         <PencilLine className='w-4 h-4'/>
                       </Button>
-                      <Button onClick={() => handleNoteDelete(activityItem.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
+                      <Button onClick={() => handleNoteDelete(note.id)} size={'icon'} variant={'destructive'}><Trash2 className='w-4 h-4'/></Button>
                     </div>
                   )
                 )}

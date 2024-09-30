@@ -17,6 +17,7 @@ import {
 import { Textarea } from '../ui/textarea'
 import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store'
+import { useToast } from '../ui/use-toast'
 
 type NotesEditFormProps = {
   note: any,
@@ -29,8 +30,9 @@ const formSchema = z.object({
 
 const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
   const [token] = useLoginToken();
-  const { assuranceCase, setAssuranceCase } = useStore()
+  const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore()
   const [loading, setLoading] = useState<boolean>(false)
+  const { toast } = useToast()
 
   const { id, content } = note
 
@@ -49,7 +51,7 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
 
       const requestOptions: RequestInit = {
           method: "PUT",
@@ -62,27 +64,31 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
       const response = await fetch(url, requestOptions);
 
       if(!response.ok) {
-          console.log('error')
+        toast({
+          variant: 'destructive',
+          title: 'Failed to update comment',
+          description: 'Something went wrong trying to update the comment.',
+        });
+        return
       }
 
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = assuranceCase.comments.map((comment:any) =>
+      const updatedComments = caseNotes.map((comment:any) =>
           comment.id === updatedComment.id ? updatedComment : comment
       );
 
-      const updatedAssuranceCase = {
-          ...assuranceCase,
-          comments: updatedComments,
-      };
-
-      setAssuranceCase(updatedAssuranceCase);
+      setCaseNotes(updatedComments);
       setEdit(false);
-      setLoading(false)
     } catch (error) {
-        console.log('Error', error)
-        setLoading(false)
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update comment',
+        description: 'Something went wrong trying to update the comment.',
+      });
+    } finally {
+      setLoading(false)
     }
   }
 
