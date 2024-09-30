@@ -91,7 +91,7 @@ export const addPropertyClaimToNested = (
 /**
  * Recursively updates a property claim in a nested array structure by ID.
  *
- * This function searches through the given array of property claims and updates 
+ * This function searches through the given array of property claims and updates
  * the matching property claim with new properties provided in `newPropertyClaim`.
  *
  * @param {any[]} array - The array of property claims to search through.
@@ -153,7 +153,7 @@ export const updatePropertyClaimNested = (
 /**
  * Recursively removes a property claim from its old location in a nested array structure by ID.
  *
- * This function searches through the provided array, filtering out the property claim 
+ * This function searches through the provided array, filtering out the property claim
  * with the specified ID and its occurrences in nested property claims and strategies.
  *
  * @param {any[]} array - The array of property claims to process.
@@ -199,7 +199,7 @@ const removePropertyClaimFromOldLocation = (array: any, id: any) => {
 /**
  * Recursively adds a property claim to a specified location in a nested array structure.
  *
- * This function searches for the parent ID in the provided array and adds the 
+ * This function searches for the parent ID in the provided array and adds the
  * new property claim to the property claims of the matching parent item.
  *
  * @param {any[]} array - The array of property claims to search through.
@@ -255,7 +255,7 @@ const addPropertyClaimToLocation = (
 /**
  * Updates a property claim's location and properties in a nested array structure.
  *
- * This function finds an existing property claim by ID, removes it from its old location, 
+ * This function finds an existing property claim by ID, removes it from its old location,
  * merges the new properties, and adds it to the new specified location.
  *
  * @param {any[]} array - The array of property claims to search through.
@@ -384,8 +384,8 @@ export const listPropertyClaims = (
 /**
  * Adds evidence to a specified property claim by ID.
  *
- * This function searches for a property claim in a nested structure and, 
- * upon finding it, adds the new evidence to that claim. If the claim does 
+ * This function searches for a property claim in a nested structure and,
+ * upon finding it, adds the new evidence to that claim. If the claim does
  * not have an evidence array, it initializes one.
  *
  * @param {any[]} array - The array of property claims to search through.
@@ -455,7 +455,7 @@ export const addEvidenceToClaim = (
 /**
  * Updates evidence in a nested structure by ID.
  *
- * This function recursively searches through the nested array and updates the 
+ * This function recursively searches through the nested array and updates the
  * evidence with the given ID, merging the existing properties with the new ones.
  *
  * @param {any[]} array - The array of property claims to search through.
@@ -519,7 +519,7 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
 /**
  * Recursively removes evidence from its old location in a nested structure by ID.
  *
- * This function searches through the array and filters out the evidence 
+ * This function searches through the array and filters out the evidence
  * with the specified ID, including nested structures.
  *
  * @param {any[]} array - The array of property claims to process.
@@ -561,7 +561,7 @@ const removeEvidenceFromOldLocation = (array: any, id: any) => {
  * Adds evidence to a specified property claim by ID in a nested structure.
  *
  * This function recursively searches for the property claim with the specified
- * ID and, upon finding it, adds the new evidence to that claim. If the claim 
+ * ID and, upon finding it, adds the new evidence to that claim. If the claim
  * does not have an evidence array, it initializes one.
  *
  * @param {any[]} array - The array of property claims to search through.

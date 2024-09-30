@@ -136,7 +136,7 @@ docker build --build-arg GITHUB_APP_CLIENT_ID=<your_client_id> \
 
 ### Steps to Deploy (GithHub Actions)
 
-In this roject we have CI/CD configured, with Github Actions. This allows us to merge changes into the `Develop` branch, and the Docker image will be built and pushed up into Docker Hub (with our credentials) and taing any `ENV` values form GitHub Secrets. 
+In this roject we have CI/CD configured, with Github Actions. This allows us to merge changes into the `Develop` branch, and the Docker image will be built and pushed up into Docker Hub (with our credentials) and taing any `ENV` values form GitHub Secrets.
 
 #### Example
 

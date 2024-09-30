@@ -1,10 +1,10 @@
 /**
  * Convert Assurance Case
- * 
+ *
  * This function is used to take an assurance case object and passes the goals array to other functions to convert into Nodes and Edges - which are required for ReactFlow.
- * 
+ *
  * @param {Object} assuranceCase - Assurance case object retrieved from the database
- * 
+ *
  */
 export const convertAssuranceCase = async (assuranceCase: any) => {
   let caseNodes: any[] = [], caseEdges: any[] = []
@@ -23,19 +23,19 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
 
 /**
  * Recursively creates nodes from a hierarchical structure of items, with support for various child types.
- * 
+ *
  * This function generates nodes from an array of items, each having potentially nested child elements such as
  * `context`, `property_claims`, `evidence`, or `strategies`. The nodes are structured with unique IDs and are
  * positioned in a graph-like format. The recursion depth is limited to prevent infinite loops, and processed
  * items are tracked to avoid duplicating nodes.
- * 
+ *
  * @param {any[]} items - An array of items from which nodes will be created. Each item can have nested child elements.
  * @param {string} nodeType - The type of node to be created for the current set of items (e.g., 'goal', 'context', 'property').
  * @param {any|null} [parentNode=null] - The parent node to which the newly created nodes will be linked. Defaults to null for root nodes.
  * @param {Set<any>} [processedItems=new Set()] - A set to track already processed items to prevent duplicates.
  * @param {number} [depth=10] - The maximum recursion depth to avoid infinite recursion. Defaults to 10.
  * @returns {any[]} An array of created nodes with their hierarchical relationships preserved.
- * 
+ *
  */
 const createNodesRecursively = (items: any, nodeType: string, parentNode: any | null = null, processedItems = new Set(), depth = 10) => {
   const nodes: any[] = [];
@@ -96,14 +96,14 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
 
 /**
  * Creates edges from a list of nodes to represent relationships between parent and child nodes.
- * 
+ *
  * This function generates edges (links) between nodes in a graph where each node may have a parent-child relationship.
  * The edges are created by linking the `parentId` of a node to the node's `id`. Special handling is applied to nodes
  * of type 'context', which results in animated edges.
- * 
+ *
  * @param {any[]} nodes - An array of nodes, where each node can optionally have a `parentId` in its data to signify a parent-child relationship.
  * @returns {any[]} An array of edges, where each edge links a parent node to a child node.
- * 
+ *
  */
 const createEdgesFromNodes = (nodes:any[]) => {
   const edges:any[] = [];

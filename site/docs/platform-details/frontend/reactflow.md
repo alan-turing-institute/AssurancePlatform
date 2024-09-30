@@ -23,6 +23,6 @@ Here is an example of how an assurance case can look when rendered with ReactFlo
 
 ### How is the chart rendered?
 
-This chart is fairly static, in that the user cannot move each of the elements around the screen. Although, ReactFlow does provide this feature, we decided to lock this down for our intial release. 
+This chart is fairly static, in that the user cannot move each of the elements around the screen. Although, ReactFlow does provide this feature, we decided to lock this down for our intial release.
 
-To move elements you can use the actions presented when selecting an element. 
+To move elements you can use the actions presented when selecting an element.

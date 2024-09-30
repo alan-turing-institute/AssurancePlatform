@@ -6,22 +6,22 @@ dotenv.config(); // Explicitly load environment variables
 
 /**
  * Configuration options for NextAuth authentication.
- * 
+ *
  * This object sets up authentication for a Next.js app using GitHub as an authentication provider.
  * It defines providers, session strategy, and callbacks for handling sign-in, redirect, session, and JWT behaviors.
- * 
+ *
  * @type {NextAuthOptions}
- * 
+ *
  * @property {string} secret - Secret for encrypting/decrypting JWT tokens. Fetched from environment variables.
  * @property {Object} session - Configuration for session management, using JWT as the strategy.
  * @property {Array} providers - List of authentication providers. Here, GitHub is configured.
  * @property {Object} callbacks - Defines callback functions for various authentication events such as signIn, redirect, session, and JWT management.
- * 
+ *
  * @example
  * // To use with NextAuth, you can import and pass this object to NextAuth in your API route.
  * import NextAuth from 'next-auth';
  * import { authOptions } from './path-to-this-file';
- * 
+ *
  * export default NextAuth(authOptions);
  */
 export const authOptions: NextAuthOptions = {
@@ -36,11 +36,11 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_APP_CLIENT_SECRET || process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string,
     }),
   ],
-  
+
   callbacks: {
     /**
      * Callback triggered during sign-in.
-     * 
+     *
      * @param {Object} params - Parameters provided during sign-in.
      * @param {Object} params.user - User object returned by the provider.
      * @param {Object} params.account - Account information including access token.
@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
 
     /**
      * Callback triggered when redirecting after login or sign-out.
-     * 
+     *
      * @param {Object} params - Parameters for the redirect.
      * @param {string} params.url - Target URL for the redirect.
      * @param {string} params.baseUrl - Base URL of the application.
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
 
     /**
      * Callback to handle the session object passed to the client.
-     * 
+     *
      * @param {Object} params - Parameters related to the session.
      * @param {Object} params.session - The current session object.
      * @param {Object} params.user - User information attached to the session.
@@ -104,7 +104,7 @@ export const authOptions: NextAuthOptions = {
 
     /**
      * Callback to handle JWT token creation and updates.
-     * 
+     *
      * @param {Object} params - Parameters related to the JWT.
      * @param {Object} params.token - The current token.
      * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).

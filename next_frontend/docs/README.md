@@ -1,6 +1,6 @@
 # Frontend Documentation
 
-This file contains some useful documentation around some decisions made for the frontend as well as details around different technologies used in this project. 
+This file contains some useful documentation around some decisions made for the frontend as well as details around different technologies used in this project.
 
 ### Table of Contents
 
