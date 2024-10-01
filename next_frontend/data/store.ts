@@ -42,6 +42,8 @@ type Store = {
   setActiveUsers: (users: any[]) => void
   nodeComments: any[]
   setNodeComments: (comments: any[]) => void
+  caseNotes: any[]
+  setCaseNotes: (comments: any[]) => void
 };
 
 export type NodeData = {
@@ -167,6 +169,12 @@ const useStore = create<Store>((set, get) => ({
     //@ts-ignore
     const sortedComments = comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     set({nodeComments: sortedComments});
+  },
+  caseNotes: [],
+  setCaseNotes: (comments: any[]) => {
+    //@ts-ignore
+    const sortedComments = comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    set({caseNotes: sortedComments});
   },
 }));
 

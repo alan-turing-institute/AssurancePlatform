@@ -14,6 +14,7 @@ import { useCreateCaseModal } from '@/hooks/useCreateCaseModal'
 import { useImportModal } from '@/hooks/useImportModal'
 import { useShareModal } from '@/hooks/useShareModal'
 import { Input } from '../ui/input'
+import useStore from '@/data/store'
 
 interface CaseListProps {
   assuranceCases: any[]

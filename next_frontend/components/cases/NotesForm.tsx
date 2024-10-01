@@ -28,7 +28,7 @@ interface NotesFormProps {
 };
 
 const NotesForm: React.FC<NotesFormProps> = ({ }) => {
-  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { nodes, setNodes, assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore();
   const [token] = useLoginToken();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -61,14 +61,16 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
 
         const result = await response.json()
 
-        const updatedComments = [ ...assuranceCase.comments, result ]
+        const newCaseNotes = [...caseNotes, result]
+        setCaseNotes(newCaseNotes)
+        
+        // const updatedComments = [ ...assuranceCase.comments, result ]
+        // const updatedAssuranceCase = {
+        //   ...assuranceCase,
+        //   comments: updatedComments
+        // }
 
-        const updatedAssuranceCase = {
-          ...assuranceCase,
-          comments: updatedComments
-        }
-
-        setAssuranceCase(updatedAssuranceCase)
+        // setAssuranceCase(updatedAssuranceCase)
 
 
         form.setValue('note', '')
