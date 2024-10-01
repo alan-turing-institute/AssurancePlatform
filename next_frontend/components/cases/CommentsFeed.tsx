@@ -5,7 +5,7 @@ import { PencilLine,Trash2, User2Icon } from 'lucide-react'
 import moment from 'moment'
 import useStore from '@/data/store'
 import { Button } from '../ui/button'
-import { useLoginToken } from '@/hooks/useAuth'
+import { unauthorized, useLoginToken } from '@/hooks/useAuth'
 import CommentsEditForm from './CommentsEditForm'
 import { useToast } from '../ui/use-toast'
 
@@ -18,9 +18,8 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
   const [token] = useLoginToken();
   const [edit, setEdit] = useState<boolean>(false)
   const [editId, setEditId] = useState<number>()
+  const [user, setUser] = useState<any>()
   const { toast } = useToast();
-
-  console.log(nodeComments.map(item => item.id))
 
   const handleNoteDelete = async (id: number) => {
     try {
@@ -55,17 +54,32 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
     }
   }
 
-  // const comments = [
-  //   { id: 1, comment: 'Lorem ipsum odor amet, consectetuer adipiscing elit. Tellus neque venenatis; maximus ultricies augue potenti. Est eu posuere metus diam purus facilisi.', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 2, comment: 'Lorem ipsum odor amet, consectetuer adipiscing elit. Tellus neque venenatis; maximus ultricies augue potenti. Est eu posuere metus diam purus facilisi. Lorem ipsum odor amet, consectetuer adipiscing elit. Tellus neque venenatis; maximus ultricies augue potenti. Est eu posuere metus diam purus facilisi.', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 3, comment: 'Testing comment', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 4, comment: 'Lorem ipsum odor amet, consectetuer adipiscing elit. Tellus neque venenatis; maximus ultricies augue potenti. Est eu posuere metus diam purus facilisi.', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 5, comment: 'Testing comment', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 6, comment: 'Lorem ipsum odor amet, consectetuer adipiscing elit. Tellus neque venenatis; maximus ultricies augue potenti. Est eu posuere metus diam purus facilisi.', user: { name: 'Rich' }, createdOn: new Date() },
-  //   { id: 7, comment: 'Testing comment', user: { name: 'Rich' }, createdOn: new Date() },
-  // ]
-
   useEffect(() => {},[nodeComments])
+
+  const fetchCurrentUser = async () => {
+    const requestOptions: RequestInit = {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, requestOptions)
+
+    if (response.status === 404 || response.status === 403) {
+      console.log('Render Not Found Page')
+      return
+    }
+
+    if (response.status === 401) return unauthorized()
+
+    const result = await response.json()
+    return result
+  }
+
+  // Fetch current user
+  useEffect(() => {
+    fetchCurrentUser().then(result => setUser(result))
+  },[user])
 
   return (
     <div className="mt-4 py-2 w-full">
@@ -98,7 +112,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
             </div>
           )}
           {!edit && (
-            assuranceCase.permissions !== 'view' && (
+            assuranceCase.permissions !== 'view' && user?.username === comment.author && (
               <div className='hidden group-hover:block absolute bottom-2 right-2'>
                 <div className='flex justify-start items-center gap-2'>
                   <Button

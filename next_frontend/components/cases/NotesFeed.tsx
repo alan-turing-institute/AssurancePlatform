@@ -19,6 +19,7 @@ export default function NotesFeed({ }) {
   const [editId, setEditId] = useState<number>()
   const [newComment, setNewComment] = useState<string>()
   const [comments, setComments] = useState([])
+  const [user, setUser] = useState<any>()
   const { toast } = useToast();
 
   //@ts-ignore
@@ -45,11 +46,37 @@ export default function NotesFeed({ }) {
     return comments
   }
 
+  const fetchCurrentUser = async () => {
+    const requestOptions: RequestInit = {
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, requestOptions)
+
+    if (response.status === 404 || response.status === 403) {
+      console.log('Render Not Found Page')
+      return
+    }
+
+    if (response.status === 401) return unauthorized()
+
+    const result = await response.json()
+    return result
+  }
+
+  // Fetch case notes/comments
   useEffect(() => {
     //@ts-ignore
     // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     fetchSingleCase().then(comments => setCaseNotes(comments))
   },[caseNotes])
+
+  // Fetch current user
+  useEffect(() => {
+    fetchCurrentUser().then(result => setUser(result))
+  },[user])
 
   const handleNoteDelete = async (id: number) => {
     try {
@@ -83,40 +110,6 @@ export default function NotesFeed({ }) {
         });
     }
   }
-
-  // const handleNoteDelete = async (id: number) => {
-  //   try {
-  //     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}api/comments/${id}/`
-
-  //     const requestOptions: RequestInit = {
-  //         method: "DELETE",
-  //         headers: {
-  //             Authorization: `Token ${token}`,
-  //             "Content-Type": "application/json",
-  //         }
-  //     };
-  //     const response = await fetch(url, requestOptions);
-
-  //     if(!response.ok) {
-  //       console.log('error')
-  //       return
-  //     }
-
-  //     const updateCaseNotes = caseNotes.filter((note:any) => note.id !== id)
-  //     setCaseNotes(updateCaseNotes)
-
-  //     // const updatedComments = assuranceCase.comments.filter((comment:any) => comment.id !== id)
-
-  //     // const updatedAssuranceCase = {
-  //     //   ...assuranceCase,
-  //     //   comments: updatedComments
-  //     // }
-
-  //     // setAssuranceCase(updatedAssuranceCase)
-  //   } catch (error) {
-  //       console.log('Error', error)
-  //   }
-  // }
 
   return (
     <div className="mt-4 py-8 px-4">
@@ -164,7 +157,7 @@ export default function NotesFeed({ }) {
                   </div>
                 </div>
                 {!edit && (
-                  assuranceCase.permissions !== 'view' && (
+                  assuranceCase.permissions !== 'view' && user?.username === note.author && (
                     <div className='hidden group-hover:flex justify-center items-center gap-2'>
                       <Button onClick={() => {
                         setEdit(!edit)
