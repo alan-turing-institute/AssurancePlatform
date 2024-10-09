@@ -1391,3 +1391,72 @@ export const attachCaseElement = async (
     return { error };
   }
 };
+
+export const addElementComment = async (
+  entity: string,
+  id: number,
+  newComment: any,
+  token: string | null
+) => {
+  if (!token) return console.log("No token");
+
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`
+
+    const requestOptions: RequestInit = {
+        method: "POST",
+        headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newComment),
+    };
+    const response = await fetch(url, requestOptions);
+
+    if(!response.ok) {
+        console.log('error')
+    }
+
+    const result = await response.json()
+
+    return result
+  } catch (error) {
+    console.log(`Could not create comment for ${entity}`, error);
+    return { error };
+  }
+};
+
+export const updateElementComment = async (
+  entity: string,
+  id: number,
+  newComment: any,
+  newCommentId: number,
+  token: string | null
+) => {
+  if (!token) return console.log("No token");
+
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`
+
+    const requestOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newComment),
+    };
+    const response = await fetch(url, requestOptions);
+
+    if(!response.ok) {
+        console.log('error')
+    }
+
+    const result = await response.json()
+
+    return result
+  } catch (error) {
+    console.log(`Could not update comment for ${entity}/${newCommentId}`, error);
+    return { error };
+  }
+};

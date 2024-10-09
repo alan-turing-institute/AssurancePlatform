@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import EditSheet from "../ui/edit-sheet";
-import { CloudFog, Eye, EyeOff, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
+import { CloudFog, Eye, EyeOff, MessageCirclePlus, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
 import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
@@ -22,6 +22,8 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import OrphanElements from "../cases/OrphanElements";
+import { ChatBubbleIcon } from "@radix-ui/react-icons";
+import NodeComment from "../cases/NodeComments";
 
 interface NodeEditProps {
   node: Node | any
@@ -238,8 +240,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   return (
     <EditSheet
-      title={`${!readOnly ? 'Editing' : ''} ${node.data.name}`}
-      description={`Use this form to update your ${caseItemDescription(node.type)}.`}
+      title={`${!readOnly ? 'Editing' : 'Viewing'} ${node.data.name}`}
+      description={`${!readOnly ? `Use this form to update your ${caseItemDescription(node.type)}.` : `You are viewing a ${caseItemDescription(node.type)}.` }`}
       isOpen={isOpen}
       onClose={handleClose}
       onChange={onChange}
@@ -267,7 +269,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </div>
           )}
           <EditForm node={node} onClose={handleClose} setUnresolvedChanges={setUnresolvedChanges} />
-          {node.type !== 'context' && !readOnly && (
+          {!readOnly ? (
             <>
               <Separator className="my-6"/>
               <div className="">
@@ -282,11 +284,28 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                   {node.type !== 'context' && node.type !== 'goal' && node.type !== 'strategy' && (
                     <Button variant={'outline'} onClick={() => setAction('move')} className="w-full"><Move className="w-4 h-4 mr-2"/>Move Item</Button>
                   )}
+                  <Button variant={'outline'} onClick={() => setAction('comment')} className="w-full"><MessageCirclePlus className="w-4 h-4 mr-2"/>
+                    Comments
+                  </Button>
+                </div>
+              </div>
+              <Separator className="my-6"/>
+            </>
+          ) : (
+            <>
+              <Separator className="my-6"/>
+              <div className="">
+                <h3 className="text-lg font-semibold mb-2">Actions</h3>
+                <div className="flex flex-col justify-around items-center gap-2">
+                  <Button variant={'outline'} onClick={() => setAction('comment')} className="w-full"><MessageCirclePlus className="w-4 h-4 mr-2"/>
+                    Comments
+                  </Button>
                 </div>
               </div>
               <Separator className="my-6"/>
             </>
           )}
+
           {!readOnly && (
             <div className="mt-12 flex justify-start items-center gap-4">
               {node.type !== 'goal' && (
@@ -349,7 +368,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             node={node}
             handleClose={handleClose}
             loadingState={{ loading, setLoading }}
-            setAction={setAction} />
+            setAction={setAction}
+          />
         )
       )}
       {action === 'move' && !readOnly && (
@@ -461,6 +481,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             </Button>
           </div>
         </>
+      )}
+      {action === 'comment' && (
+        <NodeComment
+          node={node}
+          handleClose={handleClose}
+          loadingState={{ loading, setLoading }}
+          setAction={setAction}
+          readOnly={assuranceCase.permissions === 'view' ? true : false}
+        />
       )}
       <AlertModal
         isOpen={deleteOpen}

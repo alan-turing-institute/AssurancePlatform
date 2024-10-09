@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Dispatch, SetStateAction, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { boolean, z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -17,24 +17,27 @@ import {
 import { Textarea } from '../ui/textarea'
 import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store'
+import { updateElementComment } from '@/lib/case-helper'
 import { useToast } from '../ui/use-toast'
 
-type NotesEditFormProps = {
-  note: any,
-  setEdit: Dispatch<SetStateAction<boolean | undefined>>
+type CommentsEditFormProps = {
+  node: any
+  comment: any
+  setEdit: Dispatch<SetStateAction<boolean>>
 }
 
 const formSchema = z.object({
   comment: z.string().min(2).max(500),
 })
 
-const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
+const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) => {
   const [token] = useLoginToken();
-  const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore()
+  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore()
   const [loading, setLoading] = useState<boolean>(false)
-  const { toast } = useToast()
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for the textarea
 
-  const { id, content } = note
+  const { id: commentId, content } = comment
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,7 +54,7 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`
 
       const requestOptions: RequestInit = {
           method: "PUT",
@@ -75,11 +78,11 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = caseNotes.map((comment:any) =>
+      const updatedComments = nodeComments.map((comment:any) =>
           comment.id === updatedComment.id ? updatedComment : comment
       );
 
-      setCaseNotes(updatedComments);
+      setNodeComments(updatedComments);
       setEdit(false);
     } catch (error) {
       toast({
@@ -92,6 +95,19 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
     }
   }
 
+  // Function to adjust the textarea height dynamically
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // Reset the height
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; // Set the height to match content
+    }
+  }
+
+  // Resize the textarea when the content or the form loads
+  useEffect(() => {
+    autoResizeTextarea(); // Initial resize
+  }, [form.watch('comment')]) // Re-run when the comment changes
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -100,16 +116,24 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
           name="comment"
           render={({ field }) => (
             <FormItem>
-              {/* <FormLabel>Username</FormLabel> */}
               <FormControl>
-                <Textarea placeholder="Type your message here." {...field} />
+                <Textarea
+                  placeholder="Type your message here."
+                  {...field}
+                  ref={(e) => {
+                    field.ref(e); // Integrate with react-hook-form
+                    textareaRef.current = e; // Set the local ref
+                  }}
+                  onInput={autoResizeTextarea} // Auto-resize on input
+                  style={{ overflow: 'hidden' }} // Hide scrollbars
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className='flex justify-end items-center gap-2'>
-          <Button variant={'ghost'} onClick={() => setEdit(false)}>Cancel</Button>
+          <Button variant={'ghost'} className={'hover:bg-indigo-800/50'} onClick={() => setEdit(false)}>Cancel</Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Saving' : 'Save'}
           </Button>
@@ -119,4 +143,4 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
   )
 }
 
-export default NotesEditForm
+export default CommentsEditForm

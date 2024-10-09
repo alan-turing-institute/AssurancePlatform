@@ -44,8 +44,10 @@ from .serializers import (
     StrategySerializer,
     TopLevelNormativeGoalSerializer,
     UsernameAwareUserSerializer,
+    get_case_id,
 )
 from .view_utils import (
+    CommentUtils,
     SandboxUtils,
     ShareAssuranceCaseUtils,
     SocialAuthenticationUtils,
@@ -252,7 +254,6 @@ def case_list(request):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def case_image(request: HttpRequest, pk) -> Response:
-    print(f"{pk=}")
     if request.method == "GET":
         try:
             assurance_case: AssuranceCaseImage = AssuranceCaseImage.objects.get(
@@ -904,24 +905,32 @@ def github_repository_list(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
-def comment_list(request, assurance_case_id):
+def comment_list(request: HttpRequest, element_name: str, element_id: int):
     """
-    List all comments for an assurance case, or create a new comment.
+    List all comments for an case element, or create a new comment.
     """
-    permissions = get_case_permissions(assurance_case_id, request.user)
-    if permissions is None or permissions == "view":
-        return HttpResponse(status=403)
+    model_instance = CommentUtils.get_model_instance(element_name, element_id)
+    assurance_case_id: int | None = None
+    if isinstance(model_instance, AssuranceCase):
+        assurance_case_id = model_instance.pk
+    else:
+        assurance_case_id = get_case_id(model_instance)
+
+    permissions: str | None = get_case_permissions(
+        cast(int, assurance_case_id), cast(EAPUser, request.user)
+    )
+
+    if permissions is None:
+        return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":
-        comments = Comment.objects.filter(assurance_case_id=assurance_case_id)
-        serializer = CommentSerializer(comments, many=True)
+        serializer = CommentSerializer(model_instance.comments, many=True)
         return Response(serializer.data)
 
     elif request.method == "POST":
+        if permissions not in ["manage", "edit", "review"]:
+            return HttpResponse(status=status.HTTP_403_FORBIDDEN)
         data = request.data.copy()
-        data["assurance_case_id"] = (
-            assurance_case_id  # Ensure assurance_case_id is set in the data
-        )
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             # Ensure the author is set to the current user
@@ -938,8 +947,9 @@ def comment_detail(request, pk):
     """
     Retrieve, update or delete a specific comment.
     """
+
     try:
-        comment = Comment.objects.get(id=pk)
+        comment = Comment.objects.get(id=pk, author=request.user)
     except Comment.DoesNotExist:
         return HttpResponse(status=404)
 

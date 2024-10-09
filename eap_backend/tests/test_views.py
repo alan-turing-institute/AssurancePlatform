@@ -1767,7 +1767,8 @@ class ShareAssuranceCaseViewTest(TestCase):
     def _check_status_on_comment(self, status_code: int):
         response_post: HttpResponse = self.client.post(
             reverse(
-                "comment_list", kwargs={"assurance_case_id": self.assurance_case.pk}
+                "comment_list",
+                kwargs={"element_name": "cases", "element_id": self.assurance_case.pk},
             ),
             data=json.dumps(
                 {"content": "A comment", "assurance_case": self.assurance_case.pk}

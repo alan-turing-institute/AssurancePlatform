@@ -131,6 +131,11 @@ class CommentSerializer(serializers.ModelSerializer):
             "id",
             "author",
             "assurance_case",
+            "goal",
+            "strategy",
+            "property_claim",
+            "evidence",
+            "context",
             "content",
             "created_at",
         )
@@ -390,6 +395,14 @@ class AssuranceCaseImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssuranceCaseImage
         fields = ("id", "assurance_case_id", "image")
+
+    def create(self, validated_data: dict):
+        case_image, _ = AssuranceCaseImage.objects.update_or_create(
+            assurance_case=validated_data.get("assurance_case"),
+            defaults={"image": validated_data.get("image")},
+        )
+
+        return case_image
 
 
 class StrategySerializer(serializers.ModelSerializer):
