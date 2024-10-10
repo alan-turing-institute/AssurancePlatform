@@ -13,6 +13,7 @@ To get started with Assurance Platform, follow these steps:
 ### Prerequisites
 
 -   Node.js and npm (or Yarn) installed on your machine.
+-   Have the API backend running locally
 
 ### Installation
 
@@ -33,28 +34,6 @@ To get started with Assurance Platform, follow these steps:
     ```
     npm install
     ```
-
-### Environment Variables
-
-Ensure that you have added the following to your `.env.local` file in the root of this project.
-
-```
-NEXT_PUBLIC_STORAGESASTOKEN={token-value}
-NEXT_PUBLIC_STORAGESOURCENAME={storage-name-value}
-
-GITHUB_APP_CLIENT_ID={gh-clientid-value}
-GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
-NEXTAUTH_SECRET={unique-string}
-NEXT_PUBLIC_API_URL={api-url-value}
-API_URL={api-url-value}
-NEXTAUTH_URL={frontend-url-value}
-```
-
-To generate a unique string for the `NEXTAUTH_SECRET` you can run:
-
-```bash
-openssl rand -base64 32
-```
 
 ### Development
 
@@ -81,26 +60,19 @@ This will build the application for production and start a server to serve the b
 
 The application uses environment variables for configuration. Create a `.env.local` file in the root directory and specify the required environment variables. You can use the `.env.example` file as a template.
 
-### Deployment
+#### Environment Variables Example
 
-You can deploy using Docker without Gitub actions. For example to build and `Staging` image you can navigate to `./docker/staging/` and run the following command.
-
-```
-docker compose build
-```
-
-This will build your image based on the values in the Docker compose file. To run your new image use
-
-```
-docker compose up
+```js
+GITHUB_APP_CLIENT_ID={gh-clientid-value}
+GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
+NEXTAUTH_SECRET={unique-string}
+NEXT_PUBLIC_API_URL={api-url-value}
+API_URL={api-url-value}
+NEXTAUTH_URL={frontend-url-value}
 ```
 
-Contributing
-------------
+To generate a unique string for the `NEXTAUTH_SECRET` you can run:
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
-
-License
--------
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+```bash
+openssl rand -base64 32
+```
