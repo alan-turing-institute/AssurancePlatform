@@ -63,7 +63,7 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
 
         const newCaseNotes = [...caseNotes, result]
         setCaseNotes(newCaseNotes)
-        
+
         // const updatedComments = [ ...assuranceCase.comments, result ]
         // const updatedAssuranceCase = {
         //   ...assuranceCase,

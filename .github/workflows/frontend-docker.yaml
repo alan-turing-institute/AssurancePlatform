@@ -37,7 +37,7 @@ jobs:
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
             --build-arg API_URL=https://eap-backend.azurewebsites.net/ \
-            --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+            --build-arg NEXTAUTH_URL=https://assuranceplatform.azurewebsites.net/ \
             -t turingassuranceplatform/eap_frontend:main \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }} \
             -f docker/staging/Dockerfile .
@@ -53,7 +53,7 @@ jobs:
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }} \
             --build-arg NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
             --build-arg API_URL=https://staging-eap-backend.azurewebsites.net/ \
-            --build-arg NEXTAUTH_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }} \
+            --build-arg NEXTAUTH_URL=https://staging-assuranceplatform.azurewebsites.net/ \
             -t turingassuranceplatform/eap_frontend:develop \
             -t turingassuranceplatform/eap_frontend:${{ env.commit_date }}.${{ env.sha_short }}\
             -f docker/staging/Dockerfile .
