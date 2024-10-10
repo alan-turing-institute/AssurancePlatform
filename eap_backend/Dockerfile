@@ -1,4 +1,4 @@
-FROM nikolaik/python-nodejs
+FROM nikolaik/python-nodejs:python3.12-nodejs22
 COPY . /eap_backend
 WORKDIR /eap_backend
 RUN pip install -r requirements.txt
