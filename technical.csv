@@ -1,0 +1,5 @@
+﻿Title,Description,Type,Status,Link
+About the Platform,An overview of the technical details of the platform.,,
+Installation, Instructions on how to install the platform locally.,,
+Cloud Deployment,"Instructions for deploying the platform to a cloud environment, such as Azure.",,
+API Details, Details of the platform's API.,,
