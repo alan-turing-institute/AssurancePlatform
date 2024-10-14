@@ -9,6 +9,12 @@ const nextConfig = {
         port: "",
         pathname: "**/*",
       },
+      {
+        protocol: "https",
+        hostname: "teastorageaccount.blob.core.windows.net",
+        port: "",
+        pathname: "**/*",
+      },
     ],
   },
 };
