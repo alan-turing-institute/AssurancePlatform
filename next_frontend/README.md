@@ -1,10 +1,12 @@
-Assurance Platform
+Trustworthy & Ethical Assurance Platform
 ==================
 
-Assurance Platform is a web application developed using Next.js, React, and TypeScript. It provides a platform for managing and monitoring assurance cases in various domains.
+TEA (Trustworthy & Ethical Assurance) Platform is a web application developed using Next.js, React, and TypeScript. It provides a platform for managing and monitoring assurance cases in various domains.
 
 Getting Started
 ---------------
+
+Demo: [Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
 
 To get started with Assurance Platform, follow these steps:
 
@@ -23,7 +25,7 @@ To get started with Assurance Platform, follow these steps:
 2.  Navigate to the project directory:
 
     ```
-    cd AssurancePlatform
+    cd next-frontend
     ```
 
 3.  Install dependencies using npm:
@@ -37,7 +39,21 @@ To get started with Assurance Platform, follow these steps:
 Ensure that you have added the following to your `.env.local` file in the root of this project.
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_STORAGESASTOKEN={token-value}
+NEXT_PUBLIC_STORAGESOURCENAME={storage-name-value}
+
+GITHUB_APP_CLIENT_ID={gh-clientid-value}
+GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
+NEXTAUTH_SECRET={unique-string}
+NEXT_PUBLIC_API_URL={api-url-value}
+API_URL={api-url-value}
+NEXTAUTH_URL={frontend-url-value}
+```
+
+To generate a unique string for the `NEXTAUTH_SECRET` you can run:
+
+```bash
+openssl rand -base64 32
 ```
 
 ### Development
@@ -67,22 +83,17 @@ The application uses environment variables for configuration. Create a `.env.loc
 
 ### Deployment
 
-You can deploy using Docker. Please follow these commands to build your docker image with docker compose.
+You can deploy using Docker without Gitub actions. For example to build and `Staging` image you can navigate to `./docker/staging/` and run the following command.
 
 ```
 docker compose build
 ```
 
-To run your new image use
+This will build your image based on the values in the Docker compose file. To run your new image use
 
 ```
 docker compose up
 ```
-
-Demo
-------------
-
-[Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
 
 Contributing
 ------------

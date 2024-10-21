@@ -1,7 +1,7 @@
 ---
 authors:
-    - Shakir Laher
-    - Christopher Burr
+  - Shakir Laher
+  - Christopher Burr
 ---
 
 # Standards and their role in assurance
@@ -14,10 +14,10 @@ authors:
 
 A 'standard' can be described as rules, norms or guidelines, that are established for application within certain contexts and settings. They are crafted to establish a dependable foundation for cultivating collective expectations concerning a product, process, service, or system as part of governance and assurance frameworks. We see examples of their implementation in industry, academia, professions, product development and service delivery.
 
-Standards are developed in a variety of ways, although the best-practice approach to their formation and the most widely accepted are essentially standards crafted through _consensus-building processes_.
+Standards are developed in a variety of ways, although the best-practice approach to their formation and the most widely accepted are essentially standards crafted through *consensus-building processes*.
 These standards can be developed and led by, for example, academic institutions, international bodies, professional associations, industry, or most commonly, formally recognised Standards Development Organisations (SDOs)[^sdos]
 
-[^sdos]: AI Standards Hub. 1.Introducing AI Standards. 2022. [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/).
+[^sdos]: AI Standards Hub. 1.Introducing AI Standards. 2022.  [https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/](https://aistandardshub.org/resource/main-training-page-example/1-what-are-standards/).
 
 Standards developed by SDOs are often referred to as 'technical standards'.
 These standards are developed by stakeholder-driven processes that are guided by principles such as relevance, transparency, and consensus.
@@ -41,11 +41,12 @@ Below are some of the categories of standards available.
 
 !!! info "Types of Standards"
 
--   [Foundational and terminological](#foundational-and-terminological)
--   [Process, management, and governance](#process-management-and-governance)
--   [Measurement and test methods](#measurement-and-test-methods)
--   [Product and performance requirements](#product-and-performance-requirements)
--   [Interface and architecture](#interface-and-architecture)
+
+- [Foundational and terminological](#foundational-and-terminological)
+- [Process, management, and governance](#process-management-and-governance)
+- [Measurement and test methods](#measurement-and-test-methods)
+- [Product and performance requirements](#product-and-performance-requirements)
+- [Interface and architecture](#interface-and-architecture)
 
 ### Foundational and terminological
 
@@ -56,29 +57,32 @@ These standards often form the baseline language utilised in other standards sup
 :::success
 **Examples**
 
--   ISO/IEC 22989 BS ISO/IEC 22989:2022 Information technology – Artificial intelligence – Artificial intelligence concepts and terminology
-    -   This document establishes terminology for AI and describes concepts in the field of AI. This document can be used in the development of other standards and in support of communications among diverse, interested parties or stakeholders. This document is applicable to all types of organizations (e.g. commercial enterprises, government agencies, not-for-profit organizations).
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-artificial-intelligence-concepts-and-terminology-2/)
--   ISO/IEC TS 5723 PD ISO/IEC TS 5723:2022 Trustworthiness – Vocabulary
-    -   This document provides a definition of trustworthiness for systems and their associated services, along with a selected set of their characteristics.
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/trustworthiness-vocabulary/)
+- ISO/IEC 22989 BS ISO/IEC 22989:2022 Information technology – Artificial intelligence – Artificial intelligence concepts and terminology
+    - This document establishes terminology for AI and describes concepts in the field of AI. This document can be used in the development of other standards and in support of communications among diverse, interested parties or stakeholders. This document is applicable to all types of organizations (e.g. commercial enterprises, government agencies, not-for-profit organizations).
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-artificial-intelligence-concepts-and-terminology-2/)
+- ISO/IEC TS 5723 PD ISO/IEC TS 5723:2022 Trustworthiness – Vocabulary
+    - This document provides a definition of trustworthiness for systems and their associated services, along with a selected set of their characteristics.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/trustworthiness-vocabulary/)
 
 :::
 
 ### Process, management, and governance
+
 
 Process, management and governance standards play a vital role in guiding organisational processes and approaches, providing a structured framework to help achieve well-defined steps towards their aims and objectives. These standards serve as a cornerstone in governance, offering a systematic foundation for areas such as quality assurance, risk management, management systems, benchmarking, and regulatory compliance. By establishing clear guidelines and best practices, these standards contribute to effective governance practices within an organisation. They not only enhance the efficiency and consistency of processes but also ensure that organisational activities align with industry benchmarks and comply with relevant regulations. These standards become essential tools in fostering transparency, accountability, and overall excellence in organisational performance.
 
 :::success
 **Examples**
 
--   ISO/IEC FDIS 42001:2023 Information technology – Artificial intelligence – Management system
+- ISO/IEC FDIS 42001:2023 Information technology – Artificial intelligence – Management system
+    - This standard specifies the requirements and provides guidance for establishing, implementing, maintaining and continually improving an AI management system within the context of an organization. The standard is intended for use by an organization providing or using products or services that utilize AI systems. It is intended to help the organization develop or use AI systems responsibly in pursuing its objectives and meet applicable regulatory requirements, obligations related to interested parties and expectations from them. This standard is applicable to any organization, regardless of size, type and nature, that provides or uses products or services that utilize AI systems.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-management-system/)
 
-    -   This standard specifies the requirements and provides guidance for establishing, implementing, maintaining and continually improving an AI management system within the context of an organization. The standard is intended for use by an organization providing or using products or services that utilize AI systems. It is intended to help the organization develop or use AI systems responsibly in pursuing its objectives and meet applicable regulatory requirements, obligations related to interested parties and expectations from them. This standard is applicable to any organization, regardless of size, type and nature, that provides or uses products or services that utilize AI systems.
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-management-system/)
-
--   **DCB0129:** Clinical Risk Management: its Application in the Manufacture of Health IT Systems & **DCB0160:** Clinical Risk Management: its Application in the Deployment and Use of Health IT Systems - These standards form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clinical safety of Health Information Technology (HIT) systems - [DCB0129](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0129-clinical-risk-management-its-application-in-the-manufacture-of-health-it-systems) is for organisations who develop and maintain HIT that will be utilised in health and care environments. - [DCB0160](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0160-clinical-risk-management-its-application-in-the-deployment-and-use-of-health-it-systems) is for organisations who plan to deploy, use, maintain and decommission HIT systems within health and care environments.
-    :::
+- **DCB0129:** Clinical Risk Management: its Application in the Manufacture of Health IT Systems & **DCB0160:** Clinical Risk Management: its Application in the Deployment and Use of Health IT Systems
+    - These standards form a pair of clinical risk management standards implemented by the NHS which are enforced under section 250 of the Health and Social Care Act 2012 to assure the clinical safety of Health Information Technology (HIT) systems
+    - [DCB0129](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0129-clinical-risk-management-its-application-in-the-manufacture-of-health-it-systems) is for organisations who develop and maintain HIT that will be utilised in health and care environments.
+    - [DCB0160](https://digital.nhs.uk/data-and-information/information-standards/information-standards-and-data-collections-including-extractions/publications-and-notifications/standards-and-collections/dcb0160-clinical-risk-management-its-application-in-the-deployment-and-use-of-health-it-systems) is for organisations who plan to deploy, use, maintain and decommission HIT systems within health and care environments.
+:::
 
 ### Measurement and test methods
 
@@ -90,17 +94,15 @@ The aviation industry is one example where they are relied upon to achieve accep
 :::success
 **Examples**
 
--   ISO/IEC TS 4213:2022 - Assessment of machine learning classification performance
+- ISO/IEC TS 4213:2022 - Assessment of machine learning classification performance
 
-    -   This document specifies methodologies for measuring classification performance of machine learning models, systems and algorithms.
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-assessment-of-machine-learning-classification-performance/)
+    - This document specifies methodologies for measuring classification performance of machine learning models, systems and algorithms.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/information-technology-artificial-intelligence-assessment-of-machine-learning-classification-performance/)
+- IEEE 2937-2022 - Performance Benchmarking for Artificial Intelligence Server Systems
 
--   IEEE 2937-2022 - Performance Benchmarking for Artificial Intelligence Server Systems
-
-        - 'AI computing differs from generic computing in terms of device formation, operators, and usage. AI server systems, including AI server, cluster, and high-performance computing (HPC) infrastructures are designed specifically for this purpose. The performance of these infrastructures is important to users not only on generic models but also on the ones for specific domains. Formal methods for the performance benchmarking for AI server systems are provided in this standard, including approaches for test, metrics, and measure. In addition, the technical requirements for benchmarking tools are discussed.'
-        - [IEEE 2937-2022](https://standards.ieee.org/ieee/2937/10376/)
-
-    :::
+    - 'AI computing differs from generic computing in terms of device formation, operators, and usage. AI server systems, including AI server, cluster, and high-performance computing (HPC) infrastructures are designed specifically for this purpose. The performance of these infrastructures is important to users not only on generic models but also on the ones for specific domains. Formal methods for the performance benchmarking for AI server systems are provided in this standard, including approaches for test, metrics, and measure. In addition, the technical requirements for benchmarking tools are discussed.'
+    - [IEEE 2937-2022](https://standards.ieee.org/ieee/2937/10376/)
+:::
 
 ### Product and performance requirements
 
@@ -117,13 +119,15 @@ These standards are instrumental in shaping reliable, safe, and high-quality pro
 :::success
 **Examples**
 
--   BS ISO/IEC 29155-4:2016 - Systems and software engineering. Information technology project performance benchmarking framework. Guidance for data collection and maintenance
+- BS ISO/IEC 29155-4:2016 - Systems and software engineering. Information technology project performance benchmarking framework. Guidance for data collection and maintenance
+    - This text provides requirements and guidance pertaining to the collection and maintenance of data for information technology (IT) projects. It serves as a foundational element within the broader context of benchmarking activities under "the IT project performance benchmarking framework."
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/systems-and-software-engineering-information-technology-project-performance-benchmarking-framework-guidance-for-data-collection-and-maintenance/)
 
-    -   This text provides requirements and guidance pertaining to the collection and maintenance of data for information technology (IT) projects. It serves as a foundational element within the broader context of benchmarking activities under "the IT project performance benchmarking framework."
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/systems-and-software-engineering-information-technology-project-performance-benchmarking-framework-guidance-for-data-collection-and-maintenance/)
-
--   ISO 9001:2015 - Quality Management Systems. Requirements - ISO 9001 is an international standard that provides a framework for establishing and maintaining a quality management system. It is a horizontal sector agnostic standard applicable to organisations regardless of their size or the nature of their products or services. While ISO 9001 is not exclusively focused on product development, many organisations adopt it to demonstrate their commitment to quality and to enhance their overall product development and delivery processes. - [ISO 9001](https://www.iso.org/standard/62085.html) - **Check with Chris how best to reference**
-    :::
+- ISO 9001:2015 - Quality Management Systems. Requirements
+    - ISO 9001 is an international standard that provides a framework for establishing and maintaining a quality management system. It is a horizontal sector agnostic standard applicable to organisations regardless of their size or the nature of their products or services. While ISO 9001 is not exclusively focused on product development, many organisations adopt it to demonstrate their commitment to quality and to enhance their overall product development and delivery processes.
+    - [ISO 9001](https://www.iso.org/standard/62085.html)
+    - **Check with Chris how best to reference**
+:::
 
 ### Interface and architecture
 
@@ -135,14 +139,13 @@ In essence, the combination of interoperability, infrastructure, architecture, a
 :::success
 **Examples**
 
--   IEEE 2941: Standard for Artificial Intelligence (AI) Model Representation, Compression, Distribution, and Management
+- IEEE 2941: Standard for Artificial Intelligence (AI) Model Representation, Compression, Distribution, and Management
+    - The AI development interface, AI model interoperable representation, coding format, and model encapsulated format for efficient AI model inference, storage, distribution, and management are discussed in this standard.
+    - [AI Standards Hub Link](https://aistandardshub.org/ai-standards/ieee-standard-for-artificial-intelligence-ai-model-representation-compression-distribution-and-management/)
 
-    -   The AI development interface, AI model interoperable representation, coding format, and model encapsulated format for efficient AI model inference, storage, distribution, and management are discussed in this standard.
-    -   [AI Standards Hub Link](https://aistandardshub.org/ai-standards/ieee-standard-for-artificial-intelligence-ai-model-representation-compression-distribution-and-management/)
-
--   HTML (HyperText Markup Language)
-    -   A standard developed and maintained by the World Wide Web Consortium (W3C) and Web Hypertext Application Technology Working Group (WHATWG) to serve as a markup language for structuring and presenting content on the world wide web, providing a standardised and interoperable format for creating web pages and applications.
-    -   [HTML - Living Standard](https://html.spec.whatwg.org/multipage/)
+- HTML (HyperText Markup Language)
+    - A standard developed and maintained by the World Wide Web Consortium (W3C) and Web Hypertext Application Technology Working Group (WHATWG) to serve as a markup language for structuring and presenting content on the world wide web, providing a standardised and interoperable format for creating web pages and applications.
+    - [HTML - Living Standard](https://html.spec.whatwg.org/multipage/)
 
 :::
 
@@ -156,9 +159,9 @@ This leads to increased efficiency and innovative edge to stay current and compe
 
 The following headings highlight the functions and benefits in more detail:
 
--   [Assurance, risks, and trust](#assurance-risks-and-trust)
--   [Knowledge and technology diffusion](#knowledge-and-technology-diffusion)
--   [Standards as compliance tools](#standards-as-compliance-tools)
+- [Assurance, risks, and trust](#assurance-risks-and-trust)
+- [Knowledge and technology diffusion](#knowledge-and-technology-diffusion)
+- [Standards as compliance tools](#standards-as-compliance-tools)
 
 ### Assurance, risks, and trust
 
@@ -227,7 +230,7 @@ Find an instance of a standard to use as an example. Similar to how CDEI present
 ### Evidential grounding and justification of property claims
 
 Property claims require evidential grounding.
-That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link.
+That is, the validity of a claim needs to be justified by connecting the claim to evidence through a `supported by` link (see [guidance](../guidance/components/#support-links)).
 But how does a project team or organisation know which evidence to select, and whether it is sufficient to justify the claims being made? This is where standards can provide useful support?
 
 For instance, `measurement and test methods` and `product and performance requirements` standards are crucial for determining whether a system meets the required performance levels.

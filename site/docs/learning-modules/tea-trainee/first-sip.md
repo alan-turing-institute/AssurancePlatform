@@ -36,9 +36,7 @@ For example, an argument for a car's reliability, or a case put forward by a law
 The relationship between arguments, claims, and evidence is important.
 As Tim Kelly (1998) stated in his influential doctoral thesis on argument-based assurance (original quote adapted):
 
-!!! quote
-
-    An argument without supporting evidence is _unfounded_, and therefore unconvincing. And, evidence without argument is _unexplained_—it can be unclear how goals or objectives have been satisfied.
+> An argument without supporting evidence is _unfounded_, and therefore unconvincing. And, evidence without argument is _unexplained_—it can be unclear how goals or objectives have been satisfied.
 
 In the above example, the sales advisor made claims about their cars being _reliable_ and _thoroughly assessed_ prior to sales, but these claims were not backed up by convincing evidence and were in fact undermined by the contrary evidence (i.e. two unreliable cars).
 
@@ -72,10 +70,10 @@ Let's look at the core elements that make up an assurance case.
 
 All assurance cases in the TEA platform contain the following core elements, depicted in Figure 1.
 
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/001-01-figure1.svg)
-  <figcaption>Figure 1—the core elements of an assurance case for the TEA platform.</figcaption>
-</figure>
+![](../../docs/assets/images/learning-modules/001-01-figure1.svg)
+_Figure 1—the core elements of an assurance case for the TEA platform._
+
+Let's look at each of these elements in turn.
 
 #### Goal Claim
 
@@ -87,10 +85,8 @@ For this reason, we sometimes refer to a goal element as the _top-level_ goal cl
 
 Consider the example goal claim in Figure 2.
 
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/001-01-figure2.svg)
-  <figcaption>Figure 2—An example goal claim focused on explainability.</figcaption>
-</figure>
+![](../../docs/assets/images/learning-modules/001-01-figure2.svg)
+_Figure 2—An example goal claim focused on explainability._
 
 Putting aside the issue of what this AI system is or does for a moment, it should be clear that providing assurance for such a high-level goal will not be easy given the way in which the goal is currently formulated.
 Simply put, it's not clear what is meant by "explainable".
@@ -116,33 +112,31 @@ Like a top-level goal claim, they are also propositions that require justificati
 However, while an assurance case may only have one _top-level goal claim_[^modularity], it will have _many_ property claims.
 
 Collectively, the set of property claims serve to establish the central argument for how a goal claim has been established by detailing properties of a project or the system that help justify why the top-level goal is likely to be true.
-Let's add some to the above goal claim, as shown in Figure 3.
+Let's add some to the above goal claim, as shown in ==Figure 3==.
 
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/001-01-figure3.svg)
-  <figcaption>Figure 3—an example assurance case showing a goal claim focused on explainability, with several property claims attached.</figcaption>
-</figure>
+![](../../docs/assets/images/learning-modules/001-01-figure3.svg)
+_Figure 3—an example assurance case showing a goal claim focused on explainability, with several property claims attached._
 
-Identifying the necessary and sufficient set of property claims needed to support an argument can be challenging
+Identifying the necessary and sufficient set of property claims needed to
+support an argument can be challenging[^resources].
 In later sections, we will look at how this process can be made easier.
 For now, let's look at an element that supports this task by adding additional structure (or, scaffolding) to the argument.
 
-!!! info "Claims as Propositions"
+!!! info "Claims as Propositions""
 
     As you can see, there are two types of claims in TEA:
 
-     - Top-Level Goal Claim
-     - Property Claims
+        - Top-Level Goal Claim
+        - Property Claims
 
     Both types of claims can be thought of as *propositions*. In the context of an assurance case, it is important that the goal and property claims are formulated as propositions as they enable us to determine *what is being claimed* and whether the argument and evidence are *sufficient to establish the truth* of the top-level goal claim or lower-level property claims.
-
     In most instances, the claims in an assurance case will be most similar to (5), and not, say, like the logical or mathematical truths (2) and (3). That is a statement that may be true or false. Examples of propositions include:
 
-     1. All swans are white (falsifiable)
-     2. All bachelors are unmarried (true by definition)
-     3. The square root of 9 is 3 (mathematical truth)
-     4. Water boils at 100°C (true under certain conditions)
-     5. The AI system does not create discriminatory outcomes (empirical claim that could be contested)
+        1. All swans are white (falsifiable)
+        2. All bachelors are unmarried (true by definition)
+        3. The square root of 9 is 3 (mathematical truth)
+        4. Water boils at 100°C (true under certain conditions)
+        5. The AI system does not create discriminatory outcomes (empirical claim that could be contested)
 
 #### Strategy
 
@@ -153,17 +147,15 @@ A strategy element helps to make clear the reasoning or approach taken to develo
 Unlike goal claims and property claims, however, strategy elements simply provide scaffolding (or a blueprint of sorts) for how the team plan to demonstrate that a certain goal or claim is met by breaking it up into sub-arguments.
 Let's consider our running example again.
 
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/001-01-figure4.svg)
-  <figcaption>Figure 4—an example assurance case with additional structure elements to help scaffold the argument and organise claims into sub-arguments.</figcaption>
-</figure>
+![](../../docs/assets/images/learning-modules/001-01-figure3.svg)
+_Figure 4—an example assurance case with additional structure elements to help scaffold the argument and organise claims into sub-arguments._
 
 There are several benefits to making the over-arching argument's strategy
 explicit:
 
--   **Guiding the argument**: during iterative development, the set of strategy elements serve as placeholders that the project team can use to break down the complex task of decomposing goals. And, during communication, they can serve as a clear roadmap to help other stakeholders understand and follow their reasoning.
--   **Facilitating engagement and evaluation**: external reviewers or stakeholders may wish to engage with or evaluate an assurance case, at different stages of development (e.g. during project development or compliance/auditing of the system). Understanding the strategy chosen by the project team is can help wider stakeholders assess whether the presented evidence is sufficient, if there are gaps in the argument, and, ultimately, help the project team and wider community develop more robust standards and best practices.
--   **Clarifying case relationships**: strategy elements can connect multiple elements, such as goal claims to more detailed property claims. Leveraging this hierarchical structure ensures that all claims are supported by well-thought-out process of reasoning and deliberation, and can also help a project team identify relevant evidence to ground the overarching argument.
+- **Guiding the argument**: during iterative development, the set of strategy elements serve as placeholders that the project team can use to break down the complex task of decomposing goals. And, during communication, they can serve as a clear roadmap to help other stakeholders understand and follow their reasoning.
+- **Facilitating engagement and evaluation**: external reviewers or stakeholders may wish to engage with or evaluate an assurance case, at different stages of development (e.g. during project development or compliance/auditing of the system). Understanding the strategy chosen by the project team is can help wider stakeholders assess whether the presented evidence is sufficient, if there are gaps in the argument, and, ultimately, help the project team and wider community develop more robust standards and best practices.
+- **Clarifying case relationships**: strategy elements can connect multiple elements, such as goal claims to more detailed property claims. Leveraging this hierarchical structure ensures that all claims are supported by well-thought-out process of reasoning and deliberation, and can also help a project team identify relevant evidence to ground the overarching argument.
 
 Let's now turn to consider evidence in more detail.
 
@@ -172,9 +164,7 @@ Let's now turn to consider evidence in more detail.
 Evidence is what grounds an assurance case.
 Recall the quotation from earlier:
 
-!!! quote
-
-    An argument without supporting evidence is _unfounded_, and therefore unconvincing. (Kelly, 1998)
+> An argument without supporting evidence is _unfounded_, and therefore unconvincing. (Kelly, 1998)
 
 Whereas goals orient and direct an argument, strategies help scaffold the logic of an argument, and property claims help specify and establish an argument, evidence is what provides the basis for trusting the validity of the case as a whole.
 As the foundation of an assurance case, evidence is crucial!
@@ -185,10 +175,8 @@ Alternatively, if the claim is about a model's performance exceeding some thresh
 
 Let's look at a single branch of our running example, focusing on `S1`. We can expand the set of property claims for this strategy and consider what sorts of evidence may be suitable.
 
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/001-01-figure5.svg)
-  <figcaption>Figure 5—a partial view of an assurance case, focusing on a branch for a single strategy.</figcaption>
-</figure>
+![](../../docs/assets/images/learning-modules/001-01-figure5.svg)
+_Figure 5—a partial view of an assurance case, focusing on a branch for a single strategy._
 
 Similar to a legal case, where evidence needs to be admissible, relevant, and reliable, there are also standards for which types of evidence are appropriate in a given context. In some cases, technical standards may exist that can help bolster the trustworthiness of an argument, by allowing a project team to show how their actions adhere to standards set by an external community.
 In other cases, consensus may only emerge through the communication and evaluation of the evidence itself.
@@ -202,16 +190,10 @@ In TEA, the context for an assurance case is made explicit by using context elem
 For instance, consider the following two examples:
 
 **Example 1**
-
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/context-example1.svg)
-</figure>
+![](../../docs/assets/images/learning-modules/context-example1.svg)
 
 **Example 2**
-
-<figure markdown="span">
-  ![](../../assets/images/learning-modules/context-example2.svg)
-</figure>
+![](../../docs/assets/images/learning-modules/context-example2.svg)
 
 It should be clear why these two contexts would make a difference in the subsequent claims and evidence needed to justify the goal.
 
@@ -258,7 +240,7 @@ Some examples of contextual information that could be added include:
     - Property Claim to Context
     - Strategy to Context
 
-### Value of Trustworthy and Ethical Assurance
+## Value of Trustworthy and Ethical Assurance
 
 One of the key strengths of Trustworthy and Ethical Assurance is its ability to facilitate clear communication among stakeholders, including researchers, developers, regulators, and system users.
 By presenting an argument graphically, as a well-structured set of elements and links, the underlying logic and structure of an argument is easier to discern.
@@ -266,7 +248,7 @@ By presenting an argument graphically, as a well-structured set of elements and 
 Another value of TEA is that it promotes and supports a process of critical reasoning, which is designed to create a convincing argument that articulates why a top-level goal is true (or, more precisely why it is _likely to be true_).
 By making claims explicit and providing a structured framework for critical reasoning, TEA facilitates a transparent, understandable and reproducible assurance process.
 
-Finally, it also offers a flexible and extensible way to integrate various types of evidence (and [standards](../other-modules/standards.md)), such as empirical data, expert opinion, and formal methods, into a cohesive argument.
+Finally, it also offers a flexible and extensible way to integrate various types of evidence (and [standards](standards.md)), such as empirical data, expert opinion, and formal methods, into a cohesive argument.
 
 There are many other values of TEA, which we will get to in due course.
 However, TEA is also not without its challenges[^habli].
@@ -277,6 +259,32 @@ Furthermore, there are also open research questions regarding how to update or m
 We will discuss all of this, and more, in depth in later modules.
 In the next module, we will look at how to use the TEA platform itself.
 
-[^gsn]: In the GSN standard, all claims are treated as goals and no distinction is made between goal claims and property claims. Our methodology maintains consistency with this standard, which is why property claims have the same type as goal claims, but adds an additional descriptive layer to better represent the ethical process of deliberation and reflection.
+[^gsn]:
+    In the GSN standard, all claims are treated as goals and no distinction is
+    made between goal claims and property claims. Our methodology maintains
+    consistency with this standard, which is why property claims have the same
+    type as goal claims, but adds an additional descriptive layer to better
+    represent the ethical process of deliberation and reflection (see section on
+    [Operationalising Principles](operationalising-principles.md)) <!-- @chrisdburr it looks like this document is missing! -->
+
 [^modularity]: See earlier note about 'Multiple Goals and Modular Arguments'.
-[^habli]: Habli, I., Alexander, R., & Hawkins, R. D. (2021). Safety Cases: An Impending Crisis? In Safety-Critical Systems Symposium (SSS’21). https://core.ac.uk/download/pdf/363148691.pdf
+[^habli]:
+    Habli, I., Alexander, R., & Hawkins, R. D. (2021). Safety Cases: An
+    Impending Crisis? In Safety-Critical Systems Symposium (SSS’21).
+    https://core.ac.uk/download/pdf/363148691.pdf
+
+[^resources]:
+    The TEA platform has a wide-range of tools and resources for supporting this
+    reflective and deliberative process. See [here](#).
+
+#### Unused
+
+The set of all property claims and evidence are taken to constitute _the argument_ that supports the validity of the top-level goal.
+Whether it does this successfully will depend on how well the argument is constructed.
+
+The structure of an assurance case is presented in a visually intuitive form that supports accessible communication and assists critical engagement.
+For instance, if a claim is not supported by evidence, the resulting gap will be easy to spot.[^ui]
+And, whether some evidence is strong enough to support its parent claim (or several claims) can be directly evaluated by considering the relationships that are presented.
+As such, ABA helps teams and stakeholders consider both positive evidence as well as possible counterarguments, gaps, and uncertainties, offering mitigations for those when possible.
+
+[^ui]: It is also worth noting that the UI for the TEA platform is designed with such requirements in mind (i.e. easily identifying claims that remain unsupported by evidence).

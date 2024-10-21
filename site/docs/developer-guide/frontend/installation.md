@@ -18,14 +18,14 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     Start by cloning the TEA Platform repository to your local machine, if you haven't already done so.
 
     ```shell
-    $ git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+    git clone https://github.com/alan-turing-institute/AssurancePlatform.git
     ```
 
 2. **Navigate to the Frontend Directory**
     Change into the frontend directory within the cloned repository.
 
     ```shell
-    $ cd AssurancePlatform/frontend
+    cd next-frontend
     ```
 
 3. **Install Dependencies**
@@ -33,7 +33,7 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     Run the following command to install all required npm packages specified in the package.json file.
 
     ```shell
-    $ npm install
+    npm install
     ```
 
 4. **Run the Development Server**
@@ -41,7 +41,13 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     Start the development server to launch the TEA Platform in your default web browser.
 
     ```shell
-    $ npm start
+    npm run start
+    ```
+
+    or, for development server:
+
+    ```shell
+    npm run dev
     ```
 
     **This command will automatically open a new browser tab pointing to http://localhost:3000, where you can start interacting with the frontend application.**
@@ -51,16 +57,38 @@ Setting up and running the frontend of the Trustworthy and Ethical Assurance (TE
     It's good practice to run the available tests to ensure that the frontend components are functioning as expected.
 
     ```shell
-    $ npm run test
+    npm run test
     ```
 
-## Additional Setup for SVG Export
+## Environment Variables
+
+Ensure that you have added the following to your `.env.local` file in the root of this project.
+
+```
+NEXT_PUBLIC_STORAGESASTOKEN={token-value}
+NEXT_PUBLIC_STORAGESOURCENAME={storage-name-value}
+
+GITHUB_APP_CLIENT_ID={gh-clientid-value}
+GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
+NEXTAUTH_SECRET={unique-string}
+NEXT_PUBLIC_API_URL={api-url-value}
+API_URL={api-url-value}
+NEXTAUTH_URL={frontend-url-value}
+```
+
+To generate a unique string for the `NEXTAUTH_SECRET` you can run:
+
+```bash
+openssl rand -base64 32
+```
+
+<!-- ## Additional Setup for SVG Export
 
 To enable the export of SVG images from the frontend, you need to install the Mermaid CLI globally on your system.
 
 ```shell
-npm install -g @mermaid-js/mermaid-cli
-```
+$ npm install -g @mermaid-js/mermaid-cli
+``` -->
 
 ## Troubleshooting SSL Errors
 
