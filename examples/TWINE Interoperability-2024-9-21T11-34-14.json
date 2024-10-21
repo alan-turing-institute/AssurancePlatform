@@ -1,0 +1,615 @@
+{
+  
+  "type":"AssuranceCase",
+  "name":"TWINE Interoperability",
+  "description":"A draft assurance case for interoperable digital twins for the natural environment. This case has been developed for a joint workshop run by the UKs National Oceanography Centre and the Alan Turing Institute.",
+  "created_date":"2024-10-15T09:41:49.705962Z",
+  "lock_uuid":null,
+  "goals":[
+    {
+      
+      "type":"TopLevelNormativeGoal",
+      "name":"G1",
+      "short_description":"The digital twin is interoperable with the wider ecosystem of connected digital twins.",
+      "long_description":"N/A",
+      "keywords":"N/A",
+      "assurance_case_id":190,
+      "context":[],
+      "property_claims":[],
+      "strategies":[
+        {
+          
+          "type":"Strategy",
+          "name":"S1",
+          "short_description":"Sub-argument for compliance with technical standards",
+          "long_description":"Sub-argument for compliance with technical standards",
+          "goal_id":227,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P1",
+              "short_description":"The DT uses standardised data models and formats (e.g., XML, JSON, IFC)",
+              "long_description":"The DT uses standardised data models and formats (e.g., XML, JSON, IFC)",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P2",
+              "short_description":"The DT uses standardised communication protocols (e.g. MQTT, Apache Kafka, or AMQP) for data exchange.",
+              "long_description":"The DT uses standardised communication protocols (e.g. MQTT, Apache Kafka, or AMQP) for data exchange.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P3",
+              "short_description":"The data models used by the DT have been adapted from the IMFe asset register (or shared back into the asset register)",
+              "long_description":"The data models used by the DT have been adapted from the IMFe asset register (or shared back into the asset register)",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P4",
+              "short_description":"Real-time data streaming capabilities are implemented where necessary.",
+              "long_description":"Real-time data streaming capabilities are implemented where necessary.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P5",
+              "short_description":"The DT is compatible with the underlying IT infrastructure of the ecosystem.",
+              "long_description":"The DT is compatible with the underlying IT infrastructure of the ecosystem.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.1",
+                  "short_description":"Cloud services and platforms used are interoperable with those of other digital twins.",
+                  "long_description":"Cloud services and platforms used are interoperable with those of other digital twins.",
+                  "goal_id":null,
+                  "property_claim_id":1987,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P5.2",
+                  "short_description":"Security protocols are compatible to allow secure data exchange.",
+                  "long_description":"Security protocols are compatible to allow secure data exchange.",
+                  "goal_id":null,
+                  "property_claim_id":1987,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P6",
+              "short_description":"The DT is designed in an extensible and modular manner, allowing for future expansion and integration of additional components or services.",
+              "long_description":"The DT is designed in an extensible and modular manner, allowing for future expansion and integration of additional components or services.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P6.1",
+                  "short_description":"DT interfaces support extension and integration without significant changes to core components.",
+                  "long_description":"DT interfaces support extension and integration without significant changes to core components.",
+                  "goal_id":null,
+                  "property_claim_id":1990,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P6.2",
+                  "short_description":"The DT provides Open APIs that are well-documented and accessible for external systems to interact seamlessly.",
+                  "long_description":"The DT provides Open APIs that are well-documented and accessible for external systems to interact seamlessly.",
+                  "goal_id":null,
+                  "property_claim_id":1990,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[
+                    {
+                      
+                      "type":"PropertyClaim",
+                      "name":"P6.2.1",
+                      "short_description":"APIs are published and comply with ecosystem requirements for interoperability.",
+                      "long_description":"APIs are published and comply with ecosystem requirements for interoperability.",
+                      "goal_id":null,
+                      "property_claim_id":1992,
+                      "level":3,
+                      "claim_type":"Property Claim",
+                      "property_claims":[],
+                      "evidence":[],
+                      "strategy_id":null,
+                      "in_sandbox":false,
+                      "hidden":false
+                    },
+                    {
+                      
+                      "type":"PropertyClaim",
+                      "name":"P6.2.2",
+                      "short_description":"APIs include necessary endpoints for data ingestion, querying, and real-time updates.",
+                      "long_description":"APIs include necessary endpoints for data ingestion, querying, and real-time updates.",
+                      "goal_id":null,
+                      "property_claim_id":1992,
+                      "level":3,
+                      "claim_type":"Property Claim",
+                      "property_claims":[],
+                      "evidence":[],
+                      "strategy_id":null,
+                      "in_sandbox":false,
+                      "hidden":false
+                    }
+                  ],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":306,
+              "in_sandbox":false,
+              "hidden":false
+            }
+          ],
+          "in_sandbox":false,
+          "hidden":false
+        },
+        {
+          
+          "type":"Strategy",
+          "name":"S2",
+          "short_description":"Sub-argument for semantic interoperability",
+          "long_description":"Sub-argument for semantic interoperability",
+          "goal_id":227,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P7",
+              "short_description":"The DT uses a shared ontology consistent with the ecosystem.",
+              "long_description":"The DT uses a shared ontology consistent with the ecosystem.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P7.1",
+                  "short_description":"Environmental data terms and definitions align with the common ontology.",
+                  "long_description":"Environmental data terms and definitions align with the common ontology.",
+                  "goal_id":null,
+                  "property_claim_id":1995,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P7.2",
+                  "short_description":"Semantic annotations are applied to data for clarity and consistency.",
+                  "long_description":"Semantic annotations are applied to data for clarity and consistency.",
+                  "goal_id":null,
+                  "property_claim_id":1995,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":307,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P8",
+              "short_description":"Data quality checks are conducted regularly to ensure consistency with the ecosystem’s ontology.",
+              "long_description":"Data quality checks are conducted regularly to ensure consistency with the ecosystem’s ontology.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P8.1",
+                  "short_description":"Validation rules are applied to incoming data to ensure alignment with shared standards.",
+                  "long_description":"Validation rules are applied to incoming data to ensure alignment with shared standards.",
+                  "goal_id":null,
+                  "property_claim_id":1998,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P8.2",
+                  "short_description":"Data is cleaned and processed to maintain consistency and reduce redundancy.",
+                  "long_description":"Data is cleaned and processed to maintain consistency and reduce redundancy.",
+                  "goal_id":null,
+                  "property_claim_id":1998,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":307,
+              "in_sandbox":false,
+              "hidden":false
+            }
+          ],
+          "in_sandbox":false,
+          "hidden":false
+        },
+        {
+          
+          "type":"Strategy",
+          "name":"S3",
+          "short_description":"Sub-argument for lifecycle governance",
+          "long_description":"Sub-argument for lifecycle governance",
+          "goal_id":227,
+          "property_claims":[
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P9",
+              "short_description":"Periodic assessments are scheduled to ensure ongoing compliance.",
+              "long_description":"Periodic assessments are scheduled to ensure ongoing compliance.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P10",
+              "short_description":"Compliance reports are documented and accessible for verification.",
+              "long_description":"Compliance reports are documented and accessible for verification.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P11",
+              "short_description":"Participation in ecosystem governance bodies and working groups.",
+              "long_description":"Participation in ecosystem governance bodies and working groups.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P11.1",
+                  "short_description":"Stakeholders attend regular meetings and contribute to policy development.",
+                  "long_description":"Stakeholders attend regular meetings and contribute to policy development.",
+                  "goal_id":null,
+                  "property_claim_id":2003,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P11.2",
+                  "short_description":"Feedback from the ecosystem is incorporated into the digital twin's development.",
+                  "long_description":"Feedback from the ecosystem is incorporated into the digital twin's development.",
+                  "goal_id":null,
+                  "property_claim_id":2003,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P12",
+              "short_description":"Changes to the DT are managed through a structured change management process.",
+              "long_description":"Changes to the DT are managed through a structured change management process.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P12.1",
+                  "short_description":"Changes are tracked, and historical versions are archived for audit purposes.",
+                  "long_description":"Changes are tracked, and historical versions are archived for audit purposes.",
+                  "goal_id":null,
+                  "property_claim_id":2006,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P12.2",
+                  "short_description":"Change impact assessments are conducted for significant updates to evaluate the effect on interoperability.",
+                  "long_description":"Change impact assessments are conducted for significant updates to evaluate the effect on interoperability.",
+                  "goal_id":null,
+                  "property_claim_id":2006,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P12.3",
+                  "short_description":"Stakeholders are engaged in the change process to gather input and minimise disruptions.",
+                  "long_description":"Stakeholders are engaged in the change process to gather input and minimise disruptions.",
+                  "goal_id":null,
+                  "property_claim_id":2006,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P13",
+              "short_description":"Clear policies are established and communicated with stakeholders, outlining necessary roles and responsibilities.",
+              "long_description":"Clear policies are established and communicated with stakeholders, outlining necessary roles and responsibilities.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P13.1",
+                  "short_description":"Sufficient data ownership policies have been established.",
+                  "long_description":"Sufficient data ownership policies have been established.",
+                  "goal_id":null,
+                  "property_claim_id":2010,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P13.2",
+                  "short_description":"Sufficient access rights and security policies have been established.",
+                  "long_description":"Sufficient access rights and security policies have been established.",
+                  "goal_id":null,
+                  "property_claim_id":2010,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                },
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P13.3",
+                  "short_description":"Clear accountability policies have been implemented.",
+                  "long_description":"Clear accountability policies have been implemented.",
+                  "goal_id":null,
+                  "property_claim_id":2010,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            },
+            {
+              
+              "type":"PropertyClaim",
+              "name":"P14",
+              "short_description":"A feedback loop is established to continually improve the DT based on user and ecosystem input.",
+              "long_description":"A feedback loop is established to continually improve the DT based on user and ecosystem input.",
+              "goal_id":null,
+              "property_claim_id":null,
+              "level":1,
+              "claim_type":"Property Claim",
+              "property_claims":[
+                {
+                  
+                  "type":"PropertyClaim",
+                  "name":"P14.1",
+                  "short_description":"Stakeholder and user feedback is systematically gathered and assessed to improve system capabilities.",
+                  "long_description":"Stakeholder and user feedback is systematically gathered and assessed to improve system capabilities.",
+                  "goal_id":null,
+                  "property_claim_id":2014,
+                  "level":2,
+                  "claim_type":"Property Claim",
+                  "property_claims":[],
+                  "evidence":[],
+                  "strategy_id":null,
+                  "in_sandbox":false,
+                  "hidden":false
+                }
+              ],
+              "evidence":[],
+              "strategy_id":308,
+              "in_sandbox":false,
+              "hidden":false
+            }
+          ],
+          "in_sandbox":false,
+          "hidden":false
+        },
+        {
+          
+          "type":"Strategy",
+          "name":"S4",
+          "short_description":"Sub-argument for user and ecosystem interaction",
+          "long_description":"Sub-argument for user and ecosystem interaction",
+          "goal_id":227,
+          "property_claims":[],
+          "in_sandbox":false,
+          "hidden":false
+        }
+      ],
+      "hidden":false
+    }
+  ],
+  "owner":9,
+  "edit_groups":[26],
+  "view_groups":[25],
+  "color_profile":"default",
+  "comments":[],
+  "permissions":"manage",
+  "hidden":false
+}
