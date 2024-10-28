@@ -226,10 +226,10 @@ nav:
                   - GitHub Repository Endpoints: technical-guide/reference-guide/backend/api/github.md
                   - Comment Endpoints: technical-guide/reference-guide/backend/api/comment.md
           - Frontend:
-              - Next.js: technical-guide/reference-guide/frontend/texh-stack/nextjs.md
-              - Next Auth.js: technical-guide/reference-guide/frontend/texh-stack/nextauthjs.md
-              - TailwindCss: technical-guide/reference-guide/frontend/texh-stack/tailwindcss.md
-              - Reactflow: technical-guide/reference-guide/frontend/texh-stack/reactflow.md
+              - Next.js: technical-guide/reference-guide/frontend/tech-stack/nextjs.md
+              - Next Auth.js: technical-guide/reference-guide/frontend/tech-stack/nextauthjs.md
+              - TailwindCss: technical-guide/reference-guide/frontend/tech-stack/tailwindcss.md
+              - Reactflow: technical-guide/reference-guide/frontend/tech-stack/reactflow.md
           - Deployment:
               - Azure: technical-guide/reference-guide/deployment/azure.md
           - CI/CD Pipeline:
