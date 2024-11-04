@@ -3,122 +3,64 @@ hide:
   - navigation
 ---
 
-# About the Trustworthy and Ethical Assurance Platform
+# About the TEA Platform
 
-!!! info
+The Trustworthy and Ethical Assurance (TEA) platform is an open-source and community-oriented tool that has been designed and developed by researchers at the Alan Turing Institute and University of York to support the process of developing and communicating trustworthy and ethical assurance cases. 
 
-    The Trustworthy and Ethical Assurance platform, or TEA Platform 🫖 for short, is
-    an open-source and community-oriented tool that has been designed and developed by researchers at the
-    Alan Turing Institute and University of York to support the process of
-    developing and communicating trustworthy and ethical assurance cases.
+To better understand the purpose and motivation of the TEA platform, consider the following question:
 
-![A stylised illustration of an assurance case.](assets/images/assurance-case-large.png){ align=right width="45%" }
+!!! question 
 
-To better understand the purpose and motivation of the TEA platform, we can
-consider the following question:
+    How could a team of researchers and developers provide assurance to their stakeholders or users that some _ethical goal_ has been achieved over the course of designing, developing, and deploying a data-driven technology?
 
-> How should researchers and developers provide assurance that some ethical goal
-> has been achieved over the course of a designing, developing, and deploying a
-> data-driven technology, such as a machine learning model or AI system?
+This is not an easy question to answer! As we pick it apart, we realise there are many more questions that need to be addressed:
 
-This is not an easy question to answer! As we pick it apart, we realise there
-are many more questions that need to be addressed:
+-   Which ethical goals are relevant to the technology (e.g. fairness, explainability, safety, sustainability)?
+-   How are these goals defined in the context of the project?
+-   How can a project team provide _justified evidence_ that these goals have been achieved?
+-   Who should be engaged with as part of this process, and how should this engagement be structured?
 
-- Which ethical goals are relevant to the technology (e.g. fairness,
-  explainability, safety, sustainability)?
-- How are these goals defined in the context of the project?
-- How can a project team provide justified evidence that these goals have been
-  achieved?
-- Who should be engaged with as part of this process, and how should this
-  engagement be structured?
+## What does the TEA Platform do?
 
-The TEA platform helps project teams and stakeholders—including researchers,
-developers, decision-makers, managers, auditors, regulators, and users—answer
-these questions in a systematic manner. However, different elements of the
-platform serve specific but complementary purposes.
+The TEA platform helps project teams—including researchers, developers, decision-makers, managers, auditors, regulators, and users—answer these questions in a systematic manner.
+It achieves this through three interlocking features:
 
-## Key Elements of the TEA platform
+1. An interactive tool for building assurance cases ([accessible here](https://assuranceplatform.azurewebsites.net/))
+2. A set of educational resources that help users get the most out of the tool (see [learning modules](learning-modules/index.md))
+3. The community infrastructure that promotes open and collaborative practices (see [community resources](community/index.md))
 
-We can think of the TEA platform in terms of three interlocking elements:
+### Feature 1: Interactive Tool for Building and Reviewing Assurance Cases
 
-1. An interactive tool for building assurance cases
-2. A set of educational resources that help users get the most out of the tool
-   (e.g. user guides and documentation)
-3. The community infrastructure that promotes open and collaborative practices
+The main component of the TEA platform is the interactive tool that allows members of a project team to iteratively develop an _assurance case_ using a graphical interface.
+Figure 1. shows an example assurance case.
 
-### Element 1: Interactive Assurance Tool
+![A simple assurance case showing a top-level goal claim, a set of three property claims, and corresponding evidence.](assets/images/about-page-example.svg)
+_Figure 1. A simple assurance case showing a top-level goal claim, a set of three property claims, and corresponding evidence._
 
-The main component of the TEA platform is the interactive tool that allows
-members of a project team to iteratively develop an _assurance case_ using a
-graphical interface.
+At the top of the assurance case is a clear and accessible claim about the technology or system in question, which serves as the goal of the argument (i.e. the goal claim).
+Underneath this goal claim is a set of additional claims about specific properties of the project or system (i.e. property claims), which help specify the goal and demonstrate what actions or decisions have been taken to achieve the goal.
+And, at the base of the assurance case is the evidence that justifies the validity of the above claims.
 
-<!-- Insert screenshot of platform -->
+In short, an assurance case presents an _argument_, in a logical and graphical format, about how an ethical goal has been achieved.
+The key to an assurance case is the structure of the argument.
 
-In short, an assurance case presents an _argument_, in a logical and graphical
-format, about how an ethical goal has been achieved. The key to an assurance
-case is the structure of the argument.
+!!! note "An Introduction to Trustworthy and Ethical Assurance"
 
-At the top of an assurance case is a clear and accessible claim about the
-technology or system in question, which serves as the goal of the argument (i.e.
-the goal claim). Underneath this goal claim is a set of additional claims about
-specific properties of the project or system (i.e. property claims), which help
-specify the goal and demonstrate what actions or decisions have been taken to
-achieve the goal. And, at the base of the assurance case is the evidence that
-justifies the validity of the above claims.
+    A more complete introduction to Trustworthy and Ethical Assurance (including the tool and methodology) can be found in our [learning modules](learning-modules/index.md) section.
 
-Although there are additional elements beyond these three (see
-[here](guidance/components.md) for further details), these three central
-elements are vital for demonstrating to stakeholders that a system has been
-designed, developed, and deployed in a manner that is trustworthy and ethical.
-Figure 2 shows a simple (but incomplete) assurance case comprising these three
-elements.
+### Feature 2: User Training and Resources
 
-```mermaid
-flowchart TD
-  G1[The outputs of the AI system are explainable by trained professionals];
-  G1 --> P1[User training is sufficient to interpret the behaviour of the system];
-  G1 --> P2[The model used is intrinsically interpretable];
-  G1 --> P3[Accessible documentation is available to assist users with forming explanations];
-  P1 --> E1[(Details of user training)];
-  P2 --> E2[(Details of model architecture)];
-  P3 --> E3[(Documentation)];
-```
+Although the logical structure of an assurance case is simple, the process of building and sharing an assurance case can be more involved.
+As such, a significant element of the TEA platform is the learning resources and technical documentation that has been designed to widen the scope of who can participate in the assurance ecosystem.
 
-_Figure 2. A simple assurance case showing a top-level goal claim, a set of
-three property claims, and corresponding evidence._
+You can browse our [learning modules](learning-modules/index.md), [technical documentation](technical-documentation/index.md), or [community resources](community/index.md) to find out more.
 
-### Element 2: User Guidance and Documentation
+### Feature 3: Community Infrastructure
 
-Although the logical structure of an assurance case is simple, the process of
-building and sharing an assurance case can be more involved. As such, a
-significant element of the TEA platform is the user guidance and documentation
-that helps establish best practices and enhance the capabilities of teams.
-
-Our user guidance and documentation is continuously evolving, and the following
-tables provides an overview of what is currently available.[^gh_issues]
-
-[^gh_issues]:
-    You can also see our GitHub issues for further details of other modules or
-    sections that are `planned`, `in progress`, or `under review`:
-    [https://github.com/alan-turing-institute/AssurancePlatform/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation](https://github.com/alan-turing-institute/AssurancePlatform/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation)
-
-#### Introductory Resources and User Guidance
-
-{{ read_csv('module_tracker.csv') }}
-
-#### Technical Documentation
-
-{{ read_csv('technical.csv') }}
-
-### Element 3: Community Infrastructure
-
-A key part of trustworthy and ethical assurance is meaningful engagement with
-stakeholders and users. For instance, a project team may believe that they have
-carried out the set of actions and decisions that are sufficient to justify a
-claim made about the fairness of an AI system. However, the complexity of an
-ethical principles such as fairness means that it is easy to (unintentionally)
-overlook a core property that disproportionately affects a group of users (e.g.
-representativeness of data, equitable impact of a system).
+A key part of the TEA platform is meaningful engagement with the wider community.
+This is also true for trustworthy and ethical assurance more generally.
+For instance, a project team may believe that they have carried out the set of actions and decisions that are sufficient to justify a claim made about the fairness of an AI system.
+However, the complexity of an ethical principles such as fairness means that it is easy to (unintentionally) overlook a core property that disproportionately affects a group of users (e.g. representativeness of data, equitable impact of a system).
 
 Furthermore, our understanding of trustworthy and ethical assurance evolves as
 the capabilities of sociotechnical systems, such as AI systems or digital twins,
@@ -136,6 +78,14 @@ The benefits of this include:
 - Open design and collaboration of new ideas and features to improve the TEA
   platform
 
-If you want to learn more about how the TEA platform scaffolds community
-engagement, please read our community guide:
-[https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md).
+If you want to learn more about how the TEA platform scaffolds community engagement, please read our [community guide](community/index.md).
+Here, you can also find more information about [past or upcoming events](blog/index.md) for the TEA community.
+
+## Funding Statements
+
+- From March 2024 until September 2024, the project was funded by the BRAID (UKRI AHRC) programme as part of a scoping research grant for the Trustworthy and Ethical Assurance of Digital Twins project, which was awarded to Dr Christopher Burr.
+- Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+- Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
+- Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
+

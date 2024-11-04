@@ -135,114 +135,51 @@ markdown_extensions:
 extra_css:
   - assets/style.css
 
-# Page tree
-
-# nav:
-#   - Home: index.md
-#   - About the Platform: about.md
-#   - Introductory Resources:
-#       - About this Section: introductory-resources/index.md
-#       - What is Trustworthy and Ethical Assurance: introductory-resources/what-is-tea.md
-#       - The Assurance Ecosystem: introductory-resources/assurance-ecosystem.md
-#       - An Introduction to Argument-Based Assurance: introductory-resources/argument-based-assurance.md
-#       - Open Challenges in Trustworthy and Ethical Assurance: introductory-resources/open-challenges.md
-#       # - Standards and their role in assurance: introductory-resources/standards.md
-#   - User Guidance:
-#       - About this Section: guidance/index.md
-#       - Quickly Getting Started with the TEA Platform: guidance/getting-started.md
-#       - An Introduction to the TEA Case Builder: guidance/case-builder.md
-#       - Components of an Assurance Case: guidance/components.md
-#       - Managing TEA Assurance Cases: guidance/case-management.md
-#       - Exporting TEA Cases: guidance/exporting.md
-#       - Sharing TEA Cases: guidance/sharing.md
-#       # - Operationalising Ethical Principles: guidance/operationalising-ethics.md
-#       # - TEA and the Project Lifecycle: guidance/tea-project-lifecycle.md
-#       # - The Role of Standards in TEA: guidance/standards.md
-#       # - A Case Study: guidance/case-study.md
-#   - Platform Details:
-#       - About: platform-details/about.md
-#       - Quick Start with Docker: platform-details/docker-quickstart.md
-#       - Setting Up Your Development Environment: platform-details/development-environment.md
-#       - Backend:
-#           - Backend Documentation for the TEA Platform: platform-details/backend/index.md
-#           - Installation and Setup: platform-details/backend/installation.md
-#           - Django Settings: platform-details/backend/django-settings.md
-#           - Backend Management files: platform-details/backend/backend-management-files.md
-#           - API Documentation:
-#               - API Documentation: platform-details/backend/api/index.md
-#               - Authentication Endpoints: platform-details/backend/api/authentication.md
-#               - User Endpoints: platform-details/backend/api/user.md
-#               - Group Endpoints: platform-details/backend/api/group.md
-#               - Assurance Case Endpoints: platform-details/backend/api/assurance-cases.md
-#               - GitHub Repository Endpoints: platform-details/backend/api/github.md
-#               - Comment Endpoints: platform-details/backend/api/comment.md
-#       - Frontend:
-#           - Frontend Documentation for the TEA Platform: platform-details/frontend/index.md
-#           - Installation and Setup: platform-details/frontend/installation.md
-#           - Frontend Configuration: platform-details/frontend/react-configuration.md
-#           - React Components: platform-details/frontend/react-components.md
-#           - Visualizing Assurance Cases with Mermaid.js: platform-details/frontend/mermaid.md
-#       - Deployment:
-#           - Microsoft Azure Cloud: platform-details/deployment/azure.md
-#       # - GitHub OAuth: platform-details/github.md  # TODO: No GitHub access currently
-#       - Resetting the Database:
-#           - Resetting the Database: platform-details/reset-database/index.md
-#           - Azure Deployments: platform-details/reset-database/azure.md
-#           - Local Deployments: platform-details/reset-database/local.md
-#   - Community of Practice:
-#       - Community of Practice: community/index.md
-#       - Case Studies:
-#           - Case Studies: community/case-studies/index.md
-#           - Advancing Cardiovascular Medicine with CemrgApp: community/case-studies/cemrg-app.md
-#       - Community Support: community/community-support.md
-#       # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
-#       - Upcoming community events: blog/index.md
-
 nav:
   - Home: index.md
   - About the TEA Platform: about.md
   - Learning Modules:
       - About this Section: learning-modules/index.md
       - TEA Trainee:
-          - What is Trustworthy and Ethical Assurance: learning-modules/tea-trainee/first-sip.md
-      - Other Modules:
-          - The Assurance Ecosystem: learning-modules/assurance-ecosystem.md
-          - Standards and their role in assurance: learning-modules/standards.md
-  - Technical Guide:
-      - Introduction: technical-guide/index.md
-      - Quickstart:
-          - Environment Setup: technical-guide/quickstart/environment-setup.md
-          - Running The App: technical-guide/quickstart/running-the-app.md
-      - Reference Guide:
-          - Backend:
-              - Postgres Database: technical-guide/reference-guide/backend/postgres.md
-              - Django Framework: technical-guide/reference-guide/backend/django.md
-              - API Documentation:
-                  - API Documentation: technical-guide/reference-guide/backend/api/index.md
-                  - Authentication Endpoints: technical-guide/reference-guide/backend/api/authentication.md
-                  - User Endpoints: technical-guide/reference-guide/backend/api/user.md
-                  - Group Endpoints: technical-guide/reference-guide/backend/api/group.md
-                  - Assurance Case Endpoints: technical-guide/reference-guide/backend/api/assurance-cases.md
-                  - GitHub Repository Endpoints: technical-guide/reference-guide/backend/api/github.md
-                  - Comment Endpoints: technical-guide/reference-guide/backend/api/comment.md
-          - Frontend:
-              - Next.js: technical-guide/reference-guide/frontend/tech-stack/nextjs.md
-              - Next Auth.js: technical-guide/reference-guide/frontend/tech-stack/nextauthjs.md
-              - TailwindCss: technical-guide/reference-guide/frontend/tech-stack/tailwindcss.md
-              - Reactflow: technical-guide/reference-guide/frontend/tech-stack/reactflow.md
-          - Deployment:
-              - Azure: technical-guide/reference-guide/deployment/azure.md
-          - CI/CD Pipeline:
-              - GitHub Actions: technical-guide/reference-guide/ci-cd-pipeline/github-actions.md
-              - DockerHub: technical-guide/reference-guide/ci-cd-pipeline/dockerhub.md
-      - Resetting the Database:
-          - Resetting the Database: technical-guide/reset-database/index.md
-          - Azure Deployments: technical-guide/reset-database/azure.md
-          - Local Deployments: technical-guide/reset-database/local.md
+          - learning-modules/tea-trainee/index.md
+          - An Introduction to Trustworthy and Ethical Assurance: learning-modules/tea-trainee/first-sip.md
+      - TEA Specialist:
+          - learning-modules/tea-specialist/index.md
+      - TEA Expert:
+          - learning-modules/tea-expert/index.md
+      - Other Resources:
+          - List of Resources: learning-modules/other-resources/index.md 
+          - The Assurance Ecosystem: learning-modules/other-resources/assurance-ecosystem.md
+          - Standards and their role in assurance: learning-modules/other-resources/standards.md
+  - Technical Documentation:
+      - Introduction: technical-documentation/index.md
+      - Setup and Installation: 
+          - Local Install: technical-documentation/local-quickstart.md
+          - Docker Install: technical-documentation/docker-quickstart.md
+          - Cloud Deployment: technical-documentation/deployment.md
+      - Backend Reference:
+          - Django Settings: technical-documentation/reference-guide/backend/django-settings.md
+          - Backend Management Files: technical-documentation/reference-guide/backend/management-files.md
+          - Postgres Database: technical-documentation/reference-guide/backend/postgres.md
+          - API Documentation:
+              - technical-documentation/reference-guide/backend/api/index.md
+              - Authentication Endpoints: technical-documentation/reference-guide/backend/api/authentication.md
+              - User Endpoints: technical-documentation/reference-guide/backend/api/user.md
+              - Group Endpoints: technical-documentation/reference-guide/backend/api/group.md
+              - Assurance Case Endpoints: technical-documentation/reference-guide/backend/api/assurance-cases.md
+              - GitHub Repository Endpoints: technical-documentation/reference-guide/backend/api/github.md
+              - Comment Endpoints: technical-documentation/reference-guide/backend/api/comment.md
+      - Frontend Reference:
+          - Next.js: technical-documentation/reference-guide/frontend/nextjs.md
+          - NextAuth.js: technical-documentation/reference-guide/frontend/nextauthjs.md
+          - TailwindCss: technical-documentation/reference-guide/frontend/tailwindcss.md
+          - Reactflow: technical-documentation/reference-guide/frontend/reactflow.md
+      - CI/CD Pipeline:
+          - GitHub Actions: technical-documentation/reference-guide/ci-cd-pipeline/github-actions.md
+          - Docker Containers: technical-documentation/reference-guide/ci-cd-pipeline/docker.md
   - Community Resources:
       - Community of Practice: community/index.md
       - Community Support: community/community-support.md
-      # - Why We Ask for Access to Your GitHub: community/github-access.md  # TODO: No GitHub access currently
       - Upcoming community events: blog/index.md
 
 not_in_nav: |
