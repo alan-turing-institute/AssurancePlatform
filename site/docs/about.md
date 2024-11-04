@@ -5,11 +5,11 @@ hide:
 
 # About the TEA Platform
 
-The Trustworthy and Ethical Assurance (TEA) platform is an open-source and community-oriented tool that has been designed and developed by researchers at the Alan Turing Institute and University of York to support the process of developing and communicating trustworthy and ethical assurance cases. 
+The Trustworthy and Ethical Assurance (TEA) platform is an open-source and community-oriented tool that has been designed and developed by researchers at the Alan Turing Institute and University of York to support the process of developing and communicating trustworthy and ethical assurance cases.
 
 To better understand the purpose and motivation of the TEA platform, consider the following question:
 
-!!! question 
+!!! question
 
     How could a team of researchers and developers provide assurance to their stakeholders or users that some _ethical goal_ has been achieved over the course of designing, developing, and deploying a data-driven technology?
 
@@ -87,5 +87,3 @@ Here, you can also find more information about [past or upcoming events](blog/in
 - Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
 - Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
 - Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
-
-

@@ -148,12 +148,12 @@ nav:
       - TEA Expert:
           - learning-modules/tea-expert/index.md
       - Other Resources:
-          - List of Resources: learning-modules/other-resources/index.md 
+          - List of Resources: learning-modules/other-resources/index.md
           - The Assurance Ecosystem: learning-modules/other-resources/assurance-ecosystem.md
           - Standards and their role in assurance: learning-modules/other-resources/standards.md
   - Technical Documentation:
       - Introduction: technical-documentation/index.md
-      - Setup and Installation: 
+      - Setup and Installation:
           - Local Install: technical-documentation/local-quickstart.md
           - Docker Install: technical-documentation/docker-quickstart.md
           - Cloud Deployment: technical-documentation/deployment.md

@@ -57,7 +57,7 @@ Resetting your database on Azure involves a few crucial steps to ensure that the
 
     This process will remove all existing data in the database. It is highly recommended to back up any important data before proceeding with the reset.
 
-!!! info "Prerequisities" 
+!!! info "Prerequisities"
 
     The PostgreSQL command-line tool, `psql`, is required for directly interacting with your Azure database. Mac users with Homebrew can install it using `brew install postgresql`. Windows and Linux users should refer to their respective package managers or download it from the PostgreSQL official website.
 

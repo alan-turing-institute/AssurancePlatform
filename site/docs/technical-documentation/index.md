@@ -19,5 +19,4 @@ At its core, the platform features a web application built with the [Next.js](ht
 
 On the backend, the TEA platform is powered by [Django](https://www.djangoproject.com/), a high-level Python web framework that offers robust backend capabilities, including a straightforward API for data management. Data can be stored in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/) databases, providing options for lightweight to more scalable storage solutions.
 
-The platform also supports easy installation and deployment through [Docker](https://www.docker.com/), making it straightforward to set up in various environments, including [Azure](https://azure.microsoft.com/en-us). 
-
+The platform also supports easy installation and deployment through [Docker](https://www.docker.com/), making it straightforward to set up in various environments, including [Azure](https://azure.microsoft.com/en-us).

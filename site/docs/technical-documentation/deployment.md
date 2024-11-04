@@ -1,4 +1,4 @@
-# Deploying the TEA Platform 
+# Deploying the TEA Platform
 
 ## Microsoft Azure
 
@@ -90,4 +90,3 @@ The Django admin interface provides direct access to your database for managing 
 ## Conclusion
 
 Deploying the TEA Platform on Azure involves setting up a secure and scalable environment. By following these steps, you can ensure your deployment is robust and ready for production use. Always remember to secure your secret keys and sensitive information, especially when deploying in a public cloud environment.
-
