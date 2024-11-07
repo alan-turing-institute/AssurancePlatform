@@ -2,10 +2,7 @@
 
 ![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](site/docs/assets/images/hero.gif)
 
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
-
+[![All Contributors](https://img.shields.io/github/all-contributors/alan-turing-institute/AssurancePlatform?color=ee8449&style=flat-square)](#contributors)
 [![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
@@ -83,3 +80,14 @@ Between April 2023 and December 2023, this project received funding from the Ass
 
 Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
 (Grant number: TAS_PP_00040).
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
