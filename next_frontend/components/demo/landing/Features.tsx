@@ -11,12 +11,12 @@ import {
 const features = [
   {
     name: 'Structured Methodology.',
-    description: 'Our platform uses a structured methodology for assurance, supported by open and accessible user resources that have been designed to help build capabilities within the assurance ecosystem.',
+    description: 'Our platform uses a structured methodology for assurance, supported by open and accessible user resources designed by experts in assurance.',
     icon: CloudArrowUpIcon,
   },
   {
     name: 'Best Practices.',
-    description: 'By facilitating the sharing and communication of assurance cases, the TEA platform enables cross-sector and multi-disciplinary forms of knowledge sharing and best practice.',
+    description: 'Our aim is to facilitate open sharing and communication of assurance cases, to help enable cross-sector and multi-disciplinary forms of knowledge sharing and best practice.',
     icon: LockClosedIcon,
   },
   {
@@ -26,17 +26,17 @@ const features = [
   },
   {
     name: 'Community Building.',
-    description: 'The TEA Platform enhances the ethical design and development of data-driven technologies by fostering an open and inclusive community, committed to advancing trustworthiness.',
+    description: 'The TEA Platform aims to remove barriers to participation and contribution to assurance practices, seeking to build a diverse and inclusive community of practice.',
     icon: ChatBubbleLeftRightIcon,
   },
   {
     name: 'Privacy and Control.',
-    description: 'Where necessary, we provide detailed guidance and support for self-hosting to ensure that users who handle sensitive information can manage it securely and privately within their own organisation\'s infrastructure.',
+    description: 'Although we promote and encourage openness and transparency, we also support self-hosting to ensure that users who handle sensitive information can manage it securely and privately within their own organisation\'s infrastructure.',
     icon: FingerPrintIcon,
   },
   {
     name: 'Training and Capacity Building.',
-    description: 'The platform includes freely accessible training resources for a broad range of users and stakeholders, with the goal of enriching the assurance ecosystem’s capabilities.',
+    description: 'The platform includes freely accessible training resources for a broad range of users and stakeholders, as well as providing information about upcoming events and workshops.',
     icon: AcademicCapIcon,
   },
 ]
@@ -57,7 +57,7 @@ export default function Features() {
       <div className="relative overflow-hidden pt-16">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <img
-            src="/images/tea-chart.png"
+            src="/images/tea-chart-example.png"
             alt="App screenshot"
             className="mb-[-12%] rounded-xl shadow-2xl ring-1 ring-gray-900/10"
             width={2432}
@@ -72,11 +72,11 @@ export default function Features() {
         <dl className="mx-auto grid max-w-2xl grid-cols-1 gap-x-6 gap-y-10 text-base leading-7 text-gray-600 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-x-8 lg:gap-y-16">
           {features.map((feature) => (
             <div key={feature.name} className="relative pl-9">
-              <dt className="inline font-semibold text-gray-900">
+              <div className="inline font-semibold text-gray-900">
                 <feature.icon className="absolute left-1 top-1 h-5 w-5 text-indigo-600" aria-hidden="true" />
                 {feature.name}
-              </dt>{' '}
-              <dd className="inline">{feature.description}</dd>
+              </div>{' '}
+              <div className="inline text-pretty"><br/>{feature.description}</div>
             </div>
           ))}
         </dl>
