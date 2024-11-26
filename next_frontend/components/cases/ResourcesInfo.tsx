@@ -19,34 +19,34 @@ const components: { title: string; icon: any; href: string, description: string 
   {
     title: "Top-Level Goal Claim",
     icon: <Goal />,
-    href:"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#goal-claims",
+    href:"https://alan-turing-institute.github.io/AssurancePlatform/learning-modules/tea-trainee/first-sip/#goal-claim",
     description:
       "A statement asserting a desirable property or characteristic of the system or technology under consideration.",
   },
   {
     title: "Property Claim",
     icon: <FolderOpenDot />,
-    href:"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#property-claims",
+    href:"https://alan-turing-institute.github.io/AssurancePlatform/learning-modules/tea-trainee/first-sip/#property-claims",
     description:
       "A statement that helps specify the top-level goal claim and defines a measurable requirement for the project or system under consideration",
   },
   {
     title: "Strategy",
     icon: <Route />,
-    href:"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#strategy",
+    href:"https://alan-turing-institute.github.io/AssurancePlatform/learning-modules/tea-trainee/first-sip/#strategy",
     description:
       "A course of action or approach that can help break the task of assuring a top-level goal claim into a set of related property claims.",
   },
   {
     title: "Evidence",
     icon: <Database />,
-    href:"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#evidence",
+    href:"https://alan-turing-institute.github.io/AssurancePlatform/learning-modules/tea-trainee/first-sip/#evidence",
     description: "An artefact that justifies a linked property claim's validity and grounds an assurance case.",
   },
   {
     title: "Context",
     icon: <BookOpenText />,
-    href:"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#context",
+    href:"https://alan-turing-institute.github.io/AssurancePlatform/learning-modules/tea-trainee/first-sip/#context",
     description:
       "Additional information that clarifies the scope or boundary conditions of a top-level goal claim.",
   },
