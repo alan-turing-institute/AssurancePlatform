@@ -97,7 +97,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
       <Link href={`/case/${assuranceCase.id}`}>
         <Card className='flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full'>
           <CardHeader className='flex-1 w-full'>
-            {imageLoading ? 
+            {imageLoading ?
               (
                 <Skeleton className="relative flex aspect-video rounded-md mb-4 overflow-hidden" />
               ) : (
