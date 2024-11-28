@@ -1,4 +1,7 @@
 ---
+hide:
+    - navigation
+    - toc
 tags:
     - Introductory Resources
 ---
@@ -10,34 +13,38 @@ Some of the content can be read in any order and independently of each other, bu
 
 ## The TEA Curriculum
 
-### Assurance Trainee
+<div class="grid cards" markdown>
 
-!!! info "About this Level"
+-   :material-podium-bronze:{ .lg .middle } __TEA Trainee__
+
+    ---
 
     This level introduces students to basic concepts and foundations for getting the most from the TEA platform.
 
--   [Your First Sip of TEA: An Introduction to Trustworthy and Ethical Assurance](first-sip.md): an introduction to TEA, including an explanation of the underlying methodology and core elements.
--   [Making a Cup: How to Build an Assurance Case with the TEA Platform](making-a-cup): a walkthrough of the TEA platform, showing new users how to build an assurance case.
--   [Letting the TEA steep: Putting Principles into Practice](tea-steep.md): a deeper dive into the process of building an assurance case, with an emphasis on reflection, deliberation, and justification.
--   [Drinking TEA with others: Collaborating and sharing knowledge](drinking-tea.md): getting more from the TEA platform by engaging the community.
+    [:octicons-arrow-right-24: Go to module](tea-trainee/index.md)
 
-### Assurance Specialist
+-   :material-podium-silver:{ .lg .middle } __TEA Specialist__
 
-!!! info "About this Level"
+    ---
 
     This level builds on the foundational resources introduced in 'Assurance Trainee', and equips students with the knowledge and understanding required to contribute to the TEA community.
 
-_coming soon_
+    [:octicons-arrow-right-24: Go to module](tea-specialist/index.md)
 
-### Assurance Guru
+-   :material-podium-gold:{ .lg .middle } __TEA Expert__
 
-!!! info "About this Level"
+    ---
 
     This level is for those who wish to hone their knowledge and understanding, such that they are able to establish best practices alongside other advanced members of the TEA community and wider assurance ecosystem.
 
-_coming soon_
+    [:octicons-arrow-right-24: Go to module](tea-expert/index.md)
 
-## Other Learning Resources
+-   :material-sign-direction:{ .lg .middle } __Other Learning Resources__
 
--   [Understanding the Assurance Ecosystem](assurance-ecosystem.md): an introduction to the broader AI assurance ecosystem
--   [Standards and their role in assurance](standards.md): an introduction to standards, the different types of standards and their role in assurance
+    ---
+
+    This section contains other learning resources, such as further reading on specialised topics.
+
+    [:octicons-arrow-right-24: Go to resources](other-resources/index.md)
+
+</div>
