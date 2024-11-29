@@ -12,11 +12,12 @@ import {
 // import { AssuranceCase } from '@/types'
 import Link from 'next/link'
 import moment from 'moment'
-import { Eye, MessageCircleMore, PencilRuler, ScanEye, Trash2 } from 'lucide-react'
+import { Eye, Loader2, MessageCircleMore, PencilRuler, ScanEye, Trash2 } from 'lucide-react'
 import { AlertModal } from '@/components/modals/alertModal'
 import { useParams, useRouter } from 'next/navigation'
 import { useLoginToken } from '@/hooks/useAuth'
 import Image from 'next/image'
+import { Skeleton } from '../ui/skeleton'
 
 interface CaseCardProps {
   assuranceCase: any
@@ -31,6 +32,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [imgSrc, setImgSrc] = useState('');
+  const [imageLoading, setImageLoading] = useState<boolean>(true);
   // const [imgSrc, setImgSrc] = useState(`https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`);
   // const [imageExists, setImageExists] = useState(true)
   // const [imageUrl, setImageUrl] = useState<string>('')
@@ -81,6 +83,8 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
       setImgSrc(result.image)
     } catch (error) {
       console.log('Failed to fetch image')
+    } finally {
+      setImageLoading(false)
     }
   }
 
@@ -93,15 +97,20 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
       <Link href={`/case/${assuranceCase.id}`}>
         <Card className='flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full'>
           <CardHeader className='flex-1 w-full'>
-            <div className='relative flex aspect-video rounded-md mb-4 overflow-hidden'>
-              {imgSrc && (
-                <Image
-                  src={imgSrc}
-                  alt={`Assurance Case ${assuranceCase.name} screenshot`}
-                  fill
-                />
+            {imageLoading ?
+              (
+                <Skeleton className="relative flex aspect-video rounded-md mb-4 overflow-hidden" />
+              ) : (
+                <div className='relative flex aspect-video rounded-md mb-4 overflow-hidden'>
+                  {imgSrc && (
+                    <Image
+                      src={imgSrc}
+                      alt={`Assurance Case ${assuranceCase.name} screenshot`}
+                      fill
+                    />
+                  )}
+                </div>
               )}
-            </div>
             <CardTitle>{name}</CardTitle>
             <CardDescription className='text-slate-900 dark:text-white'>{description}</CardDescription>
           </CardHeader>
