@@ -1,6 +1,6 @@
 ---
 hide:
-  - navigation
+    - navigation
 ---
 
 # About the TEA Platform
@@ -55,18 +55,17 @@ As such, a significant element of the TEA platform is the learning resources and
 
 You can browse our [learning modules](learning-modules/index.md), [technical documentation](technical-documentation/index.md), or [community resources](community/index.md) to find out more.
 
+
 ### Feature 3: Community Infrastructure
 
 A key part of the TEA platform is meaningful engagement with the wider community.
 This is also true for trustworthy and ethical assurance more generally.
+
 For instance, a project team may believe that they have carried out the set of actions and decisions that are sufficient to justify a claim made about the fairness of an AI system.
 However, the complexity of an ethical principles such as fairness means that it is easy to (unintentionally) overlook a core property that disproportionately affects a group of users (e.g. representativeness of data, equitable impact of a system).
 
-Furthermore, our understanding of trustworthy and ethical assurance evolves as
-the capabilities of sociotechnical systems, such as AI systems or digital twins,
-also evolves. Therefore, it is vital that the process of developing and
-communicating assurance cases, where possible, is done in an open and
-collaborative manner.
+Furthermore, our understanding of trustworthy and ethical assurance evolves as the capabilities of sociotechnical systems, such as AI systems or digital twins, also evolves.
+Therefore, it is vital that the process of developing and communicating assurance cases, where possible, is done in an open and collaborative manner.
 
 The benefits of this include:
 

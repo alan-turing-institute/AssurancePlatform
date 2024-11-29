@@ -1,7 +1,7 @@
 CairoSVG>=2.5.2
 mkdocs-glightbox>=0.2.0
-mkdocs-include-markdown-plugin>=6.0.4
-mkdocs-material>=9.1.14
+mkdocs-include-markdown-plugin>=6
+mkdocs-material>=9.5
 mkdocs-rss-plugin>=1.8.0
 mkdocs-table-reader-plugin>=2.0.1
 # Requirements for additional plugins

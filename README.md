@@ -1,11 +1,8 @@
 # Trustworthy and Ethical Assurance Platform
 
-![A stylised illustration of an assurance case diagram. The diagram has a hierarchical tree structure with various shapes connected by lines, representing the logical argumentation and evidence supporting the assurance claim.](site/docs/assets/images/assurance-case-large.png)
+![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](site/docs/assets/images/hero.gif)
 
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
-
+[![All Contributors](https://img.shields.io/github/all-contributors/alan-turing-institute/AssurancePlatform?color=ee8449&style=flat-square)](#contributors)
 [![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
@@ -20,14 +17,15 @@ ethical assurance cases, developed by researchers at the
 [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
 and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
-To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/)
+The UK's Responsible Technology Adoption Unit (Department of Science, Innovation, and Technology) is also a project partner.
+
+To use the TEA platform, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
+
+> [!WARNING]
+> The TEA platform is made available as a research preview, and should not be used for any business critical tasks. Future breaking changes should be expected.
 
 To view the documentation site, please go to
 [https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
-
-### Quickstart install instructions
-
-To get started quickly with installing this platform visit the [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/) and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/) installation instructions.
 
 ## What is Trustworthy and Ethical Assurance? 🤝
 
@@ -56,60 +54,36 @@ developing, and deploying their technology or system.
 
 ## Installation Instructions 💻
 
+To get started quickly with installing this platform visit the [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/) and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/) installation instructions.
+
 The Trustworthy and Ethical Assurance application can be run locally or deployed
 on your own server or a cloud-based service (e.g. Azure). To view the different
-installation instructions, please visit our documentation site for
+installation instructions, please visit our documentation site for the
 [backend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/backend/installation/)
-and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/)
-installation instructions.
+and [frontend](https://alan-turing-institute.github.io/AssurancePlatform/platform-details/frontend/installation/).
 
 ## Further Resources 📚
 
 The following resources provide additional information about the Trustworthy and
 Ethical Assurance framework and methodology:
 
-- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the
-  responsible design, development, and deployment of data-driven technologies.
-  AI and Ethics.
-  [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
-- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental
-  Healthcare. The Alan Turing Institute.
-  [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+- Burr, C., Arana, S., Gould Van Praag, C., Habli, I., Kaas, M., Katell, M., Laher, S., Leslie, D., Niederer, S., Ozturk, B., Polo, N., Porter, Z., Ryan, P., Sharan, M., Solis Lemus, J. A., Strocchi, M., Westerling, K., (2024) Trustworthy and Ethical Assurance of Digital Health and Healthcare. [https://doi.org/10.5281/zenodo.10532573](https://doi.org/10.5281/zenodo.10532573)
+- Porter, Z., Habli, I., McDermid, J. et al. A principles-based ethics assurance argument pattern for AI and autonomous systems. AI Ethics 4, 593–616 (2024). [https://doi.org/10.1007/s43681-023-00297-2](https://doi.org/10.1007/s43681-023-00297-2)
+- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
 
 ## Funding Statements
 
-Between April 2023 and December 2023 this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project.
 
-Between July 2021 and June 2022. this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
+Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
+Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr
 (Grant number: TAS_PP_00040).
 
 ## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore-start -->
-<!-- markdownlint-disable -->
-<table>
-  <tbody>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nbarlowATI"><img src="https://avatars.githubusercontent.com/u/33832774?v=4?s=100" width="100px;" alt="nbarlowATI"/><br /><sub><b>nbarlowATI</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3AnbarlowATI" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Code">💻</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Documentation">📖</a> <a href="#design-nbarlowATI" title="Design">🎨</a> <a href="#example-nbarlowATI" title="Examples">💡</a> <a href="#ideas-nbarlowATI" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=nbarlowATI" title="Tests">⚠️</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://mhauru.org"><img src="https://avatars.githubusercontent.com/u/5229876?v=4?s=100" width="100px;" alt="Markus Hauru"/><br /><sub><b>Markus Hauru</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3Amhauru" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=mhauru" title="Code">💻</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=mhauru" title="Documentation">📖</a> <a href="#design-mhauru" title="Design">🎨</a> <a href="#example-mhauru" title="Examples">💡</a> <a href="#ideas-mhauru" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=mhauru" title="Tests">⚠️</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/AoifeHughes"><img src="https://avatars.githubusercontent.com/u/10923695?v=4?s=100" width="100px;" alt="Aoife Hughes"/><br /><sub><b>Aoife Hughes</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3AAoifeHughes" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=AoifeHughes" title="Code">💻</a> <a href="#ideas-AoifeHughes" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=AoifeHughes" title="Tests">⚠️</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.turing.ac.uk/people/researchers/flora-roumpani"><img src="https://avatars.githubusercontent.com/u/4749503?v=4?s=100" width="100px;" alt="Flora"/><br /><sub><b>Flora</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3Aentopia" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=entopia" title="Code">💻</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=entopia" title="Documentation">📖</a> <a href="#design-entopia" title="Design">🎨</a> <a href="#example-entopia" title="Examples">💡</a> <a href="#ideas-entopia" title="Ideas, Planning, & Feedback">🤔</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chrisdburr"><img src="https://avatars.githubusercontent.com/u/63010234?v=4?s=100" width="100px;" alt="Christopher Burr"/><br /><sub><b>Christopher Burr</b></sub></a><br /><a href="https://github.com/alan-turing-institute/AssurancePlatform/issues?q=author%3Achrisdburr" title="Bug reports">🐛</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=chrisdburr" title="Code">💻</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=chrisdburr" title="Documentation">📖</a> <a href="#design-chrisdburr" title="Design">🎨</a> <a href="#example-chrisdburr" title="Examples">💡</a> <a href="#ideas-chrisdburr" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=chrisdburr" title="Tests">⚠️</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/pulls?q=is%3Apr+reviewed-by%3Achrisdburr" title="Reviewed Pull Requests">👀</a> <a href="#talk-chrisdburr" title="Talks">📢</a> <a href="#userTesting-chrisdburr" title="User Testing">📓</a> <a href="#research-chrisdburr" title="Research">🔬</a> <a href="#promotion-chrisdburr" title="Promotion">📣</a> <a href="#projectManagement-chrisdburr" title="Project Management">📆</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://www.turing.ac.uk/research/harnessing-power-digital-twins/turing-research-and-innovation-cluster-digital-twins"><img src="https://avatars.githubusercontent.com/u/43407869?v=4?s=100" width="100px;" alt="Cassandra Gould van Praag"/><br /><sub><b>Cassandra Gould van Praag</b></sub></a><br /><a href="#ideas-cassgvp" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/pulls?q=is%3Apr+reviewed-by%3Acassgvp" title="Reviewed Pull Requests">👀</a> <a href="#projectManagement-cassgvp" title="Project Management">📆</a> <a href="#question-cassgvp" title="Answering Questions">💬</a> <a href="#design-cassgvp" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="http://www.westerling.nu"><img src="https://avatars.githubusercontent.com/u/7298727?v=4?s=100" width="100px;" alt="Kalle Westerling"/><br /><sub><b>Kalle Westerling</b></sub></a><br /><a href="#ideas-kallewesterling" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/pulls?q=is%3Apr+reviewed-by%3Akallewesterling" title="Reviewed Pull Requests">👀</a> <a href="#projectManagement-kallewesterling" title="Project Management">📆</a> <a href="#question-kallewesterling" title="Answering Questions">💬</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=kallewesterling" title="Code">💻</a></td>
-    </tr>
-    <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/aranas"><img src="https://avatars.githubusercontent.com/u/6906140?v=4?s=100" width="100px;" alt="Sophie Arana"/><br /><sub><b>Sophie Arana</b></sub></a><br /><a href="#ideas-aranas" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/pulls?q=is%3Apr+reviewed-by%3Aaranas" title="Reviewed Pull Requests">👀</a> <a href="#projectManagement-aranas" title="Project Management">📆</a> <a href="#question-aranas" title="Answering Questions">💬</a> <a href="#design-aranas" title="Design">🎨</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/S-Laher"><img src="https://avatars.githubusercontent.com/u/45235675?v=4?s=100" width="100px;" alt="Shakir Laher"/><br /><sub><b>Shakir Laher</b></sub></a><br /><a href="#content-S-Laher" title="Content">🖋</a> <a href="https://github.com/alan-turing-institute/AssurancePlatform/commits?author=S-Laher" title="Documentation">📖</a> <a href="#ideas-S-Laher" title="Ideas, Planning, & Feedback">🤔</a> <a href="#research-S-Laher" title="Research">🔬</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<!-- markdownlint-restore -->
-<!-- prettier-ignore-end -->
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 

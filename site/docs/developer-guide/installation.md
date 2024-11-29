@@ -1,0 +1,1 @@
+<!-- Note: this documentation has moved to platform-details/backend/installation.md and platform-details/frontend/installation.md and platform-details/docker-installation.md and this file will soon be deleted. Remove any references to this page. -->

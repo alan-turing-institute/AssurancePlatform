@@ -1,7 +1,7 @@
 ---
 hide:
-  - navigation
-  - toc
+    - navigation
+    - toc
 ---
 
 ![An illustration that shows a project team designing and developing a system. They are organised such that they form an abstract assurance case.](assets/images/assurance.jpg){ align=right } <!-- TODO: improve image aligment for mobile browsers with custom HTML/CSS -->

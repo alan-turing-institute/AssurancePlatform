@@ -20,15 +20,15 @@ This section guides you on how to use GitHub issues effectively to share your TE
 
 ### Engaging with Feedback
 
-- **Monitor Your Issue**: Stay active and responsive to any comments or feedback provided on your issue. Engaging with contributors not only helps in refining your TEA case but also builds a collaborative community atmosphere.
-- **Addressing Feedback**: Update your TEA case based on the feedback received, if applicable. You can commit changes to your case file and mention the updates in the issue to keep participants informed.
-- **Close the Issue**: Once you've gathered sufficient feedback and made necessary adjustments to your TEA case, thank the contributors for their input and close the issue. You can always open new issues as your case evolves or as new feedback needs arise.
+-   **Monitor Your Issue**: Stay active and responsive to any comments or feedback provided on your issue. Engaging with contributors not only helps in refining your TEA case but also builds a collaborative community atmosphere.
+-   **Addressing Feedback**: Update your TEA case based on the feedback received, if applicable. You can commit changes to your case file and mention the updates in the issue to keep participants informed.
+-   **Close the Issue**: Once you've gathered sufficient feedback and made necessary adjustments to your TEA case, thank the contributors for their input and close the issue. You can always open new issues as your case evolves or as new feedback needs arise.
 
 ### Best Practices for Using GitHub Issues
 
-- When seeking feedback, **be as specific as possible** about the areas of the TEA case you're looking to improve. This helps contributors provide targeted and useful suggestions.
-- **Consider creating issue templates for sharing TEA cases** if you plan to do this regularly. Templates can help standardize the information you provide, making it easier for others to understand and contribute.
-- **Invite others to contribute** not just by commenting but also by suggesting edits through pull requests if they have significant improvements or corrections to offer.
+-   When seeking feedback, **be as specific as possible** about the areas of the TEA case you're looking to improve. This helps contributors provide targeted and useful suggestions.
+-   **Consider creating issue templates for sharing TEA cases** if you plan to do this regularly. Templates can help standardize the information you provide, making it easier for others to understand and contribute.
+-   **Invite others to contribute** not just by commenting but also by suggesting edits through pull requests if they have significant improvements or corrections to offer.
 
 ## TEA Platform Repository Discussions and Issues
 
@@ -36,7 +36,7 @@ The TEA (Trustworthy and Ethical Assurance) platform's [repository on GitHub](ht
 
 It is our aim to make it a vibrant community space where users, developers, and stakeholders can collaborate to enhance the platform's functionality and usability. We want you all to come together to make the platform better for everyone. By engaging in discussions, reporting issues, requesting features, and contributing to the codebase, you play a vital role in the continuous improvement and success of the TEA platform.
 
-***Join us in our mission to advance trustworthy and ethical assurance in technology.***
+**_Join us in our mission to advance trustworthy and ethical assurance in technology._**
 
 Below, we discuss how you can actively participate in discussions, report issues, request new features, and contribute to the platform's development.
 
@@ -58,6 +58,6 @@ For users with programming experience interested in contributing to the TEA plat
 
 **Read the Contribution Guidelines**: Before making any contributions, please review [repository's Issues](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md). These guidelines cover the process for submitting pull requests, coding standards, and other important practices.
 
-**Set Up Your Development Environment**: The documentation includes instructions for [setting up your backend](../platform-details/backend/installation.md) and [your frontend](../platform-details/frontend/installation.md), allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
+**Set Up Your Development Environment**: The documentation includes instructions for [setting up your backend](../developer-guide/backend/installation.md) and [your frontend](../developer-guide/frontend/installation.md), allowing you to work on the codebase, test changes, and ensure your contributions align with the platform's overall architecture and design principles.
 
 **Submit a Pull Request**: Once you've made your changes, submit a pull request through GitHub. Your pull request will be reviewed by the platform's maintainers, and feedback or requests for revisions will be communicated through the GitHub interface.

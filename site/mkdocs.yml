@@ -1,8 +1,8 @@
 site_name: Trustworthy and Ethical Assurance Platform
 site_url: https://alan-turing-institute.github.io/AssurancePlatform
 site_description: >-
-  Documentation to support the use of the Trustworthy and Ethical Assurance
-  Methodology and Platform
+  Documentation to support the use of the Trustworthy and Ethical Assurance Methodology and Platform
+
 
 repo_name: alan-turing-institute/AssurancePlatform
 repo_url: https://github.com/alan-turing-institute/AssurancePlatform
@@ -20,7 +20,6 @@ theme:
   static_templates:
     - 404.html
 
-  # Default values, taken from mkdocs_theme.yml
   language: en
   features:
     - announce.dismiss
@@ -184,3 +183,12 @@ nav:
 
 not_in_nav: |
   _prerequisites.md
+  argument-based-assurance.md
+  case-builder.md
+  case-management.md
+  components.md
+  exporting.md
+  getting-started.md
+  index.md
+  sharing.md
+  what-is-tea.md
