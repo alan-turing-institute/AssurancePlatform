@@ -1,6 +1,6 @@
 ---
-sidebar_position: 2
-sidebar_label: 'Assurance Ecosystem'
+sidebar_position: 1
+sidebar_label: 'The Assurance Ecosystem'
 ---
 
 # Understanding the Assurance Ecosystem

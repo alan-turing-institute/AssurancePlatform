@@ -18,25 +18,66 @@
 
   --ifm-navbar-background-color: #4f46e5;
   --ifm-navbar-link-color: #FFFFFF98;
-  --ifm-navbar-link-hover-color: #FFFFFF;
+  --ifm-navbar-link-hover-color: #FFFFFF; 
 
-  --docusaurus-collapse-button-bg-hover: red!important;
+  --ifm-background-color: #FFFFFF;
+
+  /* --icon-fill: #ffffff;
+  --ifm-menu-link-sublist-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16px' height='16px' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(255,255,255,.8)' d='M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z'/%3E%3C/svg%3E");
+*/
+  
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
+  --ifm-color-primary: #8b5cf6;
+  --ifm-color-primary-dark: #c9b2fb;
+  --ifm-color-primary-darker: #c9b2fb;
+  --ifm-color-primary-darkest: #c9b2fb;
+  --ifm-color-primary-light: #c9b2fb;
+  --ifm-color-primary-lighter: #c9b2fb;
+  --ifm-color-primary-lightest: #cfbcfb;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  --ifm-navbar-background-color: hsl(223, 74%, 7%);
+  
+  --ifm-background-color: hsl(222.2 84% 4.9%)!important;
+
+  /* --icon-fill: #ffffff;
+  --ifm-menu-link-sublist-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16px' height='16px' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(255,255,255,.8)' d='M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z'/%3E%3C/svg%3E"); */
 }
 
-/* #4f46e5 */
+/* menu items font size */
+.menu__list {
+  font-size: 0.96rem;
+}
 
+/* Toggle button hover */
 .toggleButton_gllP:hover {
   background: #FFFFFF20!important;
 }
+
+/* .menu {
+  background-color: #4f46e5;
+}
+.menu__link {
+  color: white;
+}
+.menu__link:hover {
+  color: white;
+}
+.menu__list-item {
+  margin: .6rem 0;
+} */
+
+/* html[data-theme='dark'] body {
+  background-color: hsl(222.2 84% 4.9%);
+} */
+
+/* hsl(222.2 84% 4.9%) */
+
+
+.footer {
+  display: none;
+}
+

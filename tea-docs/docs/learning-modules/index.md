@@ -1,7 +1,9 @@
 ---
-sidebar_position: 1
+sidebar_position: 3
 sidebar_label: 'Learning Modules'
 ---
+
+# Learning Modules
 
 In this section you will find a series of learning modules, designed to help you understand how to use the TEA platform.
 These resources include explanations of the underlying methodology, guides to using the online tool, getting the most out of our community resources, and more.
