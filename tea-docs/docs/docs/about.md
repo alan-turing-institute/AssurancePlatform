@@ -26,9 +26,9 @@ This is not an easy question to answer! As we pick it apart, we realise there ar
 
 The TEA platform helps project teams—including researchers, developers, decision-makers, managers, auditors, regulators, and users—answer these questions in a systematic manner. It achieves this through three interlocking features:
 
-- An interactive tool for building assurance cases (accessible here)
-- A set of educational resources that help users get the most out of the tool (see learning modules)
-- The community infrastructure that promotes open and collaborative practices (see community resources)
+- An interactive tool for building assurance cases ([accessible here](https://assuranceplatform.azurewebsites.net/))
+- A set of educational resources that help users get the most out of the tool (see [learning modules](./learning-modules/index.md))
+- The community infrastructure that promotes open and collaborative practices (see [community resources](./community/index.md))
 
 ### Feature 1: Interactive Tool for Building and Reviewing Assurance Cases
 
