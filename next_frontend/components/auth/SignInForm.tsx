@@ -2,7 +2,7 @@
 
 import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -37,33 +37,54 @@ const SignInForm = () => {
     },
   })
 
+  // async function onSubmit(values: z.infer<typeof formSchema>) {
+  //   setLoading(true);
+
+  //   const user = {
+  //     username: values.username,
+  //     password: values.password,
+  //   };
+
+  //   const requestOptions: RequestInit = {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify(user),
+  //   }
+
+  //   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
+  //   const result = await response.json()
+
+  //   if (result.key) {
+  //     setToken(result.key);
+  //     router.push('/dashboard')
+  //     return
+  //   } else {
+  //     setLoading(false);
+  //     setToken(null);
+  //     setErrors(["Cannot log in with provided credentials"]);
+  //   }
+  // }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-
-    const user = {
-      username: values.username,
-      password: values.password,
-    };
-
-    const requestOptions: RequestInit = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    }
-
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
-    const result = await response.json()
-
-    if (result.key) {
-      setToken(result.key);
-      router.push('/dashboard')
-      return
+  
+    const { username, password } = values;
+  
+    // Use next-auth's signIn method with "credentials" provider
+    const result = await signIn('credentials', {
+      redirect: false, // Prevent automatic navigation
+      username,
+      password,
+    });
+  
+    if (result && result.ok) {
+      // Redirect to dashboard on successful sign-in
+      router.push('/dashboard');
     } else {
       setLoading(false);
-      setToken(null);
-      setErrors(["Cannot log in with provided credentials"]);
+      setErrors([result?.error || 'Unable to log in with provided credentials']);
     }
   }
 
