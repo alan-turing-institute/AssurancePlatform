@@ -19,7 +19,8 @@ import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
 import { addHiddenProp, createAssuranceCaseNode, setNodeIdentifier } from '@/lib/case-helper'
-import { useLoginToken } from '@/hooks/useAuth'
+import { useSession } from 'next-auth/react'
+// import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
   // name: z.string().min(2, {
@@ -37,7 +38,8 @@ interface CreateFormProps {
 
 const CreateForm: React.FC<CreateFormProps> = ({ onClose, setUnresolvedChanges }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [loading, setLoading] = useState<boolean>(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -71,7 +73,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose, setUnresolvedChanges }
       "type": "TopLevelNormativeGoal"
     }
 
-    const result: any = await createAssuranceCaseNode('goals', newGoal, token)
+    const result: any = await createAssuranceCaseNode('goals', newGoal, session?.key ?? '')
 
     if(result.error) {
       // TODO: Rendering error

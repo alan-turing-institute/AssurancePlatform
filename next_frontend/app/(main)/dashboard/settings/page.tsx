@@ -9,6 +9,7 @@ import { Loader2, Router } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { AlertModal } from '@/components/modals/alertModal'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 const SettingsPage = () => {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -17,7 +18,8 @@ const SettingsPage = () => {
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false)
 
   const router = useRouter()
-  const [token, setToken] = useLoginToken()
+  // const [token, setToken] = useLoginToken()
+  const { data: session } = useSession()
   const { toast } = useToast()
 
   const notify = (message: string) => {
@@ -37,7 +39,7 @@ const SettingsPage = () => {
   const fetchCurrentUser = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     };
 
@@ -62,7 +64,7 @@ const SettingsPage = () => {
       const requestOptions: RequestInit = {
         method: "DELETE",
         headers: {
-          Authorization: `Token ${token}`
+          Authorization: `Token ${session?.key}`
         }
       }
 
@@ -73,7 +75,7 @@ const SettingsPage = () => {
         return
       }
 
-      setToken(null);
+      // setToken(null);
       router.push('/login')
     } catch (error) {
       console.log(error)

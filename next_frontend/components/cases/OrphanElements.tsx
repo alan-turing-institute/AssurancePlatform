@@ -5,10 +5,11 @@ import { Separator } from '../ui/separator'
 import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
 import { addEvidenceToClaim, addPropertyClaimToNested, attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import { BookOpenText, Database, FolderOpenDot, Loader2, Route, Trash, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { AlertModal } from '../modals/alertModal'
+import { useSession } from 'next-auth/react'
 
 type OrphanElementsProps = {
   node: any
@@ -26,7 +27,8 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
   const [filteredOrphanElements, setFilteredOrphanElements] = useState<any[]>([])
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   const filterOrphanElements = async (currentNodeType: string) => {
     switch (currentNodeType.toLowerCase()) {
@@ -45,7 +47,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
     setLoading(true)
     console.log(`Selected Orphan Element`, orphan)
 
-    const result = await attachCaseElement(orphan, orphan.id, token, node)
+    const result = await attachCaseElement(orphan, orphan.id, session?.key ?? '', node)
 
     if(result.error) {
       console.error(result.error)
@@ -218,7 +220,7 @@ const OrphanElements = ({ node, handleClose, loadingState, setAction } : OrphanE
     try {
         // Collect all deletion promises
         const deletionPromises = filteredOrphanElements.map(async (orphan: any) => {
-            const deleted = await deleteAssuranceCaseNode(orphan.type, orphan.id, token);
+            const deleted = await deleteAssuranceCaseNode(orphan.type, orphan.id, session?.key ?? '');
 
             // if (deleted) {
             //     const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, orphan.id);

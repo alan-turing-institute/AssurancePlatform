@@ -8,6 +8,7 @@ import { Button } from '../ui/button'
 import { unauthorized, useLoginToken } from '@/hooks/useAuth'
 import CommentsEditForm from './CommentsEditForm'
 import { useToast } from '../ui/use-toast'
+import { useSession } from 'next-auth/react'
 
 type CommentsFeedProps = {
   node: any
@@ -15,7 +16,8 @@ type CommentsFeedProps = {
 
 export default function CommentsFeed({ node }: CommentsFeedProps) {
   const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore()
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [edit, setEdit] = useState<boolean>(false)
   const [editId, setEditId] = useState<number>()
   const [user, setUser] = useState<any>()
@@ -28,7 +30,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
       const requestOptions: RequestInit = {
           method: "DELETE",
           headers: {
-              Authorization: `Token ${token}`,
+              Authorization: `Token ${session?.key}`,
               "Content-Type": "application/json",
           }
       };
@@ -59,7 +61,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
   const fetchCurrentUser = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     }
 

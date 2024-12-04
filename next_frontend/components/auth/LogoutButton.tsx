@@ -1,6 +1,6 @@
 'use client'
 
-import { useLoginToken } from '@/hooks/useAuth';
+// import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 import { Button } from '../ui/button';
@@ -10,7 +10,8 @@ import ActionTooltip from '../ui/action-tooltip';
 
 const LogoutButton = () => {
   const [isMounted, setIsMounted] = useState(false);
-  const [token, setToken] = useLoginToken();
+  // const [token, setToken] = useLoginToken();
+  const { data: session } = useSession()
   const router = useRouter()
   const { data } = useSession()
 
@@ -19,20 +20,22 @@ const LogoutButton = () => {
   }, []);
 
   const handleLogout = async () => {
-    const storedToken = token || (isMounted && localStorage.getItem('token')); // Safe usage of localStorage
+    // const storedToken = token || (isMounted && localStorage.getItem('token')); // Safe usage of localStorage
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/logout/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Token ${storedToken}`,
+        Authorization: `Token ${data?.key}`,
       },
     })
     if(response.status === 200) {
-      setToken(null);
+      // setToken(null);
 
-      if(data?.provider === 'github') {
-        signOut()
-      }
+      // if(data?.provider === 'github') {
+      //   signOut()
+      // }
+
+      signOut()
 
       router.push('/login')
     }

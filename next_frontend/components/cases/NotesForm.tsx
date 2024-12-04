@@ -16,7 +16,8 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import { Goal } from 'lucide-react'
 import useStore from '@/data/store';
-import { useLoginToken } from '@/hooks/useAuth'
+import { useSession } from 'next-auth/react'
+// import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
   note: z.string().min(2, {
@@ -29,7 +30,8 @@ interface NotesFormProps {
 
 const NotesForm: React.FC<NotesFormProps> = ({ }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,7 +47,7 @@ const NotesForm: React.FC<NotesFormProps> = ({ }) => {
         const requestOptions: RequestInit = {
             method: "POST",
             headers: {
-                Authorization: `Token ${token}`,
+                Authorization: `Token ${session?.key}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({

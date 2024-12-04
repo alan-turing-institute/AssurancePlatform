@@ -7,7 +7,7 @@ import { CloudFog, Eye, EyeOff, MessageCirclePlus, Move, Plus, PlusCircle, Trash
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
 import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
-import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from "@/hooks/useAuth";
 import NewLinkForm from "./NewLinkForm";
 import { AlertModal } from "../modals/alertModal";
 import useStore from '@/data/store';
@@ -24,6 +24,7 @@ import { Separator } from "../ui/separator";
 import OrphanElements from "../cases/OrphanElements";
 import { ChatBubbleIcon } from "@radix-ui/react-icons";
 import NodeComment from "../cases/NodeComments";
+import { useSession } from "next-auth/react";
 
 interface NodeEditProps {
   node: Node | any
@@ -48,7 +49,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
   const [moveElementType, setMoveElementType] = useState<string | null>(null); // State for selected strategy
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   let goal: any
   let strategies: any[] = []
@@ -83,7 +85,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   /** Function used to handle deletion of the current selected item */
   const handleDelete = async () => {
     setLoading(true)
-    const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, token)
+    const deleted = await deleteAssuranceCaseNode(node.type, node.data.id, session?.key ?? '')
 
     if(deleted) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, node.data.id, node.data.type)
@@ -130,7 +132,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           hidden: false
         } as any
 
-        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        const updated = await updateAssuranceCaseNode('property', node.data.id, session?.key ?? '', updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
@@ -155,7 +157,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           hidden: false
         } as any
 
-        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        const updated = await updateAssuranceCaseNode('property', node.data.id, session?.key ?? '', updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
@@ -180,7 +182,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           hidden: false
         } as any
 
-        const updated = await updateAssuranceCaseNode('property', node.data.id, token, updateItem)
+        const updated = await updateAssuranceCaseNode('property', node.data.id, session?.key ?? '', updateItem)
         // if (updated) {
         //   window.location.reload()
         // }
@@ -202,7 +204,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         property_claim_id: [selectedEvidenceMove.id],
         hidden: false
       } as any
-      const updated = await updateAssuranceCaseNode('evidence', node.data.id, token, updateItem)
+      const updated = await updateAssuranceCaseNode('evidence', node.data.id, session?.key ?? '', updateItem)
       // if (updated) {
       //   window.location.reload()
       // }
@@ -222,7 +224,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const parentNode: any = findParentNode(nodes, node)
 
   const handleDetach = async () => {
-    const { detached, error }: any = await detachCaseElement(node, node.type, node.data.id, token)
+    const { detached, error }: any = await detachCaseElement(node, node.type, node.data.id, session?.key ?? '')
     if(error) {
       console.error(error)
     }

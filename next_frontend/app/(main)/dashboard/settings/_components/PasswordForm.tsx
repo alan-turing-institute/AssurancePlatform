@@ -20,7 +20,7 @@ import { MoveLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
-import { useLoginToken } from "@/hooks/useAuth"
+// import { useLoginToken } from "@/hooks/useAuth"
 import { useToast } from "@/components/ui/use-toast"
 
 const ACCEPTED_FILE_TYPES = ["jpg"];
@@ -59,7 +59,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
   const [error, setError] = useState<string>('')
 
   const router = useRouter()
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
   const { data: session } = useSession()
   const { toast } = useToast()
 
@@ -93,7 +93,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
       const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newDetails),

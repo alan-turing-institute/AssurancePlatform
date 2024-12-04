@@ -20,7 +20,7 @@ import FeedbackBanner from '@/components/FeedbackBanner'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -32,22 +32,23 @@ export default function DashboardLayout({ children } : { children: React.ReactNo
   const pageName = pathname === '/' ? 'assurance cases' : pathname.split('/')[1]
   const router = useRouter()
 
-  const [token, setToken] = useLoginToken();
+  // const [token, setToken] = useLoginToken();
   const { data, status } = useSession()
+  console.log('data', data)
 
-  useEffect(() => {
-    // If a token is present, do nothing (continue rendering the component)
-    if (token) return;
+  // useEffect(() => {
+  //   // If a token is present, do nothing (continue rendering the component)
+  //   if (token) return;
 
-    // If there's user data and no token, set the token
-    if (data?.user && token === null) {
-      setToken(data?.accessToken);
-    }
-    // If no user data or token is null, redirect to the login page
-    else if (!data?.user || token === null) {
-      router.push('/login');
-    }
-  }, [token, data, router]);
+  //   // If there's user data and no token, set the token
+  //   if (data?.user && token === null) {
+  //     setToken(data?.accessToken);
+  //   }
+  //   // If no user data or token is null, redirect to the login page
+  //   else if (!data?.user || token === null) {
+  //     router.push('/login');
+  //   }
+  // }, [token, data, router]);
 
   return (
     <>

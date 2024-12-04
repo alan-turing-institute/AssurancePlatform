@@ -19,8 +19,9 @@ import { Button } from '../ui/button'
 import useStore from '@/data/store';
 import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { useSession } from 'next-auth/react'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -45,7 +46,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   setUnresolvedChanges
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [loading, setLoading] = useState<boolean>(false)
 
   const { setSelectedLink, setLinkToCreate, handleClose } = actions
@@ -69,7 +71,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "type": "Context"
     };
 
-    const result: any = await createAssuranceCaseNode('contexts', newContextItem, token)
+    const result: any = await createAssuranceCaseNode('contexts', newContextItem, session?.key ?? '')
 
     if(result.error) {
       // TODO: Rendering error
@@ -112,7 +114,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       "type": "Strategy"
     };
 
-    const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, token)
+    const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, session?.key ?? '')
 
     if(result.error) {
       // TODO: Rendering error
@@ -167,7 +169,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         break;
     }
 
-    const result: any = await createAssuranceCaseNode('propertyclaims', newPropertyClaimItem, token)
+    const result: any = await createAssuranceCaseNode('propertyclaims', newPropertyClaimItem, session?.key ?? '')
 
     if(result.error) {
       console.log('RESULT ERROR', result.error)
@@ -279,7 +281,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       type: "Evidence"
     };
 
-    const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, token)
+    const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, session?.key ?? '')
 
     if(result.error) {
       // TODO: Rendering error

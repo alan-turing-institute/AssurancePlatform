@@ -1,6 +1,6 @@
 'use client'
 
-import { useLoginToken } from '@/hooks/useAuth';
+// import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 import { z } from "zod"
@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
@@ -27,7 +27,8 @@ const SignInForm = () => {
 
   const router = useRouter()
 
-  const [token, setToken] = useLoginToken();
+  // const [token, setToken] = useLoginToken();
+  const { data: session } = useSession()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -96,10 +97,10 @@ const SignInForm = () => {
   }
 
   useEffect(() => {
-    if(token) {
+    if(session?.key) {
       router.push('/dashboard')
     }
-  },[token])
+  },[session])
 
   return (
     <div className="mx-auto w-full max-w-sm lg:w-96">

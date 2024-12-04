@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Dialog } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useLoginToken } from '@/hooks/useAuth'
+import { useSession } from 'next-auth/react'
+// import { useLoginToken } from '@/hooks/useAuth'
 
 const navigation = [
   { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/' },
@@ -14,10 +15,11 @@ export default function Hero() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   useEffect(() => {
-    if(token) {
+    if(session?.key) {
       setLoggedIn(true)
     }
   },[])

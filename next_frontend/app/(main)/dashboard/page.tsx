@@ -17,16 +17,16 @@ const Dashboard = () => {
   const [tokenLoaded, setTokenLoaded] = useState(false)   // Ensure token is ready
   const [currentUser, setCurrentUser] = useState<any>(null)
 
-  const [token] = useLoginToken()
+  // const [token] = useLoginToken()
   const router = useRouter()
   const { data: session, status } = useSession() // Get session status
   const emailModal = useEmailModal()
 
-  const fetchAssuranceCases = async (token: any) => {
+  const fetchAssuranceCases = async () => {
     try {
       const myHeaders = new Headers()
       myHeaders.append("Content-Type", "application/json")
-      myHeaders.append("Authorization", `Token ${token}`)
+      myHeaders.append("Authorization", `Token ${session?.key}`)
 
       const requestOptions: RequestInit = {
         method: 'GET',
@@ -57,7 +57,7 @@ const Dashboard = () => {
   const fetchCurrentUser = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     }
 
@@ -75,42 +75,47 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    // If the session is loading, do nothing
-    if (status === 'loading') {
-      return
-    }
+    fetchAssuranceCases().then((result) => {
+      setAssuranceCases(result)
+      setLoading(false)
+    })
+  },[])
 
-    // Check token availability
-    const storedToken = token || localStorage.getItem('token')
+  // useEffect(() => {
+  //   // If the session is loading, do nothing
+  //   if (status === 'loading') {
+  //     return
+  //   }
 
-    if (status === 'authenticated' || storedToken) {
-      // If the session is authenticated or a token is present, proceed with token checks
-      if (storedToken) {
-        setTokenLoaded(true) // Mark token as loaded
-        fetchAssuranceCases(storedToken).then((result) => {
-          setAssuranceCases(result)
-          setLoading(false)
-        })
-      } else {
-        if (tokenChecked) {
-          router.push('login')
-        }
-      }
-      setTokenChecked(true)
-    } else {
-      // If the session is unauthenticated or no token is present, redirect to login
-      router.push('login')
-    }
-  }, [token, status, router, tokenChecked])
+  //   // Check token availability
+  //   const storedToken = token || localStorage.getItem('token')
+
+  //   if (status === 'authenticated' || storedToken) {
+  //     // If the session is authenticated or a token is present, proceed with token checks
+  //     if (storedToken) {
+  //       setTokenLoaded(true) // Mark token as loaded
+  //       fetchAssuranceCases(storedToken).then((result) => {
+  //         setAssuranceCases(result)
+  //         setLoading(false)
+  //       })
+  //     } else {
+  //       if (tokenChecked) {
+  //         router.push('login')
+  //       }
+  //     }
+  //     setTokenChecked(true)
+  //   } else {
+  //     // If the session is unauthenticated or no token is present, redirect to login
+  //     router.push('login')
+  //   }
+  // }, [token, status, router, tokenChecked])
 
   useEffect(() => {
-    // if (status === 'authenticated' && tokenLoaded) {
-      fetchCurrentUser().then((result) => {
-        setCurrentUser(result)
-        if (!result?.email) emailModal.onOpen()
-      })
-    // }
-  }, [status, tokenLoaded])
+    fetchCurrentUser().then((result) => {
+      setCurrentUser(result)
+      if (!result?.email) emailModal.onOpen()
+    })
+  }, [status])
 
   return (
     <>

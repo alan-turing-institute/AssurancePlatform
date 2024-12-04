@@ -2,8 +2,9 @@
 
 import CaseList from '@/components/cases/CaseList'
 import NoCasesFound from '@/components/cases/NoCasesFound'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import { FolderHeart, FolderX, Loader2, TriangleAlert } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
@@ -13,14 +14,15 @@ const SharedWithMePage = () => {
   const [tokenChecked, setTokenChecked] = useState(false) // New state to ensure token check is complete
   const [sharedAssuranceCases, setSharedAssuranceCases] = useState([])
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const router = useRouter()
 
-  const fetchSharedAssuranceCases = async (token: any) => {
+  const fetchSharedAssuranceCases = async () => {
     try {
       const myHeaders = new Headers();
       myHeaders.append("Content-Type", "application/json");
-      myHeaders.append("Authorization", `Token ${token}`);
+      myHeaders.append("Authorization", `Token ${session?.key}`);
 
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases?owner=false&view=true&edit=true`
 
@@ -34,7 +36,7 @@ const SharedWithMePage = () => {
 
       if(response.status === 401) {
         console.log('Invalid Token')
-        localStorage.removeItem('token')
+        // localStorage.removeItem('token')
         router.push('login')
         return;
       }
@@ -48,23 +50,31 @@ const SharedWithMePage = () => {
   }
 
   useEffect(() => {
-    const storedToken = token || localStorage.getItem('token');
+    fetchSharedAssuranceCases().then(result => {
+      setSharedAssuranceCases(result)
+      setLoading(false)
+    })
+  }, [])
+  
 
-    if(storedToken) {
-      setLoading(true)
-      fetchSharedAssuranceCases(storedToken).then(result => {
-        setSharedAssuranceCases(result)
-        setLoading(false)
-      })
-    } else {
-      if (tokenChecked) {
-        router.push('login');
-      }
-    }
+  // useEffect(() => {
+  //   const storedToken = token || localStorage.getItem('token');
 
-    // Set token check to complete
-    setTokenChecked(true);
-  }, [token, router, tokenChecked])
+  //   if(storedToken) {
+  //     setLoading(true)
+  //     fetchSharedAssuranceCases(storedToken).then(result => {
+  //       setSharedAssuranceCases(result)
+  //       setLoading(false)
+  //     })
+  //   } else {
+  //     if (tokenChecked) {
+  //       router.push('login');
+  //     }
+  //   }
+
+  //   // Set token check to complete
+  //   setTokenChecked(true);
+  // }, [token, router, tokenChecked])
 
   return (
     <>
