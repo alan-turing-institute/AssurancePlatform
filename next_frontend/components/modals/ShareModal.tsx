@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
 import useStore from "@/data/store";
-import { unauthorized, useLoginToken } from "@/hooks/useAuth";
+// import { unauthorized, useLoginToken } from "@/hooks/useAuth";
 import { User } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "../ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { useSession } from "next-auth/react";
 
 type ShareItem = {
   email: string
@@ -54,7 +55,8 @@ export const ShareModal = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const router = useRouter()
   const { toast } = useToast();
 
@@ -98,7 +100,7 @@ export const ShareModal = () => {
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),

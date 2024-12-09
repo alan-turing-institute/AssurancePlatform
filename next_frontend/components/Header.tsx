@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { ModeToggle } from "./ui/theme-toggle";
 import { useRouter } from "next/navigation";
-import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from "@/hooks/useAuth";
 import useStore from "@/data/store";
 import Link from "next/link";
 import {
@@ -32,6 +32,7 @@ import { toggleHiddenForParent } from "@/lib/case-helper";
 import LogoutButton from "./auth/LogoutButton";
 import ActiveUsersList from "./cases/ActiveUsersList";
 import { ResourcesInfo } from "./cases/ResourcesInfo";
+import { useSession } from "next-auth/react";
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -48,7 +49,8 @@ const Header = ({ setOpen }: HeaderProps) => {
 
   const { fitView, setViewport, setCenter } = useReactFlow();
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCaseName(e.target.value);
@@ -67,7 +69,7 @@ const Header = ({ setOpen }: HeaderProps) => {
       const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newData),

@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "../ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { usePermissionsModal } from "@/hooks/usePermissionsModal";
+import { useSession } from "next-auth/react";
 
 export const PermissionsModal = () => {
   const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers, reviewMembers, setReviewMembers } = useStore()
@@ -42,14 +43,15 @@ export const PermissionsModal = () => {
   const params = useParams()
   const { caseId } = params
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const router = useRouter()
   const { toast } = useToast();
 
   const fetchCaseMembers = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     };
 
@@ -80,7 +82,7 @@ export const PermissionsModal = () => {
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),

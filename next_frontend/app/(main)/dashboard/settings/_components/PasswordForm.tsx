@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -15,12 +14,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { MoveLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useState } from "react"
-import { useLoginToken } from "@/hooks/useAuth"
 import { useToast } from "@/components/ui/use-toast"
 
 const ACCEPTED_FILE_TYPES = ["jpg"];
@@ -55,13 +50,10 @@ type PasswordFormProps = {
 }
 
 export function PasswordForm({ data } : PasswordFormProps) {
-  const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
-
-  const router = useRouter()
-  const [token] = useLoginToken();
-  const { data: session } = useSession()
+  const [loading, setLoading] = useState<boolean>(false)
   const { toast } = useToast()
+  const { data: session } = useSession()
 
   const notify = (message: string) => {
     toast({
@@ -93,7 +85,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
       const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newDetails),
@@ -112,9 +104,9 @@ export function PasswordForm({ data } : PasswordFormProps) {
       form.reset()
     } catch (error) {
       console.log(error)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
@@ -128,7 +120,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
       </div>
 
       <div className="md:col-span-2">
-        {!session ? (
+        {session?.provider == "credentials" ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
               <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
@@ -180,7 +172,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
             </form>
           </Form>
         ) : (
-          <p className="text-muted-foreground text-sm w-1/2">You are logged in with a <span className="text-indigo-500">{session.provider}</span> account, therefore you cannot change your password here.</p>
+          <p className="text-muted-foreground text-sm w-1/2">You are logged in with a <span className="text-indigo-500">{session?.provider}</span> account, therefore you cannot change your password here.</p>
         )}
       </div>
     </div>

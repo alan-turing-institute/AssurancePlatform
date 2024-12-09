@@ -1,5 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import GithubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import dotenv from 'dotenv';
 
 dotenv.config(); // Explicitly load environment variables
@@ -35,6 +36,38 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GITHUB_APP_CLIENT_ID || process.env.GITHUB_APP_CLIENT_ID_STAGING as string,
       clientSecret: process.env.GITHUB_APP_CLIENT_SECRET || process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string,
     }),
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        username: { label: 'Username', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials, req) {
+        const { username, password } = credentials ?? {};
+
+        try {
+          // Send credentials to your API for verification
+          const response = await fetch(`${process.env.API_URL}/api/auth/login/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          if (!response.ok) throw new Error('Invalid credentials');
+
+          const user = await response.json();
+
+          if (user) {
+            // Include key (access token) in the user object
+            return { id: user.id, name: user.name, email: user.email, key: user.key };
+          }
+          return null;
+        } catch (error) {
+          console.error('Authorization error:', error);
+          return null;
+        }
+      }
+    })
   ],
 
   callbacks: {
@@ -49,30 +82,37 @@ export const authOptions: NextAuthOptions = {
      * @returns {boolean} `true` to allow the sign-in.
      */
     async signIn({ user, account, profile, email, credentials }) {
-      const payload = {
-        access_token: account?.access_token,
-        email: profile?.email
-      };
+      if (account?.provider === 'github') {
+        // Handle GitHub-specific behavior
+        const payload = {
+          access_token: account?.access_token,
+          email: profile?.email,
+        };
 
-      const response = await fetch(`${process.env.API_URL}/api/auth/github/register-by-token/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+        const response = await fetch(`${process.env.API_URL}/api/auth/github/register-by-token/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      if (response.ok) {
-        const result = await response.json();
+        // if (response.ok) {
+        //   const result = await response.json();
+        //   user.accessToken = result.key;
+        //   user.provider = account?.provider;
+        //   return true;
+        // }
 
-        // pass the token to user so it can be added to the session
-        user.accessToken = result.key;
-        user.provider = account?.provider;
+        if (response.ok) {
+          const result = await response.json();
+          user.key = result.key; // Include the key for GitHub users
+          return true;
+        }
 
-        return true;
+        return false;
       }
 
-      return true;
+      // For credentials, allow default processing
+      return !!user;
     },
 
     /**
@@ -97,7 +137,9 @@ export const authOptions: NextAuthOptions = {
      * @returns {Object} The modified session object with an access token and provider information.
      */
     async session({ session, user, token }) {
-      session.accessToken = token.accessToken;
+      // session.accessToken = token.accessToken;
+      // session.provider = token.provider;
+      session.key = token.key; // Add the key to the session object
       session.provider = token.provider;
       return session;
     },
@@ -114,9 +156,13 @@ export const authOptions: NextAuthOptions = {
      * @returns {Object} The updated token with access token and provider information.
      */
     async jwt({ token, user, account, profile, isNewUser }) {
-      if (account && user) {
-        token.accessToken = user.accessToken;
-        token.provider = user.provider;
+      // if (account && user) {
+      //   token.accessToken = user.accessToken;
+      //   token.provider = user.provider;
+      // }
+      if (user) {
+        token.key = user.key; // Store the key from the user object
+        token.provider = user.provider || 'credentials';
       }
       return token;
     },
