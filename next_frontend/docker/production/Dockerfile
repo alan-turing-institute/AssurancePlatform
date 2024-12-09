@@ -40,6 +40,9 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV API_URL=${API_URL}
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 
+# Build documentation 
+RUN cd tea-docs && npm ci && npm run build
+
 RUN yarn build
 
 RUN echo "Build-time ENV variables:" && \
