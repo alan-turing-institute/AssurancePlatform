@@ -3,7 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
  
 const buildDir = path.join(__dirname, '..', 'build');
-const destinationDir = path.join(__dirname, '..', '..', 'next_frontend', 'public', 'documentation');
+const destinationDir = path.join(__dirname, '..', '..', 'public', 'documentation');
  
 // Run docusaurus build first
 exec('docusaurus build', (error, stdout, stderr) => {
