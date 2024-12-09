@@ -105,6 +105,7 @@ export const authOptions: NextAuthOptions = {
         if (response.ok) {
           const result = await response.json();
           user.key = result.key; // Include the key for GitHub users
+          user.provider = account.provider
           return true;
         }
 

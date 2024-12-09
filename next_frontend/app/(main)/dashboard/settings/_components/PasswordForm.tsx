@@ -120,7 +120,7 @@ export function PasswordForm({ data } : PasswordFormProps) {
       </div>
 
       <div className="md:col-span-2">
-        {session?.provider == "credentials" ? (
+        {session?.provider === "credentials" ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
               <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
