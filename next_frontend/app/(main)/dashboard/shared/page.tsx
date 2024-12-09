@@ -8,7 +8,7 @@ import React from 'react'
 
 const SharedWithMePage = async () => {
   const session = await getServerSession(authOptions)
-  
+
   // Redirect user to login if no `key`
   if(!session || !session.key) {
     redirect('/login')

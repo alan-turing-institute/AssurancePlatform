@@ -10,7 +10,7 @@ import React from 'react'
 
 const Dashboard = async () => {
   const session = await getServerSession(authOptions)
-  
+
   // Redirect user to login if no `key`
   if(!session || !session.key) {
     redirect('/login')

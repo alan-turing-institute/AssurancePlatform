@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         const { username, password } = credentials ?? {};
-      
+
         try {
           // Send credentials to your API for verification
           const response = await fetch(`${process.env.API_URL}/api/auth/login/`, {
@@ -52,11 +52,11 @@ export const authOptions: NextAuthOptions = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
           });
-      
+
           if (!response.ok) throw new Error('Invalid credentials');
-      
+
           const user = await response.json();
-      
+
           if (user) {
             // Include key (access token) in the user object
             return { id: user.id, name: user.name, email: user.email, key: user.key };

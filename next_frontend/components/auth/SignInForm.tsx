@@ -70,16 +70,16 @@ const SignInForm = () => {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-  
+
     const { username, password } = values;
-  
+
     // Use next-auth's signIn method with "credentials" provider
     const result = await signIn('credentials', {
       redirect: false, // Prevent automatic navigation
       username,
       password,
     });
-  
+
     if (result && result.ok) {
       // Redirect to dashboard on successful sign-in
       router.push('/dashboard');
