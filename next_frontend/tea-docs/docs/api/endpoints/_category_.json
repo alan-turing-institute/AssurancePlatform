@@ -1,0 +1,9 @@
+{
+  "label": "Endpoints",
+  "position": 2,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "description": "Available endpoints in the TEA api"
+  }
+}

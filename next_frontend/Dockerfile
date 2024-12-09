@@ -28,6 +28,9 @@ COPY --link . .
 COPY --link .env.local .env.production
 # COPY --link .env.production .env.production
 
+# Build documentation
+RUN cd tea-docs && npm ci && npm run build
+
 RUN yarn build
 
 # 3. Production image, copy all the files and run next

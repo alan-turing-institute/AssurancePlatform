@@ -9,7 +9,7 @@ export const navigation = [
   { name: 'My Assurance Cases', href: '/dashboard', icon: FolderIcon, current: false , externalLink: false},
   { name: 'Shared With Me', href: '/dashboard/shared', icon: UsersIcon, current: false , externalLink: false},
   // { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
-  { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/', icon: DocumentDuplicateIcon, current: false, externalLink: true },
+  { name: 'Documentation', href: '/documentation', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ]
 
 export const teams = [
