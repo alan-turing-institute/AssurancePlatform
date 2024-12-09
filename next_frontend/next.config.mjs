@@ -20,11 +20,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/documentation',
-        destination: '/documentation/index.html'
-      }
-    ]
-  }
+        source: "/documentation",
+        destination: "/documentation/index.html",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

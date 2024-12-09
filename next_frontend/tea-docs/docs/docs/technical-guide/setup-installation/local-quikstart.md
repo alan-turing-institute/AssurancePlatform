@@ -34,7 +34,7 @@ cd
 
     There are many ways to do this, but for the purpose of this guide we will assume you are using Python's `venv` package.
 
-::: 
+:::
 
 ### 1. Setting Up the Backend
 

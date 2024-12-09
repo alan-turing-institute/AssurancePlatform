@@ -84,7 +84,7 @@ As such, a goal claim should be the first element established when building an a
 For this reason, we sometimes refer to a goal element as the _top-level_ goal claim to indicate that it is the primary focus for an assurance case.
 
 Consider the example goal claim in Figure 2.
-<!-- 
+<!--
 ![](../../docs/assets/images/learning-modules/001-01-figure2.svg) -->
 _Figure 2—An example goal claim focused on explainability._
 

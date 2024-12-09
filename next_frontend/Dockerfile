@@ -28,7 +28,7 @@ COPY --link . .
 COPY --link .env.local .env.production
 # COPY --link .env.production .env.production
 
-# Build documentation 
+# Build documentation
 RUN cd tea-docs && npm ci && npm run build
 
 RUN yarn build

@@ -221,7 +221,7 @@ The application of ethical principles in AI governance involves navigating these
 -->
 
 <!-- ![](../assets/images/subject-matter.png) -->
-_Figure 3. A graphic showing the four 
+_Figure 3. A graphic showing the four
 dimensions of assurance subject matter: unobservable/observable,
 subjective/objective, ambiguous/explicit, uncertain/certain._
 
