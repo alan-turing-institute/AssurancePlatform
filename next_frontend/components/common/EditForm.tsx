@@ -29,7 +29,9 @@ const formSchema = z.object({
   }).optional(),
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
-  })
+  }),
+  assumption: z.string().optional(),
+  justification: z.string().optional()
 })
 
 interface EditFormProps {
@@ -95,7 +97,7 @@ const EditForm: React.FC<EditFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
         <FormField
           control={form.control}
           name="description"
@@ -117,6 +119,52 @@ const EditForm: React.FC<EditFormProps> = ({
             </FormItem>
           )}
         />
+        {node.type !== 'evidence' && (
+          <FormField
+            control={form.control}
+            name="assumption"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='flex justify-start items-center gap-2'>
+                  Assumption
+                  {readOnly && (
+                    <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="" {...field}
+                    readOnly={readOnly}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        {node.type !== 'evidence' && node.type === 'strategy' && (
+          <FormField
+            control={form.control}
+            name="justification"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='flex justify-start items-center gap-2'>
+                  Justification
+                  {readOnly && (
+                    <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  )}
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="" {...field}
+                    readOnly={readOnly}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         {node.type === 'evidence' && (
           <FormField
             control={form.control}

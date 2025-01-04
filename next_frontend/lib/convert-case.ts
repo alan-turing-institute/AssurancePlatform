@@ -73,9 +73,17 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
     processedItems.add(item);
 
     // Recursively create nodes for child elements
-    if (item.context && item.context.length > 0) {
-      const contextNodes = createNodesRecursively(item.context, 'context', node, processedItems, depth - 1);
-      nodes.push(...contextNodes);
+    
+    /*  DEPRECATED - REMOVE CONTEXT NODES 
+        https://github.com/orgs/alan-turing-institute/projects/240/views/1?pane=issue&itemId=86520648&issue=alan-turing-institute%7CAssurancePlatform%7C652
+    */
+    // if (item.context && item.context.length > 0) {
+    //   const contextNodes = createNodesRecursively(item.context, 'context', node, processedItems, depth - 1);
+    //   nodes.push(...contextNodes);
+    // }
+    if (item.strategies && item.strategies.length > 0) {
+      const strategyNodes = createNodesRecursively(item.strategies, 'strategy', node, processedItems, depth - 1);
+      nodes.push(...strategyNodes);
     }
     if (item.property_claims && item.property_claims.length > 0) {
       const propertyClaimNodes = createNodesRecursively(item.property_claims, 'property', node, processedItems, depth - 1);
@@ -84,10 +92,6 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
     if (item.evidence && item.evidence.length > 0) {
       const evidenceNodes = createNodesRecursively(item.evidence, 'evidence', node, processedItems, depth - 1);
       nodes.push(...evidenceNodes);
-    }
-    if (item.strategies && item.strategies.length > 0) {
-      const strategyNodes = createNodesRecursively(item.strategies, 'strategy', node, processedItems, depth - 1);
-      nodes.push(...strategyNodes);
     }
   });
 

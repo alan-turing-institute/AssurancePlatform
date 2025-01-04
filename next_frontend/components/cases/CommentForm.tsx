@@ -15,6 +15,7 @@ import { Button } from '../ui/button'
 import useStore from '@/data/store';
 import { useLoginToken } from '@/hooks/useAuth'
 import { addElementComment } from '@/lib/case-helper'
+import { useSession } from 'next-auth/react'
 
 const formSchema = z.object({
   comment: z.string().min(2, {
@@ -28,7 +29,7 @@ interface CommentsFormProps {
 
 const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) => {
   const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore();
-  const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,7 +77,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({ node }: CommentsFormProps) 
         const requestOptions: RequestInit = {
           method: "POST",
           headers: {
-            Authorization: `Token ${token}`,
+            Authorization: `Token ${session?.key}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(newComment)
