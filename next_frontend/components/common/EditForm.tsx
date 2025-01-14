@@ -54,7 +54,9 @@ const EditForm: React.FC<EditFormProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: node.data || {
       URL: '',
-      description: ''
+      description: '',
+      assumption: '',
+      justification: ''
     }
   });
 
@@ -63,6 +65,8 @@ const EditForm: React.FC<EditFormProps> = ({
     // Update item via api
     const updateItem = {
       short_description: values.description,
+      assumption: values.assumption,
+      justification: values.justification
     }
 
     if(node.type === 'evidence') {

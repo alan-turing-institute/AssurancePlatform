@@ -29,7 +29,7 @@ const WebSocketComponent = () => {
     const webSocketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('https', 'wss')
 
     let interval: any;
-    const wsUrl = `${webSocketUrl}ws/case/${assuranceCase.id}/?token=${session?.key}`;
+    const wsUrl = `${webSocketUrl}/ws/case/${assuranceCase.id}/?token=${session?.key}`;
 
     const setupWebSocket = () => {
       const websocket = new WebSocket(wsUrl);

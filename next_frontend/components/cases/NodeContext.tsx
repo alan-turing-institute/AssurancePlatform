@@ -16,9 +16,11 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
 // import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
+import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, findElementById, findItemById, findParentNode, findSiblingHiddenState, getAssuranceCaseNode, removeAssuranceCaseNode, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
 import { useSession } from 'next-auth/react'
 import { Skeleton } from '../ui/skeleton'
+import { FolderXIcon, Trash2Icon } from 'lucide-react'
+import moment from 'moment'
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -39,7 +41,11 @@ const NodeConext: React.FC<NodeContextProps> = ({
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   const { data: session } = useSession()
+  const [contexts, setContexts] = useState<any>([])
   const [loading, setLoading] = useState<boolean>(false)
+
+  // console.log('NODE', node)
+  // console.log('Case', assuranceCase.goals[0])
 
   const { setSelectedLink, setLinkToCreate, handleClose, setAction } = actions
 
@@ -54,46 +60,60 @@ const NodeConext: React.FC<NodeContextProps> = ({
   };
 
   /** Function used to handle creation of a context node linked to a goal */
-  // const handleContextAdd = async (description: string) => {
+  const handleContextAdd = async (description: string) => {
 
-  //   // Create a new context object to add - this should be created by calling the api
-  //   const newContextItem = {
-  //     "short_description": description,
-  //     "long_description": description,
-  //     "goal_id": assuranceCase.goals[0].id,
-  //     "type": "Context"
-  //   };
+    // Create a new context object to add - this should be created by calling the api
+    const newContextItem = {
+      "short_description": description,
+      "long_description": description,
+      "goal_id": node.data.id,
+      "type": "Context"
+    };
 
-  //   const result: any = await createAssuranceCaseNode('contexts', newContextItem, session?.key ?? '')
+    const result: any = await createAssuranceCaseNode('contexts', newContextItem, session?.key ?? '')
 
-  //   if(result.error) {
-  //     // TODO: Rendering error
-  //   }
+    if(result.error) {
+      // TODO: Rendering error
+    }
 
-  //   result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    console.log('RESULT', result)
 
-  //   console.log('RESULT', result)
+    // Create a new context array by adding the new context item
+    const newContext = [...assuranceCase.goals[0].context, result.data];
 
-  //   // Create a new context array by adding the new context item
-  //   const newContext = [...assuranceCase.goals[0].context, result.data];
+    // Create a new assuranceCase object with the updated context array
+    const updatedAssuranceCase = {
+      ...assuranceCase,
+      goals: [
+        {
+          ...assuranceCase.goals[0],
+          context: newContext
+        }
+      ]
+    }
 
-  //   // Create a new assuranceCase object with the updated context array
-  //   const updatedAssuranceCase = {
-  //     ...assuranceCase,
-  //     goals: [
-  //       {
-  //         ...assuranceCase.goals[0],
-  //         context: newContext
-  //       }
-  //     ]
-  //   }
+    // Update Assurance Case in state
+    setAssuranceCase(updatedAssuranceCase)
+    form.reset()
 
-  //   // Update Assurance Case in state
-  //   setAssuranceCase(updatedAssuranceCase)
-  //   reset()
-  //   setLoading(false)
-  //   // window.location.reload()
-  // }
+  }
+
+  /** Function used to handle deletion of a context node linked to a goal */
+  const handleContextDelete = async (id: number) => {
+    setLoading(true)
+    const deleted = await deleteAssuranceCaseNode('context', id, session?.key ?? '')
+
+    if(deleted) {
+      const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, id, 'context')
+      if(updatedAssuranceCase) {
+          setAssuranceCase(updatedAssuranceCase)
+          setLoading(false)
+          // setDeleteOpen(false)
+          // handleClose()
+          return
+      }
+    }
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -103,24 +123,29 @@ const NodeConext: React.FC<NodeContextProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
+    await handleContextAdd(values.description ?? '')
   }
 
   useEffect(() => {
-    form.watch((values, { name }) => {
-      if (name === 'description') {
-        setUnresolvedChanges(true);
-      }
-    });
-  }, [form.watch, setUnresolvedChanges]);
+    const GetCaseElement = async () => {
+      const result = await getAssuranceCaseNode(node.type, node.data.id, session?.key ?? '')
+      return result
+    }
 
-  const sampleContexts = [
-    { description: 'Lorem ipsum 12344 dffsdf sdfsdfsdfsd sdfsfsfsdf sdfsdfsdf' },
-    { description: 'Lorem ipsum 12344 dffsdf sdfsdfsdfsd sdfsfsfsdf sdfsdfsdf' },
-    { description: 'Lorem ipsum 12344 dffsdf sdfsdfsdfsd sdfsfsfsdf sdfsdfsdf' },
-    { description: 'Lorem ipsum 12344 dffsdf sdfsdfsdfsd sdfsfsfsdf sdfsdfsdf' },
-    { description: 'Lorem ipsum 12344 dffsdf sdfsdfsdfsd sdfsfsfsdf sdfsdfsdf' },
-  ]
+    GetCaseElement().then(result => {
+      if(!result.context) return
+
+      setContexts(result.context)
+    })
+  }, [assuranceCase])
+
+  // useEffect(() => {
+  //   form.watch((values, { name }) => {
+  //     if (name === 'description') {
+  //       setUnresolvedChanges(true);
+  //     }
+  //   });
+  // }, [form.watch, setUnresolvedChanges]);
 
   return (
     <div className='my-4 border-t'>
@@ -168,21 +193,33 @@ const NodeConext: React.FC<NodeContextProps> = ({
         </div>
       ) : (
         <div className='w-full mb-16 flex flex-col justify-start items-start gap-3'>
-          {sampleContexts.map((item: any, index:number) => (
-            <div key={index} className='p-3 text-foreground rounded-md w-full group hover:bg-indigo-500 hover:text-white transition-all duration-300 hover:cursor-pointer relative hover:pb-6'>
-              <p className="whitespace-normal">{item.description}</p>
-              {/* <div className='text-muted-foreground group-hover:text-white text-xs flex justify-start items-center gap-2 transition-all duration-300 mt-3'>
-                <BookOpenText className='w-3 h-3'/>
-                <div>
-                  author?
+          {contexts.map((item: any, index:number) => (
+            <div key={index} className='relative p-3 text-foreground rounded-md w-full group hover:bg-indigo-500 hover:text-white transition-all duration-300 hover:cursor-pointer hover:pb-6'>
+              <p className="whitespace-normal w-full">{item.long_description}</p>
+              <div className='text-muted-foreground group-hover:text-white text-xs flex justify-start items-center gap-2 transition-all duration-300 mt-3'>
+                <div className='flex-1'>
+                  {moment(item.created_date).format('DD/MM/YYY')}
                   <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                     <circle cx={1} cy={1} r={1} />
                   </svg>
-                  identifier?
+                  {item.name}
                 </div>
-              </div> */}
+                <Button 
+                  variant={'link'}
+                  className='hidden group-hover:flex'
+                  onClick={() => handleContextDelete(item.id)}
+                >
+                  Remove
+                </Button>
+              </div>
+              
             </div>
           ))}
+          {contexts.length === 0 && (
+            <div>
+              <p className='text-muted-foreground text-sm flex justify-start items-center gap-2'><FolderXIcon className='size-3'/>No Contexts Added</p>
+            </div>
+          )}
           </div>
       )}
     </div>

@@ -278,10 +278,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <div className="">
                 <h3 className="text-lg font-semibold mb-2">Actions</h3>
                 <div className="flex flex-col justify-around items-center gap-2">
-                  <Button variant={'outline'} onClick={() => setAction('context')} className="w-full">
-                    <BookOpenText className="w-4 h-4 mr-2"/>
-                    Manage Context
-                  </Button>
+                  {node.type === 'goal' && (
+                    <Button variant={'outline'} onClick={() => setAction('context')} className="w-full">
+                      <BookOpenText className="w-4 h-4 mr-2"/>
+                      Manage Context
+                    </Button>
+                  )}
                   {node.type !== 'context' && node.type !== 'evidence' && (
                     <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New</Button>
                   )}
@@ -342,7 +344,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <div className="flex flex-col justify-start items-center gap-4 w-full">
                 {node.type === 'goal' && (
                   <>
-                    <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button>
+                    {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
                     <Button variant='outline' onClick={() => selectLink('strategy')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Strategy</Button>
                     <Button variant='outline' onClick={() => selectLink('claim')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Property Claim</Button>
                   </>

@@ -106,6 +106,7 @@ class TopLevelNormativeGoal(CaseItem):
         AssuranceCase, related_name="goals", on_delete=models.CASCADE
     )
     shape = Shape.RECTANGLE
+    assumption = models.TextField(blank=True, default="")
 
     def __str__(self):
         return self.name
@@ -131,6 +132,8 @@ class Context(CaseItem):
 
 class Strategy(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
+    assumption = models.TextField(blank=True, default="")
+    justification = models.TextField(blank=True, default="")
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
         related_name="strategies",
@@ -159,6 +162,7 @@ class PropertyClaim(CaseItem):
         PROJECT = "Project claim"
 
     shape = Shape.RECTANGLE
+    assumption = models.TextField(blank=True, default="")
     claim_type = models.CharField(
         max_length=32, choices=ClaimType.choices, default=ClaimType.PROJECT
     )
