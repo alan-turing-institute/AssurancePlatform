@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import EditSheet from "../ui/edit-sheet";
-import { CloudFog, Eye, EyeOff, MessageCirclePlus, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
+import { BookOpenText, CloudFog, Eye, EyeOff, MessageCirclePlus, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
 import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
@@ -25,6 +25,7 @@ import OrphanElements from "../cases/OrphanElements";
 import { ChatBubbleIcon } from "@radix-ui/react-icons";
 import NodeComment from "../cases/NodeComments";
 import { useSession } from "next-auth/react";
+import NodeContext from "../cases/NodeContext";
 
 interface NodeEditProps {
   node: Node | any
@@ -277,6 +278,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <div className="">
                 <h3 className="text-lg font-semibold mb-2">Actions</h3>
                 <div className="flex flex-col justify-around items-center gap-2">
+                  {node.type === 'goal' && (
+                    <Button variant={'outline'} onClick={() => setAction('context')} className="w-full">
+                      <BookOpenText className="w-4 h-4 mr-2"/>
+                      Manage Context
+                    </Button>
+                  )}
                   {node.type !== 'context' && node.type !== 'evidence' && (
                     <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New</Button>
                   )}
@@ -337,7 +344,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               <div className="flex flex-col justify-start items-center gap-4 w-full">
                 {node.type === 'goal' && (
                   <>
-                    <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button>
+                    {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
                     <Button variant='outline' onClick={() => selectLink('strategy')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Strategy</Button>
                     <Button variant='outline' onClick={() => selectLink('claim')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Property Claim</Button>
                   </>
@@ -492,6 +499,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           setAction={setAction}
           readOnly={assuranceCase.permissions === 'view' ? true : false}
         />
+      )}
+      {action === 'context' && (
+        <NodeContext node={node} actions={{ setSelectedLink, handleClose, setAction }} setUnresolvedChanges={setUnresolvedChanges} />
       )}
       <AlertModal
         isOpen={deleteOpen}

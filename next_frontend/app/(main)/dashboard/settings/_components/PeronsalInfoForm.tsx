@@ -14,7 +14,6 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Lock, MoveLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 // import { useLoginToken } from "@/hooks/useAuth"
@@ -121,6 +120,8 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
     setLoading(false)
   }
 
+  console.log('Current User', data)
+
   return (
     <>
     <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -210,15 +211,15 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 <FormItem className="col-span-full">
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
+                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={data.email == '' ? false : true} />
                   </FormControl>
-                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
+                  {data.email == '' ? false : true && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          {!session && (
+          {!data.email && (
             <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
               {loading ? 'Updating' : 'Update'}
             </Button>
