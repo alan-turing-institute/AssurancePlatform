@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0025_alter_assurancecaseimage_assurance_case'),
+        ("eap_api", "0025_alter_assurancecaseimage_assurance_case"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='toplevelnormativegoal',
-            name='assumption',
+            model_name="toplevelnormativegoal",
+            name="assumption",
             field=models.TextField(blank=True, null=True),
         ),
     ]

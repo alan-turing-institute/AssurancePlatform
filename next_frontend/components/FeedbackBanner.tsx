@@ -16,9 +16,9 @@ export default function FeedbackBanner() {
             <MessageSquareMore className='w-4 h-4' />
             <strong className="font-semibold">Feedback</strong>
           </div>
-          <svg 
-            viewBox="0 0 2 2" 
-            className="hidden md:block mx-2 h-0.5 w-0.5 fill-current" 
+          <svg
+            viewBox="0 0 2 2"
+            className="hidden md:block mx-2 h-0.5 w-0.5 fill-current"
             aria-hidden="true"
           >
             <circle cx={1} cy={1} r={1} />

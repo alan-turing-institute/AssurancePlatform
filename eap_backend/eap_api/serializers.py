@@ -221,7 +221,7 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
             "context",
             "property_claims",
             "strategies",
-            'assumption'
+            "assumption",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
@@ -312,7 +312,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
             "evidence",
             "strategy_id",
             "in_sandbox",
-            'assumption'
+            "assumption",
         )
 
         extra_kwargs = {
@@ -428,8 +428,8 @@ class StrategySerializer(serializers.ModelSerializer):
             "goal_id",
             "property_claims",
             "in_sandbox",
-            'assumption',
-            'justification'
+            "assumption",
+            "justification",
         )
 
         extra_kwargs = {"name": {"allow_null": True, "required": False}}

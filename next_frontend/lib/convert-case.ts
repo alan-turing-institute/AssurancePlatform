@@ -73,8 +73,8 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
     processedItems.add(item);
 
     // Recursively create nodes for child elements
-    
-    /*  DEPRECATED - REMOVE CONTEXT NODES 
+
+    /*  DEPRECATED - REMOVE CONTEXT NODES
         https://github.com/orgs/alan-turing-institute/projects/240/views/1?pane=issue&itemId=86520648&issue=alan-turing-institute%7CAssurancePlatform%7C652
     */
     // if (item.context && item.context.length > 0) {

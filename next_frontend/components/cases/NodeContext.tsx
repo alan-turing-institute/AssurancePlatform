@@ -152,7 +152,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
       <div className='mt-4 font-medium text-muted-foreground text-sm'>
         Please add a new context using thr form below.
       </div>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 my-4">
           <FormField
@@ -204,7 +204,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
                   </svg>
                   {item.name}
                 </div>
-                <Button 
+                <Button
                   variant={'link'}
                   className='hidden group-hover:flex'
                   onClick={() => handleContextDelete(item.id)}
@@ -212,7 +212,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
                   Remove
                 </Button>
               </div>
-              
+
             </div>
           ))}
           {contexts.length === 0 && (

@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0029_alter_toplevelnormativegoal_assumption'),
+        ("eap_api", "0029_alter_toplevelnormativegoal_assumption"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='propertyclaim',
-            name='assumption',
-            field=models.TextField(blank=True, default=''),
+            model_name="propertyclaim",
+            name="assumption",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AddField(
-            model_name='strategy',
-            name='assumption',
-            field=models.TextField(blank=True, default=''),
+            model_name="strategy",
+            name="assumption",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AddField(
-            model_name='strategy',
-            name='justification',
-            field=models.TextField(blank=True, default=''),
+            model_name="strategy",
+            name="justification",
+            field=models.TextField(blank=True, default=""),
         ),
     ]
