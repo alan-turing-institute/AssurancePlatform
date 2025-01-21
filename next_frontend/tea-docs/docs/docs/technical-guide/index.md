@@ -5,7 +5,7 @@ sidebar_label: 'Technical Documentation'
 
 # Technical Documentation
 
-:::warning
+:::warning[Notice]
 
 This section provides technical documentation for developers or users who wish to learn more about how the TEA platform was built, or to access instructions on how to install locally or in the cloud.
 

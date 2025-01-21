@@ -11,9 +11,9 @@ Welcome to the Community page of the Trustworthy and Ethical Assurance (TEA) Pla
 
 We are currently in the process of building out our community infrastructure for the TEA Platform. This includes developing forums, collaborative tools, and resources to support our members in their assurance case work. Our goal is to create a dynamic and supportive environment that facilitates meaningful interactions and collaborations within the community.
 
-:::info example "Join us in shaping the future of ethical assurance"
+:::info[Join us in shaping the future of trustworthy and ethical assurance]
 
-    We are excited about the potential of the TEA Platform to bring together a community of practitioners passionate about ethical technology governance. If you are interested in talking further about our community development efforts or wish to contribute, please reach out to the Research Application Manager, Kalle Westerling, at kwesterling@turing.ac.uk. We welcome your insights, expertise, and enthusiasm as we work together to build a community that reflects our shared values and goals.
+We are excited about the potential of the TEA Platform to bring together a community of practitioners passionate about ethical technology governance. If you are interested in talking further about our community development efforts or wish to contribute, please reach out to the Research Application Manager, Kalle Westerling, at kwesterling@turing.ac.uk. We welcome your insights, expertise, and enthusiasm as we work together to build a community that reflects our shared values and goals.
 
 :::
 
