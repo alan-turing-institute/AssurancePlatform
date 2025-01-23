@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import EditSheet from "../ui/edit-sheet";
-import { BookOpenText, CloudFog, Eye, EyeOff, MessageCirclePlus, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
+import { BookOpenText, CloudFog, Eye, EyeOff, LibraryIcon, MessageCirclePlus, Move, Plus, PlusCircle, Trash2, Unplug } from "lucide-react"
 import EditForm from "./EditForm";
 import { Autour_One } from "next/font/google";
 import { addEvidenceToClaim, addPropertyClaimToNested, createAssuranceCaseNode, deleteAssuranceCaseNode, listPropertyClaims, setNodeIdentifier, updateAssuranceCaseNode, caseItemDescription, updateAssuranceCase, removeAssuranceCaseNode, extractGoalsClaimsStrategies, findElementById, getChildrenHiddenStatus, findSiblingHiddenState, findParentNode, detachCaseElement } from "@/lib/case-helper";
@@ -26,6 +26,7 @@ import { ChatBubbleIcon } from "@radix-ui/react-icons";
 import NodeComment from "../cases/NodeComments";
 import { useSession } from "next-auth/react";
 import NodeContext from "../cases/NodeContext";
+import NodeAttributes from "../cases/NodeAttributes";
 
 interface NodeEditProps {
   node: Node | any
@@ -284,8 +285,14 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       Manage Context
                     </Button>
                   )}
+                  {node.type !== 'evidence' && (
+                  <Button variant={'outline'} onClick={() => setAction('attributes')} className="w-full">
+                    <LibraryIcon className="w-4 h-4 mr-2"/>
+                    Manage Attributes
+                  </Button>
+                  )}
                   {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New</Button>
+                    <Button variant={'outline'} onClick={() => setAction('new')} className="w-full"><PlusCircle className="w-4 h-4 mr-2"/>Add New Element</Button>
                   )}
                   {node.type !== 'context' && node.type !== 'evidence' && (
                     <Button variant={'outline'} onClick={() => setAction('existing')} className="w-full"><Unplug className="w-4 h-4 mr-2"/>Reattach Element(s)</Button>
@@ -502,6 +509,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       )}
       {action === 'context' && (
         <NodeContext node={node} actions={{ setSelectedLink, handleClose, setAction }} setUnresolvedChanges={setUnresolvedChanges} />
+      )}
+      {action === 'attributes' && (
+        <NodeAttributes node={node} onClose={handleClose} actions={{ setSelectedLink, handleClose, setAction }} setUnresolvedChanges={setUnresolvedChanges} />
       )}
       <AlertModal
         isOpen={deleteOpen}
