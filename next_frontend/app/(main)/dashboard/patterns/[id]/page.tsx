@@ -1,0 +1,106 @@
+import BackButton from '@/components/ui/back-button'
+import { Button } from '@/components/ui/button'
+import PageHeading from '@/components/ui/page-heading'
+import { patterns } from '@/config'
+import { PaperclipIcon, Trash2Icon } from 'lucide-react'
+import moment from 'moment'
+import Image from 'next/image'
+import React from 'react'
+
+function PatternDetails({ params } : { params: { id: string } }) {
+  const { id } = params
+
+  const pattern = patterns.filter(x => x.id === Number(id))[0]
+
+  return (
+    <div className='p-8 min-h-screen space-y-4'>
+      <BackButton />
+      <PageHeading 
+        title={pattern.title}
+        description={`Created On ${moment(pattern.createdOn).format('DD/MM/YYYY')}`}
+        button={{ label: pattern.published ? 'Unpublish' : 'Publish', action: () => {} }} 
+        edit={{ action: () => {}}}
+      />
+
+      <div>
+        <div className="mt-6">
+          <dl className="grid grid-cols-1 sm:grid-cols-3">
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Domain/Sector</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.sector}</dd>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Date Published</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{moment(pattern.publishedDate).format('DD/MM/YYYY')}</dd>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Category</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.category}</dd>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Contact</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.contact}</dd>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-2 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Authors</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.authors}</dd>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-3 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Description</dt>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">
+                {pattern.description}
+              </dd>
+            </div>
+            <div className="border-t border-foreground/20 px-4 py-6 sm:col-span-3 sm:px-0">
+              <dt className="text-sm/6 font-medium text-foreground">Assurance Cases</dt>
+              <dd className="mt-2 text-sm text-foreground">
+                {pattern.assuranceCases.length > 0 ? (
+                  <ul role="list" className="divide-y divide-foreground/20 rounded-md border border-foreground/20">
+                    {pattern.assuranceCases.map(item => (
+                      <li key={item.id} className="flex items-center justify-between py-4 pl-4 pr-5 text-sm/6">
+                        <div className="flex w-0 flex-1 items-center">
+                          <PaperclipIcon aria-hidden="true" className="size-5 shrink-0 text-gray-400" />
+                          <div className="ml-4 flex min-w-0 flex-1 gap-2">
+                            <span className="truncate font-medium">{item.name}</span>
+                          </div>
+                        </div>
+                        <div className="ml-4 shrink-0">
+                          <a href="#" className="font-medium text-indigo-500 hover:text-indigo-500">
+                            Download
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className='text-muted-foreground'>No Assurance Cases Added.</p>
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-sm/6 font-medium text-foreground mb-2">Image</p>
+          {pattern.image ? (
+            <div className="w-10/12 relative h-[500px] group">
+              <Image
+                src={
+                  'https://images.unsplash.com/photo-1682685797743-3a7b6b8d8149?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                }
+                alt="image"
+                fill
+                className="object-cover aspect-video rounded-lg"
+              />
+              <div className="absolute bg-slate-900/70 h-full w-full flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <Button variant={'destructive'}><Trash2Icon className='size-4 mr-2'/>Remove</Button>
+              </div>
+            </div>
+          ) : (
+            <p className='text-sm text-muted-foreground'>No Image Added.</p>
+          )}
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+export default PatternDetails

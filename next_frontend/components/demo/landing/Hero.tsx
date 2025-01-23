@@ -1,128 +1,8 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { Dialog } from '@headlessui/react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useSession } from 'next-auth/react'
-// import { useLoginToken } from '@/hooks/useAuth'
-
-const navigation = [
-  // { name: 'Showcase', href: 'documentation' },
-  { name: 'Documentation', href: 'documentation' },
-  // { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/' },
-  { name: 'GitHub', href: 'https://github.com/alan-turing-institute/AssurancePlatform' },
-]
+import Header from '@/app/(landing)/_components/Header'
 
 export default function Hero() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(false)
-
-  // const [token] = useLoginToken();
-  const { data: session } = useSession()
-
-  useEffect(() => {
-    if(session?.key) {
-      setLoggedIn(true)
-    }
-  },[])
-
   return (
     <div className="bg-white">
-      <header className="absolute inset-x-0 top-0 z-50">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-          <div className="flex lg:flex-1">
-            <a href="#" className="-m-1.5 p-1.5 flex justify-start items-center gap-2">
-              <img
-                className="h-12 w-auto"
-                src="/images/tea-logo.png"
-                alt=""
-              />
-              {/* <svg className='w-6 h-6' fill='#4f46e5' xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 2v2.06A8.522 8.522 0 0 0 4.05 9H2v6h2.06A8.494 8.494 0 0 0 9 19.95V22h6v-2.06A8.494 8.494 0 0 0 19.95 15H22V9h-2.06A8.522 8.522 0 0 0 15 4.05V2m-4 2h2v2h-2m-2 .25V8h6V6.25c1.18.61 2.14 1.57 2.75 2.75H16v6h1.75A6.406 6.406 0 0 1 15 17.75V16H9v1.75A6.406 6.406 0 0 1 6.25 15H8V9H6.25A6.406 6.406 0 0 1 9 6.25M4 11h2v2H4m14-2h2v2h-2m-7 5h2v2h-2"></path></svg>
-              <span className="text-indigo-600 font-semibold">Trustworthy and Ethical Assurance</span> */}
-            </a>
-          </div>
-          <div className="flex lg:hidden">
-            <button
-              type="button"
-              className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <span className="sr-only">Open main menu</span>
-              <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-            </button>
-          </div>
-          <div className="hidden lg:flex lg:gap-x-12">
-            {navigation.map((item) => (
-              <a key={item.name} href={item.href} target='_blank' className="text-sm font-semibold leading-6 text-gray-900">
-                {item.name}
-              </a>
-            ))}
-          </div>
-          <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-              {loggedIn ? (
-                <a href="/dashboard" className="text-sm font-semibold leading-6 text-gray-900">
-                      Get Started <span aria-hidden="true">&rarr;</span>
-                </a>
-              ) : (
-                <a href="/login" className="text-sm font-semibold leading-6 text-gray-900">
-                      Log in <span aria-hidden="true">&rarr;</span>
-                </a>
-              )}
-          </div>
-        </nav>
-        <Dialog as="div" className="lg:hidden" open={mobileMenuOpen} onClose={setMobileMenuOpen}>
-          <div className="fixed inset-0 z-50" />
-          <Dialog.Panel className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-            <div className="flex items-center justify-between">
-              <a href="#" className="-m-1.5 p-1.5">
-                {/* <span className="">Your Company</span> */}
-                {/* <img
-                  className="h-8 w-auto"
-                  src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
-                  alt=""
-                /> */}
-                <img
-                  className="h-12 w-auto"
-                  src="/images/tea-logo.png"
-                  alt=""
-                />
-              </a>
-              <button
-                type="button"
-                className="-m-2.5 rounded-md p-2.5 text-gray-700"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <span className="sr-only">Close menu</span>
-                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="mt-6 flow-root">
-              <div className="-my-6 divide-y divide-gray-500/10">
-                <div className="space-y-2 py-6">
-                  {navigation.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      target='_blank'
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    >
-                      {item.name}
-                    </a>
-                  ))}
-                </div>
-                <div className="py-6">
-                  <a
-                    href="/login"
-                    className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                  >
-                    Log in
-                  </a>
-                </div>
-              </div>
-            </div>
-          </Dialog.Panel>
-        </Dialog>
-      </header>
       <main>
         <div className="relative isolate">
           <svg
@@ -162,7 +42,7 @@ export default function Hero() {
             />
           </div>
           <div className="overflow-hidden">
-            <div className="mx-auto max-w-7xl px-6 pb-32 pt-36 sm:pt-60 lg:px-8 lg:pt-40">
+            <div className="mx-auto max-w-7xl px-6 pb-32 lg:px-8">
               <div className="mx-auto w-full lg:grid lg:grid-cols-2 lg:items-center gap-8">
               {/* <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center"> */}
                 <div className="relative w-full">

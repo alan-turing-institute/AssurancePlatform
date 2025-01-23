@@ -15,7 +15,11 @@ export const Navbar = ({ children } : { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const pathname = usePathname();
-  const pageName = pathname === '/' ? 'assurance cases' : pathname.split('/')[1]
+  const pageName = pathname === '/' 
+  ? 'assurance cases' 
+  : pathname.includes('/dashboard/patterns') 
+    ? 'patterns' 
+    : pathname.split('/').filter(Boolean).pop();
 
   const { data } = useSession()
 

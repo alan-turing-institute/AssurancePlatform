@@ -101,11 +101,11 @@ class AssuranceCase(models.Model):
 
 
 class TopLevelNormativeGoal(CaseItem):
-    keywords = models.CharField(max_length=3000)
+    # keywords = models.CharField(max_length=3000)
     assurance_case = models.ForeignKey(
         AssuranceCase, related_name="goals", on_delete=models.CASCADE
     )
-    shape = Shape.RECTANGLE
+    # shape = Shape.RECTANGLE
     assumption = models.TextField(blank=True, default="")
 
     def __str__(self):
