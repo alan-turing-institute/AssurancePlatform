@@ -5,7 +5,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ExternalLink } from 'lucide-react'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
-import { Cog6ToothIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
+import { Separator } from '../ui/separator'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -32,7 +33,7 @@ const DesktopNav = () => {
           </Link>
         </div>
         <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
+          <ul role="list" className="flex flex-1 flex-col gap-y-4">
             <li>
               <ul role="list" className="-mx-2 space-y-1">
                 {navigation.map((item) => (
@@ -61,6 +62,7 @@ const DesktopNav = () => {
                 ))}
               </ul>
             </li>
+            <Separator />
             <li>
               <div className="text-xs font-semibold leading-6 text-indigo-200">Your teams</div>
               <ul role="list" className="-mx-2 mt-2 space-y-1">
@@ -98,6 +100,20 @@ const DesktopNav = () => {
                   aria-hidden="true"
                 />
                 GitHub
+                <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />
+              </a>
+            </li>
+            <li>
+              <a
+                href="/documentation"
+                target='_blank'
+                className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white items-center"
+              >
+                <DocumentDuplicateIcon
+                  className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
+                  aria-hidden="true"
+                />
+                Documentation
                 <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />
               </a>
             </li>
