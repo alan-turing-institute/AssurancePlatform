@@ -1,62 +1,64 @@
 import BackButton from '@/components/ui/back-button'
 import { Button } from '@/components/ui/button'
 import PageHeading from '@/components/ui/page-heading'
-import { patterns } from '@/config'
+import { caseStudies } from '@/config'
 import { PaperclipIcon, Trash2Icon } from 'lucide-react'
 import moment from 'moment'
 import Image from 'next/image'
 import React from 'react'
+import CaseStudyForm from '../_components/CaseStudyForm'
 
 function PatternDetails({ params } : { params: { id: string } }) {
   const { id } = params
 
-  const pattern = patterns.filter(x => x.id === Number(id))[0]
+  const caseStudy = caseStudies.filter(x => x.id === Number(id))[0]
 
   return (
     <div className='p-8 min-h-screen space-y-4'>
       <BackButton />
       <PageHeading 
-        title={pattern.title}
-        description={`Created On ${moment(pattern.createdOn).format('DD/MM/YYYY')}`}
-        button={{ label: pattern.published ? 'Unpublish' : 'Publish', action: () => {} }} 
-        edit={{ action: () => {}}}
+        title={caseStudy.title}
+        description={`Created On ${moment(caseStudy.createdOn).format('DD/MM/YYYY')}`}
+        button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', action: () => {} }} 
       />
+
+      <CaseStudyForm caseStudy={caseStudy} />
 
       <div>
         <div className="mt-6">
-          <dl className="grid grid-cols-1 sm:grid-cols-3">
+          {/* <dl className="grid grid-cols-1 sm:grid-cols-3">
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Domain/Sector</dt>
-              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.sector}</dd>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{caseStudy.sector}</dd>
             </div>
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Date Published</dt>
-              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{moment(pattern.publishedDate).format('DD/MM/YYYY')}</dd>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</dd>
             </div>
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Category</dt>
-              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.category}</dd>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{caseStudy.category}</dd>
             </div>
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Contact</dt>
-              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.contact}</dd>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{caseStudy.contact}</dd>
             </div>
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-2 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Authors</dt>
-              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{pattern.authors}</dd>
+              <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{caseStudy.authors}</dd>
             </div>
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-3 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Description</dt>
               <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">
-                {pattern.description}
+                {caseStudy.description}
               </dd>
             </div>
             <div className="border-t border-foreground/20 px-4 py-6 sm:col-span-3 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Assurance Cases</dt>
               <dd className="mt-2 text-sm text-foreground">
-                {pattern.assuranceCases.length > 0 ? (
+                {caseStudy.assuranceCases.length > 0 ? (
                   <ul role="list" className="divide-y divide-foreground/20 rounded-md border border-foreground/20">
-                    {pattern.assuranceCases.map(item => (
+                    {caseStudy.assuranceCases.map(item => (
                       <li key={item.id} className="flex items-center justify-between py-4 pl-4 pr-5 text-sm/6">
                         <div className="flex w-0 flex-1 items-center">
                           <PaperclipIcon aria-hidden="true" className="size-5 shrink-0 text-gray-400" />
@@ -77,9 +79,9 @@ function PatternDetails({ params } : { params: { id: string } }) {
                 )}
               </dd>
             </div>
-          </dl>
-          <p className="text-sm/6 font-medium text-foreground mb-2">Image</p>
-          {pattern.image ? (
+          </dl> */}
+          {/* <p className="text-sm/6 font-medium text-foreground mb-2">Image</p>
+          {caseStudy.image ? (
             <div className="w-10/12 relative h-[500px] group">
               <Image
                 src={
@@ -95,7 +97,7 @@ function PatternDetails({ params } : { params: { id: string } }) {
             </div>
           ) : (
             <p className='text-sm text-muted-foreground'>No Image Added.</p>
-          )}
+          )} */}
         </div>
       </div>
 

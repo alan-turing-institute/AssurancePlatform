@@ -17,8 +17,8 @@ export const Navbar = ({ children } : { children: React.ReactNode }) => {
   const pathname = usePathname();
   const pageName = pathname === '/' 
   ? 'assurance cases' 
-  : pathname.includes('/dashboard/patterns') 
-    ? 'patterns' 
+  : pathname.includes('/dashboard/case-studies') 
+    ? 'Case Studies' 
     : pathname.split('/').filter(Boolean).pop();
 
   const { data } = useSession()

@@ -1,7 +1,7 @@
 import PageHeading from '@/components/ui/page-heading'
 import { Separator } from '@/components/ui/separator'
-import { patterns } from '@/config'
-import { Edit2Icon, PaperclipIcon } from 'lucide-react'
+import { caseStudies } from '@/config'
+import { Edit2Icon } from 'lucide-react'
 import moment from 'moment'
 import Link from 'next/link'
 import React from 'react'
@@ -51,30 +51,30 @@ function PatternsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-foreground/10 bg-background">
-              {patterns.map((pattern) => (
-                <tr key={pattern.id}>
+              {caseStudies.map((caseStudy) => (
+                <tr key={caseStudy.id}>
                   <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:w-auto sm:max-w-none sm:pl-0">
-                    <Link href={`patterns/${pattern.id}`} className='hover:text-indigo-500 transition-all duration-200 group'>
-                      {pattern.title}
+                    <Link href={`case-studies/${caseStudy.id}`} className='hover:text-indigo-500 transition-all duration-200 group'>
+                      {caseStudy.title}
                     </Link>
                     <dl className="font-normal lg:hidden">
                       <dt className="sr-only">Title</dt>
-                      <dd className="mt-1 truncate text-foreground/80">{pattern.title}</dd>
+                      <dd className="mt-1 truncate text-foreground/80">{caseStudy.title}</dd>
                       <dt className="sr-only sm:hidden">Published</dt>
-                      <dd className="mt-1 truncate text-gray-500 sm:hidden">{moment(pattern.publishedDate).format('DD/MM/YYYY')}</dd>
+                      <dd className="mt-1 truncate text-gray-500 sm:hidden">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</dd>
                     </dl>
                   </td>
-                  <td className="hidden px-3 py-4 text-sm text-foreground/80 lg:table-cell max-w-[220px] truncate">{pattern.description}</td>
-                  <td className="hidden px-3 py-4 text-sm text-foreground/80 sm:table-cell">{pattern.authors}</td>
+                  <td className="hidden px-3 py-4 text-sm text-foreground/80 lg:table-cell max-w-[220px] truncate">{caseStudy.description}</td>
+                  <td className="hidden px-3 py-4 text-sm text-foreground/80 sm:table-cell">{caseStudy.authors}</td>
                   <td className="px-3 py-4 text-sm text-foreground/80">
                     <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-100/10 px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-500 ring-1 ring-inset ring-indigo-700/10 dark:ring-indigo-500/20">
-                      {pattern.category}
+                      {caseStudy.category}
                     </span>
                   </td>
-                  <td className="px-3 py-4 text-sm text-foreground/80">{moment(pattern.publishedDate).format('DD/MM/YYYY')}</td>
+                  <td className="px-3 py-4 text-sm text-foreground/80">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</td>
                   <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                     <a href="#" className="text-indigo-500 hover:text-indigo-600">
-                      <Edit2Icon className='size-4' /><span className="sr-only">, {pattern.title}</span>
+                      <Edit2Icon className='size-4' /><span className="sr-only">, {caseStudy.title}</span>
                     </a>
                   </td>
                 </tr>

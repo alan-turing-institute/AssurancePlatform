@@ -9,7 +9,7 @@ import { Blocks } from 'lucide-react'
 export const navigation = [
   { name: 'My Assurance Cases', href: '/dashboard', icon: FolderIcon, current: false , externalLink: false},
   { name: 'Shared With Me', href: '/dashboard/shared', icon: UsersIcon, current: false , externalLink: false},
-  { name: 'Case Portfolio', href: '/dashboard/patterns', icon: Blocks, current: false , externalLink: false},
+  { name: 'Case Studies', href: '/dashboard/case-studies', icon: Blocks, current: false , externalLink: false},
   // { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
   // { name: 'Documentation', href: '/documentation', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ]
@@ -34,7 +34,7 @@ export const settingsNavigation = [
 ]
 
 // Dummy Data 
-export const patterns = [
+export const caseStudies = [
   { 
     id: 1, 
     title: 'Introduce AI', 
@@ -50,7 +50,8 @@ export const patterns = [
       { id: crypto.randomUUID(), name: 'Assurance Case Title Example' },
       { id: crypto.randomUUID(), name: 'Assurance Case Title Example' }
     ],
-    image: 'https://images.unsplash.com/photo-1682685797743-3a7b6b8d8149?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    image: '',
+    // image: 'https://images.unsplash.com/photo-1682685797743-3a7b6b8d8149?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     published: true
   },
   { 
