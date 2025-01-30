@@ -7,7 +7,7 @@ sidebar_label: 'The Assurance Ecosystem'
 
 In 2021, the UK Government's
 [Centre for Data Ethics and Innovation](https://www.gov.uk/government/organisations/centre-for-data-ethics-and-innovation)
-released their
+(now the Responsible Technology Adoption Unit) released their
 [AI Assurance Roadmap](https://www.gov.uk/government/publications/the-roadmap-to-an-effective-ai-assurance-ecosystem).
 This publication set an agenda and series of recommendations for how to build
 and govern an effective AI Assurance ecosystem.
@@ -20,9 +20,11 @@ and ethical manner. As such, it is an emerging concept, which is currently only
 loosely defined but can, nevertheless, help us address the challenges posed by
 AI technologies and maximise their opportunities.
 
-!!! info "CDEI's AI Assurance Guide"
+:::info[UK Government's AI Assurance Ecosystem]
 
-    The following is based on and adapted from the Centre for Data Ethics and Innovation's AI Assurance Guide, which extends their original roadmap and seeks to clarify the scope of an assurance ecosystem as it pertains to AI. We consider some of the core concepts of the CDEI's guide, focusing on the parts that are relevant to the TEA platform. For further information, please visit their site: [https://cdeiuk.github.io/ai-assurance-guide/](https://cdeiuk.github.io/ai-assurance-guide/)
+The following is based on and adapted from the Centre for Data Ethics and Innovation's AI Assurance Guide, which extends their original roadmap and seeks to clarify the scope of an assurance ecosystem as it pertains to AI. We consider some of the core concepts of the CDEI's guide, focusing on the parts that are relevant to the TEA platform. For further information, please visit their site: [https://cdeiuk.github.io/ai-assurance-guide/](https://cdeiuk.github.io/ai-assurance-guide/)
+
+:::
 
 ## Why is Assurance Important
 
@@ -71,7 +73,9 @@ As the CDEI's guide acknowledges:
 > which is in fact trustworthy, we incur the opportunity costs of not using good
 > technology.
 
-<!-- ![](../assets/images/justified-trust.png) -->
+![](/img/justified-trust.png)
+
+_Figure 1. The relationship between three parties required to establish justified trust. https://cdeiuk.github.io/ai-assurance-guide/trust
 
 The concept of justified trust is, understandably, an integral part of
 _trustworthy_ and ethical assurance.
@@ -112,11 +116,10 @@ various roles and responsibilities will fall short in a number of dimensions.
 However, the following graphic provides us with a good starting point for
 understanding the key actors in an assurance ecosystem.
 
-<!-- ![This diagram depicts the AI assurance ecosystem, illustrating interactions between AI supply chain participants, AI Assurance Service Providers, Independent Researchers, and Supporting Structures like regulators and standards bodies.](../assets/images/actors.png) -->
+![This diagram depicts the AI assurance ecosystem, illustrating interactions between AI supply chain participants, AI Assurance Service Providers, Independent Researchers, and Supporting Structures like regulators and standards bodies.](/img/actors.png)
 
 _Figure 2. Key actors in the AI Assurance Ecosystem. Reprinted from CDEI (2023)
-AI Assurance Guide.
-https://cdeiuk.github.io/ai-assurance-guide/needs-and-responsibilities_
+AI Assurance Guide. https://cdeiuk.github.io/ai-assurance-guide/needs-and-responsibilities_
 
 As the diagram depicts, certain actors have a direct influence into the supply
 chain for AI systems. These are known as 'assurance users'. For instance,
@@ -184,51 +187,8 @@ While not specifically designed to address ethical principles, the following
 diagram from the CDEI's Assurance Guide can help elucidate some of the reasons
 why trustworthy and ethical assurance can be challenging.
 
-<!--  rewrite following summary
+![](/img/subject-matter.png)
 
-1. **Unobservable versus Observable**:
-   - Unobservable aspects refer to elements that cannot be directly seen or measured but might have implications, like potential societal harms from AI systems.
-   - Observable aspects are those that can be directly seen, measured, or experienced, like testing the accuracy of an AI system against a clear standard.
-
-2. **Subjective versus Objective**:
-   - Subjective aspects involve personal judgments or opinions, like deciding which definition of fairness to apply in assessing an AI system.
-   - Objective aspects refer to measurable, factual bases that do not rely on personal feelings or interpretations, like measuring false positive or false negative rates.
-
-3. **Ambiguous versus Explicit**:
-   - Ambiguous aspects lack clarity or are open to multiple interpretations, requiring more judgement for assurance. For instance, qualitative assessments of societal impacts or algorithmic bias.
-   - Explicit aspects are clear, defined, and often quantifiable, like the accuracy of an algorithm against a specific metric.
-
-4. **Uncertain versus Certain**:
-   - Uncertain aspects are characterized by doubt and unpredictability, like the potential broader societal impacts from AI deployment.
-   - Certain aspects are clear and definite, allowing for more definitive assurance.
-
-Now, regarding the assurance of ethical principles for AI:
-
-1. **Unobservable versus Observable**:
-   - Ethical principles often concern values and norms, which might be unobservable directly. However, their operationalization could be observable through specific metrics or indicators, albeit imperfectly.
-
-2. **Subjective versus Objective**:
-   - Ethical principles are fundamentally subjective as they're rooted in societal values, cultural norms, and individual beliefs. However, once a consensus is reached on certain ethical standards, their application can be approached in a more objective manner through established metrics.
-
-3. **Ambiguous versus Explicit**:
-   - Ethical principles can be ambiguous due to differing interpretations and context-dependent nuances. Over time, through discourse and standardization, they may become more explicit, although some level of ambiguity is likely to remain.
-
-4. **Uncertain versus Certain**:
-   - The impact and effectiveness of applying ethical principles are often uncertain due to the complex, dynamic nature of AI and its interaction with society. However, certain ethical benchmarks or standards can provide a level of certainty in evaluation.
-
-The application of ethical principles in AI governance involves navigating these dimensions to ensure that the AI systems are developed and deployed responsibly. The challenge lies in translating abstract ethical principles into concrete practices and metrics for evaluation while acknowledging and addressing the inherent subjectivity, ambiguity, and uncertainty involved in ethical considerations.
-
--->
-
-<!-- ![](../assets/images/subject-matter.png) -->
 _Figure 3. A graphic showing the four
 dimensions of assurance subject matter: unobservable/observable,
 subjective/objective, ambiguous/explicit, uncertain/certain._
-
-- In the context of the TEA platform, the different subject matter represent the
-  domain of the assurance case, summarised in the top-level goal claim (e.g.
-  fairness).
-
-To what extent does the TEA methodology and platform align with the CDEI's 5
-elements of assurance: https://cdeiuk.github.io/ai-assurance-guide/five-elements
--->

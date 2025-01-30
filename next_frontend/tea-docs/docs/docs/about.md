@@ -44,7 +44,7 @@ In short, an assurance case presents an argument, in a logical and graphical for
 
 :::success[An Introduction to Trustworthy and Ethical Assurance]
 
-A more complete introduction to Trustworthy and Ethical Assurance (including the tool and methodology) can be found in our learning modules section.
+A more complete introduction to Trustworthy and Ethical Assurance (including the tool and methodology) can be found in our [learning modules](./learning-modules/index.md) section.
 
 :::
 
@@ -52,7 +52,7 @@ A more complete introduction to Trustworthy and Ethical Assurance (including the
 
 Although the logical structure of an assurance case is simple, the process of building and sharing an assurance case can be more involved. As such, a significant element of the TEA platform is the learning resources and technical documentation that has been designed to widen the scope of who can participate in the assurance ecosystem.
 
-You can browse our learning modules, technical documentation, or community resources to find out more.
+You can browse our [learning modules](./learning-modules/index.md), [technical documentation](./technical-guide/index.md), or [community resources](./community/index.md) to find out more.
 
 ### Feature 3: Community Infrastructure
 
@@ -69,7 +69,7 @@ The benefits of this include:
 - A collaborative approach to evaluating the strength and justifiability of assurance cases (e.g. identifying gaps or insufficient evidence)
 - Open design and collaboration of new ideas and features to improve the TEA platform
 
-If you want to learn more about how the TEA platform scaffolds community engagement, please read our community guide. Here, you can also find more information about past or upcoming events for the TEA community.
+If you want to learn more about how the TEA platform scaffolds community engagement, please read our [community guide](./community/index.md). Here, you can also find more information about past or upcoming events for the TEA community.
 
 ## Funding Statements
 
