@@ -47,8 +47,6 @@ interface CaseStudyFormProps {
 }
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
-  console.log(caseStudy)
-
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -78,7 +76,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Do something with the form values.
     // ✅ This will be type-safe and validated.
-    console.log(values)
+    console.log('VALUES', values)
   }
 
   return (

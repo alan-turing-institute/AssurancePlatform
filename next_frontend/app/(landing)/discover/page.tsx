@@ -1,5 +1,5 @@
 import React from 'react'
-import Patterns from '../_components/Patterns'
+import CaseStudies from '../_components/CaseStudies'
 
 const DiscoverPage = () => {
   return (
@@ -14,7 +14,7 @@ const DiscoverPage = () => {
         </div>
       </div>
 
-      <Patterns />
+      <CaseStudies />
   </>
   )
 }

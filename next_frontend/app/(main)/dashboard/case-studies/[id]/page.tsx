@@ -1,14 +1,11 @@
 import BackButton from '@/components/ui/back-button'
-import { Button } from '@/components/ui/button'
 import PageHeading from '@/components/ui/page-heading'
 import { caseStudies } from '@/config'
-import { PaperclipIcon, Trash2Icon } from 'lucide-react'
 import moment from 'moment'
-import Image from 'next/image'
 import React from 'react'
 import CaseStudyForm from '../_components/CaseStudyForm'
 
-function PatternDetails({ params } : { params: { id: string } }) {
+function CaseStudyDetails({ params } : { params: { id: string } }) {
   const { id } = params
 
   const caseStudy = caseStudies.filter(x => x.id === Number(id))[0]
@@ -24,9 +21,9 @@ function PatternDetails({ params } : { params: { id: string } }) {
 
       <CaseStudyForm caseStudy={caseStudy} />
 
-      <div>
+      {/* <div>
         <div className="mt-6">
-          {/* <dl className="grid grid-cols-1 sm:grid-cols-3">
+          <dl className="grid grid-cols-1 sm:grid-cols-3">
             <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
               <dt className="text-sm/6 font-medium text-foreground">Domain/Sector</dt>
               <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{caseStudy.sector}</dd>
@@ -79,8 +76,8 @@ function PatternDetails({ params } : { params: { id: string } }) {
                 )}
               </dd>
             </div>
-          </dl> */}
-          {/* <p className="text-sm/6 font-medium text-foreground mb-2">Image</p>
+          </dl>
+          <p className="text-sm/6 font-medium text-foreground mb-2">Image</p>
           {caseStudy.image ? (
             <div className="w-10/12 relative h-[500px] group">
               <Image
@@ -97,12 +94,12 @@ function PatternDetails({ params } : { params: { id: string } }) {
             </div>
           ) : (
             <p className='text-sm text-muted-foreground'>No Image Added.</p>
-          )} */}
+          )}
         </div>
-      </div>
+      </div> */}
 
     </div>
   )
 }
 
-export default PatternDetails
+export default CaseStudyDetails

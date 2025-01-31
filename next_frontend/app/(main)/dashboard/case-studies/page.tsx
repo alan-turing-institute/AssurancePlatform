@@ -6,7 +6,7 @@ import moment from 'moment'
 import Link from 'next/link'
 import React from 'react'
 
-function PatternsPage() {
+function CaseStudiesPage() {
   return (
     <div className='p-8 space-y-4 min-h-screen'>
       <PageHeading 
@@ -88,5 +88,5 @@ function PatternsPage() {
   )
 }
 
-export default PatternsPage
+export default CaseStudiesPage
 

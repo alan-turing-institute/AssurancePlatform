@@ -2,21 +2,21 @@
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { patterns } from '@/config';
+import { caseStudies } from '@/config';
 import moment from 'moment';
 import { useState } from 'react';
 
-function Patterns() {
+function CaseStudies() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
 
-  const sectors = Array.from(new Set(patterns.map((pattern) => pattern.sector).filter(Boolean)));
+  const sectors = Array.from(new Set(caseStudies.map((caseStudy) => caseStudy.sector).filter(Boolean)));
 
-  const filteredPatterns = patterns
-  .filter((pattern) => pattern.published)
-  .filter((pattern) => 
-    (searchKeyword === '' || pattern.title.toLowerCase().includes(searchKeyword.toLowerCase())) &&
-    (selectedSector === 'all' || selectedSector === '' || pattern.sector === selectedSector)
+  const filteredCaseStudies = caseStudies
+  .filter((caseStudy) => caseStudy.published)
+  .filter((caseStudy) => 
+    (searchKeyword === '' || caseStudy.title.toLowerCase().includes(searchKeyword.toLowerCase())) &&
+    (selectedSector === 'all' || selectedSector === '' || caseStudy.sector === selectedSector)
   );
 
   return (
@@ -54,13 +54,13 @@ function Patterns() {
 
       <div className="mx-auto max-w-7xl px-6 lg:px-8 pb-28">
         <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-          {filteredPatterns.length > 0 ? (
-            filteredPatterns.map((pattern) => (
-              <article key={pattern.id} className="flex flex-col items-start justify-between">
+          {filteredCaseStudies.length > 0 ? (
+            filteredCaseStudies.map((caseStudy) => (
+              <article key={caseStudy.id} className="flex flex-col items-start justify-between">
                 <div className="relative w-full">
                   <img
                     alt=""
-                    src={pattern.image ?? ''}
+                    src={caseStudy.image ?? ''}
                     className="aspect-video w-full rounded-2xl bg-gray-100 object-cover sm:aspect-[2/1] lg:aspect-[3/2]"
                   />
                   <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-gray-900/10" />
@@ -68,18 +68,18 @@ function Patterns() {
                 <div className="max-w-xl">
                   <div className="mt-8 flex items-center gap-x-4 text-xs">
                     <time className="text-gray-500">
-                      {moment(pattern.publishedDate).format('DD/MM/YYYY')}
+                      {moment(caseStudy.publishedDate).format('DD/MM/YYYY')}
                     </time>
-                    <p className="text-black">{pattern.sector}</p>
+                    <p className="text-black">{caseStudy.sector}</p>
                   </div>
                   <div className="group relative">
                     <h3 className="mt-3 text-lg/6 font-semibold text-gray-900 group-hover:text-gray-600">
                       <a href={'#'}>
                         <span className="absolute inset-0" />
-                        {pattern.title}
+                        {caseStudy.title}
                       </a>
                     </h3>
-                    <p className="mt-5 line-clamp-3 text-sm/6 text-gray-600">{pattern.description}</p>
+                    <p className="mt-5 line-clamp-3 text-sm/6 text-gray-600">{caseStudy.description}</p>
                   </div>
                   <div className="relative mt-8 flex items-center gap-x-4">
                     <img
@@ -91,7 +91,7 @@ function Patterns() {
                       <p className="font-semibold text-gray-900">
                         <a href={'#'}>
                           <span className="absolute inset-0" />
-                          {pattern.authors}
+                          {caseStudy.authors}
                         </a>
                       </p>
                       <p className="text-gray-600">@ChrisBurrTuring</p>
@@ -101,7 +101,7 @@ function Patterns() {
               </article>
             ))
           ) : (
-            <p className="text-gray-600">No patterns match your search criteria.</p>
+            <p className="text-gray-600">No Case Studies match your search criteria.</p>
           )}
         </div>
       </div>
@@ -109,4 +109,4 @@ function Patterns() {
   );
 }
 
-export default Patterns;
+export default CaseStudies;
