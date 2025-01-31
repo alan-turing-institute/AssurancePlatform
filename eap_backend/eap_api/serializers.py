@@ -21,6 +21,7 @@ from .models import (
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
+    CaseStudy,
 )
 
 
@@ -544,3 +545,20 @@ def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
     msg = f"Can't figure out the case ID of {item}."
     warnings.warn(msg)
     return None
+
+
+class CaseStudySerializer(serializers.ModelSerializer):
+    assurance_cases = serializers.PrimaryKeyRelatedField(
+        queryset=AssuranceCase.objects.all(), many=True, required=False
+    )
+    published_date = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+    last_modified_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+    created_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+
+    class Meta:
+        model = CaseStudy
+        fields = [
+            'id', 'title', 'description', 'authors', 'category', 'published_date',
+            'last_modified_on', 'created_on', 'sector', 'contact', 'assurance_cases',
+            'image', 'published'
+        ]

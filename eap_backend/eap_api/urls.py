@@ -1,8 +1,14 @@
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
+from .views import CaseStudyViewSet  # Import your viewset
 
 from . import views
 
+router = DefaultRouter()
+router.register(r'case-studies', CaseStudyViewSet, basename='case-study')
+
 urlpatterns = [
+    path('', include(router.urls)),  # Add this line to include viewset routes
     path("auth/", include("rest_auth.urls")),
     path("auth/register/", include("rest_auth.registration.urls")),
     path("user/", views.self_detail, name="self_detail"),

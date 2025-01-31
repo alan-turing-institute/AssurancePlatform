@@ -302,3 +302,23 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+
+class CaseStudy(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)  # Optional description
+    authors = models.CharField(max_length=255, blank=True, null=True)  # Optional authors
+    category = models.CharField(max_length=100, blank=True, null=True)  # Optional category
+    published_date = models.DateTimeField(blank=True, null=True)  # Optional date
+    last_modified_on = models.DateTimeField(auto_now=True)  # Automatically updates
+    created_on = models.DateTimeField(auto_now_add=True)  # Automatically set on creation
+    sector = models.CharField(max_length=100, blank=True, null=True)  # Optional sector
+    contact = models.EmailField(blank=True, null=True)  # Optional email
+    assurance_cases = models.ManyToManyField(AssuranceCase, blank=True)  # Optional relationship
+    image = models.URLField(blank=True, null=True)  # Optional image field
+    published = models.BooleanField(default=False)  # Default to unpublished
+
+    def __str__(self):
+        return self.title
+

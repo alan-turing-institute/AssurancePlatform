@@ -4,11 +4,22 @@ import { caseStudies } from '@/config'
 import moment from 'moment'
 import React from 'react'
 import CaseStudyForm from '../_components/CaseStudyForm'
+import { fetchCaseStudyById } from '@/actions/caseStudies'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/authOptions'
+import { redirect } from 'next/navigation'
 
-function CaseStudyDetails({ params } : { params: { id: string } }) {
+async function CaseStudyDetails({ params } : { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  
+  // Redirect user to login if no `key`
+  if(!session || !session.key) {
+    redirect('/login')
+  }
+  
   const { id } = params
 
-  const caseStudy = caseStudies.filter(x => x.id === Number(id))[0]
+  const caseStudy = await fetchCaseStudyById(session.key, parseInt(id))
 
   return (
     <div className='p-8 min-h-screen space-y-4'>

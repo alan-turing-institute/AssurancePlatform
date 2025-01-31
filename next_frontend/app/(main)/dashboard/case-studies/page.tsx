@@ -1,12 +1,26 @@
+import { fetchCaseStudies } from '@/actions/caseStudies'
 import PageHeading from '@/components/ui/page-heading'
 import { Separator } from '@/components/ui/separator'
-import { caseStudies } from '@/config'
+import { authOptions } from '@/lib/authOptions'
 import { Edit2Icon } from 'lucide-react'
 import moment from 'moment'
+import { getServerSession } from 'next-auth'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import React from 'react'
 
-function CaseStudiesPage() {
+async function CaseStudiesPage() {
+  const session = await getServerSession(authOptions)
+
+  // Redirect user to login if no `key`
+  if(!session || !session.key) {
+    redirect('/login')
+  }
+
+  const { results: caseStudies } = await fetchCaseStudies(session.key)
+
+  console.log('caseStudies', caseStudies)
+
   return (
     <div className='p-8 space-y-4 min-h-screen'>
       <PageHeading 
@@ -51,7 +65,12 @@ function CaseStudiesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-foreground/10 bg-background">
-              {caseStudies.map((caseStudy) => (
+              {caseStudies.length === 0 && (
+                <tr>
+                  <td colSpan={5} className='py-4 text-muted-foreground'>No Case Studies Found.</td>
+                </tr>
+              )} 
+              {caseStudies.map((caseStudy: any) => (
                 <tr key={caseStudy.id}>
                   <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:w-auto sm:max-w-none sm:pl-0">
                     <Link href={`case-studies/${caseStudy.id}`} className='hover:text-indigo-500 transition-all duration-200 group'>

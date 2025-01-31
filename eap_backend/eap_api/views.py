@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework.serializers import ReturnDict
 from social_core.exceptions import AuthForbidden
 from social_django.utils import psa
+from rest_framework import viewsets
+from rest_framework.renderers import JSONRenderer
 
 from .models import (
     AssuranceCase,
@@ -26,6 +28,7 @@ from .models import (
     PropertyClaim,
     Strategy,
     TopLevelNormativeGoal,
+    CaseStudy,
 )
 from .serializers import (
     TYPE_DICT,
@@ -45,6 +48,7 @@ from .serializers import (
     TopLevelNormativeGoalSerializer,
     UsernameAwareUserSerializer,
     get_case_id,
+    CaseStudySerializer,
 )
 from .view_utils import (
     CommentUtils,
@@ -998,3 +1002,9 @@ def reply_to_comment(request, comment_id):
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CaseStudyViewSet(viewsets.ModelViewSet):
+    queryset = CaseStudy.objects.all()
+    serializer_class = CaseStudySerializer
+    renderer_classes = [JSONRenderer]  # Ensures JSON output
