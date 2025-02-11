@@ -1,11 +1,11 @@
 ---
-slug: mdx-blog-post
-title: MDX Blog Post
-authors: [slorber]
-tags: [docusaurus]
+slug: first-post
+title: First Post
+authors: [chris]
+tags: [test]
 ---
 
-Blog posts support [Docusaurus Markdown features](https://docusaurus.io/docs/markdown-features), such as [MDX](https://mdxjs.com/).
+Testing the blog functionality.
 
 :::tip
 

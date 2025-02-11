@@ -2,10 +2,8 @@
 tags:
     - learning-modules
 authors:
-    - Christopher Burr
-draft: false
-aliases:
-    - Pouring Your First Cup of TEA
+    - [chris]
+sidebar_position: 2
 ---
 
 # Pouring Your First Cup of TEA: An Introduction to Trustworthy and Ethical Assurance

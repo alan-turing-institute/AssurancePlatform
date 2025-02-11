@@ -11,16 +11,16 @@ To better understand the purpose and motivation of the TEA platform, consider th
 
 :::info[Question]
 
-How could a team of researchers and developers provide assurance to their stakeholders or users that some ethical goal has been achieved over the course of designing, developing, and deploying a data-driven technology?
+How should a project team provide assurance to their stakeholders or users that some ethical principle, such as explainability or safety, has been upheld across the full lifecycle of designing, developing, and deploying a data-driven technology?
 
 :::
 
 This is not an easy question to answer! As we pick it apart, we realise there are many more questions that need to be addressed:
 
-- Which ethical goals are relevant to the technology (e.g. fairness, explainability, safety, sustainability)?
-- How are these goals defined in the context of the project?
-- How can a project team provide justified evidence that these goals have been achieved?
-- Who should be engaged with as part of this process, and how should this engagement be structured?
+- Which ethical principles are relevant to the technology (e.g. fairness, explainability, safety, sustainability)?
+- How are these principles defined in the context of the project?
+- How can a project team provide justified evidence, which will be accepted by their stakeholders, that these principles have been upheld?
+- Who should be engaged as part of this process, and how should this engagement be structured?
 
 ## What does the TEA Platform do?
 
