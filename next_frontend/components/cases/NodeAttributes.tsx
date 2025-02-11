@@ -102,8 +102,8 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 
       <div className='mt-4 flex justify-start items-center gap-2'>
         {!node.data.assumption && (
-          <Button 
-            variant={'outline'} 
+          <Button
+            variant={'outline'}
             size={'sm'}
             onClick={() => setNewAssumption(!newAssumption)}
           >
@@ -112,8 +112,8 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
           </Button>
         )}
         {!node.data.justification && node.type === 'strategy' && (
-          <Button 
-            variant={'outline'} 
+          <Button
+            variant={'outline'}
             size={'sm'}
             onClick={() => setNewJustification(!newJustification)}
           >
@@ -122,7 +122,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
           </Button>
         )}
       </div>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 my-4">
           {(node.data.assumption || newAssumption) && (
