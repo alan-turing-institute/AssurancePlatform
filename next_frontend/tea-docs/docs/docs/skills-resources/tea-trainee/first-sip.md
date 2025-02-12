@@ -1,9 +1,9 @@
 ---
+sidebar_label: 'Pouring Your First Cup of TEA'
 tags:
     - learning-modules
 authors:
     - [chris]
-sidebar_position: 2
 ---
 
 # Pouring Your First Cup of TEA: An Introduction to Trustworthy and Ethical Assurance
