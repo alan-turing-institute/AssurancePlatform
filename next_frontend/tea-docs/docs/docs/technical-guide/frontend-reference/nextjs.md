@@ -32,4 +32,3 @@ Add a new file in the `app/` directory, e.g., about.js, to create an `/about` ro
 ### API Routes:
 
 Create files in `app/api/` to define backend endpoints, such as `/api/users.js`.
-
