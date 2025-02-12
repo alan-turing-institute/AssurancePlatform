@@ -1,9 +1,9 @@
 ---
-sidebar_position: 4
-sidebar_label: 'Technical Documentation'
+sidebar_position: 1
+sidebar_label: 'Section Overview'
 ---
 
-# Technical Documentation
+# Section Overview
 
 :::warning[Notice]
 
@@ -12,8 +12,6 @@ This section provides technical documentation for developers or users who wish t
 :::
 
 ![](/img/tech-documentation.png)
-
-## About the TEA Platform
 
 Our technology stack ensures that the TEA platform is not only powerful and reliable but also accessible to users with different levels of technical expertise.
 

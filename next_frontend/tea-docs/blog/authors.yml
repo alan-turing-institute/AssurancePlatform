@@ -1,23 +1,18 @@
-yangshun:
-  name: Yangshun Tay
-  title: Front End Engineer @ Facebook
-  url: https://github.com/yangshun
-  image_url: https://github.com/yangshun.png
+chris:
+  name: Christopher Burr
+  title: Senior Researcher in Trustworthy Systems
+  url: https://github.com/chrisdburr
+  image_url: https://github.com/chrisdburr.png
   page: true
   socials:
-    x: yangshunz
-    github: yangshun
-
-slorber:
-  name: Sébastien Lorber
-  title: Docusaurus maintainer
-  url: https://sebastienlorber.com
-  image_url: https://github.com/slorber.png
-  page:
-    # customize the url of the author page at /blog/authors/<permalink>
-    permalink: "/all-sebastien-lorber-articles"
+    github: chrisdburr
+    linkedin: christopherdburr
+shakir:
+  name: Shakir Laher
+  title: Research Application Manager
+  url: https://github.com/S-Laher
+  image_url: https://github.com/S-Laher.png
+  page: true
   socials:
-    x: sebastienlorber
-    linkedin: sebastienlorber
-    github: slorber
-    newsletter: https://thisweekinreact.com
+    github: S-Laher
+    linkedin: shakir-laher-a2b300141

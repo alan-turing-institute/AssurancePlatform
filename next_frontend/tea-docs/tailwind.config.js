@@ -7,7 +7,11 @@ module.exports = {
     container: false,
   },
   darkMode: ["class", '[data-theme="dark"]'],
-  content: ["./src/**/*.{jsx,tsx,html}", "./components/**/*"],
+  content: [
+    "./src/**/*.{jsx,tsx,html,mdx}",
+    "./components/**/*",
+    "./docs/**/*.{md,mdx}",
+  ],
   theme: {
     extend: {
       fontFamily: {

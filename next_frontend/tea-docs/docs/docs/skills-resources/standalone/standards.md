@@ -1,6 +1,7 @@
 ---
-sidebar_position: 2
 sidebar_label: 'Standards and their role in assurance'
+authors:
+    - [shakir]
 ---
 
 # Standards and their role in assurance
