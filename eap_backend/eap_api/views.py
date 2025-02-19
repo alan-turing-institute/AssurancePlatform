@@ -1004,7 +1004,28 @@ def reply_to_comment(request, comment_id):
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class CaseStudyViewSet(viewsets.ModelViewSet):
+#     queryset = CaseStudy.objects.all()
+#     serializer_class = CaseStudySerializer
+#     renderer_classes = [JSONRenderer]  # Ensures JSON output
+
 class CaseStudyViewSet(viewsets.ModelViewSet):
     queryset = CaseStudy.objects.all()
     serializer_class = CaseStudySerializer
     renderer_classes = [JSONRenderer]  # Ensures JSON output
+    permission_classes = [AllowAny]  # Allow access to everyone
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned case studies to those that are published
+        by filtering against a `published` query parameter in the URL.
+        """
+        queryset = CaseStudy.objects.all()  # Default queryset
+        published = self.request.query_params.get('published', None)  # Get the published query param
+
+        if published is not None:
+            # Convert to boolean (if passed as 'true' or 'false' in the query string)
+            published = published.lower() in ['true', '1', 't', 'y', 'yes']
+            queryset = queryset.filter(published=published)
+
+        return queryset

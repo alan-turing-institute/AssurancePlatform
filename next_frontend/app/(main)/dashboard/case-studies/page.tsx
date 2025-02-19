@@ -24,7 +24,7 @@ async function CaseStudiesPage() {
       <PageHeading 
         title='Assurance Case Patterns' 
         description='Here you manage all your public patterns'
-        button={{ label: 'Create', action: () => {} }}
+        createButton
         redirect={true}
         redirectUrl='/dashboard/case-studies/create'
       />

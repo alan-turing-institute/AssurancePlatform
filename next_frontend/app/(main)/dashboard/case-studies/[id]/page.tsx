@@ -3,7 +3,7 @@ import PageHeading from '@/components/ui/page-heading'
 import moment from 'moment'
 import React from 'react'
 import CaseStudyForm from '../_components/CaseStudyForm'
-import { deleteCaseStudy, fetchCaseStudyById } from '@/actions/caseStudies'
+import { deleteCaseStudy, fetchCaseStudyById, updateCaseStudy } from '@/actions/caseStudies'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { redirect } from 'next/navigation'
@@ -26,7 +26,8 @@ async function CaseStudyDetails({ params } : { params: { id: string } }) {
       <PageHeading 
         title={caseStudy.title}
         description={`Created On ${moment(caseStudy.createdOn).format('DD/MM/YYYY')}`}
-        button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', action: () => {} }} 
+        button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }} 
+        caseStudy={caseStudy}
       />
 
       <CaseStudyForm caseStudy={caseStudy} />

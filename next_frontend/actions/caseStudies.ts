@@ -19,6 +19,17 @@ export const fetchCaseStudies = async (token: string) => {
   return result
 }
 
+export const fetchPublishedCaseStudies = async () => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies?published=true`)
+
+  if(!response.ok) {
+    console.error('Something went wrong fetching case studies.')
+  }
+
+  const { results } = await response.json()
+  return results
+}
+
 export const fetchCaseStudyById = async (token: string, id: number) => {
   const requestOptions: RequestInit = {
     headers: {
@@ -75,12 +86,14 @@ export const updateCaseStudy = async (token: string | undefined, caseStudy: any)
   }
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy.id}/`, requestOptions)
+  console.log(response)
 
   if(!response.ok) {
     console.error('Something went wrong fetching case studies.')
     return false
   }
 
+  revalidatePath(`/dashboard/case-studies/${caseStudy.id}`)
   return true
 }
 
