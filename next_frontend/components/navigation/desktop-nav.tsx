@@ -7,6 +7,7 @@ import { ExternalLink } from 'lucide-react'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
 import { Cog6ToothIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 import { Separator } from '../ui/separator'
+import LoggedInUser from './logged-in-user'
 
 function classNames(...classes: any) {
   return classes.filter(Boolean).join(' ')
@@ -62,7 +63,7 @@ const DesktopNav = () => {
                 ))}
               </ul>
             </li>
-            <Separator />
+            <Separator className='bg-indigo-700/80 dark:bg-slate-800' />
             <li>
               <div className="text-xs font-semibold leading-6 text-indigo-200">Your teams</div>
               <ul role="list" className="-mx-2 mt-2 space-y-1">
@@ -117,7 +118,7 @@ const DesktopNav = () => {
                 <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />
               </a>
             </li>
-            <li className="">
+            {/* <li className="">
               <Link
                 href="/dashboard/settings"
                 className={`group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white ${pathname === '/dashboard/settings' ? 'bg-indigo-700 text-white' : null}`}
@@ -128,8 +129,12 @@ const DesktopNav = () => {
                 />
                 Settings
               </Link>
-            </li>
+            </li> */}
           </ul>
+
+          <Separator className='my-4 bg-indigo-700/80 dark:bg-slate-800' />
+
+          <LoggedInUser />
         </nav>
       </div>
     </div>

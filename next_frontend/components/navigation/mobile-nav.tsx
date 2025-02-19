@@ -7,11 +7,15 @@ import {
   Bars3Icon,
   BellIcon,
   Cog6ToothIcon,
+  DocumentDuplicateIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { GitHubLogoIcon } from '@radix-ui/react-icons'
 import { usePathname } from 'next/navigation'
 import { navigation, teams, userNavigation } from '@/config'
+import LoggedInUser from './logged-in-user'
+import { ExternalLink } from 'lucide-react'
+import { Separator } from '../ui/separator'
 
 interface MobileNavProps {
   sidebarOpen: boolean
@@ -90,7 +94,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen } : MobileNavProps) => {
                   </Link>
                 </div>
                 <nav className="flex flex-1 flex-col">
-                  <ul role="list" className="flex flex-1 flex-col gap-y-7">
+                  <ul role="list" className="flex flex-1 flex-col gap-y-4">
                     <li>
                       <ul role="list" className="-mx-2 space-y-1">
                         {navigation.map((item) => (
@@ -162,14 +166,19 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen } : MobileNavProps) => {
                         href="/dashboard/settings"
                         className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
                       >
-                        <Cog6ToothIcon
+                        <DocumentDuplicateIcon
                           className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
                           aria-hidden="true"
                         />
-                        Settings
+                        Documentation
+                        <ExternalLink className='w-4 h-4 ml-auto hidden group-hover:block' />
                       </a>
                     </li>
                   </ul>
+
+                  <Separator className='my-4 bg-indigo-700/80 dark:bg-slate-800' />
+
+                  <LoggedInUser />
                 </nav>
               </div>
             </Dialog.Panel>

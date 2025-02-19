@@ -20,45 +20,58 @@ import Image from "next/image"
 import { Trash2Icon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState } from "react"
+import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/caseStudies"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 const assuranceCaseSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
 });
 
-const formSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  description: z.string(),
-  authors: z.string(),
-  category: z.string(),
-  publishedDate: z.coerce.date(),
-  lastModifiedOn: z.coerce.date(),
-  createdOn: z.coerce.date(),
-  sector: z.string(),
-  contact: z.string().email(),
-  assuranceCases: z.array(assuranceCaseSchema),
-  image: z.any(),
-  published: z.boolean(),
+const caseStudyFormSchema = z.object({
+  id: z.number().optional(), // Optional ID for new case studies
+  title: z.string().min(1, "Title is required"), // Required
+  description: z.string().optional(),
+  authors: z.string().optional(),
+  category: z.string().optional(),
+  publishedDate: z.coerce.date().optional(),
+  lastModifiedOn: z.coerce.date().optional(),
+  createdOn: z.coerce.date().optional(),
+  sector: z.string().optional(),
+  contact: z.string().email().optional(),
+  assuranceCases: z.array(assuranceCaseSchema).optional(),
+  image: z.any().optional(),
+  published: z.boolean().optional(),
 });
+
 
 interface CaseStudyFormProps {
   caseStudy: any
 }
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
+  const { data } = useSession()
+  const { toast } = useToast();
+  const router = useRouter()
+
   // 1. Define your form.
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof caseStudyFormSchema>>({
+    resolver: zodResolver(caseStudyFormSchema),
     defaultValues: caseStudy || {
-      sector: '',
-      datePublished: '',
-      category: '',
-      contact: '',
-      authors: '',
-      description: '',
-      featuredImage: '',
-      assuranceCases: '',
+      title: "",
+      description: "",
+      authors: "",
+      category: "",
+      publishedDate: undefined,
+      lastModifiedOn: undefined,
+      createdOn: undefined,
+      sector: "",
+      contact: "",
+      assuranceCases: [],
+      image: undefined,
+      published: false,
     },
   })
 
@@ -73,11 +86,86 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   };
  
   // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log('VALUES', values)
+  async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+    if (!caseStudy.id) {
+      let newCaseStudy = {
+        title: values.title,
+        description: values.description,
+        authors: values.authors,  
+        category: values.category,
+        // published_date: values.publishedDate?.toISOString(),
+        last_modified_on: new Date().toISOString(),
+        created_on: new Date().toISOString(),
+        sector: values.sector,
+        contact: values.contact,
+        // assurance_cases": [2, 5],  
+        // "image": "https://example.com/path-to-image.jpg",
+        published: false
+      }
+
+      const createdCaseStudy = await createCaseStudy(data?.key, newCaseStudy)
+
+      if(createdCaseStudy) {
+        toast({
+          title: 'Successfully created',
+          description: 'You have created a case study!',
+        });
+        router.back()
+      }
+
+    } else {
+      let newCaseStudy = {
+        id: caseStudy.id,
+        title: values.title,
+        description: values.description,
+        authors: values.authors,  
+        category: values.category,
+        // published_date: values.publishedDate?.toISOString(),
+        last_modified_on: new Date().toISOString(),
+        sector: values.sector,
+        contact: values.contact,
+        // assurance_cases": [2, 5],  
+        // "image": "https://example.com/path-to-image.jpg",
+        published: false
+      }
+
+      console.log(newCaseStudy)
+
+      const updated = await updateCaseStudy(data?.key, newCaseStudy)
+
+      if(updated) {
+        toast({
+          title: 'Successfully Updated',
+          description: 'You have updated a case study!',
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: 'Failed to Update',
+          description: 'Something went wrong!',
+        });
+      }
+    }
   }
+
+  const handleDelete = async () => {
+    const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id)
+
+    if(deleted) {
+      toast({
+        title: 'Successfully Deleted',
+        description: 'Case Study Deleted',
+      });
+      router.back()
+    } else {
+      toast({
+        variant: "destructive",
+        title: 'Delete Failed',
+        description: 'Something went wrong!',
+      });
+    }
+  }
+  
 
   return (
     <div className="mt-6">
@@ -88,6 +176,19 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
           <div className="grid grid-cols-2 gap-8">
+          <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="sector"
@@ -217,10 +318,14 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
             )}
           </div>
 
-          <div className="flex justify-start items-center gap-4">
-            <Button variant={"secondary"}>Cancel</Button>
-            <Button variant={"default"} type="submit">Update</Button>
+          <div className="flex justify-between items-center gap-4 w-full">
+            <div className="flex items-center gap-4">
+              <Button variant="default" type="submit">{caseStudy.id ? 'Update' : 'Create'}</Button>
+            </div>
+
+            {caseStudy.id && <Button variant="destructive" onClick={handleDelete} type="submit">Delete</Button>}
           </div>
+
         </form>
       </Form>
 

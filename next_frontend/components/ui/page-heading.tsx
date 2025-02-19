@@ -1,5 +1,6 @@
 import React from 'react'
 import { Button } from './button'
+import RedirectButton from './redirect-button'
 
 interface PageHeadingProps {
   title: string
@@ -11,9 +12,11 @@ interface PageHeadingProps {
   edit?: {
     action: () => void
   }
+  redirect?: boolean
+  redirectUrl?: string
 }
 
-export default function PageHeading({ title, description, button, edit } : PageHeadingProps) {
+export default function PageHeading({ title, description, button, edit, redirect, redirectUrl } : PageHeadingProps) {
   return (
     <div className="md:flex md:items-center md:justify-between">
       <div className="min-w-0 flex-1">
@@ -26,12 +29,13 @@ export default function PageHeading({ title, description, button, edit } : PageH
         {edit && 
           <Button variant={'ghost'}>Edit</Button>
         }
-        {button && <button
+        {button && !redirect && <button
           type="button"
           className="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
           {button.label}
         </button>}
+        {button && redirect && redirectUrl && <RedirectButton label={button.label} url={redirectUrl} />}
       </div>
     </div>
   )

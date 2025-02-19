@@ -19,14 +19,14 @@ async function CaseStudiesPage() {
 
   const { results: caseStudies } = await fetchCaseStudies(session.key)
 
-  console.log('caseStudies', caseStudies)
-
   return (
     <div className='p-8 space-y-4 min-h-screen'>
       <PageHeading 
         title='Assurance Case Patterns' 
         description='Here you manage all your public patterns'
-        button={{ label: 'Create', action: () => {} }} 
+        button={{ label: 'Create', action: () => {} }}
+        redirect={true}
+        redirectUrl='/dashboard/case-studies/create'
       />
       <Separator />
 
@@ -78,7 +78,7 @@ async function CaseStudiesPage() {
                     </Link>
                     <dl className="font-normal lg:hidden">
                       <dt className="sr-only">Title</dt>
-                      <dd className="mt-1 truncate text-foreground/80">{caseStudy.title}</dd>
+                      <dd className="mt-1 text-foreground/80 max-w-[300px] truncate">{caseStudy.description}</dd>
                       <dt className="sr-only sm:hidden">Published</dt>
                       <dd className="mt-1 truncate text-gray-500 sm:hidden">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</dd>
                     </dl>
