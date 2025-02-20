@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { caseStudies } from '@/config';
 import { CalendarDaysIcon, CalendarIcon } from 'lucide-react';
 import moment from 'moment';
+import Link from 'next/link';
 import { useState } from 'react';
 
 interface CaseStudiesProps {
@@ -81,10 +82,7 @@ function CaseStudies({ caseStudies } : CaseStudiesProps) {
                   </div>
                   <div className="group relative">
                     <h3 className="mt-3 text-lg/6 font-semibold text-gray-900 group-hover:text-gray-600">
-                      <a href={'#'}>
-                        <span className="absolute inset-0" />
-                        {caseStudy.title}
-                      </a>
+                        <Link href={`/discover/${caseStudy.id}`}>{caseStudy.title}</Link>
                     </h3>
                     <p className="mt-5 line-clamp-3 text-sm/6 text-gray-600">{caseStudy.description}</p>
                   </div>

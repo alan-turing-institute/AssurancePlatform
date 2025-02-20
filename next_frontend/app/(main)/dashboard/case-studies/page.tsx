@@ -17,7 +17,7 @@ async function CaseStudiesPage() {
     redirect('/login')
   }
 
-  const { results: caseStudies } = await fetchCaseStudies(session.key)
+  const caseStudies = await fetchCaseStudies(session.key)
 
   return (
     <div className='p-8 space-y-4 min-h-screen'>

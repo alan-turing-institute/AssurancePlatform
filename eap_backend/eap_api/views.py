@@ -1009,23 +1009,98 @@ def reply_to_comment(request, comment_id):
 #     serializer_class = CaseStudySerializer
 #     renderer_classes = [JSONRenderer]  # Ensures JSON output
 
-class CaseStudyViewSet(viewsets.ModelViewSet):
-    queryset = CaseStudy.objects.all()
-    serializer_class = CaseStudySerializer
-    renderer_classes = [JSONRenderer]  # Ensures JSON output
-    permission_classes = [AllowAny]  # Allow access to everyone
+# # class CaseStudyViewSet(viewsets.ModelViewSet):
+# #     queryset = CaseStudy.objects.all()
+# #     serializer_class = CaseStudySerializer
+# #     renderer_classes = [JSONRenderer]  # Ensures JSON output
+# #     # permission_classes = [AllowAny]  # Allow access to everyone
 
-    def get_queryset(self):
-        """
-        Optionally restricts the returned case studies to those that are published
-        by filtering against a `published` query parameter in the URL.
-        """
-        queryset = CaseStudy.objects.all()  # Default queryset
-        published = self.request.query_params.get('published', None)  # Get the published query param
+# #     def get_queryset(self):
+# #         """
+# #         Optionally restricts the returned case studies to those that are published
+# #         by filtering against a `published` query parameter in the URL.
+# #         """
+# #         queryset = CaseStudy.objects.all()  # Default queryset
+# #         published = self.request.query_params.get('published', None)  # Get the published query param
 
-        if published is not None:
-            # Convert to boolean (if passed as 'true' or 'false' in the query string)
-            published = published.lower() in ['true', '1', 't', 'y', 'yes']
-            queryset = queryset.filter(published=published)
+# #         if published is not None:
+# #             # Convert to boolean (if passed as 'true' or 'false' in the query string)
+# #             published = published.lower() in ['true', '1', 't', 'y', 'yes']
+# #             queryset = queryset.filter(published=published)
 
-        return queryset
+# #         return queryset
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def case_study_list(request):
+    """
+    List all case studies, or create a new case study
+    """
+    if request.method == "GET":
+        case_studies = CaseStudy.objects.all()
+        serializer = CaseStudySerializer(case_studies, many=True)
+        return JsonResponse(serializer.data, safe=False)
+    
+    elif request.method == "POST":
+        data = JSONParser().parse(request)
+        serializer = CaseStudySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=201)
+        return JsonResponse(serializer.errors, status=400)
+
+
+@csrf_exempt
+@api_view(["GET", "PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def case_study_detail(request, pk):
+    """
+    Retrieve, update, or delete a CaseStudy instance by primary key
+    """
+    try:
+        case_study = CaseStudy.objects.get(pk=pk)
+    except CaseStudy.DoesNotExist:
+        return HttpResponse(status=404)
+
+    if request.method == "GET":
+        serializer = CaseStudySerializer(case_study)
+        return JsonResponse(serializer.data)
+
+    elif request.method == "PUT":
+        data = JSONParser().parse(request)
+        serializer = CaseStudySerializer(case_study, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data)
+        return JsonResponse(serializer.errors, status=400)
+
+    elif request.method == "DELETE":
+        case_study.delete()
+        return HttpResponse(status=204)
+    
+@csrf_exempt
+@api_view(["GET"])
+def public_case_study_list(request):
+    """
+    List all publicly available case studies (published = True)
+    """
+    case_studies = CaseStudy.objects.filter(published=True)
+    serializer = CaseStudySerializer(case_studies, many=True)
+    return JsonResponse(serializer.data, safe=False)
+
+
+@csrf_exempt
+@api_view(["GET"])
+def public_case_study_detail(request, pk):
+    """
+    Retrieve a publicly available CaseStudy instance by primary key if it's published.
+    """
+    try:
+        case_study = CaseStudy.objects.get(pk=pk, published=True)
+    except CaseStudy.DoesNotExist:
+        return HttpResponse(status=404)
+
+    serializer = CaseStudySerializer(case_study)
+    return JsonResponse(serializer.data)
+

@@ -24,6 +24,12 @@ import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/cas
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic";
+
+import "react-quill/dist/quill.bubble.css";
+
+// Dynamically import ReactQuill (Next.js SSR fix)
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
 
 const assuranceCaseSchema = z.object({
   id: z.string().uuid(),
@@ -55,6 +61,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const { data } = useSession()
   const { toast } = useToast();
   const router = useRouter()
+
+  const [value, setValue] = useState("");
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
@@ -165,6 +173,19 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       });
     }
   }
+
+  // ReactQuill Toolbar
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, 4, 5, false] }], // Heading sizes
+      [{ size: ["small", false, "large", "huge"] }], // Font size options
+      ["bold", "italic", "underline"], // Text styles
+      [{ list: "ordered" }, { list: "bullet" }], // Lists
+      ["link", "image"], // Links & images
+    ],
+  };
+
+  const formats = ["size", "bold", "italic", "underline"];
   
 
   return (
@@ -268,7 +289,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
           <Separator className="my-6" />
 
-          <FormField
+          {/* <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
@@ -276,6 +297,30 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea rows={8} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          /> */}
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <ReactQuill
+                    theme="bubble"
+                    value={field.value || value} // Ensure controlled component
+                    onChange={(content) => {
+                      field.onChange(content); // Update form state
+                      setValue(content);
+                    }}
+                    modules={modules} 
+                    formats={formats}
+                    className="border border-slate-800 rounded-md"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
