@@ -74,3 +74,63 @@
     @apply bg-background text-foreground;
   }
 }
+
+.ql-toolbar.ql-snow {
+  /* background-color: hsl(var(--secondary)); */
+  border-color: hsl(0, 0%, 90%) !important;
+  border-radius: .25rem .25rem 0rem 0rem;
+}
+
+.ql-container.ql-snow {
+  border-color: hsl(0, 0%, 90%) !important;
+  border-radius: 0rem 0rem .25rem .25rem;
+}
+
+.dark .ql-toolbar.ql-snow {
+  /* background-color: hsl(var(--secondary)); */
+  border-color: hsl(240, 25%, 20%) !important;
+  border-radius: .25rem .25rem 0rem 0rem;
+}
+
+.dark .ql-container.ql-snow {
+  border-color: hsl(240, 25%, 20%) !important;
+  border-radius: 0rem 0rem .25rem .25rem;
+}
+
+.dark .ql-picker {
+  color: white !important;
+}
+
+.dark .ql-picker>svg {
+  color: white !important;
+}
+
+.dark .ql-toolbar svg {
+  stroke: white;
+  fill: white;
+}
+
+/* Ensure stroke properties are applied */
+.dark .ql-toolbar .ql-stroke {
+  stroke: white;
+}
+
+.dark .ql-toolbar .ql-fill {
+  fill: white;
+}
+
+.dark .ql-toolbar .ql-even {
+  stroke: white;
+  fill: white;
+}
+
+.dark .ql-picker-options {
+  background-color: black !important;
+  color: white !important;
+}
+
+
+/* .dark .ql-toolbar.ql-snow {
+  background-color: hsl(var(--background)); 
+  border: none !important;
+} */

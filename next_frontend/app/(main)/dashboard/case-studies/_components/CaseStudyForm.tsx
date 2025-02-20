@@ -26,7 +26,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic";
 
-import "react-quill/dist/quill.bubble.css";
+import "react-quill/dist/quill.snow.css";
 
 // Dynamically import ReactQuill (Next.js SSR fix)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
@@ -108,7 +108,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         contact: values.contact,
         // assurance_cases": [2, 5],  
         // "image": "https://example.com/path-to-image.jpg",
-        published: false
       }
 
       const createdCaseStudy = await createCaseStudy(data?.key, newCaseStudy)
@@ -134,7 +133,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         contact: values.contact,
         // assurance_cases": [2, 5],  
         // "image": "https://example.com/path-to-image.jpg",
-        published: false
       }
 
       console.log(newCaseStudy)
@@ -174,18 +172,37 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     }
   }
 
-  // ReactQuill Toolbar
   const modules = {
     toolbar: [
-      [{ header: [1, 2, 3, 4, 5, false] }], // Heading sizes
-      [{ size: ["small", false, "large", "huge"] }], // Font size options
-      ["bold", "italic", "underline"], // Text styles
-      [{ list: "ordered" }, { list: "bullet" }], // Lists
-      ["link", "image"], // Links & images
-    ],
+      [{ header: [1, 2, 3, 4, 5, 6, false] }],
+      ["bold", "italic", "underline", "strike", "blockquote"],
+      [{ size: [] }],
+      [{ font: [] }],
+      [{ align: ["right", "center", "justify"] }],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      [{ color: ["red", "#785412"] }],
+      [{ background: ["red", "#785412"] }]
+    ]
   };
 
-  const formats = ["size", "bold", "italic", "underline"];
+  const formats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "blockquote",
+    "list",
+    "bullet",
+    "link",
+    "color",
+    "image",
+    "background",
+    "align",
+    "size",
+    "font"
+  ];
   
 
   return (
@@ -311,7 +328,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormLabel>Description</FormLabel>
                 <FormControl>
                   <ReactQuill
-                    theme="bubble"
+                    theme="snow"
                     value={field.value || value} // Ensure controlled component
                     onChange={(content) => {
                       field.onChange(content); // Update form state
@@ -319,7 +336,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     }}
                     modules={modules} 
                     formats={formats}
-                    className="border border-slate-800 rounded-md"
                   />
                 </FormControl>
                 <FormMessage />

@@ -78,12 +78,16 @@ async function CaseStudiesPage() {
                     </Link>
                     <dl className="font-normal lg:hidden">
                       <dt className="sr-only">Title</dt>
-                      <dd className="mt-1 text-foreground/80 max-w-[300px] truncate">{caseStudy.description}</dd>
+                      <dd className="mt-1 text-foreground/80 max-w-[300px] truncate" dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }}></dd>
                       <dt className="sr-only sm:hidden">Published</dt>
                       <dd className="mt-1 truncate text-gray-500 sm:hidden">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</dd>
                     </dl>
                   </td>
-                  <td className="hidden px-3 py-4 text-sm text-foreground/80 lg:table-cell max-w-[220px] truncate">{caseStudy.description}</td>
+                  <td className="hidden px-3 py-4 text-sm text-foreground/80 lg:table-cell max-w-[220px]">
+                    <div className="line-clamp-3 overflow-hidden">
+                      <span dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }} />
+                    </div>
+                  </td>
                   <td className="hidden px-3 py-4 text-sm text-foreground/80 sm:table-cell">{caseStudy.authors}</td>
                   <td className="px-3 py-4 text-sm text-foreground/80">
                     <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-100/10 px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-500 ring-1 ring-inset ring-indigo-700/10 dark:ring-indigo-500/20">

@@ -62,7 +62,7 @@ function CaseStudies({ caseStudies } : CaseStudiesProps) {
         <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
           {filteredCaseStudies.length > 0 ? (
             filteredCaseStudies.map((caseStudy: any) => (
-              <article key={caseStudy.id} className="flex flex-col items-start justify-between">
+              <article key={caseStudy.id} className="flex flex-col items-start justify-start">
                 <div className="relative w-full">
                   <img
                     alt=""
@@ -84,7 +84,7 @@ function CaseStudies({ caseStudies } : CaseStudiesProps) {
                     <h3 className="mt-3 text-lg/6 font-semibold text-gray-900 group-hover:text-gray-600">
                         <Link href={`/discover/${caseStudy.id}`}>{caseStudy.title}</Link>
                     </h3>
-                    <p className="mt-5 line-clamp-3 text-sm/6 text-gray-600">{caseStudy.description}</p>
+                    <p className="mt-5 line-clamp-3 text-sm/6 text-gray-600" dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }} />
                   </div>
                   <div className="relative mt-4 flex items-center gap-x-4">
                     {/* <img

@@ -9,6 +9,8 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
   const { id } = params
   const caseStudy = await fetchPublishedCaseStudyById(parseInt(id))
 
+  console.log(caseStudy)
+
   return (
     <div className="overflow-hidden bg-white">
       <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8">
@@ -76,44 +78,8 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
                 <div className='text-sm flex justify-start items-center gap-2'><Users2Icon className='size-4'/> {caseStudy.authors}</div>
               </div>
               <div className="prose">
-                <div dangerouslySetInnerHTML={{ __html: caseStudy.description.replace(/\n/g, "<br>") }} />
+                <div dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }} />
               </div>
-              {/* <p className="text-lg/7">
-                Sagittis scelerisque nulla cursus in enim consectetur quam. Dictum urna sed consectetur neque tristique
-                pellentesque. Blandit amet, sed aenean erat arcu morbi.
-              </p>
-              <p className="mt-5">
-                Sollicitudin tristique eros erat odio sed vitae, consequat turpis elementum. Lorem nibh vel, eget
-                pretium arcu vitae. Eros eu viverra donec ut volutpat donec laoreet quam urna.
-              </p>
-              <p className="mt-5">
-                Bibendum eu nulla feugiat justo, elit adipiscing. Ut tristique sit nisi lorem pulvinar. Urna, laoreet
-                fusce nibh leo. Dictum et et et sit. Faucibus sed non gravida lectus dignissim imperdiet a.
-              </p>
-              <p className="mt-5">
-                Dictum magnis risus phasellus vitae quam morbi. Quis lorem lorem arcu, metus, egestas netus cursus. In.
-              </p>
-              <ul role="list" className="mt-5 list-disc space-y-2 pl-6 marker:text-gray-300">
-                <li className="pl-2">Quis elit egestas venenatis mattis dignissim.</li>
-                <li className="pl-2">Cras cras lobortis vitae vivamus ultricies facilisis tempus.</li>
-                <li className="pl-2">Orci in sit morbi dignissim metus diam arcu pretium.</li>
-              </ul>
-              <p className="mt-5">
-                Rhoncus nisl, libero egestas diam fermentum dui. At quis tincidunt vel ultricies. Vulputate aliquet
-                velit faucibus semper. Pellentesque in venenatis vestibulum consectetur nibh id. In id ut tempus
-                egestas. Enim sit aliquam nec, a. Morbi enim fermentum lacus in. Viverra.
-              </p>
-              <h3 className="mt-8 text-xl/8 font-semibold text-gray-900">How we helped</h3>
-              <p className="mt-3">
-                Tincidunt integer commodo, cursus etiam aliquam neque, et. Consectetur pretium in volutpat, diam.
-                Montes, magna cursus nulla feugiat dignissim id lobortis amet. Laoreet sem est phasellus eu proin massa,
-                lectus. Diam rutrum posuere donec ultricies non morbi. Mi a platea auctor mi.
-              </p>
-              <p className="mt-5">
-                Sagittis scelerisque nulla cursus in enim consectetur quam. Dictum urna sed consectetur neque tristique
-                pellentesque. Blandit amet, sed aenean erat arcu morbi.
-              </p>
-              */}
             </div>
           </div>
         </div>
