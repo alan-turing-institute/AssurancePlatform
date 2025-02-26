@@ -15,6 +15,7 @@ from social_core.exceptions import AuthForbidden
 from social_django.utils import psa
 from rest_framework import viewsets
 from rest_framework.renderers import JSONRenderer
+import json
 
 from rest_framework.parsers import MultiPartParser, FormParser
 
@@ -1110,6 +1111,7 @@ def case_study_list(request):
 #         case_study.delete()
 #         return HttpResponse(status=204)
 
+
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -1129,18 +1131,47 @@ def case_study_detail(request, pk):
     elif request.method == "PUT":
         # Use MultiPartParser and FormParser to handle multipart/form-data
         if request.content_type == 'multipart/form-data':
-            request.parsers = [MultiPartParser(), FormParser()]
+            request.parsers = [MultiPartParser(), FormParser()]  # No need for JSONParser here
 
-        serializer = CaseStudySerializer(case_study, data=request.data, partial=True)
+        # Create a mutable copy of request.data
+        data = request.data.copy()  # This makes request.data mutable
+
+        assurance_cases_raw = data.get('assurance_cases', '[]')  # Default to '[]' if missing
+
+        # Ensure it is parsed correctly
+        try:
+            assurance_cases_list = json.loads(assurance_cases_raw)
+            print("JSON parsed assurance_cases_list:", assurance_cases_list)
+        except json.JSONDecodeError as e:
+            print("JSON parsing error:", e)
+            return JsonResponse({"error": "Invalid JSON format for assurance_cases"}, status=400)
+
+        if not isinstance(assurance_cases_list, list):
+            print('Error: Should be a list of ids, but got:', type(assurance_cases_list))
+            return JsonResponse({"error": "assurance_cases should be a list of IDs"}, status=400)
+
+        if not all(isinstance(item, int) for item in assurance_cases_list):
+            print('Error: Should be a list of integers, but got:', assurance_cases_list)
+            return JsonResponse({"error": "assurance_cases should only contain integers (IDs)"}, status=400)
+
+        # Set assurance_cases to the parsed list directly
+        data.setlist('assurance_cases', assurance_cases_list)  # Ensure it's treated as a list in QueryDict
+
+        # Pass the updated data to the serializer
+        serializer = CaseStudySerializer(case_study, data=data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
-        return JsonResponse(serializer.errors, status=400)
+        else:
+            # If the serializer is not valid, print and return the errors
+            print(f"Serializer errors: {serializer.errors}")
+            return JsonResponse(serializer.errors, status=400)
 
     elif request.method == "DELETE":
         case_study.delete()
         return HttpResponse(status=204)
+
 
     
 @csrf_exempt

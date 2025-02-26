@@ -130,6 +130,7 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
 // }
 
 export const updateCaseStudy = async (token: string | undefined, formData: FormData) => {
+  console.log(formData)
   if (!token) return false;
 
   const requestOptions: RequestInit = {
@@ -141,6 +142,7 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
   };
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${formData.get('id')}/`, requestOptions);
+  console.log(response)
 
   if (!response.ok) {
     console.error('Something went wrong fetching case studies.');

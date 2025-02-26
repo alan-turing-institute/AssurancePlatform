@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { Trash2Icon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/caseStudies"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/use-toast"
@@ -27,13 +27,16 @@ import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic";
 
 import "react-quill/dist/quill.snow.css";
+import { ArrowUpTrayIcon } from "@heroicons/react/20/solid"
+import { useImportModal } from "@/hooks/useImportModal"
+import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
 
 // Dynamically import ReactQuill (Next.js SSR fix)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
 
 const assuranceCaseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
+  id: z.number(),
+  // naxme: z.string(),
 });
 
 const caseStudyFormSchema = z.object({
@@ -52,7 +55,6 @@ const caseStudyFormSchema = z.object({
   published: z.boolean().optional(),
 });
 
-
 interface CaseStudyFormProps {
   caseStudy?: any
 }
@@ -61,8 +63,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const { data } = useSession()
   const { toast } = useToast();
   const router = useRouter()
+  const importModal = useImportModal();
 
   const [value, setValue] = useState("");
+  // State for selected assurance cases
+  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>(caseStudy.assurance_cases || []);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
@@ -154,8 +159,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   //   }
   // }
 
-
-
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
     const formData = new FormData();
     
@@ -167,6 +170,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     formData.append('created_on', new Date().toISOString());
     formData.append('sector', values.sector || '');
     formData.append('contact', values.contact || '');
+    
+    // Append the assurance cases as a JSON string
+    formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
+
     // You can append more fields or files here (e.g., 'image', fileInput.files[0])
   
     if (!caseStudy) {
@@ -199,10 +206,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       }
     }
   }
-  
-
-
-
 
   const handleDelete = async () => {
     const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id)
@@ -257,12 +260,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
   return (
     <div className="mt-6">
-
       <Separator className="my-6" />
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-
           <div className="grid grid-cols-2 gap-8">
           <FormField
               control={form.control}
@@ -356,20 +356,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
           <Separator className="my-6" />
 
-          {/* <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea rows={8} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          /> */}
-
           <FormField
             control={form.control}
             name="description"
@@ -396,14 +382,23 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           <Separator className="my-6" />
 
           <div className="">
-            <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Assurance cases</p>
+            <div className="flex justify-between items-center">
+              <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Assurance cases</p>
+              {/* <button
+                onClick={() => importModal.onOpen()}
+                className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
+                <span className='hidden md:block'>Import</span>
+              </button> */}
+            </div>
+            <RelatedAssuranceCaseList selectedAssuranceCases={selectedAssuranceCases} setSelectedAssuranceCases={setSelectedAssuranceCases} />
           </div>
 
           <div className="">
             <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Featured Image</p>
 
             {previewImage ? (
-              // <img src={previewImage} alt="Preview" className="w-full h-40 object-cover rounded-lg mb-2" />
               <div className="w-10/12 relative h-[500px] group">
                 <Image
                   src={previewImage}
@@ -439,7 +434,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
         </form>
       </Form>
-
     </div>
   )
 }
