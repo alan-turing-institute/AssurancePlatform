@@ -16,10 +16,6 @@ async function NewCaseStudy({ params } : { params: { id: string } }) {
   if(!session || !session.key) {
     redirect('/login')
   }
-  
-  const { id } = params
-
-  const caseStudy = await fetchCaseStudyById(session.key, parseInt(id))
 
   return (
     <div className='p-8 min-h-screen space-y-4'>
@@ -29,8 +25,7 @@ async function NewCaseStudy({ params } : { params: { id: string } }) {
         description={`Use this form to create a case study to showcase your work.`}
       />
 
-      <CaseStudyForm caseStudy={caseStudy} />
-
+      <CaseStudyForm />
     </div>
   )
 }

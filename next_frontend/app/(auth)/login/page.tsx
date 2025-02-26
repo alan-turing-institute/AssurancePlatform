@@ -1,8 +1,9 @@
 import SignInForm from "@/components/auth/SignInForm";
-import { MoveLeftIcon } from "lucide-react";
+import { authOptions } from "@/lib/authOptions";
+import { getServerSession } from "next-auth";
 import Link from "next/link";
 
-export default function SignInPage() {
+export default async function SignInPage() {
   return (
     <>
       <div className="flex min-h-screen flex-1">

@@ -54,7 +54,7 @@ const caseStudyFormSchema = z.object({
 
 
 interface CaseStudyFormProps {
-  caseStudy: any
+  caseStudy?: any
 }
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
@@ -95,7 +95,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
  
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-    if (!caseStudy.id) {
+    if (!caseStudy) {
       let newCaseStudy = {
         title: values.title,
         description: values.description,
@@ -110,7 +110,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         // "image": "https://example.com/path-to-image.jpg",
       }
 
-      const createdCaseStudy = await createCaseStudy(data?.key, newCaseStudy)
+      const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
 
       if(createdCaseStudy) {
         toast({
@@ -381,10 +381,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
           <div className="flex justify-between items-center gap-4 w-full">
             <div className="flex items-center gap-4">
-              <Button variant="default" type="submit">{caseStudy.id ? 'Update' : 'Create'}</Button>
+              <Button variant="default" type="submit">{caseStudy ? 'Update' : 'Create'}</Button>
             </div>
 
-            {caseStudy.id && <Button variant="destructive" onClick={handleDelete} type="submit">Delete</Button>}
+            {caseStudy && <Button variant="destructive" onClick={handleDelete} type="submit">Delete</Button>}
           </div>
 
         </form>

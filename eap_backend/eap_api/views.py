@@ -1038,7 +1038,7 @@ def case_study_list(request):
     List all case studies, or create a new case study
     """
     if request.method == "GET":
-        case_studies = CaseStudy.objects.all()
+        case_studies = CaseStudy.objects.filter(owner=request.user)  # Ensure only user-owned case studies are returned
         serializer = CaseStudySerializer(case_studies, many=True)
         return JsonResponse(serializer.data, safe=False)
     
@@ -1046,6 +1046,7 @@ def case_study_list(request):
         data = JSONParser().parse(request)
         serializer = CaseStudySerializer(data=data)
         if serializer.is_valid():
+            serializer.save(owner=request.user)  # Assign the authenticated user as the owner
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)

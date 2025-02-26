@@ -58,7 +58,7 @@ export const fetchCaseStudyById = async (token: string, id: number) => {
   return result
 }
 
-export const createCaseStudy = async (token: string | undefined, newCaseStudy: any) => {
+export const createCaseStudy = async (token: string, newCaseStudy: any) => {
   if(!token) return null
 
   const requestOptions: RequestInit = {

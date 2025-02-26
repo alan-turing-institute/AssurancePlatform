@@ -5,6 +5,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from django.conf import settings  # Ensure we use the correct user model
+
 # Classes representing tables in the database for EAP app.
 
 
@@ -307,17 +309,25 @@ class Comment(models.Model):
 class CaseStudy(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)  # Optional description
-    authors = models.CharField(max_length=255, blank=True, null=True)  # Optional authors
-    category = models.CharField(max_length=100, blank=True, null=True)  # Optional category
-    published_date = models.DateTimeField(blank=True, null=True)  # Optional date
-    last_modified_on = models.DateTimeField(auto_now=True)  # Automatically updates
-    created_on = models.DateTimeField(auto_now_add=True)  # Automatically set on creation
-    sector = models.CharField(max_length=100, blank=True, null=True)  # Optional sector
-    contact = models.EmailField(blank=True, null=True)  # Optional email
-    assurance_cases = models.ManyToManyField(AssuranceCase, blank=True)  # Optional relationship
-    image = models.URLField(blank=True, null=True)  # Optional image field
-    published = models.BooleanField(default=False)  # Default to unpublished
+    description = models.TextField(blank=True, null=True)  
+    authors = models.CharField(max_length=255, blank=True, null=True)  
+    category = models.CharField(max_length=100, blank=True, null=True)  
+    published_date = models.DateTimeField(blank=True, null=True)  
+    last_modified_on = models.DateTimeField(auto_now=True)  
+    created_on = models.DateTimeField(auto_now_add=True)  
+    sector = models.CharField(max_length=100, blank=True, null=True)  
+    contact = models.EmailField(blank=True, null=True)  
+    assurance_cases = models.ManyToManyField(AssuranceCase, blank=True)  
+    image = models.URLField(blank=True, null=True)  
+    published = models.BooleanField(default=False)  
+
+    # Add the owner field
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,  # Dynamically uses your custom user model
+        related_name="case_study",
+        on_delete=models.CASCADE,
+        null=True
+    )
 
     def __str__(self):
         return self.title

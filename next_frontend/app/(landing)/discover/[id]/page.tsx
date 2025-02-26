@@ -9,15 +9,13 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
   const { id } = params
   const caseStudy = await fetchPublishedCaseStudyById(parseInt(id))
 
-  console.log(caseStudy)
-
   return (
     <div className="overflow-hidden bg-white">
       <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="absolute bottom-0 left-3/4 top-0 hidden w-screen bg-gray-50 lg:block" />
         <div className="mx-auto max-w-prose text-base lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-8">
           <div>
-            <Link href={`/discover`} className='text-black mb-4 inline-flex justify-start items-center gap-2 hover:bg-gray-100 py-2 px-3 rounded-md'>
+            <Link href={`/discover`} className='text-white mb-12 inline-flex justify-start items-center gap-2 bg-indigo-600 hover:bg-indigo-500 py-2 px-3 rounded-md'>
               <MoveLeftIcon className='size-3'/>
               Back
             </Link>

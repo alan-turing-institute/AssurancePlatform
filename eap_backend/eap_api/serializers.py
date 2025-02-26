@@ -562,3 +562,4 @@ class CaseStudySerializer(serializers.ModelSerializer):
             'last_modified_on', 'created_on', 'sector', 'contact', 'assurance_cases',
             'image', 'published'
         ]
+        read_only_fields = ["owner"]  # Prevent users from manually setting owner
