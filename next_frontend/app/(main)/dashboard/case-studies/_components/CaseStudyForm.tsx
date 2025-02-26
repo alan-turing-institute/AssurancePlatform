@@ -94,52 +94,98 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   };
  
   // 2. Define a submit handler.
+  // async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+  //   if (!caseStudy) {
+  //     let newCaseStudy = {
+  //       title: values.title,
+  //       description: values.description,
+  //       authors: values.authors,  
+  //       category: values.category,
+  //       // published_date: values.publishedDate?.toISOString(),
+  //       last_modified_on: new Date().toISOString(),
+  //       created_on: new Date().toISOString(),
+  //       sector: values.sector,
+  //       contact: values.contact,
+  //       // assurance_cases": [2, 5],  
+  //       // "image": "https://example.com/path-to-image.jpg",
+  //     }
+
+  //     const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
+
+  //     if(createdCaseStudy) {
+  //       toast({
+  //         title: 'Successfully created',
+  //         description: 'You have created a case study!',
+  //       });
+  //       router.back()
+  //     }
+
+  //   } else {
+  //     let newCaseStudy = {
+  //       id: caseStudy.id,
+  //       title: values.title,
+  //       description: values.description,
+  //       authors: values.authors,  
+  //       category: values.category,
+  //       // published_date: values.publishedDate?.toISOString(),
+  //       last_modified_on: new Date().toISOString(),
+  //       sector: values.sector,
+  //       contact: values.contact,
+  //       // assurance_cases": [2, 5],  
+  //       // "image": "https://example.com/path-to-image.jpg",
+  //     }
+
+  //     console.log(newCaseStudy)
+
+  //     const updated = await updateCaseStudy(data?.key, newCaseStudy)
+
+  //     if(updated) {
+  //       toast({
+  //         title: 'Successfully Updated',
+  //         description: 'You have updated a case study!',
+  //       });
+  //     } else {
+  //       toast({
+  //         variant: "destructive",
+  //         title: 'Failed to Update',
+  //         description: 'Something went wrong!',
+  //       });
+  //     }
+  //   }
+  // }
+
+
+
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+    const formData = new FormData();
+    
+    formData.append('title', values.title);
+    formData.append('description', values.description || '');
+    formData.append('authors', values.authors || '');
+    formData.append('category', values.category || '');
+    formData.append('last_modified_on', new Date().toISOString());
+    formData.append('created_on', new Date().toISOString());
+    formData.append('sector', values.sector || '');
+    formData.append('contact', values.contact || '');
+    // You can append more fields or files here (e.g., 'image', fileInput.files[0])
+  
     if (!caseStudy) {
-      let newCaseStudy = {
-        title: values.title,
-        description: values.description,
-        authors: values.authors,  
-        category: values.category,
-        // published_date: values.publishedDate?.toISOString(),
-        last_modified_on: new Date().toISOString(),
-        created_on: new Date().toISOString(),
-        sector: values.sector,
-        contact: values.contact,
-        // assurance_cases": [2, 5],  
-        // "image": "https://example.com/path-to-image.jpg",
-      }
-
-      const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
-
-      if(createdCaseStudy) {
+      const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
+  
+      if (createdCaseStudy) {
         toast({
           title: 'Successfully created',
           description: 'You have created a case study!',
         });
-        router.back()
+        router.back();
       }
-
     } else {
-      let newCaseStudy = {
-        id: caseStudy.id,
-        title: values.title,
-        description: values.description,
-        authors: values.authors,  
-        category: values.category,
-        // published_date: values.publishedDate?.toISOString(),
-        last_modified_on: new Date().toISOString(),
-        sector: values.sector,
-        contact: values.contact,
-        // assurance_cases": [2, 5],  
-        // "image": "https://example.com/path-to-image.jpg",
-      }
-
-      console.log(newCaseStudy)
-
-      const updated = await updateCaseStudy(data?.key, newCaseStudy)
-
-      if(updated) {
+      // For update, append the case study ID if needed
+      formData.append('id', caseStudy.id.toString()); // Assuming caseStudy.id is a number
+  
+      const updated = await updateCaseStudy(data?.key, formData);
+  
+      if (updated) {
         toast({
           title: 'Successfully Updated',
           description: 'You have updated a case study!',
@@ -153,6 +199,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       }
     }
   }
+  
+
+
+
 
   const handleDelete = async () => {
     const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id)
@@ -162,7 +212,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         title: 'Successfully Deleted',
         description: 'Case Study Deleted',
       });
-      router.back()
+      router.push('/dashboard/case-studies')
     } else {
       toast({
         variant: "destructive",
@@ -384,7 +434,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
               <Button variant="default" type="submit">{caseStudy ? 'Update' : 'Create'}</Button>
             </div>
 
-            {caseStudy && <Button variant="destructive" onClick={handleDelete} type="submit">Delete</Button>}
+            {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button">Delete</Button>}
           </div>
 
         </form>

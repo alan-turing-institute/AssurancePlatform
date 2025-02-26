@@ -547,6 +547,23 @@ def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
     return None
 
 
+# class CaseStudySerializer(serializers.ModelSerializer):
+#     assurance_cases = serializers.PrimaryKeyRelatedField(
+#         queryset=AssuranceCase.objects.all(), many=True, required=False
+#     )
+#     published_date = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+#     last_modified_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+#     created_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+
+#     class Meta:
+#         model = CaseStudy
+#         fields = [
+#             'id', 'title', 'description', 'authors', 'category', 'published_date',
+#             'last_modified_on', 'created_on', 'sector', 'contact', 'assurance_cases',
+#             'image', 'published'
+#         ]
+#         read_only_fields = ["owner"]  # Prevent users from manually setting owner
+
 class CaseStudySerializer(serializers.ModelSerializer):
     assurance_cases = serializers.PrimaryKeyRelatedField(
         queryset=AssuranceCase.objects.all(), many=True, required=False
@@ -554,6 +571,7 @@ class CaseStudySerializer(serializers.ModelSerializer):
     published_date = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
     last_modified_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
     created_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+    image = serializers.ImageField(required=False)  # Make sure this field is handled if a file is being uploaded
 
     class Meta:
         model = CaseStudy

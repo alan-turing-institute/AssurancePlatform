@@ -16,6 +16,8 @@ from social_django.utils import psa
 from rest_framework import viewsets
 from rest_framework.renderers import JSONRenderer
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
 from .models import (
     AssuranceCase,
     AssuranceCaseImage,
@@ -1030,6 +1032,27 @@ def reply_to_comment(request, comment_id):
 
 # #         return queryset
 
+# @csrf_exempt
+# @api_view(["GET", "POST"])
+# @permission_classes([IsAuthenticated])
+# def case_study_list(request):
+#     """
+#     List all case studies, or create a new case study
+#     """
+#     if request.method == "GET":
+#         case_studies = CaseStudy.objects.filter(owner=request.user)  # Ensure only user-owned case studies are returned
+#         serializer = CaseStudySerializer(case_studies, many=True)
+#         return JsonResponse(serializer.data, safe=False)
+    
+#     elif request.method == "POST":
+#         data = JSONParser().parse(request)
+#         serializer = CaseStudySerializer(data=data)
+#         if serializer.is_valid():
+#             serializer.save(owner=request.user)  # Assign the authenticated user as the owner
+#             serializer.save()
+#             return JsonResponse(serializer.data, status=201)
+#         return JsonResponse(serializer.errors, status=400)
+
 @csrf_exempt
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -1043,14 +1066,49 @@ def case_study_list(request):
         return JsonResponse(serializer.data, safe=False)
     
     elif request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = CaseStudySerializer(data=data)
+        # Use multipart/form-data parsers
+        if request.content_type == 'multipart/form-data':
+            request.parsers = [MultiPartParser(), FormParser()]
+        
+        # `request.data` already handles both form fields and files
+        serializer = CaseStudySerializer(data=request.data)
+        
         if serializer.is_valid():
-            serializer.save(owner=request.user)  # Assign the authenticated user as the owner
-            serializer.save()
+            # Save the instance and assign the authenticated user as the owner
+            serializer.save(owner=request.user)
             return JsonResponse(serializer.data, status=201)
+        
         return JsonResponse(serializer.errors, status=400)
 
+
+
+# @csrf_exempt
+# @api_view(["GET", "PUT", "DELETE"])
+# @permission_classes([IsAuthenticated])
+# def case_study_detail(request, pk):
+#     """
+#     Retrieve, update, or delete a CaseStudy instance by primary key
+#     """
+#     try:
+#         case_study = CaseStudy.objects.get(pk=pk)
+#     except CaseStudy.DoesNotExist:
+#         return HttpResponse(status=404)
+
+#     if request.method == "GET":
+#         serializer = CaseStudySerializer(case_study)
+#         return JsonResponse(serializer.data)
+
+#     elif request.method == "PUT":
+#         data = JSONParser().parse(request)
+#         serializer = CaseStudySerializer(case_study, data=data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return JsonResponse(serializer.data)
+#         return JsonResponse(serializer.errors, status=400)
+
+#     elif request.method == "DELETE":
+#         case_study.delete()
+#         return HttpResponse(status=204)
 
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE"])
@@ -1069,8 +1127,12 @@ def case_study_detail(request, pk):
         return JsonResponse(serializer.data)
 
     elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = CaseStudySerializer(case_study, data=data, partial=True)
+        # Use MultiPartParser and FormParser to handle multipart/form-data
+        if request.content_type == 'multipart/form-data':
+            request.parsers = [MultiPartParser(), FormParser()]
+
+        serializer = CaseStudySerializer(case_study, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(serializer.data)
@@ -1079,6 +1141,7 @@ def case_study_detail(request, pk):
     elif request.method == "DELETE":
         case_study.delete()
         return HttpResponse(status=204)
+
     
 @csrf_exempt
 @api_view(["GET"])
