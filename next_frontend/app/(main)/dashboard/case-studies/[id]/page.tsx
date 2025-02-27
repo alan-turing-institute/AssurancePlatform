@@ -19,6 +19,7 @@ async function CaseStudyDetails({ params } : { params: { id: string } }) {
   const { id } = params
 
   const caseStudy = await fetchCaseStudyById(session.key, parseInt(id))
+  console.log(caseStudy)
 
   return (
     <div className='p-8 min-h-screen space-y-4'>

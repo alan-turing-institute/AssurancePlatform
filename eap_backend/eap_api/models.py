@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from enum import Enum
 
 from django.contrib.auth.models import AbstractUser
@@ -332,3 +333,13 @@ class CaseStudy(models.Model):
     def __str__(self):
         return self.title
 
+class PublishedAssuranceCase(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assurance_case = models.ForeignKey('AssuranceCase', on_delete=models.CASCADE)
+    case_study = models.ForeignKey('CaseStudy', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    content = models.JSONField()  # Stores full assurance case details
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Snapshot of {self.title} for Case Study {self.case_study.id}"

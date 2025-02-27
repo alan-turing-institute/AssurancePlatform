@@ -67,7 +67,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
   const [value, setValue] = useState("");
   // State for selected assurance cases
-  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>(caseStudy.assurance_cases || []);
+  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>([]);
+
+  useEffect(() => {
+    if(caseStudy && caseStudy.assurance_cases.length > 0) {
+      setSelectedAssuranceCases(caseStudy.assurance_cases)
+    } else {
+      setSelectedAssuranceCases([])
+    }
+  },[])
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
@@ -172,7 +180,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     formData.append('contact', values.contact || '');
     
     // Append the assurance cases as a JSON string
-    formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
+    if(selectedAssuranceCases.length > 0) {
+      formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
+    }
 
     // You can append more fields or files here (e.g., 'image', fileInput.files[0])
   
@@ -256,7 +266,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     "size",
     "font"
   ];
-  
 
   return (
     <div className="mt-6">
@@ -271,7 +280,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} disabled={caseStudy.published} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -284,7 +293,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Domain/Sector</FormLabel>
                   <FormControl>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={caseStudy.published}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select sector" />
                     </SelectTrigger>
@@ -306,7 +315,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={caseStudy.published}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -333,7 +342,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Contact</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field}  disabled={caseStudy.published}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -346,7 +355,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Authors</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field}  disabled={caseStudy.published} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -372,6 +381,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     }}
                     modules={modules} 
                     formats={formats}
+                    readOnly={caseStudy.published}
                   />
                 </FormControl>
                 <FormMessage />
@@ -392,7 +402,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <span className='hidden md:block'>Import</span>
               </button> */}
             </div>
-            <RelatedAssuranceCaseList selectedAssuranceCases={selectedAssuranceCases} setSelectedAssuranceCases={setSelectedAssuranceCases} />
+            <RelatedAssuranceCaseList 
+              published={caseStudy.published} 
+              selectedAssuranceCases={selectedAssuranceCases} 
+              setSelectedAssuranceCases={setSelectedAssuranceCases} 
+            />
           </div>
 
           <div className="">
@@ -425,10 +439,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           </div>
 
           <div className="flex justify-between items-center gap-4 w-full">
-            <div className="flex items-center gap-4">
-              <Button variant="default" type="submit">{caseStudy ? 'Update' : 'Create'}</Button>
+            <div>
+              {!caseStudy.published && (
+                <Button variant="default" type="submit">{caseStudy ? 'Update' : 'Create'}</Button>
+              )}
             </div>
-
             {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button">Delete</Button>}
           </div>
 

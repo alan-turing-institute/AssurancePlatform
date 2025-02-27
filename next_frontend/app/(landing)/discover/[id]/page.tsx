@@ -1,9 +1,9 @@
-import { fetchCaseStudyById, fetchPublishedCaseStudyById } from '@/actions/caseStudies'
-import { Button } from '@/components/ui/button'
-import { CalendarDaysIcon, CameraIcon, GroupIcon, MailIcon, MoveLeftIcon, Users2Icon } from 'lucide-react'
+import { fetchPublishedCaseStudyById } from '@/actions/caseStudies'
+import { MailIcon, MoveLeftIcon, Users2Icon } from 'lucide-react'
 import moment from 'moment'
 import Link from 'next/link'
 import React from 'react'
+import CaseStudyCases from '../../_components/CaseStudyCases'
 
 const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) => {
   const { id } = params
@@ -13,7 +13,7 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
     <div className="overflow-hidden bg-white">
       <div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8">
         <div className="absolute bottom-0 left-3/4 top-0 hidden w-screen bg-gray-50 lg:block" />
-        <div className="mx-auto max-w-prose text-base lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-8">
+        <div className="mx-auto text-base lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-8">
           <div>
             <Link href={`/discover`} className='text-white mb-12 inline-flex justify-start items-center gap-2 bg-indigo-600 hover:bg-indigo-500 py-2 px-3 rounded-md'>
               <MoveLeftIcon className='size-3'/>
@@ -48,7 +48,7 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
               </defs>
               <rect fill="url(#de316486-4a29-4312-bdfc-fbce2132a2c1)" width={404} height={384} />
             </svg>
-            <div className="relative mx-auto max-w-prose text-base lg:max-w-none">
+            <div className="relative mx-auto text-base lg:max-w-none">
               <figure>
                 <img
                   alt={caseStudy.title}
@@ -77,6 +77,10 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
               </div>
               <div className="prose">
                 <div dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }} />
+              </div>
+
+              <div className='pt-6'>
+                <CaseStudyCases assuranceCaseIds={caseStudy.assurance_cases} />
               </div>
             </div>
           </div>

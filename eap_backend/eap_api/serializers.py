@@ -22,6 +22,7 @@ from .models import (
     Strategy,
     TopLevelNormativeGoal,
     CaseStudy,
+    PublishedAssuranceCase,
 )
 
 
@@ -581,3 +582,10 @@ class CaseStudySerializer(serializers.ModelSerializer):
             'image', 'published'
         ]
         read_only_fields = ["owner"]  # Prevent users from manually setting owner
+
+class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
+    content = serializers.JSONField()  # Ensure content is treated as JSON
+
+    class Meta:
+        model = PublishedAssuranceCase
+        fields = ['id', 'assurance_case', 'case_study', 'title', 'content', 'created_at']

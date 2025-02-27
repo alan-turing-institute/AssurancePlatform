@@ -150,6 +150,7 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
   }
 
   revalidatePath(`/dashboard/case-studies/${formData.get('id')}`);
+  revalidatePath(`/discover/${formData.get('id')}`);
   return true;
 };
 
@@ -172,4 +173,15 @@ export const deleteCaseStudy = async (token: string, caseStudyId: number) => {
 
   revalidatePath('/dashboard/case-studies')
   return true
+}
+
+export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: number) => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${assuranceCaseId}/`)
+
+  if(!response.ok) {
+    console.error('Something went wrong fetching case study case.')
+  }
+
+  const result = await response.json()
+  return result[0]
 }

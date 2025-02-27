@@ -105,4 +105,5 @@ urlpatterns = [
     path("case-studies/<int:pk>/", views.case_study_detail, name="case_study_detail"),
     path("public/case-studies/", views.public_case_study_list, name="public_case_study_list"),
     path("public/case-studies/<int:pk>/", views.public_case_study_detail, name="public_case_study_detail"),
+    path("public/assurance-case/<int:id>/", views.published_assurance_case_detail, name="published_assurance_case_detail"),
 ]

@@ -32,6 +32,7 @@ from .models import (
     Strategy,
     TopLevelNormativeGoal,
     CaseStudy,
+    PublishedAssuranceCase,
 )
 from .serializers import (
     TYPE_DICT,
@@ -52,6 +53,7 @@ from .serializers import (
     UsernameAwareUserSerializer,
     get_case_id,
     CaseStudySerializer,
+    PublishedAssuranceCaseSerializer,
 )
 from .view_utils import (
     CommentUtils,
@@ -1136,6 +1138,10 @@ def case_study_detail(request, pk):
         # Create a mutable copy of request.data
         data = request.data.copy()  # This makes request.data mutable
 
+        published = data.get('published')
+
+        # Add logic here for saving a published version of the linked assurance cases
+
         assurance_cases_raw = data.get('assurance_cases', '[]')  # Default to '[]' if missing
 
         # Ensure it is parsed correctly
@@ -1161,6 +1167,27 @@ def case_study_detail(request, pk):
         serializer = CaseStudySerializer(case_study, data=data, partial=True)
 
         if serializer.is_valid():
+
+            if published:
+                for assurance_case_id in assurance_cases_list:
+                    try:
+                        assurance_case = AssuranceCase.objects.get(id=assurance_case_id)
+                    except AssuranceCase.DoesNotExist:
+                        continue  # Skip if the assurance case doesn't exist
+
+                    # Get full assurance case details using the same logic as `case_detail()`
+                    assurance_case_serializer = AssuranceCaseSerializer(assurance_case)
+                    case_data = assurance_case_serializer.data
+                    case_data["goals"] = get_json_tree(case_data["goals"], "goals")  # Apply your existing goal tree logic
+
+                    # Create a snapshot
+                    PublishedAssuranceCase.objects.create(
+                        assurance_case=assurance_case,
+                        case_study=case_study,
+                        title=assurance_case.name,
+                        content=case_data  # Store full assurance case details as JSON
+                    )
+
             serializer.save()
             return JsonResponse(serializer.data)
         else:
@@ -1172,8 +1199,73 @@ def case_study_detail(request, pk):
         case_study.delete()
         return HttpResponse(status=204)
 
+# @csrf_exempt
+# @api_view(["GET", "PUT", "DELETE"])
+# @permission_classes([IsAuthenticated])
+# def case_study_detail(request, pk):
+#     """
+#     Retrieve, update, or delete a CaseStudy instance by primary key
+#     """
+#     try:
+#         case_study = CaseStudy.objects.get(pk=pk)
+#     except CaseStudy.DoesNotExist:
+#         return HttpResponse(status=404)
 
-    
+#     if request.method == "GET":
+#         serializer = CaseStudySerializer(case_study)
+#         return JsonResponse(serializer.data)
+
+#     elif request.method == "PUT":
+#         if request.content_type == "multipart/form-data":
+#             request.parsers = [MultiPartParser(), FormParser()]
+
+#         data = request.data.copy()
+
+#         published = data.get("published")
+#         if published is not None:
+#             published = published.lower() == "true"  # Convert to boolean
+#             case_study.published = published
+
+#         # Handle assurance cases
+#         assurance_cases_raw = data.get("assurance_cases", "[]")
+
+#         try:
+#             assurance_cases_list = json.loads(assurance_cases_raw)
+#         except json.JSONDecodeError:
+#             return JsonResponse({"error": "Invalid JSON format for assurance_cases"}, status=400)
+
+#         if not isinstance(assurance_cases_list, list) or not all(isinstance(i, int) for i in assurance_cases_list):
+#             return JsonResponse({"error": "assurance_cases should be a list of integer IDs"}, status=400)
+
+#         # If publishing, fetch full assurance case details and store a snapshot
+#         if published:
+#             for assurance_case_id in assurance_cases_list:
+#                 try:
+#                     assurance_case = AssuranceCase.objects.get(id=assurance_case_id)
+#                 except AssuranceCase.DoesNotExist:
+#                     continue  # Skip if the assurance case doesn't exist
+
+#                 # Get full assurance case details using the same logic as `case_detail()`
+#                 assurance_case_serializer = AssuranceCaseSerializer(assurance_case)
+#                 case_data = assurance_case_serializer.data
+#                 case_data["goals"] = get_json_tree(case_data["goals"], "goals")  # Apply your existing goal tree logic
+
+#                 # Create a snapshot
+#                 PublishedAssuranceCase.objects.create(
+#                     assurance_case=assurance_case,
+#                     case_study=case_study,
+#                     title=assurance_case.name,
+#                     content=case_data  # Store full assurance case details as JSON
+#                 )
+
+#         case_study.save()
+#         return JsonResponse({"message": "Updated successfully", "published": case_study.published}, status=200)
+
+#     elif request.method == "DELETE":
+#         case_study.delete()
+#         return HttpResponse(status=204)
+
+ 
 @csrf_exempt
 @api_view(["GET"])
 def public_case_study_list(request):
@@ -1199,3 +1291,16 @@ def public_case_study_detail(request, pk):
     serializer = CaseStudySerializer(case_study)
     return JsonResponse(serializer.data)
 
+@csrf_exempt
+@api_view(["GET"])
+def published_assurance_case_detail(request, id):
+    """
+    Retrieve all PublishedAssuranceCases linked to a specific AssuranceCase ID.
+    """
+    published_assurance_cases = PublishedAssuranceCase.objects.filter(assurance_case=id)
+
+    if not published_assurance_cases.exists():
+        return HttpResponse(status=404)
+
+    serializer = PublishedAssuranceCaseSerializer(published_assurance_cases, many=True)  # Use many=True for multiple results
+    return JsonResponse(serializer.data, safe=False)  # Allow lists in JSON response
