@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from "next/cache"
+import { notFound } from "next/navigation"
 
 export const fetchCaseStudies = async (token: string) => {
   const requestOptions: RequestInit = {
@@ -35,6 +36,10 @@ export const fetchPublishedCaseStudyById = async (id: number) => {
 
   if(!response.ok) {
     console.error(`Something went wrong fetching case study ${id}.`)
+  }
+
+  if(response.status == 404) {
+    notFound()
   }
 
   const results = await response.json()
@@ -151,6 +156,7 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
 
   revalidatePath(`/dashboard/case-studies/${formData.get('id')}`);
   revalidatePath(`/discover/${formData.get('id')}`);
+  revalidatePath(`/discover`);
   return true;
 };
 
