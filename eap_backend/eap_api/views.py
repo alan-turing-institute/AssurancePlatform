@@ -32,6 +32,7 @@ from .models import (
     Strategy,
     TopLevelNormativeGoal,
     CaseStudy,
+    CaseStudyFeatureImage,
     PublishedAssuranceCase,
 )
 from .serializers import (
@@ -53,6 +54,7 @@ from .serializers import (
     UsernameAwareUserSerializer,
     get_case_id,
     CaseStudySerializer,
+    CaseStudyFeatureImageSerializer,
     PublishedAssuranceCaseSerializer,
 )
 from .view_utils import (
@@ -1290,6 +1292,44 @@ def public_case_study_detail(request, pk):
 
     serializer = CaseStudySerializer(case_study)
     return JsonResponse(serializer.data)
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def case_study_feature_image(request: HttpRequest, pk) -> Response:
+    if request.method == "GET":
+        try:
+            feature_image = CaseStudyFeatureImage.objects.get(case_study_id=pk)
+            image_serializer = CaseStudyFeatureImageSerializer(feature_image)
+            return Response(image_serializer.data, status=status.HTTP_200_OK)
+        except CaseStudyFeatureImage.DoesNotExist:
+            return Response(
+                {"message": f"No feature image found for case study {pk}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    elif request.method == "POST":
+        image_serializer = CaseStudyFeatureImageSerializer(
+            data={
+                "case_study_id": pk,
+                "image": request.FILES.get("media"),
+            },
+            context={"request": request},
+        )
+
+        if image_serializer.is_valid():
+            image_serializer.save()
+            return Response(
+                {
+                    "message": "Feature image uploaded successfully.",
+                    "data": image_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    return Response(
+        {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
+    )
 
 @csrf_exempt
 @api_view(["GET"])

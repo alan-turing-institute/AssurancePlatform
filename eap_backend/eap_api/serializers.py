@@ -22,6 +22,7 @@ from .models import (
     Strategy,
     TopLevelNormativeGoal,
     CaseStudy,
+    CaseStudyFeatureImage,
     PublishedAssuranceCase,
 )
 
@@ -582,6 +583,22 @@ class CaseStudySerializer(serializers.ModelSerializer):
             'image', 'published'
         ]
         read_only_fields = ["owner"]  # Prevent users from manually setting owner
+
+class CaseStudyFeatureImageSerializer(serializers.ModelSerializer):
+    case_study_id = serializers.PrimaryKeyRelatedField(
+        source="case_study", queryset=CaseStudy.objects.all()
+    )
+
+    class Meta:
+        model = CaseStudyFeatureImage
+        fields = ("id", "case_study_id", "image", "uploaded_at")
+
+    def create(self, validated_data: dict):
+        feature_image, _ = CaseStudyFeatureImage.objects.update_or_create(
+            case_study=validated_data.get("case_study"),
+            defaults={"image": validated_data.get("image")},
+        )
+        return feature_image
 
 class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
     content = serializers.JSONField()  # Ensure content is treated as JSON

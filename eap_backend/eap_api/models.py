@@ -332,6 +332,16 @@ class CaseStudy(models.Model):
 
     def __str__(self):
         return self.title
+    
+class CaseStudyFeatureImage(models.Model):
+    case_study = models.OneToOneField(
+        CaseStudy, on_delete=models.CASCADE, related_name="feature_image"
+    )
+    image = models.ImageField(upload_to="case_study_images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feature Image for {self.case_study.title}"
 
 class PublishedAssuranceCase(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

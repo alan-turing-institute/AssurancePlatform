@@ -167,6 +167,40 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   //   }
   // }
 
+  async function uploadCaseStudyFeatureImage(caseStudyId: number, imageFile: File) {
+    const formData = new FormData();
+    formData.append('media', imageFile); // Ensure it matches request.FILES.get("media")
+  
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to upload feature image');
+      }
+  
+      const result = await response.json();
+      console.log('Feature image uploaded:', result);
+      toast({
+        title: 'Feature Image Uploaded',
+        description: 'Feature image successfully uploaded!',
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        variant: "destructive",
+        title: 'Image Upload Failed',
+        description: 'Could not upload feature image!',
+      });
+    }
+  }
+  
+
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
     const formData = new FormData();
     
@@ -201,6 +235,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       formData.append('id', caseStudy.id.toString()); // Assuming caseStudy.id is a number
   
       const updated = await updateCaseStudy(data?.key, formData);
+
+      // Upload feature image if exists
+      if (values.image) {
+        await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
+      }
   
       if (updated) {
         toast({
