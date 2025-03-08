@@ -256,6 +256,37 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     }
   }
 
+  const handlePublish = async () => {
+      const formData = new FormData();
+      formData.append('id', caseStudy.id.toString());
+      formData.append('assurance_cases', JSON.stringify(caseStudy.assurance_cases));
+  
+      // Set only the fields that need updating
+      if (caseStudy.published) {
+        formData.append("published", "false"); // Convert boolean to string
+        formData.append("published_date", ""); // Clear the published date
+      } else {
+        formData.append("published", "true"); // Convert boolean to string
+        formData.append("published_date", new Date().toISOString()); // Set new date
+      }
+    
+      // Send the formData to the API
+      const response = await updateCaseStudy(data?.key, formData);
+    
+      if (response) {
+        toast({
+          title: caseStudy.published ? "Successfully Unpublished" : "Successfully Published",
+          description: `You have ${caseStudy.published ? "unpublished" : "published"} your case study!`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Update",
+          description: "Something went wrong!",
+        });
+      }
+    };
+
   const handleDelete = async () => {
     const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id)
 
@@ -319,7 +350,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input {...field} disabled={caseStudy.published} />
+                    <Input {...field} disabled={caseStudy && caseStudy.published} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -332,7 +363,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Domain/Sector</FormLabel>
                   <FormControl>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={caseStudy.published}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={caseStudy && caseStudy.published}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select sector" />
                     </SelectTrigger>
@@ -354,7 +385,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={caseStudy.published}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={caseStudy && caseStudy.published}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -381,7 +412,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Contact</FormLabel>
                   <FormControl>
-                    <Input {...field}  disabled={caseStudy.published}/>
+                    <Input {...field}  disabled={caseStudy && caseStudy.published}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -394,7 +425,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <FormItem>
                   <FormLabel>Authors</FormLabel>
                   <FormControl>
-                    <Input {...field}  disabled={caseStudy.published} />
+                    <Input {...field}  disabled={caseStudy && caseStudy.published} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -420,7 +451,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     }}
                     modules={modules} 
                     formats={formats}
-                    readOnly={caseStudy.published}
+                    readOnly={caseStudy && caseStudy.published}
                   />
                 </FormControl>
                 <FormMessage />
@@ -442,7 +473,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
               </button> */}
             </div>
             <RelatedAssuranceCaseList 
-              published={caseStudy.published} 
+              published={caseStudy ? caseStudy.published : false} 
               selectedAssuranceCases={selectedAssuranceCases} 
               setSelectedAssuranceCases={setSelectedAssuranceCases} 
             />
@@ -478,12 +509,19 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           </div>
 
           <div className="flex justify-between items-center gap-4 w-full">
-            <div>
-              {!caseStudy.published && (
-                <Button variant="default" type="submit">{caseStudy ? 'Update' : 'Create'}</Button>
-              )}
+            <div className="flex justify-start items-center gap-2">
+                <Button variant="default" type="submit">{caseStudy ? 'Save as draft' : 'Create'}</Button>
+                {caseStudy && (
+                  <Button 
+                    variant="primary" 
+                    type="button"
+                    onClick={handlePublish}
+                  >
+                    {caseStudy.published ? 'Unpublish' : 'Publish'}
+                  </Button>
+                )}
             </div>
-            {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button">Delete</Button>}
+            {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button>}
           </div>
 
         </form>

@@ -27,7 +27,7 @@ async function CaseStudyDetails({ params } : { params: { id: string } }) {
       <PageHeading 
         title={caseStudy.title}
         description={`Created On ${moment(caseStudy.createdOn).format('DD/MM/YYYY')}`}
-        button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }} 
+        // button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }} 
         caseStudy={caseStudy}
       />
 
