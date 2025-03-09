@@ -1275,7 +1275,8 @@ def public_case_study_list(request):
     List all publicly available case studies (published = True)
     """
     case_studies = CaseStudy.objects.filter(published=True)
-    serializer = CaseStudySerializer(case_studies, many=True)
+    # serializer = CaseStudySerializer(case_studies, many=True)
+    serializer = CaseStudySerializer(case_studies, many=True, context={"request": request})  # Pass request context
     return JsonResponse(serializer.data, safe=False)
 
 
@@ -1290,11 +1291,13 @@ def public_case_study_detail(request, pk):
     except CaseStudy.DoesNotExist:
         return HttpResponse(status=404)
 
-    serializer = CaseStudySerializer(case_study)
+    # serializer = CaseStudySerializer(case_study)
+    serializer = CaseStudySerializer(case_study, context={"request": request})
     return JsonResponse(serializer.data)
 
+
 @csrf_exempt
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def case_study_feature_image(request: HttpRequest, pk) -> Response:
     if request.method == "GET":
@@ -1327,9 +1330,24 @@ def case_study_feature_image(request: HttpRequest, pk) -> Response:
                 status=status.HTTP_200_OK,
             )
 
+    elif request.method == "DELETE":
+        try:
+            feature_image = CaseStudyFeatureImage.objects.get(case_study_id=pk)
+            feature_image.delete()
+            return Response(
+                {"message": f"Feature image for case study {pk} deleted successfully."},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+        except CaseStudyFeatureImage.DoesNotExist:
+            return Response(
+                {"message": f"No feature image found for case study {pk}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
     return Response(
         {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
     )
+
 
 @csrf_exempt
 @api_view(["GET"])
