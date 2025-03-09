@@ -4,7 +4,6 @@ import { fetchPublishedCaseStudies } from '@/actions/caseStudies'
 
 const DiscoverPage = async () => {
   const publishedCaseStudies = await fetchPublishedCaseStudies()
-  console.log(publishedCaseStudies)
 
   return (
     <>
