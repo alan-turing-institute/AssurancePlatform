@@ -64,10 +64,10 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
               <FolderCheckIcon className='size-6'/>
               <div className="min-w-0 flex-auto">
                 <p className="text-sm font-semibold text-foreground">
-                  {assuranceCase?.content?.name}
+                  {assuranceCase.title}
                 </p>
                 <p className="flex text-xs text-foreground/50">
-                  {assuranceCase?.content?.description}
+                  {assuranceCase.description}
                 </p>
               </div>
             </div>

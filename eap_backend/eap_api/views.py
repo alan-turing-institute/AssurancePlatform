@@ -1067,7 +1067,8 @@ def case_study_list(request):
     """
     if request.method == "GET":
         case_studies = CaseStudy.objects.filter(owner=request.user)  # Ensure only user-owned case studies are returned
-        serializer = CaseStudySerializer(case_studies, many=True)
+        # serializer = CaseStudySerializer(case_studies, many=True)
+        serializer = CaseStudySerializer(case_studies, many=True, context={"request": request})
         return JsonResponse(serializer.data, safe=False)
     
     elif request.method == "POST":
@@ -1085,37 +1086,6 @@ def case_study_list(request):
         
         return JsonResponse(serializer.errors, status=400)
 
-
-
-# @csrf_exempt
-# @api_view(["GET", "PUT", "DELETE"])
-# @permission_classes([IsAuthenticated])
-# def case_study_detail(request, pk):
-#     """
-#     Retrieve, update, or delete a CaseStudy instance by primary key
-#     """
-#     try:
-#         case_study = CaseStudy.objects.get(pk=pk)
-#     except CaseStudy.DoesNotExist:
-#         return HttpResponse(status=404)
-
-#     if request.method == "GET":
-#         serializer = CaseStudySerializer(case_study)
-#         return JsonResponse(serializer.data)
-
-#     elif request.method == "PUT":
-#         data = JSONParser().parse(request)
-#         serializer = CaseStudySerializer(case_study, data=data, partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse(serializer.data)
-#         return JsonResponse(serializer.errors, status=400)
-
-#     elif request.method == "DELETE":
-#         case_study.delete()
-#         return HttpResponse(status=204)
-
-
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -1129,7 +1099,8 @@ def case_study_detail(request, pk):
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        serializer = CaseStudySerializer(case_study)
+        # serializer = CaseStudySerializer(case_study)
+        serializer = CaseStudySerializer(case_study, context={"request": request})
         return JsonResponse(serializer.data)
 
     elif request.method == "PUT":
@@ -1166,7 +1137,7 @@ def case_study_detail(request, pk):
         data.setlist('assurance_cases', assurance_cases_list)  # Ensure it's treated as a list in QueryDict
 
         # Pass the updated data to the serializer
-        serializer = CaseStudySerializer(case_study, data=data, partial=True)
+        serializer = CaseStudySerializer(case_study, data=data, partial=True, context={"request": request})
 
         if serializer.is_valid():
 
@@ -1182,12 +1153,17 @@ def case_study_detail(request, pk):
                     case_data = assurance_case_serializer.data
                     case_data["goals"] = get_json_tree(case_data["goals"], "goals")  # Apply your existing goal tree logic
 
+                    # Remove any existing snapshots for this assurance case and case study
+                    PublishedAssuranceCase.objects.filter(
+                        assurance_case=assurance_case, case_study=case_study
+                    ).delete()
+
                     # Create a snapshot
                     PublishedAssuranceCase.objects.create(
                         assurance_case=assurance_case,
                         case_study=case_study,
                         title=assurance_case.name,
-                        content=case_data  # Store full assurance case details as JSON
+                        content=json.dumps(case_data)  # Ensure it's stored as a valid JSON string
                     )
 
             serializer.save()
@@ -1200,73 +1176,6 @@ def case_study_detail(request, pk):
     elif request.method == "DELETE":
         case_study.delete()
         return HttpResponse(status=204)
-
-# @csrf_exempt
-# @api_view(["GET", "PUT", "DELETE"])
-# @permission_classes([IsAuthenticated])
-# def case_study_detail(request, pk):
-#     """
-#     Retrieve, update, or delete a CaseStudy instance by primary key
-#     """
-#     try:
-#         case_study = CaseStudy.objects.get(pk=pk)
-#     except CaseStudy.DoesNotExist:
-#         return HttpResponse(status=404)
-
-#     if request.method == "GET":
-#         serializer = CaseStudySerializer(case_study)
-#         return JsonResponse(serializer.data)
-
-#     elif request.method == "PUT":
-#         if request.content_type == "multipart/form-data":
-#             request.parsers = [MultiPartParser(), FormParser()]
-
-#         data = request.data.copy()
-
-#         published = data.get("published")
-#         if published is not None:
-#             published = published.lower() == "true"  # Convert to boolean
-#             case_study.published = published
-
-#         # Handle assurance cases
-#         assurance_cases_raw = data.get("assurance_cases", "[]")
-
-#         try:
-#             assurance_cases_list = json.loads(assurance_cases_raw)
-#         except json.JSONDecodeError:
-#             return JsonResponse({"error": "Invalid JSON format for assurance_cases"}, status=400)
-
-#         if not isinstance(assurance_cases_list, list) or not all(isinstance(i, int) for i in assurance_cases_list):
-#             return JsonResponse({"error": "assurance_cases should be a list of integer IDs"}, status=400)
-
-#         # If publishing, fetch full assurance case details and store a snapshot
-#         if published:
-#             for assurance_case_id in assurance_cases_list:
-#                 try:
-#                     assurance_case = AssuranceCase.objects.get(id=assurance_case_id)
-#                 except AssuranceCase.DoesNotExist:
-#                     continue  # Skip if the assurance case doesn't exist
-
-#                 # Get full assurance case details using the same logic as `case_detail()`
-#                 assurance_case_serializer = AssuranceCaseSerializer(assurance_case)
-#                 case_data = assurance_case_serializer.data
-#                 case_data["goals"] = get_json_tree(case_data["goals"], "goals")  # Apply your existing goal tree logic
-
-#                 # Create a snapshot
-#                 PublishedAssuranceCase.objects.create(
-#                     assurance_case=assurance_case,
-#                     case_study=case_study,
-#                     title=assurance_case.name,
-#                     content=case_data  # Store full assurance case details as JSON
-#                 )
-
-#         case_study.save()
-#         return JsonResponse({"message": "Updated successfully", "published": case_study.published}, status=200)
-
-#     elif request.method == "DELETE":
-#         case_study.delete()
-#         return HttpResponse(status=204)
-
  
 @csrf_exempt
 @api_view(["GET"])
@@ -1278,7 +1187,6 @@ def public_case_study_list(request):
     # serializer = CaseStudySerializer(case_studies, many=True)
     serializer = CaseStudySerializer(case_studies, many=True, context={"request": request})  # Pass request context
     return JsonResponse(serializer.data, safe=False)
-
 
 @csrf_exempt
 @api_view(["GET"])
@@ -1294,7 +1202,6 @@ def public_case_study_detail(request, pk):
     # serializer = CaseStudySerializer(case_study)
     serializer = CaseStudySerializer(case_study, context={"request": request})
     return JsonResponse(serializer.data)
-
 
 @csrf_exempt
 @api_view(["GET", "POST", "DELETE"])
@@ -1347,7 +1254,6 @@ def case_study_feature_image(request: HttpRequest, pk) -> Response:
     return Response(
         {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
     )
-
 
 @csrf_exempt
 @api_view(["GET"])

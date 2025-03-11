@@ -8,6 +8,7 @@ interface CaseStudyCaseItemProps {
 
 const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) => {
   const assuranceCase = await fetchPublishedAssuranceCaseId(assuranceCaseId)
+  console.log(assuranceCase)
 
   return (
     <li key={assuranceCase.id} className="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer">
@@ -15,10 +16,7 @@ const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) =
         {/* <img alt="" src={person.imageUrl} className="size-12 flex-none rounded-full bg-gray-50" /> */}
         <div className="min-w-0 flex-auto">
           <p className="text-md font-semibold text-gray-900">
-            {assuranceCase.content.name}
-          </p>
-          <p className="mt-1 flex text-xs/5 text-gray-500">
-            {assuranceCase.content.description}
+            {assuranceCase.title}
           </p>
         </div>
       </div>
