@@ -1,6 +1,7 @@
 import { fetchPublishedAssuranceCaseId } from '@/actions/caseStudies'
 import { DownloadIcon } from 'lucide-react'
 import React from 'react'
+import DownloadCaseButton from './DownloadCaseButton'
 
 interface CaseStudyCaseItemProps {
   assuranceCaseId: number
@@ -8,7 +9,6 @@ interface CaseStudyCaseItemProps {
 
 const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) => {
   const assuranceCase = await fetchPublishedAssuranceCaseId(assuranceCaseId)
-  console.log(assuranceCase)
 
   return (
     <li key={assuranceCase.id} className="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer">
@@ -20,9 +20,8 @@ const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) =
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-x-4">
-        <p className='text-sm text-muted-foreground'>Download</p>
-        <DownloadIcon aria-hidden="true" className="size-5 flex-none text-gray-400" />
+      <div>
+        <DownloadCaseButton content={assuranceCase.content} title={assuranceCase.title} />
       </div>
     </li>
   )

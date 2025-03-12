@@ -16,7 +16,7 @@ const CaseStudyCases = ({ assuranceCaseIds } : CaseStudyCasesProps ) => {
           className="divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl mt-8 mb-24"
         >
           {assuranceCaseIds.map((assuranceCase) => (
-            <CaseStudyCaseItem assuranceCaseId={assuranceCase} />
+            <CaseStudyCaseItem key={assuranceCase.id} assuranceCaseId={assuranceCase} />
           ))}
         </ul>
       </>
