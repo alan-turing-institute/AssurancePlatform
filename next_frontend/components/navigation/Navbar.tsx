@@ -1,27 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ModeToggle } from '@/components/ui/theme-toggle'
 import LogoutButton from '@/components/auth/LogoutButton'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import FeedbackBanner from '@/components/FeedbackBanner'
-import { useSession } from 'next-auth/react'
 import { MobileNav } from './mobile-nav'
 import DesktopNav from './desktop-nav'
 import MenuToggleButton from './menu-toggle'
-import { fetchCurrentUser } from '@/actions/users'
 
 export const Navbar = ({ children } : { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
   const pathname = usePathname();
-  const pageName = pathname === '/' ? 'assurance cases' : pathname.split('/')[1]
-
-  const { data } = useSession()
-
-  useEffect(() => {
-    fetchCurrentUser(data?.key ?? '').then(result => setCurrentUser(result))
-  },[])
+  const pageName = pathname === '/'
+  ? 'assurance cases'
+  : pathname.includes('/dashboard/case-studies')
+    ? 'Case Studies'
+    : pathname.split('/').filter(Boolean).pop();
 
   return (
     <div>
@@ -48,10 +43,6 @@ export const Navbar = ({ children } : { children: React.ReactNode }) => {
               </button> */}
 
               <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10" aria-hidden="true" />
-              <div className='flex flex-col justify-start items-start'>
-                <span>{currentUser?.username}</span>
-                {/* <span className='text-xs text-muted-foreground'>({currentUser?.email})</span> */}
-              </div>
               <LogoutButton />
               <ModeToggle />
             </div>
