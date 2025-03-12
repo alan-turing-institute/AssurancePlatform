@@ -82,7 +82,7 @@ export const fetchCaseStudyById = async (token: string, id: number) => {
 //   if(!response.ok) {
 //     console.error('Something went wrong creating case study')
 //   }
-  
+
 //   revalidatePath('/dashboard/case-studies')
 //   return true
 
@@ -104,7 +104,7 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
   if(!response.ok) {
     console.error('Something went wrong creating case study')
   }
-  
+
   revalidatePath('/dashboard/case-studies')
   return true
 

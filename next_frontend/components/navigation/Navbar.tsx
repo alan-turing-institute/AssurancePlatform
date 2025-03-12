@@ -12,10 +12,10 @@ import MenuToggleButton from './menu-toggle'
 export const Navbar = ({ children } : { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname();
-  const pageName = pathname === '/' 
-  ? 'assurance cases' 
-  : pathname.includes('/dashboard/case-studies') 
-    ? 'Case Studies' 
+  const pageName = pathname === '/'
+  ? 'assurance cases'
+  : pathname.includes('/dashboard/case-studies')
+    ? 'Case Studies'
     : pathname.split('/').filter(Boolean).pop();
 
   return (

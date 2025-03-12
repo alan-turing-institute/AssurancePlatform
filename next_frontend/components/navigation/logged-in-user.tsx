@@ -11,14 +11,14 @@ const LoggedInUser = () => {
 
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState<boolean>(true)
-  
+
   useEffect(() => {
     fetchCurrentUser(data?.key ?? '').then(result => {
       setCurrentUser(result)
       setLoading(false)
     })
   },[])
-  
+
   return (
     <>
       {loading ? (

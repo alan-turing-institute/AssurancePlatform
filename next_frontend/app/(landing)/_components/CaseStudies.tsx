@@ -20,7 +20,7 @@ function CaseStudies({ caseStudies } : CaseStudiesProps) {
 
   const filteredCaseStudies = caseStudies
   .filter((caseStudy: any) => caseStudy.published)
-  .filter((caseStudy: any) => 
+  .filter((caseStudy: any) =>
     (searchKeyword === '' || caseStudy.title.toLowerCase().includes(searchKeyword.toLowerCase())) &&
     (selectedSector === 'all' || selectedSector === '' || caseStudy.sector === selectedSector)
   );

@@ -87,8 +87,8 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
           <div className="p-4">
             <h4 className="mb-4 text-sm font-medium leading-none">Your Assurance Cases</h4>
             {assuranceCasesList.map((assuranceCase: any) => (
-              <div 
-                key={assuranceCase.id} 
+              <div
+                key={assuranceCase.id}
                 className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600' : ''}`}
                 onClick={() => handleCaseSelect(assuranceCase.id)}
               >

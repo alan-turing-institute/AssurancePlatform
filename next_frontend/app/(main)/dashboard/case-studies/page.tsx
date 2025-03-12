@@ -21,8 +21,8 @@ async function CaseStudiesPage() {
 
   return (
     <div className='p-8 space-y-4 min-h-screen'>
-      <PageHeading 
-        title='Assurance Case Patterns' 
+      <PageHeading
+        title='Assurance Case Patterns'
         description='Here you manage all your public patterns'
         createButton
         redirect={true}
@@ -69,7 +69,7 @@ async function CaseStudiesPage() {
                 <tr>
                   <td colSpan={5} className='py-4 text-muted-foreground'>No Case Studies Found.</td>
                 </tr>
-              )} 
+              )}
               {caseStudies.map((caseStudy: any) => (
                 <tr key={caseStudy.id}>
                   <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:w-auto sm:max-w-none sm:pl-0">
@@ -112,4 +112,3 @@ async function CaseStudiesPage() {
 }
 
 export default CaseStudiesPage
-

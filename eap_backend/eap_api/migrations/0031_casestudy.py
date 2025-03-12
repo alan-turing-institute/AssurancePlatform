@@ -6,26 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0030_auto_20250114_1310'),
+        ("eap_api", "0030_auto_20250114_1310"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CaseStudy',
+            name="CaseStudy",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('title', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('authors', models.CharField(blank=True, max_length=255, null=True)),
-                ('category', models.CharField(blank=True, max_length=100, null=True)),
-                ('published_date', models.DateTimeField(blank=True, null=True)),
-                ('last_modified_on', models.DateTimeField(auto_now=True)),
-                ('created_on', models.DateTimeField(auto_now_add=True)),
-                ('sector', models.CharField(blank=True, max_length=100, null=True)),
-                ('contact', models.EmailField(blank=True, max_length=254, null=True)),
-                ('image', models.URLField(blank=True, null=True)),
-                ('published', models.BooleanField(default=False)),
-                ('assurance_cases', models.ManyToManyField(blank=True, to='eap_api.AssuranceCase')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                ("title", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("authors", models.CharField(blank=True, max_length=255, null=True)),
+                ("category", models.CharField(blank=True, max_length=100, null=True)),
+                ("published_date", models.DateTimeField(blank=True, null=True)),
+                ("last_modified_on", models.DateTimeField(auto_now=True)),
+                ("created_on", models.DateTimeField(auto_now_add=True)),
+                ("sector", models.CharField(blank=True, max_length=100, null=True)),
+                ("contact", models.EmailField(blank=True, max_length=254, null=True)),
+                ("image", models.URLField(blank=True, null=True)),
+                ("published", models.BooleanField(default=False)),
+                (
+                    "assurance_cases",
+                    models.ManyToManyField(blank=True, to="eap_api.AssuranceCase"),
+                ),
             ],
         ),
     ]

@@ -29,7 +29,7 @@ export default function PageHeading({ title, description, createButton, button, 
         {description && <p className='mt-2 text-muted-foreground text-sm'>{description}</p>}
       </div>
       <div className="mt-4 flex md:ml-4 md:mt-0">
-        {edit && 
+        {edit &&
           <Button variant={'ghost'}>Edit</Button>
         }
         {button && <PublishButton label={button.label} published={button.published} caseStudy={caseStudy} />}

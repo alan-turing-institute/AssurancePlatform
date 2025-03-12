@@ -106,21 +106,21 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       form.setValue("image", file);
     }
   };
- 
+
   // 2. Define a submit handler.
   // async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
   //   if (!caseStudy) {
   //     let newCaseStudy = {
   //       title: values.title,
   //       description: values.description,
-  //       authors: values.authors,  
+  //       authors: values.authors,
   //       category: values.category,
   //       // published_date: values.publishedDate?.toISOString(),
   //       last_modified_on: new Date().toISOString(),
   //       created_on: new Date().toISOString(),
   //       sector: values.sector,
   //       contact: values.contact,
-  //       // assurance_cases": [2, 5],  
+  //       // assurance_cases": [2, 5],
   //       // "image": "https://example.com/path-to-image.jpg",
   //     }
 
@@ -139,13 +139,13 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   //       id: caseStudy.id,
   //       title: values.title,
   //       description: values.description,
-  //       authors: values.authors,  
+  //       authors: values.authors,
   //       category: values.category,
   //       // published_date: values.publishedDate?.toISOString(),
   //       last_modified_on: new Date().toISOString(),
   //       sector: values.sector,
   //       contact: values.contact,
-  //       // assurance_cases": [2, 5],  
+  //       // assurance_cases": [2, 5],
   //       // "image": "https://example.com/path-to-image.jpg",
   //     }
 
@@ -171,7 +171,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   async function uploadCaseStudyFeatureImage(caseStudyId: number, imageFile: File) {
     const formData = new FormData();
     formData.append('media', imageFile); // Ensure it matches request.FILES.get("media")
-  
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`, {
         method: 'POST',
@@ -180,11 +180,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
         },
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to upload feature image');
       }
-  
+
       const result = await response.json();
       console.log('Feature image uploaded:', result);
       toast({
@@ -209,11 +209,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
         },
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to delete feature image');
       }
-  
+
       console.log('Feature image deleted');
       // toast({
       //   title: 'Feature Image Removed',
@@ -260,11 +260,11 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       fetchFeaturedImage()
     }
   }, [caseStudy])
-  
+
 
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
     const formData = new FormData();
-    
+
     formData.append('title', values.title);
     formData.append('description', values.description || '');
     formData.append('authors', values.authors || '');
@@ -273,17 +273,17 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     formData.append('created_on', new Date().toISOString());
     formData.append('sector', values.sector || '');
     formData.append('contact', values.contact || '');
-    
+
     // Append the assurance cases as a JSON string
     if(selectedAssuranceCases.length > 0) {
       formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
     }
 
     // You can append more fields or files here (e.g., 'image', fileInput.files[0])
-  
+
     if (!caseStudy) {
       const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
-  
+
       if (createdCaseStudy) {
         toast({
           title: 'Successfully created',
@@ -294,7 +294,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     } else {
       // For update, append the case study ID if needed
       formData.append('id', caseStudy.id.toString()); // Assuming caseStudy.id is a number
-  
+
       const updated = await updateCaseStudy(data?.key, formData);
 
       // Upload feature image if exists
@@ -302,7 +302,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         const uploadedImage = await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
         console.log('uploadedImage', uploadedImage)
       }
-  
+
       if (updated) {
         toast({
           title: 'Successfully Updated',
@@ -331,10 +331,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       formData.append("published", "true"); // Convert boolean to string
       formData.append("published_date", new Date().toISOString()); // Set new date
     }
-  
+
     // Send the formData to the API
     const response = await updateCaseStudy(data?.key, formData);
-  
+
     if (response) {
       toast({
         title: caseStudy.published ? "Successfully Unpublished" : "Successfully Published",
@@ -511,7 +511,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       field.onChange(content); // Update form state
                       setValue(content);
                     }}
-                    modules={modules} 
+                    modules={modules}
                     formats={formats}
                     readOnly={caseStudy && caseStudy.published}
                   />
@@ -534,10 +534,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 <span className='hidden md:block'>Import</span>
               </button> */}
             </div>
-            <RelatedAssuranceCaseList 
-              published={caseStudy ? caseStudy.published : false} 
-              selectedAssuranceCases={selectedAssuranceCases} 
-              setSelectedAssuranceCases={setSelectedAssuranceCases} 
+            <RelatedAssuranceCaseList
+              published={caseStudy ? caseStudy.published : false}
+              selectedAssuranceCases={selectedAssuranceCases}
+              setSelectedAssuranceCases={setSelectedAssuranceCases}
             />
           </div>
 
@@ -554,8 +554,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 />
                 <div className="absolute bg-indigo-900/70 h-full w-full flex justify-center items-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 {caseStudy && !caseStudy.published && (
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     type="button"
                     onClick={() => {
                       setPreviewImage(""); // Clear the preview
@@ -583,8 +583,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                   <Button variant="default" type="submit">Create</Button>
                 )}
                 {caseStudy && (
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     type="button"
                     onClick={handlePublish}
                   >

@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation'
 
 async function NewCaseStudy({ params } : { params: { id: string } }) {
   const session = await getServerSession(authOptions)
-  
+
   // Redirect user to login if no `key`
   if(!session || !session.key) {
     redirect('/login')
@@ -20,7 +20,7 @@ async function NewCaseStudy({ params } : { params: { id: string } }) {
   return (
     <div className='p-8 min-h-screen space-y-4'>
       <BackButton />
-      <PageHeading 
+      <PageHeading
         title='New Case Study'
         description={`Use this form to create a case study to showcase your work.`}
       />

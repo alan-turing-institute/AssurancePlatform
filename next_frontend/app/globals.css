@@ -78,30 +78,30 @@
 .ql-toolbar.ql-snow {
   /* background-color: hsl(var(--secondary)); */
   border-color: hsl(0, 0%, 90%) !important;
-  border-radius: .25rem .25rem 0rem 0rem;
+  border-radius: 0.25rem 0.25rem 0rem 0rem;
 }
 
 .ql-container.ql-snow {
   border-color: hsl(0, 0%, 90%) !important;
-  border-radius: 0rem 0rem .25rem .25rem;
+  border-radius: 0rem 0rem 0.25rem 0.25rem;
 }
 
 .dark .ql-toolbar.ql-snow {
   /* background-color: hsl(var(--secondary)); */
   border-color: hsl(240, 25%, 20%) !important;
-  border-radius: .25rem .25rem 0rem 0rem;
+  border-radius: 0.25rem 0.25rem 0rem 0rem;
 }
 
 .dark .ql-container.ql-snow {
   border-color: hsl(240, 25%, 20%) !important;
-  border-radius: 0rem 0rem .25rem .25rem;
+  border-radius: 0rem 0rem 0.25rem 0.25rem;
 }
 
 .dark .ql-picker {
   color: white !important;
 }
 
-.dark .ql-picker>svg {
+.dark .ql-picker > svg {
   color: white !important;
 }
 
@@ -129,8 +129,7 @@
   color: white !important;
 }
 
-
 /* .dark .ql-toolbar.ql-snow {
-  background-color: hsl(var(--background)); 
+  background-color: hsl(var(--background));
   border: none !important;
 } */

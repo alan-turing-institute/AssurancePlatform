@@ -24,9 +24,9 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
   //       ...caseStudy,
   //       published: false,
   //     }
-    
+
   //     const unpublished = await updateCaseStudy(data?.key, unPublishCaseStudy)
-      
+
   //     if(unpublished) {
   //       toast({
   //         title: 'Successfully Unpublished',
@@ -47,9 +47,9 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
   //       published_date: new Date().toISOString(),
   //       published: true,
   //     }
-    
+
   //     const published = await updateCaseStudy(data?.key, publishCaseStudy)
-      
+
   //     if(published) {
   //       toast({
   //         title: 'Successfully Published',
@@ -79,10 +79,10 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
       formData.append("published", "true"); // Convert boolean to string
       formData.append("published_date", new Date().toISOString()); // Set new date
     }
-  
+
     // Send the formData to the API
     const response = await updateCaseStudy(data?.key, formData);
-  
+
     if (response) {
       toast({
         title: published ? "Successfully Unpublished" : "Successfully Published",
@@ -96,7 +96,7 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
       });
     }
   };
-  
+
 
   return (
     <button

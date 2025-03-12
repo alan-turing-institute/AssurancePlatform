@@ -12,6 +12,8 @@ from .models import (
     AssuranceCase,
     AssuranceCaseImage,
     CaseItem,
+    CaseStudy,
+    CaseStudyFeatureImage,
     Comment,
     Context,
     EAPGroup,
@@ -19,11 +21,9 @@ from .models import (
     Evidence,
     GitHubRepository,
     PropertyClaim,
+    PublishedAssuranceCase,
     Strategy,
     TopLevelNormativeGoal,
-    CaseStudy,
-    CaseStudyFeatureImage,
-    PublishedAssuranceCase,
 )
 
 
@@ -584,22 +584,38 @@ def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
 #         ]
 #         read_only_fields = ["owner"]  # Prevent users from manually setting owner
 
+
 class CaseStudySerializer(serializers.ModelSerializer):
     assurance_cases = serializers.PrimaryKeyRelatedField(
         queryset=AssuranceCase.objects.all(), many=True, required=False
     )
-    published_date = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
-    last_modified_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+    published_date = serializers.DateTimeField(
+        format="%Y-%m-%dT%H:%M:%SZ", required=False
+    )
+    last_modified_on = serializers.DateTimeField(
+        format="%Y-%m-%dT%H:%M:%SZ", required=False
+    )
     created_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
-    image = serializers.ImageField(required=False)  
+    image = serializers.ImageField(required=False)
     feature_image_url = serializers.SerializerMethodField()  # Add this field
 
     class Meta:
         model = CaseStudy
         fields = [
-            'id', 'title', 'description', 'authors', 'category', 'published_date',
-            'last_modified_on', 'created_on', 'sector', 'contact', 'assurance_cases',
-            'image', 'published', 'feature_image_url'  # Include the new field
+            "id",
+            "title",
+            "description",
+            "authors",
+            "category",
+            "published_date",
+            "last_modified_on",
+            "created_on",
+            "sector",
+            "contact",
+            "assurance_cases",
+            "image",
+            "published",
+            "feature_image_url",  # Include the new field
         ]
         read_only_fields = ["owner"]
 
@@ -608,7 +624,11 @@ class CaseStudySerializer(serializers.ModelSerializer):
         request = self.context.get("request")  # Get request context
         try:
             feature_image = CaseStudyFeatureImage.objects.get(case_study=obj)
-            return request.build_absolute_uri(feature_image.image.url) if feature_image.image else None
+            return (
+                request.build_absolute_uri(feature_image.image.url)
+                if feature_image.image
+                else None
+            )
         except CaseStudyFeatureImage.DoesNotExist:
             return None
 
@@ -629,9 +649,17 @@ class CaseStudyFeatureImageSerializer(serializers.ModelSerializer):
         )
         return feature_image
 
+
 class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
     content = serializers.JSONField()  # Ensure content is treated as JSON
 
     class Meta:
         model = PublishedAssuranceCase
-        fields = ['id', 'assurance_case', 'case_study', 'title', 'content', 'created_at']
+        fields = [
+            "id",
+            "assurance_case",
+            "case_study",
+            "title",
+            "content",
+            "created_at",
+        ]
