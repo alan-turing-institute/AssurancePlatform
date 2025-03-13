@@ -18,6 +18,7 @@ interface RelatedAssuranceCaseListProps {
 const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelectedAssuranceCases } : RelatedAssuranceCaseListProps) => {
   const { data } = useSession()
   const [assuranceCasesList, setAssuranceCasesList] = useState<any>([])
+  
 
   useEffect(() => {
     const getCases = async () => {
@@ -89,13 +90,13 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
             {assuranceCasesList.map((assuranceCase: any) => (
               <div
                 key={assuranceCase.id}
-                className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600' : ''}`}
+                className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600 text-white' : ''}`}
                 onClick={() => handleCaseSelect(assuranceCase.id)}
               >
-                <div className='flex justify-between items-center'>
+                <div className='flex justify-between items-center p-3 mb-2'>
                   <div className="text-sm p-2">
                     <p className='font-semibold'>{assuranceCase.name}</p>
-                    <p className='text-muted-foreground'>{assuranceCase.description}</p>
+                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description}</p>
                   </div>
                   {selectedAssuranceCases.includes(assuranceCase.id) && (
                     <>
@@ -108,7 +109,7 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
                     </>
                   )}
                 </div>
-                <Separator className="my-2" />
+                <Separator className='my-2' />
               </div>
             ))}
           </div>

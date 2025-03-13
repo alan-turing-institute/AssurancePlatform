@@ -105,9 +105,9 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
     console.error('Something went wrong creating case study')
   }
 
+  const result = await response.json()
   revalidatePath('/dashboard/case-studies')
-  return true
-
+  return result
 }
 
 // export const updateCaseStudy = async (token: string | undefined, caseStudy: any) => {

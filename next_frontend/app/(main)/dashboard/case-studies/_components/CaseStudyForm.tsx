@@ -284,6 +284,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     if (!caseStudy) {
       const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
 
+      // Upload feature image if exists
+      if (values.image) {
+        const uploadedImage = await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
+        console.log('uploadedImage', uploadedImage)
+      }
+
       if (createdCaseStudy) {
         toast({
           title: 'Successfully created',
@@ -544,7 +550,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           <div className="">
             <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Featured Image</p>
 
-            {previewImage || featuredImage ? (
+            {caseStudy && caseStudy.published ? (
               <div className="w-10/12 relative h-[500px] group">
                 <Image
                   src={previewImage || featuredImage}
@@ -552,27 +558,37 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                   fill
                   className="object-cover aspect-video rounded-lg"
                 />
-                <div className="absolute bg-indigo-900/70 h-full w-full flex justify-center items-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {caseStudy && !caseStudy.published && (
-                  <Button
-                    variant="destructive"
-                    type="button"
-                    onClick={() => {
-                      setPreviewImage(""); // Clear the preview
-                      setFeaturedImage(""); // Clear the preview
-                      form.setValue("image", ""); // Reset the form field
-                      if(featuredImage) {
-                        deleteCaseStudyFeatureImage(caseStudy.id)
-                      }
-                    }}
-                  >
-                    <Trash2Icon className="size-4 mr-2" /> Remove
-                  </Button>
-                )}
-                </div>
               </div>
             ) : (
-              <Input type="file" accept="image/*" onChange={handleFileChange} disabled={caseStudy && caseStudy.published} />
+              previewImage || featuredImage ? (
+                <div className="w-10/12 relative h-[500px] group">
+                  <Image
+                    src={previewImage || featuredImage}
+                    alt="image"
+                    fill
+                    className="object-cover aspect-video rounded-lg"
+                  />
+                  <div className="absolute bg-indigo-900/70 h-full w-full flex justify-center items-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {}
+                    <Button
+                      variant="destructive"
+                      type="button"
+                      onClick={() => {
+                        setPreviewImage(""); // Clear the preview
+                        setFeaturedImage(""); // Clear the preview
+                        form.setValue("image", ""); // Reset the form field
+                        if(featuredImage) {
+                          deleteCaseStudyFeatureImage(caseStudy.id)
+                        }
+                      }}
+                    >
+                      <Trash2Icon className="size-4 mr-2" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Input type="file" accept="image/*" onChange={handleFileChange} disabled={caseStudy && caseStudy.published} />
+              )
             )}
           </div>
 

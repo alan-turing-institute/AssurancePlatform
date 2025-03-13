@@ -1082,8 +1082,13 @@ def case_study_list(request):
 
         if serializer.is_valid():
             # Save the instance and assign the authenticated user as the owner
-            serializer.save(owner=request.user)
-            return JsonResponse(serializer.data, status=201)
+            case_study_instance = serializer.save(owner=request.user)
+            
+            # Now include the id of the newly created case study
+            return JsonResponse({
+                "id": case_study_instance.id,  # The id of the created case study
+                "message": "Case study created successfully"
+            }, status=201)
 
         return JsonResponse(serializer.errors, status=400)
 
