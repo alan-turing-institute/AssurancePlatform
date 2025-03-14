@@ -62,7 +62,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`, requestOptions)
       if(response.ok) {
-        router.push('/')
+        router.push('/dashboard')
       }
     } catch (error: any) {
       console.log('ERROR!!!!', error)
