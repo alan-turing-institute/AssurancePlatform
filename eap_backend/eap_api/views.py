@@ -1077,20 +1077,38 @@ def case_study_list(request):
         if request.content_type == "multipart/form-data":
             request.parsers = [MultiPartParser(), FormParser()]
 
-        # `request.data` already handles both form fields and files
-        serializer = CaseStudySerializer(data=request.data)
+        data = request.data.copy()  # Make a mutable copy of request data
+
+        # Parse 'assurance_cases' if it's a string
+        if "assurance_cases" in data:
+            try:
+                assurance_cases_list = json.loads(data["assurance_cases"])  # Convert to list
+            except json.JSONDecodeError:
+                return JsonResponse(
+                    {"assurance_cases": "Invalid format. Must be a JSON-encoded list of IDs."}, 
+                    status=400
+                )
+
+            if not isinstance(assurance_cases_list, list) or not all(isinstance(i, int) for i in assurance_cases_list):
+                return JsonResponse(
+                    {"assurance_cases": "Must be a list of integers."}, 
+                    status=400
+                )
+
+            data.setlist("assurance_cases", assurance_cases_list)  # Ensure it's treated as a list
+
+        # Pass the cleaned data to serializer
+        serializer = CaseStudySerializer(data=data, context={"request": request})
 
         if serializer.is_valid():
-            # Save the instance and assign the authenticated user as the owner
             case_study_instance = serializer.save(owner=request.user)
-            
-            # Now include the id of the newly created case study
             return JsonResponse({
-                "id": case_study_instance.id,  # The id of the created case study
+                "id": case_study_instance.id, 
                 "message": "Case study created successfully"
             }, status=201)
 
         return JsonResponse(serializer.errors, status=400)
+
 
 
 @csrf_exempt
