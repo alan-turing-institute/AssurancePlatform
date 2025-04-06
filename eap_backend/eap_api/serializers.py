@@ -607,6 +607,7 @@ class CaseStudySerializer(serializers.ModelSerializer):
             "description",
             "authors",
             "category",
+            "type",
             "published_date",
             "last_modified_on",
             "created_on",

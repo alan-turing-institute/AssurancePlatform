@@ -86,7 +86,7 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
       {assuranceCasesList.length > 0 && (
         <ScrollArea className="h-72 w-full rounded-md border mt-4">
           <div className="p-4">
-            <h4 className="mb-4 text-sm font-medium leading-none">Your Assurance Cases</h4>
+            <h4 className="mb-4 text-sm font-normal leading-none">Please select one or more assurance cases.</h4>
             {assuranceCasesList.map((assuranceCase: any) => (
               <div
                 key={assuranceCase.id}

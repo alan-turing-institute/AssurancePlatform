@@ -22,7 +22,7 @@ async function CaseStudyDetails({ params } : { params: { id: string } }) {
 
   return (
     <div className='p-8 min-h-screen space-y-4'>
-      <BackButton />
+      <BackButton url='/dashboard/case-studies' />
       <PageHeading
         title={caseStudy.title}
         description={`Created On ${moment(caseStudy.createdOn).format('DD/MM/YYYY')}`}

@@ -312,6 +312,7 @@ class CaseStudy(models.Model):
     description = models.TextField(blank=True, null=True)
     authors = models.CharField(max_length=255, blank=True, null=True)
     category = models.CharField(max_length=100, blank=True, null=True)
+    type = models.CharField(max_length=100, blank=True, null=True)
     published_date = models.DateTimeField(blank=True, null=True)
     last_modified_on = models.DateTimeField(auto_now=True)
     created_on = models.DateTimeField(auto_now_add=True)

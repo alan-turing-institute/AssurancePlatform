@@ -33,7 +33,7 @@ export default function PageHeading({ title, description, createButton, button, 
           <Button variant={'ghost'}>Edit</Button>
         }
         {button && <PublishButton label={button.label} published={button.published} caseStudy={caseStudy} />}
-        {createButton && redirect && redirectUrl && <RedirectButton label={'Create'} url={redirectUrl} />}
+        {createButton && redirect && redirectUrl && <RedirectButton label={'New Case Study'} url={redirectUrl} />}
       </div>
     </div>
   )
