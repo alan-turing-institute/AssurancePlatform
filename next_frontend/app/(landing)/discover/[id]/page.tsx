@@ -19,9 +19,14 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
               <MoveLeftIcon className='size-3'/>
               Back
             </Link>
-            <h2 className="text-lg font-semibold text-indigo-600">Case Study</h2>
+            
             <h3 className="mt-2 text-3xl/8 font-bold tracking-tight text-gray-900 sm:text-4xl">{caseStudy.title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Published On {moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</p>
+            <div className='mt-3 flex justify-start items-center gap-3'>
+              <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+                {caseStudy.sector}
+              </span>
+              <p className="text-sm text-muted-foreground">Published On {moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</p>
+            </div>
           </div>
         </div>
         <div className="mt-8 lg:grid lg:grid-cols-2 lg:gap-8">
@@ -65,15 +70,11 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
           </div>
           <div className="mt-8 lg:mt-0">
             <div className="mx-auto text-base/7 text-gray-500">
-              <div className='text-black flex justify-start items-center gap-2 mb-4'>
-                <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
-                  {caseStudy.category}
-                </span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                  {caseStudy.sector}
-                </span>
+              <div className='text-black flex justify-start items-center gap-2 mb-10'>
                 <div className='text-sm flex justify-start items-center gap-2 mr-4'><MailIcon className='size-4'/> {caseStudy.contact}</div>
-                <div className='text-sm flex justify-start items-center gap-2'><Users2Icon className='size-4'/> {caseStudy.authors}</div>
+                <div className='text-sm flex justify-start items-center gap-2'><Users2Icon className='size-4'/>
+                  {caseStudy.authors}
+                </div>
               </div>
               <div className="prose">
                 <div dangerouslySetInnerHTML={{ __html: caseStudy.description.replace("<p><br></p>", "") }} />
