@@ -18,7 +18,7 @@ interface RelatedAssuranceCaseListProps {
 const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelectedAssuranceCases } : RelatedAssuranceCaseListProps) => {
   const { data } = useSession()
   const [assuranceCasesList, setAssuranceCasesList] = useState<any>([])
-  
+
 
   useEffect(() => {
     const getCases = async () => {
