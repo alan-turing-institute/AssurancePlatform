@@ -15,13 +15,13 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
   const { assumption, justification, type } = data
   const { data: session } = useSession()
 
-  const hasAssumptionOrJustification = 
+  const hasAssumptionOrJustification =
   typeof assumption === 'string' && assumption.trim() !== '' ||
   typeof justification === 'string' && justification.trim() !== '';
 
   const fetchNodeComments = async () => {
     let entity
-    
+
     switch (type) {
       case "Strategy":
         entity = "strategies";
