@@ -19,7 +19,7 @@ const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) =>
               <MoveLeftIcon className='size-3'/>
               Back
             </Link>
-            
+
             <h3 className="mt-2 text-3xl/8 font-bold tracking-tight text-gray-900 sm:text-4xl">{caseStudy.title}</h3>
             <div className='mt-3 flex justify-start items-center gap-3'>
               <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
