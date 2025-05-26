@@ -1,6 +1,7 @@
 import React from 'react'
 import PreviewBanner from './_components/PreviewBanner'
 import Header from './_components/Header'
+import CookieConsent from '@/components/CookieConsent'
 
 const LandingLayout = ({ children } : { children: React.ReactNode }) => {
   return (
@@ -8,6 +9,7 @@ const LandingLayout = ({ children } : { children: React.ReactNode }) => {
       <Header />
       {children}
       <PreviewBanner />
+      <CookieConsent />
     </div>
   )
 }
