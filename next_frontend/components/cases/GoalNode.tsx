@@ -4,6 +4,8 @@ import { ArrowDown, ChevronDown, Goal } from 'lucide-react';
 import React, { memo, useState } from 'react';
 import { Handle, NodeProps, Position, getConnectedEdges, getOutgoers } from 'reactflow';
 import ToggleButton from './ToggleButton';
+import { InformationCircleIcon } from '@heroicons/react/20/solid';
+import IconIndicator from './IconIndicator';
 
 function GoalNode({ data, ...props }: NodeProps) {
   const [hidden, setHidden] = useState<boolean>(true)
@@ -23,6 +25,7 @@ function GoalNode({ data, ...props }: NodeProps) {
             <p className="text-xs line-clamp-2">No description available.</p>
           )}
         </div>
+        <IconIndicator data={data} />
         <ToggleButton node={props} />
       </div>
 

@@ -4,6 +4,7 @@ import { ChevronDown, FolderOpenDot } from 'lucide-react';
 import React, { memo } from 'react';
 import { Handle, NodeProps, NodeTypes, Position } from 'reactflow';
 import ToggleButton from './ToggleButton';
+import IconIndicator from './IconIndicator';
 
 function PropertyNode({ data, ...props}: NodeProps) {
   return (
@@ -16,6 +17,7 @@ function PropertyNode({ data, ...props}: NodeProps) {
           <div className="text-lg font-bold">{data.name}</div>
           <p className="text-xs line-clamp-2">{data.description}</p>
         </div>
+        <IconIndicator data={data} />
         <ToggleButton node={props}/>
       </div>
 

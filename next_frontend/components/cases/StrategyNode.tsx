@@ -4,6 +4,8 @@ import { ChevronDown, Route } from 'lucide-react';
 import React, { memo } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
 import ToggleButton from './ToggleButton';
+import { ChatBubbleBottomCenterIcon, ChatBubbleBottomCenterTextIcon, InformationCircleIcon } from '@heroicons/react/20/solid';
+import IconIndicator from './IconIndicator';
 
 function StrategyNode({ data, ...props }: NodeProps) {
   return (
@@ -16,6 +18,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
           <div className="text-lg font-bold">{data.name}</div>
           <p className="text-xs line-clamp-2">{data.description}</p>
         </div>
+        <IconIndicator data={data} />
         <ToggleButton node={props}/>
       </div>
 
