@@ -90,7 +90,7 @@ const CookiePolicyPage = () => {
                 </ul>
               </div>
             </li>
-            
+
           </ul>
           <p className='mt-6 italic'>
             Note: The exact names and precise behaviour of these cookies may be subject to minor changes by the NextAuth.js library. We will endeavor to keep this notice updated with significant changes.
