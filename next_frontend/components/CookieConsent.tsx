@@ -4,6 +4,7 @@ import { CookieIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function CookieConsent({
     demo = false,
@@ -12,6 +13,8 @@ export default function CookieConsent({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [hide, setHide] = useState(false);
+
+    const router = useRouter()
 
     const accept = () => {
         setIsOpen(false);
@@ -64,23 +67,31 @@ export default function CookieConsent({
                 </div>
                 <div className="p-3 -mt-2">
                     <p className="text-sm text-left text-muted-foreground">
-                        This site uses essential cookies to support user authentication. Please click <a href='/cookie-policy' className="text-indigo-500 dark:text-indigo-400 underline">here</a> to find out more.
+                        This site uses essential cookies to support authentication of registered users only.
                     </p>
                 </div>
                 <div className="p-3 flex items-center gap-2 mt-2 border-t">
                     <Button
                         onClick={accept}
                         className="w-full h-9 rounded-full"
+                        variant={"primary"}
                     >
-                        Accept
+                        Okay
                     </Button>
                     <Button
+                        onClick={() => router.push('/cookie-policy')}
+                        className="w-full h-9 rounded-full"
+                        variant={"outline"}
+                    >
+                        Read More
+                    </Button>
+                    {/* <Button
                         onClick={decline}
                         className="w-full h-9 rounded-full"
                         variant="outline"
                     >
                         Decline
-                    </Button>
+                    </Button> */}
                 </div>
             </div>
         </div>

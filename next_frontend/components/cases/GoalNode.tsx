@@ -17,7 +17,10 @@ function GoalNode({ data, ...props }: NodeProps) {
           <Goal />
         </div>
         <div className="ml-2 w-[200px]">
-          <div className="text-lg font-bold">{data.name}</div>
+          <div className='flex justify-start items-center gap-4'>
+            <div className="text-lg font-bold">{data.name}</div>
+            <IconIndicator data={data} />
+          </div>
           {/* Ensure there is a value */}
           {data.description ? (
             <p className="text-xs line-clamp-2">{data.description}</p>
@@ -25,7 +28,6 @@ function GoalNode({ data, ...props }: NodeProps) {
             <p className="text-xs line-clamp-2">No description available.</p>
           )}
         </div>
-        <IconIndicator data={data} />
         <ToggleButton node={props} />
       </div>
 

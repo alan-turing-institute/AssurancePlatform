@@ -15,9 +15,10 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
   const { assumption, justification, type } = data
   const { data: session } = useSession()
 
-  const hasAssumptionOrJustification =
-  typeof assumption === 'string' && assumption.trim() !== '' ||
-  typeof justification === 'string' && justification.trim() !== '';
+  const hasAssumptionOrJustificationOrContext =
+  (typeof assumption === 'string' && assumption.trim() !== '') ||
+  (typeof justification === 'string' && justification.trim() !== '') ||
+  (Array.isArray(data.context) && data.context.length > 0);
 
   const fetchNodeComments = async () => {
     let entity
@@ -60,10 +61,12 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
     )
   }, [])
 
+  console.log(data)
+
   return (
-    <div className={`absolute ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}>
+    <div className={`inline-flex ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}>
       <div className='flex justify-start items-center gap-1'>
-        {hasAssumptionOrJustification && (
+        {hasAssumptionOrJustificationOrContext && (
           <InformationCircleIcon className='size-3 text-white/90' />
         )}
         {comments.length > 0 && (
