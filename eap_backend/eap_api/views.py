@@ -437,7 +437,7 @@ def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """
     try:
         goal = TopLevelNormativeGoal.objects.get(pk=pk)
-        shape = goal.shape.name
+        # shape = goal.shape.name
     except TopLevelNormativeGoal.DoesNotExist:
         return HttpResponse(status=404)
 
@@ -447,7 +447,7 @@ def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
         # replace IDs for children with full JSON objects
         for key in ["context", "property_claims"]:
             data[key] = get_json_tree(data[key], key)
-        data["shape"] = shape
+        # data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
         data = JSONParser().parse(request)
@@ -455,7 +455,7 @@ def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
-            data["shape"] = shape
+            # data["shape"] = shape
             return JsonResponse(data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":

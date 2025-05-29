@@ -57,6 +57,7 @@ const EditForm: React.FC<EditFormProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log('UPDATING GOAL NODE.......')
     setLoading(true)
     // Update item via api
     const updateItem = {
