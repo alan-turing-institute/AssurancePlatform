@@ -164,7 +164,9 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "edit_groups",
             "view_groups",
             "color_profile",
-            "comments",  # Add this line to include comments
+            "comments",
+            "published",
+            "published_date"
         )
 
 

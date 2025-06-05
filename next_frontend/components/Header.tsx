@@ -131,6 +131,12 @@ const Header = ({ setOpen }: HeaderProps) => {
     }
   };
 
+  useEffect(() => {
+    console.log('header re-rendered', assuranceCase.published)
+  }, [assuranceCase])
+
+  console.log(assuranceCase)
+
   return (
     <div className="fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50">
       <div className="container py-3 flex justify-between items-center">
@@ -157,6 +163,11 @@ const Header = ({ setOpen }: HeaderProps) => {
           <SearchNodes nodes={nodes} focusNode={focusNode} />
           <LogoutButton />
           <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
+          {assuranceCase.published && (
+            <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 ring-1 ring-green-500/20 ring-inset">
+              Published
+            </span>
+          )}
         </div>
       </div>
     </div>
