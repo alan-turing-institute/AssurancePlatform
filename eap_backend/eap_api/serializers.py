@@ -661,8 +661,9 @@ class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "assurance_case",
-            "case_study",
+            # "case_study",
             "title",
+            "description",
             "content",
             "created_at",
         ]

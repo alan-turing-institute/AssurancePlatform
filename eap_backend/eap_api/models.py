@@ -351,8 +351,9 @@ class CaseStudyFeatureImage(models.Model):
 class PublishedAssuranceCase(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     assurance_case = models.ForeignKey("AssuranceCase", on_delete=models.CASCADE)
-    case_study = models.ForeignKey("CaseStudy", on_delete=models.CASCADE)
+    # case_study = models.ForeignKey("CaseStudy", on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
+    description = models.CharField(max_length=1000, null=True, blank=True)
     content = models.JSONField()  # Stores full assurance case details
     created_at = models.DateTimeField(auto_now_add=True)
 

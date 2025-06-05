@@ -3,7 +3,7 @@
 import React, { Dispatch, useEffect, useState } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { fetchAssuranceCases } from '@/actions/assuranceCases'
+import { fetchAssuranceCases, fetchPublishedAssuranceCases } from '@/actions/assuranceCases'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { FolderCheckIcon, MoveRightIcon } from 'lucide-react'
@@ -32,7 +32,9 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
         setAssuranceCasesList(publishedCases.filter(Boolean)) // Remove any undefined/null values
       } else {
         // Fetch all cases when not published
-        const allCases = await fetchAssuranceCases(data?.key!!)
+        // const allCases = await fetchAssuranceCases(data?.key!!)
+        const allCases = await fetchPublishedAssuranceCases(data?.key!!)
+        console.log(allCases)
         setAssuranceCasesList(allCases)
       }
     }
@@ -95,8 +97,8 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
               >
                 <div className='flex justify-between items-center p-3 mb-2'>
                   <div className="text-sm p-2">
-                    <p className='font-semibold'>{assuranceCase.name}</p>
-                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description}</p>
+                    <p className='font-semibold'>{assuranceCase.name || assuranceCase.title}</p>
+                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description !== null ? assuranceCase.description : 'No description'}</p>
                   </div>
                   {selectedAssuranceCases.includes(assuranceCase.id) && (
                     <>
