@@ -27,7 +27,7 @@ const CookiePolicyPage = () => {
             How We Use Cookies
           </h2>
           <p className="mt-6">
-            The TEA Platform uses cookies **exclusively for essential functionalities**. These cookies are strictly necessary for the operation of our Platform, particularly for user authentication and session management. Without these cookies, registered users would not be able to log in and access the core features of the TEA Platform securely.
+            The TEA Platform uses cookies <strong>exclusively for essential functionalities</strong>. These cookies are strictly necessary for the operation of our Platform, particularly for user authentication and session management. Without these cookies, registered users would not be able to log in and access the core features of the TEA Platform securely.
           </p>
           <p className='mt-6'>We do <strong>not</strong> use cookies for:</p>
           <ul role="list" className="mt-8 max-w-xl space-y-4 text-gray-600">
