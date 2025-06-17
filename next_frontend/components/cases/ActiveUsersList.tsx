@@ -8,7 +8,7 @@ const ActiveUsersList = () => {
   const { activeUsers, setActiveUsers } = useStore();
 
   useEffect(() => {
-    console.log('Compnent remounted')
+    console.log('Active user list updated.')
   }, [activeUsers])
 
   return (

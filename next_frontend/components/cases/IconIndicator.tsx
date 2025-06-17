@@ -30,6 +30,9 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
       case "PropertyClaim":
         entity = "propertyclaims";
         break;
+      case "Evidence":
+        entity = "evidence";
+        break;
       default:
         entity = "goals";
         break;
@@ -50,18 +53,16 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
         const result = await response.json()
 
         return result
-
     } catch (error) {
         console.log('Error', error)
     }
   }
 
   useEffect(() => {
-    fetchNodeComments().then(result => setComments(result)
-    )
+    fetchNodeComments().then(result => {
+      setComments(result)
+    })
   }, [])
-
-  console.log(data)
 
   return (
     <div className={`inline-flex ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}>
