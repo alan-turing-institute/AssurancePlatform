@@ -1,13 +1,16 @@
 import { fetchCaseStudies } from '@/actions/caseStudies'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import PageHeading from '@/components/ui/page-heading'
 import { Separator } from '@/components/ui/separator'
 import { authOptions } from '@/lib/authOptions'
-import { Edit2Icon } from 'lucide-react'
+import { Edit2Icon, EllipsisVertical, EllipsisVerticalIcon, EyeIcon, Trash2Icon } from 'lucide-react'
 import moment from 'moment'
 import { getServerSession } from 'next-auth'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import React from 'react'
+import DeleteCaseButton from './_components/delete-button'
+import TableActions from './_components/table-actions'
 
 async function CaseStudiesPage() {
   const session = await getServerSession(authOptions)
@@ -50,12 +53,12 @@ async function CaseStudiesPage() {
                 >
                   Authors
                 </th>
-                <th
+                {/* <th
                   scope="col"
                   className="hidden px-3 py-3.5 text-left text-sm font-semibold text-foreground sm:table-cell"
                 >
-                  Category
-                </th>
+                  Sector
+                </th> */}
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                   Published
                 </th>
@@ -89,16 +92,17 @@ async function CaseStudiesPage() {
                     </div>
                   </td>
                   <td className="hidden px-3 py-4 text-sm text-foreground/80 sm:table-cell">{caseStudy.authors}</td>
-                  <td className="px-3 py-4 text-sm text-foreground/80">
+                  {/* <td className="px-3 py-4 text-sm text-foreground/80">
                     <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-100/10 px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-500 ring-1 ring-inset ring-indigo-700/10 dark:ring-indigo-500/20">
-                      {caseStudy.category}
+                      {caseStudy.sector}
                     </span>
-                  </td>
+                  </td> */}
                   <td className="px-3 py-4 text-sm text-foreground/80">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</td>
                   <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                    <a href="#" className="text-indigo-500 hover:text-indigo-600">
+                    {/* <a href="#" className="text-indigo-500 hover:text-indigo-600">
                       <Edit2Icon className='size-4' /><span className="sr-only">, {caseStudy.title}</span>
-                    </a>
+                    </a> */}
+                    <TableActions caseStudy={caseStudy} />
                   </td>
                 </tr>
               ))}

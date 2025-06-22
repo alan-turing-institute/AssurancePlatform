@@ -33,6 +33,7 @@ import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { sectors } from '@/config/index'
 import { AlertModal } from "@/components/modals/alertModal"
+import DeleteCaseButton from "./delete-button"
 
 // Dynamically import ReactQuill (Next.js SSR fix)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
@@ -272,7 +273,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   }, [caseStudy])
 
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-    if(caseStudy.published) {
+    if(caseStudy && caseStudy.published) {
       setFormValues(values)
       setAlertOpen(true)
       return
@@ -728,7 +729,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       </Button>
                     )}
                 </div>
-                {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button>}
+                {caseStudy && <DeleteCaseButton caseStudyId={caseStudy.id} variant="destructive" redirect />}
+                {/* <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button> */}
               </div>
 
             </form>
