@@ -122,6 +122,8 @@ export interface AssuranceCase {
   color_profile: string;
   comments: any[];
   permissions: string;
+  published: boolean,
+  published_date: string | null
 }
 
 export type User = {

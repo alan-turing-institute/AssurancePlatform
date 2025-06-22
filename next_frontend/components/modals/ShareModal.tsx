@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useShareModal } from "@/hooks/useShareModal";
 import { Separator } from "../ui/separator";
-import { Download, FileIcon, Share2, User2, UserCheck, UserX, X } from "lucide-react";
+import { Download, FileIcon, Share2, Share2Icon, UploadIcon, User2, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
@@ -45,7 +45,7 @@ const FormSchema = z.object({
 })
 
 export const ShareModal = () => {
-  const { assuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers, reviewMembers, setReviewMembers } = useStore()
+  const { assuranceCase, setAssuranceCase, viewMembers, setViewMembers, editMembers, setEditMembers, reviewMembers, setReviewMembers } = useStore()
   const shareModal = useShareModal();
 
   const [loading, setLoading] = useState(false)
@@ -188,30 +188,68 @@ export const ShareModal = () => {
     setLoading(false);
   }
 
-  // const fetchAllUsers = async () => {
-  //   const requestOptions: RequestInit = {
-  //     headers: {
-  //       Authorization: `Token ${token}`,
-  //     },
-  //   };
+  const handlePublish = async () => {
+    try {
+      const newData = {
+        published: true,
+        published_date: new Date().toISOString()
+      };
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
+      const requestOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+          Authorization: `Token ${session?.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newData),
+      };
 
-  //   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/`, requestOptions);
+      const response = await fetch(url, requestOptions);
 
-  //   if(response.status === 404 || response.status === 403 ) {
-  //     // TODO: 404 NOT FOUND PAGE
-  //     console.log('Render Not Found Page')
-  //     return
-  //   }
+      if (!response.ok) {
+        toast({ title: 'Something went wrong, publishing assurance case' });
+        return
+      }
+      
+      window.location.reload()
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
-  //   if(response.status === 401) return unauthorized()
+  const handleUnpublish = async () => {
+    try {
+      const newData = {
+        published: false,
+        published_date: null
+      };
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
+      const requestOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+          Authorization: `Token ${session?.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newData),
+      };
 
-  //   const result = await response.json()
-  //   return result
-  // }
+      const response = await fetch(url, requestOptions);
 
-  // useEffect(() => {
-  //   fetchAllUsers().then(result => console.log(result.filter((user: any) => user.email.includes('rich.griffiths'))))
-  // },[])
+      if (!response.ok) {
+        toast({ title: 'Something went wrong, publishing assurance case' });
+        return
+      }
+
+      window.location.reload()
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    console.log('Assurance case updated')
+  }, [assuranceCase])
+  
 
   return (
     <Modal
@@ -300,6 +338,19 @@ export const ShareModal = () => {
         <h2 className="flex justify-start items-center gap-2 mb-2"><FileIcon className="w-4 h-4"/>Export as JSON</h2>
         <p className="text-muted-foreground text-sm">Select the button below to download a JSON file.</p>
         <Button className="my-2" onClick={handleExport}><Download className="w-4 h-4 mr-2"/>Download File</Button>
+      </div>
+      <Separator />
+      <div className="my-4">
+        <h2 className="flex justify-start items-center gap-2 mb-2"><Share2Icon className="w-4 h-4"/>Publish Assurance Case</h2>
+        <p className="text-muted-foreground text-sm mb-2">Here you can publish the current version of your case.</p>
+        {assuranceCase && assuranceCase.published ? (
+          <div className="flex justify-start items-center gap-4">
+            <Button className="my-2" onClick={handlePublish} variant={"secondary"}><UploadIcon className="w-4 h-4 mr-2"/>Update</Button>
+            <Button className="my-2" onClick={handleUnpublish} variant={"destructive"}><Download className="w-4 h-4 mr-2"/>Unpublish</Button>
+          </div>
+        ) : (
+          <Button className="my-2 bg-emerald-500 text-white hover:bg-emerald-600" onClick={handlePublish}><Share2Icon className="w-4 h-4 mr-2"/>Publish</Button>
+        )}
       </div>
     </Modal>
   );

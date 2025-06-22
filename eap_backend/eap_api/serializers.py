@@ -164,7 +164,9 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "edit_groups",
             "view_groups",
             "color_profile",
-            "comments",  # Add this line to include comments
+            "comments",
+            "published",
+            "published_date"
         )
 
 
@@ -659,8 +661,9 @@ class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "assurance_case",
-            "case_study",
+            # "case_study",
             "title",
+            "description",
             "content",
             "created_at",
         ]
