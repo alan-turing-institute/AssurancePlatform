@@ -147,7 +147,7 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
   };
 
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${formData.get('id')}/`, requestOptions);
-  console.log(response)
+  // console.log(response)
 
   if (!response.ok) {
     console.error('Something went wrong fetching case studies.');
@@ -181,7 +181,7 @@ export const deleteCaseStudy = async (token: string, caseStudyId: number) => {
   return true
 }
 
-export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: number) => {
+export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: string) => {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${assuranceCaseId}/`)
 
   if(!response.ok) {
@@ -189,5 +189,5 @@ export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: number) => 
   }
 
   const result = await response.json()
-  return result[0]
+  return result
 }

@@ -4,25 +4,27 @@ import React from 'react'
 import DownloadCaseButton from './DownloadCaseButton'
 
 interface CaseStudyCaseItemProps {
-  assuranceCaseId: number
+  assuranceCaseId: string
 }
 
 const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) => {
-  const assuranceCase = await fetchPublishedAssuranceCaseId(assuranceCaseId)
-
+  const publishedAssuranceCase = await fetchPublishedAssuranceCaseId(assuranceCaseId)
+  
   return (
-    <li key={assuranceCase.id} className="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer">
+    <li key={publishedAssuranceCase.id} className="relative flex flex-col justify-start gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer">
       <div className="flex min-w-0 gap-x-4">
-        {/* <img alt="" src={person.imageUrl} className="size-12 flex-none rounded-full bg-gray-50" /> */}
         <div className="min-w-0 flex-auto">
-          <p className="text-md font-semibold text-gray-900">
-            {assuranceCase.title}
+          <p className="text-md font-semibold text-gray-900 mb-2">
+            {publishedAssuranceCase.title}
+          </p>
+          <p className="text-sm text-gray-500">
+            {publishedAssuranceCase.description}
           </p>
         </div>
       </div>
-      <div>
-        <DownloadCaseButton content={assuranceCase.content} title={assuranceCase.title} />
-      </div>
+      
+      <DownloadCaseButton content={publishedAssuranceCase.content} title={publishedAssuranceCase.title} />
+      
     </li>
   )
 }

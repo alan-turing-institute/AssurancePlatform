@@ -308,6 +308,17 @@ class Comment(models.Model):
     class Meta:
         ordering = ["created_at"]
 
+class PublishedAssuranceCase(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assurance_case = models.ForeignKey("AssuranceCase", on_delete=models.CASCADE)
+    # case_study = models.ForeignKey("CaseStudy", on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    description = models.CharField(max_length=1000, null=True, blank=True)
+    content = models.JSONField()  # Stores full assurance case details
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Snapshot of {self.title} for Case Study {self.case_study.id}"
 
 class CaseStudy(models.Model):
     id = models.AutoField(primary_key=True)
@@ -321,7 +332,7 @@ class CaseStudy(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     sector = models.CharField(max_length=100, blank=True, null=True)
     contact = models.EmailField(blank=True, null=True)
-    assurance_cases = models.ManyToManyField(AssuranceCase, blank=True)
+    assurance_cases = models.ManyToManyField(PublishedAssuranceCase, blank=True)
     image = models.URLField(blank=True, null=True)
     published = models.BooleanField(default=False)
 
@@ -346,16 +357,3 @@ class CaseStudyFeatureImage(models.Model):
 
     def __str__(self):
         return f"Feature Image for {self.case_study.title}"
-
-
-class PublishedAssuranceCase(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    assurance_case = models.ForeignKey("AssuranceCase", on_delete=models.CASCADE)
-    # case_study = models.ForeignKey("CaseStudy", on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    description = models.CharField(max_length=1000, null=True, blank=True)
-    content = models.JSONField()  # Stores full assurance case details
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Snapshot of {self.title} for Case Study {self.case_study.id}"

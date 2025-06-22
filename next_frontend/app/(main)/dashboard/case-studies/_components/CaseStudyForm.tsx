@@ -32,6 +32,7 @@ import { useImportModal } from "@/hooks/useImportModal"
 import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { sectors } from '@/config/index'
+import { AlertModal } from "@/components/modals/alertModal"
 
 // Dynamically import ReactQuill (Next.js SSR fix)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
@@ -67,13 +68,18 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const { toast } = useToast();
   const router = useRouter()
   const importModal = useImportModal();
-
+  
   const [value, setValue] = useState("");
-  // State for selected assurance cases
   const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>([]);
   const [imageLoading, setImageLoading] = useState<boolean>(true);
   const [previewImage, setPreviewImage] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
+  
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertLoading, setAlertLoading] = useState<boolean>(false)
+  const [formValues, setFormValues] = useState<z.infer<typeof caseStudyFormSchema> | null>(null);
+  const [loading, setLoading] = useState(false); 
+
 
   useEffect(() => {
     if(caseStudy && caseStudy.assurance_cases.length > 0) {
@@ -265,69 +271,73 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     }
   }, [caseStudy])
 
-
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+    if(caseStudy.published) {
+      setFormValues(values)
+      setAlertOpen(true)
+      return
+    }
+    await handleSubmit(values)
+  }
+
+  async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
     const formData = new FormData();
 
     formData.append('title', values.title);
     formData.append('description', values.description || '');
     formData.append('authors', values.authors || '');
-    // formData.append('category', values.category || '');
     formData.append('last_modified_on', new Date().toISOString());
     formData.append('created_on', new Date().toISOString());
     formData.append('sector', values.sector || '');
     formData.append('type', values.type || '');
     formData.append('contact', values.contact || '');
 
-    // Append the assurance cases as a JSON string
-    if(selectedAssuranceCases.length > 0) {
+    if (selectedAssuranceCases.length > 0) {
       formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
     }
 
-    // You can append more fields or files here (e.g., 'image', fileInput.files[0])
+    setLoading(true);
 
-    if (!caseStudy) {
-      const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
+    try {
+      if (!caseStudy) {
+        const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
 
-      // Upload feature image if exists
-      if (values.image) {
-        const uploadedImage = await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
-        // console.log('uploadedImage', uploadedImage)
-      }
+        if (values.image) {
+          await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
+        }
 
-      if (createdCaseStudy) {
         toast({
           title: 'Successfully created',
           description: 'You have created a case study!',
         });
+
         router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
-      }
-    } else {
-      // For update, append the case study ID if needed
-      formData.append('id', caseStudy.id.toString()); // Assuming caseStudy.id is a number
-
-      const updated = await updateCaseStudy(data?.key, formData);
-
-      // Upload feature image if exists
-      if (values.image) {
-        const uploadedImage = await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
-        // console.log('uploadedImage', uploadedImage)
-      }
-
-      if (updated) {
-        toast({
-          title: 'Successfully Updated',
-          description: 'You have updated a case study!',
-        });
       } else {
-        toast({
-          variant: "destructive",
-          title: 'Failed to Update',
-          description: 'Something went wrong!',
-        });
+        formData.append('id', caseStudy.id.toString());
+
+        const updated = await updateCaseStudy(data?.key, formData);
+
+        if (values.image) {
+          await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
+        }
+
+        if (updated) {
+          toast({
+            title: 'Successfully Updated',
+            description: 'You have updated a case study!',
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: 'Failed to Update',
+            description: 'Something went wrong!',
+          });
+        }
       }
+    } finally {
+      setLoading(false);
     }
-  }
+}
 
   const handlePublish = async () => {
     const formData = new FormData();
@@ -411,269 +421,257 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   ];
 
   return (
-    <div className="mt-6">
-      <Separator className="my-6" />
-      <TooltipProvider>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-2 gap-8">
-            <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled={caseStudy && caseStudy.published} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <>
+      <div className="mt-6">
+        <Separator className="my-6" />
+        <TooltipProvider>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-2 gap-8">
               <FormField
-                control={form.control}
-                name="sector"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sector</FormLabel>
-                    <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={caseStudy && caseStudy.published}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sector" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sectors.map((sector) => (
-                          <SelectItem key={sector.ID} value={sector.Name}>{sector.Name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={caseStudy && caseStudy.published}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {["AI", "Business", "Health", "Education"].map((sector) => (
-                            <SelectItem key={sector} value={sector}>{sector}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              /> */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}  disabled={caseStudy && caseStudy.published}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {["Assurance Case", "Argument Pattern"].map((sector) => (
-                            <SelectItem key={sector} value={sector}>{sector}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <Separator className="my-6" />
-
-            <div className="grid grid-cols-2 gap-8">
-              <FormField
-                control={form.control}
-                name="contact"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email for Corresponding Author</FormLabel>
-                    <FormControl>
-                      <Input {...field}  disabled={caseStudy && caseStudy.published}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="authors"
-                render={({ field }) => {
-                  const initialAuthors = field.value ? field.value.split(",").map(a => a.trim()) : [];
-                  const [authors, setAuthors] = useState<string[]>(initialAuthors);
-                  const [inputValue, setInputValue] = useState("");
-
-                  const addAuthor = () => {
-                    const trimmed = inputValue.trim();
-                    if (trimmed && !authors.includes(trimmed)) {
-                      const newAuthors = [...authors, trimmed];
-                      setAuthors(newAuthors);
-                      field.onChange(newAuthors.join(", "));
-                      setInputValue(""); // Clear input
-                    }
-                  };
-
-                  const removeAuthor = (authorToRemove: string) => {
-                    const newAuthors = authors.filter(author => author !== authorToRemove);
-                    setAuthors(newAuthors);
-                    field.onChange(newAuthors.join(", "));
-                  };
-
-                  return (
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Authors</FormLabel>
-
-                      <div className="flex items-center gap-2 mb-2">
-                        <Input
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          placeholder="Enter author name"
-                          disabled={caseStudy?.published}
-                        />
-                        <Button
-                          type="button"
-                          onClick={addAuthor}
-                          disabled={!inputValue.trim() || caseStudy?.published}
-                        >
-                          Add Author
-                        </Button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {authors.map((author) => (
-                          <span
-                            key={author}
-                            className="flex items-center px-2 py-1 text-sm bg-muted rounded-full"
-                          >
-                            {author}
-                            {!caseStudy?.published && (
-                              <button
-                                type="button"
-                                onClick={() => removeAuthor(author)}
-                                className="ml-1 text-muted-foreground hover:text-destructive"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
-              />
-
-
-
-            </div>
-
-            <Separator className="my-6" />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-1 mb-2">
-                    <FormLabel>Description</FormLabel>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span tabIndex={0}>
-                          <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        Provide a clear and concise summary of the case study.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <FormControl>
-                    <ReactQuill
-                      theme="snow"
-                      value={field.value || value} // Ensure controlled component
-                      onChange={(content) => {
-                        field.onChange(content); // Update form state
-                        setValue(content);
-                      }}
-                      modules={modules}
-                      formats={formats}
-                      readOnly={caseStudy && caseStudy.published}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-
-            <Separator className="my-6" />
-
-            <div className="">
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Available Published Assurance Cases</p>
-                {/* <button
-                  onClick={() => importModal.onOpen()}
-                  className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
-                  <span className='hidden md:block'>Import</span>
-                </button> */}
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sector"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sector</FormLabel>
+                      <FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sectors.map((sector) => (
+                            <SelectItem key={sector.ID} value={sector.Name}>{sector.Name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["AI", "Business", "Health", "Education"].map((sector) => (
+                              <SelectItem key={sector} value={sector}>{sector}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                /> */}
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["Assurance Case", "Argument Pattern"].map((sector) => (
+                              <SelectItem key={sector} value={sector}>{sector}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-              <RelatedAssuranceCaseList
-                published={caseStudy ? caseStudy.published : false}
-                selectedAssuranceCases={selectedAssuranceCases}
-                setSelectedAssuranceCases={setSelectedAssuranceCases}
+
+              <Separator className="my-6" />
+
+              <div className="grid grid-cols-2 gap-8">
+                <FormField
+                  control={form.control}
+                  name="contact"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email for Corresponding Author</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="authors"
+                  render={({ field }) => {
+                    const initialAuthors = field.value ? field.value.split(",").map(a => a.trim()) : [];
+                    const [authors, setAuthors] = useState<string[]>(initialAuthors);
+                    const [inputValue, setInputValue] = useState("");
+
+                    const addAuthor = () => {
+                      const trimmed = inputValue.trim();
+                      if (trimmed && !authors.includes(trimmed)) {
+                        const newAuthors = [...authors, trimmed];
+                        setAuthors(newAuthors);
+                        field.onChange(newAuthors.join(", "));
+                        setInputValue(""); // Clear input
+                      }
+                    };
+
+                    const removeAuthor = (authorToRemove: string) => {
+                      const newAuthors = authors.filter(author => author !== authorToRemove);
+                      setAuthors(newAuthors);
+                      field.onChange(newAuthors.join(", "));
+                    };
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Authors</FormLabel>
+
+                        <div className="flex items-center gap-2 mb-2">
+                          <Input
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            placeholder="Enter author name"
+                          />
+                          <Button
+                            type="button"
+                            onClick={addAuthor}
+                          >
+                            Add Author
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {authors.map((author) => (
+                            <span
+                              key={author}
+                              className="flex items-center px-2 py-1 text-sm bg-muted rounded-full"
+                            >
+                              {author}
+                              {!caseStudy?.published && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeAuthor(author)}
+                                  className="ml-1 text-muted-foreground hover:text-destructive"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
+
+
+              </div>
+
+              <Separator className="my-6" />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center gap-1 mb-2">
+                      <FormLabel>Description</FormLabel>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0}>
+                            <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          Provide a clear and concise summary of the case study.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <FormControl>
+                      <ReactQuill
+                        theme="snow"
+                        value={field.value || value} // Ensure controlled component
+                        onChange={(content) => {
+                          field.onChange(content); // Update form state
+                          setValue(content);
+                        }}
+                        modules={modules}
+                        formats={formats}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div>
-            <div className="flex items-center gap-1">
-              <FormLabel htmlFor="image">Featured Image</FormLabel>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span tabIndex={0}>
-                    <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Upload a representative image for this case study.
-                </TooltipContent>
-              </Tooltip>
-            </div>
 
-              {caseStudy && caseStudy.published ? (
-                <div className="w-full max-w-3xl mx-auto relative h-[500px] group">
-                  <Image
-                    src={previewImage || featuredImage}
-                    alt="image"
-                    fill
-                    className="object-cover aspect-video rounded-lg"
-                  />
+              <Separator className="my-6" />
+
+              <div className="">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Available Published Assurance Cases</p>
+                  {/* <button
+                    onClick={() => importModal.onOpen()}
+                    className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  >
+                    <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
+                    <span className='hidden md:block'>Import</span>
+                  </button> */}
                 </div>
-              ) : (
-                previewImage || featuredImage ? (
+                <RelatedAssuranceCaseList
+                  published={caseStudy ? caseStudy.published : false}
+                  selectedAssuranceCases={selectedAssuranceCases}
+                  setSelectedAssuranceCases={setSelectedAssuranceCases}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center gap-1 mb-3">
+                  <FormLabel htmlFor="image">Featured Image</FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      Upload a representative image for this case study.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {previewImage || featuredImage ? (
                   <div className="w-10/12 relative h-[500px] group mt-6">
                     <Image
                       src={previewImage || featuredImage}
@@ -682,16 +680,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       className="object-cover aspect-video rounded-lg"
                     />
                     <div className="absolute bg-indigo-900/70 h-full w-full flex justify-center items-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      {}
                       <Button
                         variant="destructive"
                         type="button"
                         onClick={() => {
-                          setPreviewImage(""); // Clear the preview
-                          setFeaturedImage(""); // Clear the preview
-                          form.setValue("image", ""); // Reset the form field
-                          if(featuredImage) {
-                            deleteCaseStudyFeatureImage(caseStudy.id)
+                          setPreviewImage(""); // Clear preview
+                          setFeaturedImage(""); // Clear preview
+                          form.setValue("image", ""); // Reset form field
+                          if (featuredImage) {
+                            deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
                           }
                         }}
                       >
@@ -700,44 +697,58 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     </div>
                   </div>
                 ) : (
-                  <Input type="file" accept="image/*" onChange={handleFileChange} disabled={caseStudy && caseStudy.published} />
-                )
-              )}
-            </div>
+                  <Input type="file" accept="image/*" onChange={handleFileChange} />
+                )}
 
-            <div className="flex justify-between items-center gap-4 w-full">
-              <div className="flex justify-start items-center gap-2">
-                  {caseStudy && !caseStudy.published && <Button variant="default" type="submit">Save Changes</Button>}
-                  {!caseStudy && (
-                    <Button variant="default" type="submit">Save</Button>
-                  )}
-                  {caseStudy && (
-                    <Button
-                      variant="primary"
-                      type="button"
-                      onClick={handlePublish}
-                    >
-                      {caseStudy.published ? (
-                        <>
-                          <CloudDownload className="size-4 mr-2" />
-                          <span>Remove from Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share className="size-4 mr-2" />
-                          <span>Make Public</span>
-                        </>
-                      )}
-                    </Button>
-                  )}
               </div>
-              {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button>}
-            </div>
 
-          </form>
-        </Form>
-      </TooltipProvider>
-    </div>
+              <div className="flex justify-between items-center gap-4 w-full">
+                <div className="flex justify-start items-center gap-2">
+                    {caseStudy && <Button variant="default" type="submit">Save Changes</Button>}
+                    {!caseStudy && (
+                      <Button variant="default" type="submit">Save</Button>
+                    )}
+                    {caseStudy && (
+                      <Button
+                        variant="primary"
+                        type="button"
+                        onClick={handlePublish}
+                      >
+                        {caseStudy.published ? (
+                          <>
+                            <CloudDownload className="size-4 mr-2" />
+                            <span>Remove from Public</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share className="size-4 mr-2" />
+                            <span>Make Public</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
+                </div>
+                {caseStudy && <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button>}
+              </div>
+
+            </form>
+          </Form>
+        </TooltipProvider>
+      </div>
+      <AlertModal
+        isOpen={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={async () => {
+          setAlertOpen(false)
+          if (formValues) {
+            await handleSubmit(formValues);
+          }
+        }}
+        loading={loading}
+        message="This case study is published. Updating it may affect the live version. Are you sure you want to proceed?"
+        confirmButtonText="Update Anyway"
+      />
+    </>
   )
 }
 

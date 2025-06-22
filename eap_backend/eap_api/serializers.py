@@ -589,7 +589,7 @@ def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
 
 class CaseStudySerializer(serializers.ModelSerializer):
     assurance_cases = serializers.PrimaryKeyRelatedField(
-        queryset=AssuranceCase.objects.all(), many=True, required=False
+        queryset=PublishedAssuranceCase.objects.all(), many=True, required=False
     )
     published_date = serializers.DateTimeField(
         format="%Y-%m-%dT%H:%M:%SZ", required=False
