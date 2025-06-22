@@ -87,30 +87,37 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
         <ScrollArea className="h-72 w-full rounded-md border mt-4">
           <div className="p-4">
             <h4 className="mb-4 text-sm font-normal leading-none">Please select one or more assurance cases.</h4>
-            {assuranceCasesList.map((assuranceCase: any) => (
-              <div
-                key={assuranceCase.id}
-                className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600 text-white' : ''}`}
-                onClick={() => handleCaseSelect(assuranceCase.id)}
-              >
-                <div className='flex justify-between items-center p-3 mb-2'>
-                  <div className="text-sm p-2">
-                    <p className='font-semibold'>{assuranceCase.name}</p>
-                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description}</p>
+            {assuranceCasesList
+              .sort((a: any, b: any) => {
+                const aSelected = selectedAssuranceCases.includes(a.id);
+                const bSelected = selectedAssuranceCases.includes(b.id);
+                if (aSelected === bSelected) return 0;
+                return aSelected ? -1 : 1;
+              })
+              .map((assuranceCase: any) => (
+                <div
+                  key={assuranceCase.id}
+                  className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'hover:bg-gray-100 dark:hover:bg-slate-900'} hover:cursor-pointer`}
+                  onClick={() => handleCaseSelect(assuranceCase.id)}
+                >
+                  <div className='flex justify-between items-center p-3 mb-2'>
+                    <div className="text-sm p-2">
+                      <p className='font-semibold'>{assuranceCase.name}</p>
+                      <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description}</p>
+                    </div>
+                    {selectedAssuranceCases.includes(assuranceCase.id) && (
+                      <>
+                        <div className='flex justify-center items-center gap-2 bg-indigo-900/60 rounded-full py-2 px-3 mr-4 mt-1'>
+                          <span className='text-xs text-white'>Selected</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
+                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  {selectedAssuranceCases.includes(assuranceCase.id) && (
-                    <>
-                      <div className='flex justify-center items-center gap-2 bg-indigo-900/60 rounded-full py-2 px-3 mr-4 mt-1'>
-                        <span className='text-xs text-white'>Selected</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-5">
-                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </>
-                  )}
+                  <Separator className='my-2' />
                 </div>
-                <Separator className='my-2' />
-              </div>
             ))}
           </div>
         </ScrollArea>

@@ -31,6 +31,7 @@ import { ArrowUpTrayIcon } from "@heroicons/react/20/solid"
 import { useImportModal } from "@/hooks/useImportModal"
 import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { sectors } from '@/config/index'
 
 // Dynamically import ReactQuill (Next.js SSR fix)
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
@@ -45,7 +46,7 @@ const caseStudyFormSchema = z.object({
   title: z.string().min(1, "Title is required"), // Required
   description: z.string().optional(),
   authors: z.string().optional(),
-  category: z.string().optional(),
+  // category: z.string().optional(),
   type: z.string().optional(),
   publishedDate: z.coerce.date().optional(),
   lastModifiedOn: z.coerce.date().optional(),
@@ -89,7 +90,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       title: "",
       description: "",
       authors: "",
-      category: "",
+      // category: "",
       publishedDate: undefined,
       lastModifiedOn: undefined,
       createdOn: undefined,
@@ -189,7 +190,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       }
 
       const result = await response.json();
-      console.log('Feature image uploaded:', result);
+      // console.log('Feature image uploaded:', result);
       toast({
         title: 'Feature Image Uploaded',
         description: 'Feature image successfully uploaded!',
@@ -217,7 +218,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         throw new Error('Failed to delete feature image');
       }
 
-      console.log('Feature image deleted');
+      // console.log('Feature image deleted');
       // toast({
       //   title: 'Feature Image Removed',
       //   description: 'Feature image successfully uploaded!',
@@ -271,7 +272,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     formData.append('title', values.title);
     formData.append('description', values.description || '');
     formData.append('authors', values.authors || '');
-    formData.append('category', values.category || '');
+    // formData.append('category', values.category || '');
     formData.append('last_modified_on', new Date().toISOString());
     formData.append('created_on', new Date().toISOString());
     formData.append('sector', values.sector || '');
@@ -291,7 +292,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       // Upload feature image if exists
       if (values.image) {
         const uploadedImage = await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
-        console.log('uploadedImage', uploadedImage)
+        // console.log('uploadedImage', uploadedImage)
       }
 
       if (createdCaseStudy) {
@@ -310,7 +311,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       // Upload feature image if exists
       if (values.image) {
         const uploadedImage = await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
-        console.log('uploadedImage', uploadedImage)
+        // console.log('uploadedImage', uploadedImage)
       }
 
       if (updated) {
@@ -434,15 +435,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 name="sector"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Domain/Sector</FormLabel>
+                    <FormLabel>Sector</FormLabel>
                     <FormControl>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={caseStudy && caseStudy.published}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select sector" />
                       </SelectTrigger>
                       <SelectContent>
-                        {["Business", "Technology", "Healthcare", "Finance"].map((sector) => (
-                          <SelectItem key={sector} value={sector}>{sector}</SelectItem>
+                        {sectors.map((sector) => (
+                          <SelectItem key={sector.ID} value={sector.Name}>{sector.Name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -451,7 +452,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                   </FormItem>
                 )}
               />
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
@@ -472,7 +473,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
               <FormField
                 control={form.control}
                 name="type"
@@ -631,7 +632,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
             <div className="">
               <div className="flex justify-between items-center">
-                <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Related Assurance Cases</p>
+                <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Available Published Assurance Cases</p>
                 {/* <button
                   onClick={() => importModal.onOpen()}
                   className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -706,7 +707,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
             <div className="flex justify-between items-center gap-4 w-full">
               <div className="flex justify-start items-center gap-2">
-                  {caseStudy && !caseStudy.published && <Button variant="default" type="submit">Save as draft</Button>}
+                  {caseStudy && !caseStudy.published && <Button variant="default" type="submit">Save Changes</Button>}
                   {!caseStudy && (
                     <Button variant="default" type="submit">Save</Button>
                   )}
@@ -719,12 +720,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       {caseStudy.published ? (
                         <>
                           <CloudDownload className="size-4 mr-2" />
-                          <span>Unublish</span>
+                          <span>Remove from Public</span>
                         </>
                       ) : (
                         <>
                           <Share className="size-4 mr-2" />
-                          <span>Publish</span>
+                          <span>Make Public</span>
                         </>
                       )}
                     </Button>

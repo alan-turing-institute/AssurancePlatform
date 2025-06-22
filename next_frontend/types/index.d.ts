@@ -135,3 +135,11 @@ export type User = {
   owned_groups: any[]; // Adjust the type if you know the structure of the groups
   github_repositories: any[]; // Adjust the type if you know the structure of the repositories
 };
+
+export type Sector = {
+  ID: number
+  Name: string
+  Description: string
+  ISICcode: string,
+  NACEcode: string
+}
