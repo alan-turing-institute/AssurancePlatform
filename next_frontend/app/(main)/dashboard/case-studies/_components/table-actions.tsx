@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { EllipsisVerticalIcon, EyeIcon } from 'lucide-react'
 import Link from 'next/link'
 import DeleteCaseButton from './delete-button'
+import UnpublishCaseButton from './unpublish-button'
 
 interface TableActionsProps {
   caseStudy: any
@@ -26,6 +27,18 @@ const TableActions = ({ caseStudy } : TableActionsProps ) => {
             View
           </Link>
         </DropdownMenuItem>
+        {caseStudy.published && (
+          <DropdownMenuItem asChild>
+            <div
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation(); // prevents dropdown from closing immediately
+              }}
+            >
+              <UnpublishCaseButton caseStudyId={caseStudy.id} />
+            </div>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <div
             onClick={(e) => {

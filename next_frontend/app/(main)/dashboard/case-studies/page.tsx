@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation'
 import React from 'react'
 import DeleteCaseButton from './_components/delete-button'
 import TableActions from './_components/table-actions'
+import { CheckCircleIcon } from '@heroicons/react/20/solid'
 
 async function CaseStudiesPage() {
   const session = await getServerSession(authOptions)
@@ -60,7 +61,10 @@ async function CaseStudiesPage() {
                   Sector
                 </th> */}
                 <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
-                  Published
+                  Created
+                </th>
+                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
+                  Public
                 </th>
                 <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0">
                   <span className="sr-only">Edit</span>
@@ -97,7 +101,10 @@ async function CaseStudiesPage() {
                       {caseStudy.sector}
                     </span>
                   </td> */}
-                  <td className="px-3 py-4 text-sm text-foreground/80">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</td>
+                  <td className="px-3 py-4 text-sm text-foreground/80">{moment(caseStudy.createdOn).format('DD/MM/YYYY')}</td>
+                  <td className="px-3 py-4 text-sm text-foreground/80">
+                    {caseStudy.published && <CheckCircleIcon className='text-emerald-500 size-6' />}
+                  </td>
                   <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                     {/* <a href="#" className="text-indigo-500 hover:text-indigo-600">
                       <Edit2Icon className='size-4' /><span className="sr-only">, {caseStudy.title}</span>
