@@ -249,6 +249,8 @@ export const ShareModal = () => {
   useEffect(() => {
     console.log('Assurance case updated')
   }, [assuranceCase])
+
+  console.log('assuranceCase', assuranceCase)
   
 
   return (
@@ -339,19 +341,23 @@ export const ShareModal = () => {
         <p className="text-muted-foreground text-sm">Select the button below to download a JSON file.</p>
         <Button className="my-2" onClick={handleExport}><Download className="w-4 h-4 mr-2"/>Download File</Button>
       </div>
-      <Separator />
-      <div className="my-4">
-        <h2 className="flex justify-start items-center gap-2 mb-2"><Share2Icon className="w-4 h-4"/>Publish Assurance Case</h2>
-        <p className="text-muted-foreground text-sm mb-2">Here you can publish the current version of your case.</p>
-        {assuranceCase && assuranceCase.published ? (
-          <div className="flex justify-start items-center gap-4">
-            <Button className="my-2" onClick={handlePublish} variant={"secondary"}><UploadIcon className="w-4 h-4 mr-2"/>Update</Button>
-            <Button className="my-2" onClick={handleUnpublish} variant={"destructive"}><Download className="w-4 h-4 mr-2"/>Unpublish</Button>
+      {assuranceCase && assuranceCase.permissions === 'manage' && (
+        <>
+          <Separator />
+          <div className="my-4">
+            <h2 className="flex justify-start items-center gap-2 mb-2"><Share2Icon className="w-4 h-4"/>Publish Assurance Case</h2>
+            <p className="text-muted-foreground text-sm mb-2">Here you can publish the current version of your case.</p>
+            {assuranceCase && assuranceCase.published ? (
+              <div className="flex justify-start items-center gap-4">
+                <Button className="my-2" onClick={handlePublish} variant={"secondary"}><UploadIcon className="w-4 h-4 mr-2"/>Update</Button>
+                <Button className="my-2" onClick={handleUnpublish} variant={"destructive"}><Download className="w-4 h-4 mr-2"/>Unpublish</Button>
+              </div>
+            ) : (
+              <Button className="my-2 bg-emerald-500 text-white hover:bg-emerald-600" onClick={handlePublish}><Share2Icon className="w-4 h-4 mr-2"/>Publish</Button>
+            )}
           </div>
-        ) : (
-          <Button className="my-2 bg-emerald-500 text-white hover:bg-emerald-600" onClick={handlePublish}><Share2Icon className="w-4 h-4 mr-2"/>Publish</Button>
-        )}
-      </div>
+        </>
+      )}
     </Modal>
   );
 };

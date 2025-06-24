@@ -334,6 +334,13 @@ def case_detail(request, pk):
         if permissions not in ["manage", "edit"]:
             return HttpResponse(status=403)
         data = JSONParser().parse(request)
+
+        # Check if trying to change published status
+        if "published" in data:
+            # Only allow owner to modify the published field
+            if case.owner != request.user:
+                return HttpResponse(status=403)
+
         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
         if serializer.is_valid():
             published = data.get("published", None)
