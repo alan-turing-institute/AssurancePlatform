@@ -25,7 +25,7 @@ const DeleteCaseButton = ({ caseStudyId, variant, redirect = false } : DeleteCas
 
   const handleDelete = async () => {
       const deleted = await deleteCaseStudy(data?.key!!, caseStudyId)
-  
+
       if(deleted) {
         toast({
           title: 'Successfully Deleted',

@@ -166,7 +166,7 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "color_profile",
             "comments",
             "published",
-            "published_date"
+            "published_date",
         )
 
 

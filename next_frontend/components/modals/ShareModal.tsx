@@ -215,7 +215,7 @@ export const ShareModal = () => {
         toast({ title: 'Something went wrong, publishing assurance case' });
         return
       }
-      
+
       window.location.reload()
     } catch (error) {
       console.log(error);

@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('eap_api', '0043_publishedassurancecase_description'),
+        ("eap_api", "0043_publishedassurancecase_description"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='casestudy',
-            name='assurance_cases',
-            field=models.ManyToManyField(blank=True, to='eap_api.PublishedAssuranceCase'),
+            model_name="casestudy",
+            name="assurance_cases",
+            field=models.ManyToManyField(
+                blank=True, to="eap_api.PublishedAssuranceCase"
+            ),
         ),
     ]

@@ -107,7 +107,11 @@ urlpatterns = [
         views.case_study_feature_image,
         name="case_study_feature_image",
     ),
-    path("published-assurance-cases/", views.published_assurance_case_list, name="published_assurance_case_list"),
+    path(
+        "published-assurance-cases/",
+        views.published_assurance_case_list,
+        name="published_assurance_case_list",
+    ),
     path(
         "public/case-studies/",
         views.public_case_study_list,

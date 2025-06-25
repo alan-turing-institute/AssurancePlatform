@@ -14,7 +14,6 @@ from rest_framework.response import Response
 from rest_framework.serializers import ReturnDict
 from social_core.exceptions import AuthForbidden
 from social_django.utils import psa
-from uuid import UUID
 
 from .models import (
     AssuranceCase,
@@ -360,7 +359,7 @@ def case_detail(request, pk):
                         "error": "Cannot unpublish the assurance case while it is linked to a case study.",
                         "linked_case_studies": case_study_info,
                     },
-                    status=400
+                    status=400,
                 )
 
         # Proceed with save only after validation
@@ -1179,12 +1178,15 @@ def case_study_detail(request, pk):
 
         if not all(isinstance(item, str) for item in assurance_cases_list):
             return JsonResponse(
-                {"error": "assurance_cases should only contain string UUIDs"}, status=400
+                {"error": "assurance_cases should only contain string UUIDs"},
+                status=400,
             )
 
         data.setlist("assurance_cases", assurance_cases_list)
 
-        serializer = CaseStudySerializer(case_study, data=data, partial=True, context={"request": request})
+        serializer = CaseStudySerializer(
+            case_study, data=data, partial=True, context={"request": request}
+        )
 
         if serializer.is_valid():
             serializer.save()
@@ -1292,7 +1294,9 @@ def published_assurance_case_list(request):
     user_cases = AssuranceCase.objects.filter(owner=request.user)
 
     # Fetch all PublishedAssuranceCases that reference those AssuranceCases
-    published_cases = PublishedAssuranceCase.objects.filter(assurance_case__in=user_cases)
+    published_cases = PublishedAssuranceCase.objects.filter(
+        assurance_case__in=user_cases
+    )
 
     serializer = PublishedAssuranceCaseSerializer(
         published_cases, many=True, context={"request": request}

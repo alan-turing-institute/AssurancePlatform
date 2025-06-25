@@ -9,7 +9,7 @@ interface CaseStudyCaseItemProps {
 
 const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) => {
   const publishedAssuranceCase = await fetchPublishedAssuranceCaseId(assuranceCaseId)
-  
+
   return (
     <li key={publishedAssuranceCase.id} className="relative flex flex-col justify-start gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer">
       <div className="flex min-w-0 gap-x-4">
@@ -22,9 +22,9 @@ const CaseStudyCaseItem = async ({ assuranceCaseId } : CaseStudyCaseItemProps) =
           </p>
         </div>
       </div>
-      
+
       <DownloadCaseButton content={publishedAssuranceCase.content} title={publishedAssuranceCase.title} />
-      
+
     </li>
   )
 }

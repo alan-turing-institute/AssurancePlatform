@@ -69,17 +69,17 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const { toast } = useToast();
   const router = useRouter()
   const importModal = useImportModal();
-  
+
   const [value, setValue] = useState("");
   const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>([]);
   const [imageLoading, setImageLoading] = useState<boolean>(true);
   const [previewImage, setPreviewImage] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
-  
+
   const [alertOpen, setAlertOpen] = useState(false)
   const [alertLoading, setAlertLoading] = useState<boolean>(false)
   const [formValues, setFormValues] = useState<z.infer<typeof caseStudyFormSchema> | null>(null);
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
 
   useEffect(() => {
