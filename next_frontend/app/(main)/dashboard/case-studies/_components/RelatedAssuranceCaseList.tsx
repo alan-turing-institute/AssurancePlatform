@@ -3,11 +3,10 @@
 import React, { Dispatch, useEffect, useState } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { fetchAssuranceCases } from '@/actions/assuranceCases'
+import { fetchPublishedAssuranceCases } from '@/actions/assuranceCases'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { FolderCheckIcon, MoveRightIcon } from 'lucide-react'
-import { fetchPublishedAssuranceCaseId } from '@/actions/caseStudies'
+import { MoveRightIcon } from 'lucide-react'
 
 interface RelatedAssuranceCaseListProps {
   published: boolean
@@ -22,24 +21,31 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
 
   useEffect(() => {
     const getCases = async () => {
-      if (published) {
-        // Fetch each selected assurance case and update list
-        const publishedCases = await Promise.all(
-          selectedAssuranceCases.map(async (assuranceCaseId) => {
-            return await fetchPublishedAssuranceCaseId(assuranceCaseId)
-          })
-        )
-        setAssuranceCasesList(publishedCases.filter(Boolean)) // Remove any undefined/null values
-      } else {
-        // Fetch all cases when not published
-        const allCases = await fetchAssuranceCases(data?.key!!)
-        setAssuranceCasesList(allCases)
-      }
+      // if (published) {
+      //   // Fetch each selected assurance case and update list
+      //   const publishedCases = await Promise.all(
+      //     selectedAssuranceCases.map(async (assuranceCaseId) => {
+      //       return await fetchPublishedAssuranceCaseId(assuranceCaseId)
+      //     })
+      //   )
+      //   setAssuranceCasesList(publishedCases.filter(Boolean)) // Remove any undefined/null values
+      // } else {
+      //   // Fetch all cases when not published
+      //   // const allCases = await fetchAssuranceCases(data?.key!!)
+      //   const allCases = await fetchPublishedAssuranceCases(data?.key!!)
+      //   console.log(allCases)
+      //   setAssuranceCasesList(allCases)
+      // }
+      const allCases = await fetchPublishedAssuranceCases(data?.key!!)
+      console.log('ALL PUBLISHED A.CASES', allCases)
+      setAssuranceCasesList(allCases)
     }
 
-    if (selectedAssuranceCases.length > 0 || !published) {
-      getCases()
-    }
+    getCases()
+
+    // if (selectedAssuranceCases.length > 0 || !published) {
+    //   getCases()
+    // }
   }, [published, selectedAssuranceCases, data?.key])
 
   const handleCaseSelect = (assuranceCaseId: any) => {
@@ -53,50 +59,45 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
     });
   };
 
-  if(published) {
-    return (
-      <ul
-        role="list"
-        className="divide-y divide-foreground/10 border border-foreground/10 overflow-hidden bg-background shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl mt-4"
-      >
-        {assuranceCasesList.map((assuranceCase: any) => (
-          <li key={assuranceCase.id} className="relative flex justify-between gap-x-6 px-2 py-4 sm:px-6">
-            <div className="flex min-w-0 gap-x-4 justify-start items-center">
-              <FolderCheckIcon className='size-6'/>
-              <div className="min-w-0 flex-auto">
-                <p className="text-sm font-semibold text-foreground">
-                  {assuranceCase.title}
-                </p>
-                <p className="flex text-xs text-foreground/50">
-                  {assuranceCase.description}
-                </p>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    )
-  }
-
   return (
     <>
       {assuranceCasesList.length === 0 && (
-        <p>No cases found. <Link href={'/dashboard'} className='text-violet-500 inline-flex justify-start items-center gap-2'>Create a New Assurance Case <MoveRightIcon className='size-4' /></Link></p>
+        // <p>No cases found. <Link href={'/dashboard'} className='text-violet-500 inline-flex justify-start items-center gap-2'>Create a New Assurance Case <MoveRightIcon className='size-4' /></Link></p>
+        <div className="text-center">
+          <h3 className="mt-2 text-base font-semibold text-foreground">No Published Assurance Cases Found</h3>
+          <p className="mt-1 text-sm text-gray-500">You need to publish an assurance case first.</p>
+          <div className="mt-6">
+            <Link
+              href={'/dashboard'}
+              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              See Cases
+              <MoveRightIcon aria-hidden="true" className="ml-2 size-4" />
+            </Link>
+          </div>
+        </div>
       )}
       {assuranceCasesList.length > 0 && (
         <ScrollArea className="h-72 w-full rounded-md border mt-4">
           <div className="p-4">
             <h4 className="mb-4 text-sm font-normal leading-none">Please select one or more assurance cases.</h4>
-            {assuranceCasesList.map((assuranceCase: any) => (
+            {assuranceCasesList
+            .sort((a: any, b: any) => {
+              const aSelected = selectedAssuranceCases.includes(a.id);
+              const bSelected = selectedAssuranceCases.includes(b.id);
+              if (aSelected === bSelected) return 0;
+              return aSelected ? -1 : 1;
+            })
+            .map((assuranceCase: any) => (
               <div
                 key={assuranceCase.id}
-                className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600 text-white' : ''}`}
+                className={`rounded-md ${selectedAssuranceCases.includes(assuranceCase.id) ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'hover:bg-gray-100 dark:hover:bg-slate-900'} hover:cursor-pointer`}
                 onClick={() => handleCaseSelect(assuranceCase.id)}
               >
                 <div className='flex justify-between items-center p-3 mb-2'>
                   <div className="text-sm p-2">
-                    <p className='font-semibold'>{assuranceCase.name}</p>
-                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description}</p>
+                    <p className='font-semibold'>{assuranceCase.name || assuranceCase.title}</p>
+                    <p className={`text-muted-foreground ${selectedAssuranceCases.includes(assuranceCase.id) ? 'text-white' : ''}`}>{assuranceCase.description !== null ? assuranceCase.description : 'No description'}</p>
                   </div>
                   {selectedAssuranceCases.includes(assuranceCase.id) && (
                     <>

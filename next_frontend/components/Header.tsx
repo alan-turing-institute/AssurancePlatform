@@ -33,6 +33,8 @@ import LogoutButton from "./auth/LogoutButton";
 import ActiveUsersList from "./cases/ActiveUsersList";
 import { ResourcesInfo } from "./cases/ResourcesInfo";
 import { useSession } from "next-auth/react";
+import moment from "moment";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -131,6 +133,10 @@ const Header = ({ setOpen }: HeaderProps) => {
     }
   };
 
+  useEffect(() => {
+    console.log('header re-rendered', assuranceCase.published)
+  }, [assuranceCase])
+
   return (
     <div className="fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50">
       <div className="container py-3 flex justify-between items-center">
@@ -157,10 +163,35 @@ const Header = ({ setOpen }: HeaderProps) => {
           <SearchNodes nodes={nodes} focusNode={focusNode} />
           <LogoutButton />
           <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
+          <TooltipProvider>
+          {assuranceCase.published ? (
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 ring-1 ring-green-500/20 ring-inset">
+                  Published
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Published on: {moment(assuranceCase.published_date).format('DD/MM/YYYY HH:mm:ss')}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex items-center rounded-md bg-gray-500/10 px-3 py-2 text-xs font-medium text-gray-400 ring-1 ring-gray-500/20 ring-inset">
+                  Unpublished
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">You can publish using the <strong>Share</strong><br/> action from toolbar</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          </TooltipProvider>
         </div>
       </div>
     </div>
   );
 };
 
-export default Header;
+export default Header

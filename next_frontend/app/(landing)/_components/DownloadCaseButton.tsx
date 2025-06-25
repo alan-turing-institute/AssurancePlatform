@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@/components/ui/button';
 import { DownloadIcon } from 'lucide-react';
 import React from 'react';
 
@@ -33,9 +34,13 @@ const DownloadCaseButton = ({ content, title }: { content: string; title: string
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-x-4" onClick={downloadJSON}>
-      <p className='text-sm text-muted-foreground'>Download</p>
-      <DownloadIcon aria-hidden="true" className="size-5 flex-none text-gray-400" />
+    <div className="flex shrink-0 items-center gap-x-4 mt-4" onClick={downloadJSON}>
+      {/* <p className='text-sm text-muted-foreground'>Download</p>
+      <DownloadIcon aria-hidden="true" className="size-5 flex-none text-gray-400" /> */}
+      <Button variant={'primary'}>
+        Download
+        <DownloadIcon className='size-4 ml-2' />
+      </Button>
     </div>
   );
 };

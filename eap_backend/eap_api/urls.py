@@ -108,6 +108,11 @@ urlpatterns = [
         name="case_study_feature_image",
     ),
     path(
+        "published-assurance-cases/",
+        views.published_assurance_case_list,
+        name="published_assurance_case_list",
+    ),
+    path(
         "public/case-studies/",
         views.public_case_study_list,
         name="public_case_study_list",
@@ -118,7 +123,7 @@ urlpatterns = [
         name="public_case_study_detail",
     ),
     path(
-        "public/assurance-case/<int:id>/",
+        "public/assurance-case/<uuid:id>/",
         views.published_assurance_case_detail,
         name="published_assurance_case_detail",
     ),

@@ -164,7 +164,9 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
             "edit_groups",
             "view_groups",
             "color_profile",
-            "comments",  # Add this line to include comments
+            "comments",
+            "published",
+            "published_date",
         )
 
 
@@ -587,7 +589,7 @@ def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
 
 class CaseStudySerializer(serializers.ModelSerializer):
     assurance_cases = serializers.PrimaryKeyRelatedField(
-        queryset=AssuranceCase.objects.all(), many=True, required=False
+        queryset=PublishedAssuranceCase.objects.all(), many=True, required=False
     )
     published_date = serializers.DateTimeField(
         format="%Y-%m-%dT%H:%M:%SZ", required=False
@@ -659,8 +661,9 @@ class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "assurance_case",
-            "case_study",
+            # "case_study",
             "title",
+            "description",
             "content",
             "created_at",
         ]

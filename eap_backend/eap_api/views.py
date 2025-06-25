@@ -319,15 +319,83 @@ def case_detail(request, pk):
         case_data["goals"] = goals
         case_data["permissions"] = permissions
         return JsonResponse(case_data)
+    # elif request.method == "PUT":
+    #     if permissions not in ["manage", "edit"]:
+    #         return HttpResponse(status=403)
+    #     data = JSONParser().parse(request)
+    #     serializer = AssuranceCaseSerializer(case, data=data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return JsonResponse(serializer.data)
+    #     return JsonResponse(serializer.errors, status=400)
+
     elif request.method == "PUT":
         if permissions not in ["manage", "edit"]:
             return HttpResponse(status=403)
+
         data = JSONParser().parse(request)
+
+        # Check if trying to change published status
+        if "published" in data:
+            if case.owner != request.user:
+                return HttpResponse(status=403)
+
+        published = data.get("published", None)
+
+        if published is False:
+            # Check if trying to unpublish while linked to a case study
+            linked_snapshots = PublishedAssuranceCase.objects.filter(
+                assurance_case=case
+            )
+
+            linked_case_studies = CaseStudy.objects.filter(
+                assurance_cases__in=linked_snapshots
+            ).distinct()
+
+            if linked_case_studies.exists():
+                case_study_info = list(linked_case_studies.values("id", "title"))
+                return JsonResponse(
+                    {
+                        "error": "Cannot unpublish the assurance case while it is linked to a case study.",
+                        "linked_case_studies": case_study_info,
+                    },
+                    status=400,
+                )
+
+        # Proceed with save only after validation
         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            updated_case = serializer.save()
+
+            if published is True:
+                # Clean up old snapshots
+                PublishedAssuranceCase.objects.filter(
+                    assurance_case=updated_case
+                ).delete()
+
+                # Generate full assurance case structure
+                updated_case_serialized = AssuranceCaseSerializer(updated_case)
+                case_data = updated_case_serialized.data
+                case_data["goals"] = get_json_tree(case_data["goals"], "goals")
+
+                # Create new snapshot
+                PublishedAssuranceCase.objects.create(
+                    assurance_case=updated_case,
+                    title=updated_case.name,
+                    description=updated_case.description,
+                    content=json.dumps(case_data),
+                )
+
+            elif published is False:
+                # Safe to delete snapshots (already checked above)
+                PublishedAssuranceCase.objects.filter(
+                    assurance_case=updated_case
+                ).delete()
+
             return JsonResponse(serializer.data)
+
         return JsonResponse(serializer.errors, status=400)
+
     elif request.method == "DELETE":
         if permissions not in ["manage", "edit"]:
             return HttpResponse(status=403)
@@ -1007,54 +1075,6 @@ def reply_to_comment(request, comment_id):
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class CaseStudyViewSet(viewsets.ModelViewSet):
-#     queryset = CaseStudy.objects.all()
-#     serializer_class = CaseStudySerializer
-#     renderer_classes = [JSONRenderer]  # Ensures JSON output
-
-# # class CaseStudyViewSet(viewsets.ModelViewSet):
-# #     queryset = CaseStudy.objects.all()
-# #     serializer_class = CaseStudySerializer
-# #     renderer_classes = [JSONRenderer]  # Ensures JSON output
-# #     # permission_classes = [AllowAny]  # Allow access to everyone
-
-# #     def get_queryset(self):
-# #         """
-# #         Optionally restricts the returned case studies to those that are published
-# #         by filtering against a `published` query parameter in the URL.
-# #         """
-# #         queryset = CaseStudy.objects.all()  # Default queryset
-# #         published = self.request.query_params.get('published', None)  # Get the published query param
-
-# #         if published is not None:
-# #             # Convert to boolean (if passed as 'true' or 'false' in the query string)
-# #             published = published.lower() in ['true', '1', 't', 'y', 'yes']
-# #             queryset = queryset.filter(published=published)
-
-# #         return queryset
-
-# @csrf_exempt
-# @api_view(["GET", "POST"])
-# @permission_classes([IsAuthenticated])
-# def case_study_list(request):
-#     """
-#     List all case studies, or create a new case study
-#     """
-#     if request.method == "GET":
-#         case_studies = CaseStudy.objects.filter(owner=request.user)  # Ensure only user-owned case studies are returned
-#         serializer = CaseStudySerializer(case_studies, many=True)
-#         return JsonResponse(serializer.data, safe=False)
-
-#     elif request.method == "POST":
-#         data = JSONParser().parse(request)
-#         serializer = CaseStudySerializer(data=data)
-#         if serializer.is_valid():
-#             serializer.save(owner=request.user)  # Assign the authenticated user as the owner
-#             serializer.save()
-#             return JsonResponse(serializer.data, status=201)
-#         return JsonResponse(serializer.errors, status=400)
-
-
 @csrf_exempt
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -1133,100 +1153,46 @@ def case_study_detail(request, pk):
         return HttpResponse(status=404)
 
     if request.method == "GET":
-        # serializer = CaseStudySerializer(case_study)
         serializer = CaseStudySerializer(case_study, context={"request": request})
         return JsonResponse(serializer.data)
 
     elif request.method == "PUT":
-        # Use MultiPartParser and FormParser to handle multipart/form-data
-        if request.content_type == "multipart/form-data":
-            request.parsers = [
-                MultiPartParser(),
-                FormParser(),
-            ]  # No need for JSONParser here
+        if request.content_type.startswith("multipart/form-data"):
+            request.parsers = [MultiPartParser(), FormParser()]
 
-        # Create a mutable copy of request.data
-        data = request.data.copy()  # This makes request.data mutable
+        data = request.data.copy()
 
-        published = data.get("published")
+        assurance_cases_raw = data.get("assurance_cases", "[]")
 
-        # Add logic here for saving a published version of the linked assurance cases
-
-        assurance_cases_raw = data.get(
-            "assurance_cases", "[]"
-        )  # Default to '[]' if missing
-
-        # Ensure it is parsed correctly
         try:
             assurance_cases_list = json.loads(assurance_cases_raw)
-            print("JSON parsed assurance_cases_list:", assurance_cases_list)
-        except json.JSONDecodeError as e:
-            print("JSON parsing error:", e)
+        except json.JSONDecodeError:
             return JsonResponse(
                 {"error": "Invalid JSON format for assurance_cases"}, status=400
             )
 
         if not isinstance(assurance_cases_list, list):
-            print(
-                "Error: Should be a list of ids, but got:", type(assurance_cases_list)
-            )
             return JsonResponse(
                 {"error": "assurance_cases should be a list of IDs"}, status=400
             )
 
-        if not all(isinstance(item, int) for item in assurance_cases_list):
-            print("Error: Should be a list of integers, but got:", assurance_cases_list)
+        if not all(isinstance(item, str) for item in assurance_cases_list):
             return JsonResponse(
-                {"error": "assurance_cases should only contain integers (IDs)"},
+                {"error": "assurance_cases should only contain string UUIDs"},
                 status=400,
             )
 
-        # Set assurance_cases to the parsed list directly
-        data.setlist(
-            "assurance_cases", assurance_cases_list
-        )  # Ensure it's treated as a list in QueryDict
+        data.setlist("assurance_cases", assurance_cases_list)
 
-        # Pass the updated data to the serializer
         serializer = CaseStudySerializer(
             case_study, data=data, partial=True, context={"request": request}
         )
 
         if serializer.is_valid():
-
-            if published:
-                for assurance_case_id in assurance_cases_list:
-                    try:
-                        assurance_case = AssuranceCase.objects.get(id=assurance_case_id)
-                    except AssuranceCase.DoesNotExist:
-                        continue  # Skip if the assurance case doesn't exist
-
-                    # Get full assurance case details using the same logic as `case_detail()`
-                    assurance_case_serializer = AssuranceCaseSerializer(assurance_case)
-                    case_data = assurance_case_serializer.data
-                    case_data["goals"] = get_json_tree(
-                        case_data["goals"], "goals"
-                    )  # Apply your existing goal tree logic
-
-                    # Remove any existing snapshots for this assurance case and case study
-                    PublishedAssuranceCase.objects.filter(
-                        assurance_case=assurance_case, case_study=case_study
-                    ).delete()
-
-                    # Create a snapshot
-                    PublishedAssuranceCase.objects.create(
-                        assurance_case=assurance_case,
-                        case_study=case_study,
-                        title=assurance_case.name,
-                        content=json.dumps(
-                            case_data
-                        ),  # Ensure it's stored as a valid JSON string
-                    )
-
             serializer.save()
             return JsonResponse(serializer.data)
         else:
-            # If the serializer is not valid, print and return the errors
-            print(f"Serializer errors: {serializer.errors}")
+            print(serializer.errors)  # Debugging line
             return JsonResponse(serializer.errors, status=400)
 
     elif request.method == "DELETE":
@@ -1319,16 +1285,31 @@ def case_study_feature_image(request: HttpRequest, pk) -> Response:
 
 @csrf_exempt
 @api_view(["GET"])
-def published_assurance_case_detail(request, id):
+@permission_classes([IsAuthenticated])
+def published_assurance_case_list(request):
     """
-    Retrieve all PublishedAssuranceCases linked to a specific AssuranceCase ID.
+    List all published assurance cases belonging to the authenticated user.
     """
-    published_assurance_cases = PublishedAssuranceCase.objects.filter(assurance_case=id)
+    # Get all AssuranceCases where the owner is the current user
+    user_cases = AssuranceCase.objects.filter(owner=request.user)
 
-    if not published_assurance_cases.exists():
-        return HttpResponse(status=404)
+    # Fetch all PublishedAssuranceCases that reference those AssuranceCases
+    published_cases = PublishedAssuranceCase.objects.filter(
+        assurance_case__in=user_cases
+    )
 
     serializer = PublishedAssuranceCaseSerializer(
-        published_assurance_cases, many=True
-    )  # Use many=True for multiple results
-    return JsonResponse(serializer.data, safe=False)  # Allow lists in JSON response
+        published_cases, many=True, context={"request": request}
+    )
+    return JsonResponse(serializer.data, safe=False)
+
+
+@api_view(["GET"])
+def published_assurance_case_detail(request, id):
+    try:
+        pac = PublishedAssuranceCase.objects.get(id=id)
+    except PublishedAssuranceCase.DoesNotExist:
+        return HttpResponse(status=404)
+
+    serializer = PublishedAssuranceCaseSerializer(pac)
+    return JsonResponse(serializer.data, safe=False)
