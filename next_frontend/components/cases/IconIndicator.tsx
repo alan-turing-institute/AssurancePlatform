@@ -51,7 +51,7 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
 
         const response = await fetch(url, requestOptions);
         const result = await response.json()
-        console.log('comments result', result)
+        // console.log('comments result', result)
         return result
     } catch (error) {
         console.log('Error', error)

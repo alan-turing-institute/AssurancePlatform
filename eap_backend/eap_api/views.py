@@ -333,19 +333,39 @@ def case_detail(request, pk):
     elif request.method == "PUT":
         if permissions not in ["manage", "edit"]:
             return HttpResponse(status=403)
+
         data = JSONParser().parse(request)
 
         # Check if trying to change published status
         if "published" in data:
-            # Only allow owner to modify the published field
             if case.owner != request.user:
                 return HttpResponse(status=403)
 
+        published = data.get("published", None)
+
+        if published is False:
+            # Check if trying to unpublish while linked to a case study
+            linked_snapshots = PublishedAssuranceCase.objects.filter(
+                assurance_case=case
+            )
+
+            linked_case_studies = CaseStudy.objects.filter(
+                assurance_cases__in=linked_snapshots
+            ).distinct()
+
+            if linked_case_studies.exists():
+                case_study_info = list(linked_case_studies.values("id", "title"))
+                return JsonResponse(
+                    {
+                        "error": "Cannot unpublish the assurance case while it is linked to a case study.",
+                        "linked_case_studies": case_study_info,
+                    },
+                    status=400
+                )
+
+        # Proceed with save only after validation
         serializer = AssuranceCaseSerializer(case, data=data, partial=True)
         if serializer.is_valid():
-            published = data.get("published", None)
-
-            # Save updated assurance case first
             updated_case = serializer.save()
 
             if published is True:
@@ -368,7 +388,7 @@ def case_detail(request, pk):
                 )
 
             elif published is False:
-                # Remove all snapshots for this assurance case
+                # Safe to delete snapshots (already checked above)
                 PublishedAssuranceCase.objects.filter(
                     assurance_case=updated_case
                 ).delete()
@@ -376,7 +396,6 @@ def case_detail(request, pk):
             return JsonResponse(serializer.data)
 
         return JsonResponse(serializer.errors, status=400)
-
 
     elif request.method == "DELETE":
         if permissions not in ["manage", "edit"]:

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useShareModal } from "@/hooks/useShareModal";
 import { Separator } from "../ui/separator";
-import { Download, FileIcon, Share2, Share2Icon, UploadIcon, User2, UserCheck, UserX, X } from "lucide-react";
+import { ArrowUpRight, Download, ExpandIcon, FileIcon, Share2, Share2Icon, UploadIcon, User2, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { neatJSON } from "neatjson";
 import { saveAs } from "file-saver";
@@ -27,6 +27,8 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "../ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { useSession } from "next-auth/react";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { LinkedCaseModal } from "./LinkedCaseModal";
 
 type ShareItem = {
   email: string
@@ -54,6 +56,9 @@ export const ShareModal = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
+
+  const [isLinkedCaseModalOpen, setIsLinkedCaseModalOpen] = useState(false);
+  const [linkedCaseStudies, setLinkedCaseStudies] = useState([]);
 
   // const [token] = useLoginToken();
   const { data: session } = useSession()
@@ -235,8 +240,67 @@ export const ShareModal = () => {
 
       const response = await fetch(url, requestOptions);
 
+      // if (!response.ok) {
+      //   let errorMessage = 'Something went wrong, unpublishing assurance case';
+
+      //   try {
+      //     const contentType = response.headers.get("content-type");
+      //     if (contentType && contentType.includes("application/json")) {
+      //       const errorData = await response.json();
+      //       console.log(errorData);
+      //       errorMessage = errorData.error || errorMessage;
+      //     } else {
+      //       const text = await response.text();
+      //       console.log(text);
+      //       errorMessage = text || errorMessage;
+      //     }
+      //   } catch (err) {
+      //     console.error('Error parsing response', err);
+      //   }
+
+      //   toast({ title: 'Failed to Unpublish', description: errorMessage });
+      //   return;
+      // }
+
       if (!response.ok) {
-        toast({ title: 'Something went wrong, publishing assurance case' });
+        let errorMessage = "Something went wrong, unpublishing assurance case"
+        let linkedCases = []
+
+        try {
+          const contentType = response.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+            linkedCases = errorData.linked_case_studies || []
+            setLinkedCaseStudies(linkedCases)
+          } else {
+            const text = await response.text()
+            errorMessage = text || errorMessage
+          }
+        } catch (err) {
+          console.error("Error parsing response", err)
+        }
+
+        shareModal.onClose()
+
+        toast({
+          title: "Failed to Unpublish",
+          description: (
+            <div className="space-y-4">
+              <p>{errorMessage}</p>
+              {linkedCases.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsLinkedCaseModalOpen(true)}
+                >
+                  View linked case studies <ArrowUpRight className="ml-2 size-4" />
+                </Button>
+              )}
+            </div>
+          ),
+        })
+
         return
       }
 
@@ -250,10 +314,8 @@ export const ShareModal = () => {
     console.log('Assurance case updated')
   }, [assuranceCase])
 
-  console.log('assuranceCase', assuranceCase)
-  
-
   return (
+    <>
     <Modal
       title="Share / Export Case"
       description="How would you like the share your assurance case?"
@@ -359,5 +421,14 @@ export const ShareModal = () => {
         </>
       )}
     </Modal>
+
+    <LinkedCaseModal
+      isOpen={isLinkedCaseModalOpen}
+      onClose={() => setIsLinkedCaseModalOpen(false)}
+      linkedCaseStudies={linkedCaseStudies}
+      loading={false} // or your loading state
+    />
+
+    </>
   );
 };
