@@ -1,5 +1,5 @@
-import React from 'react';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import React from "react";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 
 const ImageList = ({ title, description, images = [] }) => {
   return (
