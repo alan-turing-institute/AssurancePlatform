@@ -3,7 +3,7 @@ sidebar_position: 2
 sidebar_label: "About the TEA Platform"
 ---
 
-import Image from "@theme/IdealImage";
+import ImageList from '../../components/image-list';
 
 # About the Trustworthy and Ethical Assurance Platform
 
@@ -92,18 +92,9 @@ If you want to learn more about how the TEA platform scaffolds community engagem
 
 ## Collaborators and Partners
 
-<div className="flex items-center justify-start gap-8 my-8">
-
-<Image
-	img={require("/img/cfaa-logo.jpg")}
-	alt="CfAA Logo"
-	style={{ width: "auto", height: "100px" }}
+<ImageList
+  images={[
+    "/img/cfaa-logo.jpg",
+		"/img/dt-hub-logo.jpg",
+  ]}
 />
-
-<Image
-	img={require("/img/dt-hub-logo.jpg")}
-	alt="DT Hub Logo"
-	style={{ width: "auto", height: "100px" }}
-/>
-
-</div>
