@@ -8,7 +8,7 @@
  * work well for content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+/* Base Infima overrides */
 :root {
   --ifm-color-primary: #4338ca;
   --ifm-color-primary-dark: #3b31b7;
@@ -23,15 +23,43 @@
   --ifm-navbar-background-color: #4f46e5;
   --ifm-navbar-link-color: #fff;
   --ifm-navbar-link-hover-color: #ffffff;
-
-  --ifm-background-color: #ffffff;
-
-  /* --icon-fill: #ffffff;
-  --ifm-menu-link-sublist-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16px' height='16px' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(255,255,255,.8)' d='M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z'/%3E%3C/svg%3E");
-*/
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* DESKTOP NAVBAR: Only apply purple on desktop */
+@media (min-width: 1024px) {
+  :root {
+    --ifm-navbar-background-color: #4f46e5;
+    --ifm-navbar-link-color: #fff;
+    --ifm-navbar-link-hover-color: #ffffff;
+  }
+}
+
+/* LIGHT MODE MOBILE MENU (sidebar) styles */
+.menu {
+  background-color: #ffffff !important;
+}
+
+.menu__link {
+  color: #111827 !important;
+}
+
+.menu__link:hover {
+  color: #1f2937 !important;
+}
+
+.menu__link--active {
+  color: #374151 !important;
+}
+
+.menu__list-item .menu__link--sublist {
+  color: #111827 !important;
+}
+
+.menu__link--sublist.menu__link--disabled {
+  color: #6b7280 !important;
+}
+
+/* DARK MODE overrides */
 [data-theme="dark"] {
   --ifm-color-primary: #8b5cf6;
   --ifm-color-primary-dark: #c9b2fb;
@@ -43,52 +71,55 @@
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 
   --ifm-navbar-background-color: hsl(223, 74%, 7%);
-
   --ifm-background-color: hsl(222.2 84% 4.9%) !important;
-
   --ifm-navbar-link-hover-color: #8b5cf6;
-
-  /* --icon-fill: #ffffff;
-  --ifm-menu-link-sublist-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16px' height='16px' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(255,255,255,.8)' d='M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z'/%3E%3C/svg%3E"); */
 }
 
-/* menu items font size */
+/* DARK MODE: match sidebar to background */
+[data-theme="dark"] .menu {
+  background-color: hsl(222.2 84% 4.9%) !important;
+}
+
+[data-theme="dark"] .menu__link {
+  color: #f3f4f6 !important; /* Light gray text */
+}
+
+[data-theme="dark"] .menu__link:hover {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .menu__link--active {
+  color: #c4b5fd !important; /* Light violet */
+}
+
+[data-theme="dark"] .menu__link--sublist {
+  color: #f3f4f6 !important;
+}
+
+[data-theme="dark"] .menu__link--sublist.menu__link--disabled {
+  color: #9ca3af !important;
+}
+
+/* Optional: Font size */
 .menu__list {
   font-size: 0.96rem;
 }
 
+/* Toggle button */
 .toggleButton_gllP {
   color: white;
   fill: white;
 }
 
-/* Toggle button hover */
 .toggleButton_gllP:hover {
   background: #ffffff20 !important;
 }
 
-/* .menu {
-  background-color: #4f46e5;
+/* Make mobile menu icon white */
+.navbar__toggle {
+  color: white !important;
+  fill: white !important;
 }
-.menu__link {
-  color: white;
-}
-.menu__link:hover {
-  color: white;
-}
-.menu__list-item {
-  margin: .6rem 0;
-} */
-
-/* html[data-theme='dark'] body {
-  background-color: hsl(222.2 84% 4.9%);
-} */
-
-/* hsl(222.2 84% 4.9%) */
-
-/* html[data-theme='light'] .navbar__link:hover, .navbar__link--active {
-  border-bottom: 1px solid white;
-} */
 
 .footer {
   display: none;

@@ -368,23 +368,29 @@ def case_detail(request, pk):
             updated_case = serializer.save()
 
             if published is True:
-                # Clean up old snapshots
-                PublishedAssuranceCase.objects.filter(
-                    assurance_case=updated_case
-                ).delete()
-
                 # Generate full assurance case structure
                 updated_case_serialized = AssuranceCaseSerializer(updated_case)
                 case_data = updated_case_serialized.data
                 case_data["goals"] = get_json_tree(case_data["goals"], "goals")
 
-                # Create new snapshot
-                PublishedAssuranceCase.objects.create(
-                    assurance_case=updated_case,
-                    title=updated_case.name,
-                    description=updated_case.description,
-                    content=json.dumps(case_data),
-                )
+                # Try to fetch the existing published case
+                try:
+                    published_case = PublishedAssuranceCase.objects.get(
+                        assurance_case=updated_case
+                    )
+                    # Update the existing published case
+                    published_case.title = updated_case.name
+                    published_case.description = updated_case.description
+                    published_case.content = json.dumps(case_data)
+                    published_case.save()
+                except PublishedAssuranceCase.DoesNotExist:
+                    # Create new snapshot if not found
+                    PublishedAssuranceCase.objects.create(
+                        assurance_case=updated_case,
+                        title=updated_case.name,
+                        description=updated_case.description,
+                        content=json.dumps(case_data),
+                    )
 
             elif published is False:
                 # Safe to delete snapshots (already checked above)
