@@ -1,4 +1,4 @@
-""" from https://realpython.com/testing-in-django-part-1-best-practices-and-examples/
+"""from https://realpython.com/testing-in-django-part-1-best-practices-and-examples/
 https://www.bezkoder.com/django-rest-api/
 https://docs.djangoproject.com/en/3.2/topics/testing/tools/"""
 
