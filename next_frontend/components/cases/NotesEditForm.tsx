@@ -15,9 +15,10 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Textarea } from '../ui/textarea'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store'
 import { useToast } from '../ui/use-toast'
+import { useSession } from 'next-auth/react'
 
 type NotesEditFormProps = {
   note: any,
@@ -29,7 +30,8 @@ const formSchema = z.object({
 })
 
 const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore()
   const [loading, setLoading] = useState<boolean>(false)
   const { toast } = useToast()
@@ -56,7 +58,7 @@ const NotesEditForm = ({ note, setEdit } : NotesEditFormProps ) => {
       const requestOptions: RequestInit = {
           method: "PUT",
           headers: {
-              Authorization: `Token ${token}`,
+              Authorization: `Token ${session?.key}`,
               "Content-Type": "application/json",
           },
           body: JSON.stringify(newComment),

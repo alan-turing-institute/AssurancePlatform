@@ -5,7 +5,7 @@ import { Node } from "reactflow";
 import { useEffect, useState } from "react";
 import NodeCreate from "@/components/common/NodeCreate";
 import useStore from "@/data/store";
-import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { AlertModal } from "../modals/alertModal";
 import { neatJSON } from "neatjson";
@@ -22,6 +22,7 @@ import { usePermissionsModal } from "@/hooks/usePermissionsModal";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import SearchNodes from "../common/SearchNodes";
 import { useResourcesModal } from "@/hooks/useResourcesModal";
+import { useSession } from "next-auth/react";
 
 
 interface ActionButtonProps {
@@ -38,7 +39,8 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false);
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const { assuranceCase, setAssuranceCase } = useStore()
   const router = useRouter()
 
@@ -53,14 +55,14 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
       setLoading(true);
       const requestOptions: RequestInit = {
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         method: "DELETE",
       };
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`, requestOptions)
       if(response.ok) {
-        router.push('/')
+        router.push('/dashboard')
       }
     } catch (error: any) {
       console.log('ERROR!!!!', error)
@@ -106,6 +108,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
   }
 
   const handleCapture = async () => {
+    const token = session?.key ?? ''
     const screenshotTarget = document.getElementById('ReactFlow');
     if(screenshotTarget) {
       const canvas = await html2canvas(screenshotTarget)
@@ -144,7 +147,7 @@ const ActionButtons = ({ showCreateGoal, actions, notify, notifyError }: ActionB
       setLoading(true);
       const requestOptions: RequestInit = {
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         method: "POST",
       };

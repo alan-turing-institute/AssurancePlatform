@@ -15,9 +15,10 @@ import moment from 'moment'
 import { Eye, Loader2, MessageCircleMore, PencilRuler, ScanEye, Trash2 } from 'lucide-react'
 import { AlertModal } from '@/components/modals/alertModal'
 import { useParams, useRouter } from 'next/navigation'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import Image from 'next/image'
 import { Skeleton } from '../ui/skeleton'
+import { useSession } from 'next-auth/react'
 
 interface CaseCardProps {
   assuranceCase: any
@@ -25,7 +26,8 @@ interface CaseCardProps {
 
 const CaseCard = ({ assuranceCase } : CaseCardProps) => {
   const { id, name, description, created_date, image } = assuranceCase
-  const [ token ] = useLoginToken()
+  // const [ token ] = useLoginToken()
+  const { data: session } = useSession()
   const params = useParams();
   const router = useRouter()
 
@@ -45,7 +47,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
 
       const requestOptions: RequestInit = {
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         method: "DELETE",
       };
@@ -67,7 +69,7 @@ const CaseCard = ({ assuranceCase } : CaseCardProps) => {
       const requestOptions: RequestInit = {
         method: "GET",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         redirect: "follow"
       };

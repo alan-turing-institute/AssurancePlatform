@@ -1,6 +1,8 @@
 import datetime
+import uuid
 from enum import Enum
 
+from django.conf import settings  # Ensure we use the correct user model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -92,6 +94,8 @@ class AssuranceCase(models.Model):
     )
     shape = None
     color_profile = models.CharField(max_length=200, default="default")
+    published = models.BooleanField(default=False)
+    published_date = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -105,7 +109,8 @@ class TopLevelNormativeGoal(CaseItem):
     assurance_case = models.ForeignKey(
         AssuranceCase, related_name="goals", on_delete=models.CASCADE
     )
-    shape = Shape.RECTANGLE
+    # shape = Shape.RECTANGLE
+    assumption = models.TextField(blank=True, default="")
 
     def __str__(self):
         return self.name
@@ -131,6 +136,8 @@ class Context(CaseItem):
 
 class Strategy(CaseItem):
     shape = Shape.ROUNDED_RECTANGLE
+    assumption = models.TextField(blank=True, default="")
+    justification = models.TextField(blank=True, default="")
     goal = models.ForeignKey(
         TopLevelNormativeGoal,
         related_name="strategies",
@@ -159,6 +166,7 @@ class PropertyClaim(CaseItem):
         PROJECT = "Project claim"
 
     shape = Shape.RECTANGLE
+    assumption = models.TextField(blank=True, default="")
     claim_type = models.CharField(
         max_length=32, choices=ClaimType.choices, default=ClaimType.PROJECT
     )
@@ -298,3 +306,55 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+
+class PublishedAssuranceCase(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assurance_case = models.ForeignKey("AssuranceCase", on_delete=models.CASCADE)
+    # case_study = models.ForeignKey("CaseStudy", on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    description = models.CharField(max_length=1000, null=True, blank=True)
+    content = models.JSONField()  # Stores full assurance case details
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Snapshot of {self.title} for Case Study {self.case_study.id}"
+
+
+class CaseStudy(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    authors = models.CharField(max_length=255, blank=True, null=True)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    type = models.CharField(max_length=100, blank=True, null=True)
+    published_date = models.DateTimeField(blank=True, null=True)
+    last_modified_on = models.DateTimeField(auto_now=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    sector = models.CharField(max_length=100, blank=True, null=True)
+    contact = models.EmailField(blank=True, null=True)
+    assurance_cases = models.ManyToManyField(PublishedAssuranceCase, blank=True)
+    image = models.URLField(blank=True, null=True)
+    published = models.BooleanField(default=False)
+
+    # Add the owner field
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,  # Dynamically uses your custom user model
+        related_name="case_study",
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+    def __str__(self):
+        return self.title
+
+
+class CaseStudyFeatureImage(models.Model):
+    case_study = models.OneToOneField(
+        CaseStudy, on_delete=models.CASCADE, related_name="feature_image"
+    )
+    image = models.ImageField(upload_to="case_study_images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feature Image for {self.case_study.title}"

@@ -1,15 +1,15 @@
 'use client'
 
-import { useLoginToken } from '@/hooks/useAuth';
+// import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
@@ -27,7 +27,8 @@ const SignInForm = () => {
 
   const router = useRouter()
 
-  const [token, setToken] = useLoginToken();
+  // const [token, setToken] = useLoginToken();
+  const { data: session } = useSession()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -37,33 +38,54 @@ const SignInForm = () => {
     },
   })
 
+  // async function onSubmit(values: z.infer<typeof formSchema>) {
+  //   setLoading(true);
+
+  //   const user = {
+  //     username: values.username,
+  //     password: values.password,
+  //   };
+
+  //   const requestOptions: RequestInit = {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify(user),
+  //   }
+
+  //   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
+  //   const result = await response.json()
+
+  //   if (result.key) {
+  //     setToken(result.key);
+  //     router.push('/dashboard')
+  //     return
+  //   } else {
+  //     setLoading(false);
+  //     setToken(null);
+  //     setErrors(["Cannot log in with provided credentials"]);
+  //   }
+  // }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
 
-    const user = {
-      username: values.username,
-      password: values.password,
-    };
+    const { username, password } = values;
 
-    const requestOptions: RequestInit = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    }
+    // Use next-auth's signIn method with "credentials" provider
+    const result = await signIn('credentials', {
+      redirect: false, // Prevent automatic navigation
+      username,
+      password,
+    });
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
-    const result = await response.json()
-
-    if (result.key) {
-      setToken(result.key);
-      router.push('/dashboard')
-      return
+    if (result && result.ok) {
+      // Redirect to dashboard on successful sign-in
+      router.push('/dashboard');
     } else {
       setLoading(false);
-      setToken(null);
-      setErrors(["Cannot log in with provided credentials"]);
+      setErrors([result?.error || 'Unable to log in with provided credentials']);
     }
   }
 
@@ -75,10 +97,10 @@ const SignInForm = () => {
   }
 
   useEffect(() => {
-    if(token) {
+    if(session?.key) {
       router.push('/dashboard')
     }
-  },[token])
+  },[session])
 
   return (
     <div className="mx-auto w-full max-w-sm lg:w-96">

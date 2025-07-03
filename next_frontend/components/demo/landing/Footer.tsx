@@ -1,4 +1,11 @@
-const navigation = [
+const navigation = {
+  main: [
+    { name: 'Platform', href: '/dashboard' },
+    { name: 'Discover', href: '/discover' },
+    { name: 'Documentation', href: '/documentation' },
+    { name: 'Cookie Policy', href: '/cookie-policy' },
+  ],
+  social: [
   {
     name: 'X',
     href: 'https://x.com/turinginst',
@@ -22,24 +29,28 @@ const navigation = [
     ),
   },
 ]
+}
 
 export default function Footer() {
   return (
-    <footer className="bg-white pb-16">
-      <div className="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
-        <div className="flex justify-center space-x-6 md:order-2">
-          {navigation.map((item) => (
-            <a key={item.name} href={item.href} className="text-gray-400 hover:text-gray-500">
+    <footer className="bg-white">
+      <div className="mx-auto max-w-7xl overflow-hidden px-6 py-20 sm:py-24 lg:px-6">
+        <nav aria-label="Footer" className="-mb-6 flex flex-wrap justify-center gap-x-12 gap-y-3 text-sm/6">
+          {navigation.main.map((item) => (
+            <a key={item.name} href={item.href} className="text-gray-600 hover:text-gray-900">
+              {item.name}
+            </a>
+          ))}
+        </nav>
+        <div className="mt-16 flex justify-center gap-x-10">
+          {navigation.social.map((item) => (
+            <a key={item.name} href={item.href} className="text-gray-600 hover:text-gray-800">
               <span className="sr-only">{item.name}</span>
-              <item.icon className="h-6 w-6" aria-hidden="true" />
+              <item.icon aria-hidden="true" className="size-6" />
             </a>
           ))}
         </div>
-        <div className="mt-8 md:order-1 md:mt-0">
-          <p className="text-center text-xs leading-5 text-gray-500">
-            &copy; 2020 Alan Turing Institute. All rights reserved.
-          </p>
-        </div>
+        <p className="mt-10 text-center text-sm/6 text-gray-600">&copy; 2024 Your Company, Inc. All rights reserved.</p>
       </div>
     </footer>
   )

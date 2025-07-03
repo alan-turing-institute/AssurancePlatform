@@ -11,10 +11,12 @@ import { boolean } from 'zod'
 import NotesEditField from './NotesEditForm'
 import NotesEditForm from './NotesEditForm'
 import { useToast } from '../ui/use-toast'
+import { useSession } from 'next-auth/react'
 
 export default function NotesFeed({ }) {
   const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } = useStore()
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [edit, setEdit] = useState<boolean>()
   const [editId, setEditId] = useState<number>()
   const [newComment, setNewComment] = useState<string>()
@@ -28,7 +30,7 @@ export default function NotesFeed({ }) {
   const fetchSingleCase = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     };
 
@@ -49,7 +51,7 @@ export default function NotesFeed({ }) {
   const fetchCurrentUser = async () => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     }
 
@@ -85,7 +87,7 @@ export default function NotesFeed({ }) {
       const requestOptions: RequestInit = {
           method: "DELETE",
           headers: {
-              Authorization: `Token ${token}`,
+              Authorization: `Token ${session?.key}`,
               "Content-Type": "application/json",
           }
       };

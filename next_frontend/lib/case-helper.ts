@@ -837,6 +837,56 @@ export const updateAssuranceCaseNode = async (
   }
 };
 
+export const getAssuranceCaseNode = async (
+  type: string,
+  id: any,
+  token: string | null
+) => {
+  if (!token) return console.log("No token");
+
+  let entity = null;
+  switch (type) {
+    case "context":
+      entity = "contexts";
+      break;
+    case "strategy":
+      entity = "strategies";
+      break;
+    case "property":
+      entity = "propertyclaims";
+      break;
+    case "evidence":
+      entity = "evidence";
+      break;
+    default:
+      entity = "goals";
+      break;
+  }
+
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+
+    const requestOptions: RequestInit = {
+      method: "GET",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      }
+    };
+    const response = await fetch(url, requestOptions);
+
+    if (!response.ok) {
+      console.log('Something went wrong')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.log("Error", error);
+    return false;
+  }
+};
+
 /**
  * Recursively searches for an item by its ID within a nested structure.
  *

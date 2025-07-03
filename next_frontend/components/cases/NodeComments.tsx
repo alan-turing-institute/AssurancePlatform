@@ -5,13 +5,14 @@ import { Separator } from '../ui/separator'
 import { ScrollArea } from '../ui/scroll-area'
 import useStore from '@/data/store'
 import { addEvidenceToClaim, addPropertyClaimToNested, attachCaseElement, deleteAssuranceCaseNode, removeAssuranceCaseNode, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import { BookOpenText, Database, FolderOpenDot, Loader2, MessageCirclePlus, PlusIcon, Route, Trash, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { AlertModal } from '../modals/alertModal'
 import CommentsForm from './CommentForm'
 import CommentsFeed from './CommentsFeed'
 import { Skeleton } from '../ui/skeleton'
+import { useSession } from 'next-auth/react'
 
 type NodeCommentProps = {
   node: any
@@ -30,7 +31,8 @@ const NodeComment = ({ node, handleClose, loadingState, setAction, readOnly } : 
   const [filteredOrphanElements, setFilteredOrphanElements] = useState<any[]>([])
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   useEffect(() => {
 
@@ -64,7 +66,7 @@ const NodeComment = ({ node, handleClose, loadingState, setAction, readOnly } : 
       const requestOptions: RequestInit = {
         method: "GET",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
       };

@@ -4,6 +4,8 @@ import { ArrowDown, ChevronDown, Goal } from 'lucide-react';
 import React, { memo, useState } from 'react';
 import { Handle, NodeProps, Position, getConnectedEdges, getOutgoers } from 'reactflow';
 import ToggleButton from './ToggleButton';
+import { InformationCircleIcon } from '@heroicons/react/20/solid';
+import IconIndicator from './IconIndicator';
 
 function GoalNode({ data, ...props }: NodeProps) {
   const [hidden, setHidden] = useState<boolean>(true)
@@ -15,7 +17,10 @@ function GoalNode({ data, ...props }: NodeProps) {
           <Goal />
         </div>
         <div className="ml-2 w-[200px]">
-          <div className="text-lg font-bold">{data.name}</div>
+          <div className='flex justify-start items-center gap-4'>
+            <div className="text-lg font-bold">{data.name}</div>
+            <IconIndicator data={data} />
+          </div>
           {/* Ensure there is a value */}
           {data.description ? (
             <p className="text-xs line-clamp-2">{data.description}</p>

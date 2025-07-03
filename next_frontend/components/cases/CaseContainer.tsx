@@ -13,6 +13,7 @@ import { addHiddenProp } from '@/lib/case-helper';
 import CaseDetails from './CaseDetails';
 import Link from 'next/link';
 import WebSocketComponent from '@/components/Websocket';
+import { useSession } from 'next-auth/react';
 
 const CaseContainer = () => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -23,13 +24,15 @@ const CaseContainer = () => {
   const params = useParams()
   const { caseId } = params
 
-  const [token] = useLoginToken();
+  const { data: session } = useSession()
+
+  // const [token] = useLoginToken();
   // useEnforceLogin()
 
   const fetchSingleCase = async (id: number) => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     };
 
@@ -52,7 +55,7 @@ const CaseContainer = () => {
   const fetchOrphanedElements = async (id: any) => {
     const requestOptions: RequestInit = {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${session?.key}`,
       },
     };
 

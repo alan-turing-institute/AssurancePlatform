@@ -19,8 +19,9 @@ import { Button } from '../ui/button'
 import useStore from '@/data/store';
 import { CloudFog, Loader, Loader2, Lock, LockIcon, LockKeyhole } from 'lucide-react'
 import { getLayoutedElements } from '@/lib/layout-helper'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
+import { useSession } from 'next-auth/react'
 
 const formSchema = z.object({
   URL: z.string().min(2, {
@@ -28,7 +29,7 @@ const formSchema = z.object({
   }).optional(),
   description: z.string().min(2, {
     message: "Description must be atleast 2 characters"
-  })
+  }),
 })
 
 interface EditFormProps {
@@ -43,18 +44,20 @@ const EditForm: React.FC<EditFormProps> = ({
   setUnresolvedChanges
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: node.data || {
       URL: '',
-      description: ''
+      description: '',
     }
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log('UPDATING GOAL NODE.......')
     setLoading(true)
     // Update item via api
     const updateItem = {
@@ -66,7 +69,7 @@ const EditForm: React.FC<EditFormProps> = ({
       updateItem.URL = values.URL
     }
 
-    const updated = await updateAssuranceCaseNode(node.type, node.data.id, token, updateItem)
+    const updated = await updateAssuranceCaseNode(node.type, node.data.id, session?.key ?? '', updateItem)
 
     if(updated) {
       // Assurance Case Update
@@ -93,7 +96,7 @@ const EditForm: React.FC<EditFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
         <FormField
           control={form.control}
           name="description"

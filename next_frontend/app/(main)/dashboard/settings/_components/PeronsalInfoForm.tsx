@@ -14,10 +14,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Lock, MoveLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useLoginToken } from "@/hooks/useAuth"
+// import { useLoginToken } from "@/hooks/useAuth"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useSession } from "next-auth/react"
@@ -61,9 +60,9 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
   const [loading, setLoading] = useState<boolean>(false)
 
   const router = useRouter()
-  const [token] = useLoginToken();
-  const { toast } = useToast()
+  // const [token] = useLoginToken();
   const { data: session } = useSession()
+  const { toast } = useToast()
 
   const notify = (message: string) => {
     toast({
@@ -99,7 +98,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
       const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newUserDetails),
@@ -120,6 +119,8 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
 
     setLoading(false)
   }
+
+  console.log('Current User', data)
 
   return (
     <>
@@ -210,15 +211,15 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 <FormItem className="col-span-full">
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
+                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={data.email == '' ? false : true} />
                   </FormControl>
-                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
+                  {data.email == '' ? false : true && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-          {!session && (
+          {!data.email && (
             <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
               {loading ? 'Updating' : 'Update'}
             </Button>

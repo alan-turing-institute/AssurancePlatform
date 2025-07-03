@@ -15,7 +15,8 @@ import { Button } from "../ui/button";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { useLoginToken } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
+// import { useLoginToken } from "@/hooks/useAuth";
 
 const formSchema = z.object({
   name: z.string().min(1),
@@ -26,7 +27,8 @@ const formSchema = z.object({
 export const CaseCreateModal = () => {
   const createCaseModal = useCreateCaseModal();
   const router = useRouter();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState(0);
@@ -49,7 +51,7 @@ export const CaseCreateModal = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         body: json_str,
       };
@@ -76,7 +78,7 @@ export const CaseCreateModal = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [token]
+    [session]
   );
 
   const handleCancel = (e: any) => {

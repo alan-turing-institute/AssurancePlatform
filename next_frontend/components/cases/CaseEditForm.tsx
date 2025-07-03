@@ -17,7 +17,8 @@ import { Textarea } from "../ui/textarea"
 import { Button } from '../ui/button'
 import useStore from '@/data/store';
 import { Loader2, Lock } from 'lucide-react'
-import { useLoginToken } from '@/hooks/useAuth'
+import { useSession } from 'next-auth/react'
+// import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -38,7 +39,8 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
   setUnresolvedChanges
 }) => {
   const { assuranceCase, setAssuranceCase } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -60,7 +62,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
     const requestOptions: RequestInit = {
         method: "PUT",
         headers: {
-            Authorization: `Token ${token}`,
+            Authorization: `Token ${session?.key}`,
             "Content-Type": "application/json",
         },
         body: JSON.stringify(updateItem)

@@ -17,8 +17,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCallback, useState } from "react";
-import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const ACCEPTED_FILE_TYPES = ["application/json"]; // Correct MIME type for JSON files
 
@@ -42,7 +43,8 @@ const formSchema = z.object({
 
 export const ImportModal = () => {
   const importModal = useImportModal();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('');
@@ -59,7 +61,7 @@ export const ImportModal = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
+          Authorization: `Token ${session?.key}`,
         },
         body: JSON.stringify(json),
       };
@@ -85,7 +87,7 @@ export const ImportModal = () => {
           setError("An error occurred, please try again later");
         });
     },
-    [token]
+    [session]
   );
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {

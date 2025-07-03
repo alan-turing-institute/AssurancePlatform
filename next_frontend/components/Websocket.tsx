@@ -1,15 +1,17 @@
 'use client';
 
 import useStore from '@/data/store';
-import { useLoginToken } from '@/hooks/useAuth';
+// import { useLoginToken } from '@/hooks/useAuth';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { X } from 'lucide-react';
 import { usePrevious } from '@/hooks/usePrevious';
+import { useSession } from 'next-auth/react';
 
 const WebSocketComponent = () => {
   const { assuranceCase, setAssuranceCase, activeUsers, setActiveUsers } = useStore();
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<string[]>([]);
   const [debug, setDebug] = useState<boolean>(false);
 
@@ -27,7 +29,7 @@ const WebSocketComponent = () => {
     const webSocketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('https', 'wss')
 
     let interval: any;
-    const wsUrl = `${webSocketUrl}ws/case/${assuranceCase.id}/?token=${token}`;
+    const wsUrl = `${webSocketUrl}/ws/case/${assuranceCase.id}/?token=${session?.key}`;
 
     const setupWebSocket = () => {
       const websocket = new WebSocket(wsUrl);
@@ -87,7 +89,7 @@ const WebSocketComponent = () => {
       }
       clearInterval(interval);
     };
-  }, [assuranceCase?.id, token]); // Run effect when assuranceCase.id or token changes
+  }, [assuranceCase?.id, session?.key]); // Run effect when assuranceCase.id or token changes
 
 
   const prevAssuranceCaseString = usePrevious(JSON.stringify(assuranceCase));

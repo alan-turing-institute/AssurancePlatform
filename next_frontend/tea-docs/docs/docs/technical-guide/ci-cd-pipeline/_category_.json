@@ -1,0 +1,8 @@
+{
+  "label": "CI/CD Pipeline",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Guides for CI/CD and Containers."
+  }
+}

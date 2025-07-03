@@ -15,10 +15,11 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Textarea } from '../ui/textarea'
-import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store'
 import { updateElementComment } from '@/lib/case-helper'
 import { useToast } from '../ui/use-toast'
+import { useSession } from 'next-auth/react'
 
 type CommentsEditFormProps = {
   node: any
@@ -31,7 +32,8 @@ const formSchema = z.object({
 })
 
 const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) => {
-  const [token] = useLoginToken();
+  // const [token] = useLoginToken();
+  const { data: session } = useSession()
   const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore()
   const [loading, setLoading] = useState<boolean>(false)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for the textarea
@@ -59,7 +61,7 @@ const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) =
       const requestOptions: RequestInit = {
           method: "PUT",
           headers: {
-              Authorization: `Token ${token}`,
+              Authorization: `Token ${session?.key}`,
               "Content-Type": "application/json",
           },
           body: JSON.stringify(newComment),

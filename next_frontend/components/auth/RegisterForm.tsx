@@ -9,6 +9,7 @@ import { Input } from "../ui/input"
 import { useEffect, useState } from "react"
 import { useEnforceLogout, useLoginToken } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 const formSchema = z.object({
   username: z.string()
@@ -29,7 +30,8 @@ const formSchema = z.object({
 const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>([]);
-  const [_, setToken] = useLoginToken();
+  // const [_, setToken] = useLoginToken();
+  const { data: session } = useSession()
 
   const router = useRouter()
 
@@ -77,13 +79,13 @@ const RegisterForm = () => {
       const result = await response.json()
 
       if (result.key) {
-        setToken(result.key);
+        // setToken(result.key);
         router.push('/dashboard')
       }
       else {
           // const currentErrors = [];
           setLoading(false);
-          setToken(null);
+          // setToken(null);
           // if (result.username) {
           //   currentErrors.push(...result.username.slice(1));
           // }
@@ -104,7 +106,7 @@ const RegisterForm = () => {
   }
 
   useEffect(() => {
-    let token = localStorage.getItem("token");
+    let token = session?.key
     if(token) {
       router.push('/dashboard')
     }

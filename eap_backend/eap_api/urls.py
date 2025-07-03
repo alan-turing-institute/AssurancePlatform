@@ -1,8 +1,13 @@
 from django.urls import include, path
 
+# from .views import CaseStudyViewSet  # Import your viewset
 from . import views
 
+# router = DefaultRouter()
+# router.register(r'case-studies', CaseStudyViewSet, basename='case-study')
+
 urlpatterns = [
+    # path('', include(router.urls)),  # Add this line to include viewset routes
     path("auth/", include("rest_auth.urls")),
     path("auth/register/", include("rest_auth.registration.urls")),
     path("user/", views.self_detail, name="self_detail"),
@@ -94,5 +99,32 @@ urlpatterns = [
         "github_repositories/",
         views.github_repository_list,
         name="github_repository_list",
+    ),
+    path("case-studies/", views.case_study_list, name="case_study_list"),
+    path("case-studies/<int:pk>/", views.case_study_detail, name="case_study_detail"),
+    path(
+        "case-studies/<int:pk>/image/",
+        views.case_study_feature_image,
+        name="case_study_feature_image",
+    ),
+    path(
+        "published-assurance-cases/",
+        views.published_assurance_case_list,
+        name="published_assurance_case_list",
+    ),
+    path(
+        "public/case-studies/",
+        views.public_case_study_list,
+        name="public_case_study_list",
+    ),
+    path(
+        "public/case-studies/<int:pk>/",
+        views.public_case_study_detail,
+        name="public_case_study_detail",
+    ),
+    path(
+        "public/assurance-case/<uuid:id>/",
+        views.published_assurance_case_detail,
+        name="published_assurance_case_detail",
     ),
 ]
