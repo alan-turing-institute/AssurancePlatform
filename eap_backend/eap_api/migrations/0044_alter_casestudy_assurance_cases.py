@@ -16,9 +16,8 @@ class Migration(migrations.Migration):
         # This avoids the PostgreSQL type casting error
         migrations.RunSQL(
             "DROP TABLE IF EXISTS eap_api_casestudy_assurance_cases CASCADE;",
-            reverse_sql="-- No reverse operation needed"
+            reverse_sql="-- No reverse operation needed",
         ),
-        
         # Set the final state: ManyToManyField to PublishedAssuranceCase (UUID)
         # This is the desired end state from migration 0046
         migrations.AlterField(
