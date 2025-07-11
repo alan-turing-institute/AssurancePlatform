@@ -7,11 +7,11 @@ channels==4.2.0
 click==8.1.7
 colorama==0.4.6
 coverage==7.6.7
+dj-rest-auth==6.0.0
 Django==5.1.11
 django-allauth==65.3.0
 django-cors-headers==4.6.0
 django-extensions==3.2.3
-dj-rest-auth==6.0.0
 django-storages==1.14.4
 django-test==0.4030
 django-urls==1.1.3

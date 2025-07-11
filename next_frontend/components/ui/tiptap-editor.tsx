@@ -7,9 +7,9 @@ import Color from '@tiptap/extension-color'
 import TextAlign from '@tiptap/extension-text-align'
 import ListItem from '@tiptap/extension-list-item'
 import Placeholder from '@tiptap/extension-placeholder'
-import { 
-  Bold, 
-  Italic, 
+import {
+  Bold,
+  Italic,
   Underline,
   Strikethrough,
   AlignLeft,
@@ -63,12 +63,12 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
     return null
   }
 
-  const ToolbarButton = ({ 
-    onClick, 
-    isActive, 
-    children, 
-    title 
-  }: { 
+  const ToolbarButton = ({
+    onClick,
+    isActive,
+    children,
+    title
+  }: {
     onClick: () => void
     isActive?: boolean
     children: React.ReactNode
@@ -100,7 +100,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <Bold className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
@@ -108,7 +108,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <Italic className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
@@ -118,7 +118,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         </ToolbarButton>
 
         <div className="w-px h-6 bg-border mx-1" />
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
           isActive={editor.isActive({ textAlign: 'left' })}
@@ -126,7 +126,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
           isActive={editor.isActive({ textAlign: 'center' })}
@@ -134,7 +134,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
           isActive={editor.isActive({ textAlign: 'right' })}
@@ -144,7 +144,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         </ToolbarButton>
 
         <div className="w-px h-6 bg-border mx-1" />
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
@@ -152,7 +152,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <List className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
@@ -160,7 +160,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
         >
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
-        
+
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive('blockquote')}
@@ -171,7 +171,7 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
 
         {/* Heading buttons */}
         <div className="w-px h-6 bg-border mx-1" />
-        
+
         {[1, 2, 3].map((level) => (
           <ToolbarButton
             key={level}
@@ -185,8 +185,8 @@ export default function TiptapEditor({ value = '', onChange, className, placehol
       </div>
 
       {/* Editor */}
-      <EditorContent 
-        editor={editor} 
+      <EditorContent
+        editor={editor}
         className="prose prose-sm sm:prose-base max-w-none p-4 min-h-[200px] focus:outline-none prose-neutral dark:prose-invert"
       />
     </div>
