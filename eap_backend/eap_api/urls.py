@@ -8,8 +8,8 @@ from . import views
 
 urlpatterns = [
     # path('', include(router.urls)),  # Add this line to include viewset routes
-    path("auth/", include("rest_auth.urls")),
-    path("auth/register/", include("rest_auth.registration.urls")),
+    path("auth/", include("dj_rest_auth.urls")),
+    path("auth/register/", include("dj_rest_auth.registration.urls")),
     path("user/", views.self_detail, name="self_detail"),
     path("users/", views.user_list, name="user_list"),
     path("users/<int:pk>/", views.user_detail, name="user_detail"),

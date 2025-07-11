@@ -75,61 +75,106 @@
   }
 }
 
-.ql-toolbar.ql-snow {
-  /* background-color: hsl(var(--secondary)); */
-  border-color: hsl(0, 0%, 90%) !important;
-  border-radius: 0.25rem 0.25rem 0rem 0rem;
-}
-
-.ql-container.ql-snow {
-  border-color: hsl(0, 0%, 90%) !important;
-  border-radius: 0rem 0rem 0.25rem 0.25rem;
-}
-
-.dark .ql-toolbar.ql-snow {
-  /* background-color: hsl(var(--secondary)); */
-  border-color: hsl(240, 25%, 20%) !important;
-  border-radius: 0.25rem 0.25rem 0rem 0rem;
-}
-
-.dark .ql-container.ql-snow {
-  border-color: hsl(240, 25%, 20%) !important;
-  border-radius: 0rem 0rem 0.25rem 0.25rem;
-}
-
-.dark .ql-picker {
-  color: white !important;
-}
-
-.dark .ql-picker > svg {
-  color: white !important;
-}
-
-.dark .ql-toolbar svg {
-  stroke: white;
-  fill: white;
-}
-
-/* Ensure stroke properties are applied */
-.dark .ql-toolbar .ql-stroke {
-  stroke: white;
-}
-
-.dark .ql-toolbar .ql-fill {
-  fill: white;
-}
-
-.dark .ql-toolbar .ql-even {
-  stroke: white;
-  fill: white;
-}
-
-.dark .ql-picker-options {
-  background-color: black !important;
-  color: white !important;
-}
-
-/* .dark .ql-toolbar.ql-snow {
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+  color: hsl(var(--foreground));
   background-color: hsl(var(--background));
-  border: none !important;
-} */
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding: 0 1rem;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  line-height: 1.1;
+  margin-top: 2.5rem;
+  text-wrap: pretty;
+  color: hsl(var(--foreground));
+}
+
+.ProseMirror h1,
+.ProseMirror h2 {
+  margin-top: 3.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ProseMirror h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.ProseMirror h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.ProseMirror h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  margin: 1.5rem 0;
+  padding-left: 1rem;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.ProseMirror strong {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  color: hsl(var(--foreground));
+}
+
+.ProseMirror code {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.ProseMirror pre {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Ensure lists have proper spacing and colors */
+.ProseMirror ul li,
+.ProseMirror ol li {
+  color: hsl(var(--foreground));
+  margin: 0.25rem 0;
+}
+
+/* Selection styles */
+.ProseMirror ::selection {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
