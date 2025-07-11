@@ -8,17 +8,16 @@ def populate_published_assurance_cases(apps, schema_editor):
     """
     Populate the new published_assurance_cases field based on existing assurance_cases.
     This is a placeholder for future data migration logic if needed.
-    
+
     Since we're in development and the relationship change is fundamental
     (AssuranceCase -> PublishedAssuranceCase), we'll leave this empty for now.
     Production systems would need custom logic here.
     """
     CaseStudy = apps.get_model("eap_api", "CaseStudy")
     PublishedAssuranceCase = apps.get_model("eap_api", "PublishedAssuranceCase")
-    
+
     # For development: no data migration needed
     # Production would implement logic to map AssuranceCase -> PublishedAssuranceCase
-    pass
 
 
 def reverse_populate_published_assurance_cases(apps, schema_editor):
@@ -26,7 +25,7 @@ def reverse_populate_published_assurance_cases(apps, schema_editor):
     Reverse data migration - clear the new field
     """
     CaseStudy = apps.get_model("eap_api", "CaseStudy")
-    
+
     for case_study in CaseStudy.objects.all():
         case_study.published_assurance_cases.clear()
 

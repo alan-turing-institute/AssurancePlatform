@@ -15,9 +15,9 @@ class Migration(migrations.Migration):
             model_name="casestudy",
             name="published_assurance_cases",
             field=models.ManyToManyField(
-                blank=True, 
+                blank=True,
                 to="eap_api.PublishedAssuranceCase",
-                help_text="New field to replace assurance_cases with UUID relationship"
+                help_text="New field to replace assurance_cases with UUID relationship",
             ),
         ),
     ]

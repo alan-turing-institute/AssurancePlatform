@@ -83,7 +83,7 @@ const RegisterForm = () => {
           username: values.username,
           password: values.password1,
         });
-        
+
         if (signInResult && signInResult.ok) {
           // NextAuth will handle redirect via authOptions callback
           router.push('/dashboard');
@@ -95,7 +95,7 @@ const RegisterForm = () => {
       else {
           const currentErrors = [];
           setLoading(false);
-          
+
           if (result.username) {
             currentErrors.push(...result.username);
           }
@@ -111,7 +111,7 @@ const RegisterForm = () => {
           if (result.non_field_errors) {
             currentErrors.push(...result.non_field_errors);
           }
-          
+
           setErrors(currentErrors.length > 0 ? currentErrors : ['Registration failed. Please try again.']);
       }
     } catch (error) {

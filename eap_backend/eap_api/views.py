@@ -1120,10 +1120,8 @@ def case_study_list(request):
                 )
 
             if not isinstance(assurance_cases_list, list):
-                return JsonResponse(
-                    {"assurance_cases": "Must be a list."}, status=400
-                )
-            
+                return JsonResponse({"assurance_cases": "Must be a list."}, status=400)
+
             # Validate that all items are valid UUID strings or integers
             for item in assurance_cases_list:
                 if not isinstance(item, (str, int)):
