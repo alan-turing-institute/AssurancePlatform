@@ -1,4 +1,4 @@
-import { signOut } from "next-auth/react"
+'use server'
 
 export const fetchAssuranceCases = async (token: string) => {
   try {
@@ -13,7 +13,7 @@ export const fetchAssuranceCases = async (token: string) => {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases?owner=true&view=false&edit=false&review=false`,
+      `${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) ?? (process.env.API_URL_STAGING || process.env.NEXT_PUBLIC_API_URL_STAGING)}/api/cases?owner=true&view=false&edit=false&review=false`,
       requestOptions
     )
 
@@ -37,7 +37,7 @@ export const fetchSharedAssuranceCases = async (token: string) => {
     myHeaders.append("Content-Type", "application/json");
     myHeaders.append("Authorization", `Token ${token}`);
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases?owner=false&view=true&edit=true`
+    const url = `${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) ?? (process.env.API_URL_STAGING || process.env.NEXT_PUBLIC_API_URL_STAGING)}/api/cases?owner=false&view=true&edit=true`
 
     const requestOptions: RequestInit = {
       method: 'GET',
@@ -50,7 +50,7 @@ export const fetchSharedAssuranceCases = async (token: string) => {
     if(response.status === 401) {
       console.log('Invalid Token')
       // localStorage.removeItem('token')
-      await signOut()
+      // await signOut() // TODO: Handle signOut differently in server action
       return null
     }
 
@@ -75,7 +75,7 @@ export const fetchPublishedAssuranceCases = async (token: string) => {
     }
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/published-assurance-cases/`,
+      `${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) ?? (process.env.API_URL_STAGING || process.env.NEXT_PUBLIC_API_URL_STAGING)}/api/published-assurance-cases/`,
       requestOptions
     )
 

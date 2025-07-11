@@ -3,7 +3,6 @@
 import React, { Dispatch, useEffect, useState } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { fetchPublishedAssuranceCases } from '@/actions/assuranceCases'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { MoveRightIcon } from 'lucide-react'
@@ -36,9 +35,16 @@ const RelatedAssuranceCaseList = ({ published, selectedAssuranceCases, setSelect
       //   console.log(allCases)
       //   setAssuranceCasesList(allCases)
       // }
-      const allCases = await fetchPublishedAssuranceCases(data?.key!!)
-      console.log('ALL PUBLISHED A.CASES', allCases)
-      setAssuranceCasesList(allCases)
+      const response = await fetch('/api/published-assurance-cases', {
+        headers: {
+          'Authorization': `Token ${data?.key}`
+        }
+      })
+      if (response.ok) {
+        const allCases = await response.json()
+        console.log('ALL PUBLISHED A.CASES', allCases)
+        setAssuranceCasesList(allCases)
+      }
     }
 
     getCases()
