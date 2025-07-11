@@ -1119,12 +1119,15 @@ def case_study_list(request):
                     status=400,
                 )
 
-            if not isinstance(assurance_cases_list, list) or not all(
-                isinstance(i, int) for i in assurance_cases_list
-            ):
-                return JsonResponse(
-                    {"assurance_cases": "Must be a list of integers."}, status=400
-                )
+            if not isinstance(assurance_cases_list, list):
+                return JsonResponse({"assurance_cases": "Must be a list."}, status=400)
+
+            # Validate that all items are valid UUID strings or integers
+            for item in assurance_cases_list:
+                if not isinstance(item, (str, int)):
+                    return JsonResponse(
+                        {"assurance_cases": "Must be a list of valid IDs."}, status=400
+                    )
 
             data.setlist(
                 "assurance_cases", assurance_cases_list

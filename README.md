@@ -6,7 +6,48 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform.svg?branch=MVP)](https://app.travis-ci.com/alan-turing-institute/AssurancePlatform)
+
+## Development Quickstart 💻
+
+Get the TEA Platform running locally with Docker in just a few steps:
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+- [Git](https://git-scm.com/downloads)
+- A [GitHub OAuth App](https://github.com/settings/applications/new) for authentication
+
+### Quick Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+   cd AssurancePlatform
+   ```
+
+2. **Set up environment files**
+   ```bash
+   # Copy example environment files
+   cp eap_backend/.env.example eap_backend/.env.local
+   cp next_frontend/.env.example next_frontend/.env.local
+   ```
+
+3. **Configure GitHub OAuth (optional)**
+   - Create a [new GitHub OAuth App](https://github.com/settings/applications/new)
+   - Set Homepage URL: `http://localhost:3000`
+   - Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
+   - Add your Client ID and Client Secret to both `.env.local` files
+
+4. **Start the development environment**
+   ```bash
+   docker-compose -f docker-compose.development.yml up --build
+   ```
+
+5. **Access the platform**
+   - 🌐 **Frontend**: http://localhost:3000
+   - 🔧 **Backend API**: http://localhost:8000/api
+   - 🗄️ **Database**: PostgreSQL on localhost:5432
+
+The platform includes user registration, so you can create an account directly or sign in with GitHub (optional). For more detailed setup instructions, see the [technical documentation](https://assuranceplatform.azurewebsites.net/documentation/docs/technical-guide/setup-installation).
 
 ## About this Repository 🗂
 
@@ -16,27 +57,25 @@ ethical assurance cases, developed by researchers at the
 [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
 and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
-The UK's Responsible Technology Adoption Unit (Department of Science, Innovation, and Technology) is also a project partner.
+### What is TEA? 🫖
 
-## Usage and Deployment Instructions 💻
+The Trustworthy and Ethical Assurance (TEA) Platform is a collaborative tool for developing structured arguments about how ethical principles and trustworthy practices have been upheld throughout the lifecycle of data-driven technologies.
 
-### 1 Use the TEA Platorm
+At its core, TEA helps multi-stakeholder project teams create **assurance cases**: structured, graphical representations that demonstrate how goals like fairness, explainability, safety, or sustainability have been achieved over the course of a project's lifecycle.
 
-If you'd like to just use the TEA platform, and have some familiarity with building assurance cases already, please go to [https://assuranceplatform.azurewebsites.net/](https://assuranceplatform.azurewebsites.net/).
+The platform addresses a fundamental challenge in responsible technology development: how can project teams provide **justified evidence** that ethical principles have been upheld?
 
-> [!WARNING]
-> The TEA platform is made available as a **research preview**, and should not be used for any business critical tasks. Future breaking changes should be expected.
+TEA supports this through three integrated components:
 
-### 2 Learn About TEA
+1. An interactive tool for building assurance cases
+2. A comprehensive framework of skills and capabilities resources
+3. A collaborative community infrastructure that promotes open practices and shared learning in the trustworthy assurance ecosystem
 
-If you are not sure what an assurance case is, or need some help using the platform, please view our documentation site at
-[https://alan-turing-institute.github.io/AssurancePlatform](https://alan-turing-institute.github.io/AssurancePlatform).
+### Documentation 📄
 
-### 3 Run Locally
+Our documentation site can be accessed at [https://assuranceplatform.azurewebsites.net/documentation](https://assuranceplatform.azurewebsites.net/documentation)
 
-The TEA application can be run locally or deployed on your own server or a cloud-based service (e.g. Azure). You can find the instructions on how to do this here: [https://alan-turing-institute.github.io/AssurancePlatform/technical-documentation/local-quickstart/](https://alan-turing-institute.github.io/AssurancePlatform/technical-documentation/local-quickstart/)
-
-## Further Resources 📚
+### Further Resources 📚
 
 The following resources provide additional information about the Trustworthy and Ethical Assurance framework and methodology:
 
@@ -45,7 +84,7 @@ The following resources provide additional information about the Trustworthy and
 - Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
 - Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
 
-## Funding Statements
+### Funding Statements 💷
 
 From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project.
 

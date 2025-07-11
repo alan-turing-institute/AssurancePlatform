@@ -47,7 +47,11 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Send credentials to your API for verification
-          const response = await fetch(`${process.env.API_URL}/api/auth/login/`, {
+          const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+          if (!apiUrl) {
+            throw new Error('API_URL or NEXT_PUBLIC_API_URL must be configured');
+          }
+          const response = await fetch(`${apiUrl}/api/auth/login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -89,7 +93,12 @@ export const authOptions: NextAuthOptions = {
           email: profile?.email,
         };
 
-        const response = await fetch(`${process.env.API_URL}/api/auth/github/register-by-token/`, {
+        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) {
+          console.error('API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication');
+          return false;
+        }
+        const response = await fetch(`${apiUrl}/api/auth/github/register-by-token/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -125,7 +134,12 @@ export const authOptions: NextAuthOptions = {
      * @returns {string} Redirect URL after authentication.
      */
     async redirect({ url, baseUrl }) {
-      return `${process.env.NEXTAUTH_URL}/dashboard`;
+      // Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
+      const authUrl = process.env.NEXTAUTH_URL || baseUrl;
+      if (!authUrl) {
+        throw new Error('NEXTAUTH_URL must be configured for authentication redirects');
+      }
+      return `${authUrl}/dashboard`;
     },
 
     /**

@@ -10,7 +10,7 @@ export const fetchCaseStudies = async (token: string) => {
     },
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`, requestOptions)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
 
   if(!response.ok) {
     console.error('Something went wrong fetching case studies.')
@@ -21,7 +21,7 @@ export const fetchCaseStudies = async (token: string) => {
 }
 
 export const fetchPublishedCaseStudies = async () => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/case-studies/`)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/case-studies/`)
 
   if(!response.ok) {
     console.error('Something went wrong fetching case studies.')
@@ -32,7 +32,7 @@ export const fetchPublishedCaseStudies = async () => {
 }
 
 export const fetchPublishedCaseStudyById = async (id: number) => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/case-studies/${id}`)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/case-studies/${id}`)
 
   if(!response.ok) {
     console.error(`Something went wrong fetching case study ${id}.`)
@@ -53,7 +53,7 @@ export const fetchCaseStudyById = async (token: string, id: number) => {
     },
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${id}/`, requestOptions)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${id}/`, requestOptions)
 
   if(!response.ok) {
     console.error('Something went wrong fetching case studies.')
@@ -76,7 +76,7 @@ export const fetchCaseStudyById = async (token: string, id: number) => {
 //     body: JSON.stringify(newCaseStudy),
 //   }
 
-//   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`, requestOptions)
+//   const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
 //   console.log(response)
 
 //   if(!response.ok) {
@@ -99,10 +99,12 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
     body: formData,
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`, requestOptions)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
 
   if(!response.ok) {
-    console.error('Something went wrong creating case study')
+    const errorText = await response.text()
+    console.error('Something went wrong creating case study:', response.status, errorText)
+    return null
   }
 
   const result = await response.json()
@@ -123,7 +125,7 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
 //     body: JSON.stringify(caseStudy),
 //   }
 
-//   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy.id}/`, requestOptions)
+//   const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${caseStudy.id}/`, requestOptions)
 
 //   if(!response.ok) {
 //     console.error('Something went wrong fetching case studies.')
@@ -146,7 +148,7 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
     body: formData,  // Send FormData here instead of JSON.stringify
   };
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${formData.get('id')}/`, requestOptions);
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${formData.get('id')}/`, requestOptions);
   // console.log(response)
 
   if (!response.ok) {
@@ -169,7 +171,7 @@ export const deleteCaseStudy = async (token: string, caseStudyId: number) => {
     }
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/`, requestOptions)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${caseStudyId}/`, requestOptions)
   // console.log('response', response)
 
   if(!response.ok) {
@@ -182,7 +184,7 @@ export const deleteCaseStudy = async (token: string, caseStudyId: number) => {
 }
 
 export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: string) => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${assuranceCaseId}/`)
+  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/assurance-case/${assuranceCaseId}/`)
 
   if(!response.ok) {
     console.error('Something went wrong fetching case study case.')
