@@ -102,7 +102,9 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
   const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
 
   if(!response.ok) {
-    console.error('Something went wrong creating case study')
+    const errorText = await response.text()
+    console.error('Something went wrong creating case study:', response.status, errorText)
+    return null
   }
 
   const result = await response.json()
