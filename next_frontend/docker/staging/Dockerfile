@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Declare build arguments
 ARG GITHUB_APP_CLIENT_ID
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --link package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f package-lock.json ]; then npm ci --legacy-peer-deps; \
   elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i; \
   else echo "Lockfile not found." && exit 1; \
   fi
