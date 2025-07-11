@@ -41,6 +41,10 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Temporary testing files
+cookies.txt
+csrf.txt
+
 # Node
 node_modules/
 
@@ -67,6 +71,8 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+eap_backend/logs/
+logs/
 
 # Flask stuff:
 instance/
@@ -113,6 +119,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .venv
 env/
 venv/
@@ -151,3 +158,26 @@ site/site
 .next
 /.next/
 /out/
+next_frontend/.next/
+next_frontend/out/
+next_frontend/build/
+next_frontend/.vercel
+next_frontend/*.tsbuildinfo
+next_frontend/next-env.d.ts
+
+# npm/yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp.js
+.pnp
+.yarn/install-state.gz
+
+# misc
+*.pem
+
+# testing
+coverage/
+
+# documentation
+next_frontend/public/documentation
