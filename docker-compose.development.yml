@@ -1,0 +1,89 @@
+services:
+  # PostgreSQL Database for local development
+  postgres:
+    image: postgres:15-alpine
+    container_name: tea_postgres_dev
+    environment:
+      POSTGRES_DB: tea_dev
+      POSTGRES_USER: tea_user
+      POSTGRES_PASSWORD: tea_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tea_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tea_user -d tea_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for WebSocket/Channels
+  redis:
+    image: redis:7-alpine
+    container_name: tea_redis_dev
+    ports:
+      - "6379:6379"
+    networks:
+      - tea_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  eap_backend:
+    build:
+      context: ./eap_backend
+      dockerfile: Dockerfile.dev
+    container_name: tea_backend_dev
+    hostname: tea-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./eap_backend/.env.local
+    volumes:
+      - ./eap_backend:/app
+      - /app/node_modules
+    networks:
+      - tea_dev_network
+
+  # Frontend Service
+  eap_frontend:
+    build:
+      context: ./next_frontend
+      dockerfile: Dockerfile.dev
+    container_name: tea_frontend_dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - eap_backend
+    env_file:
+      - ./next_frontend/.env.local
+    volumes:
+      - ./next_frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+      - frontend_tea_docs_node_modules:/app/tea-docs/node_modules
+    networks:
+      - tea_dev_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: npm run dev
+
+networks:
+  tea_dev_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
+  frontend_next:
+  frontend_tea_docs_node_modules:
