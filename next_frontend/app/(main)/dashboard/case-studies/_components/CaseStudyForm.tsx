@@ -24,9 +24,6 @@ import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/cas
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic";
-
-import "react-quill/dist/quill.snow.css";
 import { ArrowUpTrayIcon } from "@heroicons/react/20/solid"
 import { useImportModal } from "@/hooks/useImportModal"
 import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
@@ -34,9 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { sectors } from '@/config/index'
 import { AlertModal } from "@/components/modals/alertModal"
 import DeleteCaseButton from "./delete-button"
-
-// Dynamically import ReactQuill (Next.js SSR fix)
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });// Import styles
+import TiptapEditor from "@/components/ui/tiptap-editor"
 
 const assuranceCaseSchema = z.object({
   id: z.number(),
@@ -389,37 +384,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     }
   }
 
-  const modules = {
-    toolbar: [
-      [{ header: [1, 2, 3, 4, 5, 6, false] }],
-      ["bold", "italic", "underline", "strike", "blockquote"],
-      [{ size: [] }],
-      [{ font: [] }],
-      [{ align: ["right", "center", "justify"] }],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["link", "image"],
-      [{ color: ["red", "#785412"] }],
-      [{ background: ["red", "#785412"] }]
-    ]
-  };
-
-  const formats = [
-    "header",
-    "bold",
-    "italic",
-    "underline",
-    "strike",
-    "blockquote",
-    "list",
-    "bullet",
-    "link",
-    "color",
-    "image",
-    "background",
-    "align",
-    "size",
-    "font"
-  ];
 
   return (
     <>
@@ -620,15 +584,14 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       </Tooltip>
                     </div>
                     <FormControl>
-                      <ReactQuill
-                        theme="snow"
+                      <TiptapEditor
                         value={field.value || value} // Ensure controlled component
                         onChange={(content) => {
                           field.onChange(content); // Update form state
                           setValue(content);
                         }}
-                        modules={modules}
-                        formats={formats}
+                        className="min-h-[200px]"
+                        placeholder="Provide a clear and concise summary of the case study..."
                       />
                     </FormControl>
                     <FormMessage />
