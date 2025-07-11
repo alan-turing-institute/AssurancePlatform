@@ -3,13 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { useEffect, useState } from "react"
-import { useEnforceLogout, useLoginToken } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signIn } from "next-auth/react"
 
 const formSchema = z.object({
   username: z.string()
@@ -21,16 +20,15 @@ const formSchema = z.object({
     .email(),
   password1: z.string()
     .min(8)
-    .regex(/(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character"),
+    .regex(/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character"),
   password2: z.string()
     .min(8)
-    .regex(/(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character")
+    .regex(/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character")
 });
 
 const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>([]);
-  // const [_, setToken] = useLoginToken();
   const { data: session } = useSession()
 
   const router = useRouter()
@@ -79,26 +77,42 @@ const RegisterForm = () => {
       const result = await response.json()
 
       if (result.key) {
-        // setToken(result.key);
-        router.push('/dashboard')
+        // Registration successful, now sign in with NextAuth
+        const signInResult = await signIn('credentials', {
+          redirect: false,
+          username: values.username,
+          password: values.password1,
+        });
+
+        if (signInResult && signInResult.ok) {
+          // NextAuth will handle redirect via authOptions callback
+          router.push('/dashboard');
+        } else {
+          setLoading(false);
+          setErrors(['Registration successful but login failed. Please try logging in manually.']);
+        }
       }
       else {
-          // const currentErrors = [];
+          const currentErrors = [];
           setLoading(false);
-          // setToken(null);
-          // if (result.username) {
-          //   currentErrors.push(...result.username.slice(1));
-          // }
-          // if (result.password1) {
-          //   currentErrors.push(...result.password1.slice(1));
-          // }
-          // if (result.password2) {
-          //   currentErrors.push(...result.password2.slice(1));
-          // }
-          // if (result.non_field_errors) {
-          //   currentErrors.push(...result.non_field_errors);
-          // }
-          // setErrors(currentErrors);
+
+          if (result.username) {
+            currentErrors.push(...result.username);
+          }
+          if (result.email) {
+            currentErrors.push(...result.email);
+          }
+          if (result.password1) {
+            currentErrors.push(...result.password1);
+          }
+          if (result.password2) {
+            currentErrors.push(...result.password2);
+          }
+          if (result.non_field_errors) {
+            currentErrors.push(...result.non_field_errors);
+          }
+
+          setErrors(currentErrors.length > 0 ? currentErrors : ['Registration failed. Please try again.']);
       }
     } catch (error) {
       console.log(error)
@@ -179,7 +193,7 @@ const RegisterForm = () => {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="infline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white">Submit</Button>
+            <Button type="submit" className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white">Submit</Button>
           </form>
         </Form>
       </div>
