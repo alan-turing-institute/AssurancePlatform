@@ -19,20 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis for WebSocket/Channels
-  redis:
-    image: redis:7-alpine
-    container_name: tea_redis_dev
-    ports:
-      - "6379:6379"
-    networks:
-      - tea_dev_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backend Service
   eap_backend:
     build:
@@ -44,8 +30,6 @@ services:
       - "8000:8000"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     env_file:
       - ./eap_backend/.env.local
