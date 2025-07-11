@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
       headers: {
         'Authorization': authHeader,
         'Content-Type': 'application/json',
+        'Connection': 'close',
       },
+      cache: 'no-store',
     });
 
     if (!response.ok) {
