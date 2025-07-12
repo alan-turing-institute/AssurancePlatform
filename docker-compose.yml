@@ -1,21 +1,21 @@
 version: "3"
 services:
-  eap_frontend:
-    image: turingassuranceplatform/eap_frontend:develop
+  tea_frontend:
+    image: turingassuranceplatform/tea_frontend:develop
     depends_on:
-      - eap_backend
+      - tea_backend
     ports:
       - "3000:3000"
     networks:
-      - eap_nw
+      - tea_nw
 
-  eap_backend:
-    image: turingassuranceplatform/eap_backend:develop
+  tea_backend:
+    image: turingassuranceplatform/tea_backend:develop
     ports:
       - "8000:8000"
     networks:
-      - eap_nw
+      - tea_nw
 
 networks:
-  eap_nw:
+  tea_nw:
     driver: bridge

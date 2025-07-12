@@ -27,8 +27,8 @@ Get the TEA Platform running locally with Docker in just a few steps:
 2. **Set up environment files**
    ```bash
    # Copy example environment files
-   cp eap_backend/.env.example eap_backend/.env.local
-   cp next_frontend/.env.example next_frontend/.env.local
+   cp tea_backend/.env.example tea_backend/.env.local
+   cp tea_frontend/.env.example tea_frontend/.env.local
    ```
 
 3. **Configure GitHub OAuth (optional)**

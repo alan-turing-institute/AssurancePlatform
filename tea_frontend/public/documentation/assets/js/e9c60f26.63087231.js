@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[2792],{9879:e=>{e.exports=JSON.parse('{"tags":[{"label":"learning-modules","permalink":"/documentation/tags/learning-modules","count":1}]}')}}]);
