@@ -37,7 +37,9 @@ const RegisterForm = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
-      email: ""
+      email: "",
+      password1: "",
+      password2: ""
     },
   })
 
@@ -70,14 +72,44 @@ const RegisterForm = () => {
 
       console.log(response)
 
-      if(!response.ok || response.status === 400) {
-        setErrors(['Invalid details, please try again.'])
+      if(!response.ok) {
+        setLoading(false);
+        if (response.status === 400) {
+          // Handle validation errors
+          try {
+            const result = await response.json()
+            const currentErrors = [];
+
+            if (result.username) {
+              currentErrors.push(...result.username);
+            }
+            if (result.email) {
+              currentErrors.push(...result.email);
+            }
+            if (result.password1) {
+              currentErrors.push(...result.password1);
+            }
+            if (result.password2) {
+              currentErrors.push(...result.password2);
+            }
+            if (result.non_field_errors) {
+              currentErrors.push(...result.non_field_errors);
+            }
+
+            setErrors(currentErrors.length > 0 ? currentErrors : ['Registration failed. Please try again.']);
+          } catch (jsonError) {
+            setErrors(['Registration failed. Please try again.']);
+          }
+        } else {
+          setErrors(['Registration failed. Please try again.']);
+        }
+        return;
       }
 
-      const result = await response.json()
-
-      if (result.key) {
-        // Registration successful, now sign in with NextAuth
+      // Registration successful (HTTP 204 or 201)
+      if (response.status === 204) {
+        // Django returns 204 No Content for successful registration
+        // Now sign in with NextAuth
         const signInResult = await signIn('credentials', {
           redirect: false,
           username: values.username,
@@ -91,28 +123,34 @@ const RegisterForm = () => {
           setLoading(false);
           setErrors(['Registration successful but login failed. Please try logging in manually.']);
         }
-      }
-      else {
-          const currentErrors = [];
+      } else {
+        // Handle other success responses that might contain JSON
+        try {
+          const result = await response.json()
+          
+          if (result.key) {
+            // Registration successful with key, now sign in with NextAuth
+            const signInResult = await signIn('credentials', {
+              redirect: false,
+              username: values.username,
+              password: values.password1,
+            });
+
+            if (signInResult && signInResult.ok) {
+              // NextAuth will handle redirect via authOptions callback
+              router.push('/dashboard');
+            } else {
+              setLoading(false);
+              setErrors(['Registration successful but login failed. Please try logging in manually.']);
+            }
+          } else {
+            setLoading(false);
+            setErrors(['Registration completed but unexpected response format.']);
+          }
+        } catch (jsonError) {
           setLoading(false);
-
-          if (result.username) {
-            currentErrors.push(...result.username);
-          }
-          if (result.email) {
-            currentErrors.push(...result.email);
-          }
-          if (result.password1) {
-            currentErrors.push(...result.password1);
-          }
-          if (result.password2) {
-            currentErrors.push(...result.password2);
-          }
-          if (result.non_field_errors) {
-            currentErrors.push(...result.non_field_errors);
-          }
-
-          setErrors(currentErrors.length > 0 ? currentErrors : ['Registration failed. Please try again.']);
+          setErrors(['Registration may have succeeded. Please try logging in.']);
+        }
       }
     } catch (error) {
       console.log(error)
@@ -193,7 +231,13 @@ const RegisterForm = () => {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white">Submit</Button>
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating Account..." : "Submit"}
+            </Button>
           </form>
         </Form>
       </div>
