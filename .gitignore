@@ -181,3 +181,6 @@ coverage/
 
 # documentation
 next_frontend/public/documentation
+
+# dev tasks
+TASKS/**
