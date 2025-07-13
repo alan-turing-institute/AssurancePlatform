@@ -13,14 +13,14 @@ graph TB
     LocalDev -->|git add| PreCommit{Pre-commit Hooks}
 
     %% Pre-commit checks
-    PreCommit -->|Python| Ruff[Ruff Linting]
-    PreCommit -->|Python| Black[Black Formatting]
+    PreCommit -->|Python| RuffLint[Ruff Linting]
+    PreCommit -->|Python| RuffFormat[Ruff Formatting]
     PreCommit -->|Python| MyPy[MyPy Type Check]
     PreCommit -->|Frontend| Prettier[Prettier Formatting]
     PreCommit -->|All| FileChecks[File Checks]
 
-    Ruff --> CommitReady
-    Black --> CommitReady
+    RuffLint --> CommitReady
+    RuffFormat --> CommitReady
     MyPy --> CommitReady
     Prettier --> CommitReady
     FileChecks --> CommitReady
@@ -43,7 +43,7 @@ graph TB
     GitHubActions --> FrontendCI[Frontend CI]
 
     %% Backend pipeline
-    BackendCI --> BackendLint[Ruff + Black + MyPy]
+    BackendCI --> BackendLint[Ruff + MyPy]
     BackendLint --> BackendBuild[Build Backend Image]
     BackendBuild --> BackendTests[Unit Tests in Container]
     BackendTests --> BackendCoverage{Coverage ≥ 90%?}
