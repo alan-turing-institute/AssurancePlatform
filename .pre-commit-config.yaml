@@ -18,7 +18,7 @@ repos:
       - id: mypy
         files: ^tea_backend/
         exclude: \.md$|migrations/|tests/
-        additional_dependencies: 
+        additional_dependencies:
           - django-stubs==5.1.0
           - djangorestframework-stubs==3.15.1
           - types-requests==2.32.0.20241016
@@ -50,7 +50,8 @@ repos:
     rev: "v4.0.0-alpha.8"
     hooks:
       - id: prettier
-        types_or: [yaml, html, css, scss, javascript, json, typescript, tsx]
+        types_or: [yaml, html, css, scss, javascript, json]
+        files: \.(js|jsx|ts|tsx|css|scss|html|yaml|yml|json)$
         exclude: \.md$
         args: [--prose-wrap=never]
 
@@ -60,7 +61,7 @@ repos:
         name: TypeScript Compiler
         entry: bash -c 'cd tea_frontend && npx tsc --noEmit'
         language: system
-        files: \.(ts|tsx)$
+        files: ^tea_frontend/.*\.(ts|tsx)$
         pass_filenames: false
 
   - repo: https://github.com/asottile/blacken-docs

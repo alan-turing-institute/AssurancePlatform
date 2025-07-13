@@ -69,7 +69,9 @@
       {
         "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version ${nextRelease.version} :tada:",
         "labels": ["released"],
-        "releasedLabels": ["released<%= nextRelease.type === 'prerelease' ? '-prerelease' : '' %>"],
+        "releasedLabels": [
+          "released<%= nextRelease.type === 'prerelease' ? '-prerelease' : '' %>"
+        ],
         "addReleases": "bottom"
       }
     ],
