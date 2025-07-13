@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[7472],{5513:t=>{t.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"First Post","permalink":"/documentation/blog/first-post","unlisted":false,"date":"2025-02-05T00:00:00.000Z"}]}')}}]);

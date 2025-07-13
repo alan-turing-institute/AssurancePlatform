@@ -186,8 +186,8 @@ pnpm-debug.log*
 # testing
 coverage/
 
-# documentation builds
-tea_frontend/public/documentation/**
+# documentation builds - all generated documentation files
+tea_frontend/public/documentation/
 tea_frontend/tea-docs/build/
 tea_frontend/tea-docs/.docusaurus/
 
