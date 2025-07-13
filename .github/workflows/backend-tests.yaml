@@ -20,10 +20,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -r eap_backend/requirements.txt
-      - run: coverage run manage.py test -v 2
-        working-directory: eap_backend
-      - run: coverage lcov --data-file eap_backend/.coverage
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('tea_backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
+            ${{ runner.os }}-uv-
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: tea_backend
+      - name: Run tests with coverage
+        run: uv run coverage run manage.py test -v 2
+        working-directory: tea_backend
+      - name: Generate coverage report
+        run: uv run coverage lcov --data-file tea_backend/.coverage
       - uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
