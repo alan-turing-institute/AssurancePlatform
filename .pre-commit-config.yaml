@@ -9,13 +9,7 @@ repos:
       - id: ruff
         args: ["--fix", "--show-fixes"]
         exclude: \.md$
-
-  - repo: https://github.com/psf/black
-    rev: "24.10.0"
-    hooks:
-      - id: black
-        language: python
-        files: ^tea_backend/
+      - id: ruff-format
         exclude: \.md$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -56,9 +50,18 @@ repos:
     rev: "v4.0.0-alpha.8"
     hooks:
       - id: prettier
-        types_or: [yaml, html, css, scss, javascript, json]
+        types_or: [yaml, html, css, scss, javascript, json, typescript, tsx]
         exclude: \.md$
         args: [--prose-wrap=never]
+
+  - repo: local
+    hooks:
+      - id: tsc
+        name: TypeScript Compiler
+        entry: bash -c 'cd tea_frontend && npx tsc --noEmit'
+        language: system
+        files: \.(ts|tsx)$
+        pass_filenames: false
 
   - repo: https://github.com/asottile/blacken-docs
     rev: "1.19.1"
