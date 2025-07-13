@@ -74,6 +74,10 @@ db.sqlite3-journal
 tea_backend/logs/
 logs/
 
+# Django media files (user uploads)
+tea_backend/mediafiles/
+mediafiles/
+
 # Flask stuff:
 instance/
 .webassets-cache
