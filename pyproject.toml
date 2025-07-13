@@ -1,5 +1,5 @@
 [tool.ruff]
-line-length = 100  # defaults to 88 like black
+line-length = 100
 select = [
   "E", "F", "W", # flake8
   "B",           # flake8-bugbear

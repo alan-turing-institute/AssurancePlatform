@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from django.db.models.query import QuerySet
 from rest_framework import serializers
@@ -528,7 +528,7 @@ def get_type_dictionary() -> dict[str, Any]:
 TYPE_DICT = get_type_dictionary()
 
 
-def get_case_id(item: AssuranceCase | CaseItem) -> Optional[int]:
+def get_case_id(item: AssuranceCase | CaseItem) -> int | None:
     """Return the id of the case in which this item is. Works for all item types."""
     # In some cases, when there's a ManyToManyField, instead of the parent item, we get
     # an iterable that can potentially list all the parents. In that case, just pick the

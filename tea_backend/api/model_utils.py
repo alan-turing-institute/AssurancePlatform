@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from django.db.models import Q
 from django.db.models.query import QuerySet

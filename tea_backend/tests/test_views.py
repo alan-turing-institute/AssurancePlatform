@@ -8,6 +8,10 @@ from django.db.models.query import QuerySet
 from django.http import HttpResponse
 from django.test import Client, TestCase
 from django.urls import reverse
+from rest_framework import status
+from rest_framework.authtoken.models import Token
+from social_core.exceptions import AuthForbidden
+
 from api.models import (
     AssuranceCase,
     Context,
@@ -29,9 +33,6 @@ from api.serializers import (
 )
 from api.view_utils import SandboxUtils, ShareAssuranceCaseUtils, make_case_summary
 from api.views import make_summary
-from rest_framework import status
-from rest_framework.authtoken.models import Token
-from social_core.exceptions import AuthForbidden
 
 from .constants_tests import (
     CASE1_INFO,

@@ -2,11 +2,12 @@ import json
 
 from django.test import Client, TestCase
 from django.urls import reverse
+from rest_framework.authtoken.models import Token
+
 from api.models import (
     EAPGroup,
     EAPUser,
 )
-from rest_framework.authtoken.models import Token
 
 from .constants_tests import (
     CASE1_INFO,

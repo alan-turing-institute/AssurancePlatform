@@ -5,7 +5,7 @@ const AssuranceCasePage = async ({ params } : { params: Promise<{ caseId: string
   const { caseId } = await params
   
   return (
-    <CaseContainer />
+    <CaseContainer caseId={caseId} />
   )
 }
 

@@ -1,0 +1,151 @@
+name: azure-deploy
+
+on:
+  workflow_run:
+    workflows: ["tea-backend-docker", "tea-frontend-docker"]
+    types:
+      - completed
+    branches:
+      - staging
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+
+env:
+  AZURE_WEBAPP_NAME_BACKEND: eap-backend
+  AZURE_WEBAPP_NAME_FRONTEND: eap-frontend
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy-staging:
+    if: |
+      (github.event.workflow_run.conclusion == 'success' && 
+       contains(github.event.workflow_run.head_branch, 'staging')) ||
+      (github.event_name == 'workflow_dispatch' && 
+       github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Deploy Backend to Azure App Service (Staging)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME_BACKEND }}-staging
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/tea-backend:staging
+      
+      - name: Deploy Frontend to Azure App Service (Staging)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME_FRONTEND }}-staging
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/tea-frontend:staging
+      
+      - name: Run smoke tests
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Basic health check for backend
+          curl -f https://${{ env.AZURE_WEBAPP_NAME_BACKEND }}-staging.azurewebsites.net/api/health/ || exit 1
+          
+          # Basic health check for frontend
+          curl -f https://${{ env.AZURE_WEBAPP_NAME_FRONTEND }}-staging.azurewebsites.net/ || exit 1
+      
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Staging deployment successful"
+            echo "Backend: https://${{ env.AZURE_WEBAPP_NAME_BACKEND }}-staging.azurewebsites.net"
+            echo "Frontend: https://${{ env.AZURE_WEBAPP_NAME_FRONTEND }}-staging.azurewebsites.net"
+          else
+            echo "❌ Staging deployment failed"
+            exit 1
+          fi
+
+  deploy-production:
+    if: |
+      (github.event.workflow_run.conclusion == 'success' && 
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && 
+       github.event.inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [] # Remove staging dependency for manual prod deploys
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Deploy Backend to Azure App Service (Production)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME_BACKEND }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/tea-backend:main
+      
+      - name: Deploy Frontend to Azure App Service (Production)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME_FRONTEND }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/tea-frontend:main
+      
+      - name: Run smoke tests
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Basic health check for backend
+          curl -f https://${{ env.AZURE_WEBAPP_NAME_BACKEND }}.azurewebsites.net/api/health/ || exit 1
+          
+          # Basic health check for frontend
+          curl -f https://${{ env.AZURE_WEBAPP_NAME_FRONTEND }}.azurewebsites.net/ || exit 1
+      
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment successful"
+            echo "Backend: https://${{ env.AZURE_WEBAPP_NAME_BACKEND }}.azurewebsites.net"
+            echo "Frontend: https://${{ env.AZURE_WEBAPP_NAME_FRONTEND }}.azurewebsites.net"
+          else
+            echo "❌ Production deployment failed"
+            exit 1
+          fi
+
+  rollback:
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Rollback to previous version
+        run: |
+          echo "🔄 Rolling back to previous deployment..."
+          # This would implement rollback logic
+          # For now, just log the action needed
+          echo "Manual rollback required - check Azure portal"

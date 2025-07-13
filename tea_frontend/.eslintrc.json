@@ -1,11 +1,32 @@
 {
-  "extends": "next/core-web-vitals",
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript"
+  ],
   "rules": {
-    "react/no-unescaped-entities": "warn",
-    "@next/next/no-html-link-for-pages": "warn",
-    "@next/next/no-img-element": "warn",
-    "jsx-a11y/alt-text": "warn",
-    "react-hooks/exhaustive-deps": "warn",
-    "react-hooks/rules-of-hooks": "error"
+    // Upgrade warnings to errors for stricter enforcement
+    "react/no-unescaped-entities": "error",
+    "@next/next/no-html-link-for-pages": "error", 
+    "@next/next/no-img-element": "error",
+    "jsx-a11y/alt-text": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react-hooks/rules-of-hooks": "error",
+    
+    // Basic code quality rules (avoiding TS-specific rules that need parser)
+    "prefer-const": "error",
+    "no-var": "error", 
+    "no-console": "warn",
+    "no-debugger": "error",
+    "eqeqeq": "error",
+    "curly": "error",
+    "no-unused-vars": "off", // Handled by TypeScript
+    
+    // React specific strict rules
+    "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/no-array-index-key": "warn",
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/jsx-no-undef": "error"
   }
 }

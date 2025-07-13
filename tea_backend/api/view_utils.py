@@ -1,5 +1,6 @@
 import functools
-from typing import Any, Callable, Literal, Optional, Type, Union, cast
+from collections.abc import Callable
+from typing import Any, Literal, cast
 
 from django.db import models
 from django.db.models.query import QuerySet
@@ -35,7 +36,7 @@ class SandboxUtils:
     @staticmethod
     def detach_context(context_id: int) -> None:
         context: Context = Context.objects.get(pk=context_id)
-        assurance_case_id: Optional[int] = get_case_id(context)
+        assurance_case_id: int | None = get_case_id(context)
 
         context.goal = None
         SandboxUtils._move_to_sandbox(context, assurance_case_id)
@@ -51,7 +52,7 @@ class SandboxUtils:
     @staticmethod
     def detach_evidence(evidence_id: int, property_claim_id: int) -> None:
         evidence: Evidence = Evidence.objects.get(pk=evidence_id)
-        assurance_case_id: Optional[int] = get_case_id(evidence)
+        assurance_case_id: int | None = get_case_id(evidence)
 
         if evidence.property_claim.filter(pk=property_claim_id).count() == 0:
             error_message: str = (
@@ -94,11 +95,11 @@ class SandboxUtils:
     @staticmethod
     def detach_property_claim(property_claim_id: int, parent_info: dict[str, Any]):
         property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
-        assurance_case_id: Optional[int] = get_case_id(property_claim)
+        assurance_case_id: int | None = get_case_id(property_claim)
 
-        goal_id: Optional[int] = parent_info.get("goal_id")
-        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
-        strategy_id: Optional[int] = parent_info.get("strategy_id")
+        goal_id: int | None = parent_info.get("goal_id")
+        parent_property_claim_id: int | None = parent_info.get("property_claim_id")
+        strategy_id: int | None = parent_info.get("strategy_id")
 
         error_message: str = ""
         if goal_id is not None:
@@ -152,9 +153,9 @@ class SandboxUtils:
     ) -> None:
         property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
 
-        goal_id: Optional[int] = parent_info.get("goal_id")
-        parent_property_claim_id: Optional[int] = parent_info.get("property_claim_id")
-        strategy_id: Optional[int] = parent_info.get("strategy_id")
+        goal_id: int | None = parent_info.get("goal_id")
+        parent_property_claim_id: int | None = parent_info.get("property_claim_id")
+        strategy_id: int | None = parent_info.get("strategy_id")
 
         if goal_id is not None:
             goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
@@ -177,7 +178,7 @@ class SandboxUtils:
     @staticmethod
     def detach_strategy(strategy_id: int) -> None:
         strategy: Strategy = Strategy.objects.get(pk=strategy_id)
-        assurance_case_id: Optional[int] = get_case_id(strategy)
+        assurance_case_id: int | None = get_case_id(strategy)
 
         strategy.goal = None
         SandboxUtils._move_to_sandbox(
@@ -189,7 +190,7 @@ class SandboxUtils:
     def attach_strategy(strategy_id: int, parent_info: dict[str, Any]) -> None:
 
         strategy: Strategy = Strategy.objects.get(pk=strategy_id)
-        goal_id: Optional[int] = parent_info.get("goal_id")
+        goal_id: int | None = parent_info.get("goal_id")
 
         if goal_id is not None:
             goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
@@ -229,8 +230,8 @@ class SandboxUtils:
     @staticmethod
     def _move_to_sandbox(
         case_item: CaseItem,
-        assurance_case_id: Optional[int],
-        is_ready: Optional[Callable[[CaseItem], bool]] = None,
+        assurance_case_id: int | None,
+        is_ready: Callable[[CaseItem], bool] | None = None,
     ):
         if assurance_case_id is None:
             error_message: str = (
@@ -252,7 +253,7 @@ class CommentUtils:
         element_name: str, element_id: int
     ) -> CaseItem | AssuranceCase:
 
-        model_class: Type[models.Model] | None = None
+        model_class: type[models.Model] | None = None
 
         if element_name == "cases":
             model_class = AssuranceCase
@@ -277,7 +278,7 @@ class CommentUtils:
 class UpdateIdentifierUtils:
     @staticmethod
     def update_identifiers(
-        case_id: Optional[int] = None, model_instance: Optional[CaseItem] = None
+        case_id: int | None = None, model_instance: CaseItem | None = None
     ):
         """Traverses the case and ensures the identifiers follow a sequence
 
@@ -660,7 +661,7 @@ def filter_by_case_id(items, request):
     return items
 
 
-def make_summary(model_data: Union[dict, list, CaseItem]):
+def make_summary(model_data: dict | list | CaseItem):
     """
     Take in a full serialized object, and return dict containing just
     the id and the name
@@ -670,7 +671,7 @@ def make_summary(model_data: Union[dict, list, CaseItem]):
     key/values.
     """
 
-    def summarize_one(data: Union[dict, CaseItem]):
+    def summarize_one(data: dict | CaseItem):
         if isinstance(data, CaseItem):
             data = model_to_dict(data)
 

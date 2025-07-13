@@ -1,6 +1,4 @@
 import SignInForm from "@/components/auth/SignInForm";
-import { authOptions } from "@/lib/authOptions";
-import { getServerSession } from "next-auth";
 import Link from "next/link";
 import Image from "next/image";
 

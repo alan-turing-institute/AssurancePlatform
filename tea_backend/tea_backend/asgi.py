@@ -15,8 +15,9 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tea_backend.settings")
 django_asgi_app = get_asgi_application()
 
-import websockets.routing  # noqa: E402
 from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
+
+import websockets.routing  # noqa: E402
 from websockets.middleware import TokenAuthMiddleware  # noqa: E402
 
 application = ProtocolTypeRouter(
