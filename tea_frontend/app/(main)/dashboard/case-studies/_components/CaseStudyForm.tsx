@@ -75,6 +75,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const [alertLoading, setAlertLoading] = useState<boolean>(false)
   const [formValues, setFormValues] = useState<z.infer<typeof caseStudyFormSchema> | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Authors field state - moved from FormField render function
+  const [authors, setAuthors] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState("");
 
 
   useEffect(() => {
@@ -84,6 +88,17 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       setSelectedAssuranceCases([])
     }
   },[])
+
+  // Sync authors state with form field value
+  useEffect(() => {
+    const formAuthors = form.watch("authors");
+    if (formAuthors) {
+      const authorsArray = formAuthors.split(",").map(a => a.trim()).filter(a => a);
+      setAuthors(authorsArray);
+    } else {
+      setAuthors([]);
+    }
+  }, [form, caseStudy])
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
@@ -260,6 +275,23 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       setImageLoading(false)
     }
   }
+
+  // Authors management functions - moved from FormField render
+  const addAuthor = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !authors.includes(trimmed)) {
+      const newAuthors = [...authors, trimmed];
+      setAuthors(newAuthors);
+      form.setValue("authors", newAuthors.join(", "));
+      setInputValue(""); // Clear input
+    }
+  };
+
+  const removeAuthor = (authorToRemove: string) => {
+    const newAuthors = authors.filter(author => author !== authorToRemove);
+    setAuthors(newAuthors);
+    form.setValue("authors", newAuthors.join(", "));
+  };
 
   useEffect(() => {
     if(caseStudy) {
@@ -495,25 +527,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                   control={form.control}
                   name="authors"
                   render={({ field }) => {
-                    const initialAuthors = field.value ? field.value.split(",").map(a => a.trim()) : [];
-                    const [authors, setAuthors] = useState<string[]>(initialAuthors);
-                    const [inputValue, setInputValue] = useState("");
-
-                    const addAuthor = () => {
-                      const trimmed = inputValue.trim();
-                      if (trimmed && !authors.includes(trimmed)) {
-                        const newAuthors = [...authors, trimmed];
-                        setAuthors(newAuthors);
-                        field.onChange(newAuthors.join(", "));
-                        setInputValue(""); // Clear input
-                      }
-                    };
-
-                    const removeAuthor = (authorToRemove: string) => {
-                      const newAuthors = authors.filter(author => author !== authorToRemove);
-                      setAuthors(newAuthors);
-                      field.onChange(newAuthors.join(", "));
-                    };
 
                     return (
                       <FormItem>
