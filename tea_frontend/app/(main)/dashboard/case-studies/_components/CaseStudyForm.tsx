@@ -75,7 +75,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const [alertLoading, setAlertLoading] = useState<boolean>(false)
   const [formValues, setFormValues] = useState<z.infer<typeof caseStudyFormSchema> | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Authors field state - moved from FormField render function
   const [authors, setAuthors] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState("");

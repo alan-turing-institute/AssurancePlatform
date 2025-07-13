@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0017_auto_20240704_1601"),
         ("api", "0018_alter_context_goal"),

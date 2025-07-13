@@ -127,7 +127,7 @@ const RegisterForm = () => {
         // Handle other success responses that might contain JSON
         try {
           const result = await response.json()
-          
+
           if (result.key) {
             // Registration successful with key, now sign in with NextAuth
             const signInResult = await signIn('credentials', {
@@ -231,9 +231,9 @@ const RegisterForm = () => {
                 </FormItem>
               )}
             />
-            <Button 
-              type="submit" 
-              disabled={loading} 
+            <Button
+              type="submit"
+              disabled={loading}
               className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating Account..." : "Submit"}

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0032_casestudy_owner"),
     ]
@@ -13,8 +12,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="casestudy",
             name="image",
-            field=models.ImageField(
-                blank=True, null=True, upload_to="case_study_images/"
-            ),
+            field=models.ImageField(blank=True, null=True, upload_to="case_study_images/"),
         ),
     ]

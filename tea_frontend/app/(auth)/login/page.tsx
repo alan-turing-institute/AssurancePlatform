@@ -19,7 +19,7 @@ export default async function SignInPage() {
             src="https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             alt=""
           /> */}
-          <Image 
+          <Image
             className="absolute inset-0 h-full w-full object-cover"
             src="https://raw.githubusercontent.com/alan-turing-institute/turing-commons/main/docs/assets/images/illustrations/assurance-alt.jpg"
             alt="Assurance platform illustration"

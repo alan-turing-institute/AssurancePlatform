@@ -60,9 +60,7 @@ def register_social_user(provider, email, username) -> dict:
 
             Token.objects.filter(user=registered_user).delete()
             Token.objects.create(user=registered_user)
-            new_token = list(
-                Token.objects.filter(user_id=registered_user).values("key")
-            )
+            new_token = list(Token.objects.filter(user_id=registered_user).values("key"))
 
             return {
                 "username": registered_user.username,
@@ -72,8 +70,7 @@ def register_social_user(provider, email, username) -> dict:
 
         else:
             raise AuthenticationFailed(
-                detail="Please continue your login using "
-                + filtered_user_by_email[0].auth_provider
+                detail="Please continue your login using " + filtered_user_by_email[0].auth_provider
             )
 
     else:

@@ -31,7 +31,6 @@ def reverse_populate_published_assurance_cases(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0044_add_published_assurance_cases"),
     ]

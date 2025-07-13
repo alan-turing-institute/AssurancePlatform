@@ -55,14 +55,10 @@ class SandboxUtils:
         assurance_case_id: int | None = get_case_id(evidence)
 
         if evidence.property_claim.filter(pk=property_claim_id).count() == 0:
-            error_message: str = (
-                f"Property claim with id {property_claim_id} is not the parent of Evidence with id {evidence_id}"
-            )
+            error_message: str = f"Property claim with id {property_claim_id} is not the parent of Evidence with id {evidence_id}"
             raise ValueError(error_message)
 
-        evidence.property_claim.set(
-            evidence.property_claim.exclude(pk=property_claim_id)
-        )
+        evidence.property_claim.set(evidence.property_claim.exclude(pk=property_claim_id))
 
         SandboxUtils._move_to_sandbox(
             evidence,
@@ -74,16 +70,13 @@ class SandboxUtils:
     @staticmethod
     def attach_evidence(evidence_id: int, property_claim_id: int) -> None:
         evidence: Evidence = Evidence.objects.get(pk=evidence_id)
-        new_property_claim: PropertyClaim = PropertyClaim.objects.get(
-            pk=property_claim_id
-        )
+        new_property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
 
         evidence.property_claim.add(new_property_claim)
         SandboxUtils._remove_from_sandbox(evidence)
 
     @staticmethod
     def _can_detach_property_claim(case_item: CaseItem) -> bool:
-
         property_claim: PropertyClaim = cast(PropertyClaim, case_item)
 
         return (
@@ -106,7 +99,9 @@ class SandboxUtils:
             goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(pk=goal_id)
 
             if goal.property_claims.filter(pk=property_claim_id).count() == 0:  # type: ignore[attr-defined]
-                error_message = f"Property claim {property_claim_id} is not attached to Goal {goal_id}"
+                error_message = (
+                    f"Property claim {property_claim_id} is not attached to Goal {goal_id}"
+                )
                 raise ValueError(error_message)
 
             property_claim.goal = None
@@ -144,13 +139,13 @@ class SandboxUtils:
                 SandboxUtils._can_detach_property_claim,
             )
         else:
-            error_message = f"Cannot detach property claim {property_claim_id} to parent {parent_info}"
+            error_message = (
+                f"Cannot detach property claim {property_claim_id} to parent {parent_info}"
+            )
             raise ValueError(error_message)
 
     @staticmethod
-    def attach_property_claim(
-        property_claim_id: int, parent_info: dict[str, Any]
-    ) -> None:
+    def attach_property_claim(property_claim_id: int, parent_info: dict[str, Any]) -> None:
         property_claim: PropertyClaim = PropertyClaim.objects.get(pk=property_claim_id)
 
         goal_id: int | None = parent_info.get("goal_id")
@@ -172,7 +167,9 @@ class SandboxUtils:
             property_claim.strategy = strategy
             SandboxUtils._remove_from_sandbox(property_claim)
         else:
-            error_message = f"Cannot attach property claim {property_claim_id} to parent {parent_info}"
+            error_message = (
+                f"Cannot attach property claim {property_claim_id} to parent {parent_info}"
+            )
             raise ValueError(error_message)
 
     @staticmethod
@@ -188,7 +185,6 @@ class SandboxUtils:
 
     @staticmethod
     def attach_strategy(strategy_id: int, parent_info: dict[str, Any]) -> None:
-
         strategy: Strategy = Strategy.objects.get(pk=strategy_id)
         goal_id: int | None = parent_info.get("goal_id")
 
@@ -210,9 +206,7 @@ class SandboxUtils:
                 property_claim["property_claims"], "property_claims"
             )
 
-            property_claim["evidence"] = get_json_tree(
-                property_claim["evidence"], "evidence"
-            )
+            property_claim["evidence"] = get_json_tree(property_claim["evidence"], "evidence")
 
         for strategy in serialized_sandbox["strategies"]:
             strategy["property_claims"] = get_json_tree(
@@ -234,9 +228,7 @@ class SandboxUtils:
         is_ready: Callable[[CaseItem], bool] | None = None,
     ):
         if assurance_case_id is None:
-            error_message: str = (
-                f"Cannot find assurance case id for element with id {case_item.pk}"
-            )
+            error_message: str = f"Cannot find assurance case id for element with id {case_item.pk}"
             raise ValueError(error_message)
 
         if is_ready is None or is_ready(case_item):
@@ -249,10 +241,7 @@ class SandboxUtils:
 
 class CommentUtils:
     @staticmethod
-    def get_model_instance(
-        element_name: str, element_id: int
-    ) -> CaseItem | AssuranceCase:
-
+    def get_model_instance(element_name: str, element_id: int) -> CaseItem | AssuranceCase:
         model_class: type[models.Model] | None = None
 
         if element_name == "cases":
@@ -277,9 +266,7 @@ class CommentUtils:
 
 class UpdateIdentifierUtils:
     @staticmethod
-    def update_identifiers(
-        case_id: int | None = None, model_instance: CaseItem | None = None
-    ):
+    def update_identifiers(case_id: int | None = None, model_instance: CaseItem | None = None):
         """Traverses the case and ensures the identifiers follow a sequence
 
         Args:
@@ -295,9 +282,8 @@ class UpdateIdentifierUtils:
             raise ValueError(error_message)
 
         if TopLevelNormativeGoal.objects.filter(assurance_case_id=case_id).exists():
-
-            current_case_goal: TopLevelNormativeGoal = (
-                TopLevelNormativeGoal.objects.get(assurance_case_id=case_id)
+            current_case_goal: TopLevelNormativeGoal = TopLevelNormativeGoal.objects.get(
+                assurance_case_id=case_id
             )
             goal_id: int = current_case_goal.pk
 
@@ -310,12 +296,10 @@ class UpdateIdentifierUtils:
                 Context.objects.filter(goal_id=goal_id).order_by("id"), "C"
             )
 
-            current_case_strategies: QuerySet = Strategy.objects.filter(
-                goal_id=goal_id
-            ).order_by("id")
-            UpdateIdentifierUtils._update_sequential_identifiers(
-                current_case_strategies, "S"
+            current_case_strategies: QuerySet = Strategy.objects.filter(goal_id=goal_id).order_by(
+                "id"
             )
+            UpdateIdentifierUtils._update_sequential_identifiers(current_case_strategies, "S")
 
             (
                 top_level_claim_ids,
@@ -331,14 +315,10 @@ class UpdateIdentifierUtils:
 
             parent_property_claims: list = sorted(
                 PropertyClaim.objects.filter(pk__in=top_level_claim_ids),
-                key=functools.cmp_to_key(
-                    UpdateIdentifierUtils._compare_property_claims
-                ),
+                key=functools.cmp_to_key(UpdateIdentifierUtils._compare_property_claims),
             )
 
-            UpdateIdentifierUtils._update_sequential_identifiers(
-                parent_property_claims, "P"
-            )
+            UpdateIdentifierUtils._update_sequential_identifiers(parent_property_claims, "P")
 
             for _, property_claim in enumerate(parent_property_claims):
                 traverse_child_property_claims(
@@ -352,9 +332,7 @@ class UpdateIdentifierUtils:
                 model_instance.refresh_from_db()
 
     @staticmethod
-    def _compare_property_claims(
-        one_claim: PropertyClaim, another_claim: PropertyClaim
-    ) -> int:
+    def _compare_property_claims(one_claim: PropertyClaim, another_claim: PropertyClaim) -> int:
         ONE_CLAIM_LEFT: int = -1
         ONE_CLAIM_RIGHT: int = 1
         result: int = 0
@@ -389,7 +367,6 @@ class UpdateIdentifierUtils:
 class SocialAuthenticationUtils:
     @staticmethod
     def register_social_user(social_user: EAPUser, auth_provider: str) -> EAPUser:
-
         matching_users: QuerySet = EAPUser.objects.filter(
             auth_provider=auth_provider,
             auth_username=social_user.username,
@@ -413,9 +390,7 @@ class SocialAuthenticationUtils:
         elif matching_users.count() == 1:
             return cast(EAPUser, matching_users.first())
         else:
-            error_message: str = (
-                f"{matching_users.count()} accounts for email {social_user.email} and provider {auth_provider}"
-            )
+            error_message: str = f"{matching_users.count()} accounts for email {social_user.email} and provider {auth_provider}"
             raise Exception(error_message)
 
 
@@ -424,14 +399,9 @@ class ShareAssuranceCaseUtils:
     def get_case_permissions(
         assurance_case: AssuranceCase,
     ) -> dict[str, list[dict[str, Any]]]:
-
         return {
-            "view": ShareAssuranceCaseUtils._get_users_from_group_list(
-                assurance_case.view_groups
-            ),
-            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
-                assurance_case.edit_groups
-            ),
+            "view": ShareAssuranceCaseUtils._get_users_from_group_list(assurance_case.view_groups),
+            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(assurance_case.edit_groups),
             "review": ShareAssuranceCaseUtils._get_users_from_group_list(
                 assurance_case.review_groups
             ),
@@ -441,7 +411,6 @@ class ShareAssuranceCaseUtils:
     def extract_requests(
         request_serializer, permission_key: str
     ) -> tuple[list[EAPUser], list[EAPUser]]:
-
         additions: list[EAPUser] = []
         removals: list[EAPUser] = []
 
@@ -481,9 +450,7 @@ class ShareAssuranceCaseUtils:
             )
 
         if "owner" in permission_list:
-            ShareAssuranceCaseUtils._consolidate_case_list(
-                case_catalog, user.cases.all(), "owner"
-            )
+            ShareAssuranceCaseUtils._consolidate_case_list(case_catalog, user.cases.all(), "owner")
 
         return [
             ShareAssuranceCaseUtils.make_case_summary(
@@ -518,8 +485,7 @@ class ShareAssuranceCaseUtils:
         user_dictionary: dict[int, dict[str, Any]] = {}
         for current_group in group_manager.all():
             group_users = {
-                user.pk: {"id": user.pk, "email": user.email}
-                for user in current_group.member.all()
+                user.pk: {"id": user.pk, "email": user.email} for user in current_group.member.all()
             }
 
             user_dictionary = user_dictionary | group_users
@@ -552,7 +518,6 @@ class ShareAssuranceCaseUtils:
 
     @staticmethod
     def get_review_group(assurance_case: AssuranceCase) -> EAPGroup:
-
         review_group: EAPGroup | None = None
         owner_review_group_name: str = (
             f"{assurance_case.owner.username}-case-{assurance_case.pk}-review-group"
@@ -577,7 +542,6 @@ class ShareAssuranceCaseUtils:
 
     @staticmethod
     def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
-
         view_group: EAPGroup | None = None
         owner_view_group_name: str = (
             f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
@@ -607,7 +571,6 @@ class ShareAssuranceCaseUtils:
         add: list[EAPUser] | None = None,
         remove: list[EAPUser] | None = None,
     ) -> None:
-
         default_group: EAPGroup
         all_groups: QuerySet
         if permission_key == "view":
@@ -729,7 +692,6 @@ def get_json_tree(id_list: list, obj_type: str) -> list:
     objs = []
 
     for obj_id in id_list:
-
         obj = TYPE_DICT[obj_type]["model"].objects.get(pk=obj_id)
         obj_serializer = TYPE_DICT[obj_type]["serializer"](obj)
         obj_data = obj_serializer.data
@@ -791,9 +753,7 @@ def save_json_tree(data, obj_type, parent_id=None, parent_type=None):
         if child_type not in data:
             continue
         for child_data in data[child_type]:
-            retval = save_json_tree(
-                child_data, child_type, parent_id=id, parent_type=obj_type
-            )
+            retval = save_json_tree(child_data, child_type, parent_id=id, parent_type=obj_type)
             # If one of the subcalls returns an error, return.
             if retval.status_code != success_http_code:
                 return retval
@@ -822,7 +782,7 @@ def get_case_permissions(
        "view": if user is a member of a group that has view rights on the case
     None otherwise.
     """
-    if isinstance(case, (int, str)):
+    if isinstance(case, int | str):
         case = AssuranceCase.objects.get(pk=int(case))
 
     if (not case.owner) or (case.owner == user):

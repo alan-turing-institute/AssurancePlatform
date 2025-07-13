@@ -64,12 +64,8 @@ class ShareRequestSerializer(serializers.Serializer):
 
 
 class EAPUserSerializer(serializers.ModelSerializer):
-    all_groups = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True, required=False
-    )
-    owned_groups = serializers.PrimaryKeyRelatedField(
-        many=True, read_only=True, required=False
-    )
+    all_groups = serializers.PrimaryKeyRelatedField(many=True, read_only=True, required=False)
+    owned_groups = serializers.PrimaryKeyRelatedField(many=True, read_only=True, required=False)
     github_repositories = GitHubRepositorySerializer(many=True, read_only=True)
 
     class Meta:
@@ -89,7 +85,6 @@ class EAPUserSerializer(serializers.ModelSerializer):
 
 
 class UsernameAwareUserSerializer(EAPUserSerializer):
-
     username = serializers.SerializerMethodField()
 
     def get_username(self, user: EAPUser) -> str:
@@ -103,9 +98,7 @@ class EAPGroupSerializer(serializers.ModelSerializer):
     members = serializers.PrimaryKeyRelatedField(
         source="member", many=True, queryset=EAPUser.objects.all()
     )
-    owner_id = serializers.PrimaryKeyRelatedField(
-        source="owner", queryset=EAPUser.objects.all()
-    )
+    owner_id = serializers.PrimaryKeyRelatedField(source="owner", queryset=EAPUser.objects.all())
     viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
@@ -171,7 +164,6 @@ class AssuranceCaseSerializer(serializers.ModelSerializer):
 
 
 class SandboxSerializer(serializers.ModelSerializer):
-
     contexts = serializers.SerializerMethodField()
     evidence = serializers.SerializerMethodField()
     property_claims = serializers.SerializerMethodField()
@@ -193,9 +185,7 @@ class SandboxSerializer(serializers.ModelSerializer):
 
     def get_property_claims(self, assurance_case: AssuranceCase) -> ReturnDict:
         sandbox_property_claims: QuerySet = assurance_case.property_claims.filter(in_sandbox=True)  # type: ignore[attr-defined]
-        property_claim_serializer = PropertyClaimSerializer(
-            sandbox_property_claims, many=True
-        )
+        property_claim_serializer = PropertyClaimSerializer(sandbox_property_claims, many=True)
         return cast(ReturnDict, property_claim_serializer.data)
 
     def get_strategies(self, assurance_case: AssuranceCase) -> ReturnDict:
@@ -232,7 +222,6 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict) -> TopLevelNormativeGoal:
-
         assurance_case_id: int = validated_data["assurance_case"].pk
 
         validated_data["name"] = _get_unique_name(
@@ -325,11 +314,7 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data: dict[str, Any]) -> PropertyClaim:
-
-        if (
-            validated_data.get("strategy") is not None
-            or validated_data.get("goal") is not None
-        ):
+        if validated_data.get("strategy") is not None or validated_data.get("goal") is not None:
             top_level_claim_ids, _ = get_property_claims_by_case_id(
                 get_case_id(PropertyClaim(**validated_data))
             )
@@ -338,14 +323,10 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
                 name_prefix="P",
             )
         elif validated_data.get("property_claim") is not None:
-            parent_property_claim: PropertyClaim | None = validated_data.get(
-                "property_claim"
-            )
+            parent_property_claim: PropertyClaim | None = validated_data.get("property_claim")
             if parent_property_claim is not None:
                 validated_data["name"] = _get_unique_name(
-                    PropertyClaim.objects.filter(
-                        property_claim_id=parent_property_claim.pk
-                    ),
+                    PropertyClaim.objects.filter(property_claim_id=parent_property_claim.pk),
                     name_prefix=f"{parent_property_claim.name}.",
                 )
 
@@ -376,18 +357,13 @@ class EvidenceSerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict) -> Evidence:
-
         (
             top_level_claim_ids,
             child_claim_ids,
-        ) = get_property_claims_by_case_id(
-            case_id=get_case_id(validated_data["property_claim"][0])
-        )
+        ) = get_property_claims_by_case_id(case_id=get_case_id(validated_data["property_claim"][0]))
 
         validated_data["name"] = _get_unique_name(
-            Evidence.objects.filter(
-                property_claim__id__in=top_level_claim_ids + child_claim_ids
-            ),
+            Evidence.objects.filter(property_claim__id__in=top_level_claim_ids + child_claim_ids),
             "E",
         )
 
@@ -440,7 +416,6 @@ class StrategySerializer(serializers.ModelSerializer):
         extra_kwargs = {"name": {"allow_null": True, "required": False}}
 
     def create(self, validated_data: dict) -> Strategy:
-
         validated_data["name"] = _get_unique_name(
             Strategy.objects.filter(goal_id=validated_data["goal"].pk), "S"
         )
@@ -448,7 +423,6 @@ class StrategySerializer(serializers.ModelSerializer):
 
 
 def _get_unique_name(base_query_set: QuerySet, name_prefix: str) -> str:
-
     candidate_index: int = base_query_set.count() + 1
     while base_query_set.filter(name=f"{name_prefix}{candidate_index}").count() != 0:
         candidate_index += 1
@@ -591,12 +565,8 @@ class CaseStudySerializer(serializers.ModelSerializer):
     assurance_cases = serializers.PrimaryKeyRelatedField(
         queryset=PublishedAssuranceCase.objects.all(), many=True, required=False
     )
-    published_date = serializers.DateTimeField(
-        format="%Y-%m-%dT%H:%M:%SZ", required=False
-    )
-    last_modified_on = serializers.DateTimeField(
-        format="%Y-%m-%dT%H:%M:%SZ", required=False
-    )
+    published_date = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
+    last_modified_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
     created_on = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%SZ", required=False)
     image = serializers.ImageField(required=False)
     feature_image_url = serializers.SerializerMethodField()  # Add this field
@@ -628,9 +598,7 @@ class CaseStudySerializer(serializers.ModelSerializer):
         try:
             feature_image = CaseStudyFeatureImage.objects.get(case_study=obj)
             return (
-                request.build_absolute_uri(feature_image.image.url)
-                if feature_image.image
-                else None
+                request.build_absolute_uri(feature_image.image.url) if feature_image.image else None
             )
         except CaseStudyFeatureImage.DoesNotExist:
             return None

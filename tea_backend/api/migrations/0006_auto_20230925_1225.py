@@ -22,9 +22,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="evidence",
             name="property_claim",
-            field=models.ManyToManyField(
-                related_name="evidence", to="api.PropertyClaim"
-            ),
+            field=models.ManyToManyField(related_name="evidence", to="api.PropertyClaim"),
         ),
         migrations.CreateModel(
             name="Strategy",

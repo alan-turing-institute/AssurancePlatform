@@ -12,8 +12,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="assurancecase",
             name="color_profile",
-            field=models.CharField(
-                blank=True, default="default", max_length=200, null=True
-            ),
+            field=models.CharField(blank=True, default="default", max_length=200, null=True),
         ),
     ]

@@ -37,9 +37,7 @@ SOCIAL_AUTH_GITHUB_KEY: str | None = os.environ.get("GITHUB_CLIENT_ID")
 SOCIAL_AUTH_GITHUB_SECRET: str | None = os.environ.get("GITHUB_CLIENT_SECRET")
 REDIRECT_URI = "http://localhost:3000/login"
 
-ALLOWED_HOSTS = (
-    [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
-)
+ALLOWED_HOSTS = [os.environ["WEBSITE_HOSTNAME"]] if "WEBSITE_HOSTNAME" in os.environ else ["*"]
 
 if "FRONTEND_HOSTNAME" in os.environ:
     ALLOWED_HOSTS += [os.environ["FRONTEND_HOSTNAME"]]
@@ -47,19 +45,41 @@ if "FRONTEND_HOSTNAME" in os.environ:
 
 AZURE_ACCOUNT_NAME: str | None = os.getenv("AZURE_ACCOUNT_NAME")
 AZURE_ACCOUNT_KEY: str | None = os.getenv("AZURE_ACCOUNT_KEY")
-AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
-MEDIA_URL: str = f"https://{AZURE_CUSTOM_DOMAIN}/media/"
-MEDIA_ROOT: Path = BASE_DIR / "mediafiles"
 
-# Storage configuration for Django 5.1+
-STORAGES = {
-    "default": {
-        "BACKEND": "tea_backend.azure_storage.AzureMediaStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+# Conditional storage configuration based on environment
+# Use Azure storage only when explicitly enabled and not in testing
+USE_AZURE_STORAGE = os.getenv("USE_AZURE_STORAGE", "false").lower() == "true"
+TESTING = "test" in sys.argv or os.getenv("TESTING", "false").lower() == "true"
+
+if USE_AZURE_STORAGE and not TESTING and AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
+    # Production/Azure configuration
+    AZURE_CUSTOM_DOMAIN = f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+    MEDIA_URL: str = f"https://{AZURE_CUSTOM_DOMAIN}/media/"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "tea_backend.azure_storage.AzureMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # Development/testing configuration (local file storage)
+    # This prevents accidental use of production Azure storage in dev/test
+    MEDIA_URL = "/media/"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+# Set MEDIA_ROOT for both cases
+MEDIA_ROOT: Path = BASE_DIR / "mediafiles"
 
 if DEBUG:
     ALLOWED_HOSTS += ["localhost", "127.0.0.1"]
@@ -105,11 +125,11 @@ MIDDLEWARE = [
 if "CORS_ORIGIN_WHITELIST" in os.environ:
     CORS_ORIGIN_WHITELIST = os.environ["CORS_ORIGIN_WHITELIST"].split(",")
 else:
-    CORS_ORIGIN_WHITELIST = (
+    CORS_ORIGIN_WHITELIST = [
         "http://localhost:3000",
         "http://localhost:8000",
         "http://localhost:8080",
-    )
+    ]
 CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = "tea_backend.urls"
@@ -157,9 +177,7 @@ WSGI_APPLICATION = "tea_backend.wsgi.application"
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 # use sqlite db for tests
-if (
-    "test" in sys.argv or "test_coverage" in sys.argv
-):  # Covers regular testing and django-coverage
+if "test" in sys.argv or "test_coverage" in sys.argv:  # Covers regular testing and django-coverage
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",

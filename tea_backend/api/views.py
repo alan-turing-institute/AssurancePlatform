@@ -166,9 +166,7 @@ def change_user_password(request: HttpRequest, pk: int) -> HttpResponse:
     if not user_to_update.check_password(
         raw_password=cast(str, serializer.validated_data.get("password"))
     ):
-        return Response(
-            {"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST)
 
     user_to_update.set_password(serializer.validated_data.get("new_password"))
     user_to_update.save()
@@ -245,10 +243,7 @@ def case_list(request):
     ]
 
     if request.method == "GET":
-
-        serialized_cases = ShareAssuranceCaseUtils.get_user_cases(
-            request.user, permission_list
-        )
+        serialized_cases = ShareAssuranceCaseUtils.get_user_cases(request.user, permission_list)
         return JsonResponse(serialized_cases, safe=False)
     elif request.method == "POST":
         data = JSONParser().parse(request)
@@ -293,9 +288,7 @@ def case_image(request: HttpRequest, pk) -> Response:
                 status=status.HTTP_200_OK,
             )
 
-    return Response(
-        {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
-    )
+    return Response({"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @csrf_exempt
@@ -336,17 +329,14 @@ def case_detail(request, pk):
         data = JSONParser().parse(request)
 
         # Check if trying to change published status
-        if "published" in data:
-            if case.owner != request.user:
-                return HttpResponse(status=403)
+        if "published" in data and case.owner != request.user:
+            return HttpResponse(status=403)
 
         published = data.get("published", None)
 
         if published is False:
             # Check if trying to unpublish while linked to a case study
-            linked_snapshots = PublishedAssuranceCase.objects.filter(
-                assurance_case=case
-            )
+            linked_snapshots = PublishedAssuranceCase.objects.filter(assurance_case=case)
 
             linked_case_studies = CaseStudy.objects.filter(
                 assurance_cases__in=linked_snapshots
@@ -375,9 +365,7 @@ def case_detail(request, pk):
 
                 # Try to fetch the existing published case
                 try:
-                    published_case = PublishedAssuranceCase.objects.get(
-                        assurance_case=updated_case
-                    )
+                    published_case = PublishedAssuranceCase.objects.get(assurance_case=updated_case)
                     # Update the existing published case
                     published_case.title = updated_case.name
                     published_case.description = updated_case.description
@@ -394,9 +382,7 @@ def case_detail(request, pk):
 
             elif published is False:
                 # Safe to delete snapshots (already checked above)
-                PublishedAssuranceCase.objects.filter(
-                    assurance_case=updated_case
-                ).delete()
+                PublishedAssuranceCase.objects.filter(assurance_case=updated_case).delete()
 
             return JsonResponse(serializer.data)
 
@@ -435,12 +421,9 @@ def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
         case_users: dict = ShareAssuranceCaseUtils.get_case_permissions(assurance_case)
         return JsonResponse(case_users)
     elif request.method == "POST":
-
         serializer = ShareRequestSerializer(data=request.data, many=True)
         if not serializer.is_valid():
-            return JsonResponse(
-                {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return JsonResponse({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         for permission_key in ["view", "edit", "review"]:
             additions, removals = ShareAssuranceCaseUtils.extract_requests(
@@ -485,7 +468,6 @@ def goal_list(request: HttpRequest) -> HttpResponse:
         summaries = make_summary(serializer.data)
         return JsonResponse(summaries, safe=False)
     elif request.method == "POST":
-
         data = JSONParser().parse(request)
         assurance_case_id = AssuranceCase.objects.get(id=data["assurance_case_id"])
         data["assurance_case"] = assurance_case_id
@@ -598,7 +580,6 @@ def context_detail(request: HttpRequest, pk: int) -> HttpResponse:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
-
     try:
         SandboxUtils.detach_context(context_id=pk)
 
@@ -611,7 +592,6 @@ def detach_context(_: HttpRequest, pk: int) -> HttpResponse:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def attach_context(request: HttpRequest, pk: int) -> HttpResponse:
-
     try:
         SandboxUtils.attach_context(context_id=pk, goal_id=request.data["goal_id"])  # type: ignore[attr-defined]
 
@@ -686,21 +666,16 @@ def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def detach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
-
     try:
         incoming_json: dict[str, Any] = request.data  # type: ignore[attr-defined]
-        SandboxUtils.detach_property_claim(
-            property_claim_id=pk, parent_info=incoming_json
-        )
+        SandboxUtils.detach_property_claim(property_claim_id=pk, parent_info=incoming_json)
         return HttpResponse(status=200)
     except (
         PropertyClaim.DoesNotExist,
         TopLevelNormativeGoal.DoesNotExist,
         Strategy.DoesNotExist,
     ):
-        return JsonResponse(
-            {"error_message": "Could not locate case element."}, status=404
-        )
+        return JsonResponse({"error_message": "Could not locate case element."}, status=404)
     except ValueError as value_error:
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
@@ -718,9 +693,7 @@ def attach_property_claim(request: HttpRequest, pk: int) -> HttpResponse:
         TopLevelNormativeGoal.DoesNotExist,
         Strategy.DoesNotExist,
     ):
-        return JsonResponse(
-            {"error_message": "Could not locate case element."}, status=404
-        )
+        return JsonResponse({"error_message": "Could not locate case element."}, status=404)
     except ValueError as value_error:
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
@@ -788,7 +761,9 @@ def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
 @permission_classes([IsAuthenticated])
 def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
     try:
-        SandboxUtils.detach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
+        SandboxUtils.detach_evidence(
+            evidence_id=pk, property_claim_id=request.data["property_claim_id"]
+        )  # type: ignore[attr-defined]
         return HttpResponse(status=200)
     except (Evidence.DoesNotExist, AssuranceCase.DoesNotExist):
         return HttpResponse(status=404)
@@ -799,7 +774,9 @@ def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 @permission_classes([IsAuthenticated])
 def attach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
     try:
-        SandboxUtils.attach_evidence(evidence_id=pk, property_claim_id=request.data["property_claim_id"])  # type: ignore[attr-defined]
+        SandboxUtils.attach_evidence(
+            evidence_id=pk, property_claim_id=request.data["property_claim_id"]
+        )  # type: ignore[attr-defined]
 
     except (Evidence.DoesNotExist, PropertyClaim.DoesNotExist):
         return HttpResponse(status=400)
@@ -887,9 +864,7 @@ def detach_strategy(_: HttpRequest, pk: int) -> HttpResponse:
         Strategy.DoesNotExist,
         TopLevelNormativeGoal.DoesNotExist,
     ):
-        return JsonResponse(
-            {"error_message": "Could not locate case element."}, status=404
-        )
+        return JsonResponse({"error_message": "Could not locate case element."}, status=404)
     except ValueError as value_error:
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
@@ -906,9 +881,7 @@ def attach_strategy(request: HttpRequest, pk: int):
         TopLevelNormativeGoal.DoesNotExist,
         Strategy.DoesNotExist,
     ):
-        return JsonResponse(
-            {"error_message": "Could not locate case element."}, status=404
-        )
+        return JsonResponse({"error_message": "Could not locate case element."}, status=404)
     except ValueError as value_error:
         return JsonResponse({"error_message": str(value_error)}, status=400)
 
@@ -919,7 +892,6 @@ def attach_strategy(request: HttpRequest, pk: int):
 @permission_classes([AllowAny])
 @psa("")
 def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG001
-
     access_token: str = request.data.get("access_token")
     user_email: str = request.data.get("email")
 
@@ -928,9 +900,7 @@ def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG00
         if not social_user.email:
             social_user.email = user_email
 
-        eap_user: EAPUser = SocialAuthenticationUtils.register_social_user(
-            social_user, backend
-        )
+        eap_user: EAPUser = SocialAuthenticationUtils.register_social_user(social_user, backend)
 
         token, _ = Token.objects.get_or_create(user=eap_user)
         return JsonResponse({"key": token.key}, status=200)
@@ -1093,9 +1063,7 @@ def case_study_list(request):
             owner=request.user
         )  # Ensure only user-owned case studies are returned
         # serializer = CaseStudySerializer(case_studies, many=True)
-        serializer = CaseStudySerializer(
-            case_studies, many=True, context={"request": request}
-        )
+        serializer = CaseStudySerializer(case_studies, many=True, context={"request": request})
         return JsonResponse(serializer.data, safe=False)
 
     elif request.method == "POST":
@@ -1108,14 +1076,10 @@ def case_study_list(request):
         # Parse 'assurance_cases' if it's a string
         if "assurance_cases" in data:
             try:
-                assurance_cases_list = json.loads(
-                    data["assurance_cases"]
-                )  # Convert to list
+                assurance_cases_list = json.loads(data["assurance_cases"])  # Convert to list
             except json.JSONDecodeError:
                 return JsonResponse(
-                    {
-                        "assurance_cases": "Invalid format. Must be a JSON-encoded list of IDs."
-                    },
+                    {"assurance_cases": "Invalid format. Must be a JSON-encoded list of IDs."},
                     status=400,
                 )
 
@@ -1124,14 +1088,12 @@ def case_study_list(request):
 
             # Validate that all items are valid UUID strings or integers
             for item in assurance_cases_list:
-                if not isinstance(item, (str, int)):
+                if not isinstance(item, str | int):
                     return JsonResponse(
                         {"assurance_cases": "Must be a list of valid IDs."}, status=400
                     )
 
-            data.setlist(
-                "assurance_cases", assurance_cases_list
-            )  # Ensure it's treated as a list
+            data.setlist("assurance_cases", assurance_cases_list)  # Ensure it's treated as a list
 
         # Pass the cleaned data to serializer
         serializer = CaseStudySerializer(data=data, context={"request": request})
@@ -1147,6 +1109,8 @@ def case_study_list(request):
             )
 
         return JsonResponse(serializer.errors, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -1176,14 +1140,10 @@ def case_study_detail(request, pk):
         try:
             assurance_cases_list = json.loads(assurance_cases_raw)
         except json.JSONDecodeError:
-            return JsonResponse(
-                {"error": "Invalid JSON format for assurance_cases"}, status=400
-            )
+            return JsonResponse({"error": "Invalid JSON format for assurance_cases"}, status=400)
 
         if not isinstance(assurance_cases_list, list):
-            return JsonResponse(
-                {"error": "assurance_cases should be a list of IDs"}, status=400
-            )
+            return JsonResponse({"error": "assurance_cases should be a list of IDs"}, status=400)
 
         if not all(isinstance(item, str) for item in assurance_cases_list):
             return JsonResponse(
@@ -1207,6 +1167,8 @@ def case_study_detail(request, pk):
     elif request.method == "DELETE":
         case_study.delete()
         return HttpResponse(status=204)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -1287,9 +1249,7 @@ def case_study_feature_image(request: HttpRequest, pk) -> Response:
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-    return Response(
-        {"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST
-    )
+    return Response({"message": "Bad request", "data": None}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @csrf_exempt
@@ -1303,9 +1263,7 @@ def published_assurance_case_list(request):
     user_cases = AssuranceCase.objects.filter(owner=request.user)
 
     # Fetch all PublishedAssuranceCases that reference those AssuranceCases
-    published_cases = PublishedAssuranceCase.objects.filter(
-        assurance_case__in=user_cases
-    )
+    published_cases = PublishedAssuranceCase.objects.filter(assurance_case__in=user_cases)
 
     serializer = PublishedAssuranceCaseSerializer(
         published_cases, many=True, context={"request": request}
@@ -1314,7 +1272,7 @@ def published_assurance_case_list(request):
 
 
 @api_view(["GET"])
-def published_assurance_case_detail(request, id):
+def published_assurance_case_detail(request, id):  # noqa: ARG001
     try:
         pac = PublishedAssuranceCase.objects.get(id=id)
     except PublishedAssuranceCase.DoesNotExist:

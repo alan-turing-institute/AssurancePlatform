@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0019_merge_0017_auto_20240704_1601_0018_alter_context_goal"),
     ]

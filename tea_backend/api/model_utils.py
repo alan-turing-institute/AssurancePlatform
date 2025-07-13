@@ -19,9 +19,7 @@ def get_property_claims_by_case_id(case_id: int | None) -> tuple[list[int], list
         assurance_case_id=case_id
     )
 
-    current_case_strategies: QuerySet = Strategy.objects.filter(
-        goal_id=current_case_goal.pk
-    )
+    current_case_strategies: QuerySet = Strategy.objects.filter(goal_id=current_case_goal.pk)
 
     (
         top_level_claim_ids,

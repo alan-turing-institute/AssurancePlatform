@@ -83,6 +83,9 @@ Issues = "https://github.com/alan-turing-institute/AssurancePlatform/issues"
 
 [tool.ruff]
 line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
 select = [
   "E", "F", "W", # flake8
   "B",           # flake8-bugbear
@@ -111,11 +114,11 @@ extend-ignore = [
   "B028",   # Explicit stacklevel
   "SIM114", # Combine logic
 ]
-target-version = "py312"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "*/migrations/*" = ["ALL"]
-"*/tests/*" = ["ARG", "PLR2004"]
+"tests/**" = ["ARG", "PLR2004", "PT004", "PT009", "F811"]
+"tests/**/*.py" = ["ARG", "PLR2004", "PT004", "PT009", "F811"]
 "*/settings/*" = ["F405", "F403"]
 
 [tool.ruff.format]

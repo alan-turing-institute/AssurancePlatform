@@ -49,7 +49,6 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         }
 
     def disconnect(self, code):
-
         if self.case_group_name is not None:
             async_to_sync(self.channel_layer.group_discard)(  # type: ignore  # noqa: PGH003
                 self.case_group_name, self.channel_name
@@ -63,7 +62,6 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         return super().disconnect(code)
 
     def receive(self, text_data=None, _=None):
-
         message_content: str = ""
         is_ping_message: bool = False
         try:
@@ -93,7 +91,6 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         self.send(text_data=json.dumps(event, cls=DjangoJSONEncoder))
 
     def remove_connection(self) -> None:
-
         try:
             connection = AssuranceCaseConnection.objects.get(
                 user=EAPUser.objects.get(pk=self.user_data["id"]),
@@ -120,9 +117,7 @@ class AssuranceCaseConsumer(WebsocketConsumer):
         return [
             {
                 "user": {
-                    "username": UsernameAwareUserSerializer(connection.user).data[
-                        "username"
-                    ],  # type: ignore  # noqa: PGH003
+                    "username": UsernameAwareUserSerializer(connection.user).data["username"],  # type: ignore  # noqa: PGH003
                     "id": connection.user.pk,
                 },
                 "connection_date": connection.connection_date,
@@ -133,10 +128,11 @@ class AssuranceCaseConsumer(WebsocketConsumer):
     def persist_connection(self) -> None:
         user_model: EAPUser = EAPUser.objects.get(pk=self.user_data["id"])
 
-        user_connections: QuerySet[
-            AssuranceCaseConnection
-        ] = AssuranceCaseConnection.objects.filter(
-            user=user_model, case_group_name=self.case_group_name  # type: ignore  # noqa: PGH003
+        user_connections: QuerySet[AssuranceCaseConnection] = (
+            AssuranceCaseConnection.objects.filter(
+                user=user_model,
+                case_group_name=self.case_group_name,  # type: ignore  # noqa: PGH003
+            )
         )
 
         channel_layer = get_channel_layer()

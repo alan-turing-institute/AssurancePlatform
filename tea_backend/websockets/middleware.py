@@ -20,18 +20,13 @@ class TokenAuthMiddleware(BaseMiddleware):
         super().__init__(inner)
 
     async def __call__(self, scope, receive, send):
-
         query_string_elements: list[str] = scope["query_string"].decode().split("&")
 
         token_key: str | None = None
         with contextlib.suppress(ValueError):
             token_key = (
-                dict(
-                    key_and_value.split("=") for key_and_value in query_string_elements
-                )
+                dict(key_and_value.split("=") for key_and_value in query_string_elements)
             ).get("token", None)
-        scope["user"] = (
-            AnonymousUser() if token_key is None else await get_user(token_key)
-        )
+        scope["user"] = AnonymousUser() if token_key is None else await get_user(token_key)
 
         return await super().__call__(scope, receive, send)

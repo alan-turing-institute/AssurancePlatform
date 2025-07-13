@@ -12,15 +12,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="assurancecase",
             name="edit_groups",
-            field=models.ManyToManyField(
-                related_name="editable_cases", to="api.EAPGroup"
-            ),
+            field=models.ManyToManyField(related_name="editable_cases", to="api.EAPGroup"),
         ),
         migrations.AddField(
             model_name="assurancecase",
             name="view_groups",
-            field=models.ManyToManyField(
-                related_name="viewable_cases", to="api.EAPGroup"
-            ),
+            field=models.ManyToManyField(related_name="viewable_cases", to="api.EAPGroup"),
         ),
     ]
