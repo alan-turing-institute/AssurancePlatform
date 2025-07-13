@@ -1,6 +1,6 @@
 # Trustworthy and Ethical Assurance Platform
 
-![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](site/docs/assets/images/hero.gif)
+![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](hero.gif)
 
 [![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
@@ -12,6 +12,7 @@
 Get the TEA Platform running locally with Docker in just a few steps:
 
 ### Prerequisites
+
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 - [Git](https://git-scm.com/downloads)
 - A [GitHub OAuth App](https://github.com/settings/applications/new) for authentication
@@ -19,12 +20,14 @@ Get the TEA Platform running locally with Docker in just a few steps:
 ### Quick Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/alan-turing-institute/AssurancePlatform.git
    cd AssurancePlatform
    ```
 
 2. **Set up environment files**
+
    ```bash
    # Copy example environment files
    cp tea_backend/.env.example tea_backend/.env.local
@@ -32,12 +35,14 @@ Get the TEA Platform running locally with Docker in just a few steps:
    ```
 
 3. **Configure GitHub OAuth (optional)**
+
    - Create a [new GitHub OAuth App](https://github.com/settings/applications/new)
    - Set Homepage URL: `http://localhost:3000`
    - Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
    - Add your Client ID and Client Secret to both `.env.local` files
 
 4. **Start the development environment**
+
    ```bash
    docker-compose -f docker-compose.development.yml up --build
    ```
