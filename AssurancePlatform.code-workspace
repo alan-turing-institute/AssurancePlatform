@@ -23,6 +23,8 @@
     "python.testing.cwd": "./tea_backend",
     "python.testing.pytestArgs": ["-v", "--tb=short"],
     "terminal.integrated.cwd": "${workspaceFolder}",
+    "terminal.integrated.defaultProfile.osx": "uv (Backend)",
+    "terminal.integrated.defaultProfile.linux": "uv (Backend)",
     "terminal.integrated.env.osx": {
       "UV_PROJECT_ENVIRONMENT": "./tea_backend/.venv"
     },
@@ -32,9 +34,10 @@
     "terminal.integrated.profiles.osx": {
       "uv (Backend)": {
         "path": "/bin/zsh",
-        "args": ["-c", "cd tea_backend && exec zsh"],
+        "args": ["-c", "cd tea_backend && source .venv/bin/activate && exec zsh"],
         "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
+          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv",
+          "VIRTUAL_ENV": "${workspaceFolder}/tea_backend/.venv"
         }
       },
       "pnpm (Frontend)": {
@@ -45,9 +48,10 @@
     "terminal.integrated.profiles.linux": {
       "uv (Backend)": {
         "path": "/bin/bash",
-        "args": ["-c", "cd tea_backend && exec bash"],
+        "args": ["-c", "cd tea_backend && source .venv/bin/activate && exec bash"],
         "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
+          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv",
+          "VIRTUAL_ENV": "${workspaceFolder}/tea_backend/.venv"
         }
       },
       "pnpm (Frontend)": {
