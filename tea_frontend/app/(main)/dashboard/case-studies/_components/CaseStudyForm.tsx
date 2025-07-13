@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { CloudDownload, InfoIcon, Share, Share2Icon, Trash2Icon, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/caseStudies"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/components/ui/use-toast"
@@ -87,18 +87,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     } else {
       setSelectedAssuranceCases([])
     }
-  },[])
-
-  // Sync authors state with form field value
-  useEffect(() => {
-    const formAuthors = form.watch("authors");
-    if (formAuthors) {
-      const authorsArray = formAuthors.split(",").map(a => a.trim()).filter(a => a);
-      setAuthors(authorsArray);
-    } else {
-      setAuthors([]);
-    }
-  }, [form, caseStudy])
+  },[caseStudy])
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
@@ -119,6 +108,17 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       published: false,
     },
   })
+
+  // Sync authors state with form field value
+  useEffect(() => {
+    const formAuthors = form.watch("authors");
+    if (formAuthors) {
+      const authorsArray = formAuthors.split(",").map(a => a.trim()).filter(a => a);
+      setAuthors(authorsArray);
+    } else {
+      setAuthors([]);
+    }
+  }, [form, caseStudy])
 
   const handleFileChange = (e: any) => {
     const file = e.target.files[0];
@@ -250,7 +250,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     }
   }
 
-  const fetchFeaturedImage = async () => {
+  const fetchFeaturedImage = useCallback(async () => {
     try {
       const requestOptions: RequestInit = {
         method: "GET",
@@ -274,7 +274,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     } finally {
       setImageLoading(false)
     }
-  }
+  }, [data?.key, caseStudy?.id])
 
   // Authors management functions - moved from FormField render
   const addAuthor = () => {
@@ -297,7 +297,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     if(caseStudy) {
       fetchFeaturedImage()
     }
-  }, [caseStudy])
+  }, [caseStudy, fetchFeaturedImage])
 
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
     if(caseStudy && caseStudy.published) {

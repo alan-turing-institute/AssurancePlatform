@@ -17,7 +17,7 @@ const LoggedInUser = () => {
       setCurrentUser(result)
       setLoading(false)
     })
-  },[])
+  },[data?.key])
 
   return (
     <>

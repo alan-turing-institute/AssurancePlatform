@@ -78,7 +78,7 @@ export const CaseCreateModal = () => {
           setErrors(["An error occurred, please try again later"]);
         });
     },
-    [session]
+    [session, createCaseModal, router]
   );
 
   const handleCancel = (e: any) => {

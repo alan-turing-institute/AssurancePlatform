@@ -162,7 +162,7 @@ const RegisterForm = () => {
     if(token) {
       router.push('/dashboard')
     }
-  },[])
+  },[session?.key, router])
 
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">

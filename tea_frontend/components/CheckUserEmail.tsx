@@ -12,7 +12,7 @@ const CheckUserEmail = ({ user } : CheckUserEmailProps) => {
 
   useEffect(() => {
     if (!user?.email) emailModal.onOpen()
-  }, [user])
+  }, [user, emailModal])
 
   return null
 }

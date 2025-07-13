@@ -90,7 +90,7 @@ const EditForm: React.FC<EditFormProps> = ({
         setUnresolvedChanges(true);
       }
     });
-  }, [form.watch, setUnresolvedChanges]);
+  }, [form, setUnresolvedChanges]);
 
   let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
 

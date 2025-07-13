@@ -10,7 +10,7 @@ const CookiePolicyPage = () => {
           Cookie Notice for the Trustworthy and Ethical Assurance Platform
         </h1>
         <p className="mt-6 text-xl/8">
-          This Cookie Notice explains how the Trustworthy and Ethical Assurance (TEA) Platform ("we", "us", or "our") uses cookies on our website, <a href='https://assuranceplatform.azurewebsites.net/' className='text-indigo-600 underline'>https://assuranceplatform.azurewebsites.net/</a> (the "Platform"). This notice is designed to help you understand what cookies are, why we use them, and your choices regarding their use.
+          This Cookie Notice explains how the Trustworthy and Ethical Assurance (TEA) Platform (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) uses cookies on our website, <a href='https://assuranceplatform.azurewebsites.net/' className='text-indigo-600 underline'>https://assuranceplatform.azurewebsites.net/</a> (the &quot;Platform&quot;). This notice is designed to help you understand what cookies are, why we use them, and your choices regarding their use.
         </p>
 
         <div className="mt-16 max-w-3xl">
@@ -102,7 +102,7 @@ const CookiePolicyPage = () => {
             Why These Cookies Are Essential
           </h2>
           <p className="mt-6">
-            These cookies are classified as "strictly necessary" because:
+            These cookies are classified as &quot;strictly necessary&quot; because:
           </p>
           <ul className="mt-6 ml-8 max-w-xl list-disc text-gray-600">
             <li>
@@ -125,12 +125,12 @@ const CookiePolicyPage = () => {
             When you first visit our Platform, you will see a cookie banner informing you about our use of essential cookies.
           </p>
           <p className="mt-6">
-            Because the cookies we use are strictly necessary for registered users to log in and use the Platform's features:
+            Because the cookies we use are strictly necessary for registered users to log in and use the Platform&apos;s features:
           </p>
           <ul className="mt-6 ml-8 max-w-xl list-disc text-gray-600">
             <li><strong>You cannot opt-out of these essential cookies if you wish to log in and use the authenticated sections of the TEA Platform.</strong></li>
             <li>If you do not wish for these cookies to be placed on your device, you can choose not to register or log in to the Platform.</li>
-            <li>You can always manage or delete cookies through your browser settings. However, please be aware that if you block or delete our essential cookies, you will not be able to log in or use certain parts of the Platform. Instructions for managing cookies in popular browsers can typically be found in the browser's "Help" section or by searching online.</li>
+            <li>You can always manage or delete cookies through your browser settings. However, please be aware that if you block or delete our essential cookies, you will not be able to log in or use certain parts of the Platform. Instructions for managing cookies in popular browsers can typically be found in the browser&apos;s &quot;Help&quot; section or by searching online.</li>
           </ul>
         </div>
 
@@ -154,7 +154,7 @@ const CookiePolicyPage = () => {
             Currently, the TEA Platform itself primarily uses the first-party essential cookies listed above for its core authentication functionality.
           </p>
           <p className="mt-6">
-            If you choose to authenticate using a third-party provider (e.g., GitHub), that provider will set its own cookies as part of their authentication process. These cookies are governed by the respective third-party's cookie policy, which you should review. The TEA Platform does not control these third-party cookies once you are on their domain for authentication.
+            If you choose to authenticate using a third-party provider (e.g., GitHub), that provider will set its own cookies as part of their authentication process. These cookies are governed by the respective third-party&apos;s cookie policy, which you should review. The TEA Platform does not control these third-party cookies once you are on their domain for authentication.
           </p>
         </div>
 

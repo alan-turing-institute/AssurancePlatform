@@ -55,7 +55,7 @@ function Flow({}: FlowProps) {
     });
   };
 
-  const convert = async () => {
+  const convert = useCallback(async () => {
     if (assuranceCase && assuranceCase.goals) {
       const result = await convertAssuranceCase(assuranceCase);
       const { caseNodes, caseEdges } = result;
@@ -64,12 +64,12 @@ function Flow({}: FlowProps) {
       layoutNodes(caseNodes, caseEdges);
       setLoading(false);
     }
-  };
+  }, [assuranceCase, layoutNodes]);
 
   // intial conversion of the assurance case on component render
   useEffect(() => {
     convert();
-  }, [assuranceCase]);
+  }, [assuranceCase, convert]);
 
   const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
     setSelectedNode(node);

@@ -8,7 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { redirect } from 'next/navigation'
 
-async function CaseStudyDetails({ params } : { params: { id: string } }) {
+async function CaseStudyDetails({ params } : { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
 
   // Redirect user to login if no `key`
@@ -16,7 +16,7 @@ async function CaseStudyDetails({ params } : { params: { id: string } }) {
     redirect('/login')
   }
 
-  const { id } = params
+  const { id } = await params
 
   const caseStudy = await fetchCaseStudyById(session.key, parseInt(id))
 

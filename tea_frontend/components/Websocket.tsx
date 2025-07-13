@@ -128,7 +128,7 @@ const WebSocketComponent = () => {
       }
       clearInterval(interval);
     };
-  }, [assuranceCase?.id, session?.key]); // Run effect when assuranceCase.id or token changes
+  }, [assuranceCase?.id, session?.key, setActiveUsers, setAssuranceCase]); // Run effect when assuranceCase.id or token changes
 
 
   const prevAssuranceCaseString = usePrevious(JSON.stringify(assuranceCase));

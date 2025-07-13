@@ -9,7 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { redirect } from 'next/navigation'
 
-async function NewCaseStudy({ params } : { params: { id: string } }) {
+async function NewCaseStudy() {
   const session = await getServerSession(authOptions)
 
   // Redirect user to login if no `key`

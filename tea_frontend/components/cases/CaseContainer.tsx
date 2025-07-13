@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Flow from './Flow'
 import { unauthorized, useLoginToken } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation';
@@ -29,7 +29,7 @@ const CaseContainer = () => {
   // const [token] = useLoginToken();
   // useEnforceLogin()
 
-  const fetchSingleCase = async (id: number) => {
+  const fetchSingleCase = useCallback(async (id: number) => {
     const requestOptions: RequestInit = {
       headers: {
         Authorization: `Token ${session?.key}`,
@@ -50,9 +50,9 @@ const CaseContainer = () => {
 
     const formattedAssuranceCase = await addHiddenProp(result)
     return formattedAssuranceCase
-  }
+  }, [session?.key])
 
-  const fetchOrphanedElements = async (id: any) => {
+  const fetchOrphanedElements = useCallback(async (id: any) => {
     const requestOptions: RequestInit = {
       headers: {
         Authorization: `Token ${session?.key}`,
@@ -70,7 +70,7 @@ const CaseContainer = () => {
 
     const result = await response.json()
     return result
-  }
+  }, [session?.key])
 
   useEffect(() => {
     //@ts-ignore
@@ -78,13 +78,13 @@ const CaseContainer = () => {
       setAssuranceCase(result)
       setLoading(false)
     })
-  },[])
+  },[caseId, fetchSingleCase, setAssuranceCase])
 
   useEffect(() => {
     fetchOrphanedElements(caseId).then(result => {
       setOrphanedElements(result)
     })
-  },[assuranceCase])
+  },[caseId, assuranceCase, fetchOrphanedElements, setOrphanedElements])
 
   return (
     <>

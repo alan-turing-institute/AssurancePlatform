@@ -56,7 +56,7 @@ const CreateForm: React.FC<CreateFormProps> = ({ onClose, setUnresolvedChanges }
         setUnresolvedChanges(true);
       }
     });
-  }, [form.watch, setUnresolvedChanges]);
+  }, [form, setUnresolvedChanges]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const identifier = await setNodeIdentifier(null, 'goal')

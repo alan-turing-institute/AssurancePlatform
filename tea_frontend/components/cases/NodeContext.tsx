@@ -137,7 +137,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
 
       setContexts(result.context)
     })
-  }, [assuranceCase])
+  }, [node.data.id, node.type, session?.key, assuranceCase])
 
   // useEffect(() => {
   //   form.watch((values, { name }) => {

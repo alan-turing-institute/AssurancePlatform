@@ -81,7 +81,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
   // Fetch current user
   useEffect(() => {
     fetchCurrentUser().then(result => setUser(result))
-  },[user])
+  },[session?.key])
 
   return (
     <div className="mt-4 py-2 w-full">

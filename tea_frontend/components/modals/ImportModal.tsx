@@ -87,7 +87,7 @@ export const ImportModal = () => {
           setError("An error occurred, please try again later");
         });
     },
-    [session]
+    [session, importModal, router]
   );
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {

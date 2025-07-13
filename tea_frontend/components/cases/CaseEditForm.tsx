@@ -83,7 +83,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
         setUnresolvedChanges(true);
       }
     });
-  }, [form.watch, setUnresolvedChanges]);
+  }, [form, setUnresolvedChanges]);
 
   return (
     <Form {...form}>

@@ -29,7 +29,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
           setHidden(strategies[0].hidden)
         }
     }
-  },[])
+  },[node.id, nodes])
 
   let stack: any[] = []
   let outgoers: any[] = [];

@@ -103,7 +103,7 @@ const SignInForm = () => {
       // User has a session but no backend key - likely GitHub auth failed
       console.warn('Authentication incomplete: session exists but no backend key found')
     }
-  },[session])
+  },[session, router])
 
   return (
     <div className="mx-auto w-full max-w-sm lg:w-96">

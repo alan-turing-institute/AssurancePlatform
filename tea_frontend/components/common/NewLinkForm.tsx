@@ -342,7 +342,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         setUnresolvedChanges(true);
       }
     });
-  }, [form.watch, setUnresolvedChanges]);
+  }, [form, setUnresolvedChanges]);
 
   return (
     <div className='my-4 border-t'>

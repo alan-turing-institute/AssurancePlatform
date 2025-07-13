@@ -2,6 +2,7 @@ import SignInForm from "@/components/auth/SignInForm";
 import { authOptions } from "@/lib/authOptions";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function SignInPage() {
   return (
@@ -20,8 +21,12 @@ export default async function SignInPage() {
             src="https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             alt=""
           /> */}
-          <img className="absolute inset-0 h-full w-full object-cover"
+          <Image 
+            className="absolute inset-0 h-full w-full object-cover"
             src="https://raw.githubusercontent.com/alan-turing-institute/turing-commons/main/docs/assets/images/illustrations/assurance-alt.jpg"
+            alt="Assurance platform illustration"
+            fill
+            sizes="50vw"
           />
         </div>
       </div>

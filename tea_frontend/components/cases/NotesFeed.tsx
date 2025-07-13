@@ -73,12 +73,12 @@ export default function NotesFeed({ }) {
     //@ts-ignore
     // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     fetchSingleCase().then(comments => setCaseNotes(comments))
-  },[caseNotes])
+  },[assuranceCase])
 
   // Fetch current user
   useEffect(() => {
     fetchCurrentUser().then(result => setUser(result))
-  },[user])
+  },[session?.key])
 
   const handleNoteDelete = async (id: number) => {
     try {

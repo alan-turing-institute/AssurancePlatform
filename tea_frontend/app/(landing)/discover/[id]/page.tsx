@@ -5,8 +5,8 @@ import Link from 'next/link'
 import React from 'react'
 import CaseStudyCases from '../../_components/CaseStudyCases'
 
-const DiscoverCaseStudyPage = async ({ params } : { params: { id: string } }) => {
-  const { id } = params
+const DiscoverCaseStudyPage = async ({ params } : { params: Promise<{ id: string }> }) => {
+  const { id } = await params
   const caseStudy = await fetchPublishedCaseStudyById(parseInt(id))
 
   return (
