@@ -15,8 +15,8 @@
     "python.testing.cwd": "./tea_backend",
     "python.testing.pytestArgs": ["-v", "--tb=short"],
     "terminal.integrated.cwd": "${workspaceFolder}",
-    "terminal.integrated.defaultProfile.osx": "uv (Backend)",
-    "terminal.integrated.defaultProfile.linux": "uv (Backend)",
+    "terminal.integrated.defaultProfile.osx": "zsh",
+    "terminal.integrated.defaultProfile.linux": "bash",
     "terminal.integrated.env.osx": {
       "UV_PROJECT_ENVIRONMENT": "./tea_backend/.venv"
     },
