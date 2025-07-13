@@ -62,6 +62,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "coverage==7.6.7",
+    "factory-boy==3.3.1",
     "mypy==1.13.0",
     "mypy-extensions==1.0.0",
     "pre-commit==4.0.1",
@@ -170,7 +171,7 @@ addopts = [
     "--cov-report=xml",
     "--cov-fail-under=80",
 ]
-testpaths = ["tests"]
+testpaths = ["tests", "api", "websockets"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
@@ -210,4 +211,5 @@ packages = ["api", "tea_backend", "websockets"]
 [dependency-groups]
 dev = [
     "coverage>=7.6.7",
+    "factory-boy>=3.3.1",
 ]
