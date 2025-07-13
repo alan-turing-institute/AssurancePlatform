@@ -1,24 +1,28 @@
 FROM node:20-alpine
 
-# Install libc6-compat for compatibility
+# Install dependencies needed for compatibility
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package*.json yarn.lock* pnpm-lock.yaml* ./
 
-# Install dependencies
-RUN npm ci --legacy-peer-deps
+# Install dependencies using preferred package manager
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  else npm ci --legacy-peer-deps; \
+  fi
 
 # Copy source code
 COPY . .
 
 # Build documentation
-RUN cd tea-docs && npm ci && npm run build
+RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build
 
 # Expose port
 EXPOSE 3000
 
 # Start development server
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"]

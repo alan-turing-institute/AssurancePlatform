@@ -58,7 +58,7 @@ services:
       - tea_dev_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    command: npm run dev
+    command: sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
 
 networks:
   tea_dev_network:

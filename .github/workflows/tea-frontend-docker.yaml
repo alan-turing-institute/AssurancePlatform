@@ -1,0 +1,122 @@
+name: tea-frontend-docker
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tea_frontend/**'
+      - '.github/workflows/tea-frontend-docker.yaml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'tea_frontend/**'
+      - '.github/workflows/tea-frontend-docker.yaml'
+  release:
+    types:
+      - published
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/tea-frontend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # set latest tag for default branch
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            # semantic version for releases
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # set staging tag for develop branch
+            type=raw,value=staging,enable={{is_default_branch}}
+            # date-based versioning
+            type=raw,value={{date 'YYYY-MM-DD'}}.{{sha}},enable={{is_default_branch}}
+            
+      - name: Build and push Docker image (Production - main branch)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tea_frontend
+          file: ./tea_frontend/docker/staging/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            API_URL=https://eap-backend.azurewebsites.net/
+            NEXTAUTH_URL=https://assuranceplatform.azurewebsites.net/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          
+      - name: Build and push Docker image (Staging - develop branch)
+        if: github.ref == 'refs/heads/develop'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tea_frontend
+          file: ./tea_frontend/docker/staging/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }}
+            API_URL=https://staging-eap-backend.azurewebsites.net/
+            NEXTAUTH_URL=https://staging-assuranceplatform.azurewebsites.net/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          
+      - name: Build and push Docker image (PR/other branches)
+        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tea_frontend
+          file: ./tea_frontend/docker/staging/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }}
+            API_URL=https://staging-eap-backend.azurewebsites.net/
+            NEXTAUTH_URL=https://staging-assuranceplatform.azurewebsites.net/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64

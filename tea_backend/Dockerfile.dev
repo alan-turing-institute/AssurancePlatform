@@ -1,7 +1,14 @@
 FROM nikolaik/python-nodejs:python3.12-nodejs22
+
+# Install uv
+RUN pip install uv
+
 COPY . /app
 WORKDIR /app
-RUN pip install -r requirements.txt
+
+# Install dependencies with uv from pyproject.toml
+RUN uv pip install --system .
+
 # Skip migrations and admin creation during build for development
 # These will be handled at runtime when the database is available
 CMD sh -c "python manage.py migrate && python manage.py createadmin && daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application"

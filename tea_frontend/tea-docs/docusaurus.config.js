@@ -37,7 +37,7 @@ const config = {
     locales: ["en"],
   },
 
-  plugins: [tailwindPlugin, "@docusaurus/plugin-ideal-image"],
+  plugins: [tailwindPlugin],
 
   markdown: {
     mermaid: true,

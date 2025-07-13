@@ -19,9 +19,9 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY --link package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci --legacy-peer-deps; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i; \
   else echo "Lockfile not found." && exit 1; \
   fi
 
@@ -41,9 +41,9 @@ ENV API_URL=${API_URL}
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 
 # Build documentation
-RUN cd tea-docs && npm ci && npm run build
+RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build
 
-RUN yarn build
+RUN if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm build; else yarn build; fi
 
 RUN echo "Build-time ENV variables:" && \
   echo GITHUB_APP_CLIENT_ID=$GITHUB_APP_CLIENT_ID && \

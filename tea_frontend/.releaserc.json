@@ -1,0 +1,84 @@
+{
+  "branches": [
+    "main",
+    {
+      "name": "develop",
+      "prerelease": "dev"
+    },
+    {
+      "name": "feature/*",
+      "prerelease": "feature-${name.replace(/^feature\\//g, \"\")}"
+    }
+  ],
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "type": "feat", "release": "minor" },
+          { "type": "fix", "release": "patch" },
+          { "type": "perf", "release": "patch" },
+          { "type": "docs", "release": "patch" },
+          { "type": "style", "release": "patch" },
+          { "type": "refactor", "release": "patch" },
+          { "type": "test", "release": "patch" },
+          { "type": "build", "release": "patch" },
+          { "type": "ci", "release": "patch" },
+          { "type": "chore", "release": false },
+          { "type": "revert", "release": "patch" },
+          { "breaking": true, "release": "major" }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "types": [
+            { "type": "feat", "section": "✨ Features" },
+            { "type": "fix", "section": "🐛 Bug Fixes" },
+            { "type": "perf", "section": "⚡ Performance Improvements" },
+            { "type": "docs", "section": "📚 Documentation" },
+            { "type": "style", "section": "💄 Styles" },
+            { "type": "refactor", "section": "♻️ Code Refactoring" },
+            { "type": "test", "section": "✅ Tests" },
+            { "type": "build", "section": "👷 Build System" },
+            { "type": "ci", "section": "🔧 CI/CD" },
+            { "type": "revert", "section": "⏪ Reverts" }
+          ]
+        }
+      }
+    ],
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# TEA Platform Changelog\n\nAll notable changes to the TEA Platform will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
+      }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": false
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version ${nextRelease.version} :tada:",
+        "labels": ["released"],
+        "releasedLabels": ["released<%= nextRelease.type === 'prerelease' ? '-prerelease' : '' %>"],
+        "addReleases": "bottom"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json", "package-lock.json", "CHANGELOG.md"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}
