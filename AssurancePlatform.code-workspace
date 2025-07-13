@@ -1,16 +1,8 @@
 {
   "folders": [
     {
-      "name": "TEA Platform Root",
+      "name": "TEA Platform",
       "path": "."
-    },
-    {
-      "name": "Backend (Django)",
-      "path": "./tea_backend"
-    },
-    {
-      "name": "Frontend (Next.js)",
-      "path": "./tea_frontend"
     }
   ],
   "settings": {
@@ -244,6 +236,32 @@
         "type": "shell",
         "command": "cd tea_frontend && npx tsc --noEmit",
         "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Run Tests",
+        "type": "shell",
+        "command": "cd tea_frontend && pnpm test",
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Run Tests with Coverage",
+        "type": "shell",
+        "command": "cd tea_frontend && pnpm test:coverage",
+        "group": "test",
         "presentation": {
           "echo": true,
           "reveal": "always",
