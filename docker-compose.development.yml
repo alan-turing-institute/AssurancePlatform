@@ -35,7 +35,6 @@ services:
       - ./tea_backend/.env.local
     volumes:
       - ./tea_backend:/app
-      - /app/node_modules
     networks:
       - tea_dev_network
 
