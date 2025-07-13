@@ -71,7 +71,7 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-eap_backend/logs/
+tea_backend/logs/
 logs/
 
 # Flask stuff:
@@ -110,6 +110,10 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
+# uv (Python package manager)
+.uv/
+uv.lock
+
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
@@ -146,9 +150,9 @@ dmypy.json
 
 *.env
 DO_NOT_COMMIT
-frontend/.env
-frontend/.env.local
-frontend/next-env.d.ts
+tea_frontend/.env
+tea_frontend/.env.local
+tea_frontend/next-env.d.ts
 ENV_Testing_Vars.sh
 .aider*
 
@@ -158,20 +162,23 @@ site/site
 .next
 /.next/
 /out/
-next_frontend/.next/
-next_frontend/out/
-next_frontend/build/
-next_frontend/.vercel
-next_frontend/*.tsbuildinfo
-next_frontend/next-env.d.ts
+tea_frontend/.next/
+tea_frontend/out/
+tea_frontend/build/
+tea_frontend/.vercel
+tea_frontend/*.tsbuildinfo
+tea_frontend/next-env.d.ts
 
-# npm/yarn
+# npm/yarn/pnpm
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .pnp.js
 .pnp
 .yarn/install-state.gz
+.pnpm-store/
+.pnpm-debug.log*
 
 # misc
 *.pem
@@ -179,8 +186,49 @@ yarn-error.log*
 # testing
 coverage/
 
-# documentation
-next_frontend/public/documentation
+# documentation builds
+tea_frontend/public/documentation/**
+tea_frontend/tea-docs/build/
+tea_frontend/tea-docs/.docusaurus/
 
 # dev tasks
 TASKS/**
+
+# IDE and editor files
+.idea/
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.vscode/launch.json
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Docker
+.dockerignore.bak
+docker-compose.override.yml
+
+# Cache directories
+.cache/
+.npm/
+.eslintcache
+.stylelintcache
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+.tmp/
+
+# Build artifacts
+*.tgz
+*.tar.gz
