@@ -35,6 +35,30 @@ jobs:
             ${{ runner.os }}-pnpm-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run linting (no tests configured yet)
-        run: pnpm lint || echo "Linting completed with warnings/errors - see output above"
+
+      - name: Run type checking
+        run: npx tsc --noEmit
+
+      - name: Run linting
+        run: pnpm lint
         continue-on-error: true
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+        env:
+          NODE_ENV: test
+
+      - name: Check coverage thresholds
+        run: pnpm test:coverage:check
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: success()
+        with:
+          file: ./tea_frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+
+      - name: Build application
+        run: pnpm build

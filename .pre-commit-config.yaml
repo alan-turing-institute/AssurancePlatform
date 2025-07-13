@@ -8,8 +8,10 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
+        files: ^tea_backend/
         exclude: \.md$
       - id: ruff-format
+        files: ^tea_backend/
         exclude: \.md$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -53,7 +55,7 @@ repos:
     hooks:
       - id: prettier
         types_or: [yaml, html, css, scss, javascript, json]
-        files: \.(js|jsx|ts|tsx|css|scss|html|yaml|yml|json)$
+        files: ^tea_frontend/.*\.(js|jsx|ts|tsx|css|scss|html|yaml|yml|json)$
         exclude: \.md$
         args: [--prose-wrap=never]
 
