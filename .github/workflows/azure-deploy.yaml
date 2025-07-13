@@ -2,7 +2,7 @@ name: azure-deploy
 
 on:
   workflow_run:
-    workflows: ["tea-backend-docker", "tea-frontend-docker"]
+    workflows: ["backend-integration-build", "frontend-build"]
     types:
       - completed
     branches:

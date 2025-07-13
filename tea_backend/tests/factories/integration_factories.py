@@ -1,122 +1,72 @@
 """
-FactoryBoy factories for integration and collaboration models.
+Factory definitions for integration-related models.
 
-This module provides factories for creating test data for:
-- GitHubRepository (GitHub integration)
-- Comment (commenting system)
-- AssuranceCaseImage (image uploads)
+This module provides FactoryBoy factories for:
+- GitHubRepository model
+- PublishedAssuranceCase model
+- CaseStudy model
+- CaseStudyFeatureImage model
 """
 
 import factory
+from django.utils import timezone
 
-from api.models import AssuranceCaseImage, Comment, GitHubRepository
-from tests.factories.base import BaseFactory
-from tests.factories.case_factories import (
-    AssuranceCaseFactory,
-    TopLevelNormativeGoalFactory,
-)
-from tests.factories.content_factories import (
-    ContextFactory,
-    EvidenceFactory,
-    PropertyClaimFactory,
-    StrategyFactory,
-)
+from api.models import CaseStudy, CaseStudyFeatureImage, GitHubRepository, PublishedAssuranceCase
+from tests.factories.case_factories import AssuranceCaseFactory
 from tests.factories.user_factories import EAPUserFactory
 
 
-class GitHubRepositoryFactory(BaseFactory):
-    """Factory for creating GitHubRepository instances."""
+class GitHubRepositoryFactory(factory.django.DjangoModelFactory):
+    """Factory for GitHubRepository model."""
 
     class Meta:
         model = GitHubRepository
 
     name = factory.Sequence(lambda n: f"test-repo-{n}")
-    url = factory.LazyAttribute(lambda obj: f"https://github.com/testuser/{obj.name}")
-    description = factory.Faker("text", max_nb_chars=200)
+    url = factory.LazyAttribute(
+        lambda obj: f"https://github.com/{obj.owner.auth_username}/{obj.name}"
+    )
+    owner = factory.SubFactory(EAPUserFactory, auth_provider="github")
+
+
+class PublishedAssuranceCaseFactory(factory.django.DjangoModelFactory):
+    """Factory for PublishedAssuranceCase model."""
+
+    class Meta:
+        model = PublishedAssuranceCase
+
+    assurance_case = factory.SubFactory(AssuranceCaseFactory)
+    repository = factory.SubFactory(GitHubRepositoryFactory)
+    branch = "main"
+    file_path = factory.Sequence(lambda n: f"case-{n}.json")
+    commit_sha = factory.Faker("sha1")
+    published_at = factory.LazyFunction(timezone.now)
+    description = factory.Faker("sentence", nb_words=8)
+
+
+class CaseStudyFactory(factory.django.DjangoModelFactory):
+    """Factory for CaseStudy model."""
+
+    class Meta:
+        model = CaseStudy
+
+    title = factory.Faker("sentence", nb_words=4)
+    description = factory.Faker("paragraph", nb_sentences=3)
+    content = factory.Faker("text", max_nb_chars=2000)
+    type = factory.Iterator(["educational", "industrial", "research"])
     owner = factory.SubFactory(EAPUserFactory)
+    created_at = factory.Faker("date_time_this_year")
 
 
-class GitHubRepositoryWithoutDescriptionFactory(GitHubRepositoryFactory):
-    """Factory for creating GitHubRepository without description."""
-
-    description = None
-
-
-class CommentFactory(BaseFactory):
-    """Factory for creating Comment instances."""
+class CaseStudyFeatureImageFactory(factory.django.DjangoModelFactory):
+    """Factory for CaseStudyFeatureImage model."""
 
     class Meta:
-        model = Comment
+        model = CaseStudyFeatureImage
 
-    author = factory.SubFactory(EAPUserFactory)
-    content = factory.Faker("text", max_nb_chars=500)
-    assurance_case = factory.SubFactory(AssuranceCaseFactory)
-
-    # Set all other foreign keys to None by default
-    goal = None
-    strategy = None
-    property_claim = None
-    evidence = None
-    context = None
-
-
-class AssuranceCaseCommentFactory(CommentFactory):
-    """Factory for creating comments on AssuranceCase."""
-
-    assurance_case = factory.SubFactory(AssuranceCaseFactory)
-
-
-class GoalCommentFactory(CommentFactory):
-    """Factory for creating comments on TopLevelNormativeGoal."""
-
-    goal = factory.SubFactory(TopLevelNormativeGoalFactory)
-    assurance_case = factory.LazyAttribute(
-        lambda obj: obj.goal.assurance_case if obj.goal else None
+    case_study = factory.SubFactory(CaseStudyFactory)
+    image = factory.django.ImageField(
+        filename="test_feature.jpg", width=400, height=300, color="red"
     )
-
-
-class ContextCommentFactory(CommentFactory):
-    """Factory for creating comments on Context."""
-
-    context = factory.SubFactory(ContextFactory)
-    assurance_case = factory.LazyAttribute(
-        lambda obj: obj.context.assurance_case if obj.context else None
-    )
-
-
-class StrategyCommentFactory(CommentFactory):
-    """Factory for creating comments on Strategy."""
-
-    strategy = factory.SubFactory(StrategyFactory)
-    assurance_case = factory.LazyAttribute(
-        lambda obj: obj.strategy.assurance_case if obj.strategy else None
-    )
-
-
-class PropertyClaimCommentFactory(CommentFactory):
-    """Factory for creating comments on PropertyClaim."""
-
-    property_claim = factory.SubFactory(PropertyClaimFactory)
-    assurance_case = factory.LazyAttribute(
-        lambda obj: obj.property_claim.assurance_case if obj.property_claim else None
-    )
-
-
-class EvidenceCommentFactory(CommentFactory):
-    """Factory for creating comments on Evidence."""
-
-    evidence = factory.SubFactory(EvidenceFactory)
-    assurance_case = factory.LazyAttribute(
-        lambda obj: obj.evidence.assurance_case if obj.evidence else None
-    )
-
-
-class AssuranceCaseImageFactory(BaseFactory):
-    """Factory for creating AssuranceCaseImage instances."""
-
-    class Meta:
-        model = AssuranceCaseImage
-
-    assurance_case = factory.SubFactory(AssuranceCaseFactory)
-
-    image = factory.django.ImageField(filename="test_image.png")
+    alt_text = factory.Faker("sentence", nb_words=6)
+    created_at = factory.LazyFunction(timezone.now)

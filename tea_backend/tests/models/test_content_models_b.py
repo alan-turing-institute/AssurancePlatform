@@ -6,6 +6,7 @@ This module provides comprehensive tests for:
 - Evidence model (evidence management with many-to-many relationships)
 """
 
+import pytest
 from django.test import TestCase
 
 from api.models import Evidence, PropertyClaim, Shape
@@ -121,22 +122,20 @@ class TestPropertyClaimModel(TestCase):
         """Test PropertyClaim cannot be its own parent."""
         claim = PropertyClaimFactory()
 
-        with self.assertRaises(ValueError):
-            claim.property_claim = claim
+        claim.property_claim = claim
+        with pytest.raises(ValueError, match="self-reference"):
             claim.save()
 
     def test_should_prevent_multiple_parents(self):
         """Test PropertyClaim cannot have multiple parent types."""
         goal = TopLevelNormativeGoalFactory()
         strategy = StrategyFactory()
-        parent_claim = PropertyClaimFactory()
-
         # Create claim with goal
         claim = PropertyClaimFactory(goal=goal)
 
         # Try to add strategy (should fail)
-        with self.assertRaises(ValueError):
-            claim.strategy = strategy
+        claim.strategy = strategy
+        with pytest.raises(ValueError, match="self-reference"):
             claim.save()
 
     def test_should_handle_empty_assumptions(self):

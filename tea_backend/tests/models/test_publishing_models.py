@@ -7,6 +7,7 @@ This module provides comprehensive tests for:
 - PublishedAssuranceCase model (published case snapshots)
 """
 
+import pytest
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -289,10 +290,10 @@ class TestCaseStudyFeatureImageModel(TestCase):
     def test_should_enforce_one_to_one_relationship(self):
         """Test that CaseStudyFeatureImage enforces one image per case study."""
         case_study = CaseStudyFactory()
-        image1 = CaseStudyFeatureImageFactory(case_study=case_study)
+        CaseStudyFeatureImageFactory(case_study=case_study)
 
         # Try to create another image for the same case study
-        with self.assertRaises(IntegrityError):
+        with pytest.raises(IntegrityError):
             CaseStudyFeatureImageFactory(case_study=case_study)
 
     def test_should_delete_image_when_case_study_deleted(self):

@@ -6,6 +6,7 @@ This module provides comprehensive tests for:
 - EAPGroup model (group management and permissions)
 """
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
@@ -87,7 +88,7 @@ class TestEAPUserModel(TestCase):
         """Test that usernames must be unique."""
         EAPUserFactory(username="duplicate")
 
-        with self.assertRaises(IntegrityError):
+        with pytest.raises(IntegrityError):
             EAPUserFactory(username="duplicate")
 
     def test_should_allow_duplicate_emails(self):

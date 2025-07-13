@@ -15,14 +15,18 @@ import Link from 'next/link';
 import WebSocketComponent from '@/components/Websocket';
 import { useSession } from 'next-auth/react';
 
-const CaseContainer = () => {
+interface CaseContainerProps {
+  caseId?: string;
+}
+
+const CaseContainer = ({ caseId }: CaseContainerProps) => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
   const [loading, setLoading] = useState(true)
   const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
   const [open, setOpen] = useState(false);
 
   const params = useParams()
-  const { caseId } = params
+  const { caseId: paramsCaseId } = params
 
   const { data: session } = useSession()
 
@@ -74,17 +78,17 @@ const CaseContainer = () => {
 
   useEffect(() => {
     //@ts-ignore
-    fetchSingleCase(caseId).then(result => {
+    fetchSingleCase(caseId || paramsCaseId).then(result => {
       setAssuranceCase(result)
       setLoading(false)
     })
-  },[caseId, fetchSingleCase, setAssuranceCase])
+  },[caseId, paramsCaseId, fetchSingleCase, setAssuranceCase])
 
   useEffect(() => {
-    fetchOrphanedElements(caseId).then(result => {
+    fetchOrphanedElements(caseId || paramsCaseId).then(result => {
       setOrphanedElements(result)
     })
-  },[caseId, assuranceCase, fetchOrphanedElements, setOrphanedElements])
+  },[caseId, paramsCaseId, assuranceCase, fetchOrphanedElements, setOrphanedElements])
 
   return (
     <>

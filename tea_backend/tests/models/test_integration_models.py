@@ -7,6 +7,7 @@ This module provides comprehensive tests for:
 - AssuranceCaseImage model (image uploads)
 """
 
+import pytest
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -283,10 +284,10 @@ class TestAssuranceCaseImageModel(TestCase):
     def test_should_enforce_unique_constraint(self):
         """Test that AssuranceCaseImage enforces one image per case."""
         case = AssuranceCaseFactory()
-        image1 = AssuranceCaseImageFactory(assurance_case=case)
+        AssuranceCaseImageFactory(assurance_case=case)
 
         # Try to create another image for the same case
-        with self.assertRaises(IntegrityError):
+        with pytest.raises(IntegrityError):
             AssuranceCaseImageFactory(assurance_case=case)
 
     def test_should_delete_image_when_case_deleted(self):

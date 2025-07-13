@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=2000", "--enforce-all"]
-        exclude: hero\.gif
+        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf
       - id: check-case-conflict
       - id: check-merge-conflict
       - id: check-symlinks

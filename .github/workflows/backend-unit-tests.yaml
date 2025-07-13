@@ -1,4 +1,4 @@
-name: backend-tests
+name: backend-unit-tests
 on:
   workflow_dispatch:
   pull_request:
@@ -35,11 +35,29 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
         working-directory: tea_backend
+      - name: Run type checking
+        run: uv run mypy .
+        working-directory: tea_backend
+      - name: Run linting
+        run: uv run ruff check .
+        working-directory: tea_backend
       - name: Run tests with coverage
         run: uv run coverage run manage.py test -v 2
         working-directory: tea_backend
+      - name: Check coverage threshold
+        run: uv run coverage report --fail-under=90 --show-missing
+        working-directory: tea_backend
       - name: Generate coverage report
         run: uv run coverage lcov --data-file tea_backend/.coverage
+      - name: Generate XML coverage for Codecov
+        run: uv run coverage xml
+        working-directory: tea_backend
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: tea_backend/coverage.xml
+          flags: backend,unit-tests
+          name: backend-unit-tests-${{ matrix.python-version }}
       - uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
