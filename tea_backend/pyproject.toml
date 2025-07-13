@@ -9,10 +9,10 @@ description = "TEA Platform Backend - Django REST API with WebSocket support for
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Alan Turing Institute", email = "info@turing.ac.uk"}
+    {name = "Christopher Burr", email = "cburr@turing.ac.uk"}
 ]
 maintainers = [
-    {name = "Alan Turing Institute", email = "info@turing.ac.uk"}
+    {name = "Christopher Burr", email = "cburr@turing.ac.uk"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
