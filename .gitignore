@@ -147,6 +147,9 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# ruff
+.ruff_cache/
+
 # Pyre type checker
 .pyre/
 
@@ -196,7 +199,7 @@ tea_frontend/tea-docs/build/
 tea_frontend/tea-docs/.docusaurus/
 
 # dev tasks
-TASKS/**
+TASKS/
 
 # IDE and editor files
 .idea/

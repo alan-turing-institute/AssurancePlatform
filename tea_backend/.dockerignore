@@ -1,0 +1,107 @@
+# Environment files
+.env*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Development tools
+.ruff_cache/
+.mypy_cache/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Database
+db.sqlite3
+*.db
+*.sqlite
+
+# Media files (uploaded content)
+mediafiles/
+media/
+
+# Static files (collected in production)
+staticfiles/
+static/
+
+# Node modules (if any frontend build tools)
+node_modules/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation build artifacts
+docs/_build/
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+*.sublime-*
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup
+
+# Package files
+*.egg-info/
+dist/
+build/
+*.tar.gz
+*.zip
+
+# Local development files
+README.md
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# UV lock file (not needed in container)
+uv.lock
