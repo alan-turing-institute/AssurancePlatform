@@ -1,21 +1,51 @@
 ci:
-  autoupdate_commit_msg: "chore: update pre-commit hooks"
-  autofix_commit_msg: "style: pre-commit fixes"
+  autoupdate_commit_msg: 'chore: update pre-commit hooks'
+  autofix_commit_msg: 'style: pre-commit fixes'
 
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.7.4"
+  # Fast syntax and security checks first
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 'v5.0.0'
     hooks:
-      - id: ruff
-        args: ["--fix", "--show-fixes"]
+      - id: check-json
+      - id: check-yaml
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-added-large-files
+        args: ['--maxkb=2000', '--enforce-all']
+        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf
+
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.4.0
+  #   hooks:
+  #     - id: detect-secrets
+  #       args: ['--baseline', '.secrets.baseline']
+
+  # Language-specific formatting and linting (fast)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
         files: ^tea_backend/
         exclude: \.md$
       - id: ruff-format
         files: ^tea_backend/
         exclude: \.md$
 
+  # Frontend formatting and linting with Biome/Ultracite
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.1.1
+    hooks:
+      - id: biome-check
+        additional_dependencies: ['@biomejs/biome@2.0.6']
+        args: [--write]
+        files: ^tea_frontend/
+
+  # Type checking (slower, after formatting)
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.13.0"
+    rev: 'v1.13.0'
     hooks:
       - id: mypy
         files: ^tea_backend/
@@ -24,40 +54,6 @@ repos:
           - django-stubs==5.1.0
           - djangorestframework-stubs==3.15.1
           - types-requests==2.32.0.20241016
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v5.0.0"
-    hooks:
-      - id: check-added-large-files
-        args: ["--maxkb=2000", "--enforce-all"]
-        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf
-      - id: check-case-conflict
-      - id: check-merge-conflict
-      - id: check-symlinks
-      # - id: check-yaml
-      - id: debug-statements
-      - id: end-of-file-fixer
-      - id: mixed-line-ending
-      #- id: name-tests-test
-      #  args: ["--pytest-test-first"]
-      - id: requirements-txt-fixer
-      - id: trailing-whitespace
-
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: "v1.10.0"
-    hooks:
-      - id: rst-backticks
-      - id: rst-directive-colons
-      - id: rst-inline-touching-normal
-
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: "v4.0.0-alpha.8"
-    hooks:
-      - id: prettier
-        types_or: [yaml, html, css, scss, javascript, json]
-        files: ^tea_frontend/.*\.(js|jsx|ts|tsx|css|scss|html|yaml|yml|json)$
-        exclude: \.md$
-        args: [--prose-wrap=never]
 
   - repo: local
     hooks:
@@ -68,14 +64,17 @@ repos:
         files: ^tea_frontend/.*\.(ts|tsx)$
         pass_filenames: false
 
-  - repo: https://github.com/asottile/blacken-docs
-    rev: "1.19.1"
+  # File cleanup (last, so it doesn't interfere with other tools)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 'v5.0.0'
     hooks:
-      - id: blacken-docs
-        additional_dependencies: [black==23.3.0]
-        exclude: \.md$
-
-  # - repo: https://github.com/shellcheck-py/shellcheck-py
-  #   rev: "v0.9.0.2"
-  #   hooks:
-  #     - id: shellcheck
+      - id: debug-statements
+        files: \.(py|js|jsx|ts|tsx)$
+      - id: end-of-file-fixer
+        exclude: \.(svg|png|jpg|jpeg|gif)$
+      - id: mixed-line-ending
+        exclude: \.(svg|png|jpg|jpeg|gif)$
+      - id: requirements-txt-fixer
+        files: requirements.*\.txt$
+      - id: trailing-whitespace
+        exclude: \.(svg|png|jpg|jpeg|gif|md)$
