@@ -9,9 +9,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.request import HttpRequest
+from rest_framework.request import HttpRequest, Request  # type: ignore[attr-defined]
 from rest_framework.response import Response
-from rest_framework.serializers import ReturnDict
+from rest_framework.serializers import ReturnDict  # type: ignore[attr-defined]
 from social_core.exceptions import AuthForbidden
 from social_django.utils import psa
 
@@ -86,7 +86,8 @@ def user_list(request: HttpRequest) -> HttpResponse:
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-    return None
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -143,14 +144,14 @@ def user_detail(request, pk=None):
             repo_serializer.save(owner=user)
             return JsonResponse(repo_serializer.data, status=201)
         return JsonResponse(repo_serializer.errors, status=400)
-
-    return None
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
-def change_user_password(request: HttpRequest, pk: int) -> HttpResponse:
+def change_user_password(request: Request, pk: int) -> HttpResponse:
     user_to_update: EAPUser = EAPUser.objects.get(pk=pk)
 
     if request.user != user_to_update:
@@ -412,7 +413,7 @@ def case_sandbox(_: HttpRequest, pk: int) -> HttpResponse:
 @csrf_exempt
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
-def share_case_with(request: HttpRequest, pk: int) -> HttpResponse:
+def share_case_with(request: Request, pk: int) -> HttpResponse:
     assurance_case: AssuranceCase = AssuranceCase.objects.get(pk=pk)
     if assurance_case.owner != request.user:
         return HttpResponse(status=403)
@@ -506,8 +507,8 @@ def goal_detail(request: HttpRequest, pk: int) -> HttpResponse:
         # data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = TopLevelNormativeGoalSerializer(goal, data=data, partial=True)
+        request_data = JSONParser().parse(request)
+        serializer = TopLevelNormativeGoalSerializer(goal, data=request_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -562,8 +563,8 @@ def context_detail(request: HttpRequest, pk: int) -> HttpResponse:
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = ContextSerializer(context, data=data, partial=True)
+        request_data = JSONParser().parse(request)
+        serializer = ContextSerializer(context, data=request_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -643,18 +644,18 @@ def property_claim_detail(request: HttpRequest, pk: int) -> HttpResponse:
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = PropertyClaimSerializer(claim, data=data, partial=True)
+        request_data = JSONParser().parse(request)
+        serializer = PropertyClaimSerializer(claim, data=request_data, partial=True)
         if serializer.is_valid():
             model_instance: PropertyClaim = cast(PropertyClaim, serializer.save())
 
-            data: dict = cast(
+            response_data: dict = cast(
                 dict,
                 PropertyClaimSerializer(model_instance).data,
             )
-            data["shape"] = shape
+            response_data["shape"] = shape
 
-            return JsonResponse(data)
+            return JsonResponse(response_data)
         return JsonResponse(serializer.errors, status=400)
     elif request.method == "DELETE":
         claim.delete()
@@ -742,8 +743,8 @@ def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
         data["shape"] = shape
         return JsonResponse(data)
     elif request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = EvidenceSerializer(evidence, data=data, partial=True)
+        request_data = JSONParser().parse(request)
+        serializer = EvidenceSerializer(evidence, data=request_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             data = serializer.data
@@ -759,11 +760,11 @@ def evidence_detail(request: HttpRequest, pk: int) -> HttpResponse:
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
+def detach_evidence(request: Request, pk: int) -> HttpResponse:
     try:
         SandboxUtils.detach_evidence(
             evidence_id=pk, property_claim_id=request.data["property_claim_id"]
-        )  # type: ignore[attr-defined]
+        )
         return HttpResponse(status=200)
     except (Evidence.DoesNotExist, AssuranceCase.DoesNotExist):
         return HttpResponse(status=404)
@@ -772,11 +773,11 @@ def detach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
 @csrf_exempt
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def attach_evidence(request: HttpRequest, pk: int) -> HttpResponse:
+def attach_evidence(request: Request, pk: int) -> HttpResponse:
     try:
         SandboxUtils.attach_evidence(
             evidence_id=pk, property_claim_id=request.data["property_claim_id"]
-        )  # type: ignore[attr-defined]
+        )
 
     except (Evidence.DoesNotExist, PropertyClaim.DoesNotExist):
         return HttpResponse(status=400)
@@ -891,12 +892,12 @@ def attach_strategy(request: HttpRequest, pk: int):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @psa("")
-def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG001
-    access_token: str = request.data.get("access_token")
-    user_email: str = request.data.get("email")
+def register_by_access_token(request: Request, backend: str):  # noqa: ARG001
+    access_token: str | None = request.data.get("access_token")
+    user_email: str | None = request.data.get("email")
 
     try:
-        social_user: EAPUser = request.backend.do_auth(access_token)
+        social_user: EAPUser = request.backend.do_auth(access_token)  # type: ignore[attr-defined]
         if not social_user.email:
             social_user.email = user_email
 
@@ -911,8 +912,8 @@ def register_by_access_token(request: HttpRequest, backend: str):  # noqa: ARG00
         )
 
 
-@permission_classes((AllowAny,))
 class GithubSocialAuthView(GenericAPIView):
+    permission_classes = (AllowAny,)
     serializer_class = GithubSocialAuthSerializer
 
     def post(self, request):
@@ -956,7 +957,7 @@ def github_repository_list(request):
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
-def comment_list(request: HttpRequest, element_name: str, element_id: int):
+def comment_list(request: Request, element_name: str, element_id: int):
     """
     List all comments for an case element, or create a new comment.
     """
@@ -975,7 +976,11 @@ def comment_list(request: HttpRequest, element_name: str, element_id: int):
         return HttpResponse(status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":
-        serializer = CommentSerializer(model_instance.comments, many=True)
+        comments = getattr(model_instance, "comments", None)
+        if comments is not None:
+            serializer = CommentSerializer(comments, many=True)
+        else:
+            serializer = CommentSerializer([], many=True)
         return Response(serializer.data)
 
     elif request.method == "POST":

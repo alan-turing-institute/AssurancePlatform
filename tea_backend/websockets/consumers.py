@@ -118,7 +118,7 @@ class AssuranceCaseConsumer(WebsocketConsumer):
             {
                 "user": {
                     "username": UsernameAwareUserSerializer(connection.user).data["username"],  # type: ignore  # noqa: PGH003
-                    "id": connection.user.pk,
+                    "id": cast(EAPUser, connection.user).pk,
                 },
                 "connection_date": connection.connection_date,
             }

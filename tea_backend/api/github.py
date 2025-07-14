@@ -74,13 +74,13 @@ def register_social_user(provider, email, username) -> dict:
             )
 
     else:
-        user = {
+        user_data = {
             "username": username,
             "email": email,
             "password": settings.GITHUB_CLIENT_SECRET,  # Dummy password for now
             "auth_provider": "github",
         }
-        user = EAPUser.objects.create_user(**user)
+        user = EAPUser.objects.create_user(**user_data)
         user.is_active = True
         user.auth_provider = provider
         user.save()

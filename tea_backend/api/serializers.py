@@ -3,7 +3,7 @@ from typing import Any, cast
 
 from django.db.models.query import QuerySet
 from rest_framework import serializers
-from rest_framework.serializers import ReturnDict
+from rest_framework.serializers import ReturnDict  # type: ignore[attr-defined]
 
 from . import models
 from .github import Github, register_social_user
@@ -64,8 +64,12 @@ class ShareRequestSerializer(serializers.Serializer):
 
 
 class EAPUserSerializer(serializers.ModelSerializer):
-    all_groups = serializers.PrimaryKeyRelatedField(many=True, read_only=True, required=False)
-    owned_groups = serializers.PrimaryKeyRelatedField(many=True, read_only=True, required=False)
+    all_groups: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
+    owned_groups: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True, required=False
+    )
     github_repositories = GitHubRepositorySerializer(many=True, read_only=True)
 
     class Meta:
@@ -99,8 +103,12 @@ class EAPGroupSerializer(serializers.ModelSerializer):
         source="member", many=True, queryset=EAPUser.objects.all()
     )
     owner_id = serializers.PrimaryKeyRelatedField(source="owner", queryset=EAPUser.objects.all())
-    viewable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    editable_cases = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    viewable_cases: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
+    editable_cases: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = EAPGroup
@@ -118,7 +126,7 @@ class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
 
     def get_author(self, comment: Comment) -> str:
-        user: EAPUser = comment.author
+        user = cast(EAPUser, comment.author)
         return user.username if user.auth_provider == "legacy" else user.auth_username
 
     class Meta:
@@ -138,7 +146,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class AssuranceCaseSerializer(serializers.ModelSerializer):
-    goals = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    goals: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
     comments = CommentSerializer(many=True, read_only=True)
     type = serializers.CharField(default="AssuranceCase", read_only=True)
     color_profile = serializers.CharField(default="default")
@@ -198,9 +208,14 @@ class TopLevelNormativeGoalSerializer(serializers.ModelSerializer):
     assurance_case_id = serializers.PrimaryKeyRelatedField(
         source="assurance_case", queryset=AssuranceCase.objects.all()
     )
-    context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    strategies = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    # context field conflicts with base class, use type ignore
+    context = serializers.PrimaryKeyRelatedField(many=True, read_only=True)  # type: ignore[assignment]
+    property_claims: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
+    strategies: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
     type = serializers.CharField(default="TopLevelNormativeGoal", read_only=True)
 
     class Meta:
@@ -283,11 +298,15 @@ class PropertyClaimSerializer(serializers.ModelSerializer):
 
     level = serializers.IntegerField(read_only=True)
     claim_type = serializers.CharField(default="Project claim")
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     # Use SerializerMethodField to handle the possibility of property_claim
     #  being None
-    evidence = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    evidence: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
     type = serializers.CharField(default="PropertyClaim", read_only=True)
 
     class Meta:
@@ -396,7 +415,9 @@ class StrategySerializer(serializers.ModelSerializer):
     )
 
     type = serializers.CharField(default="Strategy", read_only=True)
-    property_claims = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    property_claims: serializers.PrimaryKeyRelatedField = serializers.PrimaryKeyRelatedField(
+        many=True, read_only=True
+    )
 
     class Meta:
         model = Strategy
@@ -511,7 +532,7 @@ def get_case_id(item: AssuranceCase | CaseItem) -> int | None:
         item = item.first()
 
     if isinstance(item, models.AssuranceCase):
-        return item.id
+        return item.pk
     for _k, v in TYPE_DICT.items():
         if isinstance(item, v["model"]):
             for parent_type, _ in v["parent_types"]:

@@ -12,4 +12,4 @@ class EAPUserCreationForm(UserCreationForm):
 class EAPUserChangeForm(UserChangeForm):
     class Meta:
         model = EAPUser
-        fields = UserChangeForm.Meta.fields
+        fields = UserChangeForm.Meta.fields  # type: ignore[attr-defined]

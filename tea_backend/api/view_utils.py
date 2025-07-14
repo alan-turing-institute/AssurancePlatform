@@ -7,7 +7,7 @@ from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.utils.crypto import get_random_string
-from rest_framework.serializers import ReturnDict
+from rest_framework.serializers import ReturnDict  # type: ignore[attr-defined]
 
 from .model_utils import (
     get_case_property_claims,
@@ -261,7 +261,7 @@ class CommentUtils:
             error_message: str = f"Invalid URL {element_name}/{element_id}"
             raise ValueError(error_message)
 
-        return model_class.objects.get(pk=element_id)
+        return cast(CaseItem | AssuranceCase, model_class.objects.get(pk=element_id))
 
 
 class UpdateIdentifierUtils:
@@ -345,7 +345,9 @@ class UpdateIdentifierUtils:
             result = ONE_CLAIM_RIGHT
         elif one_claim.strategy is not None and another_claim.strategy is not None:
             if one_claim.strategy != another_claim.strategy:
-                result = one_claim.strategy.pk - another_claim.strategy.pk
+                one_pk = getattr(one_claim.strategy, "pk", 0)
+                another_pk = getattr(another_claim.strategy, "pk", 0)
+                result = one_pk - another_pk
             else:
                 result = one_claim.pk - another_claim.pk
 
@@ -400,10 +402,14 @@ class ShareAssuranceCaseUtils:
         assurance_case: AssuranceCase,
     ) -> dict[str, list[dict[str, Any]]]:
         return {
-            "view": ShareAssuranceCaseUtils._get_users_from_group_list(assurance_case.view_groups),
-            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(assurance_case.edit_groups),
+            "view": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.view_groups.all()
+            ),
+            "edit": ShareAssuranceCaseUtils._get_users_from_group_list(
+                assurance_case.edit_groups.all()
+            ),
             "review": ShareAssuranceCaseUtils._get_users_from_group_list(
-                assurance_case.review_groups
+                assurance_case.review_groups.all()
             ),
         }
 
@@ -426,7 +432,7 @@ class ShareAssuranceCaseUtils:
     @staticmethod
     def get_user_cases(user: EAPUser, permission_list: list[str]) -> list[dict]:
         case_catalog: dict[int, dict] = {}
-        group_ids: list[int] = [group.pk for group in user.all_groups.all()]
+        group_ids: list[int] = [group.pk for group in user.all_groups.all()]  # type: ignore[attr-defined]
 
         if "view" in permission_list:
             ShareAssuranceCaseUtils._consolidate_case_list(
@@ -450,7 +456,7 @@ class ShareAssuranceCaseUtils:
             )
 
         if "owner" in permission_list:
-            ShareAssuranceCaseUtils._consolidate_case_list(case_catalog, user.cases.all(), "owner")
+            ShareAssuranceCaseUtils._consolidate_case_list(case_catalog, user.cases.all(), "owner")  # type: ignore[attr-defined]
 
         return [
             ShareAssuranceCaseUtils.make_case_summary(
@@ -495,12 +501,14 @@ class ShareAssuranceCaseUtils:
     @staticmethod
     def get_edit_group(assurance_case: AssuranceCase) -> EAPGroup:
         edit_group: EAPGroup | None = None
-        owner_edit_group_name: str = (
-            f"{assurance_case.owner.username}-case-{assurance_case.pk}-edit-group"
-        )
+        if assurance_case.owner is None:
+            msg = "AssuranceCase has no owner"
+            raise ValueError(msg)
+        owner = cast(EAPUser, assurance_case.owner)
+        owner_edit_group_name: str = f"{owner.username}-case-{assurance_case.pk}-edit-group"
 
         group_query_set: QuerySet = assurance_case.edit_groups.filter(
-            owner=assurance_case.owner, name=owner_edit_group_name
+            owner=owner, name=owner_edit_group_name
         )
 
         (
@@ -519,12 +527,14 @@ class ShareAssuranceCaseUtils:
     @staticmethod
     def get_review_group(assurance_case: AssuranceCase) -> EAPGroup:
         review_group: EAPGroup | None = None
-        owner_review_group_name: str = (
-            f"{assurance_case.owner.username}-case-{assurance_case.pk}-review-group"
-        )
+        if assurance_case.owner is None:
+            msg = "AssuranceCase has no owner"
+            raise ValueError(msg)
+        owner = cast(EAPUser, assurance_case.owner)
+        owner_review_group_name: str = f"{owner.username}-case-{assurance_case.pk}-review-group"
 
         group_query_set: QuerySet = assurance_case.review_groups.filter(
-            owner=assurance_case.owner, name=owner_review_group_name
+            owner=owner, name=owner_review_group_name
         )
 
         (
@@ -543,12 +553,14 @@ class ShareAssuranceCaseUtils:
     @staticmethod
     def get_view_group(assurance_case: AssuranceCase) -> EAPGroup:
         view_group: EAPGroup | None = None
-        owner_view_group_name: str = (
-            f"{assurance_case.owner.username}-case-{assurance_case.pk}-view-group"
-        )
+        if assurance_case.owner is None:
+            msg = "AssuranceCase has no owner"
+            raise ValueError(msg)
+        owner = cast(EAPUser, assurance_case.owner)
+        owner_view_group_name: str = f"{owner.username}-case-{assurance_case.pk}-view-group"
 
         group_query_set: QuerySet = assurance_case.view_groups.filter(
-            owner=assurance_case.owner, name=owner_view_group_name
+            owner=owner, name=owner_view_group_name
         )
 
         (
@@ -791,7 +803,7 @@ def get_case_permissions(
 
     # now check groups
     try:
-        user_groups: QuerySet = user.all_groups.get_queryset()
+        user_groups: QuerySet = user.all_groups.get_queryset()  # type: ignore[attr-defined]
         edit_groups: QuerySet = case.edit_groups.get_queryset()
         # check intersection of two lists
         if set(edit_groups) & set(user_groups):
