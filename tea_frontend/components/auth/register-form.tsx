@@ -66,7 +66,7 @@ const RegisterForm = () => {
   }
 
   function extractValidationErrors(result: Record<string, string[]>) {
-    const currentErrors = [];
+    const currentErrors: string[] = [];
 
     if (result.username) {
       currentErrors.push(...result.username);
@@ -142,7 +142,7 @@ const RegisterForm = () => {
     }
   }
 
-  async function registerUser(values: z.infer<typeof formSchema>) {
+  function registerUser(values: z.infer<typeof formSchema>) {
     const user = {
       username: values.username,
       email: values.email,
@@ -197,7 +197,7 @@ const RegisterForm = () => {
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
       <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12 dark:bg-slate-900">
-        {errors?.map((error: any) => (
+        {errors?.map((error: string) => (
           <div
             className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
             key={crypto.randomUUID()}

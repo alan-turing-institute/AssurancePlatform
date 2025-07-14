@@ -21,5 +21,17 @@
       "!*.min.js",
       "!*.min.css"
     ]
+  },
+  "linter": {
+    "rules": {
+      "nursery": {
+        "noUnknownAtRule": "off"
+      },
+      "performance": {
+        "useTopLevelRegex": {
+          "level": "warn"
+        }
+      }
+    }
   }
 }

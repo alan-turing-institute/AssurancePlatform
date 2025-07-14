@@ -123,8 +123,8 @@ export const waitFor = (
 // Re-export everything from React Testing Library
 export * from '@testing-library/react';
 
-import userEvent from '@testing-library/user-event';
-export { userEvent };
+// Re-export userEvent
+export { default as userEvent } from '@testing-library/user-event';
 
 // Export custom render functions
 export {

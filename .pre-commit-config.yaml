@@ -37,7 +37,7 @@ repos:
         files: ^tea_backend/
         exclude: \.md$
 
-  # # Frontend formatting and linting with Biome/Ultracite
+  # Frontend formatting and linting with Biome/Ultracite
   # - repo: local
   #   hooks:
   #     - id: ultracite-format

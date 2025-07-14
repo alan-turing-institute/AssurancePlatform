@@ -63,7 +63,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
   );
 
   const fetchOrphanedElements = useCallback(
-    async (id: any) => {
+    async (id: string | number) => {
       const requestOptions: RequestInit = {
         headers: {
           Authorization: `Token ${session?.key}`,
@@ -105,24 +105,30 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 
   return (
     <>
-      {loading ? (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground">Rendering your chart...</p>
-          </div>
-        </div>
-      ) : assuranceCase ? (
-        <ReactFlowProvider>
-          <Header setOpen={setOpen} />
-          <Flow />
-          <CaseDetails isOpen={open} setOpen={setOpen} />
-          <FeedbackButton />
-          <WebSocketComponent />
-        </ReactFlowProvider>
-      ) : (
-        <p>No Case Found</p>
-      )}
+      {(() => {
+        if (loading) {
+          return (
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-muted-foreground">Rendering your chart...</p>
+              </div>
+            </div>
+          );
+        }
+        if (assuranceCase) {
+          return (
+            <ReactFlowProvider>
+              <Header setOpen={setOpen} />
+              <Flow />
+              <CaseDetails isOpen={open} setOpen={setOpen} />
+              <FeedbackButton />
+              <WebSocketComponent />
+            </ReactFlowProvider>
+          );
+        }
+        return <p>No Case Found</p>;
+      })()}
     </>
   );
 };

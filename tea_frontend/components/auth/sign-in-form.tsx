@@ -198,6 +198,7 @@ const SignInForm = () => {
               className="flex w-full items-center justify-center gap-3 rounded-md bg-background px-3 py-2 font-semibold text-foreground text-sm shadow-sm ring-1 ring-gray-200 ring-inset hover:bg-foreground/10 focus-visible:ring-transparent dark:ring-slate-800"
               disabled={loadingProvider}
               onClick={() => handleProviderLogin('github')}
+              type="button"
             >
               {loadingProvider ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

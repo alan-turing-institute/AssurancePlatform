@@ -25,8 +25,8 @@ vi.mock('@/components/modals/alertModal', () => ({
     return (
       <div data-testid="alert-modal">
         <p>Are you sure you want to delete this case?</p>
-        <button onClick={onClose}>Cancel</button>
-        <button disabled={loading} onClick={onConfirm}>
+        <button type="button" onClick={onClose}>Cancel</button>
+        <button type="button" disabled={loading} onClick={onConfirm}>
           {loading ? 'Deleting...' : 'Delete'}
         </button>
       </div>
@@ -209,7 +209,7 @@ describe('CaseCard', () => {
   it('should render case with image when available', () => {
     const caseWithImage = createMockAssuranceCase({
       ...mockAssuranceCase,
-      images: [{ url: 'https://example.com/case-image.png' }] as any,
+      images: [{ url: 'https://example.com/case-image.png' }],
     });
 
     renderWithAuth(<CaseCard assuranceCase={caseWithImage} />);

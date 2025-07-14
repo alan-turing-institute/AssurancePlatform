@@ -37,10 +37,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock Next.js image component
+// biome-ignore lint/performance/noImgElement: Needed for mocking Next.js Image component in tests
 vi.mock('next/image', () => ({
-  default: (props: any) => {
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
+    return <img alt="" {...props} />;
   },
 }));
 
@@ -58,7 +59,7 @@ vi.mock('next-auth/react', () => ({
 
 // Mock ReactFlow
 vi.mock('reactflow', () => ({
-  default: ({ children, ...props }: any) => (
+  default: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="react-flow" {...props}>
       {children}
     </div>

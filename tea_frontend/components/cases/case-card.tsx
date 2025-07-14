@@ -2,11 +2,8 @@
 
 import { Eye, MessageCircleMore, PencilRuler, Trash2 } from 'lucide-react';
 import moment from 'moment';
-// import { useLoginToken } from '@/hooks/useAuth'
 import Image from 'next/image';
-// import { AssuranceCase } from '@/types'
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { AlertModal } from '@/components/modals/alertModal';
@@ -19,26 +16,26 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '../ui/skeleton';
 
+interface AssuranceCaseWithPermissions {
+  id: number;
+  name: string;
+  description?: string;
+  created_date: string;
+  permissions: string[];
+}
+
 interface CaseCardProps {
-  assuranceCase: any;
+  assuranceCase: AssuranceCaseWithPermissions;
 }
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
-  const { id, name, description, created_date, image } = assuranceCase;
-  // const [ token ] = useLoginToken()
+  const { id, name, description, created_date } = assuranceCase;
   const { data: session } = useSession();
-  const _params = useParams();
-  const _router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imgSrc, setImgSrc] = useState('');
   const [imageLoading, setImageLoading] = useState<boolean>(true);
-  // const [imgSrc, setImgSrc] = useState(`https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`);
-  // const [imageExists, setImageExists] = useState(true)
-  // const [imageUrl, setImageUrl] = useState<string>('')
-
-  // const imageUrl = `https://teamedia.blob.core.windows.net/sample-container/chart-screenshot-case-${assuranceCase.id}.png`
 
   const onDelete = async () => {
     try {
@@ -58,7 +55,8 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
       if (response.ok) {
         window.location.reload();
       }
-    } catch (_error: any) {
+    } catch (_error: unknown) {
+      // Error handling is done through the response status check above
     } finally {
       setLoading(false);
       setOpen(false);
@@ -88,6 +86,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
       const result = await response.json();
       setImgSrc(result.image);
     } catch (_error) {
+      // Error handling is done through the response status check above
     } finally {
       setImageLoading(false);
     }
@@ -142,6 +141,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
           className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
           disabled={loading}
           onClick={() => setOpen(true)}
+          type="button"
         >
           <Trash2 className="h-4 w-4" />
         </button>

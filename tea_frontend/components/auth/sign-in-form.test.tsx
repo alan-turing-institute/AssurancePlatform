@@ -6,6 +6,11 @@ import {
 } from '@/src/__tests__/utils/test-utils';
 import SignInForm from './sign-in-form';
 
+// Define regex patterns at module level for performance
+const USERNAME_REGEX = /username/i;
+const PASSWORD_REGEX = /password/i;
+const SIGN_IN_REGEX = /sign in/i;
+
 const mockPush = vi.fn();
 const mockSignIn = vi.fn();
 
@@ -38,18 +43,18 @@ describe('SignInForm', () => {
   it('should render form with all required fields', () => {
     renderWithoutProviders(<SignInForm />);
 
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(USERNAME_REGEX)).toBeInTheDocument();
+    expect(screen.getByLabelText(PASSWORD_REGEX)).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /sign in/i })
+      screen.getByRole('button', { name: SIGN_IN_REGEX })
     ).toBeInTheDocument();
   });
 
   it('should have correct input types and placeholders', () => {
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
 
     expect(usernameInput).toHaveAttribute('type', 'text');
     expect(passwordInput).toHaveAttribute('type', 'password');
@@ -60,7 +65,7 @@ describe('SignInForm', () => {
     renderWithoutProviders(<SignInForm />);
 
     const usernameInput = screen.getByLabelText(/username/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'a'); // Less than 2 characters
     await user.click(submitButton);
@@ -74,9 +79,9 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'validuser');
     await user.type(passwordInput, '1234567'); // Less than 8 characters
@@ -92,7 +97,7 @@ describe('SignInForm', () => {
     renderWithoutProviders(<SignInForm />);
 
     const usernameInput = screen.getByLabelText(/username/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     const longUsername = 'a'.repeat(51); // More than 50 characters
     await user.type(usernameInput, longUsername);
@@ -109,9 +114,9 @@ describe('SignInForm', () => {
 
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'testuser');
     await user.type(passwordInput, 'password123');
@@ -133,9 +138,9 @@ describe('SignInForm', () => {
 
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'testuser');
     await user.type(passwordInput, 'password123');
@@ -151,7 +156,7 @@ describe('SignInForm', () => {
     renderWithoutProviders(<SignInForm />);
 
     const usernameInput = screen.getByLabelText(/username/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     // Trigger validation error
     await user.click(submitButton);
@@ -170,8 +175,8 @@ describe('SignInForm', () => {
   it('should have proper accessibility attributes', () => {
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
     const form = screen.getByRole('form') || usernameInput.closest('form');
 
     expect(usernameInput).toHaveAccessibleName();
@@ -183,9 +188,9 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     // Tab through form elements
     await user.tab();
@@ -202,7 +207,7 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
     await user.click(submitButton);
 
     expect(mockSignIn).not.toHaveBeenCalled();
@@ -220,9 +225,9 @@ describe('SignInForm', () => {
 
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'testuser');
     await user.type(passwordInput, 'wrongpassword');
