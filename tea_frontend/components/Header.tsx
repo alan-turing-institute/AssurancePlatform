@@ -1,15 +1,5 @@
-import {
-  ArrowLeft,
-  Check,
-  ChevronsUpDown,
-  Copy,
-  MessageSquareMore,
-  Search,
-  SearchIcon,
-  X,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import moment from 'moment';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type React from 'react';
@@ -20,17 +10,12 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  getNodesBounds,
-  useReactFlow,
-  useUpdateNodeInternals,
-} from 'reactflow';
+import { useReactFlow, useUpdateNodeInternals } from 'reactflow';
 // import { useLoginToken } from "@/hooks/useAuth";
 import useStore from '@/data/store';
 import { toggleHiddenForParent } from '@/lib/case-helper';
-import LogoutButton from './auth/LogoutButton';
-import ActiveUsersList from './cases/ActiveUsersList';
-import { ResourcesInfo } from './cases/ResourcesInfo';
+import LogoutButton from './auth/logout-button';
+import ActiveUsersList from './cases/active-users-list';
 import SearchNodes from './common/SearchNodes';
 import { Button } from './ui/button';
 import { ModeToggle } from './ui/theme-toggle';
@@ -48,26 +33,26 @@ interface HeaderProps {
 const Header = ({ setOpen }: HeaderProps) => {
   const { nodes, assuranceCase, setAssuranceCase } = useStore();
   const router = useRouter();
-  const updateNodeInternals = useUpdateNodeInternals();
+  const _updateNodeInternals = useUpdateNodeInternals();
 
   const [editName, setEditName] = useState<boolean>(false);
   const [newCaseName, setNewCaseName] = useState<string>(assuranceCase.name);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const _inputRef = useRef<HTMLInputElement>(null);
 
   const { fitView, setViewport, setCenter } = useReactFlow();
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCaseName(e.target.value);
   };
 
-  const handleEditClick = () => {
+  const _handleEditClick = () => {
     setEditName(!editName);
   };
 
-  const updateAssuranceCaseName = async () => {
+  const _updateAssuranceCaseName = async () => {
     try {
       const newData = {
         name: newCaseName,
@@ -84,17 +69,14 @@ const Header = ({ setOpen }: HeaderProps) => {
 
       const response = await fetch(url, requestOptions);
       if (!response.ok) {
-        console.log('Render a new error');
       }
       setEditName(false);
       setAssuranceCase({ ...assuranceCase, name: newCaseName });
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (_error) {}
   };
 
   const unhideParents = (nodeId: string) => {
-    const currentNode = nodes.find((node) => node.id == nodeId);
+    const currentNode = nodes.find((node) => node.id === nodeId);
 
     const updatedAssuranceCase = toggleHiddenForParent(
       currentNode,
@@ -105,7 +87,6 @@ const Header = ({ setOpen }: HeaderProps) => {
   };
 
   const focusNode = (value: string) => {
-    console.log('Focus Node');
     const nodeId: any = nodes.filter((n) => n.id === value)[0].id;
 
     unhideParents(nodeId);
@@ -119,7 +100,7 @@ const Header = ({ setOpen }: HeaderProps) => {
       const node = nodes.find((n) => n.id === nodeId);
 
       if (node) {
-        const zoomLevel = 1.5; // Adjust the zoom level as needed
+        const _zoomLevel = 1.5; // Adjust the zoom level as needed
 
         // Assuming node dimensions (update these with actual dimensions if available)
         const nodeWidth = node.width || 0;
@@ -131,16 +112,12 @@ const Header = ({ setOpen }: HeaderProps) => {
 
         setCenter(centerX, centerY);
       } else {
-        console.error('Node is null');
       }
     } else {
-      console.error('Node ID is undefined');
     }
   };
 
-  useEffect(() => {
-    console.log('header re-rendered', assuranceCase.published);
-  }, [assuranceCase]);
+  useEffect(() => {}, []);
 
   return (
     <div className="fixed top-0 left-0 z-50 w-full bg-indigo-600 text-white dark:bg-slate-900">

@@ -1,5 +1,4 @@
-import React from 'react';
-import SettingsNav from '../_components/SettingsNav';
+import SettingsNav from '../_components/settings-nav';
 
 const TeamSettings = () => {
   return (

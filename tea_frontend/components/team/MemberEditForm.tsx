@@ -39,7 +39,6 @@ interface MemberEditFormProps {
 }
 
 const MemberEditForm: React.FC<MemberEditFormProps> = ({ member }) => {
-  console.log(member);
   const departments = [
     'Technology',
     'HR',
@@ -53,11 +52,7 @@ const MemberEditForm: React.FC<MemberEditFormProps> = ({ member }) => {
     defaultValues: member,
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
-  }
+  function onSubmit(_values: z.infer<typeof formSchema>) {}
 
   return (
     <Form {...form}>

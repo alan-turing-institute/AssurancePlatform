@@ -91,8 +91,8 @@ build/
 *.tar.gz
 *.zip
 
-# Local development files
-README.md
+# Local development files - Keep README.md for package build
+# README.md - commented out to allow package building
 Dockerfile*
 docker-compose*.yml
 .dockerignore

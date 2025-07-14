@@ -46,7 +46,7 @@ export const authOptions: NextAuthOptions = {
         username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials, _req) {
         const { username, password } = credentials ?? {};
 
         try {
@@ -63,7 +63,9 @@ export const authOptions: NextAuthOptions = {
             body: JSON.stringify({ username, password }),
           });
 
-          if (!response.ok) throw new Error('Invalid credentials');
+          if (!response.ok) {
+            throw new Error('Invalid credentials');
+          }
 
           const user = await response.json();
 
@@ -77,8 +79,7 @@ export const authOptions: NextAuthOptions = {
             };
           }
           return null;
-        } catch (error) {
-          console.error('Authorization error:', error);
+        } catch (_error) {
           return null;
         }
       },
@@ -106,9 +107,6 @@ export const authOptions: NextAuthOptions = {
 
         const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) {
-          console.error(
-            'API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication'
-          );
           return false;
         }
         const response = await fetch(
@@ -133,15 +131,9 @@ export const authOptions: NextAuthOptions = {
           user.provider = account.provider;
           return true;
         }
-        console.error(
-          `GitHub authentication failed: ${response.status} ${response.statusText}`
-        );
         try {
-          const errorData = await response.json();
-          console.error('GitHub auth error details:', errorData);
-        } catch (e) {
-          console.error('Unable to parse error response');
-        }
+          const _errorData = await response.json();
+        } catch (_e) {}
 
         return false;
       }

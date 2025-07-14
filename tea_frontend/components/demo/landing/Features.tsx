@@ -1,13 +1,10 @@
 import {
   AcademicCapIcon,
-  ArrowPathIcon,
   ChatBubbleLeftRightIcon,
   CloudArrowUpIcon,
-  Cog6ToothIcon,
   FingerPrintIcon,
   LightBulbIcon,
   LockClosedIcon,
-  ServerIcon,
 } from '@heroicons/react/20/solid';
 
 const features = [

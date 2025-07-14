@@ -1,12 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  useReactFlow,
-} from 'reactflow';
+import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
 
 import 'reactflow/dist/style.css';
 import { Loader2, Unplug, X } from 'lucide-react';
@@ -15,10 +10,9 @@ import NodeEdit from '@/components/common/NodeEdit';
 import useStore from '@/data/store';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
-import ActionButtons from './ActionButtons';
+import ActionButtons from './action-buttons';
 
 import 'react-toastify/dist/ReactToastify.css';
-import { useTheme } from 'next-themes';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 
@@ -56,7 +50,7 @@ function Flow({}: FlowProps) {
   };
 
   const convert = useCallback(async () => {
-    if (assuranceCase && assuranceCase.goals) {
+    if (assuranceCase?.goals) {
       const result = await convertAssuranceCase(assuranceCase);
       const { caseNodes, caseEdges } = result;
 
@@ -69,15 +63,14 @@ function Flow({}: FlowProps) {
   // intial conversion of the assurance case on component render
   useEffect(() => {
     convert();
-  }, [assuranceCase, convert]);
+  }, [convert]);
 
-  const handleNodeClick = (event: React.MouseEvent, node: Node | any) => {
+  const handleNodeClick = (_event: React.MouseEvent, node: Node | any) => {
     setSelectedNode(node);
     setEditOpen(true);
   };
 
-  const showCreateGoal =
-    nodes.length > 0 && nodes[0].type === 'goal' ? false : true;
+  const showCreateGoal = !(nodes.length > 0 && nodes[0].type === 'goal');
 
   const notify = (message: string) => {
     toast({

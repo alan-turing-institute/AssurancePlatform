@@ -61,10 +61,7 @@ describe('utils', () => {
           const otherClasses = uniqueClasses.filter(
             (cls) => !cls.startsWith('p-')
           );
-          return [
-            ...otherClasses,
-            paddingClasses[paddingClasses.length - 1],
-          ].join(' ');
+          return [...otherClasses, paddingClasses.at(-1)].join(' ');
         }
 
         return uniqueClasses.join(' ');
@@ -110,7 +107,7 @@ describe('utils', () => {
     });
 
     it('should handle empty inputs', () => {
-      const result = cn();
+      const _result = cn();
       expect(mockClsx).toHaveBeenCalledWith([]);
     });
 

@@ -48,10 +48,10 @@ describe('authOptions', () => {
       const { authOptions } = await import('../authOptions');
 
       expect(authOptions.callbacks).toBeDefined();
-      expect(typeof authOptions.callbacks!.signIn).toBe('function');
-      expect(typeof authOptions.callbacks!.redirect).toBe('function');
-      expect(typeof authOptions.callbacks!.session).toBe('function');
-      expect(typeof authOptions.callbacks!.jwt).toBe('function');
+      expect(typeof authOptions.callbacks?.signIn).toBe('function');
+      expect(typeof authOptions.callbacks?.redirect).toBe('function');
+      expect(typeof authOptions.callbacks?.session).toBe('function');
+      expect(typeof authOptions.callbacks?.jwt).toBe('function');
     });
   });
 

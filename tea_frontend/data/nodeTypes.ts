@@ -1,8 +1,8 @@
-import ContextNode from '@/components/cases/ContextNode';
-import EvidenceNode from '@/components/cases/EvidenceNode';
-import GoalNode from '@/components/cases/GoalNode';
-import PropertyNode from '@/components/cases/PropertyNode';
-import StrategyNode from '@/components/cases/StrategyNode';
+import ContextNode from '@/components/cases/context-node';
+import EvidenceNode from '@/components/cases/evidence-node';
+import GoalNode from '@/components/cases/goal-node';
+import PropertyNode from '@/components/cases/property-node';
+import StrategyNode from '@/components/cases/strategy-node';
 
 export const nodeTypes = {
   goal: GoalNode,

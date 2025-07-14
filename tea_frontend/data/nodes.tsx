@@ -1,12 +1,5 @@
 'use client';
 
-import {
-  BookOpenText,
-  Database,
-  FolderOpenDot,
-  Goal,
-  Route,
-} from 'lucide-react';
 import type { Node } from 'reactflow';
 
 export const initNodes = [

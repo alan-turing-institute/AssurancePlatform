@@ -17,7 +17,6 @@ import {
   ListOrdered,
   Quote,
   Strikethrough,
-  Underline,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';

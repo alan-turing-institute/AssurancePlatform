@@ -1,19 +1,15 @@
-import moment from 'moment';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import React from 'react';
-import { fetchCaseStudyById } from '@/actions/caseStudies';
 import BackButton from '@/components/ui/back-button';
 import PageHeading from '@/components/ui/page-heading';
-import { caseStudies } from '@/config';
 import { authOptions } from '@/lib/authOptions';
-import CaseStudyForm from '../_components/CaseStudyForm';
+import CaseStudyForm from '../_components/case-study-form';
 
 async function NewCaseStudy() {
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!(session && session.key)) {
+  if (!session?.key) {
     redirect('/login');
   }
 

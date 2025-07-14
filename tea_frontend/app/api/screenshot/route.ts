@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
     const { message, data } = await response.json();
     return NextResponse.json({ message, data });
   } catch (error) {
-    console.log(error);
     return NextResponse.json({ error, message: "Couldn't upload image" });
   }
 }

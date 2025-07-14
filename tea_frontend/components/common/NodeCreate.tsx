@@ -15,7 +15,7 @@ const NodeCreate = ({ isOpen, setOpen }: NodeCreateProps) => {
   const [isMounted, setIsMounted] = useState(false);
   const [unresolvedChanges, setUnresolvedChanges] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -31,7 +31,7 @@ const NodeCreate = ({ isOpen, setOpen }: NodeCreateProps) => {
     setUnresolvedChanges(false);
   };
 
-  const onChange = (open: boolean) => {
+  const onChange = (_open: boolean) => {
     if (unresolvedChanges) {
       setAlertOpen(true);
     } else {

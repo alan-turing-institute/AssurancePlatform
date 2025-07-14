@@ -3,8 +3,8 @@
 import { Trash2Icon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import React, { useState } from 'react';
-import { deleteCaseStudy } from '@/actions/caseStudies';
+import { useState } from 'react';
+import { deleteCaseStudy } from '@/actions/case-studies';
 import { AlertModal } from '@/components/modals/alertModal';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -25,10 +25,10 @@ const DeleteCaseButton = ({
   const router = useRouter();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteLoading, _setDeleteLoading] = useState<boolean>(false);
 
   const handleDelete = async () => {
-    const deleted = await deleteCaseStudy(data?.key!, caseStudyId);
+    const deleted = await deleteCaseStudy(data?.key ?? '', caseStudyId);
 
     if (deleted) {
       toast({

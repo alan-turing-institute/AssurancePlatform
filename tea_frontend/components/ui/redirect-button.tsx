@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React from 'react';
 
 interface RedirectButtonProps {
   label: string;
@@ -10,7 +9,7 @@ interface RedirectButtonProps {
 }
 
 const RedirectButton = ({ label, url }: RedirectButtonProps) => {
-  const router = useRouter();
+  const _router = useRouter();
 
   return (
     <Link

@@ -1,14 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  CloudFog,
-  Loader,
-  Loader2,
-  Lock,
-  LockIcon,
-  LockKeyhole,
-} from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
@@ -17,7 +10,6 @@ import { z } from 'zod';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,11 +20,9 @@ import useStore from '@/data/store';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
   caseItemDescription,
-  findItemById,
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
-import { getLayoutedElements } from '@/lib/layout-helper';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
@@ -73,7 +63,6 @@ const EditForm: React.FC<EditFormProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('UPDATING GOAL NODE.......');
     setLoading(true);
     // Update item via api
     const updateItem = {
@@ -111,18 +100,17 @@ const EditForm: React.FC<EditFormProps> = ({
   }
 
   useEffect(() => {
-    form.watch((values, { name }) => {
+    form.watch((_values, { name }) => {
       if (name === 'description' || name === 'URL') {
         setUnresolvedChanges(true);
       }
     });
   }, [form, setUnresolvedChanges]);
 
-  const readOnly =
+  const readOnly = !!(
     assuranceCase.permissions === 'view' ||
     assuranceCase.permissions === 'review'
-      ? true
-      : false;
+  );
 
   return (
     <Form {...form}>

@@ -27,7 +27,10 @@ export default function Example() {
             >
               Back to Discover
             </Link>
-            <a className="font-semibold text-gray-900 text-sm" href="#">
+            <a
+              className="font-semibold text-gray-900 text-sm"
+              href="mailto:cburr@turing.ac.uk"
+            >
               Contact support <span aria-hidden="true">&rarr;</span>
             </a>
           </div>

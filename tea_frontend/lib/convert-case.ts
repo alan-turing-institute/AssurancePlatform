@@ -48,7 +48,6 @@ export const createNodesRecursively = (
   const nodes: any[] = [];
 
   if (depth <= 0) {
-    console.error('Maximum recursion depth reached');
     return nodes;
   }
 

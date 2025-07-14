@@ -1,9 +1,10 @@
 'use server';
 
+import fs from 'node:fs';
 import { BlobServiceClient } from '@azure/storage-blob';
-import fs from 'fs';
-import { revalidatePath } from 'next/cache';
-import path from 'path';
+
+// Regex pattern for removing base64 data URL prefix
+const BASE64_PREFIX_REGEX = /^data:image\/\w+;base64,/;
 
 /**
  * Captures a base64-encoded image, converts it to a buffer, and uploads it to Azure Blob Storage.
@@ -18,40 +19,33 @@ export const capture = async (
   assuranceCaseId: string
 ): Promise<string | undefined> => {
   const filename = `chart-screenshot-case-${assuranceCaseId}.png`;
-  try {
-    // Remove header from base64 string
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+  // Remove header from base64 string
+  const base64Data = base64Image.replace(BASE64_PREFIX_REGEX, '');
 
-    // Create buffer from base64 string
-    const buffer = Buffer.from(base64Data, 'base64');
+  // Create buffer from base64 string
+  const buffer = Buffer.from(base64Data, 'base64');
 
-    // Save image buffer to Azure Blob Storage
-    const imageUrl = await saveToStorage(buffer, filename);
-    return imageUrl;
-  } catch (error) {
-    console.error('Error saving image:', error);
-    throw error;
-  }
+  // Save image buffer to Azure Blob Storage
+  const imageUrl = await saveToStorage(buffer, filename);
+  return imageUrl;
 };
 
 /**
  * Checks if a file already exists on the file system at the specified file path.
  *
  * @param {string} filePath - The path of the file to check for existence.
- * @returns {Promise<boolean>} `true` if the file exists, `false` otherwise.
+ * @returns {boolean} `true` if the file exists, `false` otherwise.
  */
-export const existingImage = async (filePath: string): Promise<boolean> => {
+export const existingImage = (filePath: string): boolean => {
   try {
     // Check if the file exists by trying to read its stats
     fs.statSync(filePath);
     return true; // File exists
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
       // File does not exist
       return false;
     }
-    // Other error occurred (e.g., permission issue)
-    console.error('Error checking file existence:', error);
     return false;
   }
 };
@@ -88,8 +82,7 @@ const saveToStorage = async (
     // Return the URL of the uploaded image
     const imageUrl = `https://${account}.blob.core.windows.net/${containerName}/${filename}`;
     return imageUrl;
-  } catch (error) {
-    console.error('Error uploading to storage:', error);
+  } catch (_error) {
     return;
   }
 };
@@ -97,8 +90,8 @@ const saveToStorage = async (
 /**
  * A simple test function to validate that the async structure is functioning.
  *
- * @returns {Promise<boolean>} Always returns `true`.
+ * @returns {boolean} Always returns `true`.
  */
-export const test = async (): Promise<boolean> => {
+export const test = (): boolean => {
   return true;
 };

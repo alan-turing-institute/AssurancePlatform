@@ -1,9 +1,7 @@
 'use client';
 
-import { ChatBubbleIcon } from '@radix-ui/react-icons';
 import {
   BookOpenText,
-  CloudFog,
   Eye,
   EyeOff,
   LibraryIcon,
@@ -14,7 +12,6 @@ import {
   Trash2,
   Unplug,
 } from 'lucide-react';
-import { Autour_One } from 'next/font/google';
 import { useSession } from 'next-auth/react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,30 +24,22 @@ import {
 } from '@/components/ui/select';
 import useStore from '@/data/store';
 import {
-  addEvidenceToClaim,
-  addPropertyClaimToNested,
   caseItemDescription,
-  createAssuranceCaseNode,
   deleteAssuranceCaseNode,
   detachCaseElement,
   extractGoalsClaimsStrategies,
-  findElementById,
   findParentNode,
   findSiblingHiddenState,
-  getChildrenHiddenStatus,
-  listPropertyClaims,
   removeAssuranceCaseNode,
-  setNodeIdentifier,
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
-import NodeAttributes from '../cases/NodeAttributes';
-import NodeComment from '../cases/NodeComments';
-import NodeContext from '../cases/NodeContext';
-import OrphanElements from '../cases/OrphanElements';
+import NodeAttributes from '../cases/node-attributes';
+import NodeComment from '../cases/node-comments';
+import NodeContext from '../cases/node-context';
+import OrphanElements from '../cases/orphan-elements';
 import { AlertModal } from '../modals/alertModal';
 import EditSheet from '../ui/edit-sheet';
-import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import EditForm from './EditForm';
 // import { useLoginToken } from "@/hooks/useAuth";
@@ -78,7 +67,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
   const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
-  const [moveElementType, setMoveElementType] = useState<string | null>(null); // State for selected strategy
+  const [_moveElementType, _setMoveElementType] = useState<string | null>(null); // State for selected strategy
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
@@ -87,11 +76,10 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let strategies: any[] = [];
   let claims: any[] = [];
 
-  const readOnly =
+  const readOnly = !!(
     assuranceCase.permissions === 'view' ||
     assuranceCase.permissions === 'review'
-      ? true
-      : false;
+  );
 
   if (assuranceCase.goals && assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0];
@@ -151,7 +139,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     setUnresolvedChanges(false);
   };
 
-  const onChange = (open: boolean) => {
+  const onChange = (_open: boolean) => {
     if (unresolvedChanges) {
       setAlertOpen(true);
     } else {
@@ -162,8 +150,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const handleMove = async () => {
     setLoading(true);
     if (selectedClaimMove) {
-      const updatedItem = null;
-      console.log('Move Property to Strategy with ID', selectedClaimMove);
+      const _updatedItem = null;
 
       // Find id for selected move element
       const type = selectedClaimMove.name.substring(0, 1);
@@ -291,9 +278,6 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       }
     }
     if (selectedEvidenceMove) {
-      console.log(
-        `Move Evidence to Property Claim with ID: ${selectedEvidenceMove}`
-      );
       const updateItem = {
         property_claim_id: [selectedEvidenceMove.id],
         hidden: false,
@@ -340,7 +324,6 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       session?.key ?? ''
     );
     if (error) {
-      console.error(error);
     }
 
     if (detached) {
@@ -530,33 +513,22 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             setUnresolvedChanges={setUnresolvedChanges}
           />
         ) : (
-          <>
-            {node.type != 'context' && node.type != 'evidence' && (
-              <div className="mt-8 flex flex-col items-start justify-start">
-                <h3 className="mb-2 font-semibold text-lg">Add New</h3>
-                <div className="flex w-full flex-col items-center justify-start gap-4">
-                  {node.type === 'goal' && (
-                    <>
-                      {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
-                      <Button
-                        className="w-full"
-                        onClick={() => selectLink('strategy')}
-                        variant="outline"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Strategy
-                      </Button>
-                      <Button
-                        className="w-full"
-                        onClick={() => selectLink('claim')}
-                        variant="outline"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Property Claim
-                      </Button>
-                    </>
-                  )}
-                  {node.type === 'strategy' && (
+          node.type !== 'context' &&
+          node.type !== 'evidence' && (
+            <div className="mt-8 flex flex-col items-start justify-start">
+              <h3 className="mb-2 font-semibold text-lg">Add New</h3>
+              <div className="flex w-full flex-col items-center justify-start gap-4">
+                {node.type === 'goal' && (
+                  <>
+                    {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
+                    <Button
+                      className="w-full"
+                      onClick={() => selectLink('strategy')}
+                      variant="outline"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Strategy
+                    </Button>
                     <Button
                       className="w-full"
                       onClick={() => selectLink('claim')}
@@ -565,38 +537,48 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       <Plus className="mr-2 h-4 w-4" />
                       Add Property Claim
                     </Button>
-                  )}
-                  {node.type === 'property' && (
-                    <>
-                      <Button
-                        className="w-full"
-                        onClick={() => selectLink('claim')}
-                        variant="outline"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Property Claim
-                      </Button>
-                      <Button
-                        className="w-full"
-                        onClick={() => selectLink('evidence')}
-                        variant="outline"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Evidence
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <Button
-                  className="my-6"
-                  onClick={() => setAction(null)}
-                  variant={'outline'}
-                >
-                  Cancel
-                </Button>
+                  </>
+                )}
+                {node.type === 'strategy' && (
+                  <Button
+                    className="w-full"
+                    onClick={() => selectLink('claim')}
+                    variant="outline"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Property Claim
+                  </Button>
+                )}
+                {node.type === 'property' && (
+                  <>
+                    <Button
+                      className="w-full"
+                      onClick={() => selectLink('claim')}
+                      variant="outline"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Property Claim
+                    </Button>
+                    <Button
+                      className="w-full"
+                      onClick={() => selectLink('evidence')}
+                      variant="outline"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Evidence
+                    </Button>
+                  </>
+                )}
               </div>
-            )}
-          </>
+              <Button
+                className="my-6"
+                onClick={() => setAction(null)}
+                variant={'outline'}
+              >
+                Cancel
+              </Button>
+            </div>
+          )
         ))}
       {action === 'existing' &&
         !readOnly &&
@@ -663,28 +645,25 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                           </div>
                         </SelectItem>
                       ))}
-                      {claims &&
-                        claims.map((claim: any) => (
-                          <SelectItem key={crypto.randomUUID()} value={claim}>
-                            <div className="flex flex-col items-start justify-start gap-1">
-                              <div className="flex items-center">
-                                <span className="font-medium">
-                                  {claim.name}
-                                </span>
-                                <svg
-                                  aria-hidden="true"
-                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                  viewBox="0 0 2 2"
-                                >
-                                  <circle cx={1} cy={1} r={1} />
-                                </svg>
-                                <span className="max-w-[200px] truncate">
-                                  {claim.short_description}
-                                </span>
-                              </div>
+                      {claims?.map((claim: any) => (
+                        <SelectItem key={crypto.randomUUID()} value={claim}>
+                          <div className="flex flex-col items-start justify-start gap-1">
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg
+                                aria-hidden="true"
+                                className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                viewBox="0 0 2 2"
+                              >
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">
+                                {claim.short_description}
+                              </span>
                             </div>
-                          </SelectItem>
-                        ))}
+                          </div>
+                        </SelectItem>
+                      ))}
                       {strategies?.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
                           No strategies found.
@@ -699,28 +678,25 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
                     <SelectContent>
-                      {claims &&
-                        claims.map((claim: any) => (
-                          <SelectItem key={crypto.randomUUID()} value={claim}>
-                            <div className="flex flex-col items-start justify-start gap-1">
-                              <div className="flex items-center">
-                                <span className="font-medium">
-                                  {claim.name}
-                                </span>
-                                <svg
-                                  aria-hidden="true"
-                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                  viewBox="0 0 2 2"
-                                >
-                                  <circle cx={1} cy={1} r={1} />
-                                </svg>
-                                <span className="max-w-[200px] truncate">
-                                  {claim.short_description}
-                                </span>
-                              </div>
+                      {claims?.map((claim: any) => (
+                        <SelectItem key={crypto.randomUUID()} value={claim}>
+                          <div className="flex flex-col items-start justify-start gap-1">
+                            <div className="flex items-center">
+                              <span className="font-medium">{claim.name}</span>
+                              <svg
+                                aria-hidden="true"
+                                className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                viewBox="0 0 2 2"
+                              >
+                                <circle cx={1} cy={1} r={1} />
+                              </svg>
+                              <span className="max-w-[200px] truncate">
+                                {claim.short_description}
+                              </span>
                             </div>
-                          </SelectItem>
-                        ))}
+                          </div>
+                        </SelectItem>
+                      ))}
                       {claims && claims.length === 0 && (
                         <SelectItem disabled={true} value="{strategy.id}">
                           No property claims found.
@@ -754,7 +730,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           handleClose={handleClose}
           loadingState={{ loading, setLoading }}
           node={node}
-          readOnly={assuranceCase.permissions === 'view' ? true : false}
+          readOnly={assuranceCase.permissions === 'view'}
           setAction={setAction}
         />
       )}

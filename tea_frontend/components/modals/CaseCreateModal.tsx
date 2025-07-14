@@ -1,16 +1,15 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Check, Loader } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,7 +20,6 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
 import { Button } from '../ui/button';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 // import { useLoginToken } from "@/hooks/useAuth";
 
@@ -38,10 +36,10 @@ export const CaseCreateModal = () => {
   const { data: session } = useSession();
 
   const [loading, setLoading] = useState(false);
-  const [stage, setStage] = useState(0);
+  const [_stage, _setStage] = useState(0);
   // const [templates, setTemplates] = useState<any[]>([]);
   // const [defaultValue, setDefaultValue] = useState(0);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [_errors, setErrors] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,13 +75,11 @@ export const CaseCreateModal = () => {
             createCaseModal.onClose();
             router.push(`/case/${json.id}`);
           } else {
-            console.error(json);
             setLoading(false);
             setErrors(['An error occurred, please try again later']);
           }
         })
-        .catch((ex) => {
-          console.error(ex);
+        .catch((_ex) => {
           setLoading(false);
           setErrors(['An error occurred, please try again later']);
         });
@@ -110,9 +106,7 @@ export const CaseCreateModal = () => {
         color_profile: 'default',
       };
       CreateCase(JSON.stringify(newCase));
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (_error) {}
   };
 
   // const fetchTemplates = async () => {

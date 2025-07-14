@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  Cog6ToothIcon,
-  DocumentDuplicateIcon,
-} from '@heroicons/react/24/outline';
+import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import { GitHubLogoIcon } from '@radix-ui/react-icons';
 import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
@@ -19,7 +16,7 @@ function classNames(...classes: any) {
 
 const DesktopNav = () => {
   const pathname = usePathname();
-  const pageName =
+  const _pageName =
     pathname === '/' ? 'assurance cases' : pathname.split('/')[1];
 
   return (
@@ -43,9 +40,9 @@ const DesktopNav = () => {
           </Link>
         </div>
         <nav className="flex flex-1 flex-col">
-          <ul className="flex flex-1 flex-col gap-y-4" role="list">
+          <ul className="flex flex-1 flex-col gap-y-4">
             <li>
-              <ul className="-mx-2 space-y-1" role="list">
+              <ul className="-mx-2 space-y-1">
                 {navigation.map((item) => (
                   <li key={item.name}>
                     <a
@@ -81,7 +78,7 @@ const DesktopNav = () => {
               <div className="font-semibold text-indigo-200 text-xs leading-6">
                 Your teams
               </div>
-              <ul className="-mx-2 mt-2 space-y-1" role="list">
+              <ul className="-mx-2 mt-2 space-y-1">
                 {teams.length === 0 && (
                   <p className="px-2 text-indigo-100/60 text-sm dark:text-slate-300/50">
                     No teams added

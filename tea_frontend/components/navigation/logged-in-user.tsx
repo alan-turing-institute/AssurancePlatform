@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchCurrentUser } from '@/actions/users';
 import { Skeleton } from '../ui/skeleton';
 

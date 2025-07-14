@@ -1,8 +1,8 @@
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
 import { NextResponse } from 'next/server';
-import path from 'path';
 
-export async function GET() {
+export function GET() {
   // Read files from the file system using Node.js fs module
   const templatesDir = path.resolve(process.cwd(), 'caseTemplates');
   const files = fs.readdirSync(templatesDir);

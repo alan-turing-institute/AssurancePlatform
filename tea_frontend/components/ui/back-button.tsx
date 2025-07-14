@@ -2,7 +2,6 @@
 
 import { ArrowLeftIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React from 'react';
 import { Button } from './button';
 
 interface BackButtonProps {

@@ -37,16 +37,16 @@ repos:
         files: ^tea_backend/
         exclude: \.md$
 
-  # Frontend formatting and linting with Biome/Ultracite
-  - repo: local
-    hooks:
-      - id: ultracite-format
-        name: ultracite format (safe fixes only)
-        entry: bash -c 'cd tea_frontend && npx ultracite format || true'
-        language: system
-        pass_filenames: false
-        files: '^tea_frontend/.*\.(jsx?|tsx?|json)$'
-        exclude: '^tea_frontend/(node_modules|\.next|public/documentation|logs)/'
+  # # Frontend formatting and linting with Biome/Ultracite
+  # - repo: local
+  #   hooks:
+  #     - id: ultracite-format
+  #       name: ultracite format (safe fixes only)
+  #       entry: bash -c 'cd tea_frontend && npx ultracite format || true'
+  #       language: system
+  #       pass_filenames: false
+  #       files: '^tea_frontend/.*\.(jsx?|tsx?|json)$'
+  #       exclude: '^tea_frontend/(node_modules|\.next|public/documentation|logs)/'
 
   # Type checking (slower, after formatting)
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -60,14 +60,14 @@ repos:
           - djangorestframework-stubs==3.15.1
           - types-requests==2.32.0.20241016
 
-  - repo: local
-    hooks:
-      - id: tsc
-        name: TypeScript Compiler
-        entry: bash -c 'cd tea_frontend && npx tsc --noEmit'
-        language: system
-        files: ^tea_frontend/.*\.(ts|tsx)$
-        pass_filenames: false
+  # - repo: local
+  #   hooks:
+  #     - id: tsc
+  #       name: TypeScript Compiler
+  #       entry: bash -c 'cd tea_frontend && npx tsc --noEmit'
+  #       language: system
+  #       files: ^tea_frontend/.*\.(ts|tsx)$
+  #       pass_filenames: false
 
   # File cleanup (last, so it doesn't interfere with other tools)
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -1,36 +1,21 @@
 import { CheckCircleIcon } from '@heroicons/react/20/solid';
-import {
-  Edit2Icon,
-  EllipsisVertical,
-  EllipsisVerticalIcon,
-  EyeIcon,
-  Trash2Icon,
-} from 'lucide-react';
 import moment from 'moment';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import React from 'react';
-import { fetchCaseStudies } from '@/actions/caseStudies';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { fetchCaseStudies } from '@/actions/case-studies';
 import PageHeading from '@/components/ui/page-heading';
 import { Separator } from '@/components/ui/separator';
 import { authOptions } from '@/lib/authOptions';
-import DeleteCaseButton from './_components/delete-button';
+import { extractTextFromHtml } from '@/lib/sanitize-html';
+import type { CaseStudy } from '@/types/domain';
 import TableActions from './_components/table-actions';
 
 async function CaseStudiesPage() {
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!(session && session.key)) {
+  if (!session?.key) {
     redirect('/login');
   }
 
@@ -101,7 +86,7 @@ async function CaseStudiesPage() {
                   </td>
                 </tr>
               )}
-              {caseStudies.map((caseStudy: any) => (
+              {caseStudies.map((caseStudy: CaseStudy) => (
                 <tr key={caseStudy.id}>
                   <td className="w-full max-w-0 py-4 pr-3 pl-4 font-medium text-foreground text-sm sm:w-auto sm:max-w-none sm:pl-0">
                     <Link
@@ -112,15 +97,9 @@ async function CaseStudiesPage() {
                     </Link>
                     <dl className="font-normal lg:hidden">
                       <dt className="sr-only">Title</dt>
-                      <dd
-                        className="mt-1 max-w-[300px] truncate text-foreground/80"
-                        dangerouslySetInnerHTML={{
-                          __html: caseStudy.description.replace(
-                            '<p><br></p>',
-                            ''
-                          ),
-                        }}
-                      />
+                      <dd className="mt-1 max-w-[300px] truncate text-foreground/80">
+                        {extractTextFromHtml(caseStudy.description)}
+                      </dd>
                       <dt className="sr-only sm:hidden">Published</dt>
                       <dd className="mt-1 truncate text-gray-500 sm:hidden">
                         {moment(caseStudy.publishedDate).format('DD/MM/YYYY')}
@@ -129,14 +108,7 @@ async function CaseStudiesPage() {
                   </td>
                   <td className="hidden max-w-[220px] px-3 py-4 text-foreground/80 text-sm lg:table-cell">
                     <div className="line-clamp-3 overflow-hidden">
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: caseStudy.description.replace(
-                            '<p><br></p>',
-                            ''
-                          ),
-                        }}
-                      />
+                      <span>{extractTextFromHtml(caseStudy.description)}</span>
                     </div>
                   </td>
                   <td className="hidden px-3 py-4 text-foreground/80 text-sm sm:table-cell">

@@ -2,8 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import React from 'react';
-import { updateCaseStudy } from '@/actions/caseStudies';
+import { updateCaseStudy } from '@/actions/case-studies';
 import { useToast } from './use-toast';
 
 interface PublishButtonProps {
@@ -15,7 +14,7 @@ interface PublishButtonProps {
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
   const { data } = useSession();
   const { toast } = useToast();
-  const router = useRouter();
+  const _router = useRouter();
 
   // const handlePublish = async () => {
   //   if(published) {

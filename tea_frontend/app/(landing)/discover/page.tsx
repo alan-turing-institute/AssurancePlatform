@@ -1,6 +1,5 @@
-import React from 'react';
-import { fetchPublishedCaseStudies } from '@/actions/caseStudies';
-import CaseStudies from '../_components/CaseStudies';
+import { fetchPublishedCaseStudies } from '@/actions/case-studies';
+import CaseStudies from '../_components/case-studies';
 
 const DiscoverPage = async () => {
   const publishedCaseStudies = await fetchPublishedCaseStudies();

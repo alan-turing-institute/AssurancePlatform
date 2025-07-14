@@ -1,4 +1,5 @@
 import { type RenderOptions, render } from '@testing-library/react';
+import type { Session } from 'next-auth';
 import { SessionProvider } from 'next-auth/react';
 import type React from 'react';
 import type { ReactElement } from 'react';
@@ -21,7 +22,7 @@ const mockSession = {
 // Provider wrapper for tests
 interface ProvidersProps {
   children: React.ReactNode;
-  session?: any;
+  session?: Session | null;
 }
 
 const Providers = ({ children, session = null }: ProvidersProps) => {
@@ -43,7 +44,7 @@ const Providers = ({ children, session = null }: ProvidersProps) => {
 
 // Custom render function
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  session?: any;
+  session?: Session | null;
   withProviders?: boolean;
 }
 
@@ -97,7 +98,7 @@ export const createMockFile = (
 };
 
 // Helper to wait for async operations
-export const waitFor = async (
+export const waitFor = (
   callback: () => void | Promise<void>,
   timeout = 1000
 ) => {

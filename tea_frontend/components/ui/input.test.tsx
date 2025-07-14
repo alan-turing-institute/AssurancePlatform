@@ -1,7 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  render,
   renderWithoutProviders,
   screen,
 } from '@/src/__tests__/utils/test-utils';

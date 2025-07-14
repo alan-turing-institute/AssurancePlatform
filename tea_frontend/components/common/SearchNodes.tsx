@@ -1,16 +1,13 @@
 'use client';
 
 import { Search } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +25,6 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
   const [filteredNodes, setFilteredNodes] = useState(nodes);
 
   const handleSearch = (searchValue: string) => {
-    console.log(searchValue);
     setValue(searchValue);
 
     if (searchValue !== '') {

@@ -1,16 +1,12 @@
 import moment from 'moment';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import React from 'react';
-import {
-  deleteCaseStudy,
-  fetchCaseStudyById,
-  updateCaseStudy,
-} from '@/actions/caseStudies';
+import { fetchCaseStudyById } from '@/actions/case-studies';
 import BackButton from '@/components/ui/back-button';
 import PageHeading from '@/components/ui/page-heading';
 import { authOptions } from '@/lib/authOptions';
-import CaseStudyForm from '../_components/CaseStudyForm';
+import type { CaseStudy } from '@/types/domain';
+import CaseStudyForm from '../_components/case-study-form';
 
 async function CaseStudyDetails({
   params,
@@ -20,13 +16,16 @@ async function CaseStudyDetails({
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!(session && session.key)) {
+  if (!session?.key) {
     redirect('/login');
   }
 
   const { id } = await params;
 
-  const caseStudy = await fetchCaseStudyById(session.key, Number.parseInt(id));
+  const caseStudy = await fetchCaseStudyById(
+    session.key,
+    Number.parseInt(id, 10)
+  );
 
   return (
     <>
@@ -125,7 +124,7 @@ async function CaseStudyDetails({
 
 export default CaseStudyDetails;
 
-function PublishedBanner({ caseStudy }: any) {
+function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
   return (
     <div className="flex items-center gap-x-6 bg-emerald-500 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 dark:bg-emerald-600">
       <div className="w-full text-sm text-white leading-6">

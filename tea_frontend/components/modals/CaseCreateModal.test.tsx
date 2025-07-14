@@ -2,7 +2,6 @@ import { HttpResponse, http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/src/__tests__/mocks/server';
 import {
-  render,
   renderWithAuth,
   screen,
   userEvent,
@@ -342,7 +341,7 @@ describe('CaseCreateModal', () => {
       await user.click(screen.getByRole('button', { name: /submit/i }));
 
       await waitFor(() => {
-        expect(capturedHeaders['authorization']).toBeDefined();
+        expect(capturedHeaders.authorization).toBeDefined();
         expect(capturedHeaders['content-type']).toBe('application/json');
       });
     });
@@ -665,7 +664,7 @@ describe('CaseCreateModal', () => {
       await user.click(screen.getByRole('button', { name: /submit/i }));
 
       await waitFor(() => {
-        expect(capturedHeaders['authorization']).toContain('Token');
+        expect(capturedHeaders.authorization).toContain('Token');
       });
     });
   });

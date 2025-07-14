@@ -1,43 +1,20 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { saveAs } from 'file-saver';
 import {
-  Download,
   Eye,
-  FileIcon,
   MessageCircleMore,
   PencilRuler,
-  Share2,
   Trash2,
   User2,
-  UserCheck,
-  UserX,
-  X,
 } from 'lucide-react';
-import { neatJSON } from 'neatjson';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
-import { unauthorized, useLoginToken } from '@/hooks/useAuth';
+import { unauthorized } from '@/hooks/useAuth';
 import { usePermissionsModal } from '@/hooks/usePermissionsModal';
-import { useShareModal } from '@/hooks/useShareModal';
-import { User } from '@/types';
 import { Button } from '../ui/button';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Separator } from '../ui/separator';
 import { useToast } from '../ui/use-toast';
 
@@ -53,10 +30,10 @@ export const PermissionsModal = () => {
   } = useStore();
   const permissionModal = usePermissionsModal();
 
-  const [loading, setLoading] = useState(false);
-  const [isDisabled, setIsDisabled] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [_loading, setLoading] = useState(false);
+  const [_isDisabled, _setIsDisabled] = useState(false);
+  const [_error, _setError] = useState<string>('');
+  const [_successMessage, _setSuccessMessage] = useState<string>('');
   // const [viewMembers, setViewMembers] = useState<any[]>([])
   // const [editMembers, setEditMembers] = useState<any[]>([])
 
@@ -65,7 +42,7 @@ export const PermissionsModal = () => {
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
 
   const fetchCaseMembers = async () => {
@@ -80,7 +57,9 @@ export const PermissionsModal = () => {
       requestOptions
     );
 
-    if (response.status === 401) return unauthorized();
+    if (response.status === 401) {
+      return unauthorized();
+    }
 
     const result = await response.json();
     return result;
@@ -113,8 +92,6 @@ export const PermissionsModal = () => {
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {
-        console.log(`Something went wrong ${response.status}`);
-
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -145,9 +122,7 @@ export const PermissionsModal = () => {
         );
         setReviewMembers(removedMembers);
       }
-    } catch (error) {
-      console.log('Error', error);
-
+    } catch (_error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -164,7 +139,13 @@ export const PermissionsModal = () => {
         setReviewMembers(result.review);
       });
     }
-  }, [assuranceCase]);
+  }, [
+    assuranceCase,
+    fetchCaseMembers,
+    setEditMembers,
+    setReviewMembers,
+    setViewMembers,
+  ]);
 
   return (
     <Modal

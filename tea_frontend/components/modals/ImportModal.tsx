@@ -13,7 +13,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -43,7 +42,7 @@ export const ImportModal = () => {
   // const [token] = useLoginToken();
   const { data: session } = useSession();
 
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
   const router = useRouter();
@@ -76,13 +75,11 @@ export const ImportModal = () => {
             importModal.onClose();
             router.push(`/case/${json.id}`);
           } else {
-            console.error(json);
             setLoading(false);
             setError('An error occurred, please try again later');
           }
         })
-        .catch((ex) => {
-          console.error(ex);
+        .catch((_ex) => {
           setLoading(false);
           setError('An error occurred, please try again later');
         });
@@ -101,17 +98,15 @@ export const ImportModal = () => {
           try {
             const json = JSON.parse(event.target.result as string);
             await ImportCreateCase(json);
-          } catch (error) {
+          } catch (_error) {
             setError('Error parsing JSON file, bad format.');
-            console.error('Error parsing JSON:', error);
           }
         };
 
         fileReader.readAsText(file);
       }
-    } catch (error) {
+    } catch (_error) {
       setError('Error reading file');
-      console.error('Error reading file:', error);
     }
   };
 
@@ -127,40 +122,34 @@ export const ImportModal = () => {
       onClose={handleModalClose}
       title="Import File"
     >
-      <>
-        {error && (
-          <div className="pb-2 font-semibold text-rose-500 text-sm">
-            {error}
-          </div>
-        )}
-        <Form {...form}>
-          <form
-            className="w-full space-y-6"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
-            <FormField
-              control={form.control}
-              name="file"
-              render={({ field: { value, onChange, ...fieldProps } }) => (
-                <FormItem>
-                  {/* <FormLabel>File</FormLabel> */}
-                  <FormControl>
-                    <Input
-                      {...fieldProps}
-                      onChange={(event) =>
-                        onChange(event.target.files && event.target.files[0])
-                      }
-                      type="file"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit">Submit</Button>
-          </form>
-        </Form>
-      </>
+      {error && (
+        <div className="pb-2 font-semibold text-rose-500 text-sm">{error}</div>
+      )}
+      <Form {...form}>
+        <form
+          className="w-full space-y-6"
+          onSubmit={form.handleSubmit(onSubmit)}
+        >
+          <FormField
+            control={form.control}
+            name="file"
+            render={({ field: { value, onChange, ...fieldProps } }) => (
+              <FormItem>
+                {/* <FormLabel>File</FormLabel> */}
+                <FormControl>
+                  <Input
+                    {...fieldProps}
+                    onChange={(event) => onChange(event.target.files?.[0])}
+                    type="file"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit">Submit</Button>
+        </form>
+      </Form>
     </Modal>
   );
 };

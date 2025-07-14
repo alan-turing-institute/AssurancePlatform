@@ -1,12 +1,10 @@
 'use client';
 
-import { CloudDownloadIcon, Trash2Icon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { CloudDownloadIcon } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import React, { useState } from 'react';
-import { deleteCaseStudy, updateCaseStudy } from '@/actions/caseStudies';
+import { useState } from 'react';
+import { updateCaseStudy } from '@/actions/case-studies';
 import { AlertModal } from '@/components/modals/alertModal';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
 interface UnpublishCaseButtonProps {
@@ -18,7 +16,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
   const { toast } = useToast();
 
   const [alertOpen, setAlertOpen] = useState(false);
-  const [alertLoading, setAlertLoading] = useState<boolean>(false);
+  const [alertLoading, _setAlertLoading] = useState<boolean>(false);
 
   const handleUnpublish = async () => {
     try {
@@ -43,9 +41,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
           description: 'Sorry something went wrong!',
         });
       }
-    } catch (error) {
-      console.log(error);
-
+    } catch (_error) {
       toast({
         variant: 'destructive',
         title: 'Failed to Unpublish',
@@ -58,13 +54,14 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 
   return (
     <div>
-      <div
-        className="flex items-center hover:cursor-pointer"
+      <button
+        className="flex items-center transition-colors"
         onClick={() => setAlertOpen(true)}
+        type="button"
       >
         <CloudDownloadIcon className="mr-2 size-4" />
         Unpublish
-      </div>
+      </button>
       <AlertModal
         cancelButtonText={'No'}
         confirmButtonText={'Yes, unpublish case study!'}

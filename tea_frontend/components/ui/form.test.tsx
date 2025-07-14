@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
-  render,
   renderWithoutProviders,
   screen,
 } from '@/src/__tests__/utils/test-utils';
@@ -174,7 +173,7 @@ describe('Form Components', () => {
     expect(emailInput).toHaveAccessibleName('Email');
 
     // Check that description is properly associated
-    const description = screen.getByText('This is your public display name.');
+    const _description = screen.getByText('This is your public display name.');
     expect(usernameInput).toHaveAccessibleDescription(
       'This is your public display name.'
     );

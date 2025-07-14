@@ -1,9 +1,10 @@
 import { MailIcon, MoveLeftIcon, Users2Icon } from 'lucide-react';
 import moment from 'moment';
+import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
-import { fetchPublishedCaseStudyById } from '@/actions/caseStudies';
-import CaseStudyCases from '../../_components/CaseStudyCases';
+import { fetchPublishedCaseStudyById } from '@/actions/case-studies';
+import { extractTextFromHtml } from '@/lib/sanitize-html';
+import CaseStudyCases from '../../_components/case-study-cases';
 
 const DiscoverCaseStudyPage = async ({
   params,
@@ -11,7 +12,7 @@ const DiscoverCaseStudyPage = async ({
   params: Promise<{ id: string }>;
 }) => {
   const { id } = await params;
-  const caseStudy = await fetchPublishedCaseStudyById(Number.parseInt(id));
+  const caseStudy = await fetchPublishedCaseStudyById(Number.parseInt(id, 10));
 
   return (
     <div className="overflow-hidden bg-white">
@@ -78,7 +79,7 @@ const DiscoverCaseStudyPage = async ({
             </svg>
             <div className="relative mx-auto text-base lg:max-w-none">
               <figure>
-                <img
+                <Image
                   alt={caseStudy.title}
                   className="aspect-[12/7] w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
                   height={1376}
@@ -106,11 +107,7 @@ const DiscoverCaseStudyPage = async ({
                 </div>
               </div>
               <div className="prose">
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: caseStudy.description.replace('<p><br></p>', ''),
-                  }}
-                />
+                <div>{extractTextFromHtml(caseStudy.description)}</div>
               </div>
 
               <div className="pt-6">

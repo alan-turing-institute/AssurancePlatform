@@ -4,13 +4,12 @@ import {
   mockAssuranceCase,
 } from '@/src/__tests__/utils/mock-data';
 import {
-  render,
   renderWithAuth,
   screen,
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
-import Flow from './Flow';
+import Flow from './flow';
 
 // Mock ReactFlow
 const mockFitView = vi.fn();

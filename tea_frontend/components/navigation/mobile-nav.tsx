@@ -1,26 +1,14 @@
 'use client';
 
-import { Dialog, Menu, Transition } from '@headlessui/react';
-import {
-  Bars3Icon,
-  BellIcon,
-  Cog6ToothIcon,
-  DocumentDuplicateIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
+import { Dialog, Transition } from '@headlessui/react';
+import { DocumentDuplicateIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { GitHubLogoIcon } from '@radix-ui/react-icons';
 import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  type Dispatch,
-  Fragment,
-  type SetStateAction,
-  useEffect,
-  useState,
-} from 'react';
-import { navigation, teams, userNavigation } from '@/config';
+import { type Dispatch, Fragment, type SetStateAction } from 'react';
+import { navigation, teams } from '@/config';
 import { Separator } from '../ui/separator';
 import LoggedInUser from './logged-in-user';
 
@@ -35,7 +23,7 @@ function classNames(...classes: any) {
 
 export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
   const pathname = usePathname();
-  const pageName =
+  const _pageName =
     pathname === '/' ? 'assurance cases' : pathname.split('/')[1];
 
   return (
@@ -117,9 +105,9 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
                   </Link>
                 </div>
                 <nav className="flex flex-1 flex-col">
-                  <ul className="flex flex-1 flex-col gap-y-4" role="list">
+                  <ul className="flex flex-1 flex-col gap-y-4">
                     <li>
-                      <ul className="-mx-2 space-y-1" role="list">
+                      <ul className="-mx-2 space-y-1">
                         {navigation.map((item) => (
                           <li key={item.name}>
                             <a
@@ -151,7 +139,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
                       <div className="font-semibold text-indigo-200 text-xs leading-6">
                         Your teams
                       </div>
-                      <ul className="-mx-2 mt-2 space-y-1" role="list">
+                      <ul className="-mx-2 mt-2 space-y-1">
                         {teams.length === 0 && (
                           <p className="px-2 text-indigo-100/60 text-sm dark:text-slate-300/50">
                             No teams added

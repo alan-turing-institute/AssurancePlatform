@@ -13,7 +13,6 @@ import {
   setNodeIdentifier,
   updateAssuranceCase,
   updateAssuranceCaseNode,
-  updateEvidenceNested,
   updatePropertyClaimNested,
 } from '../case-helper';
 

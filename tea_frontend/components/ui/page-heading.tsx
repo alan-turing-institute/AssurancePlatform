@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from './button';
 import PublishButton from './publish-button';
 import RedirectButton from './redirect-button';

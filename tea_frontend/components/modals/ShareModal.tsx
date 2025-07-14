@@ -5,7 +5,6 @@ import { saveAs } from 'file-saver';
 import {
   ArrowUpRight,
   Download,
-  ExpandIcon,
   FileIcon,
   Share2,
   Share2Icon,
@@ -13,7 +12,6 @@ import {
   User2,
   UserCheck,
   UserX,
-  X,
 } from 'lucide-react';
 import { neatJSON } from 'neatjson';
 import { useRouter } from 'next/navigation';
@@ -36,7 +34,6 @@ import { useShareModal } from '@/hooks/useShareModal';
 // import { unauthorized, useLoginToken } from "@/hooks/useAuth";
 import type { User } from '@/types';
 import { Button } from '../ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Separator } from '../ui/separator';
 import { useToast } from '../ui/use-toast';
@@ -75,18 +72,18 @@ export const ShareModal = () => {
   const shareModal = useShareModal();
 
   const [loading, setLoading] = useState(false);
-  const [isDisabled, setIsDisabled] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [_isDisabled, _setIsDisabled] = useState(false);
+  const [error, _setError] = useState<string>('');
+  const [successMessage, _setSuccessMessage] = useState<string>('');
+  const [_users, _setUsers] = useState<User[]>([]);
+  const [_selectedUsers, _setSelectedUsers] = useState<User[]>([]);
 
   const [isLinkedCaseModalOpen, setIsLinkedCaseModalOpen] = useState(false);
   const [linkedCaseStudies, setLinkedCaseStudies] = useState([]);
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -137,8 +134,6 @@ export const ShareModal = () => {
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {
-        console.log(`Something went wrong ${response.status}`);
-
         toast({
           variant: 'destructive',
           title: 'Unable to share case',
@@ -170,9 +165,7 @@ export const ShareModal = () => {
       }
 
       form.reset();
-    } catch (error) {
-      console.log('Error', error);
-
+    } catch (_error) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -191,7 +184,7 @@ export const ShareModal = () => {
     // confuse it when importing the JSON exported here.
     json = json.replaceAll(/"id":\d+(,)?/g, '');
 
-    const name = assuranceCase['name'];
+    const name = assuranceCase.name;
 
     // Write to a file, which to the user shows as a download.
     const blob = new Blob([json], {
@@ -213,7 +206,7 @@ export const ShareModal = () => {
       now.getMinutes() +
       '-' +
       now.getSeconds();
-    const filename = name + '-' + datestr + '.json';
+    const filename = `${name}-${datestr}.json`;
     saveAs(blob, filename);
     setLoading(false);
   };
@@ -242,9 +235,7 @@ export const ShareModal = () => {
       }
 
       window.location.reload();
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (_error) {}
   };
 
   const handleUnpublish = async () => {
@@ -293,7 +284,7 @@ export const ShareModal = () => {
 
         try {
           const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
+          if (contentType?.includes('application/json')) {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
             linkedCases = errorData.linked_case_studies || [];
@@ -302,9 +293,7 @@ export const ShareModal = () => {
             const text = await response.text();
             errorMessage = text || errorMessage;
           }
-        } catch (err) {
-          console.error('Error parsing response', err);
-        }
+        } catch (_err) {}
 
         shareModal.onClose();
 
@@ -331,14 +320,10 @@ export const ShareModal = () => {
       }
 
       window.location.reload();
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (_error) {}
   };
 
-  useEffect(() => {
-    console.log('Assurance case updated');
-  }, [assuranceCase]);
+  useEffect(() => {}, []);
 
   return (
     <>
@@ -467,7 +452,7 @@ export const ShareModal = () => {
               <p className="mb-2 text-muted-foreground text-sm">
                 Here you can publish the current version of your case.
               </p>
-              {assuranceCase && assuranceCase.published ? (
+              {assuranceCase?.published ? (
                 <div className="flex items-center justify-start gap-4">
                   <Button
                     className="my-2"

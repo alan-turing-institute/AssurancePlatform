@@ -1,7 +1,6 @@
-import React, { type ReactNode } from 'react';
-import { FeedbackForm } from './_components/FeedbackForm';
+import { FeedbackForm } from './_components/feedback-form';
 
-const FeedbackLayout = ({ children }: { children: ReactNode }) => {
+const FeedbackLayout = () => {
   return (
     <div className="relative min-h-screen bg-grid-paper dark:bg-grid-paper-dark">
       {/* Your content */}

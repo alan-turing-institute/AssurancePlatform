@@ -1,0 +1,200 @@
+
+> tea-platform-frontend@0.2.0 lint /Users/cburr/Repositories/AssurancePlatform/tea_frontend
+> npx ultracite@latest lint
+
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+npm warn Unknown env config "verify-deps-before-run". This will stop working in the next major version of npm.
+npm warn Unknown env config "_jsr-registry". This will stop working in the next major version of npm.
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:221:37 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+
+    219 │           body: formData,
+    220 │           headers: {
+  > 221 │             Authorization: `Token ${data?.key!}`, // Replace with actual auth token
+        │                                     ^^^^^^^^^^
+    222 │           },
+    223 │         }
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:252:37 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+
+    250 │           method: 'DELETE',
+    251 │           headers: {
+  > 252 │             Authorization: `Token ${data?.key!}`, // Replace with actual auth token
+        │                                     ^^^^^^^^^^
+    253 │           },
+    254 │         }
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:297:22 lint/suspicious/noEmptyBlockStatements ━━━━━━━━━━
+
+  × Unexpected empty block.
+
+    295 │       const result = await response.json();
+    296 │       setFeaturedImage(result.image);
+  > 297 │     } catch (_error) {
+        │                      ^
+  > 298 │     } finally {
+        │     ^
+    299 │       setImageLoading(false);
+    300 │     }
+
+  i Empty blocks are usually the result of an incomplete refactoring. Remove the empty block or add a comment inside it if it is intentional.
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:335:18 lint/complexity/noExcessiveCognitiveComplexity ━━━━━━━━━━
+
+  × Excessive complexity of 20 detected (max: 15).
+
+    333 │   }
+    334 │
+  > 335 │   async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+        │                  ^^^^^^^^^^^^
+    336 │     const formData = new FormData();
+    337 │
+
+  i Please refactor this function to reduce its complexity score from 20 to the max allowed complexity 15.
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:379:56 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+
+    377 │         }
+    378 │       } else {
+  > 379 │         const createdCaseStudy = await createCaseStudy(data?.key!, formData);
+        │                                                        ^^^^^^^^^^
+    380 │
+    381 │         if (values.image) {
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:434:43 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+
+    433 │   const _handleDelete = async () => {
+  > 434 │     const deleted = await deleteCaseStudy(data?.key!, caseStudy.id);
+        │                                           ^^^^^^^^^^
+    435 │
+    436 │     if (deleted) {
+
+
+app/(main)/dashboard/case-studies/_components/case-study-form.tsx:572:30 lint/correctness/noUnusedFunctionParameters ━━━━━━━━━━
+
+  × This parameter is unused.
+
+    570 │                   control={form.control}
+    571 │                   name="authors"
+  > 572 │                   render={({ field }) => {
+        │                              ^^^^^
+    573 │                     return (
+    574 │                       <FormItem>
+
+  i Unused parameters might be the result of an incomplete refactoring.
+
+
+app/(main)/dashboard/case-studies/_components/delete-button.tsx:31:43 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  × Forbidden non-null assertion.
+
+    30 │   const handleDelete = async () => {
+  > 31 │     const deleted = await deleteCaseStudy(data?.key!, caseStudyId);
+       │                                           ^^^^^^^^^^
+    32 │
+    33 │     if (deleted) {
+
+
+app/(main)/dashboard/case-studies/_components/related-assurance-case-list.tsx:15:3 lint/correctness/noUnusedFunctionParameters ━━━━━━━━━━
+
+  × This parameter is unused.
+
+    14 │ const RelatedAssuranceCaseList = ({
+  > 15 │   published,
+       │   ^^^^^^^^^
+    16 │   selectedAssuranceCases,
+    17 │   setSelectedAssuranceCases,
+
+  i Unused parameters might be the result of an incomplete refactoring.
+
+
+app/(main)/dashboard/settings/_components/delete-form.tsx:45:22 lint/suspicious/noEmptyBlockStatements ━━━━━━━━━━
+
+  × Unexpected empty block.
+
+    43 │       // setToken(null);
+    44 │       router.push('/login');
+  > 45 │     } catch (_error) {}
+       │                      ^^
+    46 │     setDeleteOpen(false);
+    47 │   };
+
+  i Empty blocks are usually the result of an incomplete refactoring. Remove the empty block or add a comment inside it if it is intentional.
+
+
+app/(main)/dashboard/settings/_components/password-form.tsx:109:22 lint/suspicious/noEmptyBlockStatements ━━━━━━━━━━
+
+  × Unexpected empty block.
+
+    107 │       notify('Password Updated Successfully!');
+    108 │       form.reset();
+  > 109 │     } catch (_error) {
+        │                      ^
+  > 110 │     } finally {
+        │     ^
+    111 │       setLoading(false);
+    112 │     }
+
+  i Empty blocks are usually the result of an incomplete refactoring. Remove the empty block or add a comment inside it if it is intentional.
+
+
+app/(main)/dashboard/settings/_components/password-form.tsx:101:17 lint/nursery/noShadow ━━━━━━━━━━━
+
+  × This variable shadows another variable with the same name in the outer scope.
+
+    100 │       if (response.status === 400) {
+  > 101 │         const { error } = await response.json();
+        │                 ^^^^^
+    102 │         if (error) {
+    103 │           setError(error);
+
+  i This is the shadowed variable, which is now inaccessible in the inner scope.
+
+    56 │ export function PasswordForm({ data }: PasswordFormProps) {
+  > 57 │   const [error, setError] = useState<string>('');
+       │          ^^^^^
+    58 │   const [_loading, setLoading] = useState<boolean>(false);
+    59 │   const { toast } = useToast();
+
+  i Consider renaming this variable. It's easy to confuse the origin of variables if they share the same name.
+
+
+app/(main)/dashboard/settings/_components/personal-info-form.tsx:117:22 lint/suspicious/noEmptyBlockStatements ━━━━━━━━━━
+
+  × Unexpected empty block.
+
+    115 │       const _result = await response.json();
+    116 │       notify('User Updated Successfully!');
+  > 117 │     } catch (_error) {}
+        │                      ^^
+    118 │
+    119 │     setLoading(false);
+
+  i Empty blocks are usually the result of an incomplete refactoring. Remove the empty block or add a comment inside it if it is intentional.
+
+
+app/api/templates/route.ts:5:8 lint/suspicious/useAwait ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × This async function lacks an await expression.
+
+     3 │ import { NextResponse } from 'next/server';
+     4 │
+   > 5 │ export async function GET() {
+       │        ^^^^^^^^^^^^^^^^^^^^^^
+   > 6 │   // Read files from the file system using Node.js fs module
+        ...
+  > 23 │
+  > 24 │   return NextResponse.json({ newTemplates, defaultCase });

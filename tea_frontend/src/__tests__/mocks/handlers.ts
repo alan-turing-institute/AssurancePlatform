@@ -59,7 +59,7 @@ export const handlers = [
 
   http.get(`${API_BASE_URL}/api/cases/:id/`, ({ params }) => {
     return HttpResponse.json({
-      id: Number.parseInt(params.id as string),
+      id: Number.parseInt(params.id as string, 10),
       name: 'Test Assurance Case',
       description: 'A test case for testing',
       created_date: '2024-01-01T00:00:00Z',
@@ -144,7 +144,6 @@ export const handlers = [
 
   // Fallback for unhandled requests
   http.all('*', ({ request }) => {
-    console.warn(`Unhandled ${request.method} request to ${request.url}`);
     return new HttpResponse(null, { status: 404 });
   }),
 ];

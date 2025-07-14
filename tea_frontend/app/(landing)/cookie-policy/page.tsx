@@ -1,9 +1,4 @@
-import {
-  CheckCircleIcon,
-  InformationCircleIcon,
-  XCircleIcon,
-} from '@heroicons/react/20/solid';
-import React from 'react';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/20/solid';
 
 const CookiePolicyPage = () => {
   return (
@@ -55,7 +50,7 @@ const CookiePolicyPage = () => {
           <p className="mt-6">
             We do <strong>not</strong> use cookies for:
           </p>
-          <ul className="mt-8 max-w-xl space-y-4 text-gray-600" role="list">
+          <ul className="mt-8 max-w-xl space-y-4 text-gray-600">
             <li className="flex gap-x-3">
               <XCircleIcon
                 aria-hidden="true"
@@ -90,7 +85,7 @@ const CookiePolicyPage = () => {
             The following are the essential cookies used by the TEA Platform.
             These are set by NextAuth.js, the authentication library we use:
           </p>
-          <ul className="mt-8 max-w-xl space-y-8 text-gray-600" role="list">
+          <ul className="mt-8 max-w-xl space-y-8 text-gray-600">
             <li className="flex gap-x-3">
               <CheckCircleIcon
                 aria-hidden="true"

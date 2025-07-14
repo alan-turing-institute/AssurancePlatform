@@ -6,7 +6,6 @@ import {
   mockAssuranceCase,
 } from '@/src/__tests__/utils/mock-data';
 import {
-  render,
   renderWithAuth,
   screen,
   userEvent,
