@@ -1,10 +1,15 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import CaseSheet from '../ui/case-sheet';
+import React, {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useState,
+} from 'react';
 import useStore from '@/data/store';
-import CaseEditForm from './CaseEditForm';
 import { AlertModal } from '../modals/alertModal';
+import CaseSheet from '../ui/case-sheet';
+import CaseEditForm from './CaseEditForm';
 
 interface CaseDetailsProps {
   isOpen: boolean;
@@ -43,11 +48,13 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 
   return (
     <CaseSheet
-      title={`${assuranceCase.permissions === 'manage' ? 'Update' : ''} Assurance Case`}
-      description={`Use this form to update your assurance case name and description.`}
+      description={
+        'Use this form to update your assurance case name and description.'
+      }
       isOpen={isOpen}
-      onClose={handleClose}
       onChange={onChange}
+      onClose={handleClose}
+      title={`${assuranceCase.permissions === 'manage' ? 'Update' : ''} Assurance Case`}
     >
       <div className="my-6">
         <CaseEditForm
@@ -55,15 +62,15 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
           setUnresolvedChanges={setUnresolvedChanges}
         />
         <AlertModal
+          cancelButtonText={'No, keep editing'}
+          confirmButtonText={'Yes, discard changes!'}
           isOpen={alertOpen}
-          onClose={() => setAlertOpen(false)}
-          onConfirm={handleClose}
           loading={loading}
           message={
             'You have changes that have not been updated. Would you like to discard these changes?'
           }
-          confirmButtonText={'Yes, discard changes!'}
-          cancelButtonText={'No, keep editing'}
+          onClose={() => setAlertOpen(false)}
+          onConfirm={handleClose}
         />
       </div>
     </CaseSheet>

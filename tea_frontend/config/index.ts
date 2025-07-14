@@ -1,10 +1,10 @@
-import { Sector } from '@/types';
 import {
   FolderIcon,
-  UsersIcon,
   GlobeAltIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 import { Blocks } from 'lucide-react';
+import type { Sector } from '@/types';
 
 export const navigation = [
   {

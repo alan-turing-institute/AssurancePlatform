@@ -1,8 +1,8 @@
 'use client';
 
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { User } from '@/types';
-import { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import type { User } from '@/types';
 
 type AutoCompleteProps = {
   options: User[];
@@ -56,27 +56,27 @@ const AutoComplete = ({
   return (
     <div className="autocomplete relative">
       <input
-        type="text"
-        value={inputValue}
+        className={cn(
+          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:font-medium file:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
+        )}
+        onBlur={() => setTimeout(() => setIsOpen(false), 100)}
         onChange={handleInputChange}
         onFocus={() => setIsOpen(true)}
-        onBlur={() => setTimeout(() => setIsOpen(false), 100)}
-        className={cn(
-          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
-        )}
         placeholder="Start typing..."
+        type="text"
+        value={inputValue}
       />
       {isOpen && filteredOptions.length > 0 && (
-        <ul className="absolute top-full left-0 z-50 w-full p-2 bg-gray-100 dark:bg-slate-900 rounded-md mt-1 space-y-3 shadow-lg">
+        <ul className="absolute top-full left-0 z-50 mt-1 w-full space-y-3 rounded-md bg-gray-100 p-2 shadow-lg dark:bg-slate-900">
           {filteredOptions.map((option, index) => (
             <li
+              className="group rounded-md p-2 hover:cursor-pointer hover:bg-indigo-600 hover:text-white"
               key={index}
               onClick={() => handleOptionClick(option)}
-              className="hover:bg-indigo-600 hover:cursor-pointer group hover:text-white p-2 rounded-md"
             >
               {option.username}
               {option.email ? (
-                <span className="ml-2 text-xs text-muted-foreground group-hover:text-white">
+                <span className="ml-2 text-muted-foreground text-xs group-hover:text-white">
                   ({option.email})
                 </span>
               ) : null}

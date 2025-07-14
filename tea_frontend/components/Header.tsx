@@ -1,11 +1,3 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  Dispatch,
-  SetStateAction,
-} from 'react';
-import { Button } from './ui/button';
 import {
   ArrowLeft,
   Check,
@@ -16,24 +8,32 @@ import {
   SearchIcon,
   X,
 } from 'lucide-react';
-import { ModeToggle } from './ui/theme-toggle';
-import { useRouter } from 'next/navigation';
-// import { useLoginToken } from "@/hooks/useAuth";
-import useStore from '@/data/store';
+import moment from 'moment';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
 import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  getNodesBounds,
   useReactFlow,
   useUpdateNodeInternals,
-  getNodesBounds,
 } from 'reactflow';
-import SearchNodes from './common/SearchNodes';
-
+// import { useLoginToken } from "@/hooks/useAuth";
+import useStore from '@/data/store';
 import { toggleHiddenForParent } from '@/lib/case-helper';
 import LogoutButton from './auth/LogoutButton';
 import ActiveUsersList from './cases/ActiveUsersList';
 import { ResourcesInfo } from './cases/ResourcesInfo';
-import { useSession } from 'next-auth/react';
-import moment from 'moment';
+import SearchNodes from './common/SearchNodes';
+import { Button } from './ui/button';
+import { ModeToggle } from './ui/theme-toggle';
 import {
   Tooltip,
   TooltipContent,
@@ -106,7 +106,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 
   const focusNode = (value: string) => {
     console.log('Focus Node');
-    let nodeId: any = nodes.filter((n) => n.id === value)[0].id;
+    const nodeId: any = nodes.filter((n) => n.id === value)[0].id;
 
     unhideParents(nodeId);
 
@@ -143,36 +143,36 @@ const Header = ({ setOpen }: HeaderProps) => {
   }, [assuranceCase]);
 
   return (
-    <div className="fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50">
-      <div className="container py-3 flex justify-between items-center">
-        <div className="flex justify-start items-center gap-2">
+    <div className="fixed top-0 left-0 z-50 w-full bg-indigo-600 text-white dark:bg-slate-900">
+      <div className="container flex items-center justify-between py-3">
+        <div className="flex items-center justify-start gap-2">
           <Button
-            variant={'ghost'}
-            size={'icon'}
+            className="hover:bg-indigo-900/20 hover:text-white hover:dark:bg-gray-100/10"
             onClick={() => router.back()}
-            className="hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white"
+            size={'icon'}
+            variant={'ghost'}
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <p
-            onClick={() => setOpen(true)}
             className="font-semibold hover:cursor-pointer"
+            onClick={() => setOpen(true)}
           >
             {assuranceCase.name}
           </p>
         </div>
 
-        <div className="flex justify-start items-center gap-2">
+        <div className="flex items-center justify-start gap-2">
           {/* <ResourcesInfo /> */}
           <ActiveUsersList />
-          <SearchNodes nodes={nodes} focusNode={focusNode} />
+          <SearchNodes focusNode={focusNode} nodes={nodes} />
           <LogoutButton />
-          <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
+          <ModeToggle className="border-none bg-indigo-500 hover:bg-indigo-900/20 hover:text-white dark:bg-slate-900 hover:dark:bg-gray-100/10" />
           <TooltipProvider>
             {assuranceCase.published ? (
               <Tooltip>
                 <TooltipTrigger>
-                  <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 ring-1 ring-green-500/20 ring-inset">
+                  <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 font-medium text-green-400 text-xs ring-1 ring-green-500/20 ring-inset">
                     Published
                   </span>
                 </TooltipTrigger>
@@ -188,7 +188,7 @@ const Header = ({ setOpen }: HeaderProps) => {
             ) : (
               <Tooltip>
                 <TooltipTrigger>
-                  <span className="inline-flex items-center rounded-md bg-gray-500/10 px-3 py-2 text-xs font-medium text-gray-400 ring-1 ring-gray-500/20 ring-inset">
+                  <span className="inline-flex items-center rounded-md bg-gray-500/10 px-3 py-2 font-medium text-gray-400 text-xs ring-1 ring-gray-500/20 ring-inset">
                     Unpublished
                   </span>
                 </TooltipTrigger>

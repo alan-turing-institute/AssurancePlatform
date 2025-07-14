@@ -1,13 +1,13 @@
 'use client';
 
+import { CloudDownloadIcon, Trash2Icon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import React, { useState } from 'react';
 import { deleteCaseStudy, updateCaseStudy } from '@/actions/caseStudies';
 import { AlertModal } from '@/components/modals/alertModal';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { CloudDownloadIcon, Trash2Icon } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
 
 interface UnpublishCaseButtonProps {
   caseStudyId: number;
@@ -34,7 +34,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
       if (response) {
         toast({
           title: 'Successfully Unpublished',
-          description: `You have unpublished your case study!`,
+          description: 'You have unpublished your case study!',
         });
       } else {
         toast({
@@ -62,17 +62,17 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
         className="flex items-center hover:cursor-pointer"
         onClick={() => setAlertOpen(true)}
       >
-        <CloudDownloadIcon className="size-4 mr-2" />
+        <CloudDownloadIcon className="mr-2 size-4" />
         Unpublish
       </div>
       <AlertModal
+        cancelButtonText={'No'}
+        confirmButtonText={'Yes, unpublish case study!'}
         isOpen={alertOpen}
-        onClose={() => setAlertOpen(false)}
-        onConfirm={handleUnpublish}
         loading={alertLoading}
         message={'Are you sure you want to unpublish this case study?'}
-        confirmButtonText={'Yes, unpublish case study!'}
-        cancelButtonText={'No'}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleUnpublish}
       />
     </div>
   );

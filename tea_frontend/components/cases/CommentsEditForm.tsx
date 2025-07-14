@@ -1,15 +1,16 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useSession } from 'next-auth/react';
 import React, {
-  Dispatch,
-  SetStateAction,
+  type Dispatch,
+  type SetStateAction,
   useEffect,
   useRef,
   useState,
 } from 'react';
-import { boolean, z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { boolean, z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -20,12 +21,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Textarea } from '../ui/textarea';
 // import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store';
 import { updateElementComment } from '@/lib/case-helper';
+import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/use-toast';
-import { useSession } from 'next-auth/react';
 
 type CommentsEditFormProps = {
   node: any;
@@ -67,7 +67,7 @@ const CommentsEditForm = ({
     };
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`;
 
       const requestOptions: RequestInit = {
         method: 'PUT',
@@ -124,7 +124,7 @@ const CommentsEditForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="comment"
@@ -134,11 +134,11 @@ const CommentsEditForm = ({
                 <Textarea
                   placeholder="Type your message here."
                   {...field}
+                  onInput={autoResizeTextarea}
                   ref={(e) => {
                     field.ref(e); // Integrate with react-hook-form
                     textareaRef.current = e; // Set the local ref
-                  }}
-                  onInput={autoResizeTextarea} // Auto-resize on input
+                  }} // Auto-resize on input
                   style={{ overflow: 'hidden' }} // Hide scrollbars
                 />
               </FormControl>
@@ -146,15 +146,15 @@ const CommentsEditForm = ({
             </FormItem>
           )}
         />
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <Button
-            variant={'ghost'}
             className={'hover:bg-indigo-800/50'}
             onClick={() => setEdit(false)}
+            variant={'ghost'}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} type="submit">
             {loading ? 'Saving' : 'Save'}
           </Button>
         </div>

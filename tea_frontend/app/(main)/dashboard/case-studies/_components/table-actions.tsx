@@ -1,5 +1,7 @@
 'use client';
 
+import { EllipsisVerticalIcon, EyeIcon } from 'lucide-react';
+import Link from 'next/link';
 import React from 'react';
 import {
   DropdownMenu,
@@ -9,8 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { EllipsisVerticalIcon, EyeIcon } from 'lucide-react';
-import Link from 'next/link';
 import DeleteCaseButton from './delete-button';
 import UnpublishCaseButton from './unpublish-button';
 
@@ -29,10 +29,10 @@ const TableActions = ({ caseStudy }: TableActionsProps) => {
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link
-            href={`case-studies/${caseStudy.id}`}
             className="flex items-center"
+            href={`case-studies/${caseStudy.id}`}
           >
-            <EyeIcon className="size-4 mr-2" />
+            <EyeIcon className="mr-2 size-4" />
             View
           </Link>
         </DropdownMenuItem>

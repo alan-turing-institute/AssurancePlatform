@@ -31,8 +31,8 @@ const NotesSheet = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onChange}>
-      <SheetContent className="overflow-y-scroll min-w-full">
+    <Sheet onOpenChange={onChange} open={isOpen}>
+      <SheetContent className="min-w-full overflow-y-scroll">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>

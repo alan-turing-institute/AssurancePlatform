@@ -1,6 +1,12 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { boolean, z } from 'zod';
 import {
   Form,
   FormControl,
@@ -11,14 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { boolean, z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
 import useStore from '@/data/store';
-import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react';
-import { getLayoutedElements } from '@/lib/layout-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
   addEvidenceToClaim,
@@ -32,7 +31,9 @@ import {
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
-import { useSession } from 'next-auth/react';
+import { getLayoutedElements } from '@/lib/layout-helper';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -307,7 +308,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to handle creation of a evidence node linked to a property claim */
   const handleEvidenceAdd = async (description: string, url?: string) => {
-    let property_claim_id: any = [node.data.id];
+    const property_claim_id: any = [node.data.id];
 
     // Create a new evidence object to add
     const newEvidenceItem = {
@@ -395,7 +396,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         Create new <span className="font-bold">{linkType}</span>.
       </div>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+        <form className="mt-6 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           <FormField
             control={form.control}
             name="description"
@@ -427,20 +428,20 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
               )}
             />
           )}
-          <div className="flex justify-start items-center gap-3 pt-4">
+          <div className="flex items-center justify-start gap-3 pt-4">
             <Button
-              type="submit"
-              disabled={loading}
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+              disabled={loading}
+              type="submit"
             >
               Add
             </Button>
             <Button
-              variant={'outline'}
               onClick={() => {
                 setSelectedLink(false);
                 setLinkToCreate('');
               }}
+              variant={'outline'}
             >
               Cancel
             </Button>

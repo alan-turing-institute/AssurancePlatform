@@ -1,10 +1,7 @@
 'use client';
 
-import { Modal } from '@/components/ui/modal';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useShareModal } from '@/hooks/useShareModal';
-import { Separator } from '../ui/separator';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { saveAs } from 'file-saver';
 import {
   ArrowUpRight,
   Download,
@@ -18,13 +15,10 @@ import {
   UserX,
   X,
 } from 'lucide-react';
-import { Button } from '../ui/button';
 import { neatJSON } from 'neatjson';
-import { saveAs } from 'file-saver';
-import useStore from '@/data/store';
-// import { unauthorized, useLoginToken } from "@/hooks/useAuth";
-import { User } from '@/types';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -36,10 +30,16 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '../ui/use-toast';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { useSession } from 'next-auth/react';
+import { Modal } from '@/components/ui/modal';
+import useStore from '@/data/store';
+import { useShareModal } from '@/hooks/useShareModal';
+// import { unauthorized, useLoginToken } from "@/hooks/useAuth";
+import type { User } from '@/types';
+import { Button } from '../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Separator } from '../ui/separator';
+import { useToast } from '../ui/use-toast';
 import { LinkedCaseModal } from './LinkedCaseModal';
 
 type ShareItem = {
@@ -124,7 +124,7 @@ export const ShareModal = () => {
     payload.push(newShareItem);
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/sharedwith`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/sharedwith`;
 
       const requestOptions: RequestInit = {
         method: 'POST',
@@ -315,9 +315,9 @@ export const ShareModal = () => {
               <p>{errorMessage}</p>
               {linkedCases.length > 0 && (
                 <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => setIsLinkedCaseModalOpen(true)}
+                  size="sm"
+                  variant="outline"
                 >
                   View linked case studies{' '}
                   <ArrowUpRight className="ml-2 size-4" />
@@ -343,32 +343,32 @@ export const ShareModal = () => {
   return (
     <>
       <Modal
-        title="Share / Export Case"
         description="How would you like the share your assurance case?"
         isOpen={shareModal.isOpen}
         onClose={shareModal.onClose}
+        title="Share / Export Case"
       >
         {error && (
-          <div className="w-full bg-rose-500/20 border-2 border-rose-700 text-rose-600 py-1 px-3 rounded-md flex justify-start items-center gap-2">
-            <UserX className="w-4 h-4" />
+          <div className="flex w-full items-center justify-start gap-2 rounded-md border-2 border-rose-700 bg-rose-500/20 px-3 py-1 text-rose-600">
+            <UserX className="h-4 w-4" />
             {error}
           </div>
         )}
         {successMessage && (
-          <div className="w-full bg-emerald-500/20 border-2 border-emerald-700 text-emerald-600 py-1 px-3 rounded-md flex justify-start items-center gap-2">
-            <UserCheck className="w-4 h-4" />
+          <div className="flex w-full items-center justify-start gap-2 rounded-md border-2 border-emerald-700 bg-emerald-500/20 px-3 py-1 text-emerald-600">
+            <UserCheck className="h-4 w-4" />
             {successMessage}
           </div>
         )}
         {assuranceCase && assuranceCase.permissions === 'manage' && (
           <div className="my-4 space-y-2">
-            <h2 className="flex justify-start items-center gap-2">
-              <User2 className="w-4 h-4" /> Share with users
+            <h2 className="flex items-center justify-start gap-2">
+              <User2 className="h-4 w-4" /> Share with users
             </h2>
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit(onSubmit)}
                 className="w-full space-y-6"
+                onSubmit={form.handleSubmit(onSubmit)}
               >
                 <FormField
                   control={form.control}
@@ -395,13 +395,13 @@ export const ShareModal = () => {
                       <FormLabel>Access Level</FormLabel>
                       <FormControl>
                         <RadioGroup
-                          onValueChange={field.onChange}
+                          className="flex items-center justify-start space-x-2"
                           defaultValue={field.value}
-                          className="flex justify-start items-center space-x-2"
+                          onValueChange={field.onChange}
                         >
                           <FormItem
-                            key={crypto.randomUUID()}
                             className="flex items-center space-x-3 space-y-0"
+                            key={crypto.randomUUID()}
                           >
                             <FormControl>
                               <RadioGroupItem value={'Read'} />
@@ -409,8 +409,8 @@ export const ShareModal = () => {
                             <FormLabel className="font-normal">Read</FormLabel>
                           </FormItem>
                           <FormItem
-                            key={crypto.randomUUID()}
                             className="flex items-center space-x-3 space-y-0"
+                            key={crypto.randomUUID()}
                           >
                             <FormControl>
                               <RadioGroupItem value={'Edit'} />
@@ -418,8 +418,8 @@ export const ShareModal = () => {
                             <FormLabel className="font-normal">Edit</FormLabel>
                           </FormItem>
                           <FormItem
-                            key={crypto.randomUUID()}
                             className="flex items-center space-x-3 space-y-0"
+                            key={crypto.randomUUID()}
                           >
                             <FormControl>
                               <RadioGroupItem value={'Reviewer'} />
@@ -434,8 +434,8 @@ export const ShareModal = () => {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={loading}>
-                  <Share2 className="w-4 h-4 mr-2" />
+                <Button disabled={loading} type="submit">
+                  <Share2 className="mr-2 h-4 w-4" />
                   Share
                 </Button>
               </form>
@@ -444,15 +444,15 @@ export const ShareModal = () => {
         )}
         <Separator />
         <div className="my-4">
-          <h2 className="flex justify-start items-center gap-2 mb-2">
-            <FileIcon className="w-4 h-4" />
+          <h2 className="mb-2 flex items-center justify-start gap-2">
+            <FileIcon className="h-4 w-4" />
             Export as JSON
           </h2>
           <p className="text-muted-foreground text-sm">
             Select the button below to download a JSON file.
           </p>
           <Button className="my-2" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Download File
           </Button>
         </div>
@@ -460,21 +460,21 @@ export const ShareModal = () => {
           <>
             <Separator />
             <div className="my-4">
-              <h2 className="flex justify-start items-center gap-2 mb-2">
-                <Share2Icon className="w-4 h-4" />
+              <h2 className="mb-2 flex items-center justify-start gap-2">
+                <Share2Icon className="h-4 w-4" />
                 Publish Assurance Case
               </h2>
-              <p className="text-muted-foreground text-sm mb-2">
+              <p className="mb-2 text-muted-foreground text-sm">
                 Here you can publish the current version of your case.
               </p>
               {assuranceCase && assuranceCase.published ? (
-                <div className="flex justify-start items-center gap-4">
+                <div className="flex items-center justify-start gap-4">
                   <Button
                     className="my-2"
                     onClick={handlePublish}
                     variant={'secondary'}
                   >
-                    <UploadIcon className="w-4 h-4 mr-2" />
+                    <UploadIcon className="mr-2 h-4 w-4" />
                     Update
                   </Button>
                   <Button
@@ -482,7 +482,7 @@ export const ShareModal = () => {
                     onClick={handleUnpublish}
                     variant={'destructive'}
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Unpublish
                   </Button>
                 </div>
@@ -491,7 +491,7 @@ export const ShareModal = () => {
                   className="my-2 bg-emerald-500 text-white hover:bg-emerald-600"
                   onClick={handlePublish}
                 >
-                  <Share2Icon className="w-4 h-4 mr-2" />
+                  <Share2Icon className="mr-2 h-4 w-4" />
                   Publish
                 </Button>
               )}
@@ -502,9 +502,9 @@ export const ShareModal = () => {
 
       <LinkedCaseModal
         isOpen={isLinkedCaseModalOpen}
-        onClose={() => setIsLinkedCaseModalOpen(false)}
         linkedCaseStudies={linkedCaseStudies}
-        loading={false} // or your loading state
+        loading={false}
+        onClose={() => setIsLinkedCaseModalOpen(false)} // or your loading state
       />
     </>
   );

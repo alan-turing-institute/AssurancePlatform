@@ -1,16 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  createMockAssuranceCase,
+  mockAssuranceCase,
+} from '@/src/__tests__/utils/mock-data';
 import {
   render,
-  screen,
-  waitFor,
   renderWithAuth,
+  screen,
   userEvent,
+  waitFor,
 } from '@/src/__tests__/utils/test-utils';
-import {
-  mockAssuranceCase,
-  createMockAssuranceCase,
-} from '@/src/__tests__/utils/mock-data';
 import CaseDetails from './CaseDetails';
 
 // Mock the store
@@ -55,7 +55,7 @@ vi.mock('../ui/case-sheet', () => ({
     onChange: (open: boolean) => void;
     children: React.ReactNode;
   }) => (
-    <div data-testid="case-sheet" data-open={isOpen}>
+    <div data-open={isOpen} data-testid="case-sheet">
       <h1>{title}</h1>
       <p>{description}</p>
       <button onClick={() => onChange(false)}>Sheet Close</button>

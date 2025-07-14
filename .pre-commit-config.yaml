@@ -38,17 +38,15 @@ repos:
         exclude: \.md$
 
   # Frontend formatting and linting with Biome/Ultracite
-  # TEMPORARILY DISABLED: Due to biome's nested configuration issues with pre-commit
-  # TODO: Consider using Husky or lint-staged instead (run: npx ultracite init)
-  # - repo: local
-  #   hooks:
-  #     - id: biome-check
-  #       name: biome check
-  #       entry: sh -c 'cd tea_frontend && npx @biomejs/biome check --write . --files-ignore-unknown=true'
-  #       language: system
-  #       pass_filenames: false
-  #       files: '^tea_frontend/'
-  #       types_or: [javascript, jsx, typescript, tsx, json]
+  - repo: local
+    hooks:
+      - id: ultracite-format
+        name: ultracite format (safe fixes only)
+        entry: bash -c 'cd tea_frontend && npx ultracite format || true'
+        language: system
+        pass_filenames: false
+        files: '^tea_frontend/.*\.(jsx?|tsx?|json)$'
+        exclude: '^tea_frontend/(node_modules|\.next|public/documentation|logs)/'
 
   # Type checking (slower, after formatting)
   - repo: https://github.com/pre-commit/mirrors-mypy

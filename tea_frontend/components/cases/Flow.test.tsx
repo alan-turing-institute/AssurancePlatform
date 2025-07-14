@@ -1,15 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  createMockAssuranceCase,
+  mockAssuranceCase,
+} from '@/src/__tests__/utils/mock-data';
 import {
   render,
-  screen,
-  waitFor,
   renderWithAuth,
+  screen,
   userEvent,
+  waitFor,
 } from '@/src/__tests__/utils/test-utils';
-import {
-  mockAssuranceCase,
-  createMockAssuranceCase,
-} from '@/src/__tests__/utils/mock-data';
 import Flow from './Flow';
 
 // Mock ReactFlow
@@ -31,14 +31,14 @@ vi.mock('reactflow', async () => {
       children,
     }: any) => (
       <div
-        data-testid="react-flow"
-        data-nodes-count={nodes.length}
         data-edges-count={edges.length}
+        data-nodes-count={nodes.length}
+        data-testid="react-flow"
       >
         {nodes.map((node: any) => (
           <div
-            key={node.id}
             data-testid={`node-${node.id}`}
+            key={node.id}
             onClick={(e) => onNodeClick(e, node)}
           >
             {node.data.label}
@@ -73,7 +73,7 @@ vi.mock('@/data/store', () => ({
 // Mock child components
 vi.mock('./ActionButtons', () => ({
   default: ({ showCreateGoal, actions, notify, notifyError }: any) => (
-    <div data-testid="action-buttons" data-show-create-goal={showCreateGoal}>
+    <div data-show-create-goal={showCreateGoal} data-testid="action-buttons">
       <button onClick={() => actions.onLayout('TB')}>Layout</button>
       <button onClick={() => notify('Test notification')}>Notify</button>
       <button onClick={() => notifyError('Test error')}>Notify Error</button>
@@ -84,7 +84,7 @@ vi.mock('./ActionButtons', () => ({
 vi.mock('@/components/common/NodeEdit', () => ({
   default: ({ node, isOpen, setEditOpen }: any) =>
     isOpen ? (
-      <div data-testid="node-edit" data-node-id={node?.id}>
+      <div data-node-id={node?.id} data-testid="node-edit">
         <button onClick={() => setEditOpen(false)}>Close Edit</button>
       </div>
     ) : null,

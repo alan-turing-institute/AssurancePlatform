@@ -27,7 +27,7 @@ const CaseSheet = ({
   children,
 }: CaseSheetProps) => {
   return (
-    <Sheet open={isOpen} onOpenChange={onChange}>
+    <Sheet onOpenChange={onChange} open={isOpen}>
       <SheetContent className="overflow-y-scroll">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>

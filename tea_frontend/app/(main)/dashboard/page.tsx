@@ -1,18 +1,18 @@
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import React from 'react';
 import { fetchAssuranceCases } from '@/actions/assuranceCases';
 import { fetchCurrentUser } from '@/actions/users';
+import CheckUserEmail from '@/components/CheckUserEmail';
 import CaseList from '@/components/cases/CaseList';
 import NoCasesFound from '@/components/cases/NoCasesFound';
-import CheckUserEmail from '@/components/CheckUserEmail';
 import { authOptions } from '@/lib/authOptions';
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
-import React from 'react';
 
 const Dashboard = async () => {
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!session || !session.key) {
+  if (!(session && session.key)) {
     redirect('/login');
   }
 

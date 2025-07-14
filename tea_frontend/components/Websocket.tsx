@@ -1,12 +1,12 @@
 'use client';
 
-import useStore from '@/data/store';
-// import { useLoginToken } from '@/hooks/useAuth';
-import { useEffect, useState, useRef } from 'react';
-import { Button } from './ui/button';
 import { X } from 'lucide-react';
-import { usePrevious } from '@/hooks/usePrevious';
 import { useSession } from 'next-auth/react';
+// import { useLoginToken } from '@/hooks/useAuth';
+import { useEffect, useRef, useState } from 'react';
+import useStore from '@/data/store';
+import { usePrevious } from '@/hooks/usePrevious';
+import { Button } from './ui/button';
 
 const WebSocketComponent = () => {
   const { assuranceCase, setAssuranceCase, activeUsers, setActiveUsers } =
@@ -22,7 +22,7 @@ const WebSocketComponent = () => {
   const websocketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!assuranceCase || !assuranceCase.id) {
+    if (!(assuranceCase && assuranceCase.id)) {
       console.error(
         'AssuranceCase or AssuranceCase ID is undefined, WebSocket cannot be established.'
       );
@@ -58,8 +58,8 @@ const WebSocketComponent = () => {
     let interval: any;
     const wsUrl = `${webSocketUrl}/ws/case/${assuranceCase.id}/?token=${session.key}`;
     console.log('WebSocket configuration:', {
-      apiUrl: apiUrl,
-      webSocketUrl: webSocketUrl,
+      apiUrl,
+      webSocketUrl,
       caseId: assuranceCase.id,
       hasToken: !!session.key,
       finalUrl: wsUrl,
@@ -118,7 +118,7 @@ const WebSocketComponent = () => {
         console.error('WebSocket error occurred:', {
           url: wsUrl,
           readyState: websocket.readyState,
-          event: event,
+          event,
         });
         // Check if it's a connection error
         if (
@@ -168,7 +168,7 @@ const WebSocketComponent = () => {
 
   return (
     <div
-      className={`${!debug ? 'hidden' : 'absolute'} w-full h-full z-50 top-0 left-0 bg-background p-4 rounded-md`}
+      className={`${debug ? 'absolute' : 'hidden'} top-0 left-0 z-50 h-full w-full rounded-md bg-background p-4`}
     >
       <h1 className="mb-2">WebSocket | Users</h1>
       <div className="output">
@@ -178,12 +178,12 @@ const WebSocketComponent = () => {
         ))}
       </div>
       <Button
-        variant={'ghost'}
-        size={'sm'}
         className="absolute top-2 right-2"
         onClick={() => setDebug(false)}
+        size={'sm'}
+        variant={'ghost'}
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </Button>
     </div>
   );

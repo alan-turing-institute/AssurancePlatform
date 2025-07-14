@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { HttpResponse, http } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { server } from '@/src/__tests__/mocks/server';
 import {
   render,
-  screen,
   renderWithAuth,
   renderWithoutProviders,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
-import userEvent from '@testing-library/user-event';
 import LogoutButton from './LogoutButton';
-import { server } from '@/src/__tests__/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 // Mock the ActionTooltip component to focus on LogoutButton logic
 vi.mock('../ui/action-tooltip', () => ({

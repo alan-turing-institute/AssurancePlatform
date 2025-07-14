@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { HttpResponse, http } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { server } from '@/src/__tests__/mocks/server';
+import {
+  createMockAssuranceCase,
+  mockAssuranceCase,
+} from '@/src/__tests__/utils/mock-data';
 import {
   render,
+  renderWithAuth,
   screen,
   waitFor,
-  renderWithAuth,
 } from '@/src/__tests__/utils/test-utils';
-import {
-  mockAssuranceCase,
-  createMockAssuranceCase,
-} from '@/src/__tests__/utils/mock-data';
 import CaseContainer from './CaseContainer';
-import { server } from '@/src/__tests__/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 // Mock the store
 const mockStore = {
@@ -66,7 +66,7 @@ vi.mock('./CaseDetails', () => ({
     isOpen: boolean;
     setOpen: (open: boolean) => void;
   }) => (
-    <div data-testid="case-details" data-open={isOpen}>
+    <div data-open={isOpen} data-testid="case-details">
       <button onClick={() => setOpen(!isOpen)}>Toggle Details</button>
     </div>
   ),

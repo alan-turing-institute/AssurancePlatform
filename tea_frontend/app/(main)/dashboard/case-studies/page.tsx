@@ -1,3 +1,16 @@
+import { CheckCircleIcon } from '@heroicons/react/20/solid';
+import {
+  Edit2Icon,
+  EllipsisVertical,
+  EllipsisVerticalIcon,
+  EyeIcon,
+  Trash2Icon,
+} from 'lucide-react';
+import moment from 'moment';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import React from 'react';
 import { fetchCaseStudies } from '@/actions/caseStudies';
 import {
   DropdownMenu,
@@ -10,63 +23,50 @@ import {
 import PageHeading from '@/components/ui/page-heading';
 import { Separator } from '@/components/ui/separator';
 import { authOptions } from '@/lib/authOptions';
-import {
-  Edit2Icon,
-  EllipsisVertical,
-  EllipsisVerticalIcon,
-  EyeIcon,
-  Trash2Icon,
-} from 'lucide-react';
-import moment from 'moment';
-import { getServerSession } from 'next-auth';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import React from 'react';
 import DeleteCaseButton from './_components/delete-button';
 import TableActions from './_components/table-actions';
-import { CheckCircleIcon } from '@heroicons/react/20/solid';
 
 async function CaseStudiesPage() {
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!session || !session.key) {
+  if (!(session && session.key)) {
     redirect('/login');
   }
 
   const caseStudies = await fetchCaseStudies(session.key);
 
   return (
-    <div className="p-8 space-y-4 min-h-screen">
+    <div className="min-h-screen space-y-4 p-8">
       <PageHeading
-        title="Assurance Case Patterns"
-        description="Here you manage all your public patterns"
         createButton
+        description="Here you manage all your public patterns"
         redirect={true}
         redirectUrl="/dashboard/case-studies/create"
+        title="Assurance Case Patterns"
       />
       <Separator />
 
       <div className="">
-        <div className="-mx-4 mt-8 sm:-mx-0">
+        <div className="-mx-4 sm:-mx-0 mt-8">
           <table className="min-w-full divide-y divide-foreground/10">
             <thead>
               <tr>
                 <th
+                  className="py-3.5 pr-3 pl-4 text-left font-semibold text-foreground text-sm sm:pl-0"
                   scope="col"
-                  className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-0"
                 >
                   Title
                 </th>
                 <th
+                  className="hidden px-3 py-3.5 text-left font-semibold text-foreground text-sm lg:table-cell"
                   scope="col"
-                  className="hidden px-3 py-3.5 text-left text-sm font-semibold text-foreground lg:table-cell"
                 >
                   Description
                 </th>
                 <th
+                  className="hidden px-3 py-3.5 text-left font-semibold text-foreground text-sm sm:table-cell"
                   scope="col"
-                  className="hidden px-3 py-3.5 text-left text-sm font-semibold text-foreground sm:table-cell"
                 >
                   Authors
                 </th>
@@ -77,18 +77,18 @@ async function CaseStudiesPage() {
                   Sector
                 </th> */}
                 <th
+                  className="px-3 py-3.5 text-left font-semibold text-foreground text-sm"
                   scope="col"
-                  className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                 >
                   Created
                 </th>
                 <th
+                  className="px-3 py-3.5 text-left font-semibold text-foreground text-sm"
                   scope="col"
-                  className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                 >
                   Public
                 </th>
-                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0">
+                <th className="relative py-3.5 pr-4 pl-3 sm:pr-0" scope="col">
                   <span className="sr-only">Edit</span>
                 </th>
               </tr>
@@ -96,38 +96,38 @@ async function CaseStudiesPage() {
             <tbody className="divide-y divide-foreground/10 bg-background">
               {caseStudies.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-4 text-muted-foreground">
+                  <td className="py-4 text-muted-foreground" colSpan={5}>
                     No Case Studies Found.
                   </td>
                 </tr>
               )}
               {caseStudies.map((caseStudy: any) => (
                 <tr key={caseStudy.id}>
-                  <td className="w-full max-w-0 py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:w-auto sm:max-w-none sm:pl-0">
+                  <td className="w-full max-w-0 py-4 pr-3 pl-4 font-medium text-foreground text-sm sm:w-auto sm:max-w-none sm:pl-0">
                     <Link
+                      className="group transition-all duration-200 hover:text-indigo-500"
                       href={`case-studies/${caseStudy.id}`}
-                      className="hover:text-indigo-500 transition-all duration-200 group"
                     >
                       {caseStudy.title}
                     </Link>
                     <dl className="font-normal lg:hidden">
                       <dt className="sr-only">Title</dt>
                       <dd
-                        className="mt-1 text-foreground/80 max-w-[300px] truncate"
+                        className="mt-1 max-w-[300px] truncate text-foreground/80"
                         dangerouslySetInnerHTML={{
                           __html: caseStudy.description.replace(
                             '<p><br></p>',
                             ''
                           ),
                         }}
-                      ></dd>
+                      />
                       <dt className="sr-only sm:hidden">Published</dt>
                       <dd className="mt-1 truncate text-gray-500 sm:hidden">
                         {moment(caseStudy.publishedDate).format('DD/MM/YYYY')}
                       </dd>
                     </dl>
                   </td>
-                  <td className="hidden px-3 py-4 text-sm text-foreground/80 lg:table-cell max-w-[220px]">
+                  <td className="hidden max-w-[220px] px-3 py-4 text-foreground/80 text-sm lg:table-cell">
                     <div className="line-clamp-3 overflow-hidden">
                       <span
                         dangerouslySetInnerHTML={{
@@ -139,7 +139,7 @@ async function CaseStudiesPage() {
                       />
                     </div>
                   </td>
-                  <td className="hidden px-3 py-4 text-sm text-foreground/80 sm:table-cell">
+                  <td className="hidden px-3 py-4 text-foreground/80 text-sm sm:table-cell">
                     {caseStudy.authors}
                   </td>
                   {/* <td className="px-3 py-4 text-sm text-foreground/80">
@@ -147,15 +147,15 @@ async function CaseStudiesPage() {
                       {caseStudy.sector}
                     </span>
                   </td> */}
-                  <td className="px-3 py-4 text-sm text-foreground/80">
+                  <td className="px-3 py-4 text-foreground/80 text-sm">
                     {moment(caseStudy.createdOn).format('DD/MM/YYYY')}
                   </td>
-                  <td className="px-3 py-4 text-sm text-foreground/80">
+                  <td className="px-3 py-4 text-foreground/80 text-sm">
                     {caseStudy.published && (
-                      <CheckCircleIcon className="text-emerald-500 size-6" />
+                      <CheckCircleIcon className="size-6 text-emerald-500" />
                     )}
                   </td>
-                  <td className="py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                  <td className="py-4 pr-4 pl-3 text-right font-medium text-sm sm:pr-0">
                     {/* <a href="#" className="text-indigo-500 hover:text-indigo-600">
                       <Edit2Icon className='size-4' /><span className="sr-only">, {caseStudy.title}</span>
                     </a> */}

@@ -1,9 +1,27 @@
 'use client';
 
+import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
 import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  CloudDownload,
+  InfoIcon,
+  Share,
+  Share2Icon,
+  Trash2Icon,
+  X,
+} from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-
+import {
+  createCaseStudy,
+  deleteCaseStudy,
+  updateCaseStudy,
+} from '@/actions/caseStudies';
+import { AlertModal } from '@/components/modals/alertModal';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -14,17 +32,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
-import {
-  CloudDownload,
-  InfoIcon,
-  Share,
-  Share2Icon,
-  Trash2Icon,
-  X,
-} from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -32,28 +39,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  createCaseStudy,
-  deleteCaseStudy,
-  updateCaseStudy,
-} from '@/actions/caseStudies';
-import { useSession } from 'next-auth/react';
-import { useToast } from '@/components/ui/use-toast';
-import { useRouter } from 'next/navigation';
-import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
-import { useImportModal } from '@/hooks/useImportModal';
-import RelatedAssuranceCaseList from './RelatedAssuranceCaseList';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import TiptapEditor from '@/components/ui/tiptap-editor';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
 import { sectors } from '@/config/index';
-import { AlertModal } from '@/components/modals/alertModal';
+import { useImportModal } from '@/hooks/useImportModal';
 import DeleteCaseButton from './delete-button';
-import TiptapEditor from '@/components/ui/tiptap-editor';
+import RelatedAssuranceCaseList from './RelatedAssuranceCaseList';
 
 const assuranceCaseSchema = z.object({
   id: z.number(),
@@ -231,7 +230,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           method: 'POST',
           body: formData,
           headers: {
-            Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
+            Authorization: `Token ${data?.key!}`, // Replace with actual auth token
           },
         }
       );
@@ -263,7 +262,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         {
           method: 'DELETE',
           headers: {
-            Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
+            Authorization: `Token ${data?.key!}`, // Replace with actual auth token
           },
         }
       );
@@ -370,20 +369,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     setLoading(true);
 
     try {
-      if (!caseStudy) {
-        const createdCaseStudy = await createCaseStudy(data?.key!!, formData);
-
-        if (values.image) {
-          await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
-        }
-
-        toast({
-          title: 'Successfully created',
-          description: 'You have created a case study!',
-        });
-
-        router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
-      } else {
+      if (caseStudy) {
         formData.append('id', caseStudy.id.toString());
 
         const updated = await updateCaseStudy(data?.key, formData);
@@ -404,6 +390,19 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
             description: 'Something went wrong!',
           });
         }
+      } else {
+        const createdCaseStudy = await createCaseStudy(data?.key!, formData);
+
+        if (values.image) {
+          await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
+        }
+
+        toast({
+          title: 'Successfully created',
+          description: 'You have created a case study!',
+        });
+
+        router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
       }
     } finally {
       setLoading(false);
@@ -447,7 +446,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   };
 
   const handleDelete = async () => {
-    const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id);
+    const deleted = await deleteCaseStudy(data?.key!, caseStudy.id);
 
     if (deleted) {
       toast({
@@ -470,7 +469,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         <Separator className="my-6" />
         <TooltipProvider>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
               <div className="grid grid-cols-2 gap-8">
                 <FormField
                   control={form.control}
@@ -493,8 +492,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       <FormLabel>Sector</FormLabel>
                       <FormControl>
                         <Select
-                          onValueChange={field.onChange}
                           defaultValue={field.value}
+                          onValueChange={field.onChange}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select sector" />
@@ -542,8 +541,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       <FormLabel>Type</FormLabel>
                       <FormControl>
                         <Select
-                          onValueChange={field.onChange}
                           defaultValue={field.value}
+                          onValueChange={field.onChange}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -590,13 +589,13 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                       <FormItem>
                         <FormLabel>Authors</FormLabel>
 
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="mb-2 flex items-center gap-2">
                           <Input
-                            value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder="Enter author name"
+                            value={inputValue}
                           />
-                          <Button type="button" onClick={addAuthor}>
+                          <Button onClick={addAuthor} type="button">
                             Add Author
                           </Button>
                         </div>
@@ -604,17 +603,17 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                         <div className="flex flex-wrap gap-2">
                           {authors.map((author) => (
                             <span
+                              className="flex items-center rounded-full bg-muted px-2 py-1 text-sm"
                               key={author}
-                              className="flex items-center px-2 py-1 text-sm bg-muted rounded-full"
                             >
                               {author}
                               {!caseStudy?.published && (
                                 <button
-                                  type="button"
-                                  onClick={() => removeAuthor(author)}
                                   className="ml-1 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeAuthor(author)}
+                                  type="button"
                                 >
-                                  <X className="w-3 h-3" />
+                                  <X className="h-3 w-3" />
                                 </button>
                               )}
                             </span>
@@ -635,12 +634,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center gap-1 mb-2">
+                    <div className="mb-2 flex items-center gap-1">
                       <FormLabel>Description</FormLabel>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span tabIndex={0}>
-                            <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                            <InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="right">
@@ -650,13 +649,13 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     </div>
                     <FormControl>
                       <TiptapEditor
-                        value={field.value || value} // Ensure controlled component
+                        className="min-h-[200px]" // Ensure controlled component
                         onChange={(content) => {
                           field.onChange(content); // Update form state
                           setValue(content);
                         }}
-                        className="min-h-[200px]"
                         placeholder="Provide a clear and concise summary of the case study..."
+                        value={field.value || value}
                       />
                     </FormControl>
                     <FormMessage />
@@ -667,8 +666,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
               <Separator className="my-6" />
 
               <div className="">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">
+                <div className="flex items-center justify-between">
+                  <p className="mb-4 font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Available Published Assurance Cases
                   </p>
                   {/* <button
@@ -687,12 +686,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
               </div>
 
               <div>
-                <div className="flex items-center gap-1 mb-3">
+                <div className="mb-3 flex items-center gap-1">
                   <FormLabel htmlFor="image">Featured Image</FormLabel>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span tabIndex={0}>
-                        <InfoIcon className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                        <InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="right">
@@ -702,17 +701,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 </div>
 
                 {previewImage || featuredImage ? (
-                  <div className="w-10/12 relative h-[500px] group mt-6">
+                  <div className="group relative mt-6 h-[500px] w-10/12">
                     <Image
-                      src={previewImage || featuredImage}
                       alt="image"
+                      className="aspect-video rounded-lg object-cover"
                       fill
-                      className="object-cover aspect-video rounded-lg"
+                      src={previewImage || featuredImage}
                     />
-                    <div className="absolute bg-indigo-900/70 h-full w-full flex justify-center items-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute flex h-full w-full items-center justify-center rounded-lg bg-indigo-900/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                       <Button
-                        variant="destructive"
-                        type="button"
                         onClick={() => {
                           setPreviewImage(''); // Clear preview
                           setFeaturedImage(''); // Clear preview
@@ -721,46 +718,48 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                             deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
                           }
                         }}
+                        type="button"
+                        variant="destructive"
                       >
-                        <Trash2Icon className="size-4 mr-2" /> Remove
+                        <Trash2Icon className="mr-2 size-4" /> Remove
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <Input
-                    type="file"
                     accept="image/*"
                     onChange={handleFileChange}
+                    type="file"
                   />
                 )}
               </div>
 
-              <div className="flex justify-between items-center gap-4 w-full">
-                <div className="flex justify-start items-center gap-2">
+              <div className="flex w-full items-center justify-between gap-4">
+                <div className="flex items-center justify-start gap-2">
                   {caseStudy && (
-                    <Button variant="default" type="submit">
+                    <Button type="submit" variant="default">
                       Save Changes
                     </Button>
                   )}
                   {!caseStudy && (
-                    <Button variant="default" type="submit">
+                    <Button type="submit" variant="default">
                       Save
                     </Button>
                   )}
                   {caseStudy && (
                     <Button
-                      variant="primary"
-                      type="button"
                       onClick={handlePublish}
+                      type="button"
+                      variant="primary"
                     >
                       {caseStudy.published ? (
                         <>
-                          <CloudDownload className="size-4 mr-2" />
+                          <CloudDownload className="mr-2 size-4" />
                           <span>Remove from Public</span>
                         </>
                       ) : (
                         <>
-                          <Share className="size-4 mr-2" />
+                          <Share className="mr-2 size-4" />
                           <span>Make Public</span>
                         </>
                       )}
@@ -770,8 +769,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 {caseStudy && (
                   <DeleteCaseButton
                     caseStudyId={caseStudy.id}
-                    variant="destructive"
                     redirect
+                    variant="destructive"
                   />
                 )}
                 {/* <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button> */}
@@ -781,7 +780,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         </TooltipProvider>
       </div>
       <AlertModal
+        confirmButtonText="Update Anyway"
         isOpen={alertOpen}
+        loading={loading}
+        message="This case study is published. Updating it may affect the live version. Are you sure you want to proceed?"
         onClose={() => setAlertOpen(false)}
         onConfirm={async () => {
           setAlertOpen(false);
@@ -789,9 +791,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
             await handleSubmit(formValues);
           }
         }}
-        loading={loading}
-        message="This case study is published. Updating it may affect the live version. Are you sure you want to proceed?"
-        confirmButtonText="Update Anyway"
       />
     </>
   );

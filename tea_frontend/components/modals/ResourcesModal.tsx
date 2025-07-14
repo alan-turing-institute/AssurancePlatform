@@ -1,8 +1,5 @@
 'use client';
 
-import { Modal } from '@/components/ui/modal';
-import { useResourcesModal } from '@/hooks/useResourcesModal';
-import { cn } from '@/lib/utils';
 import {
   BookOpenText,
   Database,
@@ -11,6 +8,9 @@ import {
   Route,
 } from 'lucide-react';
 import React from 'react';
+import { Modal } from '@/components/ui/modal';
+import { useResourcesModal } from '@/hooks/useResourcesModal';
+import { cn } from '@/lib/utils';
 
 export const ResourcesModal = () => {
   const resourcesModal = useResourcesModal();
@@ -60,21 +60,21 @@ export const ResourcesModal = () => {
 
   return (
     <Modal
-      title="Element Legend"
+      classNames="min-w-[800px]"
       description="Here is some useful information about each element, select each to find out more."
       isOpen={resourcesModal.isOpen}
       onClose={resourcesModal.onClose}
-      classNames="min-w-[800px]"
+      title="Element Legend"
     >
       <ul className="grid gap-3 py-2 md:grid-cols-2">
         {components.map((component) => (
           <ListItem
-            key={component.title}
-            href={component.href}
-            target="_blank"
             className="group"
+            href={component.href}
+            key={component.title}
+            target="_blank"
           >
-            <div className="flex justify-start items-center gap-3 text-foreground pb-2 font-bold group-hover:text-white">
+            <div className="flex items-center justify-start gap-3 pb-2 font-bold text-foreground group-hover:text-white">
               {component.icon}
               {component.title}
             </div>
@@ -93,17 +93,17 @@ const ListItem = React.forwardRef<
   return (
     <li>
       <a
-        ref={ref}
         className={cn(
-          'block group select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none hover:bg-indigo-500 dark:hover:bg-indigo-700 hover:text-accent-foreground',
+          'group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none hover:bg-indigo-500 hover:text-accent-foreground dark:hover:bg-indigo-700',
           className
         )}
+        ref={ref}
         {...props}
       >
-        <div className="text-sm font-medium leading-none group-hover:text-white">
+        <div className="font-medium text-sm leading-none group-hover:text-white">
           {title}
         </div>
-        <p className="text-sm leading-snug text-muted-foreground group-hover:text-white">
+        <p className="text-muted-foreground text-sm leading-snug group-hover:text-white">
           {children}
         </p>
       </a>

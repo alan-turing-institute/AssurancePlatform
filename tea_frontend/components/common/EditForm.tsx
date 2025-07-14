@@ -1,6 +1,19 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  CloudFog,
+  Loader,
+  Loader2,
+  Lock,
+  LockIcon,
+  LockKeyhole,
+} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -11,29 +24,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
 import useStore from '@/data/store';
-import {
-  CloudFog,
-  Loader,
-  Loader2,
-  Lock,
-  LockIcon,
-  LockKeyhole,
-} from 'lucide-react';
-import { getLayoutedElements } from '@/lib/layout-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
+  caseItemDescription,
   findItemById,
   updateAssuranceCase,
   updateAssuranceCaseNode,
-  caseItemDescription,
 } from '@/lib/case-helper';
-import { useSession } from 'next-auth/react';
+import { getLayoutedElements } from '@/lib/layout-helper';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   URL: z
@@ -80,7 +81,7 @@ const EditForm: React.FC<EditFormProps> = ({
     };
 
     if (node.type === 'evidence') {
-      //@ts-ignore
+      //@ts-expect-error
       updateItem.URL = values.URL;
     }
 
@@ -117,7 +118,7 @@ const EditForm: React.FC<EditFormProps> = ({
     });
   }, [form, setUnresolvedChanges]);
 
-  let readOnly =
+  const readOnly =
     assuranceCase.permissions === 'view' ||
     assuranceCase.permissions === 'review'
       ? true
@@ -125,20 +126,20 @@ const EditForm: React.FC<EditFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
+      <form className="mt-6 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex justify-start items-center gap-2">
+              <FormLabel className="flex items-center justify-start gap-2">
                 Description
                 {readOnly && (
                   <span
+                    className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                     title="Read Only"
-                    className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
                   >
-                    <Lock className="w-3 h-3" />
+                    <Lock className="h-3 w-3" />
                   </span>
                 )}
               </FormLabel>
@@ -159,14 +160,14 @@ const EditForm: React.FC<EditFormProps> = ({
             name="URL"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex justify-start items-center gap-2">
+                <FormLabel className="flex items-center justify-start gap-2">
                   Evidence URL
                   {readOnly && (
                     <span
+                      className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                       title="Read Only"
-                      className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
                     >
-                      <Lock className="w-3 h-3" />
+                      <Lock className="h-3 w-3" />
                     </span>
                   )}
                 </FormLabel>
@@ -182,19 +183,19 @@ const EditForm: React.FC<EditFormProps> = ({
             )}
           />
         )}
-        <div className="flex justify-start items-center gap-3">
+        <div className="flex items-center justify-start gap-3">
           {!readOnly && (
             <Button
-              type="submit"
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
               disabled={loading}
+              type="submit"
             >
               {loading ? (
                 <span
+                  className="flex items-center justify-center gap-2"
                   title="Read Only"
-                  className="flex justify-center items-center gap-2"
                 >
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Updating...
                 </span>
               ) : (

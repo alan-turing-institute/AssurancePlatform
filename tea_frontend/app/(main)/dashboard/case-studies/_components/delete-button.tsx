@@ -1,13 +1,13 @@
 'use client';
 
+import { Trash2Icon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import React, { useState } from 'react';
 import { deleteCaseStudy } from '@/actions/caseStudies';
 import { AlertModal } from '@/components/modals/alertModal';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Trash2Icon } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
 
 interface DeleteCaseButtonProps {
   caseStudyId: number;
@@ -28,7 +28,7 @@ const DeleteCaseButton = ({
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
   const handleDelete = async () => {
-    const deleted = await deleteCaseStudy(data?.key!!, caseStudyId);
+    const deleted = await deleteCaseStudy(data?.key!, caseStudyId);
 
     if (deleted) {
       toast({
@@ -49,32 +49,32 @@ const DeleteCaseButton = ({
     <div>
       {variant === 'destructive' && (
         <Button
-          variant={variant}
           onClick={() => setDeleteOpen(true)}
           type="button"
+          variant={variant}
         >
-          <Trash2Icon className="size-4 mr-2" />
+          <Trash2Icon className="mr-2 size-4" />
           Delete
         </Button>
       )}
       {variant === 'link' && (
         <button
+          className="flex items-center"
           onClick={() => setDeleteOpen(true)}
           type="button"
-          className="flex items-center"
         >
-          <Trash2Icon className="size-4 mr-2" />
+          <Trash2Icon className="mr-2 size-4" />
           Delete
         </button>
       )}
       <AlertModal
+        cancelButtonText={'No'}
+        confirmButtonText={'Yes, remove case study!'}
         isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
         loading={deleteLoading}
         message={'Are you sure you want to delete this case study?'}
-        confirmButtonText={'Yes, remove case study!'}
-        cancelButtonText={'No'}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
       />
     </div>
   );

@@ -1,17 +1,5 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-// import { AssuranceCase } from '@/types'
-import Link from 'next/link';
-import moment from 'moment';
 import {
   Eye,
   Loader2,
@@ -20,12 +8,24 @@ import {
   ScanEye,
   Trash2,
 } from 'lucide-react';
-import { AlertModal } from '@/components/modals/alertModal';
-import { useParams, useRouter } from 'next/navigation';
+import moment from 'moment';
 // import { useLoginToken } from '@/hooks/useAuth'
 import Image from 'next/image';
-import { Skeleton } from '../ui/skeleton';
+// import { AssuranceCase } from '@/types'
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import React, { useEffect, useState } from 'react';
+import { AlertModal } from '@/components/modals/alertModal';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '../ui/skeleton';
 
 interface CaseCardProps {
   assuranceCase: any;
@@ -110,17 +110,17 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
   return (
     <div className="group relative min-h-[420px]">
       <Link href={`/case/${assuranceCase.id}`}>
-        <Card className="flex flex-col justify-start items-start group-hover:bg-indigo-500/5 transition-all h-full">
-          <CardHeader className="flex-1 w-full">
+        <Card className="flex h-full flex-col items-start justify-start transition-all group-hover:bg-indigo-500/5">
+          <CardHeader className="w-full flex-1">
             {imageLoading ? (
-              <Skeleton className="relative flex aspect-video rounded-md mb-4 overflow-hidden" />
+              <Skeleton className="relative mb-4 flex aspect-video overflow-hidden rounded-md" />
             ) : (
-              <div className="relative flex aspect-video rounded-md mb-4 overflow-hidden">
+              <div className="relative mb-4 flex aspect-video overflow-hidden rounded-md">
                 {imgSrc && (
                   <Image
-                    src={imgSrc}
                     alt={`Assurance Case ${assuranceCase.name} screenshot`}
                     fill
+                    src={imgSrc}
                   />
                 )}
               </div>
@@ -130,17 +130,17 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
               {description}
             </CardDescription>
           </CardHeader>
-          <CardFooter className="flex w-full justify-between items-center text-xs text-gray-500 dark:text-gray-300">
+          <CardFooter className="flex w-full items-center justify-between text-gray-500 text-xs dark:text-gray-300">
             <p>Created on: {moment(created_date).format('DD/MM/YYYY')}</p>
-            <div className="flex justify-start items-center gap-2">
+            <div className="flex items-center justify-start gap-2">
               {assuranceCase.permissions.includes('view') && (
-                <Eye className="w-4 h-4" />
+                <Eye className="h-4 w-4" />
               )}
               {assuranceCase.permissions.includes('review') && (
-                <MessageCircleMore className="w-4 h-4" />
+                <MessageCircleMore className="h-4 w-4" />
               )}
               {assuranceCase.permissions.includes('edit') && (
-                <PencilRuler className="w-4 h-4" />
+                <PencilRuler className="h-4 w-4" />
               )}
             </div>
           </CardFooter>
@@ -149,19 +149,19 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
       {(assuranceCase.permissions.includes('owner') ||
         assuranceCase.permissions.includes('editor')) && (
         <button
+          className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
           disabled={loading}
           onClick={() => setOpen(true)}
-          className="absolute hidden group-hover:block top-4 right-4 bg-rose-500 text-white p-2 rounded-md shadow-lg z-50"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="h-4 w-4" />
         </button>
       )}
       <AlertModal
+        confirmButtonText={'Delete'}
         isOpen={open}
+        loading={loading}
         onClose={() => setOpen(false)}
         onConfirm={onDelete}
-        loading={loading}
-        confirmButtonText={'Delete'}
       />
     </div>
   );

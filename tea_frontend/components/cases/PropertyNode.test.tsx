@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Position } from 'reactflow';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   render,
-  screen,
   renderWithAuth,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
 import PropertyNode from './PropertyNode';
-import { Position } from 'reactflow';
 
 // Mock ReactFlow components
 vi.mock('reactflow', async () => {
@@ -22,8 +22,8 @@ vi.mock('reactflow', async () => {
       position: string;
     }) => (
       <div
-        data-testid={`handle-${type}${id ? `-${id}` : ''}`}
         data-position={position}
+        data-testid={`handle-${type}${id ? `-${id}` : ''}`}
       >
         Handle {type} {id || ''}
       </div>
@@ -41,7 +41,7 @@ vi.mock('reactflow', async () => {
 // Mock child components
 vi.mock('./ToggleButton', () => ({
   default: ({ node }: { node: any }) => (
-    <div data-testid="toggle-button" data-node-id={node.id}>
+    <div data-node-id={node.id} data-testid="toggle-button">
       Toggle Button
     </div>
   ),
@@ -50,8 +50,8 @@ vi.mock('./ToggleButton', () => ({
 vi.mock('./IconIndicator', () => ({
   default: ({ data }: { data: any }) => (
     <div
-      data-testid="icon-indicator"
       data-has-comments={data.comments?.length > 0}
+      data-testid="icon-indicator"
     >
       Icon Indicator
     </div>

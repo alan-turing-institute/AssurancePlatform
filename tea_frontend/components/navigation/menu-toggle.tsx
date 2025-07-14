@@ -1,7 +1,7 @@
 'use client';
 
 import { Bars3Icon } from '@heroicons/react/24/outline';
-import { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 interface MenuToggleButtonProps {
   setSidebarOpen: Dispatch<SetStateAction<boolean>>;
@@ -10,12 +10,12 @@ interface MenuToggleButtonProps {
 export const MenuToggleButton = ({ setSidebarOpen }: MenuToggleButtonProps) => {
   return (
     <button
-      type="button"
       className="-m-2.5 p-2.5 text-foreground lg:hidden"
       onClick={() => setSidebarOpen(true)}
+      type="button"
     >
       <span className="sr-only">Open sidebar</span>
-      <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+      <Bars3Icon aria-hidden="true" className="h-6 w-6" />
     </button>
   );
 };

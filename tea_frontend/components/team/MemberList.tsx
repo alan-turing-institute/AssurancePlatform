@@ -62,56 +62,56 @@ export default function MemberList() {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="sm:flex sm:items-center">
           <div className="sm:flex-auto">
-            <h1 className="text-base font-semibold leading-6 text-foreground">
+            <h1 className="font-semibold text-base text-foreground leading-6">
               Users
             </h1>
-            <p className="mt-2 text-sm text-foreground/70">
+            <p className="mt-2 text-foreground/70 text-sm">
               A list of all users in your account including their name, title,
               email and role.
             </p>
           </div>
-          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
             <button
+              className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
               type="button"
-              className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
               Add user
             </button>
           </div>
         </div>
         <div className="mt-8 flow-root">
-          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div className="-mx-4 -my-2 sm:-mx-6 lg:-mx-8 overflow-x-auto">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
               <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-900">
                 <thead>
                   <tr>
                     <th
+                      className="py-3.5 pr-3 pl-4 text-left font-semibold text-foreground text-sm sm:pl-0"
                       scope="col"
-                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-0"
                     >
                       Name
                     </th>
                     <th
+                      className="px-3 py-3.5 text-left font-semibold text-foreground text-sm"
                       scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                     >
                       Title
                     </th>
                     <th
+                      className="px-3 py-3.5 text-left font-semibold text-foreground text-sm"
                       scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                     >
                       Status
                     </th>
                     <th
+                      className="px-3 py-3.5 text-left font-semibold text-foreground text-sm"
                       scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-foreground"
                     >
                       Role
                     </th>
                     <th
+                      className="relative py-3.5 pr-4 pl-3 sm:pr-0"
                       scope="col"
-                      className="relative py-3.5 pl-3 pr-4 sm:pr-0"
                     >
                       <span className="sr-only">Edit</span>
                     </th>
@@ -120,13 +120,13 @@ export default function MemberList() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-900">
                   {people.map((person) => (
                     <tr key={person.email}>
-                      <td className="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
+                      <td className="whitespace-nowrap py-5 pr-3 pl-4 text-sm sm:pl-0">
                         <div className="flex items-center">
                           <div className="h-11 w-11 flex-shrink-0">
                             <img
+                              alt=""
                               className="h-11 w-11 rounded-full object-cover"
                               src={person.image}
-                              alt=""
                             />
                           </div>
                           <div className="ml-4">
@@ -139,24 +139,24 @@ export default function MemberList() {
                           </div>
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+                      <td className="whitespace-nowrap px-3 py-5 text-gray-500 text-sm">
                         <div className="text-foreground">{person.title}</div>
                         <div className="mt-1 text-gray-500">
                           {person.department}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
-                        <span className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                      <td className="whitespace-nowrap px-3 py-5 text-gray-500 text-sm">
+                        <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700 text-xs ring-1 ring-emerald-600/20 ring-inset dark:bg-emerald-900/20">
                           Active
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-5 text-sm text-foreground">
+                      <td className="whitespace-nowrap px-3 py-5 text-foreground text-sm">
                         {person.role}
                       </td>
-                      <td className="relative whitespace-nowrap py-5 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                      <td className="relative whitespace-nowrap py-5 pr-4 pl-3 text-right font-medium text-sm sm:pr-0">
                         <button
-                          onClick={() => handleEdit(person)}
                           className="text-indigo-600 hover:text-indigo-900"
+                          onClick={() => handleEdit(person)}
                         >
                           Edit<span className="sr-only">, {person.name}</span>
                         </button>
@@ -170,8 +170,8 @@ export default function MemberList() {
         </div>
       </div>
       <MemberEdit
-        member={selectedMember}
         isOpen={editOpen}
+        member={selectedMember}
         onClose={() => setEditOpen(false)}
       />
     </>

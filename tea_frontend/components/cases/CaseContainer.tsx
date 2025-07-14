@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import Flow from './Flow';
-import { unauthorized, useLoginToken } from '@/hooks/useAuth';
-import { useParams } from 'next/navigation';
 import { Loader2, MessagesSquare } from 'lucide-react';
-import Header from '../Header';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
+import WebSocketComponent from '@/components/Websocket';
 
 import useStore from '@/data/store';
+import { unauthorized, useLoginToken } from '@/hooks/useAuth';
 import { addHiddenProp } from '@/lib/case-helper';
+import Header from '../Header';
 import CaseDetails from './CaseDetails';
-import Link from 'next/link';
-import WebSocketComponent from '@/components/Websocket';
-import { useSession } from 'next-auth/react';
+import Flow from './Flow';
 
 interface CaseContainerProps {
   caseId?: string;
@@ -89,7 +89,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
   );
 
   useEffect(() => {
-    //@ts-ignore
+    //@ts-expect-error
     fetchSingleCase(caseId || paramsCaseId).then((result) => {
       setAssuranceCase(result);
       setLoading(false);
@@ -111,9 +111,9 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
   return (
     <>
       {loading ? (
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="flex flex-col justify-center items-center gap-2">
-            <Loader2 className="w-8 h-8 animate-spin" />
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin" />
             <p className="text-muted-foreground">Rendering your chart...</p>
           </div>
         </div>
@@ -140,9 +140,9 @@ const FeedbackButton = () => {
       }
       target="_blank"
     >
-      <div className="absolute bottom-4 right-4 w-14 h-14 rounded-full bg-violet-600 shadow-xl flex justify-center items-center hover:cursor-pointer">
-        <MessagesSquare className="w-6 h-6 text-white" />
-        <div className="absolute w-16 h-16 rounded-full bg-violet-500 -z-10 animate-pulse" />
+      <div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
+        <MessagesSquare className="h-6 w-6 text-white" />
+        <div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />
       </div>
     </Link>
   );

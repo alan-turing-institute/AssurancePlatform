@@ -1,6 +1,6 @@
 import React from 'react';
-import CaseStudies from '../_components/CaseStudies';
 import { fetchPublishedCaseStudies } from '@/actions/caseStudies';
+import CaseStudies from '../_components/CaseStudies';
 
 const DiscoverPage = async () => {
   const publishedCaseStudies = await fetchPublishedCaseStudies();
@@ -9,13 +9,13 @@ const DiscoverPage = async () => {
     <>
       <div className="bg-white px-6 py-24 sm:py-20 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-base/7 font-semibold text-indigo-600">
+          <p className="font-semibold text-base/7 text-indigo-600">
             Get the help you need
           </p>
-          <h2 className="mt-2 text-5xl font-semibold tracking-tight text-gray-900">
+          <h2 className="mt-2 font-semibold text-5xl text-gray-900 tracking-tight">
             Community Case Studies
           </h2>
-          <p className="mt-8 text-pretty text-lg font-medium text-gray-500 sm:text-xl/8">
+          <p className="mt-8 text-pretty font-medium text-gray-500 text-lg sm:text-xl/8">
             Browse through all the case studies that have been created by our
             community.
           </p>

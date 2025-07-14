@@ -1,10 +1,7 @@
 'use client';
 
-import { Modal } from '@/components/ui/modal';
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useShareModal } from '@/hooks/useShareModal';
-import { Separator } from '../ui/separator';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { saveAs } from 'file-saver';
 import {
   Download,
   Eye,
@@ -18,13 +15,10 @@ import {
   UserX,
   X,
 } from 'lucide-react';
-import { Button } from '../ui/button';
 import { neatJSON } from 'neatjson';
-import { saveAs } from 'file-saver';
-import useStore from '@/data/store';
-import { unauthorized, useLoginToken } from '@/hooks/useAuth';
-import { User } from '@/types';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -36,10 +30,16 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '../ui/use-toast';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Modal } from '@/components/ui/modal';
+import useStore from '@/data/store';
+import { unauthorized, useLoginToken } from '@/hooks/useAuth';
 import { usePermissionsModal } from '@/hooks/usePermissionsModal';
-import { useSession } from 'next-auth/react';
+import { useShareModal } from '@/hooks/useShareModal';
+import { User } from '@/types';
+import { Button } from '../ui/button';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Separator } from '../ui/separator';
+import { useToast } from '../ui/use-toast';
 
 export const PermissionsModal = () => {
   const {
@@ -100,7 +100,7 @@ export const PermissionsModal = () => {
 
       payload.push(item);
 
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`;
 
       const requestOptions: RequestInit = {
         method: 'POST',
@@ -168,13 +168,13 @@ export const PermissionsModal = () => {
 
   return (
     <Modal
-      title="Permissions"
       description="Manage who has access to the current assurance case."
       isOpen={permissionModal.isOpen}
       onClose={permissionModal.onClose}
+      title="Permissions"
     >
-      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
-        <PencilRuler className="w-4 h-4" />
+      <p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+        <PencilRuler className="h-4 w-4" />
         Edit members
       </p>
       <Separator />
@@ -183,30 +183,30 @@ export const PermissionsModal = () => {
         {editMembers.length > 0 ? (
           editMembers.map((member: any) => (
             <div
+              className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}
-              className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group"
             >
-              <User2 className="w-4 h-4" />
+              <User2 className="h-4 w-4" />
               <div className="flex-1">
                 <p>{member.email}</p>
               </div>
               <Button
+                className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
                 onClick={() => handleRemovePermissions(member, 'edit')}
                 size={'icon'}
                 variant={'ghost'}
-                className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">No members found.</p>
+          <p className="text-muted-foreground text-sm">No members found.</p>
         )}
       </div>
 
-      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
-        <MessageCircleMore className="w-4 h-4" />
+      <p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+        <MessageCircleMore className="h-4 w-4" />
         Review members
       </p>
       <Separator />
@@ -215,30 +215,30 @@ export const PermissionsModal = () => {
         {reviewMembers.length > 0 ? (
           reviewMembers.map((member: any) => (
             <div
+              className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}
-              className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group"
             >
-              <User2 className="w-4 h-4" />
+              <User2 className="h-4 w-4" />
               <div className="flex-1">
                 <p>{member.email}</p>
               </div>
               <Button
+                className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
                 onClick={() => handleRemovePermissions(member, 'review')}
                 size={'icon'}
                 variant={'ghost'}
-                className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">No members found.</p>
+          <p className="text-muted-foreground text-sm">No members found.</p>
         )}
       </div>
 
-      <p className="uppercase text-xs mb-2 flex justify-start items-center gap-2 text-slate-300">
-        <Eye className="w-4 h-4" />
+      <p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+        <Eye className="h-4 w-4" />
         View members
       </p>
       <Separator />
@@ -247,25 +247,25 @@ export const PermissionsModal = () => {
         {viewMembers.length > 0 ? (
           viewMembers.map((member: any) => (
             <div
+              className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}
-              className="flex justify-start items-center gap-4 p-1 px-3 rounded-md  hover:cursor-pointer group"
             >
-              <User2 className="w-4 h-4" />
+              <User2 className="h-4 w-4" />
               <div className="flex-1">
                 <p>{member.email}</p>
               </div>
               <Button
+                className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
                 onClick={() => handleRemovePermissions(member, 'read')}
                 size={'icon'}
                 variant={'ghost'}
-                className="hover:bg-rose-500 dark:hover:bg-rose-700/50 hover:text-white"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">No members found.</p>
+          <p className="text-muted-foreground text-sm">No members found.</p>
         )}
       </div>
     </Modal>

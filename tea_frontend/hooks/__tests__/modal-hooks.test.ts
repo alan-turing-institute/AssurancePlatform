@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateCaseModal } from '../useCreateCaseModal';
-import { useShareModal } from '../useShareModal';
-import { usePermissionsModal } from '../usePermissionsModal';
-import { useImportModal } from '../useImportModal';
 import { useEmailModal } from '../useEmailModal';
+import { useImportModal } from '../useImportModal';
+import { usePermissionsModal } from '../usePermissionsModal';
 import { useResourcesModal } from '../useResourcesModal';
+import { useShareModal } from '../useShareModal';
 
 // Helper function to test modal hook behavior
 const testModalHook = (hookName: string, useHook: () => any) => {

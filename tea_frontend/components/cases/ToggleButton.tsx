@@ -2,7 +2,12 @@
 
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow';
+import {
+  type Edge,
+  getConnectedEdges,
+  getOutgoers,
+  useReactFlow,
+} from 'reactflow';
 
 import useStore from '@/data/store';
 import {
@@ -35,12 +40,12 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
     }
   }, [node.id, nodes]);
 
-  let stack: any[] = [];
-  let outgoers: any[] = [];
-  let connectedEdges: any[] = [];
+  const stack: any[] = [];
+  const outgoers: any[] = [];
+  const connectedEdges: any[] = [];
 
   const checkTarget = (edge: any, id: number) => {
-    let edges = edge.filter((ed: any) => {
+    const edges = edge.filter((ed: any) => {
       return ed.target !== id;
     });
     return edges;
@@ -49,13 +54,13 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
   const handleToggle = (e: any) => {
     e.stopPropagation();
 
-    let currentNodeID = node.id;
+    const currentNodeID = node.id;
     stack.push(node);
 
     while (stack.length > 0) {
-      let lastNode = stack.pop();
-      let childnode = getOutgoers(lastNode, nodes, edges);
-      let childedge = checkTarget(
+      const lastNode = stack.pop();
+      const childnode = getOutgoers(lastNode, nodes, edges);
+      const childedge = checkTarget(
         getConnectedEdges([lastNode], edges),
         currentNodeID
       );
@@ -68,10 +73,10 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
       });
     }
 
-    let childNodeID = outgoers.map((node) => {
+    const childNodeID = outgoers.map((node) => {
       return node.id;
     });
-    let childEdgeID = connectedEdges.map((edge) => {
+    const childEdgeID = connectedEdges.map((edge) => {
       return edge.id;
     });
 
@@ -204,7 +209,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 
   return (
     <button onClick={(e) => handleToggle2(e)}>
-      <div className="infline-flex hover:bg-slate-900/10 p-1 rounded-full">
+      <div className="infline-flex rounded-full p-1 hover:bg-slate-900/10">
         {hidden ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
       </div>
     </button>

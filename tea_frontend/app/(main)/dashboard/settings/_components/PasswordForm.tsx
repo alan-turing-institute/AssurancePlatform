@@ -1,6 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,8 +16,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useSession } from 'next-auth/react';
-import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
 const ACCEPTED_FILE_TYPES = ['jpg'];
@@ -83,7 +83,7 @@ export function PasswordForm({ data }: PasswordFormProps) {
     };
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${data.id}/change-password`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${data.id}/change-password`;
 
       const requestOptions: RequestInit = {
         method: 'PUT',
@@ -116,10 +116,10 @@ export function PasswordForm({ data }: PasswordFormProps) {
     <>
       <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
         <div>
-          <h2 className="text-base font-semibold leading-7 text-foreground">
+          <h2 className="font-semibold text-base text-foreground leading-7">
             Change password
           </h2>
-          <p className="mt-1 text-sm leading-6 text-gray-400">
+          <p className="mt-1 text-gray-400 text-sm leading-6">
             Update your password associated with your account.
           </p>
         </div>
@@ -128,8 +128,8 @@ export function PasswordForm({ data }: PasswordFormProps) {
           {session?.provider === 'credentials' ? (
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit(onSubmit)}
                 className="w-full space-y-6"
+                onSubmit={form.handleSubmit(onSubmit)}
               >
                 <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
                   <FormField
@@ -179,15 +179,15 @@ export function PasswordForm({ data }: PasswordFormProps) {
                   />
                 </div>
                 <Button
+                  className="bg-indigo-600 text-white hover:bg-indigo-700"
                   type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   Update
                 </Button>
               </form>
             </Form>
           ) : (
-            <p className="text-muted-foreground text-sm w-1/2">
+            <p className="w-1/2 text-muted-foreground text-sm">
               You are logged in with a{' '}
               <span className="text-indigo-500">{session?.provider}</span>{' '}
               account, therefore you cannot change your password here.

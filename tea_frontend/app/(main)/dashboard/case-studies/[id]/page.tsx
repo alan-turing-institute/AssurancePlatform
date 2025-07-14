@@ -1,16 +1,16 @@
-import BackButton from '@/components/ui/back-button';
-import PageHeading from '@/components/ui/page-heading';
 import moment from 'moment';
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import React from 'react';
-import CaseStudyForm from '../_components/CaseStudyForm';
 import {
   deleteCaseStudy,
   fetchCaseStudyById,
   updateCaseStudy,
 } from '@/actions/caseStudies';
-import { getServerSession } from 'next-auth';
+import BackButton from '@/components/ui/back-button';
+import PageHeading from '@/components/ui/page-heading';
 import { authOptions } from '@/lib/authOptions';
-import { redirect } from 'next/navigation';
+import CaseStudyForm from '../_components/CaseStudyForm';
 
 async function CaseStudyDetails({
   params,
@@ -20,24 +20,24 @@ async function CaseStudyDetails({
   const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if (!session || !session.key) {
+  if (!(session && session.key)) {
     redirect('/login');
   }
 
   const { id } = await params;
 
-  const caseStudy = await fetchCaseStudyById(session.key, parseInt(id));
+  const caseStudy = await fetchCaseStudyById(session.key, Number.parseInt(id));
 
   return (
     <>
       {caseStudy.published && <PublishedBanner caseStudy={caseStudy} />}
-      <div className="p-8 min-h-screen space-y-4">
+      <div className="min-h-screen space-y-4 p-8">
         <BackButton url="/dashboard/case-studies" />
         <PageHeading
-          title={caseStudy.title}
+          caseStudy={caseStudy}
           description={`Created on: ${moment(caseStudy.createdOn).format('DD/MM/YYYY')} | Last modified on: ${moment(caseStudy.last_modified_on).format('DD/MM/YYYY')}`}
           // button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }}
-          caseStudy={caseStudy}
+          title={caseStudy.title}
         />
 
         <CaseStudyForm caseStudy={caseStudy} />
@@ -127,16 +127,16 @@ export default CaseStudyDetails;
 
 function PublishedBanner({ caseStudy }: any) {
   return (
-    <div className="flex items-center gap-x-6 bg-emerald-500 dark:bg-emerald-600 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
-      <div className="text-sm leading-6 text-white w-full">
-        <div className="flex flex-col md:flex-row justify-center items-center gap-2 w-full py-3 md:py-0">
-          <div className="flex justify-start items-center gap-2">
+    <div className="flex items-center gap-x-6 bg-emerald-500 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 dark:bg-emerald-600">
+      <div className="w-full text-sm text-white leading-6">
+        <div className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0">
+          <div className="flex items-center justify-start gap-2">
             <strong className="font-semibold">Published Case Study</strong>
           </div>
           <svg
-            viewBox="0 0 2 2"
-            className="hidden md:block mx-2 h-0.5 w-0.5 fill-current"
             aria-hidden="true"
+            className="mx-2 hidden h-0.5 w-0.5 fill-current md:block"
+            viewBox="0 0 2 2"
           >
             <circle cx={1} cy={1} r={1} />
           </svg>

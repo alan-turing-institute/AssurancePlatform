@@ -1,12 +1,12 @@
 'use client';
 
+import { LogOutIcon } from 'lucide-react';
 // import { useLoginToken } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { Button } from '../ui/button';
 import { signOut, useSession } from 'next-auth/react';
-import { LogOutIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import ActionTooltip from '../ui/action-tooltip';
+import { Button } from '../ui/button';
 
 const LogoutButton = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -45,8 +45,8 @@ const LogoutButton = () => {
 
   return (
     <ActionTooltip label="Logout">
-      <Button size={'sm'} variant={'ghost'} onClick={handleLogout}>
-        <LogOutIcon className="w-4 h-4" />
+      <Button onClick={handleLogout} size={'sm'} variant={'ghost'}>
+        <LogOutIcon className="h-4 w-4" />
         <span className="sr-only">Logout</span>
       </Button>
     </ActionTooltip>

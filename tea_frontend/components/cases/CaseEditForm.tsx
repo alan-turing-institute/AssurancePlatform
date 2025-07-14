@@ -1,6 +1,12 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2, Lock } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -10,14 +16,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
 import useStore from '@/data/store';
-import { Loader2, Lock } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+
 // import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
@@ -94,20 +96,20 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+      <form className="mt-6 space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex justify-start items-center gap-2">
+              <FormLabel className="flex items-center justify-start gap-2">
                 Name
                 {assuranceCase.permissions !== 'manage' && (
                   <span
+                    className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                     title="Read Only"
-                    className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
                   >
-                    <Lock className="w-3 h-3" />
+                    <Lock className="h-3 w-3" />
                   </span>
                 )}
               </FormLabel>
@@ -128,14 +130,14 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex justify-start items-center gap-2">
+              <FormLabel className="flex items-center justify-start gap-2">
                 Description
                 {assuranceCase.permissions !== 'manage' && (
                   <span
+                    className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                     title="Read Only"
-                    className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
                   >
-                    <Lock className="w-3 h-3" />
+                    <Lock className="h-3 w-3" />
                   </span>
                 )}
               </FormLabel>
@@ -152,16 +154,16 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             </FormItem>
           )}
         />
-        <div className="flex justify-start items-center gap-3">
+        <div className="flex items-center justify-start gap-3">
           {assuranceCase.permissions === 'manage' && (
             <Button
-              type="submit"
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
               disabled={loading}
+              type="submit"
             >
               {loading ? (
-                <span className="flex justify-center items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Updating...
                 </span>
               ) : (

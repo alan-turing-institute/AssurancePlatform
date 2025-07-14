@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import {
   render,
-  screen,
   renderWithoutProviders,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
-import userEvent from '@testing-library/user-event';
 import { Button } from './button';
 
 describe('Button', () => {
@@ -107,7 +107,7 @@ describe('Button', () => {
 
   it('should have correct accessibility attributes', () => {
     renderWithoutProviders(
-      <Button type="submit" aria-label="Submit form">
+      <Button aria-label="Submit form" type="submit">
         Submit
       </Button>
     );

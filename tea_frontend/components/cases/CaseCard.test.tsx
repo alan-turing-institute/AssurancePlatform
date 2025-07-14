@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { HttpResponse, http } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { server } from '@/src/__tests__/mocks/server';
+import { createMockAssuranceCase } from '@/src/__tests__/utils/mock-data';
 import {
   render,
-  screen,
   renderWithAuth,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
-import userEvent from '@testing-library/user-event';
 import CaseCard from './CaseCard';
-import { createMockAssuranceCase } from '@/src/__tests__/utils/mock-data';
-import { server } from '@/src/__tests__/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 // Mock the AlertModal component
 vi.mock('@/components/modals/alertModal', () => ({
@@ -28,7 +28,7 @@ vi.mock('@/components/modals/alertModal', () => ({
       <div data-testid="alert-modal">
         <p>Are you sure you want to delete this case?</p>
         <button onClick={onClose}>Cancel</button>
-        <button onClick={onConfirm} disabled={loading}>
+        <button disabled={loading} onClick={onConfirm}>
           {loading ? 'Deleting...' : 'Delete'}
         </button>
       </div>

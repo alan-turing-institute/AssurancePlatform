@@ -1,18 +1,5 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { Separator } from '../ui/separator';
-import { ScrollArea } from '../ui/scroll-area';
-import useStore from '@/data/store';
-import {
-  addEvidenceToClaim,
-  addPropertyClaimToNested,
-  attachCaseElement,
-  deleteAssuranceCaseNode,
-  removeAssuranceCaseNode,
-  updateAssuranceCase,
-  updateAssuranceCaseNode,
-} from '@/lib/case-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
   BookOpenText,
@@ -25,12 +12,30 @@ import {
   Trash,
   Trash2,
 } from 'lucide-react';
-import { Button } from '../ui/button';
+import { useSession } from 'next-auth/react';
+import React, {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useState,
+} from 'react';
+import useStore from '@/data/store';
+import {
+  addEvidenceToClaim,
+  addPropertyClaimToNested,
+  attachCaseElement,
+  deleteAssuranceCaseNode,
+  removeAssuranceCaseNode,
+  updateAssuranceCase,
+  updateAssuranceCaseNode,
+} from '@/lib/case-helper';
 import { AlertModal } from '../modals/alertModal';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
+import { Skeleton } from '../ui/skeleton';
 import CommentsForm from './CommentForm';
 import CommentsFeed from './CommentsFeed';
-import { Skeleton } from '../ui/skeleton';
-import { useSession } from 'next-auth/react';
 
 type NodeCommentProps = {
   node: any;
@@ -86,7 +91,7 @@ const NodeComment = ({
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
 
       const requestOptions: RequestInit = {
         method: 'GET',
@@ -110,18 +115,18 @@ const NodeComment = ({
   }, []);
 
   return (
-    <div className="flex flex-col justify-start items-start mt-8">
-      <h3 className="text-lg font-semibold mb-2">
-        {!readOnly ? 'New Comment' : 'Comments'}
+    <div className="mt-8 flex flex-col items-start justify-start">
+      <h3 className="mb-2 font-semibold text-lg">
+        {readOnly ? 'Comments' : 'New Comment'}
       </h3>
       {!readOnly && <CommentsForm node={node} />}
       {loading ? (
-        <div className="py-8 flex flex-col justify-start gap-2 w-full">
-          <Skeleton className="w-full h-[10px] rounded-full" />
-          <Skeleton className="w-2/3 h-[10px] rounded-full" />
-          <div className="flex justify-start items-center gap-2">
-            <Skeleton className="w-[20px] h-[10px] rounded-full" />
-            <Skeleton className="w-[100px] h-[10px] rounded-full" />
+        <div className="flex w-full flex-col justify-start gap-2 py-8">
+          <Skeleton className="h-[10px] w-full rounded-full" />
+          <Skeleton className="h-[10px] w-2/3 rounded-full" />
+          <div className="flex items-center justify-start gap-2">
+            <Skeleton className="h-[10px] w-[20px] rounded-full" />
+            <Skeleton className="h-[10px] w-[100px] rounded-full" />
           </div>
         </div>
       ) : (

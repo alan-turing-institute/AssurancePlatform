@@ -181,7 +181,7 @@ export const updateCaseStudy = async (
 
   revalidatePath(`/dashboard/case-studies/${formData.get('id')}`);
   revalidatePath(`/discover/${formData.get('id')}`);
-  revalidatePath(`/discover`);
+  revalidatePath('/discover');
   return true;
 };
 

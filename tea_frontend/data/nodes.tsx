@@ -1,6 +1,5 @@
 'use client';
 
-import { Node } from 'reactflow';
 import {
   BookOpenText,
   Database,
@@ -8,6 +7,7 @@ import {
   Goal,
   Route,
 } from 'lucide-react';
+import type { Node } from 'reactflow';
 
 export const initNodes = [
   // {

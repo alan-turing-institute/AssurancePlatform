@@ -6,7 +6,7 @@ const TeamSettings = () => {
     <main>
       <h1 className="sr-only">Account Settings</h1>
 
-      <header className="border-b border-white/5">
+      <header className="border-white/5 border-b">
         {/* Secondary navigation */}
         <SettingsNav />
       </header>

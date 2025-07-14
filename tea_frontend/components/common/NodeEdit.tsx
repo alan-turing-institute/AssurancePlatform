@@ -1,8 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import EditSheet from '../ui/edit-sheet';
+import { ChatBubbleIcon } from '@radix-ui/react-icons';
 import {
   BookOpenText,
   CloudFog,
@@ -16,31 +14,10 @@ import {
   Trash2,
   Unplug,
 } from 'lucide-react';
-import EditForm from './EditForm';
 import { Autour_One } from 'next/font/google';
-import {
-  addEvidenceToClaim,
-  addPropertyClaimToNested,
-  createAssuranceCaseNode,
-  deleteAssuranceCaseNode,
-  listPropertyClaims,
-  setNodeIdentifier,
-  updateAssuranceCaseNode,
-  caseItemDescription,
-  updateAssuranceCase,
-  removeAssuranceCaseNode,
-  extractGoalsClaimsStrategies,
-  findElementById,
-  getChildrenHiddenStatus,
-  findSiblingHiddenState,
-  findParentNode,
-  detachCaseElement,
-} from '@/lib/case-helper';
-// import { useLoginToken } from "@/hooks/useAuth";
-import NewLinkForm from './NewLinkForm';
-import { AlertModal } from '../modals/alertModal';
-import useStore from '@/data/store';
-
+import { useSession } from 'next-auth/react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -48,14 +25,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import useStore from '@/data/store';
+import {
+  addEvidenceToClaim,
+  addPropertyClaimToNested,
+  caseItemDescription,
+  createAssuranceCaseNode,
+  deleteAssuranceCaseNode,
+  detachCaseElement,
+  extractGoalsClaimsStrategies,
+  findElementById,
+  findParentNode,
+  findSiblingHiddenState,
+  getChildrenHiddenStatus,
+  listPropertyClaims,
+  removeAssuranceCaseNode,
+  setNodeIdentifier,
+  updateAssuranceCase,
+  updateAssuranceCaseNode,
+} from '@/lib/case-helper';
+import NodeAttributes from '../cases/NodeAttributes';
+import NodeComment from '../cases/NodeComments';
+import NodeContext from '../cases/NodeContext';
+import OrphanElements from '../cases/OrphanElements';
+import { AlertModal } from '../modals/alertModal';
+import EditSheet from '../ui/edit-sheet';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
-import OrphanElements from '../cases/OrphanElements';
-import { ChatBubbleIcon } from '@radix-ui/react-icons';
-import NodeComment from '../cases/NodeComments';
-import { useSession } from 'next-auth/react';
-import NodeContext from '../cases/NodeContext';
-import NodeAttributes from '../cases/NodeAttributes';
+import EditForm from './EditForm';
+// import { useLoginToken } from "@/hooks/useAuth";
+import NewLinkForm from './NewLinkForm';
 
 interface NodeEditProps {
   node: Node | any;
@@ -88,7 +87,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let strategies: any[] = [];
   let claims: any[] = [];
 
-  let readOnly =
+  const readOnly =
     assuranceCase.permissions === 'view' ||
     assuranceCase.permissions === 'review'
       ? true
@@ -163,13 +162,13 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const handleMove = async () => {
     setLoading(true);
     if (selectedClaimMove) {
-      let updatedItem = null;
-      console.log(`Move Property to Strategy with ID`, selectedClaimMove);
+      const updatedItem = null;
+      console.log('Move Property to Strategy with ID', selectedClaimMove);
 
       // Find id for selected move element
       const type = selectedClaimMove.name.substring(0, 1);
       if (type === 'G') {
-        let updateItem = {
+        const updateItem = {
           goal_id: goal ? goal.id : null,
           strategy_id: null,
           property_claim_id: null,
@@ -211,7 +210,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           (claim: any) => claim.id === selectedClaimMove.id
         )[0].id;
 
-        let updateItem = {
+        const updateItem = {
           goal_id: null,
           strategy_id: null,
           property_claim_id: elementId,
@@ -253,7 +252,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           (strategy: any) => strategy.id === selectedClaimMove.id
         )[0].id;
 
-        let updateItem = {
+        const updateItem = {
           goal_id: null,
           strategy_id: elementId,
           property_claim_id: null,
@@ -361,28 +360,28 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
   return (
     <EditSheet
-      title={`${!readOnly ? 'Editing' : 'Viewing'} ${node.data.name}`}
-      description={`${!readOnly ? `Use this form to update your ${caseItemDescription(node.type)}.` : `You are viewing a ${caseItemDescription(node.type)}.`}`}
+      description={`${readOnly ? `You are viewing a ${caseItemDescription(node.type)}.` : `Use this form to update your ${caseItemDescription(node.type)}.`}`}
       isOpen={isOpen}
-      onClose={handleClose}
       onChange={onChange}
+      onClose={handleClose}
+      title={`${readOnly ? 'Viewing' : 'Editing'} ${node.data.name}`}
     >
       {!action && (
         <div>
           {node.type !== 'goal' && parentNode && (
             <div className="mt-6 flex flex-col text-sm">
-              <div className="mb-2 flex justify-start items-center gap-2">
+              <div className="mb-2 flex items-center justify-start gap-2">
                 <p>Parent Description</p>
                 {toggleParentDescription ? (
                   <Eye
-                    className="w-4 h-4"
+                    className="h-4 w-4"
                     onClick={() =>
                       setToggleParentDescription(!toggleParentDescription)
                     }
                   />
                 ) : (
                   <EyeOff
-                    className="w-4 h-4"
+                    className="h-4 w-4"
                     onClick={() =>
                       setToggleParentDescription(!toggleParentDescription)
                     }
@@ -391,7 +390,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               </div>
               {toggleParentDescription && (
                 <>
-                  <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">
+                  <span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
                     Identifier: {parentNode.data.name}
                   </span>
                   <p className="text-muted-foreground">
@@ -406,70 +405,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             onClose={handleClose}
             setUnresolvedChanges={setUnresolvedChanges}
           />
-          {!readOnly ? (
+          {readOnly ? (
             <>
               <Separator className="my-6" />
               <div className="">
-                <h3 className="text-lg font-semibold mb-2">Actions</h3>
-                <div className="flex flex-col justify-around items-center gap-2">
-                  {node.type === 'goal' && (
-                    <Button
-                      variant={'outline'}
-                      onClick={() => setAction('context')}
-                      className="w-full"
-                    >
-                      <BookOpenText className="w-4 h-4 mr-2" />
-                      Manage Context
-                    </Button>
-                  )}
-                  {node.type !== 'evidence' && (
-                    <Button
-                      variant={'outline'}
-                      onClick={() => setAction('attributes')}
-                      className="w-full"
-                    >
-                      <LibraryIcon className="w-4 h-4 mr-2" />
-                      Manage Attributes
-                    </Button>
-                  )}
-                  {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button
-                      variant={'outline'}
-                      onClick={() => setAction('new')}
-                      className="w-full"
-                    >
-                      <PlusCircle className="w-4 h-4 mr-2" />
-                      Add New Element
-                    </Button>
-                  )}
-                  {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button
-                      variant={'outline'}
-                      onClick={() => setAction('existing')}
-                      className="w-full"
-                    >
-                      <Unplug className="w-4 h-4 mr-2" />
-                      Reattach Element(s)
-                    </Button>
-                  )}
-                  {node.type !== 'context' &&
-                    node.type !== 'goal' &&
-                    node.type !== 'strategy' && (
-                      <Button
-                        variant={'outline'}
-                        onClick={() => setAction('move')}
-                        className="w-full"
-                      >
-                        <Move className="w-4 h-4 mr-2" />
-                        Move Item
-                      </Button>
-                    )}
+                <h3 className="mb-2 font-semibold text-lg">Actions</h3>
+                <div className="flex flex-col items-center justify-around gap-2">
                   <Button
-                    variant={'outline'}
-                    onClick={() => setAction('comment')}
                     className="w-full"
+                    onClick={() => setAction('comment')}
+                    variant={'outline'}
                   >
-                    <MessageCirclePlus className="w-4 h-4 mr-2" />
+                    <MessageCirclePlus className="mr-2 h-4 w-4" />
                     Comments
                   </Button>
                 </div>
@@ -480,14 +427,66 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
             <>
               <Separator className="my-6" />
               <div className="">
-                <h3 className="text-lg font-semibold mb-2">Actions</h3>
-                <div className="flex flex-col justify-around items-center gap-2">
+                <h3 className="mb-2 font-semibold text-lg">Actions</h3>
+                <div className="flex flex-col items-center justify-around gap-2">
+                  {node.type === 'goal' && (
+                    <Button
+                      className="w-full"
+                      onClick={() => setAction('context')}
+                      variant={'outline'}
+                    >
+                      <BookOpenText className="mr-2 h-4 w-4" />
+                      Manage Context
+                    </Button>
+                  )}
+                  {node.type !== 'evidence' && (
+                    <Button
+                      className="w-full"
+                      onClick={() => setAction('attributes')}
+                      variant={'outline'}
+                    >
+                      <LibraryIcon className="mr-2 h-4 w-4" />
+                      Manage Attributes
+                    </Button>
+                  )}
+                  {node.type !== 'context' && node.type !== 'evidence' && (
+                    <Button
+                      className="w-full"
+                      onClick={() => setAction('new')}
+                      variant={'outline'}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add New Element
+                    </Button>
+                  )}
+                  {node.type !== 'context' && node.type !== 'evidence' && (
+                    <Button
+                      className="w-full"
+                      onClick={() => setAction('existing')}
+                      variant={'outline'}
+                    >
+                      <Unplug className="mr-2 h-4 w-4" />
+                      Reattach Element(s)
+                    </Button>
+                  )}
+                  {node.type !== 'context' &&
+                    node.type !== 'goal' &&
+                    node.type !== 'strategy' && (
+                      <Button
+                        className="w-full"
+                        onClick={() => setAction('move')}
+                        variant={'outline'}
+                      >
+                        <Move className="mr-2 h-4 w-4" />
+                        Move Item
+                      </Button>
+                    )}
                   <Button
-                    variant={'outline'}
-                    onClick={() => setAction('comment')}
                     className="w-full"
+                    onClick={() => setAction('comment')}
+                    variant={'outline'}
                   >
-                    <MessageCirclePlus className="w-4 h-4 mr-2" />
+                    <MessageCirclePlus className="mr-2 h-4 w-4" />
                     Comments
                   </Button>
                 </div>
@@ -497,21 +496,21 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           )}
 
           {!readOnly && (
-            <div className="mt-12 flex justify-start items-center gap-4">
+            <div className="mt-12 flex items-center justify-start gap-4">
               {node.type !== 'goal' && (
                 <Button
-                  variant={'outline'}
+                  className="my-8 w-full"
                   onClick={handleDetach}
-                  className="w-full my-8"
+                  variant={'outline'}
                 >
-                  <Unplug className="w-4 h-4 mr-2" />
+                  <Unplug className="mr-2 h-4 w-4" />
                   Detach
                 </Button>
               )}
               <Button
-                variant={'destructive'}
+                className="flex w-full items-center justify-center"
                 onClick={() => setDeleteOpen(true)}
-                className="w-full flex justify-center items-center"
+                variant={'destructive'}
               >
                 <Trash2 className="mr-2" />
                 Delete&nbsp;
@@ -525,73 +524,73 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         !readOnly &&
         (selectedLink ? (
           <NewLinkForm
-            node={node}
-            linkType={linkToCreate}
             actions={{ setLinkToCreate, setSelectedLink, handleClose }}
+            linkType={linkToCreate}
+            node={node}
             setUnresolvedChanges={setUnresolvedChanges}
           />
         ) : (
           <>
             {node.type != 'context' && node.type != 'evidence' && (
-              <div className="flex flex-col justify-start items-start mt-8">
-                <h3 className="text-lg font-semibold mb-2">Add New</h3>
-                <div className="flex flex-col justify-start items-center gap-4 w-full">
+              <div className="mt-8 flex flex-col items-start justify-start">
+                <h3 className="mb-2 font-semibold text-lg">Add New</h3>
+                <div className="flex w-full flex-col items-center justify-start gap-4">
                   {node.type === 'goal' && (
                     <>
                       {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
                       <Button
-                        variant="outline"
-                        onClick={() => selectLink('strategy')}
                         className="w-full"
+                        onClick={() => selectLink('strategy')}
+                        variant="outline"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Strategy
                       </Button>
                       <Button
-                        variant="outline"
-                        onClick={() => selectLink('claim')}
                         className="w-full"
+                        onClick={() => selectLink('claim')}
+                        variant="outline"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Property Claim
                       </Button>
                     </>
                   )}
                   {node.type === 'strategy' && (
                     <Button
-                      variant="outline"
-                      onClick={() => selectLink('claim')}
                       className="w-full"
+                      onClick={() => selectLink('claim')}
+                      variant="outline"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Property Claim
                     </Button>
                   )}
                   {node.type === 'property' && (
                     <>
                       <Button
-                        variant="outline"
-                        onClick={() => selectLink('claim')}
                         className="w-full"
+                        onClick={() => selectLink('claim')}
+                        variant="outline"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Property Claim
                       </Button>
                       <Button
-                        variant="outline"
-                        onClick={() => selectLink('evidence')}
                         className="w-full"
+                        onClick={() => selectLink('evidence')}
+                        variant="outline"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Evidence
                       </Button>
                     </>
                   )}
                 </div>
                 <Button
-                  variant={'outline'}
-                  onClick={() => setAction(null)}
                   className="my-6"
+                  onClick={() => setAction(null)}
+                  variant={'outline'}
                 >
                   Cancel
                 </Button>
@@ -601,11 +600,12 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         ))}
       {action === 'existing' &&
         !readOnly &&
-        node.type !== 'evidence' && node.type !== 'context' && (
+        node.type !== 'evidence' &&
+        node.type !== 'context' && (
           <OrphanElements
-            node={node}
             handleClose={handleClose}
             loadingState={{ loading, setLoading }}
+            node={node}
             setAction={setAction}
           />
         )}
@@ -613,10 +613,10 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
         <>
           {node.type === 'property' || node.type === 'evidence' ? (
             <div className="w-full pt-4">
-              <h3 className="mt-6 text-lg font-semibold mb-2 capitalize">
+              <h3 className="mt-6 mb-2 font-semibold text-lg capitalize">
                 Move {node.type}
               </h3>
-              <div className="flex flex-col justify-start items-left gap-2">
+              <div className="items-left flex flex-col justify-start gap-2">
                 {node.type === 'property' && (
                   <Select onValueChange={setSelectedClaimMove}>
                     <SelectTrigger>
@@ -625,13 +625,13 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                     <SelectContent>
                       {goal && (
                         <SelectItem key={crypto.randomUUID()} value={goal}>
-                          <div className="flex flex-col justify-start items-start gap-1">
+                          <div className="flex flex-col items-start justify-start gap-1">
                             <div className="flex items-center">
                               <span className="font-medium">{goal.name}</span>
                               <svg
-                                viewBox="0 0 2 2"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
                                 aria-hidden="true"
+                                className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                viewBox="0 0 2 2"
                               >
                                 <circle cx={1} cy={1} r={1} />
                               </svg>
@@ -644,15 +644,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       )}
                       {strategies?.map((strategy: any) => (
                         <SelectItem key={crypto.randomUUID()} value={strategy}>
-                          <div className="flex justify-start items-start gap-1">
+                          <div className="flex items-start justify-start gap-1">
                             <div className="flex items-center">
                               <span className="font-medium">
                                 {strategy.name}
                               </span>
                               <svg
-                                viewBox="0 0 2 2"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
                                 aria-hidden="true"
+                                className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                viewBox="0 0 2 2"
                               >
                                 <circle cx={1} cy={1} r={1} />
                               </svg>
@@ -666,15 +666,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       {claims &&
                         claims.map((claim: any) => (
                           <SelectItem key={crypto.randomUUID()} value={claim}>
-                            <div className="flex flex-col justify-start items-start gap-1">
+                            <div className="flex flex-col items-start justify-start gap-1">
                               <div className="flex items-center">
                                 <span className="font-medium">
                                   {claim.name}
                                 </span>
                                 <svg
-                                  viewBox="0 0 2 2"
-                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
                                   aria-hidden="true"
+                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                  viewBox="0 0 2 2"
                                 >
                                   <circle cx={1} cy={1} r={1} />
                                 </svg>
@@ -702,15 +702,15 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
                       {claims &&
                         claims.map((claim: any) => (
                           <SelectItem key={crypto.randomUUID()} value={claim}>
-                            <div className="flex flex-col justify-start items-start gap-1">
+                            <div className="flex flex-col items-start justify-start gap-1">
                               <div className="flex items-center">
                                 <span className="font-medium">
                                   {claim.name}
                                 </span>
                                 <svg
-                                  viewBox="0 0 2 2"
-                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
                                   aria-hidden="true"
+                                  className="mx-2 inline h-0.5 w-0.5 fill-current"
+                                  viewBox="0 0 2 2"
                                 >
                                   <circle cx={1} cy={1} r={1} />
                                 </svg>
@@ -732,7 +732,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               </div>
             </div>
           ) : null}
-          <div className="flex justify-start items-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             <Button
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
               onClick={handleMove}
@@ -740,9 +740,9 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
               Move
             </Button>
             <Button
-              variant={'outline'}
-              onClick={() => setAction(null)}
               className="my-6"
+              onClick={() => setAction(null)}
+              variant={'outline'}
             >
               Cancel
             </Button>
@@ -751,49 +751,49 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       )}
       {action === 'comment' && (
         <NodeComment
-          node={node}
           handleClose={handleClose}
           loadingState={{ loading, setLoading }}
-          setAction={setAction}
+          node={node}
           readOnly={assuranceCase.permissions === 'view' ? true : false}
+          setAction={setAction}
         />
       )}
       {action === 'context' && (
         <NodeContext
-          node={node}
           actions={{ setSelectedLink, handleClose, setAction }}
+          node={node}
           setUnresolvedChanges={setUnresolvedChanges}
         />
       )}
       {action === 'attributes' && (
         <NodeAttributes
+          actions={{ setSelectedLink, handleClose, setAction }}
           node={node}
           onClose={handleClose}
-          actions={{ setSelectedLink, handleClose, setAction }}
           setUnresolvedChanges={setUnresolvedChanges}
         />
       )}
       <AlertModal
+        cancelButtonText={'No, keep the element'}
+        confirmButtonText={'Yes, delete this element!'}
         isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
         loading={loading}
         message={
           'Deleting this element will also remove all of the connected child elements. Please detach any child elements that you wish to keep before deleting, as the current action cannot be undone.'
         }
-        confirmButtonText={'Yes, delete this element!'}
-        cancelButtonText={'No, keep the element'}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
       />
       <AlertModal
+        cancelButtonText={'No, keep editing'}
+        confirmButtonText={'Yes, discard changes!'}
         isOpen={alertOpen}
-        onClose={() => setAlertOpen(false)}
-        onConfirm={handleClose}
         loading={loading}
         message={
           'You have changes that have not been updated. Would you like to discard these changes?'
         }
-        confirmButtonText={'Yes, discard changes!'}
-        cancelButtonText={'No, keep editing'}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleClose}
       />
     </EditSheet>
   );

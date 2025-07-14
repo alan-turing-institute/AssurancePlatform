@@ -1,20 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  caseItemDescription,
-  addPropertyClaimToNested,
-  updatePropertyClaimNested,
-  listPropertyClaims,
   addEvidenceToClaim,
-  updateEvidenceNested,
-  findItemById,
-  setNodeIdentifier,
-  extractGoalsClaimsStrategies,
   addHiddenProp,
+  addPropertyClaimToNested,
+  caseItemDescription,
   createAssuranceCaseNode,
   deleteAssuranceCaseNode,
-  updateAssuranceCaseNode,
+  extractGoalsClaimsStrategies,
+  findItemById,
   getAssuranceCaseNode,
+  listPropertyClaims,
+  setNodeIdentifier,
   updateAssuranceCase,
+  updateAssuranceCaseNode,
+  updateEvidenceNested,
+  updatePropertyClaimNested,
 } from '../case-helper';
 
 // Mock fetch for API calls

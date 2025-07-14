@@ -1,7 +1,7 @@
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import { Navbar } from '@/components/navigation/Navbar';
 import { authOptions } from '@/lib/authOptions';
-import { getServerSession } from 'next-auth';
-import { redirect } from 'next/navigation';
 
 export default async function DashboardLayout({
   children,
@@ -9,7 +9,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.key) redirect('/login');
+  if (!(session && session.key)) redirect('/login');
 
   return (
     <>

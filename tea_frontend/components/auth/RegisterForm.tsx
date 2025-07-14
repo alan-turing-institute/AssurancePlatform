@@ -1,8 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Button } from '../ui/button';
 import {
   Form,
   FormControl,
@@ -11,11 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from '../ui/form';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession, signIn } from 'next-auth/react';
 
 const formSchema = z.object({
   username: z
@@ -187,7 +187,7 @@ const RegisterForm = () => {
   }
 
   useEffect(() => {
-    let token = session?.key;
+    const token = session?.key;
     if (token) {
       router.push('/dashboard');
     }
@@ -195,19 +195,19 @@ const RegisterForm = () => {
 
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-      <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
+      <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12 dark:bg-slate-900">
         {errors &&
           errors.map((error: any) => (
             <div
+              className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
               key={crypto.randomUUID()}
-              className="bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mb-6"
             >
               <p>{error}</p>
             </div>
           ))}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
             <FormField
               control={form.control}
               name="username"
@@ -229,8 +229,8 @@ const RegisterForm = () => {
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
                       placeholder="example@gmail.com"
+                      type="email"
                       {...field}
                     />
                   </FormControl>
@@ -265,9 +265,9 @@ const RegisterForm = () => {
               )}
             />
             <Button
-              type="submit"
+              className="inline-flex w-full bg-indigo-600 text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading}
-              className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              type="submit"
             >
               {loading ? 'Creating Account...' : 'Submit'}
             </Button>
@@ -275,11 +275,11 @@ const RegisterForm = () => {
         </Form>
       </div>
 
-      <p className="mt-10 text-center text-sm text-foreground">
+      <p className="mt-10 text-center text-foreground text-sm">
         Already a member?{' '}
         <a
-          href={`/login`}
-          className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
+          className="font-semibold text-indigo-600 leading-6 hover:text-indigo-500"
+          href={'/login'}
         >
           Login here
         </a>

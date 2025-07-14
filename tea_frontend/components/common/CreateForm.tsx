@@ -1,6 +1,12 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Goal } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { boolean, z } from 'zod';
 import {
   Form,
   FormControl,
@@ -11,19 +17,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { boolean, z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
-import { Goal } from 'lucide-react';
 import useStore from '@/data/store';
 import {
   addHiddenProp,
   createAssuranceCaseNode,
   setNodeIdentifier,
 } from '@/lib/case-helper';
-import { useSession } from 'next-auth/react';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+
 // import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
@@ -69,7 +71,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
     const identifier = await setNodeIdentifier(null, 'goal');
 
     const newGoal = {
-      name: `G1`,
+      name: 'G1',
       short_description: values.description,
       long_description: 'N/A',
       keywords: 'N/A',
@@ -105,7 +107,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+      <form className="mt-6 space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
         {/* <FormField
           control={form.control}
           name="name"
@@ -132,11 +134,11 @@ const CreateForm: React.FC<CreateFormProps> = ({
             </FormItem>
           )}
         />
-        <div className="flex justify-start items-center gap-3">
+        <div className="flex items-center justify-start gap-3">
           <Button
-            type="submit"
+            className="bg-indigo-500 text-white hover:bg-indigo-600"
             disabled={loading}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white"
+            type="submit"
           >
             {loading ? 'Creating...' : 'Create Goal'}
           </Button>

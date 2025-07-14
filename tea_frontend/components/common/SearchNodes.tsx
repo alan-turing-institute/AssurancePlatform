@@ -1,5 +1,6 @@
 'use client';
 
+import { Search } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import {
   Dialog,
@@ -11,12 +12,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '../ui/button';
-import { Search } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import ActionTooltip from '../ui/action-tooltip';
+import { Button } from '../ui/button';
 
 type SearchNodesProps = {
   nodes: any[];
@@ -58,15 +58,15 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
     <>
       <ActionTooltip label="Search">
         <Button
+          onClick={() => setSearchOpen(true)}
           size={'sm'}
           variant={'ghost'}
-          onClick={() => setSearchOpen(true)}
         >
-          <Search className="w-4 h-4" />
+          <Search className="h-4 w-4" />
           <span className="sr-only">Search</span>
         </Button>
       </ActionTooltip>
-      <Dialog open={searchOpen} onOpenChange={handleSearchClose}>
+      <Dialog onOpenChange={handleSearchClose} open={searchOpen}>
         <DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Search Nodes</DialogTitle>
@@ -76,15 +76,15 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
           </DialogHeader>
           <div className="flex items-center space-x-2">
             <div className="grid flex-1 gap-2">
-              <Label htmlFor="link" className="sr-only">
+              <Label className="sr-only" htmlFor="link">
                 Link
               </Label>
               <Input
-                id="searchValue"
-                defaultValue=""
-                value={value}
-                onChange={(e: any) => handleSearch(e.target.value)}
                 autoComplete="off"
+                defaultValue=""
+                id="searchValue"
+                onChange={(e: any) => handleSearch(e.target.value)}
+                value={value}
               />
             </div>
           </div>
@@ -92,17 +92,17 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
             {filteredNodes.map((node) => (
               <div key={node.id}>
                 <div
-                  className="group flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
+                  className="group my-2 flex flex-col items-start justify-start gap-1 rounded-md p-2 hover:cursor-pointer hover:bg-indigo-500 hover:text-white"
                   onClick={() => handleSelection(node.id)}
                 >
                   <div className="flex flex-col items-start">
-                    <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">
+                    <span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
                       Identifier: {node.data.name}
                     </span>
                     {/* <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                     <circle cx={1} cy={1} r={1} />
                   </svg> */}
-                    <span className="w-full line-clamp-2 text-sm">
+                    <span className="line-clamp-2 w-full text-sm">
                       {node.data.short_description}
                     </span>
                   </div>

@@ -1,4 +1,4 @@
-import { AssuranceCase } from '@/types';
+import type { AssuranceCase } from '@/types';
 
 interface Map {
   [key: string]: string | undefined;
@@ -106,7 +106,7 @@ export const updatePropertyClaimNested = (
 ) => {
   // Iterate through the property claims array
   for (let i = 0; i < array.length; i++) {
-    let propertyClaim = array[i];
+    const propertyClaim = array[i];
 
     // Check if this property claim matches the parent ID
     if (propertyClaim.id === id && propertyClaim.type === 'PropertyClaim') {
@@ -272,7 +272,7 @@ export const updatePropertyClaimNestedMove = (
   let existingPropertyClaim = null;
   const findExstingPropertyClaim = (arr: any) => {
     for (let i = 0; i < arr.length; i++) {
-      let item = arr[i];
+      const item = arr[i];
 
       if (item.id === id && item.type === 'PropertyClaim') {
         existingPropertyClaim = item;
@@ -311,7 +311,7 @@ export const updatePropertyClaimNestedMove = (
   // const newClaimId = newPropertyClaim.property_claim_id[0];
 
   let newParentId = null;
-  let newParentType = null;
+  const newParentType = null;
 
   if (updatedPropertyClaim.goal_id !== null) {
     newParentId = updatedPropertyClaim.goal_id;
@@ -466,7 +466,7 @@ export const addEvidenceToClaim = (
 export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
   // Iterate through the array
   for (let i = 0; i < array.length; i++) {
-    let item = array[i];
+    const item = array[i];
 
     // Check if this evidence matches the parent ID
     if (item.id === id) {
@@ -637,7 +637,7 @@ export const updateEvidenceNestedMove = (
   let existingEvidence = null;
   const findExistingEvidence = (arr: any) => {
     for (let i = 0; i < arr.length; i++) {
-      let item = arr[i];
+      const item = arr[i];
       if (item.evidence) {
         for (let j = 0; j < item.evidence.length; j++) {
           if (item.evidence[j].id === id) {
@@ -693,7 +693,7 @@ export const createAssuranceCaseNode = async (
   if (!token) return console.log('No token');
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -759,7 +759,7 @@ export const deleteAssuranceCaseNode = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
       method: 'DELETE',
@@ -816,7 +816,7 @@ export const updateAssuranceCaseNode = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
       method: 'PUT',
@@ -864,7 +864,7 @@ export const getAssuranceCaseNode = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
       method: 'GET',
@@ -951,13 +951,13 @@ export const updateAssuranceCase = async (
   updatedItem: any,
   id: any,
   node: any,
-  move: boolean = false
+  move = false
 ) => {
   let updatedAssuranceCase: any;
   let updatedGoals: any;
 
   switch (type) {
-    case 'context':
+    case 'context': {
       const newContext = assuranceCase.goals[0].context.map((context: any) => {
         if (context.id === id && context.type === 'Context') {
           return {
@@ -973,7 +973,8 @@ export const updateAssuranceCase = async (
         goals: [{ ...assuranceCase.goals[0], context: newContext }],
       };
       return updatedAssuranceCase;
-    case 'strategy':
+    }
+    case 'strategy': {
       // Create a new strategy array by adding the new context item
       const newStrategy = assuranceCase.goals[0].strategies.map(
         (strategy: any) => {
@@ -998,6 +999,7 @@ export const updateAssuranceCase = async (
         ],
       };
       return updatedAssuranceCase;
+    }
     case 'property':
       // updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
       if (move) {
@@ -1054,7 +1056,7 @@ export const updateAssuranceCase = async (
 };
 
 export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
-  let identifier: number = 0;
+  let identifier = 0;
   let newArray: any[] = [];
   let parentPrefix: number | null = null;
 
@@ -1066,7 +1068,7 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
       newArray = [...parentNode.data.strategies];
       break;
     case 'property':
-      parentPrefix = parseFloat(parentNode.data.name.substring(1));
+      parentPrefix = Number.parseFloat(parentNode.data.name.substring(1));
       newArray = [...parentNode.data.property_claims];
       break;
     case 'evidence':
@@ -1080,11 +1082,13 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
     const lastItem = newArray.pop();
 
     if (newNodeType === 'property' && parentNode.type === 'property') {
-      const lastIdentifier = parseFloat(lastItem.name.substring(1)).toString();
+      const lastIdentifier = Number.parseFloat(
+        lastItem.name.substring(1)
+      ).toString();
       const subIdentifier = lastIdentifier.split('.')[1];
-      identifier = parseInt(subIdentifier) + 1;
+      identifier = Number.parseInt(subIdentifier) + 1;
     } else {
-      const lastIdentifier = parseFloat(lastItem.name.substring(1));
+      const lastIdentifier = Number.parseFloat(lastItem.name.substring(1));
       identifier = lastIdentifier + 1;
     }
   } else {
@@ -1274,15 +1278,18 @@ export const addHiddenProp = async (assuranceCase: any) => {
 const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
   if (caseNode.type == 'AssuranceCase') {
     return caseNode['goals'];
-  } else if (caseNode.type == 'TopLevelNormativeGoal') {
+  }
+  if (caseNode.type == 'TopLevelNormativeGoal') {
     return caseNode['context'].concat(
       caseNode['property_claims'],
       caseNode['strategies'],
       caseNode['context']
     );
-  } else if (caseNode.type == 'Strategy') {
+  }
+  if (caseNode.type == 'Strategy') {
     return caseNode['property_claims'];
-  } else if (caseNode.type == 'PropertyClaim') {
+  }
+  if (caseNode.type == 'PropertyClaim') {
     return caseNode['property_claims'].concat(caseNode['evidence']);
   }
 
@@ -1306,7 +1313,7 @@ export function searchWithDeepFirst(
   let nodeFound: CaseNode | null = null;
 
   while (nodesToProcess.length > 0) {
-    let currentNode: CaseNode | undefined = nodesToProcess.shift();
+    const currentNode: CaseNode | undefined = nodesToProcess.shift();
     if (currentNode === undefined) {
       return [];
     }
@@ -1315,14 +1322,13 @@ export function searchWithDeepFirst(
       visitedNodes.push(currentNode);
       nodeFound = currentNode;
       break;
-    } else {
-      visitedNodes.push(currentNode);
-      let adjacentNodes = getAdjacent(currentNode);
-
-      adjacentNodes.forEach((node) => (parentMap[node.id] = currentNode));
-
-      nodesToProcess = nodesToProcess.concat(adjacentNodes);
     }
+    visitedNodes.push(currentNode);
+    const adjacentNodes = getAdjacent(currentNode);
+
+    adjacentNodes.forEach((node) => (parentMap[node.id] = currentNode));
+
+    nodesToProcess = nodesToProcess.concat(adjacentNodes);
   }
 
   return [nodeFound, parentMap];
@@ -1397,13 +1403,11 @@ export function toggleHiddenForChildren(
             obj.originalHidden = !!obj.hidden; // Record the original hidden state
           }
           obj.hidden = true; // Force hidden
+        } else if (obj.originalHidden !== undefined) {
+          obj.hidden = obj.originalHidden; // Reset to original hidden state
+          delete obj.originalHidden; // Clean up originalHidden property
         } else {
-          if (obj.originalHidden !== undefined) {
-            obj.hidden = obj.originalHidden; // Reset to original hidden state
-            delete obj.originalHidden; // Clean up originalHidden property
-          } else {
-            obj.hidden = false; // If no original hidden state, set to visible
-          }
+          obj.hidden = false; // If no original hidden state, set to visible
         }
       }
 
@@ -1435,7 +1439,7 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
     if (element.id === id) {
       return element;
     }
-    let childrenKeys = [
+    const childrenKeys = [
       'goals',
       'context',
       'property_claims',
@@ -1443,10 +1447,10 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
       'evidence',
       'comments',
     ];
-    for (let key of childrenKeys) {
+    for (const key of childrenKeys) {
       if (element[key]) {
-        for (let child of element[key]) {
-          let result = searchElement(child, id);
+        for (const child of element[key]) {
+          const result = searchElement(child, id);
           if (result) {
             return result;
           }
@@ -1467,16 +1471,16 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
  */
 export function getChildrenHiddenStatus(element: any): boolean[] {
   let hiddenStatus: boolean[] = [];
-  let childrenKeys = [
+  const childrenKeys = [
     'context',
     'property_claims',
     'strategies',
     'evidence',
     'comments',
   ];
-  for (let key of childrenKeys) {
+  for (const key of childrenKeys) {
     if (element[key]) {
-      for (let child of element[key]) {
+      for (const child of element[key]) {
         hiddenStatus.push(child.hidden);
         // Recursively check nested property claims and strategies
         if (key === 'property_claims' || key === 'strategies') {
@@ -1506,12 +1510,10 @@ export const findSiblingHiddenState = (
     if (hiddenStatus.length === 0) {
       // then get parents hidden value
       return element.hidden;
-    } else {
-      return hiddenStatus[0];
     }
-  } else {
-    console.log(`Element with ID ${parentId} not found.`);
+    return hiddenStatus[0];
   }
+  console.log(`Element with ID ${parentId} not found.`);
 };
 
 /**
@@ -1602,7 +1604,7 @@ export const detachCaseElement = async (
   }
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/detach`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/detach`;
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -1683,7 +1685,7 @@ export const attachCaseElement = async (
   console.log('Payload', payload);
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -1715,7 +1717,7 @@ export const addElementComment = async (
   if (!token) return console.log('No token');
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
 
     const requestOptions: RequestInit = {
       method: 'POST',
@@ -1750,7 +1752,7 @@ export const updateElementComment = async (
   if (!token) return console.log('No token');
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
 
     const requestOptions: RequestInit = {
       method: 'PUT',

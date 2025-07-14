@@ -1,17 +1,17 @@
-import SignInForm from '@/components/auth/SignInForm';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
+import SignInForm from '@/components/auth/SignInForm';
 
 export default async function SignInPage() {
   return (
     <>
       <div className="flex min-h-screen flex-1">
-        <div className="flex lg:w-1/2 w-full flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+        <div className="flex w-full flex-col justify-center px-4 py-12 sm:px-6 lg:w-1/2 lg:flex-none lg:px-20 xl:px-24">
           <SignInForm />
-          <div className="flex justify-center items-center my-8">
+          <div className="my-8 flex items-center justify-center">
             <Link
+              className="flex items-center justify-start text-muted-foreground text-sm hover:text-indigo-500"
               href={'/'}
-              className="flex justify-start items-center text-sm text-muted-foreground hover:text-indigo-500"
             >
               Back to homepage
             </Link>
@@ -25,11 +25,11 @@ export default async function SignInPage() {
             alt=""
           /> */}
           <Image
-            className="absolute inset-0 h-full w-full object-cover"
-            src="https://raw.githubusercontent.com/alan-turing-institute/turing-commons/main/docs/assets/images/illustrations/assurance-alt.jpg"
             alt="Assurance platform illustration"
+            className="absolute inset-0 h-full w-full object-cover"
             fill
             sizes="50vw"
+            src="https://raw.githubusercontent.com/alan-turing-institute/turing-commons/main/docs/assets/images/illustrations/assurance-alt.jpg"
           />
         </div>
       </div>

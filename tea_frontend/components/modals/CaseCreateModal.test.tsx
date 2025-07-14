@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { HttpResponse, http } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { server } from '@/src/__tests__/mocks/server';
 import {
   render,
-  screen,
-  waitFor,
   renderWithAuth,
+  screen,
   userEvent,
+  waitFor,
 } from '@/src/__tests__/utils/test-utils';
 import { CaseCreateModal } from './CaseCreateModal';
-import { server } from '@/src/__tests__/mocks/server';
-import { http, HttpResponse } from 'msw';
 
 // Mock the hook
 const mockCreateCaseModal = {
@@ -58,7 +58,7 @@ vi.mock('@/components/ui/modal', () => ({
       <div data-testid="modal" role="dialog">
         <h1>{title}</h1>
         <p>{description}</p>
-        <button onClick={onClose} data-testid="modal-close">
+        <button data-testid="modal-close" onClick={onClose}>
           Close
         </button>
         {children}

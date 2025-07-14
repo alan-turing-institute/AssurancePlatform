@@ -1,16 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   render,
-  screen,
   renderWithAuth,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
-import userEvent from '@testing-library/user-event';
 import { Navbar } from './Navbar';
 
 // Mock the navigation components to focus on Navbar logic
 vi.mock('./mobile-nav', () => ({
   MobileNav: ({ sidebarOpen, setSidebarOpen }: any) => (
-    <div data-testid="mobile-nav" data-sidebar-open={sidebarOpen}>
+    <div data-sidebar-open={sidebarOpen} data-testid="mobile-nav">
       <button onClick={() => setSidebarOpen(!sidebarOpen)}>
         Toggle Mobile Nav
       </button>
@@ -24,7 +24,7 @@ vi.mock('./desktop-nav', () => ({
 
 vi.mock('./menu-toggle', () => ({
   default: ({ setSidebarOpen }: any) => (
-    <button onClick={() => setSidebarOpen(true)} data-testid="menu-toggle">
+    <button data-testid="menu-toggle" onClick={() => setSidebarOpen(true)}>
       Menu Toggle
     </button>
   ),

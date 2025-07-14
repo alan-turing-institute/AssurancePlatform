@@ -1,6 +1,6 @@
 'use client';
 
-import { Edge } from 'reactflow';
+import type { Edge } from 'reactflow';
 
 export const initEdges = [
   // {

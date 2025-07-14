@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import useStore from '@/data/store';
 import NotesSheet from '../ui/notes-sheet';
 import NotesFeed from './NotesFeed';
 import NotesForm from './NotesForm';
-import useStore from '@/data/store';
 
 interface CaseNotesProps {
   isOpen: boolean;
@@ -25,10 +25,10 @@ const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
 
   return (
     <NotesSheet
+      description={`Use this section to view ${assuranceCase.permissions !== 'view' ? 'and manage your' : ''} notes.`}
       isOpen={isOpen}
       onClose={onClose}
       title={`${assuranceCase.permissions !== 'view' ? 'Manage' : ''} Case Notes`}
-      description={`Use this section to view ${assuranceCase.permissions !== 'view' ? 'and manage your' : ''} notes.`}
     >
       {/* <CreateForm onClose={onClose} /> */}
       {assuranceCase.permissions !== 'view' && <NotesForm />}

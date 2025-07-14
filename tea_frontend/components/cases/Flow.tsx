@@ -2,27 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
-  MiniMap,
-  Controls,
   Background,
+  Controls,
+  MiniMap,
   useReactFlow,
 } from 'reactflow';
 
 import 'reactflow/dist/style.css';
+import { Loader2, Unplug, X } from 'lucide-react';
 import NodeEdit from '@/components/common/NodeEdit';
-import ActionButtons from './ActionButtons';
 
 import useStore from '@/data/store';
-import { Loader2, Unplug, X } from 'lucide-react';
 import { convertAssuranceCase } from '@/lib/convert-case';
 import { getLayoutedElements } from '@/lib/layout-helper';
+import ActionButtons from './ActionButtons';
 
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from 'next-themes';
-import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/button';
+import { useToast } from '../ui/use-toast';
 
-interface FlowProps {}
+type FlowProps = {};
 
 function Flow({}: FlowProps) {
   const { fitView } = useReactFlow();
@@ -98,52 +98,52 @@ function Flow({}: FlowProps) {
   return (
     <div className="min-h-screen">
       {loading ? (
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin" />
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       ) : (
         <div id="ChartFlow" ref={reactFlowWrapper}>
           <ReactFlow
+            className="min-h-screen"
+            edges={edges}
+            fitView
             id="ReactFlow"
             nodes={nodes}
-            edges={edges}
+            nodesDraggable={false}
+            nodeTypes={nodeTypes}
             onNodeClick={handleNodeClick}
             onNodesChange={onNodesChange}
-            className="min-h-screen"
-            fitView
-            nodeTypes={nodeTypes}
-            nodesDraggable={false}
           >
             <Controls className="z-50" />
             <Background />
           </ReactFlow>
           <ActionButtons
-            showCreateGoal={showCreateGoal}
             actions={{ onLayout }}
             notify={notify}
             notifyError={notifyError}
+            showCreateGoal={showCreateGoal}
           />
           <NodeEdit
-            node={selectedNode}
             isOpen={editOpen}
+            node={selectedNode}
             setEditOpen={setEditOpen}
           />
           {orphanedElements &&
             orphanedElements.length > 0 &&
             showOrphanMessage && (
-              <div className="absolute top-16 px-8 py-2 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm">
-                <div className="flex justify-center items-center">
-                  <div className="container mx-auto flex justify-center items-center gap-2">
-                    <Unplug className="w-4 h-4" />
+              <div className="absolute top-16 left-0 w-full bg-slate-200/30 px-8 py-2 text-foreground backdrop-blur-sm dark:bg-violet-500/30">
+                <div className="flex items-center justify-center">
+                  <div className="container mx-auto flex items-center justify-center gap-2">
+                    <Unplug className="h-4 w-4" />
                     <p>You have orphaned elements for this assurance case.</p>
                   </div>
                   <Button
-                    variant={'ghost'}
-                    size={'icon'}
                     className="hover:bg-gray-400/10 dark:hover:bg-slate-900/10"
                     onClick={() => setShowOrphanMessage(false)}
+                    size={'icon'}
+                    variant={'ghost'}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

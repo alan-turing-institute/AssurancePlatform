@@ -1,5 +1,5 @@
-import React from 'react';
 import { DownloadIcon } from 'lucide-react';
+import React from 'react';
 import CaseStudyCaseItem from './CaseStudyCaseItem';
 
 interface CaseStudyCasesProps {
@@ -10,17 +10,17 @@ const CaseStudyCases = ({ assuranceCaseIds }: CaseStudyCasesProps) => {
   if (assuranceCaseIds.length > 0) {
     return (
       <>
-        <h3 className="font-semibold text-lg text-black">
+        <h3 className="font-semibold text-black text-lg">
           Related Assurance Cases
         </h3>
         <ul
+          className="mt-8 mb-24 divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl"
           role="list"
-          className="divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl mt-8 mb-24"
         >
           {assuranceCaseIds.map((assuranceCase) => (
             <CaseStudyCaseItem
-              key={assuranceCase.id}
               assuranceCaseId={assuranceCase}
+              key={assuranceCase.id}
             />
           ))}
         </ul>

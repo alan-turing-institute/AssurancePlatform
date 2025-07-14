@@ -1,5 +1,7 @@
 'use client';
 
+import { saveAs } from 'file-saver';
+import html2canvas from 'html2canvas';
 import {
   Camera,
   Expand,
@@ -18,28 +20,25 @@ import {
   Trash2,
   Users2,
 } from 'lucide-react';
-import { Node } from 'reactflow';
-import { useEffect, useState } from 'react';
-import NodeCreate from '@/components/common/NodeCreate';
-import useStore from '@/data/store';
+import { neatJSON } from 'neatjson';
 // import { useLoginToken } from "@/hooks/useAuth";
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import { Node } from 'reactflow';
+import { capture, test } from '@/actions/capture';
+import NodeCreate from '@/components/common/NodeCreate';
+import useStore from '@/data/store';
 import { AlertModal } from '../modals/alertModal';
-import { neatJSON } from 'neatjson';
-import { saveAs } from 'file-saver';
 import ActionTooltip from '../ui/action-tooltip';
 import CaseNotes from './CaseNotes';
-
-import html2canvas from 'html2canvas';
-import { capture, test } from '@/actions/capture';
-import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useShareModal } from '@/hooks/useShareModal';
-import { usePermissionsModal } from '@/hooks/usePermissionsModal';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import SearchNodes from '../common/SearchNodes';
-import { useResourcesModal } from '@/hooks/useResourcesModal';
 import { useSession } from 'next-auth/react';
+import { usePermissionsModal } from '@/hooks/usePermissionsModal';
+import { useResourcesModal } from '@/hooks/useResourcesModal';
+import { useShareModal } from '@/hooks/useShareModal';
+import SearchNodes from '../common/SearchNodes';
 
 interface ActionButtonProps {
   showCreateGoal: boolean;
@@ -191,29 +190,29 @@ const ActionButtons = ({
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 flex justify-center items-center">
-      <div className="w-1/8 m-auto bg-indigo-100 dark:bg-indigo-500/20 shadow-lg text-white py-2 px-4 flex justify-center items-center gap-2 rounded-full">
-        <div className="pr-2 border-r-2 border-r-indigo-200 dark:border-r-indigo-800/60 flex justify-center items-center gap-2">
+    <div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
+      <div className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20">
+        <div className="flex items-center justify-center gap-2 border-r-2 border-r-indigo-200 pr-2 dark:border-r-indigo-800/60">
           {showCreateGoal &&
             (assuranceCase.permissions !== 'view' ||
               assuranceCase.permissions !== 'review') && (
               <ActionTooltip label="New Goal">
                 <button
+                  className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                   onClick={() => setOpen(true)}
-                  className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="h-5 w-5" />
                   <span className="sr-only">Add Goal</span>
                 </button>
               </ActionTooltip>
             )}
           <ActionTooltip label="Focus">
             <button
+              className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               id="FocusBtn"
               onClick={() => onLayout('TB')}
-              className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"
             >
-              <Group className="w-5 h-5" />
+              <Group className="h-5 w-5" />
               <span className="sr-only">Focus</span>
             </button>
           </ActionTooltip>
@@ -221,32 +220,32 @@ const ActionButtons = ({
             assuranceCase.permissions !== 'review' && (
               <ActionTooltip label="Reset Identifiers">
                 <button
+                  className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                   onClick={() => setAlertOpen(true)}
-                  className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"
                 >
-                  <RotateCw className="w-5 h-5" />
+                  <RotateCw className="h-5 w-5" />
                   <span className="sr-only">Reset Identifiers</span>
                 </button>
               </ActionTooltip>
             )}
           <ActionTooltip label="Resources">
             <button
+              className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               onClick={() => resourcesModal.onOpen()}
-              className="w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full p-3"
             >
-              <Info className="w-5 h-5" />
+              <Info className="h-5 w-5" />
               <span className="sr-only">Resources</span>
             </button>
           </ActionTooltip>
         </div>
-        <div className="flex justify-center items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {assuranceCase.permissions !== 'view' && (
             <ActionTooltip label="Share & Export">
               <button
+                className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={() => shareModal.onOpen()}
-                className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"
               >
-                <ExternalLink className="w-5 h-5" />
+                <ExternalLink className="h-5 w-5" />
                 <span className="sr-only">Share & Export</span>
               </button>
             </ActionTooltip>
@@ -254,20 +253,20 @@ const ActionButtons = ({
           {assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Permissions">
               <button
+                className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={() => permissionModal.onOpen()}
-                className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"
               >
-                <Users2 className="w-5 h-5" />
+                <Users2 className="h-5 w-5" />
                 <span className="sr-only">Permissions</span>
               </button>
             </ActionTooltip>
           )}
           <ActionTooltip label="Notes">
             <button
+              className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               onClick={() => setNotesOpen(true)}
-              className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"
             >
-              <Notebook className="w-5 h-5" />
+              <Notebook className="h-5 w-5" />
               <span className="sr-only">Notes</span>
             </button>
           </ActionTooltip>
@@ -275,10 +274,10 @@ const ActionButtons = ({
             assuranceCase.permissions === 'editor') && (
             <ActionTooltip label="Capture">
               <button
+                className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={handleCapture}
-                className="p-3 w-50 h-50 bg-indigo-700 hover:bg-indigo-800 transition-all rounded-full"
               >
-                <Camera className="w-5 h-5" />
+                <Camera className="h-5 w-5" />
                 <span className="sr-only">Capture</span>
               </button>
             </ActionTooltip>
@@ -286,10 +285,10 @@ const ActionButtons = ({
           {assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Delete">
               <button
+                className="h-50 w-50 rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"
                 onClick={() => setDeleteOpen(true)}
-                className="p-3 w-50 h-50 bg-rose-500 hover:bg-rose-600 transition-all rounded-full"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="h-5 w-5" />
                 <span className="sr-only">Delete</span>
               </button>
             </ActionTooltip>
@@ -298,22 +297,22 @@ const ActionButtons = ({
         <NodeCreate isOpen={open} setOpen={setOpen} />
         <CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
         <AlertModal
+          confirmButtonText={'Delete'}
           isOpen={deleteOpen}
+          loading={loading}
           onClose={() => setDeleteOpen(false)}
           onConfirm={onDelete}
-          loading={loading}
-          confirmButtonText={'Delete'}
         />
         <AlertModal
+          cancelButtonText={'No, keep current identifiers'}
+          confirmButtonText={'Yes, reset all identifiers'}
           isOpen={alertOpen}
-          onClose={() => setAlertOpen(false)}
-          onConfirm={handleNameReset}
           loading={loading}
           message={
             'Updating the identifiers will systematically reset all of the unique labels that are displayed for each of the elements (e.g. P1, E1), so that they are continuous. This cannot be undone.'
           }
-          confirmButtonText={'Yes, reset all identifiers'}
-          cancelButtonText={'No, keep current identifiers'}
+          onClose={() => setAlertOpen(false)}
+          onConfirm={handleNameReset}
         />
       </div>
     </div>

@@ -1,10 +1,10 @@
 'use client';
 
-import { AlertModal } from '@/components/modals/alertModal';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
+import { AlertModal } from '@/components/modals/alertModal';
 import { useToast } from '@/components/ui/use-toast';
-import { useRouter } from 'next/navigation';
 
 interface DeleteFormProps {
   user: any;
@@ -27,7 +27,7 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 
   const handleDeleteUser = async () => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${user.id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${user.id}/`;
 
       const requestOptions: RequestInit = {
         method: 'DELETE',
@@ -54,10 +54,10 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
   return (
     <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
       <div>
-        <h2 className="text-base font-semibold leading-7 text-foreground">
+        <h2 className="font-semibold text-base text-foreground leading-7">
           Delete account
         </h2>
-        <p className="mt-1 text-sm leading-6 text-gray-400">
+        <p className="mt-1 text-gray-400 text-sm leading-6">
           No longer want to use our service? You can delete your account here.
           This action is not reversible. All information related to this account
           will be deleted permanently.
@@ -66,27 +66,27 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 
       <form className="flex items-start md:col-span-2">
         <button
-          type="submit"
-          className="rounded-md bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-400"
+          className="rounded-md bg-red-500 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-red-400"
           onClick={(e) => {
             e.preventDefault();
             setDeleteOpen(true);
           }}
+          type="submit"
         >
           Yes, delete my account
         </button>
       </form>
 
       <AlertModal
+        cancelButtonText={'No, keep my account'}
+        confirmButtonText={'Yes, delete my account!'}
         isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDeleteUser}
         loading={deleteLoading}
         message={
           'Are you sure you want to delete your account? This will sign you out immediatley.'
         }
-        confirmButtonText={'Yes, delete my account!'}
-        cancelButtonText={'No, keep my account'}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDeleteUser}
       />
     </div>
   );

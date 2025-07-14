@@ -1,9 +1,9 @@
 'use server';
 
-import fs from 'fs';
-import path from 'path';
 import { BlobServiceClient } from '@azure/storage-blob';
+import fs from 'fs';
 import { revalidatePath } from 'next/cache';
+import path from 'path';
 
 /**
  * Captures a base64-encoded image, converts it to a buffer, and uploads it to Azure Blob Storage.
@@ -49,11 +49,10 @@ export const existingImage = async (filePath: string): Promise<boolean> => {
     if (error.code === 'ENOENT') {
       // File does not exist
       return false;
-    } else {
-      // Other error occurred (e.g., permission issue)
-      console.error('Error checking file existence:', error);
-      return false;
     }
+    // Other error occurred (e.g., permission issue)
+    console.error('Error checking file existence:', error);
+    return false;
   }
 };
 
@@ -91,7 +90,7 @@ const saveToStorage = async (
     return imageUrl;
   } catch (error) {
     console.error('Error uploading to storage:', error);
-    return undefined;
+    return;
   }
 };
 

@@ -1,6 +1,6 @@
-import { fetchPublishedAssuranceCaseId } from '@/actions/caseStudies';
 import { DownloadIcon } from 'lucide-react';
 import React from 'react';
+import { fetchPublishedAssuranceCaseId } from '@/actions/caseStudies';
 import DownloadCaseButton from './DownloadCaseButton';
 
 interface CaseStudyCaseItemProps {
@@ -15,15 +15,15 @@ const CaseStudyCaseItem = async ({
 
   return (
     <li
+      className="relative flex flex-col justify-start gap-x-6 px-4 py-5 hover:cursor-pointer hover:bg-gray-50 sm:px-6"
       key={publishedAssuranceCase.id}
-      className="relative flex flex-col justify-start gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 hover:cursor-pointer"
     >
       <div className="flex min-w-0 gap-x-4">
         <div className="min-w-0 flex-auto">
-          <p className="text-md font-semibold text-gray-900 mb-2">
+          <p className="mb-2 font-semibold text-gray-900 text-md">
             {publishedAssuranceCase.title}
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-gray-500 text-sm">
             {publishedAssuranceCase.description}
           </p>
         </div>

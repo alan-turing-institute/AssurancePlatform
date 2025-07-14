@@ -1,7 +1,7 @@
-import { NextAuthOptions } from 'next-auth';
-import GithubProvider from 'next-auth/providers/github';
-import CredentialsProvider from 'next-auth/providers/credentials';
 import dotenv from 'dotenv';
+import type { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import GithubProvider from 'next-auth/providers/github';
 
 dotenv.config(); // Explicitly load environment variables
 
@@ -132,16 +132,15 @@ export const authOptions: NextAuthOptions = {
           user.key = result.key; // Include the key for GitHub users
           user.provider = account.provider;
           return true;
-        } else {
-          console.error(
-            `GitHub authentication failed: ${response.status} ${response.statusText}`
-          );
-          try {
-            const errorData = await response.json();
-            console.error('GitHub auth error details:', errorData);
-          } catch (e) {
-            console.error('Unable to parse error response');
-          }
+        }
+        console.error(
+          `GitHub authentication failed: ${response.status} ${response.statusText}`
+        );
+        try {
+          const errorData = await response.json();
+          console.error('GitHub auth error details:', errorData);
+        } catch (e) {
+          console.error('Unable to parse error response');
         }
 
         return false;

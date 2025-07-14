@@ -1,9 +1,9 @@
 'use client';
 
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { AlertModal } from '../modals/alertModal';
 import CreateSheet from '../ui/create-sheet';
 import CreateForm from './CreateForm';
-import { AlertModal } from '../modals/alertModal';
 
 interface NodeCreateProps {
   isOpen: boolean;
@@ -40,22 +40,22 @@ const NodeCreate = ({ isOpen, setOpen }: NodeCreateProps) => {
   };
 
   return (
-    <CreateSheet isOpen={isOpen} onClose={handleClose} onChange={onChange}>
+    <CreateSheet isOpen={isOpen} onChange={onChange} onClose={handleClose}>
       <CreateForm
         onClose={handleClose}
         setUnresolvedChanges={setUnresolvedChanges}
       />
 
       <AlertModal
+        cancelButtonText={'No, keep editing'}
+        confirmButtonText={'Yes, discard changes!'}
         isOpen={alertOpen}
-        onClose={() => setAlertOpen(false)}
-        onConfirm={handleClose}
         loading={loading}
         message={
           'You have changes that have not been updated. Would you like to discard these changes?'
         }
-        confirmButtonText={'Yes, discard changes!'}
-        cancelButtonText={'No, keep editing'}
+        onClose={() => setAlertOpen(false)}
+        onConfirm={handleClose}
       />
     </CreateSheet>
   );

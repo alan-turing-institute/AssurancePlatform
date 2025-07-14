@@ -1,10 +1,10 @@
 'use client';
 
-import { updateCaseStudy } from '@/actions/caseStudies';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import React from 'react';
+import { updateCaseStudy } from '@/actions/caseStudies';
 import { useToast } from './use-toast';
-import { useRouter } from 'next/navigation';
 
 interface PublishButtonProps {
   label: string;
@@ -104,9 +104,9 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 
   return (
     <button
-      type="button"
+      className="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
       onClick={handlePublish}
-      className="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      type="button"
     >
       {label}
     </button>

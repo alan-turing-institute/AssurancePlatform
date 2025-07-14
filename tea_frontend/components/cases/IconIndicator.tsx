@@ -1,12 +1,12 @@
 'use client';
 
-import useStore from '@/data/store';
 import {
   ChatBubbleBottomCenterTextIcon,
   InformationCircleIcon,
 } from '@heroicons/react/20/solid';
 import { useSession } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
+import useStore from '@/data/store';
 
 interface IconIndicatorProps {
   data: any;
@@ -42,7 +42,7 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
     }
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${data.id}/comments/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${data.id}/comments/`;
 
       const requestOptions: RequestInit = {
         method: 'GET',
@@ -71,7 +71,7 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
     <div
       className={`inline-flex ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}
     >
-      <div className="flex justify-start items-center gap-1">
+      <div className="flex items-center justify-start gap-1">
         {hasAssumptionOrJustificationOrContext && (
           <InformationCircleIcon className="size-3 text-white/90" />
         )}

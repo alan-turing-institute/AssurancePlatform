@@ -1,9 +1,9 @@
 'use client';
 
+import { ArrowLeftIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 import { Button } from './button';
-import { useRouter } from 'next/navigation';
-import { ArrowLeftIcon } from 'lucide-react';
 
 interface BackButtonProps {
   url?: string;
@@ -16,9 +16,9 @@ export default function BackButton({ url }: BackButtonProps) {
 
   return (
     <Button
+      className="mb-8 flex items-center justify-start gap-2"
       onClick={() => router.push(redirectUrl)}
       variant={'outline'}
-      className="flex justify-start items-center gap-2 mb-8"
     >
       <ArrowLeftIcon className="size-4" />
       Back

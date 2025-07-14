@@ -1,9 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { MoveLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -16,8 +17,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MoveLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 const FormSchema = z.object({
   name: z.string().min(2, {
@@ -48,16 +47,16 @@ export function FeedbackForm() {
   }
 
   return (
-    <div className="bg-background rounded-md shadow-xl w-full max-w-3xl mx-12 p-8">
-      <h1 className="text-lg font-bold mb-2">Feedback Form</h1>
-      <p className="text-muted-foreground mb-4">
+    <div className="mx-12 w-full max-w-3xl rounded-md bg-background p-8 shadow-xl">
+      <h1 className="mb-2 font-bold text-lg">Feedback Form</h1>
+      <p className="mb-4 text-muted-foreground">
         We appreciate any type of feedback, please fill in the form below and
         let us know what you think of our product.
       </p>
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
           className="w-full space-y-6"
+          onSubmit={form.handleSubmit(onSubmit)}
         >
           <FormField
             control={form.control}
@@ -80,8 +79,8 @@ export function FeedbackForm() {
                 <FormLabel>Email Address</FormLabel>
                 <FormControl>
                   <Input
-                    type="email"
                     placeholder="example@gmail.com"
+                    type="email"
                     {...field}
                   />
                 </FormControl>
@@ -97,8 +96,8 @@ export function FeedbackForm() {
                 <FormLabel>Your Feedback</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Let us know what you think..."
                     className="resize-none"
+                    placeholder="Let us know what you think..."
                     rows={10}
                     {...field}
                   />
@@ -107,7 +106,7 @@ export function FeedbackForm() {
               </FormItem>
             )}
           />
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -115,12 +114,12 @@ export function FeedbackForm() {
               }}
               variant={'ghost'}
             >
-              <MoveLeft className="w-4 h-4 mr-2" />
+              <MoveLeft className="mr-2 h-4 w-4" />
               Cancel
             </Button>
             <Button
+              className="bg-indigo-600 text-white hover:bg-indigo-700"
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               Submit
             </Button>

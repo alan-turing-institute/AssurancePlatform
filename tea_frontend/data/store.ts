@@ -1,22 +1,22 @@
-import { create } from 'zustand';
-import {
-  Connection,
-  Edge,
-  EdgeChange,
-  Node,
-  NodeChange,
-  addEdge,
-  OnNodesChange,
-  OnEdgesChange,
-  OnConnect,
-  applyNodeChanges,
-  applyEdgeChanges,
-  NodeTypes,
-} from 'reactflow';
-import { initNodes } from './nodes';
-import { initEdges } from './edges';
-import { nodeTypes } from './nodeTypes';
 import Dagre from '@dagrejs/dagre';
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Connection,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+  type NodeTypes,
+  type OnConnect,
+  type OnEdgesChange,
+  type OnNodesChange,
+} from 'reactflow';
+import { create } from 'zustand';
+import { initEdges } from './edges';
+import { initNodes } from './nodes';
+import { nodeTypes } from './nodeTypes';
 
 type Store = {
   assuranceCase: any;
@@ -79,7 +79,7 @@ const useStore = create<Store>((set, get) => ({
   orphanedElements: [],
   nodes: initNodes,
   edges: initEdges,
-  nodeTypes: nodeTypes,
+  nodeTypes,
   onNodesChange: (changes: NodeChange[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -106,7 +106,7 @@ const useStore = create<Store>((set, get) => ({
     get().layoutNodes(nodes, edges);
   },
   setOrphanedElements: (orphanedElements: any) => {
-    let newArray: any[] = [];
+    const newArray: any[] = [];
 
     if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
       orphanedElements.contexts.map((context: any) => {
@@ -171,14 +171,16 @@ const useStore = create<Store>((set, get) => ({
   nodeComments: [],
   setNodeComments: (comments: any[]) => {
     const sortedComments = comments.sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     set({ nodeComments: sortedComments });
   },
   caseNotes: [],
   setCaseNotes: (comments: any[]) => {
     const sortedComments = comments.sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     set({ caseNotes: sortedComments });
   },

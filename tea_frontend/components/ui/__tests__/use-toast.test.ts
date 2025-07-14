@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useToast } from '../use-toast';
-import { ToastActionElement, ToastAction } from '../toast';
+import { act, renderHook } from '@testing-library/react';
 import React from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ToastAction, type ToastActionElement } from '../toast';
+import { useToast } from '../use-toast';
 
 describe('useToast', () => {
   beforeEach(() => {
@@ -242,7 +242,7 @@ describe('useToast', () => {
 
       // Fast forward past the remove delay (1000000ms)
       act(() => {
-        vi.advanceTimersByTime(1000001);
+        vi.advanceTimersByTime(1_000_001);
       });
 
       expect(result.current.toasts).toHaveLength(0);
@@ -268,7 +268,7 @@ describe('useToast', () => {
 
       // Fast forward past the remove delay
       act(() => {
-        vi.advanceTimersByTime(1000001);
+        vi.advanceTimersByTime(1_000_001);
       });
 
       // Should still be empty (no double removal)
@@ -283,7 +283,7 @@ describe('useToast', () => {
       });
 
       act(() => {
-        vi.advanceTimersByTime(500000); // Half the delay
+        vi.advanceTimersByTime(500_000); // Half the delay
       });
 
       act(() => {
@@ -296,7 +296,7 @@ describe('useToast', () => {
 
       // Fast forward to remove Toast 2
       act(() => {
-        vi.advanceTimersByTime(1000001);
+        vi.advanceTimersByTime(1_000_001);
       });
 
       expect(result.current.toasts).toHaveLength(0);

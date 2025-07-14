@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   convertAssuranceCase,
-  createNodesRecursively,
   createEdgesFromNodes,
+  createNodesRecursively,
 } from '../convert-case';
 
 describe('convert-case utilities', () => {
@@ -556,7 +556,7 @@ describe('convert-case utilities', () => {
     });
 
     it('should handle extremely deep nesting', async () => {
-      let deepCase = {
+      const deepCase = {
         id: 1,
         name: 'Deep Case',
         goals: [

@@ -1,4 +1,9 @@
-import React from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Goal } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -9,14 +14,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
-import { Goal } from 'lucide-react';
 import useStore from '@/data/store';
-import { useSession } from 'next-auth/react';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+
 // import { useLoginToken } from '@/hooks/useAuth'
 
 const formSchema = z.object({
@@ -25,7 +26,7 @@ const formSchema = z.object({
   }),
 });
 
-interface NotesFormProps {}
+type NotesFormProps = {};
 
 const NotesForm: React.FC<NotesFormProps> = ({}) => {
   const {
@@ -48,7 +49,7 @@ const NotesForm: React.FC<NotesFormProps> = ({}) => {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/comments/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/comments/`;
 
       const requestOptions: RequestInit = {
         method: 'POST',
@@ -88,7 +89,7 @@ const NotesForm: React.FC<NotesFormProps> = ({}) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 mt-6">
+      <form className="mt-6 space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="note"
@@ -102,10 +103,10 @@ const NotesForm: React.FC<NotesFormProps> = ({}) => {
             </FormItem>
           )}
         />
-        <div className="flex justify-start items-center gap-3">
+        <div className="flex items-center justify-start gap-3">
           <Button
+            className="bg-indigo-500 text-white hover:bg-indigo-600"
             type="submit"
-            className="bg-indigo-500 hover:bg-indigo-600 text-white"
           >
             Add Note
           </Button>

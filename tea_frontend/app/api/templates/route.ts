@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import fs from 'fs';
+import { NextResponse } from 'next/server';
 import path from 'path';
 
 export async function GET() {
@@ -18,7 +18,7 @@ export async function GET() {
   });
 
   // Find default case
-  let defaultCase =
+  const defaultCase =
     newTemplates.find((c) => c.name === 'empty') || newTemplates[0];
 
   return NextResponse.json({ newTemplates, defaultCase });

@@ -1,6 +1,12 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { MinusIcon, PlusIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -9,18 +15,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
 import useStore from '@/data/store';
 import {
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
-import { useSession } from 'next-auth/react';
-import { MinusIcon, PlusIcon } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   assumption: z.string().optional(),
@@ -98,7 +99,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
     }
   }
 
-  let readOnly =
+  const readOnly =
     assuranceCase.permissions === 'view' ||
     assuranceCase.permissions === 'review'
       ? true
@@ -118,31 +119,31 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
         Please use this section to manage attributes for this element.
       </div>
 
-      <div className="mt-4 flex justify-start items-center gap-2">
+      <div className="mt-4 flex items-center justify-start gap-2">
         {!node.data.assumption && (
           <Button
-            variant={'outline'}
-            size={'sm'}
             onClick={() => setNewAssumption(!newAssumption)}
+            size={'sm'}
+            variant={'outline'}
           >
             {newAssumption ? (
-              <MinusIcon className="size-3 mr-2" />
+              <MinusIcon className="mr-2 size-3" />
             ) : (
-              <PlusIcon className="size-3 mr-2" />
+              <PlusIcon className="mr-2 size-3" />
             )}
             Assumption
           </Button>
         )}
         {!node.data.justification && node.type === 'strategy' && (
           <Button
-            variant={'outline'}
-            size={'sm'}
             onClick={() => setNewJustification(!newJustification)}
+            size={'sm'}
+            variant={'outline'}
           >
             {newJustification ? (
-              <MinusIcon className="size-3 mr-2" />
+              <MinusIcon className="mr-2 size-3" />
             ) : (
-              <PlusIcon className="size-3 mr-2" />
+              <PlusIcon className="mr-2 size-3" />
             )}
             Justification
           </Button>
@@ -150,7 +151,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 my-4">
+        <form className="my-4 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           {(node.data.assumption || newAssumption) && (
             <FormField
               control={form.control}
@@ -192,14 +193,14 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
                 )}
               />
             )}
-          <div className="flex justify-start items-center gap-3 pt-4">
-            <Button variant={'outline'} onClick={handleCancel}>
+          <div className="flex items-center justify-start gap-3 pt-4">
+            <Button onClick={handleCancel} variant={'outline'}>
               Cancel
             </Button>
             <Button
-              type="submit"
-              disabled={loading}
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+              disabled={loading}
+              type="submit"
             >
               {loading ? 'Saving...' : 'Update Attributes'}
             </Button>

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { Blocks } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 
 interface LinkedCaseModalProps {
   isOpen: boolean;
@@ -31,20 +31,20 @@ export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
 
   return (
     <Modal
-      title="Linked Case Studies"
       description="You cannot unpublish this assurance case because it is linked to these case studies."
       isOpen={isOpen}
       onClose={onClose}
+      title="Linked Case Studies"
     >
-      <div className="max-h-60 overflow-y-auto mb-4">
-        <ul className="space-y-1 text-sm text-muted-foreground">
+      <div className="mb-4 max-h-60 overflow-y-auto">
+        <ul className="space-y-1 text-muted-foreground text-sm">
           {linkedCaseStudies.map((caseStudy) => (
             <li key={caseStudy.id}>
               <Link
+                className="flex items-center gap-2 text-indigo-600 hover:underline dark:text-indigo-500"
                 href={`/dashboard/case-studies/${caseStudy.id}`}
-                target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-600 dark:text-indigo-500 hover:underline flex items-center gap-2"
+                target="_blank"
               >
                 <Blocks className="size-4" />
                 {caseStudy.title}
@@ -54,8 +54,8 @@ export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
         </ul>
       </div>
 
-      <div className="pt-6 flex justify-end w-full space-x-2">
-        <Button disabled={loading} variant="outline" onClick={onClose}>
+      <div className="flex w-full justify-end space-x-2 pt-6">
+        <Button disabled={loading} onClick={onClose} variant="outline">
           Close
         </Button>
       </div>

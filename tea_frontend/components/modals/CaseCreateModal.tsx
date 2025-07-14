@@ -1,12 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft, ArrowRight, Check, Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-
-import { Modal } from '@/components/ui/modal';
-import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
-
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 import {
   Form,
   FormControl,
@@ -16,14 +16,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
+import { Textarea } from '@/components/ui/textarea';
+import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
 import { Button } from '../ui/button';
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Loader } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { useSession } from 'next-auth/react';
+
 // import { useLoginToken } from "@/hooks/useAuth";
 
 const formSchema = z.object({
@@ -131,22 +130,22 @@ export const CaseCreateModal = () => {
 
   return (
     <Modal
-      title="Create New Assurance Case"
       description="Please enter a name and description for your new assurance case."
       isOpen={createCaseModal.isOpen}
       onClose={createCaseModal.onClose}
+      title="Create New Assurance Case"
     >
       {loading ? (
-        <div className="flex justify-center items-center p-16">
-          <Loader className="w-10 h-10 animate-spin" />
+        <div className="flex items-center justify-center p-16">
+          <Loader className="h-10 w-10 animate-spin" />
         </div>
       ) : (
         <div className="space-y-4 py-2 pb-4">
           <div className="space-y-2">
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6"
+                onSubmit={form.handleSubmit(onSubmit)}
               >
                 <FormField
                   control={form.control}
@@ -211,11 +210,11 @@ export const CaseCreateModal = () => {
                   </FormItem>
                 )}
               /> */}
-                <div className="pt-6 space-x-2 flex items-center justify-end w-full">
+                <div className="flex w-full items-center justify-end space-x-2 pt-6">
                   <Button
                     disabled={loading}
-                    variant="outline"
                     onClick={(e) => handleCancel(e)}
+                    variant="outline"
                   >
                     Cancel
                   </Button>

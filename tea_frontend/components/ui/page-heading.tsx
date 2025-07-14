@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from './button';
-import RedirectButton from './redirect-button';
 import PublishButton from './publish-button';
+import RedirectButton from './redirect-button';
 
 interface PageHeadingProps {
   title: string;
@@ -32,20 +32,20 @@ export default function PageHeading({
   return (
     <div className="md:flex md:items-center md:justify-between">
       <div className="min-w-0 flex-1">
-        <h2 className="text-xl font-bold text-foreground sm:truncate">
+        <h2 className="font-bold text-foreground text-xl sm:truncate">
           {title}
         </h2>
         {description && (
           <p className="mt-2 text-muted-foreground text-sm">{description}</p>
         )}
       </div>
-      <div className="mt-4 flex md:ml-4 md:mt-0">
+      <div className="mt-4 flex md:mt-0 md:ml-4">
         {edit && <Button variant={'ghost'}>Edit</Button>}
         {button && (
           <PublishButton
+            caseStudy={caseStudy}
             label={button.label}
             published={button.published}
-            caseStudy={caseStudy}
           />
         )}
         {createButton && redirect && redirectUrl && (

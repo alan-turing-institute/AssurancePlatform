@@ -36,15 +36,15 @@ export default function FAQ() {
     <div className="bg-white">
       <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-2xl font-bold leading-10 tracking-tight text-gray-900">
+          <h2 className="font-bold text-2xl text-gray-900 leading-10 tracking-tight">
             Frequently asked questions
           </h2>
-          <p className="mt-6 text-base leading-7 text-gray-600">
+          <p className="mt-6 text-base text-gray-600 leading-7">
             Have a different question and can’t find the answer you’re looking
             for? Reach out to our support team by{' '}
             <a
-              href="mailto:tea@turing.ac.uk"
               className="font-semibold text-indigo-600 hover:text-indigo-500"
+              href="mailto:tea@turing.ac.uk"
             >
               sending us an email
             </a>{' '}
@@ -55,10 +55,10 @@ export default function FAQ() {
           <dl className="space-y-16 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:gap-y-16 sm:space-y-0 lg:grid-cols-3 lg:gap-x-10">
             {faqs.map((faq) => (
               <div key={faq.id}>
-                <dt className="text-base font-semibold leading-7 text-gray-900">
+                <dt className="font-semibold text-base text-gray-900 leading-7">
                   {faq.question}
                 </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
+                <dd className="mt-2 text-base text-gray-600 leading-7">
                   {faq.answer}
                 </dd>
               </div>

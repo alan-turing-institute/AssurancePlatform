@@ -1,13 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
-import {
-  render,
-  screen,
-  renderWithoutProviders,
-} from '@/src/__tests__/utils/test-utils';
+import { zodResolver } from '@hookform/resolvers/zod';
 import userEvent from '@testing-library/user-event';
 import { useForm } from 'react-hook-form';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  render,
+  renderWithoutProviders,
+  screen,
+} from '@/src/__tests__/utils/test-utils';
+import { Button } from './button';
 import {
   Form,
   FormControl,
@@ -18,7 +19,6 @@ import {
   FormMessage,
 } from './form';
 import { Input } from './input';
-import { Button } from './button';
 
 const testSchema = z.object({
   username: z.string().min(2, 'Username must be at least 2 characters'),
@@ -44,8 +44,8 @@ describe('Form Components', () => {
     return (
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit(onSubmit || vi.fn())}
           className="space-y-4"
+          onSubmit={form.handleSubmit(onSubmit || vi.fn())}
         >
           <FormField
             control={form.control}
@@ -70,7 +70,7 @@ describe('Form Components', () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter email" {...field} />
+                  <Input placeholder="Enter email" type="email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

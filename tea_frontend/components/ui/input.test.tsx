@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import {
   render,
-  screen,
   renderWithoutProviders,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
-import userEvent from '@testing-library/user-event';
 import { Input } from './input';
 
 describe('Input', () => {
@@ -75,13 +75,13 @@ describe('Input', () => {
 
   it('should handle controlled value', () => {
     const { rerender } = renderWithoutProviders(
-      <Input value="controlled value" readOnly />
+      <Input readOnly value="controlled value" />
     );
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('controlled value');
 
-    rerender(<Input value="updated value" readOnly />);
+    rerender(<Input readOnly value="updated value" />);
     expect(input).toHaveValue('updated value');
   });
 
@@ -96,8 +96,8 @@ describe('Input', () => {
   it('should have correct accessibility attributes', () => {
     renderWithoutProviders(
       <Input
-        aria-label="Username input"
         aria-describedby="username-help"
+        aria-label="Username input"
         required
       />
     );
@@ -113,7 +113,7 @@ describe('Input', () => {
     const handleFocus = vi.fn();
     const handleBlur = vi.fn();
 
-    renderWithoutProviders(<Input onFocus={handleFocus} onBlur={handleBlur} />);
+    renderWithoutProviders(<Input onBlur={handleBlur} onFocus={handleFocus} />);
 
     const input = screen.getByRole('textbox');
 
@@ -127,7 +127,7 @@ describe('Input', () => {
   it('should prevent input when readOnly', async () => {
     const user = userEvent.setup();
 
-    renderWithoutProviders(<Input value="readonly value" readOnly />);
+    renderWithoutProviders(<Input readOnly value="readonly value" />);
 
     const input = screen.getByRole('textbox');
     await user.type(input, 'should not change');
@@ -136,7 +136,7 @@ describe('Input', () => {
   });
 
   it('should handle file input type correctly', () => {
-    renderWithoutProviders(<Input type="file" accept=".jpg,.png" />);
+    renderWithoutProviders(<Input accept=".jpg,.png" type="file" />);
 
     const fileInput = screen.getByRole('textbox', { hidden: true }); // file inputs are hidden by default
     expect(fileInput).toHaveAttribute('type', 'file');

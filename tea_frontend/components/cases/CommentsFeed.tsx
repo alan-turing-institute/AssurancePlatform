@@ -1,14 +1,14 @@
 'use client';
 
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { PencilLine, Trash2, User2Icon } from 'lucide-react';
 import moment from 'moment';
-import useStore from '@/data/store';
-import { Button } from '../ui/button';
-import { unauthorized, useLoginToken } from '@/hooks/useAuth';
-import CommentsEditForm from './CommentsEditForm';
-import { useToast } from '../ui/use-toast';
 import { useSession } from 'next-auth/react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import useStore from '@/data/store';
+import { unauthorized, useLoginToken } from '@/hooks/useAuth';
+import { Button } from '../ui/button';
+import { useToast } from '../ui/use-toast';
+import CommentsEditForm from './CommentsEditForm';
 
 type CommentsFeedProps = {
   node: any;
@@ -26,7 +26,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 
   const handleNoteDelete = async (id: number) => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
 
       const requestOptions: RequestInit = {
         method: 'DELETE',
@@ -90,37 +90,37 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
   }, [session?.key]);
 
   return (
-    <div className="mt-4 py-2 w-full">
+    <div className="mt-4 w-full py-2">
       {/* <p className='mb-6'>Exisitng comments</p> */}
 
       {nodeComments.length === 0 && (
         <p className="text-foreground/70">No comments have been added.</p>
       )}
 
-      <div className="w-full mb-16 flex flex-col justify-start items-start gap-3">
+      <div className="mb-16 flex w-full flex-col items-start justify-start gap-3">
         {nodeComments.map((comment: any) => (
           <div
+            className="group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer hover:bg-indigo-500 hover:pb-8 hover:text-white"
             key={comment.id}
-            className="p-3 text-foreground rounded-md w-full group hover:bg-indigo-500 hover:text-white transition-all duration-300 hover:cursor-pointer relative hover:pb-8"
           >
             {edit && editId === comment.id ? (
               <CommentsEditForm
-                node={node}
                 comment={comment}
+                node={node}
                 setEdit={setEdit}
               />
             ) : (
-              <p className="whitespace-normal mb-1">{comment.content}</p>
+              <p className="mb-1 whitespace-normal">{comment.content}</p>
             )}
             {edit && editId === comment.id ? null : (
-              <div className="text-muted-foreground group-hover:text-white text-xs flex justify-start items-center gap-2 transition-all duration-300 mt-3">
-                <User2Icon className="w-3 h-3" />
+              <div className="mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 group-hover:text-white">
+                <User2Icon className="h-3 w-3" />
                 <div>
                   {comment.author}
                   <svg
-                    viewBox="0 0 2 2"
-                    className="mx-2 inline h-0.5 w-0.5 fill-current"
                     aria-hidden="true"
+                    className="mx-2 inline h-0.5 w-0.5 fill-current"
+                    viewBox="0 0 2 2"
                   >
                     <circle cx={1} cy={1} r={1} />
                   </svg>
@@ -130,26 +130,26 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
             )}
             {!edit &&
               assuranceCase.permissions !== 'view' &&
-                user?.username === comment.author && (
-                <div className="hidden group-hover:block absolute bottom-2 right-2">
-                  <div className="flex justify-start items-center gap-2">
+              user?.username === comment.author && (
+                <div className="absolute right-2 bottom-2 hidden group-hover:block">
+                  <div className="flex items-center justify-start gap-2">
                     <Button
+                      className="hover:bg-indigo-800/50"
                       onClick={() => {
                         setEdit(!edit);
                         setEditId(comment.id);
                       }}
-                      variant={'ghost'}
                       size={'sm'}
-                      className="hover:bg-indigo-800/50"
+                      variant={'ghost'}
                     >
-                      <PencilLine className="w-4 h-4" />
+                      <PencilLine className="h-4 w-4" />
                     </Button>
                     <Button
                       onClick={() => handleNoteDelete(comment.id)}
                       size={'icon'}
                       variant={'destructive'}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

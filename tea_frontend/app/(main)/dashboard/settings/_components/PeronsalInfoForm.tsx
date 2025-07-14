@@ -1,6 +1,11 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Lock, MoveLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+// import { useLoginToken } from "@/hooks/useAuth"
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,12 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Lock, MoveLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-// import { useLoginToken } from "@/hooks/useAuth"
-import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { useSession } from 'next-auth/react';
 
 const ACCEPTED_FILE_TYPES = ['jpg'];
 
@@ -93,7 +93,7 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
     };
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${userId}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${userId}/`;
 
       const requestOptions: RequestInit = {
         method: 'PUT',
@@ -126,10 +126,10 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
     <>
       <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
         <div>
-          <h2 className="text-base font-semibold leading-7 text-foreground">
+          <h2 className="font-semibold text-base text-foreground leading-7">
             Personal Information
           </h2>
-          <p className="mt-1 text-sm leading-6 text-gray-400">
+          <p className="mt-1 text-gray-400 text-sm leading-6">
             Use a permanent address where you can receive mail.
           </p>
         </div>
@@ -137,8 +137,8 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
         <div className="md:col-span-2">
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
               className="w-full space-y-6"
+              onSubmit={form.handleSubmit(onSubmit)}
             >
               <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
                 {/* <FormField
@@ -209,8 +209,8 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
                         />
                       </FormControl>
                       {session && (
-                        <FormDescription className="text-xs flex justify-start items-center">
-                          <Lock className="w-3 h-3 mr-2" />
+                        <FormDescription className="flex items-center justify-start text-xs">
+                          <Lock className="mr-2 h-3 w-3" />
                           Read only
                         </FormDescription>
                       )}
@@ -226,20 +226,20 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
                         <Input
-                          type="email"
                           placeholder="example@gmail.com"
+                          type="email"
                           {...field}
                           readOnly={data.email == '' ? false : true}
                         />
                       </FormControl>
-                      {data.email == ''
-                        ? false
-                        : true && (
-                            <FormDescription className="text-xs flex justify-start items-center">
-                              <Lock className="w-3 h-3 mr-2" />
-                              Read only
-                            </FormDescription>
-                          )}
+                      {data.email == '' ? (
+                        false
+                      ) : (
+                        <FormDescription className="flex items-center justify-start text-xs">
+                          <Lock className="mr-2 h-3 w-3" />
+                          Read only
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -247,9 +247,9 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
               </div>
               {!data.email && (
                 <Button
-                  type="submit"
+                  className="bg-indigo-600 text-white hover:bg-indigo-700"
                   disabled={loading}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  type="submit"
                 >
                   {loading ? 'Updating' : 'Update'}
                 </Button>

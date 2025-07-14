@@ -1,18 +1,5 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { Separator } from '../ui/separator';
-import { ScrollArea } from '../ui/scroll-area';
-import useStore from '@/data/store';
-import {
-  addEvidenceToClaim,
-  addPropertyClaimToNested,
-  attachCaseElement,
-  deleteAssuranceCaseNode,
-  removeAssuranceCaseNode,
-  updateAssuranceCase,
-  updateAssuranceCaseNode,
-} from '@/lib/case-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
   BookOpenText,
@@ -23,9 +10,27 @@ import {
   Trash,
   Trash2,
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { AlertModal } from '../modals/alertModal';
 import { useSession } from 'next-auth/react';
+import React, {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useState,
+} from 'react';
+import useStore from '@/data/store';
+import {
+  addEvidenceToClaim,
+  addPropertyClaimToNested,
+  attachCaseElement,
+  deleteAssuranceCaseNode,
+  removeAssuranceCaseNode,
+  updateAssuranceCase,
+  updateAssuranceCaseNode,
+} from '@/lib/case-helper';
+import { AlertModal } from '../modals/alertModal';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 
 type OrphanElementsProps = {
   node: any;
@@ -79,7 +84,7 @@ const OrphanElements = ({
 
   const handleOrphanSelection = async (orphan: any) => {
     setLoading(true);
-    console.log(`Selected Orphan Element`, orphan);
+    console.log('Selected Orphan Element', orphan);
 
     const result = await attachCaseElement(
       orphan,
@@ -97,7 +102,7 @@ const OrphanElements = ({
       let updatedAssuranceCase;
 
       switch (orphan.type.toLowerCase()) {
-        case 'context':
+        case 'context': {
           orphan.goal_id = node.data.id;
           // Create a new context array by adding the new context item
           const newContext = [...assuranceCase.goals[0].context, orphan];
@@ -118,7 +123,8 @@ const OrphanElements = ({
           setLoading(false);
           handleClose();
           break;
-        case 'strategy':
+        }
+        case 'strategy': {
           orphan.strategy_id = node.data.id;
           // Create a new strategy array by adding the new context item
           const newStrategy = [...assuranceCase.goals[0].strategies, orphan];
@@ -140,6 +146,7 @@ const OrphanElements = ({
           setLoading(false);
           handleClose();
           break;
+        }
         case 'propertyclaim':
           if (node.type === 'goal') {
             orphan.goal_id = node.data.id;
@@ -244,7 +251,7 @@ const OrphanElements = ({
             }
           }
           break;
-        case 'evidence':
+        case 'evidence': {
           orphan.property_claim_id = [node.data.id];
           const added = addEvidenceToClaim(
             assuranceCase.goals,
@@ -268,6 +275,7 @@ const OrphanElements = ({
           setLoading(false);
           handleClose();
           break;
+        }
         default:
           break;
       }
@@ -329,34 +337,34 @@ const OrphanElements = ({
   }, [node]);
 
   return (
-    <div className="flex flex-col justify-start items-start mt-8">
-      <h3 className="text-lg font-semibold mb-2">Existing Elements</h3>
+    <div className="mt-8 flex flex-col items-start justify-start">
+      <h3 className="mb-2 font-semibold text-lg">Existing Elements</h3>
       <ScrollArea
         className={`${filteredOrphanElements.length > 3 ? 'h-80' : 'h-auto'} w-full rounded-md border`}
       >
         <div className="p-1">
           {filteredOrphanElements.length === 0 && (
-            <div className="p-2 rounded-md text-sm flex items-center">
+            <div className="flex items-center rounded-md p-2 text-sm">
               No items found.
             </div>
           )}
           {filteredOrphanElements.map((el: any) => (
             <div key={el.id}>
               <div
-                className="p-2 rounded-md text-sm flex items-center hover:bg-indigo-500 hover:cursor-pointer"
+                className="flex items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-indigo-500"
                 onClick={() => handleOrphanSelection(el)}
               >
                 {/* <span className="font-medium">{el.name}</span> */}
-                {el.type === 'Evidence' && <Database className="w-6 h-6" />}
-                {el.type === 'Strategy' && <Route className="w-6 h-6" />}
+                {el.type === 'Evidence' && <Database className="h-6 w-6" />}
+                {el.type === 'Strategy' && <Route className="h-6 w-6" />}
                 {el.type === 'PropertyClaim' && (
-                  <FolderOpenDot className="w-6 h-6" />
+                  <FolderOpenDot className="h-6 w-6" />
                 )}
-                {el.type === 'Context' && <BookOpenText className="w-6 h-6" />}
+                {el.type === 'Context' && <BookOpenText className="h-6 w-6" />}
                 <svg
-                  viewBox="0 0 2 2"
-                  className="mx-2 inline h-0.5 w-0.5 fill-current"
                   aria-hidden="true"
+                  className="mx-2 inline h-0.5 w-0.5 fill-current"
+                  viewBox="0 0 2 2"
                 >
                   <circle cx={1} cy={1} r={1} />
                 </svg>
@@ -368,38 +376,38 @@ const OrphanElements = ({
         </div>
       </ScrollArea>
       {loading && (
-        <p className="flex justify-start items-center mt-4">
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        <p className="mt-4 flex items-center justify-start">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Adding Element...
         </p>
       )}
-      <div className="w-full flex justify-start items-center gap-3">
+      <div className="flex w-full items-center justify-start gap-3">
         <Button
-          variant={'outline'}
+          className="my-6 w-full"
           onClick={() => setAction(null)}
-          className="w-full my-6"
+          variant={'outline'}
         >
           Cancel
         </Button>
         <Button
-          variant={'destructive'}
+          className="my-6 w-full"
           onClick={() => setDeleteOpen(true)}
-          className="w-full my-6"
+          variant={'destructive'}
         >
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash2 className="mr-2 h-4 w-4" />
           Delete All
         </Button>
       </div>
       <AlertModal
+        cancelButtonText={'No, keep them'}
+        confirmButtonText={'Yes, delete all'}
         isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
         loading={loading}
         message={
           'Are you sure you want to delete all orphaned elements. This cannot be undone.'
         }
-        confirmButtonText={'Yes, delete all'}
-        cancelButtonText={'No, keep them'}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
       />
     </div>
   );

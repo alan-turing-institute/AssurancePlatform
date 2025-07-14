@@ -1,6 +1,13 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FolderXIcon, Trash2Icon } from 'lucide-react';
+import moment from 'moment';
+import { useSession } from 'next-auth/react';
+import type React from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -9,11 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
 import useStore from '@/data/store';
 // import { useLoginToken } from '@/hooks/useAuth'
 import {
@@ -32,10 +34,9 @@ import {
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
-import { useSession } from 'next-auth/react';
+import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
-import { FolderXIcon, Trash2Icon } from 'lucide-react';
-import moment from 'moment';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   description: z
@@ -186,7 +187,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 my-4">
+        <form className="my-4 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
           <FormField
             control={form.control}
             name="description"
@@ -204,14 +205,14 @@ const NodeConext: React.FC<NodeContextProps> = ({
               </FormItem>
             )}
           />
-          <div className="flex justify-start items-center gap-3 pt-4">
-            <Button variant={'outline'} onClick={handleCancel}>
+          <div className="flex items-center justify-start gap-3 pt-4">
+            <Button onClick={handleCancel} variant={'outline'}>
               Cancel
             </Button>
             <Button
-              type="submit"
-              disabled={loading}
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+              disabled={loading}
+              type="submit"
             >
               Add Context
             </Button>
@@ -220,45 +221,45 @@ const NodeConext: React.FC<NodeContextProps> = ({
       </Form>
 
       <div className="mt-8 font-medium">Existing Contexts</div>
-      <p className="text-muted-foreground text-sm mb-4">
+      <p className="mb-4 text-muted-foreground text-sm">
         Please manage your contexts below
       </p>
 
       {loading ? (
-        <div className="py-8 flex flex-col justify-start gap-2 w-full">
-          <Skeleton className="w-full h-[10px] rounded-full" />
-          <Skeleton className="w-2/3 h-[10px] rounded-full" />
-          <div className="flex justify-start items-center gap-2">
-            <Skeleton className="w-[20px] h-[10px] rounded-full" />
-            <Skeleton className="w-[100px] h-[10px] rounded-full" />
+        <div className="flex w-full flex-col justify-start gap-2 py-8">
+          <Skeleton className="h-[10px] w-full rounded-full" />
+          <Skeleton className="h-[10px] w-2/3 rounded-full" />
+          <div className="flex items-center justify-start gap-2">
+            <Skeleton className="h-[10px] w-[20px] rounded-full" />
+            <Skeleton className="h-[10px] w-[100px] rounded-full" />
           </div>
         </div>
       ) : (
-        <div className="w-full mb-16 flex flex-col justify-start items-start gap-3">
+        <div className="mb-16 flex w-full flex-col items-start justify-start gap-3">
           {contexts.map((item: any, index: number) => (
             <div
+              className="group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer hover:bg-indigo-500 hover:pb-6 hover:text-white"
               key={index}
-              className="relative p-3 text-foreground rounded-md w-full group hover:bg-indigo-500 hover:text-white transition-all duration-300 hover:cursor-pointer hover:pb-6"
             >
-              <p className="whitespace-normal w-full">
+              <p className="w-full whitespace-normal">
                 {item.long_description}
               </p>
-              <div className="text-muted-foreground group-hover:text-white text-xs flex justify-start items-center gap-2 transition-all duration-300 mt-3">
+              <div className="mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 group-hover:text-white">
                 <div className="flex-1">
                   {moment(item.created_date).format('DD/MM/YYY')}
                   <svg
-                    viewBox="0 0 2 2"
-                    className="mx-2 inline h-0.5 w-0.5 fill-current"
                     aria-hidden="true"
+                    className="mx-2 inline h-0.5 w-0.5 fill-current"
+                    viewBox="0 0 2 2"
                   >
                     <circle cx={1} cy={1} r={1} />
                   </svg>
                   {item.name}
                 </div>
                 <Button
-                  variant={'link'}
                   className="hidden group-hover:flex"
                   onClick={() => handleContextDelete(item.id)}
+                  variant={'link'}
                 >
                   Remove
                 </Button>
@@ -267,7 +268,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
           ))}
           {contexts.length === 0 && (
             <div>
-              <p className="text-muted-foreground text-sm flex justify-start items-center gap-2">
+              <p className="flex items-center justify-start gap-2 text-muted-foreground text-sm">
                 <FolderXIcon className="size-3" />
                 No Contexts Added
               </p>

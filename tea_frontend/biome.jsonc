@@ -1,4 +1,25 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
-  "extends": ["ultracite"]
+  "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
+  "extends": ["ultracite"],
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!.next/**",
+      "!node_modules/**",
+      "!**/node_modules/**",
+      "!public/documentation/**",
+      "!tea-docs/**",
+      "!logs/**",
+      "!build/**",
+      "!dist/**",
+      "!out/**",
+      "!*.min.js",
+      "!*.min.css"
+    ]
+  }
 }

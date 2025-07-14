@@ -1,26 +1,26 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
-import TextAlign from '@tiptap/extension-text-align';
 import ListItem from '@tiptap/extension-list-item';
 import Placeholder from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   Italic,
-  Underline,
-  Strikethrough,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   List,
   ListOrdered,
   Quote,
+  Strikethrough,
+  Underline,
 } from 'lucide-react';
-import { Button } from './button';
 import { cn } from '@/lib/utils';
+import { Button } from './button';
 
 interface TiptapEditorProps {
   value?: string;
@@ -80,102 +80,103 @@ export default function TiptapEditor({
     title: string;
   }) => (
     <Button
+      className={cn('h-8 w-8 p-0', isActive && 'bg-muted')}
+      onClick={onClick}
+      size="sm"
+      title={title}
       type="button"
       variant="ghost"
-      size="sm"
-      onClick={onClick}
-      className={cn('h-8 w-8 p-0', isActive && 'bg-muted')}
-      title={title}
     >
       {children}
     </Button>
   );
 
   return (
-    <div className={cn('border rounded-md', className)}>
+    <div className={cn('rounded-md border', className)}>
       {/* Toolbar */}
-      <div className="border-b p-2 flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1 border-b p-2">
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
+          onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold"
         >
           <Bold className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic"
         >
           <Italic className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
           title="Strikethrough"
         >
           <Strikethrough className="h-4 w-4" />
         </ToolbarButton>
 
-        <div className="w-px h-6 bg-border mx-1" />
+        <div className="mx-1 h-6 w-px bg-border" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
           isActive={editor.isActive({ textAlign: 'left' })}
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
           title="Align Left"
         >
           <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
           isActive={editor.isActive({ textAlign: 'center' })}
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
           title="Align Center"
         >
           <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
           isActive={editor.isActive({ textAlign: 'right' })}
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
           title="Align Right"
         >
           <AlignRight className="h-4 w-4" />
         </ToolbarButton>
 
-        <div className="w-px h-6 bg-border mx-1" />
+        <div className="mx-1 h-6 w-px bg-border" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
           title="Bullet List"
         >
           <List className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
           title="Ordered List"
         >
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive('blockquote')}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
           title="Quote"
         >
           <Quote className="h-4 w-4" />
         </ToolbarButton>
 
         {/* Heading buttons */}
-        <div className="w-px h-6 bg-border mx-1" />
+        <div className="mx-1 h-6 w-px bg-border" />
 
         {[1, 2, 3].map((level) => (
           <ToolbarButton
+            isActive={editor.isActive('heading', { level })}
             key={level}
             onClick={() =>
               editor
@@ -184,18 +185,17 @@ export default function TiptapEditor({
                 .toggleHeading({ level: level as any })
                 .run()
             }
-            isActive={editor.isActive('heading', { level })}
             title={`Heading ${level}`}
           >
-            <span className="text-xs font-bold">H{level}</span>
+            <span className="font-bold text-xs">H{level}</span>
           </ToolbarButton>
         ))}
       </div>
 
       {/* Editor */}
       <EditorContent
+        className="prose prose-sm sm:prose-base prose-neutral dark:prose-invert min-h-[200px] max-w-none p-4 focus:outline-none"
         editor={editor}
-        className="prose prose-sm sm:prose-base max-w-none p-4 min-h-[200px] focus:outline-none prose-neutral dark:prose-invert"
       />
     </div>
   );

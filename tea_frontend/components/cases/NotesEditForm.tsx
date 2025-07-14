@@ -1,9 +1,10 @@
 'use client';
 
-import React, { Dispatch, SetStateAction, useState } from 'react';
-import { boolean, z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSession } from 'next-auth/react';
+import React, { type Dispatch, type SetStateAction, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { boolean, z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -14,11 +15,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Textarea } from '../ui/textarea';
 // import { useLoginToken } from '@/hooks/useAuth'
 import useStore from '@/data/store';
+import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/use-toast';
-import { useSession } from 'next-auth/react';
 
 type NotesEditFormProps = {
   note: any;
@@ -54,7 +54,7 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
     };
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
 
       const requestOptions: RequestInit = {
         method: 'PUT',
@@ -97,7 +97,7 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="comment"
@@ -111,11 +111,11 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
             </FormItem>
           )}
         />
-        <div className="flex justify-end items-center gap-2">
-          <Button variant={'ghost'} onClick={() => setEdit(false)}>
+        <div className="flex items-center justify-end gap-2">
+          <Button onClick={() => setEdit(false)} variant={'ghost'}>
             Cancel
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} type="submit">
             {loading ? 'Saving' : 'Save'}
           </Button>
         </div>

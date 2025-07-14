@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { Position } from 'reactflow';
+import { describe, expect, it, vi } from 'vitest';
 import {
   render,
-  screen,
   renderWithAuth,
+  screen,
 } from '@/src/__tests__/utils/test-utils';
 import EvidenceNode from './EvidenceNode';
-import { Position } from 'reactflow';
 
 // Mock ReactFlow components
 vi.mock('reactflow', async () => {
@@ -13,7 +13,7 @@ vi.mock('reactflow', async () => {
   return {
     ...actual,
     Handle: ({ type, position }: { type: string; position: string }) => (
-      <div data-testid={`handle-${type}`} data-position={position}>
+      <div data-position={position} data-testid={`handle-${type}`}>
         Handle {type}
       </div>
     ),
@@ -31,8 +31,8 @@ vi.mock('reactflow', async () => {
 vi.mock('./IconIndicator', () => ({
   default: ({ data }: { data: any }) => (
     <div
-      data-testid="icon-indicator"
       data-has-comments={data.comments?.length > 0}
+      data-testid="icon-indicator"
     >
       Icon Indicator
     </div>
@@ -554,8 +554,8 @@ describe('EvidenceNode', () => {
         name: 'Evidence with Attachments',
         description: 'Evidence that includes multiple file attachments',
         attachments: [
-          { id: 1, name: 'test-results.pdf', size: 1024000 },
-          { id: 2, name: 'screenshots.zip', size: 2048000 },
+          { id: 1, name: 'test-results.pdf', size: 1_024_000 },
+          { id: 2, name: 'screenshots.zip', size: 2_048_000 },
         ],
       };
 

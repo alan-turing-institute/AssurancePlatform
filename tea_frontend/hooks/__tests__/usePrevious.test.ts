@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { usePrevious } from '../usePrevious';
 
 describe('usePrevious', () => {
@@ -353,7 +353,7 @@ describe('usePrevious', () => {
         }
       );
 
-      rerender({ value: NaN });
+      rerender({ value: Number.NaN });
       expect(result.current).toBe(42);
 
       rerender({ value: 100 });
@@ -368,11 +368,11 @@ describe('usePrevious', () => {
         }
       );
 
-      rerender({ value: Infinity });
+      rerender({ value: Number.POSITIVE_INFINITY });
       expect(result.current).toBe(42);
 
-      rerender({ value: -Infinity });
-      expect(result.current).toBe(Infinity);
+      rerender({ value: Number.NEGATIVE_INFINITY });
+      expect(result.current).toBe(Number.POSITIVE_INFINITY);
     });
   });
 

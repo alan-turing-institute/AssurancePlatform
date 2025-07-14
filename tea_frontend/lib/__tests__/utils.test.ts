@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the dependencies properly
 vi.mock('clsx', () => ({
@@ -9,10 +9,10 @@ vi.mock('tailwind-merge', () => ({
   twMerge: vi.fn(),
 }));
 
-// Import after mocking
-import { cn } from '../utils';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+// Import after mocking
+import { cn } from '../utils';
 
 // Get the mocked functions
 const mockClsx = vi.mocked(clsx);
@@ -149,7 +149,7 @@ describe('utils', () => {
     });
 
     it('should handle boolean values', () => {
-      const result = cn('class1', false, 'class2', true && 'conditional-class');
+      const result = cn('class1', false, 'class2', 'conditional-class');
 
       expect(result).toContain('class1');
       expect(result).toContain('class2');

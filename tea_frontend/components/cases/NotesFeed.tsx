@@ -1,6 +1,5 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
 import {
   ChatBubbleLeftEllipsisIcon,
   TagIcon,
@@ -17,14 +16,15 @@ import {
   X,
 } from 'lucide-react';
 import moment from 'moment';
-import useStore from '@/data/store';
-import { Button } from '../ui/button';
-import { unauthorized, useLoginToken } from '@/hooks/useAuth';
+import { useSession } from 'next-auth/react';
+import { Fragment, useEffect, useState } from 'react';
 import { boolean } from 'zod';
+import useStore from '@/data/store';
+import { unauthorized, useLoginToken } from '@/hooks/useAuth';
+import { Button } from '../ui/button';
+import { useToast } from '../ui/use-toast';
 import NotesEditField from './NotesEditForm';
 import NotesEditForm from './NotesEditForm';
-import { useToast } from '../ui/use-toast';
-import { useSession } from 'next-auth/react';
 
 export default function NotesFeed({}) {
   const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } =
@@ -39,7 +39,8 @@ export default function NotesFeed({}) {
   const { toast } = useToast();
 
   assuranceCase.comments.sort(
-    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    (a: any, b: any) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
   const fetchSingleCase = async () => {
@@ -91,7 +92,6 @@ export default function NotesFeed({}) {
 
   // Fetch case notes/comments
   useEffect(() => {
-    //@ts-ignore
     // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     fetchSingleCase().then((comments) => setCaseNotes(comments));
   }, [assuranceCase]);
@@ -103,7 +103,7 @@ export default function NotesFeed({}) {
 
   const handleNoteDelete = async (id: number) => {
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
 
       const requestOptions: RequestInit = {
         method: 'DELETE',
@@ -137,21 +137,21 @@ export default function NotesFeed({}) {
   };
 
   return (
-    <div className="mt-4 py-8 px-4">
-      <ul role="list" className="-mb-8">
+    <div className="mt-4 px-4 py-8">
+      <ul className="-mb-8" role="list">
         {caseNotes.length === 0 && (
           <p className="text-foreground/70">No notes have been added.</p>
         )}
         {caseNotes.map((note: any, index: any) => (
           <li key={note.id}>
-            <div className="relative pb-8 group">
+            <div className="group relative pb-8">
               {index !== caseNotes.length - 1 ? (
                 <span
-                  className="absolute left-9 top-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-800"
                   aria-hidden="true"
+                  className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-gray-200 dark:bg-gray-800"
                 />
               ) : null}
-              <div className="relative flex justify-start items-start space-x-3 p-4 rounded-md group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
+              <div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
                 <div className="relative mr-4">
                   {/* <img
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-400 ring-8 ring-white"
@@ -159,7 +159,7 @@ export default function NotesFeed({}) {
                     alt=""
                   /> */}
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 ring-8 ring-white dark:ring-slate-900">
-                    <User2Icon className="w-4 h-4 text-white" />
+                    <User2Icon className="h-4 w-4 text-white" />
                   </div>
 
                   {/* <span className="absolute -bottom-0.5 -right-1 rounded-tl bg-white px-0.5 py-px">
@@ -173,12 +173,12 @@ export default function NotesFeed({}) {
                         {note.author}
                       </p>
                     </div>
-                    <p className="mt-0.5 text-sm text-foreground/70">
+                    <p className="mt-0.5 text-foreground/70 text-sm">
                       Created On:{' '}
                       {moment(new Date(note.created_at)).format('DD/MM/YYYY')}
                     </p>
                   </div>
-                  <div className="mt-2 text-sm text-foreground">
+                  <div className="mt-2 text-foreground text-sm">
                     {edit && editId === note.id ? (
                       <NotesEditForm note={note} setEdit={setEdit} />
                     ) : (
@@ -188,24 +188,24 @@ export default function NotesFeed({}) {
                 </div>
                 {!edit &&
                   assuranceCase.permissions !== 'view' &&
-                    user?.username === note.author && (
-                    <div className="hidden group-hover:flex justify-center items-center gap-2">
+                  user?.username === note.author && (
+                    <div className="hidden items-center justify-center gap-2 group-hover:flex">
                       <Button
+                        className="bg-background text-foreground hover:bg-background/50"
                         onClick={() => {
                           setEdit(!edit);
                           setEditId(note.id);
                         }}
                         size={'icon'}
-                        className="bg-background hover:bg-background/50 text-foreground"
                       >
-                        <PencilLine className="w-4 h-4" />
+                        <PencilLine className="h-4 w-4" />
                       </Button>
                       <Button
                         onClick={() => handleNoteDelete(note.id)}
                         size={'icon'}
                         variant={'destructive'}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   )}

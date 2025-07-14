@@ -1,5 +1,5 @@
-import CaseContainer from '@/components/cases/CaseContainer';
 import React from 'react';
+import CaseContainer from '@/components/cases/CaseContainer';
 
 const AssuranceCasePage = async ({
   params,

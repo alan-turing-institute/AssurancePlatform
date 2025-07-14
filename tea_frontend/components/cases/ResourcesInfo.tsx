@@ -1,9 +1,14 @@
 'use client';
 
-import * as React from 'react';
+import {
+  BookOpenText,
+  Database,
+  FolderOpenDot,
+  Goal,
+  Route,
+} from 'lucide-react';
 import Link from 'next/link';
-
-import { cn } from '@/lib/utils';
+import * as React from 'react';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -13,13 +18,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
-import {
-  BookOpenText,
-  Database,
-  FolderOpenDot,
-  Goal,
-  Route,
-} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const components: {
   title: string;
@@ -76,12 +75,12 @@ export function ResourcesInfo() {
             <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
               {components.map((component) => (
                 <ListItem
-                  key={component.title}
-                  // title={component.title}
                   href={component.href}
+                  // title={component.title}
+                  key={component.title}
                   target="_blank"
                 >
-                  <div className="flex justify-start items-center gap-3 text-foreground pb-2 font-bold">
+                  <div className="flex items-center justify-start gap-3 pb-2 font-bold text-foreground">
                     {component.icon}
                     {component.title}
                   </div>
@@ -104,15 +103,15 @@ const ListItem = React.forwardRef<
     <li>
       <NavigationMenuLink asChild>
         <a
-          ref={ref}
           className={cn(
             'block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
             className
           )}
+          ref={ref}
           {...props}
         >
-          <div className="text-sm font-medium leading-none">{title}</div>
-          <p className="text-sm leading-snug text-muted-foreground">
+          <div className="font-medium text-sm leading-none">{title}</div>
+          <p className="text-muted-foreground text-sm leading-snug">
             {children}
           </p>
         </a>
