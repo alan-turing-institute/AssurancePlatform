@@ -1,6 +1,6 @@
 'use client';
 
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 import {
   BookOpenText,
   Database,
@@ -84,7 +84,6 @@ const OrphanElements = ({
 
   const handleOrphanSelection = async (orphan: any) => {
     setLoading(true);
-    console.log('Selected Orphan Element', orphan);
 
     const result = await attachCaseElement(
       orphan,
@@ -94,11 +93,10 @@ const OrphanElements = ({
     );
 
     if (result.error) {
-      console.error(result.error);
+      // Handle error silently
     }
 
     if (result.attached) {
-      console.log('Orphan Attached');
       let updatedAssuranceCase;
 
       switch (orphan.type.toLowerCase()) {
@@ -182,7 +180,7 @@ const OrphanElements = ({
               orphan
             );
             if (!added) {
-              return console.error('Parent property claim not found!');
+              return; // Parent property claim not found
             }
 
             const updatedAssuranceCase = {
@@ -259,7 +257,7 @@ const OrphanElements = ({
             orphan
           );
           if (!added) {
-            return console.error('Parent property claim not found!');
+            return; // Parent property claim not found
           }
 
           updatedAssuranceCase = {
@@ -306,7 +304,6 @@ const OrphanElements = ({
 
       // Wait for all deletion promises to resolve
       const deletedResults = await Promise.all(deletionPromises);
-      console.log('Deleted Results', deletedResults);
 
       // Extract the ids of the deleted orphans
       const deletedIds = deletedResults
@@ -324,7 +321,7 @@ const OrphanElements = ({
       setDeleteOpen(false);
       handleClose();
     } catch (error) {
-      console.error('Error during deletion process:', error);
+      // Handle error silently
     } finally {
       setLoading(false);
     }

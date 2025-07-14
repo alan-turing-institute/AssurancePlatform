@@ -1,9 +1,9 @@
 'use client';
 
+import { useEmailModal } from '.*/use-email-modal';
 import { MoveRightIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/modal';
-import { useEmailModal } from '@/hooks/useEmailModal';
 import { Button } from '../ui/button';
 
 export const EmailModal = () => {

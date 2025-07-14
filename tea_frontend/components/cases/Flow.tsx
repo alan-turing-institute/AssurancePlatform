@@ -5,7 +5,7 @@ import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
 
 import 'reactflow/dist/style.css';
 import { Loader2, Unplug, X } from 'lucide-react';
-import NodeEdit from '@/components/common/NodeEdit';
+import NodeEdit from '@/components/common/node-edit';
 
 import useStore from '@/data/store';
 import { convertAssuranceCase } from '@/lib/convert-case';

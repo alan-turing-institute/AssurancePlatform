@@ -1,5 +1,6 @@
 'use client';
 
+import { useShareModal } from '.*/use-share-modal';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { saveAs } from 'file-saver';
 import {
@@ -30,14 +31,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
-import { useShareModal } from '@/hooks/useShareModal';
-// import { unauthorized, useLoginToken } from "@/hooks/useAuth";
+// import { unauthorized, useLoginToken } from ".*/use-auth";
 import type { User } from '@/types';
 import { Button } from '../ui/button';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Separator } from '../ui/separator';
 import { useToast } from '../ui/use-toast';
-import { LinkedCaseModal } from './LinkedCaseModal';
+import { LinkedCaseModal } from './linked-case-modal';
 
 type ShareItem = {
   email: string;

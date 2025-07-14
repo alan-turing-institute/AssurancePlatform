@@ -1,8 +1,8 @@
+import { authOptions } from '.*/auth-options';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import BackButton from '@/components/ui/back-button';
 import PageHeading from '@/components/ui/page-heading';
-import { authOptions } from '@/lib/authOptions';
 import CaseStudyForm from '../_components/case-study-form';
 
 async function NewCaseStudy() {

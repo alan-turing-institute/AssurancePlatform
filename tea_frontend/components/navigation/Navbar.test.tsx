@@ -5,7 +5,7 @@ import {
   renderWithAuth,
   screen,
 } from '@/src/__tests__/utils/test-utils';
-import { Navbar } from './Navbar';
+import { Navbar } from './navbar';
 
 // Mock the navigation components to focus on Navbar logic
 vi.mock('./mobile-nav', () => ({

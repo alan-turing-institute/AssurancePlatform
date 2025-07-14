@@ -14,16 +14,16 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import NodeCreate from '@/components/common/NodeCreate';
+import NodeCreate from '@/components/common/node-create';
 import useStore from '@/data/store';
 import { AlertModal } from '../modals/alertModal';
 import ActionTooltip from '../ui/action-tooltip';
 import CaseNotes from './case-notes';
 import 'react-toastify/dist/ReactToastify.css';
+import { usePermissionsModal } from '.*/use-permissions-modal';
+import { useResourcesModal } from '.*/use-resources-modal';
+import { useShareModal } from '.*/use-share-modal';
 import { useSession } from 'next-auth/react';
-import { usePermissionsModal } from '@/hooks/usePermissionsModal';
-import { useResourcesModal } from '@/hooks/useResourcesModal';
-import { useShareModal } from '@/hooks/useShareModal';
 
 interface ActionButtonProps {
   showCreateGoal: boolean;
@@ -149,9 +149,9 @@ const ActionButtons = ({
               assuranceCase.permissions !== 'review') && (
               <ActionTooltip label="New Goal">
                 <button
-                  type="button"
                   className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                   onClick={() => setOpen(true)}
+                  type="button"
                 >
                   <Plus className="h-5 w-5" />
                   <span className="sr-only">Add Goal</span>
@@ -160,10 +160,10 @@ const ActionButtons = ({
             )}
           <ActionTooltip label="Focus">
             <button
-              type="button"
               className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               id="FocusBtn"
               onClick={() => onLayout('TB')}
+              type="button"
             >
               <Group className="h-5 w-5" />
               <span className="sr-only">Focus</span>
@@ -173,9 +173,9 @@ const ActionButtons = ({
             assuranceCase.permissions !== 'review' && (
               <ActionTooltip label="Reset Identifiers">
                 <button
-                  type="button"
                   className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                   onClick={() => setAlertOpen(true)}
+                  type="button"
                 >
                   <RotateCw className="h-5 w-5" />
                   <span className="sr-only">Reset Identifiers</span>
@@ -184,9 +184,9 @@ const ActionButtons = ({
             )}
           <ActionTooltip label="Resources">
             <button
-              type="button"
               className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               onClick={() => resourcesModal.onOpen()}
+              type="button"
             >
               <Info className="h-5 w-5" />
               <span className="sr-only">Resources</span>
@@ -197,9 +197,9 @@ const ActionButtons = ({
           {assuranceCase.permissions !== 'view' && (
             <ActionTooltip label="Share & Export">
               <button
-                type="button"
                 className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={() => shareModal.onOpen()}
+                type="button"
               >
                 <ExternalLink className="h-5 w-5" />
                 <span className="sr-only">Share & Export</span>
@@ -209,9 +209,9 @@ const ActionButtons = ({
           {assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Permissions">
               <button
-                type="button"
                 className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={() => permissionModal.onOpen()}
+                type="button"
               >
                 <Users2 className="h-5 w-5" />
                 <span className="sr-only">Permissions</span>
@@ -220,9 +220,9 @@ const ActionButtons = ({
           )}
           <ActionTooltip label="Notes">
             <button
-              type="button"
               className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
               onClick={() => setNotesOpen(true)}
+              type="button"
             >
               <Notebook className="h-5 w-5" />
               <span className="sr-only">Notes</span>
@@ -232,9 +232,9 @@ const ActionButtons = ({
             assuranceCase.permissions === 'editor') && (
             <ActionTooltip label="Capture">
               <button
-                type="button"
                 className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
                 onClick={handleCapture}
+                type="button"
               >
                 <Camera className="h-5 w-5" />
                 <span className="sr-only">Capture</span>
@@ -244,9 +244,9 @@ const ActionButtons = ({
           {assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Delete">
               <button
-                type="button"
                 className="h-50 w-50 rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"
                 onClick={() => setDeleteOpen(true)}
+                type="button"
               >
                 <Trash2 className="h-5 w-5" />
                 <span className="sr-only">Delete</span>

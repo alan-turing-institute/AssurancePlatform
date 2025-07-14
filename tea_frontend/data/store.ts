@@ -1,3 +1,4 @@
+import { nodeTypes } from '.*/node-types';
 import Dagre from '@dagrejs/dagre';
 import {
   addEdge,
@@ -14,36 +15,47 @@ import {
   type OnNodesChange,
 } from 'reactflow';
 import { create } from 'zustand';
+import type { AssuranceCase, Comment as CaseComment, User } from '@/types';
 import { initEdges } from './edges';
 import { initNodes } from './nodes';
-import { nodeTypes } from './nodeTypes';
+
+// Define types for orphaned elements
+type OrphanedElement = {
+  id: number;
+  type: string;
+  name: string;
+  [key: string]: unknown;
+};
+
+// Define type for members (users in groups)
+type Member = User;
 
 type Store = {
-  assuranceCase: any;
-  orphanedElements: any[];
+  assuranceCase: AssuranceCase | null;
+  orphanedElements: OrphanedElement[];
   nodes: Node[];
   edges: Edge[];
   nodeTypes: NodeTypes;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  setAssuranceCase: (assuranceCase: any) => void;
-  setOrphanedElements: (orphanedElements: any) => void;
+  setAssuranceCase: (assuranceCase: AssuranceCase | null) => void;
+  setOrphanedElements: (orphanedElements: OrphanedElement[]) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
-  viewMembers: any[];
-  editMembers: any[];
-  reviewMembers: any[];
-  setViewMembers: (members: any[]) => void;
-  setEditMembers: (members: any[]) => void;
-  setReviewMembers: (members: any[]) => void;
-  activeUsers: any[];
-  setActiveUsers: (users: any[]) => void;
-  nodeComments: any[];
-  setNodeComments: (comments: any[]) => void;
-  caseNotes: any[];
-  setCaseNotes: (comments: any[]) => void;
+  viewMembers: Member[];
+  editMembers: Member[];
+  reviewMembers: Member[];
+  setViewMembers: (members: Member[]) => void;
+  setEditMembers: (members: Member[]) => void;
+  setReviewMembers: (members: Member[]) => void;
+  activeUsers: User[];
+  setActiveUsers: (users: User[]) => void;
+  nodeComments: CaseComment[];
+  setNodeComments: (comments: CaseComment[]) => void;
+  caseNotes: CaseComment[];
+  setCaseNotes: (comments: CaseComment[]) => void;
 };
 
 export type NodeData = {
@@ -56,16 +68,18 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
   g.setGraph({ rankdir: 'TB' });
 
   // Set all nodes in the graph, including hidden ones
-  nodes.forEach((node: any) => g.setNode(node.id, node));
+  nodes.forEach((node) => g.setNode(node.id, node));
 
   // Set edges for visible nodes only
-  const visibleEdges = edges.filter((edge: any) => !edge.hidden);
-  visibleEdges.forEach((edge: any) => g.setEdge(edge.source, edge.target));
+  const visibleEdges = edges.filter(
+    (edge) => !(edge as Edge & { hidden?: boolean }).hidden
+  );
+  visibleEdges.forEach((edge) => g.setEdge(edge.source, edge.target));
 
   Dagre.layout(g);
 
   return {
-    nodes: nodes.map((node: any) => {
+    nodes: nodes.map((node) => {
       const { x, y } = g.node(node.id);
       return { ...node, position: { x, y } };
     }),
@@ -95,7 +109,7 @@ const useStore = create<Store>((set, get) => ({
       edges: addEdge(connection, get().edges),
     });
   },
-  setAssuranceCase: (assuranceCase: any) => {
+  setAssuranceCase: (assuranceCase: AssuranceCase | null) => {
     // Update the assurance case in the state
     set({ assuranceCase });
 
@@ -105,11 +119,16 @@ const useStore = create<Store>((set, get) => ({
     // Layout the nodes and edges
     get().layoutNodes(nodes, edges);
   },
-  setOrphanedElements: (orphanedElements: any) => {
-    const newArray: any[] = [];
+  setOrphanedElements: (orphanedElements: {
+    contexts?: OrphanedElement[];
+    property_claims?: OrphanedElement[];
+    strategies?: OrphanedElement[];
+    evidence?: OrphanedElement[];
+  }) => {
+    const newArray: OrphanedElement[] = [];
 
     if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
-      orphanedElements.contexts.map((context: any) => {
+      orphanedElements.contexts.forEach((context) => {
         newArray.push(context);
       });
     }
@@ -118,19 +137,19 @@ const useStore = create<Store>((set, get) => ({
       orphanedElements.property_claims &&
       orphanedElements.property_claims.length > 0
     ) {
-      orphanedElements.property_claims.map((claim: any) => {
+      orphanedElements.property_claims.forEach((claim) => {
         newArray.push(claim);
       });
     }
 
     if (orphanedElements.strategies && orphanedElements.strategies.length > 0) {
-      orphanedElements.strategies.map((strategy: any) => {
+      orphanedElements.strategies.forEach((strategy) => {
         newArray.push(strategy);
       });
     }
 
     if (orphanedElements.evidence && orphanedElements.evidence.length > 0) {
-      orphanedElements.evidence.map((evidence: any) => {
+      orphanedElements.evidence.forEach((evidence) => {
         newArray.push(evidence);
       });
     }
@@ -155,21 +174,21 @@ const useStore = create<Store>((set, get) => ({
   viewMembers: [],
   editMembers: [],
   reviewMembers: [],
-  setViewMembers: (members: any[]) => {
+  setViewMembers: (members: Member[]) => {
     set({ viewMembers: members });
   },
-  setEditMembers: (members: any[]) => {
+  setEditMembers: (members: Member[]) => {
     set({ editMembers: members });
   },
-  setReviewMembers: (members: any[]) => {
+  setReviewMembers: (members: Member[]) => {
     set({ reviewMembers: members });
   },
   activeUsers: [],
-  setActiveUsers(users: any) {
+  setActiveUsers(users: User[]) {
     set({ activeUsers: users });
   },
   nodeComments: [],
-  setNodeComments: (comments: any[]) => {
+  setNodeComments: (comments: CaseComment[]) => {
     const sortedComments = comments.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -177,7 +196,7 @@ const useStore = create<Store>((set, get) => ({
     set({ nodeComments: sortedComments });
   },
   caseNotes: [],
-  setCaseNotes: (comments: any[]) => {
+  setCaseNotes: (comments: CaseComment[]) => {
     const sortedComments = comments.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

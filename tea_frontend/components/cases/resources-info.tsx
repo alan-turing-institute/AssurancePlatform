@@ -7,7 +7,7 @@ import {
   Goal,
   Route,
 } from 'lucide-react';
-import * as React from 'react';
+import React from 'react';
 import {
   NavigationMenu,
   NavigationMenuContent,

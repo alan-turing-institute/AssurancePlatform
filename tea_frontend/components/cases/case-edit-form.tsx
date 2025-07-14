@@ -20,7 +20,7 @@ import useStore from '@/data/store';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 
 const formSchema = z.object({
   name: z
@@ -74,6 +74,8 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
     };
     const response = await fetch(url, requestOptions);
     if (!response.ok) {
+      // TODO: Handle error response appropriately
+      console.error('Failed to update case');
     }
 
     setLoading(false);

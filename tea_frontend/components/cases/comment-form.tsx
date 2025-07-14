@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import useStore from '@/data/store';
+import type { Comment as CaseComment } from '@/types';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
@@ -23,14 +24,18 @@ const formSchema = z.object({
 });
 
 interface CommentsFormProps {
-  node: any;
+  node: {
+    type: string;
+    data: {
+      id: number;
+    };
+  };
 }
 
 const CommentsForm: React.FC<CommentsFormProps> = ({
   node,
 }: CommentsFormProps) => {
-  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } =
-    useStore();
+  const { nodeComments, setNodeComments } = useStore();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
 
@@ -44,9 +49,16 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
 
-    const newComment = {
+    const newComment: {
+      content: string;
+      context?: number;
+      strategy?: number;
+      property_claim?: number;
+      evidence?: number;
+      goal?: number;
+    } = {
       content: values.comment,
-    } as any;
+    };
 
     let entity = null;
     switch (node.type) {
@@ -95,6 +107,8 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
       // Clear form input
       form.setValue('comment', '');
     } catch (_error) {
+      // TODO: Handle error appropriately
+      console.error('Failed to post comment', _error);
     } finally {
       setLoading(false);
     }

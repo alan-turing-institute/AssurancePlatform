@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import useStore from '@/data/store';
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 import {
   addEvidenceToClaim,
   addHiddenProp,
@@ -96,8 +96,6 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     }
 
     result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
-
-    console.log('RESULT', result);
 
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
@@ -196,7 +194,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     );
 
     if (result.error) {
-      console.log('RESULT ERROR', result.error);
+      // Handle error silently
       return;
     }
 
@@ -260,7 +258,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         result.data
       );
       if (!added) {
-        return console.error('Parent property claim not found!');
+        return; // Parent property claim not found
       }
 
       const updatedAssuranceCase = {
@@ -337,7 +335,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       result.data
     );
     if (!added) {
-      return console.error('Parent property claim not found!');
+      return; // Parent property claim not found
     }
 
     const updatedAssuranceCase = {

@@ -7,18 +7,22 @@ import {
   screen,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
+import type { AssuranceCase, User } from '@/types';
 import CaseContainer from './case-container';
+
+// Regex constants for test assertions
+const LOADING_REGEX = /loading/i;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: null as any,
+  assuranceCase: null as AssuranceCase | null,
   setAssuranceCase: vi.fn(),
   setOrphanedElements: vi.fn(),
-  viewMembers: [] as any[],
+  viewMembers: [] as User[],
   setViewMembers: vi.fn(),
-  editMembers: [] as any[],
+  editMembers: [] as User[],
   setEditMembers: vi.fn(),
-  reviewMembers: [] as any[],
+  reviewMembers: [] as User[],
   setReviewMembers: vi.fn(),
 };
 
@@ -99,7 +103,7 @@ describe('CaseContainer', () => {
       renderWithAuth(<CaseContainer caseId="1" />);
 
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_REGEX })
       ).toBeInTheDocument();
       expect(screen.getByText('Rendering your chart...')).toBeInTheDocument();
     });
@@ -107,7 +111,7 @@ describe('CaseContainer', () => {
     it('should show correct loading animation elements', () => {
       renderWithAuth(<CaseContainer caseId="1" />);
 
-      const spinner = screen.getByRole('status', { name: /loading/i });
+      const spinner = screen.getByRole('status', { name: LOADING_REGEX });
       expect(spinner).toHaveClass('animate-spin');
       expect(screen.getByText('Rendering your chart...')).toHaveClass(
         'text-muted-foreground'
@@ -310,7 +314,7 @@ describe('CaseContainer', () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByRole('status', { name: /loading/i })
+          screen.queryByRole('status', { name: LOADING_REGEX })
         ).not.toBeInTheDocument();
       });
     });

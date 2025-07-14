@@ -38,12 +38,12 @@ import NodeAttributes from '../cases/node-attributes';
 import NodeComment from '../cases/node-comments';
 import NodeContext from '../cases/node-context';
 import OrphanElements from '../cases/orphan-elements';
-import { AlertModal } from '../modals/alertModal';
+import { AlertModal } from '../modals/alert-modal';
 import EditSheet from '../ui/edit-sheet';
 import { Separator } from '../ui/separator';
-import EditForm from './EditForm';
-// import { useLoginToken } from "@/hooks/useAuth";
-import NewLinkForm from './NewLinkForm';
+import EditForm from './edit-form';
+// import { useLoginToken } from ".*/use-auth";
+import NewLinkForm from './new-link-form';
 
 interface NodeEditProps {
   node: Node | any;

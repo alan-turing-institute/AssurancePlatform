@@ -2,9 +2,9 @@
 
 import { BookOpenText } from 'lucide-react';
 import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from 'reactflow';
 
-function ContextNode({ isConnectable, data }: any) {
+function ContextNode({ data }: NodeProps) {
   return (
     <div
       className={

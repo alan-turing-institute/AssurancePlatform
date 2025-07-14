@@ -1,11 +1,11 @@
 'use client';
 
+import { unauthorized } from '.*/use-auth';
 import { PencilLine, Trash2, User2Icon } from 'lucide-react';
 import moment from 'moment';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import useStore from '@/data/store';
-import { unauthorized } from '@/hooks/useAuth';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import NotesEditForm from './notes-edit-form';

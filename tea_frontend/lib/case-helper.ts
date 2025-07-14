@@ -1,4 +1,11 @@
-import type { AssuranceCase } from '@/types';
+import type {
+  AssuranceCase,
+  Context,
+  Evidence,
+  Goal,
+  PropertyClaim,
+  Strategy,
+} from '@/types';
 
 interface Map {
   [key: string]: string | undefined;
@@ -8,7 +15,22 @@ interface CaseNode {
   hidden: boolean;
   id: number;
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+// Union type for items that can contain property claims
+type PropertyClaimContainer = PropertyClaim | Strategy | Goal;
+
+// Type guard to check if an object has property_claims
+function hasPropertyClaims(
+  obj: unknown
+): obj is { property_claims: PropertyClaim[] } {
+  return typeof obj === 'object' && obj !== null && 'property_claims' in obj;
+}
+
+// Type guard to check if an object has strategies
+function hasStrategies(obj: unknown): obj is { strategies: Strategy[] } {
+  return typeof obj === 'object' && obj !== null && 'strategies' in obj;
 }
 
 const DESCRIPTION_FROM_TYPE: Map = {
@@ -25,16 +47,16 @@ export const caseItemDescription = (caseItemName: string) =>
 /**
  * Recursively adds a new property claim to a specified parent property claim by ID.
  *
- * @param {any} propertyClaims - The array of property claims to search through.
- * @param {any} parentId - The ID of the parent property claim to which the new claim will be added.
- * @param {any} newPropertyClaim - The new property claim to be added.
- * @returns {boolean} Returns true if the property claim was found and updated, otherwise false.
+ * @param propertyClaims - The array of property claims to search through.
+ * @param parentId - The ID of the parent property claim to which the new claim will be added.
+ * @param newPropertyClaim - The new property claim to be added.
+ * @returns Returns true if the property claim was found and updated, otherwise false.
  */
 export const addPropertyClaimToNested = (
-  propertyClaims: any,
-  parentId: any,
-  newPropertyClaim: any
-) => {
+  propertyClaims: PropertyClaim[],
+  parentId: number,
+  newPropertyClaim: PropertyClaim
+): boolean => {
   // Iterate through the property claims array
   for (let i = 0; i < propertyClaims.length; i++) {
     const propertyClaim = propertyClaims[i];
@@ -94,16 +116,16 @@ export const addPropertyClaimToNested = (
  * This function searches through the given array of property claims and updates
  * the matching property claim with new properties provided in `newPropertyClaim`.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} id - The ID of the property claim to be updated.
- * @param {any} newPropertyClaim - An object containing the properties to update the property claim with.
- * @returns {any[] | null} Returns the updated array if the property claim is found and updated, otherwise null.
+ * @param array - The array of property claims to search through.
+ * @param id - The ID of the property claim to be updated.
+ * @param newPropertyClaim - An object containing the properties to update the property claim with.
+ * @returns Returns the updated array if the property claim is found and updated, otherwise null.
  */
 export const updatePropertyClaimNested = (
-  array: any,
-  id: any,
-  newPropertyClaim: any
-) => {
+  array: PropertyClaim[],
+  id: number,
+  newPropertyClaim: Partial<PropertyClaim>
+): PropertyClaim[] | null => {
   // Iterate through the property claims array
   for (let i = 0; i < array.length; i++) {
     const propertyClaim = array[i];
@@ -156,16 +178,19 @@ export const updatePropertyClaimNested = (
  * This function searches through the provided array, filtering out the property claim
  * with the specified ID and its occurrences in nested property claims and strategies.
  *
- * @param {any[]} array - The array of property claims to process.
- * @param {any} id - The ID of the property claim to remove.
- * @returns {any[]} A new array with the specified property claim removed.
+ * @param array - The array of property claims to process.
+ * @param id - The ID of the property claim to remove.
+ * @returns A new array with the specified property claim removed.
  */
-const removePropertyClaimFromOldLocation = (array: any, id: any) => {
-  return array.map((item: any) => {
+const removePropertyClaimFromOldLocation = (
+  array: PropertyClaim[],
+  id: number
+): PropertyClaim[] => {
+  return array.map((item) => {
     if (item.property_claims) {
       // Filter out the claim with the given id
       item.property_claims = item.property_claims.filter(
-        (claim: any) => claim.id !== id
+        (claim) => claim.id !== id
       );
       // Recursively remove the claim from nested property_claims
       item.property_claims = removePropertyClaimFromOldLocation(
@@ -176,11 +201,11 @@ const removePropertyClaimFromOldLocation = (array: any, id: any) => {
 
     if (item.strategies) {
       // Recursively process each strategy
-      item.strategies = item.strategies.map((strategy: any) => {
+      item.strategies = item.strategies.map((strategy) => {
         if (strategy.property_claims) {
           // Filter out the claim with the given id from the strategy's property_claims
           strategy.property_claims = strategy.property_claims.filter(
-            (claim: any) => claim.id !== id
+            (claim) => claim.id !== id
           );
           // Recursively remove the claim from the strategy's nested property_claims
           strategy.property_claims = removePropertyClaimFromOldLocation(
@@ -202,17 +227,17 @@ const removePropertyClaimFromOldLocation = (array: any, id: any) => {
  * This function searches for the parent ID in the provided array and adds the
  * new property claim to the property claims of the matching parent item.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} property_claim - The property claim to be added.
- * @param {any} newParentId - The ID of the parent property claim where the new claim should be added.
- * @returns {any[]} A new array with the property claim added to the specified location.
+ * @param array - The array of property claims to search through.
+ * @param property_claim - The property claim to be added.
+ * @param newParentId - The ID of the parent property claim where the new claim should be added.
+ * @returns A new array with the property claim added to the specified location.
  */
 const addPropertyClaimToLocation = (
-  array: any,
-  property_claim: any,
-  newParentId: any
-) => {
-  return array.map((item: any) => {
+  array: PropertyClaim[],
+  property_claim: PropertyClaim,
+  newParentId: number
+): PropertyClaim[] => {
+  return array.map((item) => {
     if (item.id === newParentId) {
       if (!item.property_claims) {
         item.property_claims = [];
@@ -229,7 +254,7 @@ const addPropertyClaimToLocation = (
     }
 
     if (item.strategies) {
-      item.strategies = item.strategies.map((strategy: any) => {
+      item.strategies = item.strategies.map((strategy) => {
         if (strategy.id === newParentId) {
           if (!strategy.property_claims) {
             strategy.property_claims = [];
@@ -258,19 +283,19 @@ const addPropertyClaimToLocation = (
  * This function finds an existing property claim by ID, removes it from its old location,
  * merges the new properties, and adds it to the new specified location.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} id - The ID of the property claim to be updated.
- * @param {any} newPropertyClaim - An object containing the properties to update the property claim with.
- * @returns {any[]} A new array with the property claim updated and moved to the new location.
+ * @param array - The array of property claims to search through.
+ * @param id - The ID of the property claim to be updated.
+ * @param newPropertyClaim - An object containing the properties to update the property claim with.
+ * @returns A new array with the property claim updated and moved to the new location.
  */
 export const updatePropertyClaimNestedMove = (
-  array: any,
-  id: any,
-  newPropertyClaim: any
-) => {
+  array: PropertyClaim[],
+  id: number,
+  newPropertyClaim: Partial<PropertyClaim> & { property_claim_id?: number }
+): PropertyClaim[] => {
   // Find the existing property claim item
-  let existingPropertyClaim = null;
-  const findExstingPropertyClaim = (arr: any) => {
+  let existingPropertyClaim: PropertyClaim | null = null;
+  const findExstingPropertyClaim = (arr: PropertyClaim[]) => {
     for (let i = 0; i < arr.length; i++) {
       const item = arr[i];
 
@@ -294,18 +319,16 @@ export const updatePropertyClaimNestedMove = (
   findExstingPropertyClaim(array);
 
   // Remove evidence from its old location
-  console.log('Remove Element');
   const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(
     array,
     id
   );
-  console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim);
 
   // Merge existing evidence properties with updated ones
   const updatedPropertyClaim = {
-    ...(existingPropertyClaim as any),
+    ...existingPropertyClaim,
     ...newPropertyClaim,
-  };
+  } as PropertyClaim;
 
   // Add evidence to the new location
   // const newClaimId = newPropertyClaim.property_claim_id[0];
@@ -323,8 +346,6 @@ export const updatePropertyClaimNestedMove = (
     newParentId = updatedPropertyClaim.property_claim_id;
   }
 
-  console.log('New Parent Id', newParentId);
-
   const updatedArray = addPropertyClaimToLocation(
     arrayWithoutOldPropertyClaim,
     updatedPropertyClaim,
@@ -341,16 +362,16 @@ export const updatePropertyClaimNestedMove = (
  * all claims that are of type "PropertyClaim" and do not match the current
  * claim name provided.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {string} currentClaimName - The name of the current claim to exclude.
- * @param {any[]} claims - An array to accumulate the found property claims (used for recursion).
- * @returns {any[]} An array of property claims excluding the specified current claim.
+ * @param array - The array of property claims to search through.
+ * @param currentClaimName - The name of the current claim to exclude.
+ * @param claims - An array to accumulate the found property claims (used for recursion).
+ * @returns An array of property claims excluding the specified current claim.
  */
 export const listPropertyClaims = (
-  array: any,
+  array: PropertyClaim[],
   currentClaimName: string,
-  claims: any[] = []
-) => {
+  claims: PropertyClaim[] = []
+): PropertyClaim[] => {
   // Iterate through the property claims array
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
@@ -388,23 +409,22 @@ export const listPropertyClaims = (
  * upon finding it, adds the new evidence to that claim. If the claim does
  * not have an evidence array, it initializes one.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} parentId - The ID of the property claim to which the evidence should be added.
- * @param {any} newEvidence - The evidence object to add to the property claim.
- * @returns {boolean} True if the property claim was found and updated; false otherwise.
+ * @param array - The array of property claims to search through.
+ * @param parentId - The ID of the property claim to which the evidence should be added.
+ * @param newEvidence - The evidence object to add to the property claim.
+ * @returns True if the property claim was found and updated; false otherwise.
  */
 export const addEvidenceToClaim = (
-  array: any,
-  parentId: any,
-  newEvidence: any
-) => {
+  array: PropertyClaim[],
+  parentId: number,
+  newEvidence: Evidence
+): boolean => {
   // Iterate through the property claims array
   for (let i = 0; i < array.length; i++) {
     const propertyClaim = array[i];
 
     // Check if this property claim matches the parent ID
     if (propertyClaim.id === parentId) {
-      console.log(propertyClaim);
       // Check if the property claim already has evidence array
       if (!propertyClaim.evidence) {
         propertyClaim.evidence = [];
@@ -458,12 +478,16 @@ export const addEvidenceToClaim = (
  * This function recursively searches through the nested array and updates the
  * evidence with the given ID, merging the existing properties with the new ones.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} id - The ID of the evidence to update.
- * @param {any} newEvidence - An object containing the properties to update the evidence with.
- * @returns {any[]} The updated array with the evidence modified, or null if not found.
+ * @param array - The array of property claims to search through.
+ * @param id - The ID of the evidence to update.
+ * @param newEvidence - An object containing the properties to update the evidence with.
+ * @returns The updated array with the evidence modified, or null if not found.
  */
-export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
+export const updateEvidenceNested = (
+  array: PropertyClaim[],
+  id: number,
+  newEvidence: Partial<Evidence>
+): PropertyClaim[] | null => {
   // Iterate through the array
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
@@ -522,16 +546,17 @@ export const updateEvidenceNested = (array: any, id: any, newEvidence: any) => {
  * This function searches through the array and filters out the evidence
  * with the specified ID, including nested structures.
  *
- * @param {any[]} array - The array of property claims to process.
- * @param {any} id - The ID of the evidence to remove.
- * @returns {any[]} A new array with the specified evidence removed.
+ * @param array - The array of property claims to process.
+ * @param id - The ID of the evidence to remove.
+ * @returns A new array with the specified evidence removed.
  */
-const removeEvidenceFromOldLocation = (array: any, id: any) => {
-  return array.map((item: any) => {
+const removeEvidenceFromOldLocation = (
+  array: PropertyClaim[],
+  id: number
+): PropertyClaim[] => {
+  return array.map((item) => {
     if (item.evidence) {
-      item.evidence = item.evidence.filter(
-        (evidence: any) => evidence.id !== id
-      );
+      item.evidence = item.evidence.filter((evidence) => evidence.id !== id);
     }
 
     if (item.property_claims) {
@@ -542,7 +567,7 @@ const removeEvidenceFromOldLocation = (array: any, id: any) => {
     }
 
     if (item.strategies) {
-      item.strategies = item.strategies.map((strategy: any) => {
+      item.strategies = item.strategies.map((strategy) => {
         if (strategy.property_claims) {
           strategy.property_claims = removeEvidenceFromOldLocation(
             strategy.property_claims,
@@ -564,17 +589,17 @@ const removeEvidenceFromOldLocation = (array: any, id: any) => {
  * ID and, upon finding it, adds the new evidence to that claim. If the claim
  * does not have an evidence array, it initializes one.
  *
- * @param {any[]} array - The array of property claims to search through.
- * @param {any} evidence - The evidence object to add to the property claim.
- * @param {any} newClaimId - The ID of the property claim where the evidence should be added.
- * @returns {any[]} The updated array with the evidence added to the specified claim.
+ * @param array - The array of property claims to search through.
+ * @param evidence - The evidence object to add to the property claim.
+ * @param newClaimId - The ID of the property claim where the evidence should be added.
+ * @returns The updated array with the evidence added to the specified claim.
  */
 const addEvidenceToNewLocation = (
-  array: any,
-  evidence: any,
-  newClaimId: any
-) => {
-  return array.map((item: any) => {
+  array: PropertyClaim[],
+  evidence: Evidence,
+  newClaimId: number
+): PropertyClaim[] => {
+  return array.map((item) => {
     if (item.id === newClaimId) {
       if (!item.evidence) {
         item.evidence = [];
@@ -591,7 +616,7 @@ const addEvidenceToNewLocation = (
     }
 
     if (item.strategies) {
-      item.strategies = item.strategies.map((strategy: any) => {
+      item.strategies = item.strategies.map((strategy) => {
         if (strategy.property_claims) {
           strategy.property_claims = addEvidenceToNewLocation(
             strategy.property_claims,
@@ -624,15 +649,6 @@ export const updateEvidenceNestedMove = (
   id: any,
   newEvidence: any
 ) => {
-  console.log(
-    'updateEvidenceNested called with array:',
-    array,
-    'id:',
-    id,
-    'newEvidence:',
-    newEvidence
-  );
-
   // Find the existing evidence item
   let existingEvidence = null;
   const findExistingEvidence = (arr: any) => {
@@ -690,7 +706,7 @@ export const createAssuranceCaseNode = async (
   newItem: any,
   token: string | null
 ) => {
-  if (!token) return console.log('No token');
+  if (!token) return { error: 'No token' };
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
@@ -710,7 +726,6 @@ export const createAssuranceCaseNode = async (
     }
 
     const result = await response.json();
-    console.log('Node Create Result', result);
 
     const data = {
       ...result,
@@ -719,7 +734,6 @@ export const createAssuranceCaseNode = async (
 
     return { data };
   } catch (error) {
-    console.log('Error', error);
     return { error };
   }
 };
@@ -734,10 +748,10 @@ export const createAssuranceCaseNode = async (
  */
 export const deleteAssuranceCaseNode = async (
   type: string,
-  id: any,
+  id: number,
   token: string | null
-) => {
-  if (!token) return console.log('No token');
+): Promise<boolean> => {
+  if (!token) return { error: 'No token' };
 
   let entity = null;
   switch (type.toLowerCase()) {
@@ -774,7 +788,6 @@ export const deleteAssuranceCaseNode = async (
       return true;
     }
   } catch (error) {
-    console.log('Error', error);
     return false;
   }
 };
@@ -782,19 +795,19 @@ export const deleteAssuranceCaseNode = async (
 /**
  * Updates an existing assurance case node by sending a PUT request to the specified API endpoint.
  *
- * @param {string} type - The type of node to update (e.g., "context", "strategy").
- * @param {any} id - The unique identifier of the assurance case node to be updated.
- * @param {string | null} token - The authorization token for API access. If null, the function logs an error and exits.
- * @param {any} updateItem - The updated data for the assurance case node.
- * @returns {Promise<boolean>} A promise that resolves to true if the update was successful, otherwise false.
+ * @param type - The type of node to update (e.g., "context", "strategy").
+ * @param id - The unique identifier of the assurance case node to be updated.
+ * @param token - The authorization token for API access. If null, the function logs an error and exits.
+ * @param updateItem - The updated data for the assurance case node.
+ * @returns A promise that resolves to true if the update was successful, otherwise false.
  */
 export const updateAssuranceCaseNode = async (
   type: string,
-  id: any,
+  id: number,
   token: string | null,
-  updateItem: any
-) => {
-  if (!token) return console.log('No token');
+  updateItem: unknown
+): Promise<boolean> => {
+  if (!token) return { error: 'No token' };
 
   let entity = null;
   switch (type) {
@@ -832,7 +845,6 @@ export const updateAssuranceCaseNode = async (
       return true;
     }
   } catch (error) {
-    console.log('Error', error);
     return false;
   }
 };
@@ -842,7 +854,7 @@ export const getAssuranceCaseNode = async (
   id: any,
   token: string | null
 ) => {
-  if (!token) return console.log('No token');
+  if (!token) return { error: 'No token' };
 
   let entity = null;
   switch (type) {
@@ -876,13 +888,11 @@ export const getAssuranceCaseNode = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
-      console.log('Something went wrong');
     }
 
     const result = await response.json();
     return result;
   } catch (error) {
-    console.log('Error', error);
     return false;
   }
 };
@@ -1035,7 +1045,6 @@ export const updateAssuranceCase = async (
           updatedItem
         );
       }
-      console.log(updatedGoals);
       updatedAssuranceCase = {
         ...assuranceCase,
         goals: updatedGoals,
@@ -1187,13 +1196,11 @@ export const removeAssuranceCaseNode = (
   id: any,
   type: string
 ) => {
-  console.log(`Remove id: ${id} type: ${type}`);
   const updatedGoals = removeItemFromNestedStructure(
     assuranceCase.goals,
     id,
     type
   );
-  console.log('updatedGoals', updatedGoals);
   return {
     ...assuranceCase,
     goals: updatedGoals,
@@ -1513,7 +1520,6 @@ export const findSiblingHiddenState = (
     }
     return hiddenStatus[0];
   }
-  console.log(`Element with ID ${parentId} not found.`);
 };
 
 /**
@@ -1569,8 +1575,6 @@ export const detachCaseElement = async (
 ): Promise<any> => {
   if (!token) return { error: 'No token' };
 
-  console.log('Detaching Node', node);
-
   const payload: any = {
     goal_id: null,
     strategy_id: null,
@@ -1623,7 +1627,6 @@ export const detachCaseElement = async (
 
     return { detached: true };
   } catch (error) {
-    console.log('Error', error);
     return { error };
   }
 };
@@ -1644,8 +1647,6 @@ export const attachCaseElement = async (
   parent: any
 ): Promise<any> => {
   if (!token) return { error: 'No token' };
-
-  console.log('Parent', parent);
 
   const payload: any = {
     goal_id: null,
@@ -1682,8 +1683,6 @@ export const attachCaseElement = async (
       break;
   }
 
-  console.log('Payload', payload);
-
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
 
@@ -1703,7 +1702,6 @@ export const attachCaseElement = async (
 
     return { attached: true };
   } catch (error) {
-    console.log('Error', error);
     return { error };
   }
 };
@@ -1714,7 +1712,7 @@ export const addElementComment = async (
   newComment: any,
   token: string | null
 ) => {
-  if (!token) return console.log('No token');
+  if (!token) return { error: 'No token' };
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
@@ -1730,14 +1728,12 @@ export const addElementComment = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
-      console.log('error');
     }
 
     const result = await response.json();
 
     return result;
   } catch (error) {
-    console.log(`Could not create comment for ${entity}`, error);
     return { error };
   }
 };
@@ -1749,7 +1745,7 @@ export const updateElementComment = async (
   newCommentId: number,
   token: string | null
 ) => {
-  if (!token) return console.log('No token');
+  if (!token) return { error: 'No token' };
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
@@ -1765,17 +1761,12 @@ export const updateElementComment = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
-      console.log('error');
     }
 
     const result = await response.json();
 
     return result;
   } catch (error) {
-    console.log(
-      `Could not update comment for ${entity}/${newCommentId}`,
-      error
-    );
     return { error };
   }
 };

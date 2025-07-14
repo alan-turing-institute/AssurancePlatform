@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { Inter as FontSans } from 'next/font/google';
 import './globals.css';
+import { authOptions } from '.*/auth-options';
 import { getServerSession } from 'next-auth';
 import { Toaster } from '@/components/ui/toaster';
-import { authOptions } from '@/lib/authOptions';
 import { cn } from '@/lib/utils';
 import { ModalProvider } from '@/providers/modal-provider';
 import SessionProvider from '@/providers/session-provider';

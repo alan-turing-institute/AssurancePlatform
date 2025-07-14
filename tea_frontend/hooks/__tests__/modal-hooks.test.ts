@@ -1,11 +1,11 @@
+import { useCreateCaseModal } from '.*/use-create-case-modal';
+import { useEmailModal } from '.*/use-email-modal';
+import { useImportModal } from '.*/use-import-modal';
+import { usePermissionsModal } from '.*/use-permissions-modal';
+import { useResourcesModal } from '.*/use-resources-modal';
+import { useShareModal } from '.*/use-share-modal';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useCreateCaseModal } from '../useCreateCaseModal';
-import { useEmailModal } from '../useEmailModal';
-import { useImportModal } from '../useImportModal';
-import { usePermissionsModal } from '../usePermissionsModal';
-import { useResourcesModal } from '../useResourcesModal';
-import { useShareModal } from '../useShareModal';
 
 // Helper function to test modal hook behavior
 const testModalHook = (hookName: string, useHook: () => any) => {

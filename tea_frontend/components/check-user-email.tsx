@@ -1,7 +1,7 @@
 'use client';
 
+import { useEmailModal } from '.*/use-email-modal';
 import { useEffect } from 'react';
-import { useEmailModal } from '@/hooks/useEmailModal';
 
 interface CheckUserEmailProps {
   user: any;

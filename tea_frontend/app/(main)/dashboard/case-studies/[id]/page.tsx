@@ -1,10 +1,10 @@
+import { authOptions } from '.*/auth-options';
 import moment from 'moment';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { fetchCaseStudyById } from '@/actions/case-studies';
 import BackButton from '@/components/ui/back-button';
 import PageHeading from '@/components/ui/page-heading';
-import { authOptions } from '@/lib/authOptions';
 import type { CaseStudy } from '@/types/domain';
 import CaseStudyForm from '../_components/case-study-form';
 

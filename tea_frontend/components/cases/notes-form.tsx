@@ -15,7 +15,7 @@ import useStore from '@/data/store';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 
 const formSchema = z.object({
   note: z.string().min(2, {

@@ -26,7 +26,7 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 
 const formSchema = z.object({
   // name: z.string().min(2, {
@@ -90,7 +90,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
 
     if (result.error) {
       // TODO: Rendering error
-      return console.log(result.error);
+      return; // Handle error silently
     }
 
     const updatedAssuranceCase = {

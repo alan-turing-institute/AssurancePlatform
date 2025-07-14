@@ -1,11 +1,11 @@
 'use client';
 
+import { useCreateCaseModal } from '.*/use-create-case-modal';
+import { useImportModal } from '.*/use-import-modal';
 import { PlusIcon } from '@heroicons/react/20/solid';
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { Undo2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
-import { useImportModal } from '@/hooks/useImportModal';
 
 type NoCasesFoundProps = {
   message: string;

@@ -1,27 +1,32 @@
 'use client';
 
+import { unauthorized } from '.*/use-auth';
 import { PencilLine, Trash2, User2Icon } from 'lucide-react';
 import moment from 'moment';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import useStore from '@/data/store';
-import { unauthorized } from '@/hooks/useAuth';
+import type { Comment as CaseComment, User } from '@/types';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import CommentsEditForm from './comments-edit-form';
 
 type CommentsFeedProps = {
-  node: any;
+  node: {
+    type: string;
+    data: {
+      id: number;
+    };
+  };
 };
 
 export default function CommentsFeed({ node }: CommentsFeedProps) {
-  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } =
-    useStore();
+  const { assuranceCase, nodeComments, setNodeComments } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const [edit, setEdit] = useState<boolean>(false);
   const [editId, setEditId] = useState<number>();
-  const [user, setUser] = useState<any>();
+  const [user, setUser] = useState<User | undefined>();
   const { toast } = useToast();
 
   const handleNoteDelete = async (id: number) => {
@@ -47,7 +52,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
       }
 
       const updatedComments = nodeComments.filter(
-        (comment: any) => comment.id !== id
+        (comment) => comment.id !== id
       );
       setNodeComments(updatedComments);
     } catch (_error) {
@@ -59,7 +64,9 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
     }
   };
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    // TODO: Add any initialization logic if needed
+  }, []);
 
   const fetchCurrentUser = async () => {
     const requestOptions: RequestInit = {
@@ -99,7 +106,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
       )}
 
       <div className="mb-16 flex w-full flex-col items-start justify-start gap-3">
-        {nodeComments.map((comment: any) => (
+        {nodeComments.map((comment) => (
           <div
             className="group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer hover:bg-indigo-500 hover:pb-8 hover:text-white"
             key={comment.id}

@@ -1,8 +1,8 @@
 'use client';
 
+import MemberEditForm from '.*/member-edit-form';
 import { useEffect, useState } from 'react';
 import EditSheet from '../ui/edit-sheet';
-import MemberEditForm from './MemberEditForm';
 
 interface MemberEditProps {
   member: any;

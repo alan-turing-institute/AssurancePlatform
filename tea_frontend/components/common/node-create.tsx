@@ -3,7 +3,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { AlertModal } from '../modals/alertModal';
 import CreateSheet from '../ui/create-sheet';
-import CreateForm from './CreateForm';
+import CreateForm from './create-form';
 
 interface NodeCreateProps {
   isOpen: boolean;

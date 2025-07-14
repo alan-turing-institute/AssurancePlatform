@@ -1,9 +1,9 @@
+import { authOptions } from '.*/auth-options';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { fetchSharedAssuranceCases } from '@/actions/assurance-cases';
 import CaseList from '@/components/cases/case-list';
 import NoCasesFound from '@/components/cases/no-cases-found';
-import { authOptions } from '@/lib/authOptions';
 
 const SharedWithMePage = async () => {
   const session = await getServerSession(authOptions);

@@ -6,6 +6,12 @@ import { createMockAssuranceCase } from '@/src/__tests__/utils/mock-data';
 import { renderWithAuth, screen } from '@/src/__tests__/utils/test-utils';
 import CaseCard from './case-card';
 
+// Regex constants for test assertions
+const JAN_15_2024_REGEX = /Jan 15, 2024/;
+const JUN_30_2024_REGEX = /Jun 30, 2024/;
+const LONG_CASE_NAME_REGEX = /This is a very long case name/;
+const LONG_DESCRIPTION_REGEX = /This is a very long description/;
+
 // Mock the AlertModal component
 vi.mock('@/components/modals/alertModal', () => ({
   AlertModal: ({
@@ -25,8 +31,10 @@ vi.mock('@/components/modals/alertModal', () => ({
     return (
       <div data-testid="alert-modal">
         <p>Are you sure you want to delete this case?</p>
-        <button type="button" onClick={onClose}>Cancel</button>
-        <button type="button" disabled={loading} onClick={onConfirm}>
+        <button onClick={onClose} type="button">
+          Cancel
+        </button>
+        <button disabled={loading} onClick={onConfirm} type="button">
           {loading ? 'Deleting...' : 'Delete'}
         </button>
       </div>
@@ -71,7 +79,7 @@ describe('CaseCard', () => {
     ).toBeInTheDocument();
 
     // Check formatted date
-    expect(screen.getByText(/Jan 15, 2024/)).toBeInTheDocument();
+    expect(screen.getByText(JAN_15_2024_REGEX)).toBeInTheDocument();
   });
 
   it('should render action buttons', () => {
@@ -240,7 +248,7 @@ describe('CaseCard', () => {
     renderWithAuth(<CaseCard assuranceCase={caseWithDifferentDate} />);
 
     // Should display formatted date
-    expect(screen.getByText(/Jun 30, 2024/)).toBeInTheDocument();
+    expect(screen.getByText(JUN_30_2024_REGEX)).toBeInTheDocument();
   });
 
   it('should be accessible via keyboard navigation', async () => {
@@ -268,12 +276,8 @@ describe('CaseCard', () => {
 
     renderWithAuth(<CaseCard assuranceCase={caseWithLongText} />);
 
-    expect(
-      screen.getByText(/This is a very long case name/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/This is a very long description/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(LONG_CASE_NAME_REGEX)).toBeInTheDocument();
+    expect(screen.getByText(LONG_DESCRIPTION_REGEX)).toBeInTheDocument();
   });
 
   it('should handle missing or invalid date gracefully', () => {

@@ -9,11 +9,16 @@ import {
   screen,
   userEvent,
 } from '@/src/__tests__/utils/test-utils';
+import type { AssuranceCase } from '@/types';
 import CaseDetails from './case-details';
+
+// Regex constants for test assertions
+const YES_DISCARD_CHANGES_REGEX = /yes, discard changes/i;
+const NO_KEEP_EDITING_REGEX = /no, keep editing/i;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: mockAssuranceCase as any,
+  assuranceCase: mockAssuranceCase as AssuranceCase,
 };
 
 vi.mock('@/data/store', () => ({
@@ -434,10 +439,10 @@ describe('CaseDetails', () => {
 
       // Should have action buttons
       expect(
-        screen.getByRole('button', { name: /yes, discard changes/i })
+        screen.getByRole('button', { name: YES_DISCARD_CHANGES_REGEX })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /no, keep editing/i })
+        screen.getByRole('button', { name: NO_KEEP_EDITING_REGEX })
       ).toBeInTheDocument();
     });
   });

@@ -1,7 +1,7 @@
 'use client';
 
+import MemberEdit from '.*/member-edit';
 import { useState } from 'react';
-import MemberEdit from './MemberEdit';
 
 const people = [
   {

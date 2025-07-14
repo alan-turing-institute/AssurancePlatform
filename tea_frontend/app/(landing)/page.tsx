@@ -1,7 +1,7 @@
-import CTA from '@/components/demo/landing/CTA';
-import Features from '@/components/demo/landing/Features';
-import Footer from '@/components/demo/landing/Footer';
-import Hero from '@/components/demo/landing/Hero';
+import CTA from '@/components/demo/landing/cta';
+import Features from '@/components/demo/landing/features';
+import Footer from '@/components/demo/landing/footer';
+import Hero from '@/components/demo/landing/hero';
 
 const LandingPage = () => {
   return (

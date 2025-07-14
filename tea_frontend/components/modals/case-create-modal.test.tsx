@@ -7,7 +7,7 @@ import {
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
-import { CaseCreateModal } from './CaseCreateModal';
+import { CaseCreateModal } from './case-create-modal';
 
 // Mock the hook
 const mockCreateCaseModal = {

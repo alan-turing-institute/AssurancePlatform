@@ -10,6 +10,11 @@ import SignInForm from './sign-in-form';
 const USERNAME_REGEX = /username/i;
 const PASSWORD_REGEX = /password/i;
 const SIGN_IN_REGEX = /sign in/i;
+const MIN_LENGTH_ERROR_REGEX = /string must contain at least 2 character/i;
+const MIN_PASSWORD_LENGTH_ERROR_REGEX =
+  /string must contain at least 8 character/i;
+const MAX_LENGTH_ERROR_REGEX = /string must contain at most 50 character/i;
+const CONTINUE_WITH_GITHUB_REGEX = /continue with github/i;
 
 const mockPush = vi.fn();
 const mockSignIn = vi.fn();
@@ -64,15 +69,13 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
     const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     await user.type(usernameInput, 'a'); // Less than 2 characters
     await user.click(submitButton);
 
-    expect(
-      await screen.findByText(/string must contain at least 2 character/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
   });
 
   it('should validate minimum password length', async () => {
@@ -88,7 +91,7 @@ describe('SignInForm', () => {
     await user.click(submitButton);
 
     expect(
-      await screen.findByText(/string must contain at least 8 character/i)
+      await screen.findByText(MIN_PASSWORD_LENGTH_ERROR_REGEX)
     ).toBeInTheDocument();
   });
 
@@ -96,16 +99,14 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
     const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     const longUsername = 'a'.repeat(51); // More than 50 characters
     await user.type(usernameInput, longUsername);
     await user.click(submitButton);
 
-    expect(
-      await screen.findByText(/string must contain at most 50 character/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(MAX_LENGTH_ERROR_REGEX)).toBeInTheDocument();
   });
 
   it('should handle form submission with valid data', async () => {
@@ -155,21 +156,17 @@ describe('SignInForm', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
     const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
 
     // Trigger validation error
     await user.click(submitButton);
-    expect(
-      await screen.findByText(/string must contain at least 2 character/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
 
     // Start typing to clear error
     await user.type(usernameInput, 'validuser');
 
-    expect(
-      screen.queryByText(/string must contain at least 2 character/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(MIN_LENGTH_ERROR_REGEX)).not.toBeInTheDocument();
   });
 
   it('should have proper accessibility attributes', () => {
@@ -211,9 +208,7 @@ describe('SignInForm', () => {
     await user.click(submitButton);
 
     expect(mockSignIn).not.toHaveBeenCalled();
-    expect(
-      await screen.findByText(/string must contain at least 2 character/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
   });
 
   it('should handle sign in error states', async () => {
@@ -242,7 +237,7 @@ describe('SignInForm', () => {
     renderWithoutProviders(<SignInForm />);
 
     const githubButton = screen.getByRole('button', {
-      name: /continue with github/i,
+      name: CONTINUE_WITH_GITHUB_REGEX,
     });
     expect(githubButton).toBeInTheDocument();
   });
@@ -252,7 +247,7 @@ describe('SignInForm', () => {
     renderWithoutProviders(<SignInForm />);
 
     const githubButton = screen.getByRole('button', {
-      name: /continue with github/i,
+      name: CONTINUE_WITH_GITHUB_REGEX,
     });
     await user.click(githubButton);
 
@@ -264,10 +259,10 @@ describe('SignInForm', () => {
 
     // Check for form elements structure
     const usernameField = screen
-      .getByLabelText(/username/i)
+      .getByLabelText(USERNAME_REGEX)
       .closest('.space-y-2');
     const passwordField = screen
-      .getByLabelText(/password/i)
+      .getByLabelText(PASSWORD_REGEX)
       .closest('.space-y-2');
 
     expect(usernameField).toBeInTheDocument();

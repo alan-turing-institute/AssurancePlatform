@@ -1,5 +1,7 @@
 'use client';
 
+import { unauthorized } from '.*/use-auth';
+import { usePermissionsModal } from '.*/use-permissions-modal';
 import {
   Eye,
   MessageCircleMore,
@@ -12,8 +14,6 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
-import { unauthorized } from '@/hooks/useAuth';
-import { usePermissionsModal } from '@/hooks/usePermissionsModal';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { useToast } from '../ui/use-toast';

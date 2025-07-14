@@ -1,3 +1,4 @@
+import { authOptions } from '.*/auth-options';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { fetchAssuranceCases } from '@/actions/assurance-cases';
@@ -5,7 +6,6 @@ import { fetchCurrentUser } from '@/actions/users';
 import CaseList from '@/components/cases/case-list';
 import NoCasesFound from '@/components/cases/no-cases-found';
 import CheckUserEmail from '@/components/check-user-email';
-import { authOptions } from '@/lib/authOptions';
 
 const Dashboard = async () => {
   const session = await getServerSession(authOptions);

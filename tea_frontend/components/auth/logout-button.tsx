@@ -1,7 +1,7 @@
 'use client';
 
 import { LogOutIcon } from 'lucide-react';
-// import { useLoginToken } from '@/hooks/useAuth';
+// import { useLoginToken } from '.*/use-auth';
 import { useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';

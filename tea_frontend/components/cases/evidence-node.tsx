@@ -2,10 +2,10 @@
 
 import { Database } from 'lucide-react';
 import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, type NodeProps, Position } from 'reactflow';
 import IconIndicator from './icon-indicator';
 
-function EvidenceNode({ data }: any) {
+function EvidenceNode({ data }: NodeProps) {
   return (
     <div
       className={

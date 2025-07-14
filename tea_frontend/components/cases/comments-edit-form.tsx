@@ -19,14 +19,20 @@ import {
   FormItem,
   FormMessage,
 } from '@/components/ui/form';
-// import { useLoginToken } from '@/hooks/useAuth'
+// import { useLoginToken } from '.*/use-auth'
 import useStore from '@/data/store';
+import type { Comment as CaseComment } from '@/types';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/use-toast';
 
 type CommentsEditFormProps = {
-  node: any;
-  comment: any;
+  node: {
+    type: string;
+    data: {
+      id: number;
+    };
+  };
+  comment: CaseComment;
   setEdit: Dispatch<SetStateAction<boolean>>;
 };
 
@@ -34,15 +40,10 @@ const formSchema = z.object({
   comment: z.string().min(2).max(500),
 });
 
-const CommentsEditForm = ({
-  node,
-  comment,
-  setEdit,
-}: CommentsEditFormProps) => {
+const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
   // const [token] = useLoginToken();
   const { data: session } = useSession();
-  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } =
-    useStore();
+  const { nodeComments, setNodeComments } = useStore();
   const [loading, setLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for the textarea
 
@@ -88,7 +89,7 @@ const CommentsEditForm = ({
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = nodeComments.map((comment: any) =>
+      const updatedComments = nodeComments.map((comment) =>
         comment.id === updatedComment.id ? updatedComment : comment
       );
 

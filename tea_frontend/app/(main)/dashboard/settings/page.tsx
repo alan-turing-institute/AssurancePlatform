@@ -1,7 +1,7 @@
+import { authOptions } from '.*/auth-options';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { fetchCurrentUser } from '@/actions/users';
-import { authOptions } from '@/lib/authOptions';
 import { DeleteForm } from './_components/delete-form';
 import { PasswordForm } from './_components/password-form';
 import { PersonalInfoForm } from './_components/personal-info-form';

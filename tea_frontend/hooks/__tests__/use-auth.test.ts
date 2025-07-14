@@ -1,11 +1,11 @@
-import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   unauthorized,
   useEnforceLogin,
   useEnforceLogout,
   useLoginToken,
-} from '../useAuth';
+} from '.*/use-auth';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock next/navigation
 const mockPush = vi.fn();

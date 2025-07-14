@@ -1,18 +1,17 @@
 'use client';
 
-// import { AssuranceCase } from '@/types'
+import { useCreateCaseModal } from '.*/use-create-case-modal';
+import { useImportModal } from '.*/use-import-modal';
 import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
 import { PlusCircleIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
-
 import { Card, CardContent } from '@/components/ui/card';
-import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
-import { useImportModal } from '@/hooks/useImportModal';
+import type { AssuranceCase } from '@/types';
 import { Input } from '../ui/input';
 import CaseCard from './case-card';
 
 interface CaseListProps {
-  assuranceCases: any[];
+  assuranceCases: AssuranceCase[];
   showCreate?: boolean;
 }
 
@@ -37,7 +36,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
       setFilteredCases(assuranceCases);
     } else {
       // Filter assurance cases by name containing the searchTerm
-      const filtered = assuranceCases.filter((ac: any) =>
+      const filtered = assuranceCases.filter((ac) =>
         ac.name.toLowerCase().includes(searchTermLowerCase)
       );
       setFilteredCases(filtered);
@@ -60,6 +59,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
           <button
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
             onClick={() => importModal.onOpen()}
+            type="button"
           >
             <ArrowUpTrayIcon
               aria-hidden="true"
@@ -74,6 +74,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
           <button
             className="group min-h-[420px]"
             onClick={() => createCaseModal.onOpen()}
+            type="button"
           >
             <Card className="flex h-full items-center justify-center border-dashed transition-all group-hover:bg-indigo-500/10">
               <CardContent className="flex flex-col items-center justify-center gap-2 py-20">

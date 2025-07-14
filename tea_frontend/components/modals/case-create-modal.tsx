@@ -1,12 +1,13 @@
 'use client';
 
+import { useCreateCaseModal } from '.*/use-create-case-modal';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
@@ -18,10 +19,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
 import { Button } from '../ui/button';
 
-// import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from ".*/use-auth";
 
 const formSchema = z.object({
   name: z.string().min(1),

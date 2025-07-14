@@ -11,7 +11,7 @@ import {
   useState,
 } from 'react';
 import { useReactFlow, useUpdateNodeInternals } from 'reactflow';
-// import { useLoginToken } from "@/hooks/useAuth";
+// import { useLoginToken } from ".*/use-auth";
 import useStore from '@/data/store';
 import { toggleHiddenForParent } from '@/lib/case-helper';
 import LogoutButton from './auth/logout-button';

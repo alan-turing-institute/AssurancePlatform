@@ -11,7 +11,7 @@ import {
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
-import { ShareModal } from './ShareModal';
+import { ShareModal } from './share-modal';
 
 // Mock the store
 const mockStore = {

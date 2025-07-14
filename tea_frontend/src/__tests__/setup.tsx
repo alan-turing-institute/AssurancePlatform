@@ -59,7 +59,13 @@ vi.mock('next-auth/react', () => ({
 
 // Mock ReactFlow
 vi.mock('reactflow', () => ({
-  default: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+  default: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="react-flow" {...props}>
       {children}
     </div>
