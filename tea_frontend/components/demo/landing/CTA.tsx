@@ -9,7 +9,9 @@ export default function CTA() {
             Start using TEA today.
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-indigo-200">
-            You can sign up and test the TEA platform in action today. If would like to set up the platform in your own, private environment, please get in touch!
+            You can sign up and test the TEA platform in action today. If would
+            like to set up the platform in your own, private environment, please
+            get in touch!
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <a
@@ -25,5 +27,5 @@ export default function CTA() {
         </div>
       </div>
     </div>
-  )
+  );
 }

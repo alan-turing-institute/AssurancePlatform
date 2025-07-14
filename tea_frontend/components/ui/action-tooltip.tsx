@@ -3,9 +3,15 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from '@/components/ui/tooltip';
 
-const ActionTooltip = ({ children, label } : { children: React.ReactNode, label: string }) => {
+const ActionTooltip = ({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) => {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -15,7 +21,7 @@ const ActionTooltip = ({ children, label } : { children: React.ReactNode, label:
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
-}
+  );
+};
 
-export default ActionTooltip
+export default ActionTooltip;

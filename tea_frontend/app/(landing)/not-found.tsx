@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from 'next/link';
 
 export default function Example() {
   return (
@@ -34,5 +34,5 @@ export default function Example() {
         </div>
       </main>
     </>
-  )
+  );
 }

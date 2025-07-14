@@ -1,24 +1,24 @@
-const fs = require("fs-extra");
-const path = require("path");
-const { exec } = require("child_process");
+const fs = require('fs-extra');
+const path = require('path');
+const { exec } = require('child_process');
 
-const buildDir = path.join(__dirname, "..", "build");
+const buildDir = path.join(__dirname, '..', 'build');
 const destinationDir = path.join(
   __dirname,
-  "..",
-  "..",
-  "public",
-  "documentation",
+  '..',
+  '..',
+  'public',
+  'documentation'
 );
 
 // Run docusaurus build first
-exec("docusaurus build", (error, stdout, stderr) => {
+exec('docusaurus build', (error, stdout, stderr) => {
   if (error) {
     console.error(`Error during build: ${stderr}`);
     process.exit(1);
   }
 
-  console.log("Build successful:", stdout);
+  console.log('Build successful:', stdout);
 
   // Remove the destination directory if it exists
   fs.remove(destinationDir, (err) => {
@@ -27,7 +27,7 @@ exec("docusaurus build", (error, stdout, stderr) => {
       process.exit(1);
     }
 
-    console.log("Old documentation removed.");
+    console.log('Old documentation removed.');
 
     // Move the new build directory
     fs.move(buildDir, destinationDir, (err) => {
@@ -36,7 +36,7 @@ exec("docusaurus build", (error, stdout, stderr) => {
         process.exit(1);
       }
 
-      console.log("Build successfully moved to documentation folder.");
+      console.log('Build successfully moved to documentation folder.');
     });
   });
 });

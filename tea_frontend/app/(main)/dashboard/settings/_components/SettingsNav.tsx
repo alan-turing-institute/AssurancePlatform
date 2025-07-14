@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { settingsNavigation } from '@/config'
-import { usePathname } from 'next/navigation'
-import React from 'react'
+import { settingsNavigation } from '@/config';
+import { usePathname } from 'next/navigation';
+import React from 'react';
 
 const SettingsNav = () => {
-  const path = usePathname()
+  const path = usePathname();
 
   return (
     <nav className="flex overflow-x-auto py-4">
@@ -15,14 +15,17 @@ const SettingsNav = () => {
       >
         {settingsNavigation.map((item) => (
           <li key={item.name}>
-            <a href={item.href} className={path === item.href ? 'text-indigo-500' : ''}>
+            <a
+              href={item.href}
+              className={path === item.href ? 'text-indigo-500' : ''}
+            >
               {item.name}
             </a>
           </li>
         ))}
       </ul>
     </nav>
-  )
-}
+  );
+};
 
-export default SettingsNav
+export default SettingsNav;

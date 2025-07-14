@@ -13,6 +13,7 @@ import os
 import pytest
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import connection
 from rest_framework.test import APIClient
 
 User = get_user_model()
@@ -96,8 +97,6 @@ class TestDatabaseSetup:
 
     def test_database_connection(self):
         """Test that we can connect to the test database."""
-        from django.db import connection
-
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             result = cursor.fetchone()
@@ -105,6 +104,4 @@ class TestDatabaseSetup:
 
     def test_database_engine(self):
         """Test that we're using PostgreSQL."""
-        from django.db import connection
-
         assert connection.vendor == "postgresql"

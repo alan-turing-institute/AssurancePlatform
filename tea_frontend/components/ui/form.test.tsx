@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, renderWithoutProviders } from '@/src/__tests__/utils/test-utils'
-import userEvent from '@testing-library/user-event'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { describe, it, expect, vi } from 'vitest';
+import {
+  render,
+  screen,
+  renderWithoutProviders,
+} from '@/src/__tests__/utils/test-utils';
+import userEvent from '@testing-library/user-event';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form,
   FormControl,
@@ -12,30 +16,37 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from './form'
-import { Input } from './input'
-import { Button } from './button'
+} from './form';
+import { Input } from './input';
+import { Button } from './button';
 
 const testSchema = z.object({
   username: z.string().min(2, 'Username must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-})
+});
 
-type TestFormData = z.infer<typeof testSchema>
+type TestFormData = z.infer<typeof testSchema>;
 
 describe('Form Components', () => {
-  const TestForm = ({ onSubmit }: { onSubmit?: (data: TestFormData) => void }) => {
+  const TestForm = ({
+    onSubmit,
+  }: {
+    onSubmit?: (data: TestFormData) => void;
+  }) => {
     const form = useForm<TestFormData>({
       resolver: zodResolver(testSchema),
       defaultValues: {
         username: '',
         email: '',
       },
-    })
+    });
 
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit || vi.fn())} className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit || vi.fn())}
+          className="space-y-4"
+        >
           <FormField
             control={form.control}
             name="username"
@@ -68,158 +79,172 @@ describe('Form Components', () => {
           <Button type="submit">Submit</Button>
         </form>
       </Form>
-    )
-  }
+    );
+  };
 
   it('should render form with all components', () => {
-    renderWithoutProviders(<TestForm />)
+    renderWithoutProviders(<TestForm />);
 
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/enter username/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument()
-    expect(screen.getByText('This is your public display name.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument()
-  })
+    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter username/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
+    expect(
+      screen.getByText('This is your public display name.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
+  });
 
   it('should show validation errors for required fields', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
-    expect(screen.getByText('Username must be at least 2 characters')).toBeInTheDocument()
-    expect(screen.getByText('Invalid email address')).toBeInTheDocument()
-  })
+    expect(
+      screen.getByText('Username must be at least 2 characters')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Invalid email address')).toBeInTheDocument();
+  });
 
   it('should show validation error for invalid email', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
-    const emailInput = screen.getByLabelText(/email/i)
-    await user.type(emailInput, 'invalid-email')
+    const emailInput = screen.getByLabelText(/email/i);
+    await user.type(emailInput, 'invalid-email');
 
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
-    expect(screen.getByText('Invalid email address')).toBeInTheDocument()
-  })
+    expect(screen.getByText('Invalid email address')).toBeInTheDocument();
+  });
 
   it('should submit form with valid data', async () => {
-    const user = userEvent.setup()
-    const mockSubmit = vi.fn()
-    renderWithoutProviders(<TestForm onSubmit={mockSubmit} />)
+    const user = userEvent.setup();
+    const mockSubmit = vi.fn();
+    renderWithoutProviders(<TestForm onSubmit={mockSubmit} />);
 
-    const usernameInput = screen.getByLabelText(/username/i)
-    const emailInput = screen.getByLabelText(/email/i)
+    const usernameInput = screen.getByLabelText(/username/i);
+    const emailInput = screen.getByLabelText(/email/i);
 
-    await user.type(usernameInput, 'testuser')
-    await user.type(emailInput, 'test@example.com')
+    await user.type(usernameInput, 'testuser');
+    await user.type(emailInput, 'test@example.com');
 
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
     expect(mockSubmit).toHaveBeenCalledWith({
       username: 'testuser',
       email: 'test@example.com',
-    })
-  })
+    });
+  });
 
   it('should clear validation errors when valid input is provided', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
     // First trigger validation errors
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
-    expect(screen.getByText('Username must be at least 2 characters')).toBeInTheDocument()
+    expect(
+      screen.getByText('Username must be at least 2 characters')
+    ).toBeInTheDocument();
 
     // Then provide valid input
-    const usernameInput = screen.getByLabelText(/username/i)
-    await user.type(usernameInput, 'validuser')
+    const usernameInput = screen.getByLabelText(/username/i);
+    await user.type(usernameInput, 'validuser');
 
     // Error should be cleared
-    expect(screen.queryByText('Username must be at least 2 characters')).not.toBeInTheDocument()
-  })
+    expect(
+      screen.queryByText('Username must be at least 2 characters')
+    ).not.toBeInTheDocument();
+  });
 
   it('should have proper accessibility attributes', () => {
-    renderWithoutProviders(<TestForm />)
+    renderWithoutProviders(<TestForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i)
-    const emailInput = screen.getByLabelText(/email/i)
+    const usernameInput = screen.getByLabelText(/username/i);
+    const emailInput = screen.getByLabelText(/email/i);
 
     // Check that inputs are properly labeled
-    expect(usernameInput).toHaveAccessibleName('Username')
-    expect(emailInput).toHaveAccessibleName('Email')
+    expect(usernameInput).toHaveAccessibleName('Username');
+    expect(emailInput).toHaveAccessibleName('Email');
 
     // Check that description is properly associated
-    const description = screen.getByText('This is your public display name.')
-    expect(usernameInput).toHaveAccessibleDescription('This is your public display name.')
-  })
+    const description = screen.getByText('This is your public display name.');
+    expect(usernameInput).toHaveAccessibleDescription(
+      'This is your public display name.'
+    );
+  });
 
   it('should mark form fields as invalid when there are errors', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
-    const usernameInput = screen.getByLabelText(/username/i)
-    const emailInput = screen.getByLabelText(/email/i)
+    const usernameInput = screen.getByLabelText(/username/i);
+    const emailInput = screen.getByLabelText(/email/i);
 
-    expect(usernameInput).toHaveAttribute('aria-invalid', 'true')
-    expect(emailInput).toHaveAttribute('aria-invalid', 'true')
-  })
+    expect(usernameInput).toHaveAttribute('aria-invalid', 'true');
+    expect(emailInput).toHaveAttribute('aria-invalid', 'true');
+  });
 
   it('should handle FormLabel error state styling', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
     // Wait for validation to trigger
-    await screen.findByText('Username must be at least 2 characters')
+    await screen.findByText('Username must be at least 2 characters');
 
-    const usernameLabel = screen.getByText('Username')
-    expect(usernameLabel).toHaveClass('text-rose-500')
-  })
+    const usernameLabel = screen.getByText('Username');
+    expect(usernameLabel).toHaveClass('text-rose-500');
+  });
 
   it('should handle controlled form field updates', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i)
+    const usernameInput = screen.getByLabelText(/username/i);
 
-    await user.type(usernameInput, 'newuser')
-    expect(usernameInput).toHaveValue('newuser')
+    await user.type(usernameInput, 'newuser');
+    expect(usernameInput).toHaveValue('newuser');
 
-    await user.clear(usernameInput)
-    expect(usernameInput).toHaveValue('')
-  })
+    await user.clear(usernameInput);
+    expect(usernameInput).toHaveValue('');
+  });
 
   it('should render FormMessage only when there is an error', async () => {
-    const user = userEvent.setup()
-    renderWithoutProviders(<TestForm />)
+    const user = userEvent.setup();
+    renderWithoutProviders(<TestForm />);
 
     // Initially no error messages should be shown
-    expect(screen.queryByText('Username must be at least 2 characters')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Username must be at least 2 characters')
+    ).not.toBeInTheDocument();
 
     // Trigger validation
-    const submitButton = screen.getByRole('button', { name: /submit/i })
-    await user.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /submit/i });
+    await user.click(submitButton);
 
     // Now error messages should be visible
-    expect(screen.getByText('Username must be at least 2 characters')).toBeInTheDocument()
-  })
+    expect(
+      screen.getByText('Username must be at least 2 characters')
+    ).toBeInTheDocument();
+  });
 
   it('should render FormDescription consistently', () => {
-    renderWithoutProviders(<TestForm />)
+    renderWithoutProviders(<TestForm />);
 
-    const description = screen.getByText('This is your public display name.')
-    expect(description).toBeInTheDocument()
-    expect(description).toHaveClass('text-sm', 'text-muted-foreground')
-  })
-})
+    const description = screen.getByText('This is your public display name.');
+    expect(description).toBeInTheDocument();
+    expect(description).toHaveClass('text-sm', 'text-muted-foreground');
+  });
+});

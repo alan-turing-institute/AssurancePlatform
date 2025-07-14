@@ -1,11 +1,11 @@
-import { MoveRightIcon } from "lucide-react";
+import { MoveRightIcon } from 'lucide-react';
 
 export const CustomButton = ({ children, url }) => {
   return (
     <a
+      className="my-3 inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:cursor-pointer hover:bg-indigo-700 hover:text-white hover:no-underline"
       href={url}
       target="_blank"
-      className="inline-flex my-3 bg-indigo-600 text-white py-2 px-4 rounded-md hover:text-white hover:bg-indigo-700 hover:cursor-pointer hover:no-underline justify-center items-center gap-2"
     >
       {children}
       <MoveRightIcon className="size-4" />

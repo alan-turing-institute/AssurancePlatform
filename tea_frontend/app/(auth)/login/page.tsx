@@ -1,6 +1,6 @@
-import SignInForm from "@/components/auth/SignInForm";
-import Link from "next/link";
-import Image from "next/image";
+import SignInForm from '@/components/auth/SignInForm';
+import Link from 'next/link';
+import Image from 'next/image';
 
 export default async function SignInPage() {
   return (
@@ -9,7 +9,12 @@ export default async function SignInPage() {
         <div className="flex lg:w-1/2 w-full flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
           <SignInForm />
           <div className="flex justify-center items-center my-8">
-            <Link href={'/'} className="flex justify-start items-center text-sm text-muted-foreground hover:text-indigo-500">Back to homepage</Link>
+            <Link
+              href={'/'}
+              className="flex justify-start items-center text-sm text-muted-foreground hover:text-indigo-500"
+            >
+              Back to homepage
+            </Link>
           </div>
         </div>
         <div className="relative hidden w-1/2 lg:block">
@@ -29,5 +34,5 @@ export default async function SignInPage() {
         </div>
       </div>
     </>
-  )
+  );
 }

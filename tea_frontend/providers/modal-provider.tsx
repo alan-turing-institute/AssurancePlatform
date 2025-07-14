@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { CaseCreateModal } from "@/components/modals/CaseCreateModal";
-import { EmailModal } from "@/components/modals/EmailModal";
-import { ImportModal } from "@/components/modals/ImportModal";
-import { PermissionsModal } from "@/components/modals/PermissionsModal";
-import { ResourcesModal } from "@/components/modals/ResourcesModal";
-import { ShareModal } from "@/components/modals/ShareModal";
-import { useEffect, useState } from "react";
+import { CaseCreateModal } from '@/components/modals/CaseCreateModal';
+import { EmailModal } from '@/components/modals/EmailModal';
+import { ImportModal } from '@/components/modals/ImportModal';
+import { PermissionsModal } from '@/components/modals/PermissionsModal';
+import { ResourcesModal } from '@/components/modals/ResourcesModal';
+import { ShareModal } from '@/components/modals/ShareModal';
+import { useEffect, useState } from 'react';
 
 /**
  * ModalProvider component that renders several modals for different functionalities.

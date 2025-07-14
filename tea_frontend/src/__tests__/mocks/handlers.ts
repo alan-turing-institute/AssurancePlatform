@@ -1,7 +1,7 @@
-import { http, HttpResponse } from 'msw'
+import { HttpResponse, http } from 'msw';
 
 // Mock API base URL (should match your backend)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export const handlers = [
   // Authentication endpoints
@@ -15,7 +15,7 @@ export const handlers = [
         last_name: 'User',
       },
       token: 'mock-jwt-token',
-    })
+    });
   }),
 
   http.post(`${API_BASE_URL}/api/auth/register/`, () => {
@@ -28,7 +28,7 @@ export const handlers = [
         last_name: 'User',
       },
       token: 'mock-jwt-token',
-    })
+    });
   }),
 
   http.get(`${API_BASE_URL}/api/auth/user/`, () => {
@@ -38,7 +38,7 @@ export const handlers = [
       email: 'test@example.com',
       first_name: 'Test',
       last_name: 'User',
-    })
+    });
   }),
 
   // Assurance Cases endpoints
@@ -54,12 +54,12 @@ export const handlers = [
         edit_groups: [],
         review_groups: [],
       },
-    ])
+    ]);
   }),
 
   http.get(`${API_BASE_URL}/api/cases/:id/`, ({ params }) => {
     return HttpResponse.json({
-      id: parseInt(params.id as string),
+      id: Number.parseInt(params.id as string),
       name: 'Test Assurance Case',
       description: 'A test case for testing',
       created_date: '2024-01-01T00:00:00Z',
@@ -72,34 +72,40 @@ export const handlers = [
       evidence: [],
       contexts: [],
       strategies: [],
-    })
+    });
   }),
 
   http.post(`${API_BASE_URL}/api/cases/`, () => {
-    return HttpResponse.json({
-      id: 3,
-      name: 'New Test Case',
-      description: 'Newly created test case',
-      created_date: new Date().toISOString(),
-      owner: 1,
-      view_groups: [],
-      edit_groups: [],
-      review_groups: [],
-    }, { status: 201 })
+    return HttpResponse.json(
+      {
+        id: 3,
+        name: 'New Test Case',
+        description: 'Newly created test case',
+        created_date: new Date().toISOString(),
+        owner: 1,
+        view_groups: [],
+        edit_groups: [],
+        review_groups: [],
+      },
+      { status: 201 }
+    );
   }),
 
   // Comments endpoints
   http.get(`${API_BASE_URL}/api/comments/`, () => {
-    return HttpResponse.json([])
+    return HttpResponse.json([]);
   }),
 
   http.post(`${API_BASE_URL}/api/comments/`, () => {
-    return HttpResponse.json({
-      id: 1,
-      content: 'Test comment',
-      author: 1,
-      created_date: new Date().toISOString(),
-    }, { status: 201 })
+    return HttpResponse.json(
+      {
+        id: 1,
+        content: 'Test comment',
+        author: 1,
+        created_date: new Date().toISOString(),
+      },
+      { status: 201 }
+    );
   }),
 
   // Users endpoints
@@ -112,7 +118,7 @@ export const handlers = [
         first_name: 'Test',
         last_name: 'User',
       },
-    ])
+    ]);
   }),
 
   // Templates endpoint
@@ -123,22 +129,22 @@ export const handlers = [
         name: 'Minimal Template',
         description: 'A minimal assurance case template',
       },
-    ])
+    ]);
   }),
 
   // Public API endpoints
   http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-    return HttpResponse.json([])
+    return HttpResponse.json([]);
   }),
 
   // GitHub integration
   http.get(`${API_BASE_URL}/api/github/repositories/`, () => {
-    return HttpResponse.json([])
+    return HttpResponse.json([]);
   }),
 
   // Fallback for unhandled requests
   http.all('*', ({ request }) => {
-    console.warn(`Unhandled ${request.method} request to ${request.url}`)
-    return new HttpResponse(null, { status: 404 })
+    console.warn(`Unhandled ${request.method} request to ${request.url}`);
+    return new HttpResponse(null, { status: 404 });
   }),
-]
+];

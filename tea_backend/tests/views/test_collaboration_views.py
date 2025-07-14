@@ -17,7 +17,9 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from api.models import Comment
 from tests.factories.case_factories import AssuranceCaseFactory
+from tests.factories.collaboration_factories import CommentFactory
 from tests.factories.content_factories import (
     ContextFactory,
     EvidenceFactory,
@@ -104,8 +106,6 @@ class TestCommentDetailView(TestCase):
         self.goal = TopLevelNormativeGoalFactory(assurance_case=self.case)
 
         # Create a comment using the factory
-        from tests.factories.collaboration_factories import CommentFactory
-
         self.comment = CommentFactory(
             author=self.user, content="Original comment", content_object=self.goal
         )
@@ -158,8 +158,6 @@ class TestCommentDetailView(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify comment was deleted
-        from api.models import Comment
-
         self.assertFalse(Comment.objects.filter(id=self.comment.id).exists())
 
     def test_delete_comment_not_author(self):
@@ -193,8 +191,6 @@ class TestElementCommentViews(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create comments on the goal
-        from tests.factories.collaboration_factories import CommentFactory
-
         CommentFactory.create_batch(3, content_object=self.goal, author=self.user)
 
         url = reverse("goal_comments", kwargs={"goal_id": self.goal.id})
@@ -299,8 +295,6 @@ class TestCommentReplyFunctionality(TestCase):
         self.goal = TopLevelNormativeGoalFactory(assurance_case=self.case)
 
         # Create parent comment
-        from tests.factories.collaboration_factories import CommentFactory
-
         self.parent_comment = CommentFactory(
             author=self.user, content="Parent comment", content_object=self.goal
         )
@@ -356,8 +350,6 @@ class TestCommentReplyFunctionality(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create some replies
-        from tests.factories.collaboration_factories import CommentFactory
-
         reply1 = CommentFactory(
             author=self.other_user,
             content="Reply 1",
@@ -499,8 +491,6 @@ class TestCommentNotifications(TestCase):
     def test_reply_creation_triggers_notification(self):
         """Test that reply creation triggers notifications to parent author."""
         # Create parent comment
-        from tests.factories.collaboration_factories import CommentFactory
-
         parent_comment = CommentFactory(
             author=self.author, content="Parent comment", content_object=self.goal
         )
@@ -601,8 +591,6 @@ class TestCommentSorting(TestCase):
         self.goal = TopLevelNormativeGoalFactory(assurance_case=self.case)
 
         # Create multiple comments with different timestamps
-        from tests.factories.collaboration_factories import CommentFactory
-
         self.comments = []
         for i in range(5):
             comment = CommentFactory(

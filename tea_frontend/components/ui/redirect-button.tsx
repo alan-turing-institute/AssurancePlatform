@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import React from 'react'
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 interface RedirectButtonProps {
-  label: string
-  url: string
+  label: string;
+  url: string;
 }
 
 const RedirectButton = ({ label, url }: RedirectButtonProps) => {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <Link
@@ -19,7 +19,7 @@ const RedirectButton = ({ label, url }: RedirectButtonProps) => {
     >
       {label}
     </Link>
-  )
-}
+  );
+};
 
-export default RedirectButton
+export default RedirectButton;

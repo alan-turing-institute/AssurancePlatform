@@ -1,10 +1,16 @@
-'use client'
+'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
-import { boolean, z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { Button } from "@/components/ui/button"
+import React, {
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { boolean, z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -13,75 +19,80 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Textarea } from '../ui/textarea'
+} from '@/components/ui/form';
+import { Textarea } from '../ui/textarea';
 // import { useLoginToken } from '@/hooks/useAuth'
-import useStore from '@/data/store'
-import { updateElementComment } from '@/lib/case-helper'
-import { useToast } from '../ui/use-toast'
-import { useSession } from 'next-auth/react'
+import useStore from '@/data/store';
+import { updateElementComment } from '@/lib/case-helper';
+import { useToast } from '../ui/use-toast';
+import { useSession } from 'next-auth/react';
 
 type CommentsEditFormProps = {
-  node: any
-  comment: any
-  setEdit: Dispatch<SetStateAction<boolean>>
-}
+  node: any;
+  comment: any;
+  setEdit: Dispatch<SetStateAction<boolean>>;
+};
 
 const formSchema = z.object({
   comment: z.string().min(2).max(500),
-})
+});
 
-const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) => {
+const CommentsEditForm = ({
+  node,
+  comment,
+  setEdit,
+}: CommentsEditFormProps) => {
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
-  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } = useStore()
-  const [loading, setLoading] = useState<boolean>(false)
+  const { data: session } = useSession();
+  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } =
+    useStore();
+  const [loading, setLoading] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for the textarea
 
-  const { id: commentId, content } = comment
+  const { id: commentId, content } = comment;
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       comment: content,
-    }
-  })
+    },
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true)
+    setLoading(true);
 
     const newComment = {
-      content: values.comment
-    }
+      content: values.comment,
+    };
 
     try {
-      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${commentId}/`;
 
       const requestOptions: RequestInit = {
-          method: "PUT",
-          headers: {
-              Authorization: `Token ${session?.key}`,
-              "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newComment),
+        method: 'PUT',
+        headers: {
+          Authorization: `Token ${session?.key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newComment),
       };
       const response = await fetch(url, requestOptions);
 
-      if(!response.ok) {
+      if (!response.ok) {
         toast({
           variant: 'destructive',
           title: 'Failed to update comment',
           description: 'Something went wrong trying to update the comment.',
         });
-        return
+        return;
       }
 
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = nodeComments.map((comment:any) =>
-          comment.id === updatedComment.id ? updatedComment : comment
+      const updatedComments = nodeComments.map((comment: any) =>
+        comment.id === updatedComment.id ? updatedComment : comment
       );
 
       setNodeComments(updatedComments);
@@ -93,7 +104,7 @@ const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) =
         description: 'Something went wrong trying to update the comment.',
       });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -101,14 +112,15 @@ const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) =
   const autoResizeTextarea = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'; // Reset the height
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'; // Set the height to match content
+      textareaRef.current.style.height =
+        textareaRef.current.scrollHeight + 'px'; // Set the height to match content
     }
-  }
+  };
 
   // Resize the textarea when the content or the form loads
   useEffect(() => {
     autoResizeTextarea(); // Initial resize
-  }, [form.watch('comment')]) // Re-run when the comment changes
+  }, [form.watch('comment')]); // Re-run when the comment changes
 
   return (
     <Form {...form}>
@@ -134,15 +146,21 @@ const CommentsEditForm = ({ node, comment, setEdit } : CommentsEditFormProps ) =
             </FormItem>
           )}
         />
-        <div className='flex justify-end items-center gap-2'>
-          <Button variant={'ghost'} className={'hover:bg-indigo-800/50'} onClick={() => setEdit(false)}>Cancel</Button>
+        <div className="flex justify-end items-center gap-2">
+          <Button
+            variant={'ghost'}
+            className={'hover:bg-indigo-800/50'}
+            onClick={() => setEdit(false)}
+          >
+            Cancel
+          </Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Saving' : 'Save'}
           </Button>
         </div>
       </form>
     </Form>
-  )
-}
+  );
+};
 
-export default CommentsEditForm
+export default CommentsEditForm;

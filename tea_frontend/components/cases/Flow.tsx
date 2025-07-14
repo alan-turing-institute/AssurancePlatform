@@ -35,12 +35,12 @@ function Flow({}: FlowProps) {
     setEdges,
     layoutNodes,
     assuranceCase,
-    orphanedElements
+    orphanedElements,
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | any>(null);
   const [loading, setLoading] = useState(true);
-  const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true)
+  const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true);
 
   const { toast } = useToast();
 
@@ -76,7 +76,8 @@ function Flow({}: FlowProps) {
     setEditOpen(true);
   };
 
-  const showCreateGoal = nodes.length > 0 && nodes[0].type === 'goal' ? false : true;
+  const showCreateGoal =
+    nodes.length > 0 && nodes[0].type === 'goal' ? false : true;
 
   const notify = (message: string) => {
     toast({
@@ -122,25 +123,31 @@ function Flow({}: FlowProps) {
             notify={notify}
             notifyError={notifyError}
           />
-          <NodeEdit node={selectedNode} isOpen={editOpen} setEditOpen={setEditOpen} />
-          {orphanedElements && orphanedElements.length > 0 && showOrphanMessage && (
-            <div className='absolute top-16 px-8 py-2 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm'>
-              <div className='flex justify-center items-center'>
-                <div className='container mx-auto flex justify-center items-center gap-2'>
-                  <Unplug className='w-4 h-4'/>
-                  <p>You have orphaned elements for this assurance case.</p>
+          <NodeEdit
+            node={selectedNode}
+            isOpen={editOpen}
+            setEditOpen={setEditOpen}
+          />
+          {orphanedElements &&
+            orphanedElements.length > 0 &&
+            showOrphanMessage && (
+              <div className="absolute top-16 px-8 py-2 left-0 w-full bg-slate-200/30 dark:bg-violet-500/30 text-foreground backdrop-blur-sm">
+                <div className="flex justify-center items-center">
+                  <div className="container mx-auto flex justify-center items-center gap-2">
+                    <Unplug className="w-4 h-4" />
+                    <p>You have orphaned elements for this assurance case.</p>
+                  </div>
+                  <Button
+                    variant={'ghost'}
+                    size={'icon'}
+                    className="hover:bg-gray-400/10 dark:hover:bg-slate-900/10"
+                    onClick={() => setShowOrphanMessage(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant={'ghost'}
-                  size={'icon'}
-                  className='hover:bg-gray-400/10 dark:hover:bg-slate-900/10'
-                  onClick={() => setShowOrphanMessage(false)}
-                >
-                  <X className='w-4 h-4'/>
-                </Button>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
     </div>

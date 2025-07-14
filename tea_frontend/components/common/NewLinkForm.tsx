@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import {
   Form,
   FormControl,
@@ -9,77 +9,94 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { boolean, z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { Textarea } from "../ui/textarea"
-import { Button } from '../ui/button'
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { boolean, z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Textarea } from '../ui/textarea';
+import { Button } from '../ui/button';
 import useStore from '@/data/store';
-import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react'
-import { getLayoutedElements } from '@/lib/layout-helper'
+import { CloudFog, LockIcon, LockKeyhole } from 'lucide-react';
+import { getLayoutedElements } from '@/lib/layout-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
-import { addEvidenceToClaim, addHiddenProp, addPropertyClaimToNested, createAssuranceCaseNode, findItemById, findParentNode, findSiblingHiddenState, setNodeIdentifier, updateAssuranceCase, updateAssuranceCaseNode } from '@/lib/case-helper'
-import { useSession } from 'next-auth/react'
+import {
+  addEvidenceToClaim,
+  addHiddenProp,
+  addPropertyClaimToNested,
+  createAssuranceCaseNode,
+  findItemById,
+  findParentNode,
+  findSiblingHiddenState,
+  setNodeIdentifier,
+  updateAssuranceCase,
+  updateAssuranceCaseNode,
+} from '@/lib/case-helper';
+import { useSession } from 'next-auth/react';
 
 const formSchema = z.object({
   description: z.string().min(2, {
-    message: "Description must be atleast 2 characters"
+    message: 'Description must be atleast 2 characters',
   }),
-  URL: z.string().min(2, {
-    message: "url must be at least 2 characters.",
-  }).optional(),
-})
+  URL: z
+    .string()
+    .min(2, {
+      message: 'url must be at least 2 characters.',
+    })
+    .optional(),
+});
 
 interface NewLinkFormProps {
   node: any;
-  linkType: string
-  actions: any
-  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
-};
+  linkType: string;
+  actions: any;
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
+}
 
 const NewLinkForm: React.FC<NewLinkFormProps> = ({
   node,
   linkType,
   actions,
-  setUnresolvedChanges
+  setUnresolvedChanges,
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
-  const [loading, setLoading] = useState<boolean>(false)
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const { setSelectedLink, setLinkToCreate, handleClose } = actions
+  const { setSelectedLink, setLinkToCreate, handleClose } = actions;
 
-  const parentNode: any = findParentNode(nodes, node)
+  const parentNode: any = findParentNode(nodes, node);
 
   const reset = () => {
-    setLinkToCreate('')
-    setSelectedLink(false)
-    handleClose()
-  }
+    setLinkToCreate('');
+    setSelectedLink(false);
+    handleClose();
+  };
 
   /** Function used to handle creation of a context node linked to a goal */
   const handleContextAdd = async (description: string) => {
-
     // Create a new context object to add - this should be created by calling the api
     const newContextItem = {
-      "short_description": description,
-      "long_description": description,
-      "goal_id": assuranceCase.goals[0].id,
-      "type": "Context"
+      short_description: description,
+      long_description: description,
+      goal_id: assuranceCase.goals[0].id,
+      type: 'Context',
     };
 
-    const result: any = await createAssuranceCaseNode('contexts', newContextItem, session?.key ?? '')
+    const result: any = await createAssuranceCaseNode(
+      'contexts',
+      newContextItem,
+      session?.key ?? ''
+    );
 
-    if(result.error) {
+    if (result.error) {
       // TODO: Rendering error
     }
 
-    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
 
-    console.log('RESULT', result)
+    console.log('RESULT', result);
 
     // Create a new context array by adding the new context item
     const newContext = [...assuranceCase.goals[0].context, result.data];
@@ -90,37 +107,40 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       goals: [
         {
           ...assuranceCase.goals[0],
-          context: newContext
-        }
-      ]
-    }
+          context: newContext,
+        },
+      ],
+    };
 
     // Update Assurance Case in state
-    setAssuranceCase(updatedAssuranceCase)
-    reset()
-    setLoading(false)
+    setAssuranceCase(updatedAssuranceCase);
+    reset();
+    setLoading(false);
     // window.location.reload()
-  }
+  };
 
   /** Function used to handle creation of a strategy node linked to a goal */
   const handleStrategyAdd = async (description: string) => {
-
     // Create a new strategy object to add
     const newStrategyItem = {
-      "short_description": description,
-      "long_description": description,
-      "goal_id": assuranceCase.goals[0].id,
-      "property_claims": [],
-      "type": "Strategy"
+      short_description: description,
+      long_description: description,
+      goal_id: assuranceCase.goals[0].id,
+      property_claims: [],
+      type: 'Strategy',
     };
 
-    const result: any = await createAssuranceCaseNode('strategies', newStrategyItem, session?.key ?? '')
+    const result: any = await createAssuranceCaseNode(
+      'strategies',
+      newStrategyItem,
+      session?.key ?? ''
+    );
 
-    if(result.error) {
+    if (result.error) {
       // TODO: Rendering error
     }
 
-    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
 
     // Create a new strategy array by adding the new context item
     const newStrategy = [...assuranceCase.goals[0].strategies, result.data];
@@ -131,22 +151,21 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       goals: [
         {
           ...assuranceCase.goals[0],
-          strategies: newStrategy
+          strategies: newStrategy,
         },
         // Copy other goals if needed
-      ]
-    }
+      ],
+    };
 
     // Update Assurance Case in state
-    setAssuranceCase(updatedAssuranceCase)
-    reset()
-    setLoading(false)
+    setAssuranceCase(updatedAssuranceCase);
+    reset();
+    setLoading(false);
     // window.location.reload()
-  }
+  };
 
   /** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
   const handleClaimAdd = async (description: string) => {
-
     // Create a new property claims object to add
     const newPropertyClaimItem: any = {
       short_description: description,
@@ -154,54 +173,66 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       claim_type: 'Property Claim',
       property_claims: [],
       evidence: [],
-      type: "PropertyClaim"
+      type: 'PropertyClaim',
     };
 
     switch (node.type) {
       case 'strategy':
-        newPropertyClaimItem.strategy_id = node.data.id
+        newPropertyClaimItem.strategy_id = node.data.id;
         break;
       case 'property':
-        newPropertyClaimItem.property_claim_id = node.data.id
+        newPropertyClaimItem.property_claim_id = node.data.id;
         break;
       default:
-        newPropertyClaimItem.goal_id = assuranceCase.goals[0].id
+        newPropertyClaimItem.goal_id = assuranceCase.goals[0].id;
         break;
     }
 
-    const result: any = await createAssuranceCaseNode('propertyclaims', newPropertyClaimItem, session?.key ?? '')
+    const result: any = await createAssuranceCaseNode(
+      'propertyclaims',
+      newPropertyClaimItem,
+      session?.key ?? ''
+    );
 
-    if(result.error) {
-      console.log('RESULT ERROR', result.error)
-      return
+    if (result.error) {
+      console.log('RESULT ERROR', result.error);
+      return;
     }
 
-    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
 
-    if(node.type === 'strategy') {
+    if (node.type === 'strategy') {
       // Find the goal containing the specific strategy
-      const goalContainingStrategy = assuranceCase.goals.find((goal:any) => goal.strategies && goal.strategies.some((strategy:any) => strategy.id === result.data.strategy_id));
+      const goalContainingStrategy = assuranceCase.goals.find(
+        (goal: any) =>
+          goal.strategies &&
+          goal.strategies.some(
+            (strategy: any) => strategy.id === result.data.strategy_id
+          )
+      );
 
       if (goalContainingStrategy) {
         // Clone the assuranceCase to avoid mutating the state directly
         const updatedAssuranceCase = { ...assuranceCase };
 
         // Update the strategies array in the goal containing the specific strategy
-        const updatedStrategies = goalContainingStrategy.strategies.map((strategy: any) => {
-          if (strategy.id === result.data.strategy_id) {
-            // Add the new property claim to the corresponding strategy
-            return {
-              ...strategy,
-              property_claims: [...strategy.property_claims, result.data]
-            };
+        const updatedStrategies = goalContainingStrategy.strategies.map(
+          (strategy: any) => {
+            if (strategy.id === result.data.strategy_id) {
+              // Add the new property claim to the corresponding strategy
+              return {
+                ...strategy,
+                property_claims: [...strategy.property_claims, result.data],
+              };
+            }
+            return strategy;
           }
-          return strategy;
-        });
+        );
 
         // Update the goal containing the specific strategy with the updated strategies array
         const updatedGoalContainingStrategy = {
           ...goalContainingStrategy,
-          strategies: updatedStrategies
+          strategies: updatedStrategies,
         };
 
         // Update the assuranceCase goals array with the updated goal containing the specific strategy
@@ -214,17 +245,21 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
         // Update Assurance Case in state
         setAssuranceCase(updatedAssuranceCase);
-        reset()
-        setLoading(false)
+        reset();
+        setLoading(false);
         // window.location.reload()
       }
     }
 
-    if(node.type === 'property') {
+    if (node.type === 'property') {
       // Call the function to add the new property claim to the nested structure
-      const added = addPropertyClaimToNested(assuranceCase.goals, result.data.property_claim_id, result.data);
+      const added = addPropertyClaimToNested(
+        assuranceCase.goals,
+        result.data.property_claim_id,
+        result.data
+      );
       if (!added) {
-          return console.error("Parent property claim not found!");
+        return console.error('Parent property claim not found!');
       }
 
       const updatedAssuranceCase = {
@@ -232,20 +267,23 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         goals: [
           {
             ...assuranceCase.goals[0],
-          }
-        ]
-      }
+          },
+        ],
+      };
 
       // const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase)
-      setAssuranceCase(updatedAssuranceCase)
-      reset()
-      setLoading(false)
+      setAssuranceCase(updatedAssuranceCase);
+      reset();
+      setLoading(false);
       // window.location.reload()
     }
 
-    if(node.type === 'goal') {
+    if (node.type === 'goal') {
       // Create a new property claim array by adding the new property claims item
-      const newPropertyClaim = [...assuranceCase.goals[0].property_claims, result.data];
+      const newPropertyClaim = [
+        ...assuranceCase.goals[0].property_claims,
+        result.data,
+      ];
 
       // Create a new assuranceCase object with the updated property claims array
       const updatedAssuranceCase = {
@@ -253,24 +291,23 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         goals: [
           {
             ...assuranceCase.goals[0],
-            property_claims: newPropertyClaim
+            property_claims: newPropertyClaim,
           },
           // Copy other goals if needed
-        ]
-      }
+        ],
+      };
 
       // Update Assurance Case in state
-      setAssuranceCase(updatedAssuranceCase)
-      reset()
-      setLoading(false)
+      setAssuranceCase(updatedAssuranceCase);
+      reset();
+      setLoading(false);
       // window.location.reload()
     }
-  }
+  };
 
   /** Function used to handle creation of a evidence node linked to a property claim */
   const handleEvidenceAdd = async (description: string, url?: string) => {
-
-    let property_claim_id: any = [node.data.id]
+    let property_claim_id: any = [node.data.id];
 
     // Create a new evidence object to add
     const newEvidenceItem = {
@@ -278,20 +315,28 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       long_description: description,
       URL: url,
       property_claim_id,
-      type: "Evidence"
+      type: 'Evidence',
     };
 
-    const result: any = await createAssuranceCaseNode('evidence', newEvidenceItem, session?.key ?? '')
+    const result: any = await createAssuranceCaseNode(
+      'evidence',
+      newEvidenceItem,
+      session?.key ?? ''
+    );
 
-    if(result.error) {
+    if (result.error) {
       // TODO: Rendering error
     }
 
-    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id)
+    result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
 
-    const added = addEvidenceToClaim(assuranceCase.goals, result.data.property_claim_id[0], result.data);
+    const added = addEvidenceToClaim(
+      assuranceCase.goals,
+      result.data.property_claim_id[0],
+      result.data
+    );
     if (!added) {
-      return console.error("Parent property claim not found!");
+      return console.error('Parent property claim not found!');
     }
 
     const updatedAssuranceCase = {
@@ -299,37 +344,37 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
       goals: [
         {
           ...assuranceCase.goals[0],
-        }
-      ]
-    }
+        },
+      ],
+    };
 
-    setAssuranceCase(updatedAssuranceCase)
-    reset()
-    setLoading(false)
+    setAssuranceCase(updatedAssuranceCase);
+    reset();
+    setLoading(false);
     // window.location.reload()
-  }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      description: ''
-    }
+      description: '',
+    },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true)
+    setLoading(true);
     switch (linkType) {
       case 'context':
-        handleContextAdd(values.description)
+        handleContextAdd(values.description);
         break;
       case 'claim':
-        handleClaimAdd(values.description)
+        handleClaimAdd(values.description);
         break;
       case 'strategy':
-        handleStrategyAdd(values.description)
+        handleStrategyAdd(values.description);
         break;
       case 'evidence':
-        handleEvidenceAdd(values.description, values.URL)
+        handleEvidenceAdd(values.description, values.URL);
         break;
       default:
         break;
@@ -345,9 +390,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   }, [form, setUnresolvedChanges]);
 
   return (
-    <div className='my-4 border-t'>
-      <div className='mt-4'>
-        Create new <span className='font-bold'>{linkType}</span>.
+    <div className="my-4 border-t">
+      <div className="mt-4">
+        Create new <span className="font-bold">{linkType}</span>.
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
@@ -358,7 +403,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Type your description here." {...field} />
+                  <Textarea
+                    placeholder="Type your description here."
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -379,17 +427,28 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
               )}
             />
           )}
-          <div className='flex justify-start items-center gap-3 pt-4'>
-            <Button type="submit" disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 dark:text-white">Add</Button>
-            <Button variant={"outline"} onClick={() => {
-              setSelectedLink(false)
-              setLinkToCreate('')
-            }}>Cancel</Button>
+          <div className="flex justify-start items-center gap-3 pt-4">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+            >
+              Add
+            </Button>
+            <Button
+              variant={'outline'}
+              onClick={() => {
+                setSelectedLink(false);
+                setLinkToCreate('');
+              }}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </Form>
     </div>
-  )
-}
+  );
+};
 
-export default NewLinkForm
+export default NewLinkForm;

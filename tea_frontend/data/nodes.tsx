@@ -1,7 +1,13 @@
-'use client'
+'use client';
 
-import { Node } from "reactflow";
-import { BookOpenText, Database, FolderOpenDot, Goal, Route } from "lucide-react";
+import { Node } from 'reactflow';
+import {
+  BookOpenText,
+  Database,
+  FolderOpenDot,
+  Goal,
+  Route,
+} from 'lucide-react';
 
 export const initNodes = [
   // {
@@ -15,7 +21,6 @@ export const initNodes = [
   //   id: '2',
   //   type: 'context',
   //   data: { name: 'C1', type: 'context', description: 'Lorem ipsum testing description, Lorem ipsum testing description', icon: <BookOpenText /> },
-
   //   position: { x: -350, y: 50 },
   //   hidden: false
   // },

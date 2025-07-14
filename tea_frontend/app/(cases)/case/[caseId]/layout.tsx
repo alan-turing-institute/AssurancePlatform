@@ -1,11 +1,7 @@
-import React from 'react'
+import React from 'react';
 
-const AssuranceCaseLayout = ({ children } : { children: React.ReactNode }) => {
-  return (
-    <div>
-      { children }
-    </div>
-  )
-}
+const AssuranceCaseLayout = ({ children }: { children: React.ReactNode }) => {
+  return <div>{children}</div>;
+};
 
-export default AssuranceCaseLayout
+export default AssuranceCaseLayout;

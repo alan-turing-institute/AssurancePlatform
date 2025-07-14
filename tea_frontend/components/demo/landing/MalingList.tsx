@@ -18,7 +18,13 @@ export default function MailingList() {
       <div className="relative sm:py-16">
         <div aria-hidden="true" className="hidden sm:block">
           <div className="absolute inset-y-0 left-0 w-1/2 rounded-r-3xl bg-gray-50" />
-          <svg className="absolute left-1/2 top-8 -ml-3" width={404} height={392} fill="none" viewBox="0 0 404 392">
+          <svg
+            className="absolute left-1/2 top-8 -ml-3"
+            width={404}
+            height={392}
+            fill="none"
+            viewBox="0 0 404 392"
+          >
             <defs>
               <pattern
                 id="8228f071-bcee-4ec8-905a-2a059a2cc4fb"
@@ -28,15 +34,29 @@ export default function MailingList() {
                 height={20}
                 patternUnits="userSpaceOnUse"
               >
-                <rect x={0} y={0} width={4} height={4} className="text-gray-200" fill="currentColor" />
+                <rect
+                  x={0}
+                  y={0}
+                  width={4}
+                  height={4}
+                  className="text-gray-200"
+                  fill="currentColor"
+                />
               </pattern>
             </defs>
-            <rect width={404} height={392} fill="url(#8228f071-bcee-4ec8-905a-2a059a2cc4fb)" />
+            <rect
+              width={404}
+              height={392}
+              fill="url(#8228f071-bcee-4ec8-905a-2a059a2cc4fb)"
+            />
           </svg>
         </div>
         <div className="mx-auto max-w-md px-6 sm:max-w-3xl lg:max-w-7xl lg:px-8">
           <div className="relative overflow-hidden rounded-2xl bg-indigo-600 px-6 py-10 shadow-xl sm:px-12 sm:py-20">
-            <div aria-hidden="true" className="absolute inset-0 -mt-72 sm:-mt-32 md:mt-0">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -mt-72 sm:-mt-32 md:mt-0"
+            >
               <svg
                 className="absolute inset-0 h-full w-full"
                 preserveAspectRatio="xMidYMid slice"
@@ -61,8 +81,8 @@ export default function MailingList() {
                   Get notified when we&rsquo;re launching.
                 </h2>
                 <p className="mx-auto mt-6 max-w-2xl text-lg text-indigo-200">
-                  Sagittis scelerisque nulla cursus in enim consectetur quam. Dictum urna sed consectetur neque
-                  tristique pellentesque.
+                  Sagittis scelerisque nulla cursus in enim consectetur quam.
+                  Dictum urna sed consectetur neque tristique pellentesque.
                 </p>
               </div>
               <form action="#" className="mt-12 sm:mx-auto sm:flex sm:max-w-lg">
@@ -91,5 +111,5 @@ export default function MailingList() {
         </div>
       </div>
     </div>
-  )
+  );
 }

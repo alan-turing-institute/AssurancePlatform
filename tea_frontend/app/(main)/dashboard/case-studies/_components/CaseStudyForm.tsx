@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -12,26 +12,48 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
-import Image from "next/image"
-import { CloudDownload, InfoIcon, Share, Share2Icon, Trash2Icon, X } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCallback, useEffect, useState } from "react"
-import { createCaseStudy, deleteCaseStudy, updateCaseStudy } from "@/actions/caseStudies"
-import { useSession } from "next-auth/react"
-import { useToast } from "@/components/ui/use-toast"
-import { useRouter } from "next/navigation"
-import { ArrowUpTrayIcon } from "@heroicons/react/20/solid"
-import { useImportModal } from "@/hooks/useImportModal"
-import RelatedAssuranceCaseList from "./RelatedAssuranceCaseList"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { sectors } from '@/config/index'
-import { AlertModal } from "@/components/modals/alertModal"
-import DeleteCaseButton from "./delete-button"
-import TiptapEditor from "@/components/ui/tiptap-editor"
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import Image from 'next/image';
+import {
+  CloudDownload,
+  InfoIcon,
+  Share,
+  Share2Icon,
+  Trash2Icon,
+  X,
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  createCaseStudy,
+  deleteCaseStudy,
+  updateCaseStudy,
+} from '@/actions/caseStudies';
+import { useSession } from 'next-auth/react';
+import { useToast } from '@/components/ui/use-toast';
+import { useRouter } from 'next/navigation';
+import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
+import { useImportModal } from '@/hooks/useImportModal';
+import RelatedAssuranceCaseList from './RelatedAssuranceCaseList';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { sectors } from '@/config/index';
+import { AlertModal } from '@/components/modals/alertModal';
+import DeleteCaseButton from './delete-button';
+import TiptapEditor from '@/components/ui/tiptap-editor';
 
 const assuranceCaseSchema = z.object({
   id: z.number(),
@@ -40,7 +62,7 @@ const assuranceCaseSchema = z.object({
 
 const caseStudyFormSchema = z.object({
   id: z.number().optional(), // Optional ID for new case studies
-  title: z.string().min(1, "Title is required"), // Required
+  title: z.string().min(1, 'Title is required'), // Required
   description: z.string().optional(),
   authors: z.string().optional(),
   // category: z.string().optional(),
@@ -56,75 +78,81 @@ const caseStudyFormSchema = z.object({
 });
 
 interface CaseStudyFormProps {
-  caseStudy?: any
+  caseStudy?: any;
 }
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
-  const { data } = useSession()
+  const { data } = useSession();
   const { toast } = useToast();
-  const router = useRouter()
+  const router = useRouter();
   const importModal = useImportModal();
 
-  const [value, setValue] = useState("");
-  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>([]);
+  const [value, setValue] = useState('');
+  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<any[]>(
+    []
+  );
   const [imageLoading, setImageLoading] = useState<boolean>(true);
-  const [previewImage, setPreviewImage] = useState("");
-  const [featuredImage, setFeaturedImage] = useState("");
+  const [previewImage, setPreviewImage] = useState('');
+  const [featuredImage, setFeaturedImage] = useState('');
 
-  const [alertOpen, setAlertOpen] = useState(false)
-  const [alertLoading, setAlertLoading] = useState<boolean>(false)
-  const [formValues, setFormValues] = useState<z.infer<typeof caseStudyFormSchema> | null>(null);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertLoading, setAlertLoading] = useState<boolean>(false);
+  const [formValues, setFormValues] = useState<z.infer<
+    typeof caseStudyFormSchema
+  > | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Authors field state - moved from FormField render function
   const [authors, setAuthors] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState("");
-
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
-    if(caseStudy && caseStudy.assurance_cases.length > 0) {
-      setSelectedAssuranceCases(caseStudy.assurance_cases)
+    if (caseStudy && caseStudy.assurance_cases.length > 0) {
+      setSelectedAssuranceCases(caseStudy.assurance_cases);
     } else {
-      setSelectedAssuranceCases([])
+      setSelectedAssuranceCases([]);
     }
-  },[caseStudy])
+  }, [caseStudy]);
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
     resolver: zodResolver(caseStudyFormSchema),
     defaultValues: caseStudy || {
-      title: "",
-      description: "",
-      authors: "",
+      title: '',
+      description: '',
+      authors: '',
       // category: "",
       publishedDate: undefined,
       lastModifiedOn: undefined,
       createdOn: undefined,
-      sector: "",
-      type: "",
-      contact: "",
+      sector: '',
+      type: '',
+      contact: '',
       assuranceCases: [],
       image: undefined,
       published: false,
     },
-  })
+  });
 
   // Sync authors state with form field value
   useEffect(() => {
-    const formAuthors = form.watch("authors");
+    const formAuthors = form.watch('authors');
     if (formAuthors) {
-      const authorsArray = formAuthors.split(",").map(a => a.trim()).filter(a => a);
+      const authorsArray = formAuthors
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a);
       setAuthors(authorsArray);
     } else {
       setAuthors([]);
     }
-  }, [form, caseStudy])
+  }, [form, caseStudy]);
 
   const handleFileChange = (e: any) => {
     const file = e.target.files[0];
     if (file) {
       setPreviewImage(URL.createObjectURL(file));
-      form.setValue("image", file);
+      form.setValue('image', file);
     }
   };
 
@@ -189,18 +217,24 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   //   }
   // }
 
-  async function uploadCaseStudyFeatureImage(caseStudyId: number, imageFile: File) {
+  async function uploadCaseStudyFeatureImage(
+    caseStudyId: number,
+    imageFile: File
+  ) {
     const formData = new FormData();
     formData.append('media', imageFile); // Ensure it matches request.FILES.get("media")
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
+        {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to upload feature image');
@@ -215,7 +249,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
-        variant: "destructive",
+        variant: 'destructive',
         title: 'Image Upload Failed',
         description: 'Could not upload feature image!',
       });
@@ -224,12 +258,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
   async function deleteCaseStudyFeatureImage(caseStudyId: number) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Token ${data?.key!!}`, // Replace with actual auth token
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to delete feature image');
@@ -253,28 +290,31 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const fetchFeaturedImage = useCallback(async () => {
     try {
       const requestOptions: RequestInit = {
-        method: "GET",
+        method: 'GET',
         headers: {
           Authorization: `Token ${data?.key}`,
         },
-        redirect: "follow"
+        redirect: 'follow',
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy.id}/image`, requestOptions)
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy.id}/image`,
+        requestOptions
+      );
 
       // if(response.status == 404) {
       //   setImgSrc('/images/assurance-case-medium.png')
       //   return
       // }
 
-      const result = await response.json()
-      setFeaturedImage(result.image)
+      const result = await response.json();
+      setFeaturedImage(result.image);
     } catch (error) {
-      console.log('Failed to fetch image')
+      console.log('Failed to fetch image');
     } finally {
-      setImageLoading(false)
+      setImageLoading(false);
     }
-  }, [data?.key, caseStudy?.id])
+  }, [data?.key, caseStudy?.id]);
 
   // Authors management functions - moved from FormField render
   const addAuthor = () => {
@@ -282,30 +322,30 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     if (trimmed && !authors.includes(trimmed)) {
       const newAuthors = [...authors, trimmed];
       setAuthors(newAuthors);
-      form.setValue("authors", newAuthors.join(", "));
-      setInputValue(""); // Clear input
+      form.setValue('authors', newAuthors.join(', '));
+      setInputValue(''); // Clear input
     }
   };
 
   const removeAuthor = (authorToRemove: string) => {
-    const newAuthors = authors.filter(author => author !== authorToRemove);
+    const newAuthors = authors.filter((author) => author !== authorToRemove);
     setAuthors(newAuthors);
-    form.setValue("authors", newAuthors.join(", "));
+    form.setValue('authors', newAuthors.join(', '));
   };
 
   useEffect(() => {
-    if(caseStudy) {
-      fetchFeaturedImage()
+    if (caseStudy) {
+      fetchFeaturedImage();
     }
-  }, [caseStudy, fetchFeaturedImage])
+  }, [caseStudy, fetchFeaturedImage]);
 
   async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-    if(caseStudy && caseStudy.published) {
-      setFormValues(values)
-      setAlertOpen(true)
-      return
+    if (caseStudy && caseStudy.published) {
+      setFormValues(values);
+      setAlertOpen(true);
+      return;
     }
-    await handleSubmit(values)
+    await handleSubmit(values);
   }
 
   async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
@@ -321,7 +361,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     formData.append('contact', values.contact || '');
 
     if (selectedAssuranceCases.length > 0) {
-      formData.append('assurance_cases', JSON.stringify(selectedAssuranceCases));
+      formData.append(
+        'assurance_cases',
+        JSON.stringify(selectedAssuranceCases)
+      );
     }
 
     setLoading(true);
@@ -356,7 +399,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           });
         } else {
           toast({
-            variant: "destructive",
+            variant: 'destructive',
             title: 'Failed to Update',
             description: 'Something went wrong!',
           });
@@ -365,20 +408,23 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
     } finally {
       setLoading(false);
     }
-}
+  }
 
   const handlePublish = async () => {
     const formData = new FormData();
     formData.append('id', caseStudy.id.toString());
-    formData.append('assurance_cases', JSON.stringify(caseStudy.assurance_cases));
+    formData.append(
+      'assurance_cases',
+      JSON.stringify(caseStudy.assurance_cases)
+    );
 
     // Set only the fields that need updating
     if (caseStudy.published) {
-      formData.append("published", "false"); // Convert boolean to string
-      formData.append("published_date", ""); // Clear the published date
+      formData.append('published', 'false'); // Convert boolean to string
+      formData.append('published_date', ''); // Clear the published date
     } else {
-      formData.append("published", "true"); // Convert boolean to string
-      formData.append("published_date", new Date().toISOString()); // Set new date
+      formData.append('published', 'true'); // Convert boolean to string
+      formData.append('published_date', new Date().toISOString()); // Set new date
     }
 
     // Send the formData to the API
@@ -386,36 +432,37 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
     if (response) {
       toast({
-        title: caseStudy.published ? "Successfully Unpublished" : "Successfully Published",
-        description: `You have ${caseStudy.published ? "unpublished" : "published"} your case study!`,
+        title: caseStudy.published
+          ? 'Successfully Unpublished'
+          : 'Successfully Published',
+        description: `You have ${caseStudy.published ? 'unpublished' : 'published'} your case study!`,
       });
     } else {
       toast({
-        variant: "destructive",
-        title: "Failed to Update",
-        description: "Something went wrong!",
+        variant: 'destructive',
+        title: 'Failed to Update',
+        description: 'Something went wrong!',
       });
     }
   };
 
   const handleDelete = async () => {
-    const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id)
+    const deleted = await deleteCaseStudy(data?.key!!, caseStudy.id);
 
-    if(deleted) {
+    if (deleted) {
       toast({
         title: 'Successfully Deleted',
         description: 'Case Study Deleted',
       });
-      router.push('/dashboard/case-studies')
+      router.push('/dashboard/case-studies');
     } else {
       toast({
-        variant: "destructive",
+        variant: 'destructive',
         title: 'Delete Failed',
         description: 'Something went wrong!',
       });
     }
-  }
-
+  };
 
   return (
     <>
@@ -425,7 +472,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="grid grid-cols-2 gap-8">
-              <FormField
+                <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
@@ -445,16 +492,21 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     <FormItem>
                       <FormLabel>Sector</FormLabel>
                       <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sector" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sectors.map((sector) => (
-                            <SelectItem key={sector.ID} value={sector.Name}>{sector.Name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select sector" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sectors.map((sector) => (
+                              <SelectItem key={sector.ID} value={sector.Name}>
+                                {sector.Name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -489,14 +541,21 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     <FormItem>
                       <FormLabel>Type</FormLabel>
                       <FormControl>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} >
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {["Assurance Case", "Argument Pattern"].map((sector) => (
-                              <SelectItem key={sector} value={sector}>{sector}</SelectItem>
-                            ))}
+                            {['Assurance Case', 'Argument Pattern'].map(
+                              (sector) => (
+                                <SelectItem key={sector} value={sector}>
+                                  {sector}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -527,7 +586,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                   control={form.control}
                   name="authors"
                   render={({ field }) => {
-
                     return (
                       <FormItem>
                         <FormLabel>Authors</FormLabel>
@@ -538,10 +596,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                             onChange={(e) => setInputValue(e.target.value)}
                             placeholder="Enter author name"
                           />
-                          <Button
-                            type="button"
-                            onClick={addAuthor}
-                          >
+                          <Button type="button" onClick={addAuthor}>
                             Add Author
                           </Button>
                         </div>
@@ -571,9 +626,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     );
                   }}
                 />
-
-
-
               </div>
 
               <Separator className="my-6" />
@@ -612,12 +664,13 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                 )}
               />
 
-
               <Separator className="my-6" />
 
               <div className="">
                 <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">Available Published Assurance Cases</p>
+                  <p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-4">
+                    Available Published Assurance Cases
+                  </p>
                   {/* <button
                     onClick={() => importModal.onOpen()}
                     className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -661,9 +714,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                         variant="destructive"
                         type="button"
                         onClick={() => {
-                          setPreviewImage(""); // Clear preview
-                          setFeaturedImage(""); // Clear preview
-                          form.setValue("image", ""); // Reset form field
+                          setPreviewImage(''); // Clear preview
+                          setFeaturedImage(''); // Clear preview
+                          form.setValue('image', ''); // Reset form field
                           if (featuredImage) {
                             deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
                           }
@@ -674,41 +727,55 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     </div>
                   </div>
                 ) : (
-                  <Input type="file" accept="image/*" onChange={handleFileChange} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
                 )}
-
               </div>
 
               <div className="flex justify-between items-center gap-4 w-full">
                 <div className="flex justify-start items-center gap-2">
-                    {caseStudy && <Button variant="default" type="submit">Save Changes</Button>}
-                    {!caseStudy && (
-                      <Button variant="default" type="submit">Save</Button>
-                    )}
-                    {caseStudy && (
-                      <Button
-                        variant="primary"
-                        type="button"
-                        onClick={handlePublish}
-                      >
-                        {caseStudy.published ? (
-                          <>
-                            <CloudDownload className="size-4 mr-2" />
-                            <span>Remove from Public</span>
-                          </>
-                        ) : (
-                          <>
-                            <Share className="size-4 mr-2" />
-                            <span>Make Public</span>
-                          </>
-                        )}
-                      </Button>
-                    )}
+                  {caseStudy && (
+                    <Button variant="default" type="submit">
+                      Save Changes
+                    </Button>
+                  )}
+                  {!caseStudy && (
+                    <Button variant="default" type="submit">
+                      Save
+                    </Button>
+                  )}
+                  {caseStudy && (
+                    <Button
+                      variant="primary"
+                      type="button"
+                      onClick={handlePublish}
+                    >
+                      {caseStudy.published ? (
+                        <>
+                          <CloudDownload className="size-4 mr-2" />
+                          <span>Remove from Public</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share className="size-4 mr-2" />
+                          <span>Make Public</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
-                {caseStudy && <DeleteCaseButton caseStudyId={caseStudy.id} variant="destructive" redirect />}
+                {caseStudy && (
+                  <DeleteCaseButton
+                    caseStudyId={caseStudy.id}
+                    variant="destructive"
+                    redirect
+                  />
+                )}
                 {/* <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button> */}
               </div>
-
             </form>
           </Form>
         </TooltipProvider>
@@ -717,7 +784,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         isOpen={alertOpen}
         onClose={() => setAlertOpen(false)}
         onConfirm={async () => {
-          setAlertOpen(false)
+          setAlertOpen(false);
           if (formValues) {
             await handleSubmit(formValues);
           }
@@ -727,7 +794,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
         confirmButtonText="Update Anyway"
       />
     </>
-  )
-}
+  );
+};
 
-export default CaseStudyForm
+export default CaseStudyForm;

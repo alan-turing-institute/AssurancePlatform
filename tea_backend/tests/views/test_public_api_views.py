@@ -10,6 +10,7 @@ This module tests:
 """
 
 from io import BytesIO
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -19,7 +20,14 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from api.models import CaseStudy
 from tests.factories.case_factories import AssuranceCaseFactory
+from tests.factories.content_factories import TopLevelNormativeGoalFactory
+from tests.factories.integration_factories import (
+    CaseStudyFactory,
+    CaseStudyFeatureImageFactory,
+    PublishedAssuranceCaseFactory,
+)
 from tests.factories.user_factories import EAPUserFactory
 
 User = get_user_model()
@@ -35,8 +43,6 @@ class TestPublicAssuranceCaseViews(TestCase):
         self.case = AssuranceCaseFactory(owner=self.user, published=True)
 
         # Create published assurance case
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
-
         self.published_case = PublishedAssuranceCaseFactory(assurance_case=self.case)
 
     def test_list_published_cases_anonymous(self):
@@ -73,8 +79,6 @@ class TestPublicAssuranceCaseViews(TestCase):
     def test_get_published_case_detail_with_content(self):
         """Test retrieving published case with full content structure."""
         # Add some content to the case
-        from tests.factories.content_factories import TopLevelNormativeGoalFactory
-
         TopLevelNormativeGoalFactory(assurance_case=self.case)
 
         url = reverse("public_published_case_detail", kwargs={"id": self.published_case.id})
@@ -86,8 +90,6 @@ class TestPublicAssuranceCaseViews(TestCase):
 
     def test_get_nonexistent_published_case(self):
         """Test retrieving non-existent published case."""
-        from uuid import uuid4
-
         url = reverse("public_published_case_detail", kwargs={"id": uuid4()})
         response = self.client.get(url)
 
@@ -98,7 +100,6 @@ class TestPublicAssuranceCaseViews(TestCase):
         # Create additional published cases
         other_user = EAPUserFactory()
         other_case = AssuranceCaseFactory(owner=other_user, published=True)
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
 
         PublishedAssuranceCaseFactory(assurance_case=other_case)
 
@@ -145,7 +146,6 @@ class TestCaseStudyViews(TestCase):
     def test_list_case_studies_anonymous(self):
         """Test listing case studies without authentication."""
         # Create case studies
-        from tests.factories.integration_factories import CaseStudyFactory
 
         CaseStudyFactory.create_batch(3)
 
@@ -200,7 +200,6 @@ class TestCaseStudyViews(TestCase):
 
     def test_get_case_study_detail(self):
         """Test retrieving case study details."""
-        from tests.factories.integration_factories import CaseStudyFactory
 
         case_study = CaseStudyFactory(owner=self.user)
 
@@ -215,8 +214,6 @@ class TestCaseStudyViews(TestCase):
     def test_update_case_study_as_owner(self):
         """Test updating case study as owner."""
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import CaseStudyFactory
 
         case_study = CaseStudyFactory(owner=self.user)
 
@@ -236,8 +233,6 @@ class TestCaseStudyViews(TestCase):
         other_user = EAPUserFactory()
         self.client.force_authenticate(user=self.user)
 
-        from tests.factories.integration_factories import CaseStudyFactory
-
         case_study = CaseStudyFactory(owner=other_user)
 
         update_data = {"title": "Unauthorized Update"}
@@ -251,8 +246,6 @@ class TestCaseStudyViews(TestCase):
         """Test deleting case study as owner."""
         self.client.force_authenticate(user=self.user)
 
-        from tests.factories.integration_factories import CaseStudyFactory
-
         case_study = CaseStudyFactory(owner=self.user)
 
         url = reverse("case_study_detail", kwargs={"pk": case_study.pk})
@@ -261,8 +254,6 @@ class TestCaseStudyViews(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify case study was deleted
-        from api.models import CaseStudy
-
         self.assertFalse(CaseStudy.objects.filter(id=case_study.id).exists())
 
 
@@ -273,8 +264,6 @@ class TestCaseStudyImageHandling(TestCase):
         """Set up test client, user, and case study."""
         self.client = APIClient()
         self.user = EAPUserFactory()
-
-        from tests.factories.integration_factories import CaseStudyFactory
 
         self.case_study = CaseStudyFactory(owner=self.user)
 
@@ -317,7 +306,6 @@ class TestCaseStudyImageHandling(TestCase):
     def test_get_case_study_feature_images(self):
         """Test retrieving case study feature images."""
         # Create feature image
-        from tests.factories.integration_factories import CaseStudyFeatureImageFactory
 
         CaseStudyFeatureImageFactory(case_study=self.case_study)
 
@@ -332,8 +320,6 @@ class TestCaseStudyImageHandling(TestCase):
     def test_delete_feature_image(self):
         """Test deleting case study feature image."""
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import CaseStudyFeatureImageFactory
 
         feature_image = CaseStudyFeatureImageFactory(case_study=self.case_study)
 
@@ -359,12 +345,10 @@ class TestPublicContentFiltering(TestCase):
         self.private_case = AssuranceCaseFactory(owner=self.user, published=False)
 
         # Create case studies
-        from tests.factories.integration_factories import CaseStudyFactory
 
         self.public_case_study = CaseStudyFactory(owner=self.user)
 
         # Create published versions
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
 
         self.published_case = PublishedAssuranceCaseFactory(assurance_case=self.public_case)
 
@@ -393,7 +377,6 @@ class TestPublicContentFiltering(TestCase):
     def test_public_content_pagination(self):
         """Test pagination of public content."""
         # Create many case studies
-        from tests.factories.integration_factories import CaseStudyFactory
 
         CaseStudyFactory.create_batch(15)
 
@@ -464,8 +447,6 @@ class TestPublicAPICaching(TestCase):
         self.client = APIClient()
         self.user = EAPUserFactory()
         self.case = AssuranceCaseFactory(owner=self.user, published=True)
-
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
 
         self.published_case = PublishedAssuranceCaseFactory(assurance_case=self.case)
 
@@ -542,8 +523,6 @@ class TestPublicAPIErrors(TestCase):
 
     def test_404_for_nonexistent_published_case(self):
         """Test 404 response for non-existent published case."""
-        from uuid import uuid4
-
         url = reverse("public_published_case_detail", kwargs={"id": uuid4()})
         response = self.client.get(url)
 

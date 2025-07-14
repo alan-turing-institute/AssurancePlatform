@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 type TokenHookReturnType = [string | null, (value: any) => void];
 
@@ -11,7 +11,7 @@ export function useEnforceLogin() {
   const [token] = useLoginToken();
 
   if (token == null) {
-    window.location.replace("/");
+    window.location.replace('/');
 
     return false;
   }
@@ -28,7 +28,7 @@ export function useEnforceLogout() {
   const [token] = useLoginToken();
 
   if (token != null) {
-    window.location.replace("/");
+    window.location.replace('/');
     return false;
   }
 
@@ -41,7 +41,7 @@ export function useEnforceLogout() {
  * @returns {void}
  */
 export function unauthorized() {
-  window.location.replace("/login");
+  window.location.replace('/login');
 }
 
 /**
@@ -54,11 +54,11 @@ const setToken = (value: any) => {
   localStorage.clear();
 
   if (value) {
-    localStorage.setItem("token", value);
+    localStorage.setItem('token', value);
   }
 
-  return null
-}
+  return null;
+};
 
 /**
  * Get the user's login token. The token is stored in local storage.
@@ -66,9 +66,9 @@ const setToken = (value: any) => {
  * @returns {[string, function]} The user's login token and a function to set the token.
  */
 export function useLoginToken(): TokenHookReturnType {
-  let token = null
+  let token = null;
   if (typeof window !== 'undefined') {
-    token = localStorage.getItem("token");
+    token = localStorage.getItem('token');
   }
   return [token, setToken];
 }

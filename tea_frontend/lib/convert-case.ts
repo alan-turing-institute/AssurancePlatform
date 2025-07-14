@@ -7,19 +7,20 @@
  *
  */
 export const convertAssuranceCase = async (assuranceCase: any) => {
-  let caseNodes: any[] = [], caseEdges: any[] = []
+  let caseNodes: any[] = [],
+    caseEdges: any[] = [];
 
   // Create nodes for each child array item
-  const goals = assuranceCase.goals
+  const goals = assuranceCase.goals;
 
   // Create nodes recursively for goals and their children
-  caseNodes = createNodesRecursively(goals, 'goal')
+  caseNodes = createNodesRecursively(goals, 'goal');
 
   // Create edges for every node
-  caseEdges = createEdgesFromNodes(caseNodes)
+  caseEdges = createEdgesFromNodes(caseNodes);
 
-  return { caseNodes, caseEdges }
-}
+  return { caseNodes, caseEdges };
+};
 
 /**
  * Recursively creates nodes from a hierarchical structure of items, with support for various child types.
@@ -37,11 +38,17 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
  * @returns {any[]} An array of created nodes with their hierarchical relationships preserved.
  *
  */
-const createNodesRecursively = (items: any, nodeType: string, parentNode: any | null = null, processedItems = new Set(), depth = 10) => {
+export const createNodesRecursively = (
+  items: any,
+  nodeType: string,
+  parentNode: any | null = null,
+  processedItems = new Set(),
+  depth = 10
+) => {
   const nodes: any[] = [];
 
   if (depth <= 0) {
-    console.error("Maximum recursion depth reached");
+    console.error('Maximum recursion depth reached');
     return nodes;
   }
 
@@ -55,12 +62,18 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
     const node = {
       id: nodeId,
       type: nodeType,
-      data: { id: item.id, name: item.name, type: item.type, description: item.short_description, ...item },
+      data: {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        description: item.short_description,
+        ...item,
+      },
       position: { x: 0, y: 50 },
       // hidden: nodeType === 'goal' ? false : true,
       hidden: item.hidden,
       height: 64,
-      width: 288
+      width: 288,
     };
 
     if (parentNode) {
@@ -82,15 +95,33 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
     //   nodes.push(...contextNodes);
     // }
     if (item.strategies && item.strategies.length > 0) {
-      const strategyNodes = createNodesRecursively(item.strategies, 'strategy', node, processedItems, depth - 1);
+      const strategyNodes = createNodesRecursively(
+        item.strategies,
+        'strategy',
+        node,
+        processedItems,
+        depth - 1
+      );
       nodes.push(...strategyNodes);
     }
     if (item.property_claims && item.property_claims.length > 0) {
-      const propertyClaimNodes = createNodesRecursively(item.property_claims, 'property', node, processedItems, depth - 1);
+      const propertyClaimNodes = createNodesRecursively(
+        item.property_claims,
+        'property',
+        node,
+        processedItems,
+        depth - 1
+      );
       nodes.push(...propertyClaimNodes);
     }
     if (item.evidence && item.evidence.length > 0) {
-      const evidenceNodes = createNodesRecursively(item.evidence, 'evidence', node, processedItems, depth - 1);
+      const evidenceNodes = createNodesRecursively(
+        item.evidence,
+        'evidence',
+        node,
+        processedItems,
+        depth - 1
+      );
       nodes.push(...evidenceNodes);
     }
   });
@@ -109,10 +140,10 @@ const createNodesRecursively = (items: any, nodeType: string, parentNode: any | 
  * @returns {any[]} An array of edges, where each edge links a parent node to a child node.
  *
  */
-const createEdgesFromNodes = (nodes:any[]) => {
-  const edges:any[] = [];
+export const createEdgesFromNodes = (nodes: any[]) => {
+  const edges: any[] = [];
 
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     // Get the ID of the current node
     const currentNodeId = node.id;
 
@@ -124,10 +155,10 @@ const createEdgesFromNodes = (nodes:any[]) => {
         id: edgeId,
         source: node.data.parentId,
         target: currentNodeId,
-        animated: (node.type === 'context'),
+        animated: node.type === 'context',
         sourceHandle: 'c',
         // sourceHandle: node.type === 'context' ? 'a' : 'c',
-        hidden: false
+        hidden: false,
       };
 
       edges.push(edge);

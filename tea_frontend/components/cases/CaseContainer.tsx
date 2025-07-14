@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import React, { useCallback, useEffect, useState } from 'react'
-import Flow from './Flow'
+import React, { useCallback, useEffect, useState } from 'react';
+import Flow from './Flow';
 import { unauthorized, useLoginToken } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation';
 import { Loader2, MessagesSquare } from 'lucide-react';
@@ -21,115 +21,131 @@ interface CaseContainerProps {
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
   // const [assuranceCase, setAssuranceCase] = useState<any>()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
   const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
   const [open, setOpen] = useState(false);
 
-  const params = useParams()
-  const { caseId: paramsCaseId } = params
+  const params = useParams();
+  const { caseId: paramsCaseId } = params;
 
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   // const [token] = useLoginToken();
   // useEnforceLogin()
 
-  const fetchSingleCase = useCallback(async (id: number) => {
-    const requestOptions: RequestInit = {
-      headers: {
-        Authorization: `Token ${session?.key}`,
-      },
-    };
+  const fetchSingleCase = useCallback(
+    async (id: number) => {
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Token ${session?.key}`,
+        },
+      };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`, requestOptions);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
+        requestOptions
+      );
 
-    if(response.status === 404 || response.status === 403 ) {
-      // TODO: 404 NOT FOUND PAGE
-      console.log('Render Not Found Page')
-      return
-    }
+      if (response.status === 404 || response.status === 403) {
+        // TODO: 404 NOT FOUND PAGE
+        console.log('Render Not Found Page');
+        return;
+      }
 
-    if(response.status === 401) return unauthorized()
+      if (response.status === 401) return unauthorized();
 
-    const result = await response.json()
+      const result = await response.json();
 
-    const formattedAssuranceCase = await addHiddenProp(result)
-    return formattedAssuranceCase
-  }, [session?.key])
+      const formattedAssuranceCase = await addHiddenProp(result);
+      return formattedAssuranceCase;
+    },
+    [session?.key]
+  );
 
-  const fetchOrphanedElements = useCallback(async (id: any) => {
-    const requestOptions: RequestInit = {
-      headers: {
-        Authorization: `Token ${session?.key}`,
-      },
-    };
+  const fetchOrphanedElements = useCallback(
+    async (id: any) => {
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Token ${session?.key}`,
+        },
+      };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`, requestOptions);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
+        requestOptions
+      );
 
-    if(response.status === 404 || response.status === 403 ) {
-      console.log('Render Not Found Page')
-      return
-    }
+      if (response.status === 404 || response.status === 403) {
+        console.log('Render Not Found Page');
+        return;
+      }
 
-    if(response.status === 401) return unauthorized()
+      if (response.status === 401) return unauthorized();
 
-    const result = await response.json()
-    return result
-  }, [session?.key])
+      const result = await response.json();
+      return result;
+    },
+    [session?.key]
+  );
 
   useEffect(() => {
     //@ts-ignore
-    fetchSingleCase(caseId || paramsCaseId).then(result => {
-      setAssuranceCase(result)
-      setLoading(false)
-    })
-  },[caseId, paramsCaseId, fetchSingleCase, setAssuranceCase])
+    fetchSingleCase(caseId || paramsCaseId).then((result) => {
+      setAssuranceCase(result);
+      setLoading(false);
+    });
+  }, [caseId, paramsCaseId, fetchSingleCase, setAssuranceCase]);
 
   useEffect(() => {
-    fetchOrphanedElements(caseId || paramsCaseId).then(result => {
-      setOrphanedElements(result)
-    })
-  },[caseId, paramsCaseId, assuranceCase, fetchOrphanedElements, setOrphanedElements])
+    fetchOrphanedElements(caseId || paramsCaseId).then((result) => {
+      setOrphanedElements(result);
+    });
+  }, [
+    caseId,
+    paramsCaseId,
+    assuranceCase,
+    fetchOrphanedElements,
+    setOrphanedElements,
+  ]);
 
   return (
     <>
       {loading ? (
-        <div className='flex justify-center items-center min-h-screen'>
-          <div className='flex flex-col justify-center items-center gap-2'>
-            <Loader2 className='w-8 h-8 animate-spin' />
-            <p className='text-muted-foreground'>Rendering your chart...</p>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="flex flex-col justify-center items-center gap-2">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <p className="text-muted-foreground">Rendering your chart...</p>
           </div>
         </div>
+      ) : assuranceCase ? (
+        <ReactFlowProvider>
+          <Header setOpen={setOpen} />
+          <Flow />
+          <CaseDetails isOpen={open} setOpen={setOpen} />
+          <FeedbackButton />
+          <WebSocketComponent />
+        </ReactFlowProvider>
       ) : (
-        assuranceCase ? (
-          <ReactFlowProvider>
-            <Header setOpen={setOpen} />
-            <Flow />
-            <CaseDetails isOpen={open} setOpen={setOpen} />
-            <FeedbackButton />
-            <WebSocketComponent />
-          </ReactFlowProvider>
-        ) : (
-          <p>No Case Found</p>
-        )
+        <p>No Case Found</p>
       )}
     </>
-  )
-}
+  );
+};
 
 const FeedbackButton = () => {
   return (
     <Link
       href={
-        "https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
+        'https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/'
       }
       target="_blank"
     >
-      <div className='absolute bottom-4 right-4 w-14 h-14 rounded-full bg-violet-600 shadow-xl flex justify-center items-center hover:cursor-pointer'>
-        <MessagesSquare className='w-6 h-6 text-white' />
-        <div className='absolute w-16 h-16 rounded-full bg-violet-500 -z-10 animate-pulse' />
+      <div className="absolute bottom-4 right-4 w-14 h-14 rounded-full bg-violet-600 shadow-xl flex justify-center items-center hover:cursor-pointer">
+        <MessagesSquare className="w-6 h-6 text-white" />
+        <div className="absolute w-16 h-16 rounded-full bg-violet-500 -z-10 animate-pulse" />
       </div>
     </Link>
-  )
-}
+  );
+};
 
-export default CaseContainer
+export default CaseContainer;

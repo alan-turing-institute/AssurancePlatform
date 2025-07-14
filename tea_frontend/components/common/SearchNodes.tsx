@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogClose,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '../ui/button';
@@ -19,51 +19,51 @@ import { Separator } from '@/components/ui/separator';
 import ActionTooltip from '../ui/action-tooltip';
 
 type SearchNodesProps = {
-  nodes: any[]
-  focusNode: (value: string) => void
-}
-const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
-  const [value, setValue] = useState("")
-  const [searchOpen, setSearchOpen] = useState(false)
+  nodes: any[];
+  focusNode: (value: string) => void;
+};
+const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
+  const [value, setValue] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [filteredNodes, setFilteredNodes] = useState(nodes);
 
   const handleSearch = (searchValue: string) => {
-    console.log(searchValue)
-    setValue(searchValue)
+    console.log(searchValue);
+    setValue(searchValue);
 
-    if(searchValue !== '') {
-      const result = nodes.filter(node =>
+    if (searchValue !== '') {
+      const result = nodes.filter((node) =>
         node.data.short_description.toLowerCase().includes(value.toLowerCase())
-      )
-      setFilteredNodes(result)
+      );
+      setFilteredNodes(result);
     }
   };
 
   const handleSearchClose = () => {
-    setValue('')
-    setSearchOpen(false)
-    setFilteredNodes(nodes)
-  }
+    setValue('');
+    setSearchOpen(false);
+    setFilteredNodes(nodes);
+  };
 
   const handleSelection = (nodeId: string) => {
-    focusNode(nodeId)
-    setSearchOpen(false)
-  }
+    focusNode(nodeId);
+    setSearchOpen(false);
+  };
 
   useEffect(() => {
-    setFilteredNodes(nodes)
-  },[nodes])
+    setFilteredNodes(nodes);
+  }, [nodes]);
 
   return (
     <>
-      <ActionTooltip label='Search'>
+      <ActionTooltip label="Search">
         <Button
           size={'sm'}
           variant={'ghost'}
           onClick={() => setSearchOpen(true)}
         >
-          <Search className='w-4 h-4'/>
-          <span className='sr-only'>Search</span>
+          <Search className="w-4 h-4" />
+          <span className="sr-only">Search</span>
         </Button>
       </ActionTooltip>
       <Dialog open={searchOpen} onOpenChange={handleSearchClose}>
@@ -84,26 +84,30 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
                 defaultValue=""
                 value={value}
                 onChange={(e: any) => handleSearch(e.target.value)}
-                autoComplete='off'
+                autoComplete="off"
               />
             </div>
           </div>
-          <div className='max-h-[320px] overflow-y-auto'>
+          <div className="max-h-[320px] overflow-y-auto">
             {filteredNodes.map((node) => (
-              <div key={node.id }>
-              <div
-                className="group flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
-                onClick={() => handleSelection(node.id)}
-              >
-                <div className="flex flex-col items-start">
-                  <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">Identifier: {node.data.name}</span>
-                  {/* <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
+              <div key={node.id}>
+                <div
+                  className="group flex flex-col justify-start items-start gap-1 p-2 my-2 rounded-md hover:bg-indigo-500 hover:text-white hover:cursor-pointer"
+                  onClick={() => handleSelection(node.id)}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="text-xs uppercase text-muted-foreground mb-2 font-medium group-hover:text-white">
+                      Identifier: {node.data.name}
+                    </span>
+                    {/* <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
                     <circle cx={1} cy={1} r={1} />
                   </svg> */}
-                  <span className="w-full line-clamp-2 text-sm">{node.data.short_description}</span>
+                    <span className="w-full line-clamp-2 text-sm">
+                      {node.data.short_description}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <Separator />
+                <Separator />
               </div>
             ))}
           </div>
@@ -117,7 +121,7 @@ const SearchNodes = ({nodes, focusNode} : SearchNodesProps) => {
         </DialogContent>
       </Dialog>
     </>
-  )
-}
+  );
+};
 
-export default SearchNodes
+export default SearchNodes;

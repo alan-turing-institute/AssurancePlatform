@@ -39,9 +39,8 @@ jobs:
       - name: Run type checking
         run: npx tsc --noEmit
 
-      - name: Run linting
+      - name: Check formatting and linting
         run: pnpm lint
-        continue-on-error: true
 
       - name: Run tests with coverage
         run: pnpm test:coverage

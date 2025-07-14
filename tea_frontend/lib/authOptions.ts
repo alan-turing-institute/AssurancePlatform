@@ -28,13 +28,17 @@ dotenv.config(); // Explicitly load environment variables
 export const authOptions: NextAuthOptions = {
   // Secret for Next-auth, without this JWT encryption/decryption won't work
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
+  session: { strategy: 'jwt' },
 
   // Configure one or more authentication providers
   providers: [
     GithubProvider({
-      clientId: process.env.GITHUB_APP_CLIENT_ID || process.env.GITHUB_APP_CLIENT_ID_STAGING as string,
-      clientSecret: process.env.GITHUB_APP_CLIENT_SECRET || process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string,
+      clientId:
+        process.env.GITHUB_APP_CLIENT_ID ||
+        (process.env.GITHUB_APP_CLIENT_ID_STAGING as string),
+      clientSecret:
+        process.env.GITHUB_APP_CLIENT_SECRET ||
+        (process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string),
     }),
     CredentialsProvider({
       name: 'Credentials',
@@ -49,7 +53,9 @@ export const authOptions: NextAuthOptions = {
           // Send credentials to your API for verification
           const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
           if (!apiUrl) {
-            throw new Error('API_URL or NEXT_PUBLIC_API_URL must be configured');
+            throw new Error(
+              'API_URL or NEXT_PUBLIC_API_URL must be configured'
+            );
           }
           const response = await fetch(`${apiUrl}/api/auth/login/`, {
             method: 'POST',
@@ -63,15 +69,20 @@ export const authOptions: NextAuthOptions = {
 
           if (user) {
             // Include key (access token) in the user object
-            return { id: user.id, name: user.name, email: user.email, key: user.key };
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              key: user.key,
+            };
           }
           return null;
         } catch (error) {
           console.error('Authorization error:', error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
 
   callbacks: {
@@ -95,14 +106,19 @@ export const authOptions: NextAuthOptions = {
 
         const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
         if (!apiUrl) {
-          console.error('API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication');
+          console.error(
+            'API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication'
+          );
           return false;
         }
-        const response = await fetch(`${apiUrl}/api/auth/github/register-by-token/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(
+          `${apiUrl}/api/auth/github/register-by-token/`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }
+        );
 
         // if (response.ok) {
         //   const result = await response.json();
@@ -114,10 +130,12 @@ export const authOptions: NextAuthOptions = {
         if (response.ok) {
           const result = await response.json();
           user.key = result.key; // Include the key for GitHub users
-          user.provider = account.provider
+          user.provider = account.provider;
           return true;
         } else {
-          console.error(`GitHub authentication failed: ${response.status} ${response.statusText}`);
+          console.error(
+            `GitHub authentication failed: ${response.status} ${response.statusText}`
+          );
           try {
             const errorData = await response.json();
             console.error('GitHub auth error details:', errorData);
@@ -145,7 +163,9 @@ export const authOptions: NextAuthOptions = {
       // Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
       const authUrl = process.env.NEXTAUTH_URL || baseUrl;
       if (!authUrl) {
-        throw new Error('NEXTAUTH_URL must be configured for authentication redirects');
+        throw new Error(
+          'NEXTAUTH_URL must be configured for authentication redirects'
+        );
       }
       return `${authUrl}/dashboard`;
     },
@@ -189,5 +209,5 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-  }
+  },
 };

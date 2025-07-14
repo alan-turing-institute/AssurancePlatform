@@ -1,67 +1,77 @@
-'use server'
+'use server';
 
-import { revalidatePath } from "next/cache"
-import { notFound } from "next/navigation"
+import { revalidatePath } from 'next/cache';
+import { notFound } from 'next/navigation';
 
 export const fetchCaseStudies = async (token: string) => {
   const requestOptions: RequestInit = {
     headers: {
       Authorization: `Token ${token}`,
     },
+  };
+
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`,
+    requestOptions
+  );
+
+  if (!response.ok) {
+    console.error('Something went wrong fetching case studies.');
   }
 
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
-
-  if(!response.ok) {
-    console.error('Something went wrong fetching case studies.')
-  }
-
-  const result = await response.json()
-  return result
-}
+  const result = await response.json();
+  return result;
+};
 
 export const fetchPublishedCaseStudies = async () => {
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/case-studies/`)
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/public/case-studies/`
+  );
 
-  if(!response.ok) {
-    console.error('Something went wrong fetching case studies.')
+  if (!response.ok) {
+    console.error('Something went wrong fetching case studies.');
   }
 
-  const results = await response.json()
-  return results
-}
+  const results = await response.json();
+  return results;
+};
 
 export const fetchPublishedCaseStudyById = async (id: number) => {
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/case-studies/${id}`)
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/public/case-studies/${id}`
+  );
 
-  if(!response.ok) {
-    console.error(`Something went wrong fetching case study ${id}.`)
+  if (!response.ok) {
+    console.error(`Something went wrong fetching case study ${id}.`);
   }
 
-  if(response.status == 404) {
-    notFound()
+  if (response.status == 404) {
+    notFound();
   }
 
-  const results = await response.json()
-  return results
-}
+  const results = await response.json();
+  return results;
+};
 
 export const fetchCaseStudyById = async (token: string, id: number) => {
   const requestOptions: RequestInit = {
     headers: {
       Authorization: `Token ${token}`,
     },
+  };
+
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${id}/`,
+    requestOptions
+  );
+
+  if (!response.ok) {
+    console.error('Something went wrong fetching case studies.');
   }
 
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${id}/`, requestOptions)
-
-  if(!response.ok) {
-    console.error('Something went wrong fetching case studies.')
-  }
-
-  const result = await response.json()
-  return result
-}
+  const result = await response.json();
+  return result;
+};
 
 // export const createCaseStudy = async (token: string, newCaseStudy: any) => {
 //   if(!token) return null
@@ -89,7 +99,7 @@ export const fetchCaseStudyById = async (token: string, id: number) => {
 // }
 
 export const createCaseStudy = async (token: string, formData: FormData) => {
-  if(!token) return null
+  if (!token) return null;
 
   const requestOptions: RequestInit = {
     method: 'POST',
@@ -97,20 +107,27 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
       Authorization: `Token ${token}`,
     },
     body: formData,
+  };
+
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`,
+    requestOptions
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(
+      'Something went wrong creating case study:',
+      response.status,
+      errorText
+    );
+    return null;
   }
 
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/`, requestOptions)
-
-  if(!response.ok) {
-    const errorText = await response.text()
-    console.error('Something went wrong creating case study:', response.status, errorText)
-    return null
-  }
-
-  const result = await response.json()
-  revalidatePath('/dashboard/case-studies')
-  return result
-}
+  const result = await response.json();
+  revalidatePath('/dashboard/case-studies');
+  return result;
+};
 
 // export const updateCaseStudy = async (token: string | undefined, caseStudy: any) => {
 //   if(!token) return false
@@ -136,7 +153,10 @@ export const createCaseStudy = async (token: string, formData: FormData) => {
 //   return true
 // }
 
-export const updateCaseStudy = async (token: string | undefined, formData: FormData) => {
+export const updateCaseStudy = async (
+  token: string | undefined,
+  formData: FormData
+) => {
   // console.log(formData)
   if (!token) return false;
 
@@ -145,10 +165,13 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
     headers: {
       Authorization: `Token ${token}`,
     },
-    body: formData,  // Send FormData here instead of JSON.stringify
+    body: formData, // Send FormData here instead of JSON.stringify
   };
 
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${formData.get('id')}/`, requestOptions);
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${formData.get('id')}/`,
+    requestOptions
+  );
   // console.log(response)
 
   if (!response.ok) {
@@ -162,34 +185,40 @@ export const updateCaseStudy = async (token: string | undefined, formData: FormD
   return true;
 };
 
-
 export const deleteCaseStudy = async (token: string, caseStudyId: number) => {
   const requestOptions: RequestInit = {
     method: 'DELETE',
     headers: {
       Authorization: `Token ${token}`,
-    }
-  }
+    },
+  };
 
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/case-studies/${caseStudyId}/`, requestOptions)
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/`,
+    requestOptions
+  );
   // console.log('response', response)
 
-  if(!response.ok) {
-    console.error('Something went wrong deleting case study.')
-    return false
+  if (!response.ok) {
+    console.error('Something went wrong deleting case study.');
+    return false;
   }
 
-  revalidatePath('/dashboard/case-studies')
-  return true
-}
+  revalidatePath('/dashboard/case-studies');
+  return true;
+};
 
-export const fetchPublishedAssuranceCaseId = async (assuranceCaseId: string) => {
-  const response = await fetch(`${(process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)}/api/public/assurance-case/${assuranceCaseId}/`)
+export const fetchPublishedAssuranceCaseId = async (
+  assuranceCaseId: string
+) => {
+  const response = await fetch(
+    `${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${assuranceCaseId}/`
+  );
 
-  if(!response.ok) {
-    console.error('Something went wrong fetching case study case.')
+  if (!response.ok) {
+    console.error('Something went wrong fetching case study case.');
   }
 
-  const result = await response.json()
-  return result
-}
+  const result = await response.json();
+  return result;
+};

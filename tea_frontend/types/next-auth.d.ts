@@ -1,7 +1,7 @@
 // next-auth.d.ts
 import NextAuth from 'next-auth';
 import 'next-auth/jwt';
-import { Session } from "next-auth";
+import { Session } from 'next-auth';
 
 declare module 'next-auth' {
   interface Session {

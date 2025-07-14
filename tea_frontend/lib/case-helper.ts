@@ -1,4 +1,4 @@
-import { AssuranceCase } from "@/types";
+import { AssuranceCase } from '@/types';
 
 interface Map {
   [key: string]: string | undefined;
@@ -12,11 +12,11 @@ interface CaseNode {
 }
 
 const DESCRIPTION_FROM_TYPE: Map = {
-  goal: "Goal",
-  context: "Context",
-  strategy: "Strategy",
-  property: "Property Claim",
-  evidence: "Evidence",
+  goal: 'Goal',
+  context: 'Context',
+  strategy: 'Strategy',
+  property: 'Property Claim',
+  evidence: 'Evidence',
 };
 
 export const caseItemDescription = (caseItemName: string) =>
@@ -109,7 +109,7 @@ export const updatePropertyClaimNested = (
     let propertyClaim = array[i];
 
     // Check if this property claim matches the parent ID
-    if (propertyClaim.id === id && propertyClaim.type === "PropertyClaim") {
+    if (propertyClaim.id === id && propertyClaim.type === 'PropertyClaim') {
       array[i] = { ...propertyClaim, ...newPropertyClaim };
 
       return array; // Return the updated array
@@ -274,7 +274,7 @@ export const updatePropertyClaimNestedMove = (
     for (let i = 0; i < arr.length; i++) {
       let item = arr[i];
 
-      if (item.id === id && item.type === "PropertyClaim") {
+      if (item.id === id && item.type === 'PropertyClaim') {
         existingPropertyClaim = item;
         return;
       }
@@ -294,12 +294,12 @@ export const updatePropertyClaimNestedMove = (
   findExstingPropertyClaim(array);
 
   // Remove evidence from its old location
-  console.log("Remove Element");
+  console.log('Remove Element');
   const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(
     array,
     id
   );
-  console.log("arrayWithoutOldPropertyClaim", arrayWithoutOldPropertyClaim);
+  console.log('arrayWithoutOldPropertyClaim', arrayWithoutOldPropertyClaim);
 
   // Merge existing evidence properties with updated ones
   const updatedPropertyClaim = {
@@ -323,7 +323,7 @@ export const updatePropertyClaimNestedMove = (
     newParentId = updatedPropertyClaim.property_claim_id;
   }
 
-  console.log("New Parent Id", newParentId);
+  console.log('New Parent Id', newParentId);
 
   const updatedArray = addPropertyClaimToLocation(
     arrayWithoutOldPropertyClaim,
@@ -355,7 +355,7 @@ export const listPropertyClaims = (
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
 
-    if (item.type === "PropertyClaim" && item.name !== currentClaimName) {
+    if (item.type === 'PropertyClaim' && item.name !== currentClaimName) {
       claims.push(item);
     }
 
@@ -625,11 +625,11 @@ export const updateEvidenceNestedMove = (
   newEvidence: any
 ) => {
   console.log(
-    "updateEvidenceNested called with array:",
+    'updateEvidenceNested called with array:',
     array,
-    "id:",
+    'id:',
     id,
-    "newEvidence:",
+    'newEvidence:',
     newEvidence
   );
 
@@ -690,16 +690,16 @@ export const createAssuranceCaseNode = async (
   newItem: any,
   token: string | null
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   try {
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
 
     const requestOptions: RequestInit = {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(newItem),
     };
@@ -710,7 +710,7 @@ export const createAssuranceCaseNode = async (
     }
 
     const result = await response.json();
-    console.log("Node Create Result", result);
+    console.log('Node Create Result', result);
 
     const data = {
       ...result,
@@ -719,7 +719,7 @@ export const createAssuranceCaseNode = async (
 
     return { data };
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return { error };
   }
 };
@@ -737,24 +737,24 @@ export const deleteAssuranceCaseNode = async (
   id: any,
   token: string | null
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   let entity = null;
   switch (type.toLowerCase()) {
-    case "context":
-      entity = "contexts";
+    case 'context':
+      entity = 'contexts';
       break;
-    case "strategy":
-      entity = "strategies";
+    case 'strategy':
+      entity = 'strategies';
       break;
-    case "property":
-      entity = "propertyclaims";
+    case 'property':
+      entity = 'propertyclaims';
       break;
-    case "evidence":
-      entity = "evidence";
+    case 'evidence':
+      entity = 'evidence';
       break;
     default:
-      entity = "goals";
+      entity = 'goals';
       break;
   }
 
@@ -762,10 +762,10 @@ export const deleteAssuranceCaseNode = async (
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
-      method: "DELETE",
+      method: 'DELETE',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     };
     const response = await fetch(url, requestOptions);
@@ -774,7 +774,7 @@ export const deleteAssuranceCaseNode = async (
       return true;
     }
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return false;
   }
 };
@@ -794,24 +794,24 @@ export const updateAssuranceCaseNode = async (
   token: string | null,
   updateItem: any
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   let entity = null;
   switch (type) {
-    case "context":
-      entity = "contexts";
+    case 'context':
+      entity = 'contexts';
       break;
-    case "strategy":
-      entity = "strategies";
+    case 'strategy':
+      entity = 'strategies';
       break;
-    case "property":
-      entity = "propertyclaims";
+    case 'property':
+      entity = 'propertyclaims';
       break;
-    case "evidence":
-      entity = "evidence";
+    case 'evidence':
+      entity = 'evidence';
       break;
     default:
-      entity = "goals";
+      entity = 'goals';
       break;
   }
 
@@ -819,10 +819,10 @@ export const updateAssuranceCaseNode = async (
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
-      method: "PUT",
+      method: 'PUT',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(updateItem),
     };
@@ -832,7 +832,7 @@ export const updateAssuranceCaseNode = async (
       return true;
     }
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return false;
   }
 };
@@ -842,24 +842,24 @@ export const getAssuranceCaseNode = async (
   id: any,
   token: string | null
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   let entity = null;
   switch (type) {
-    case "context":
-      entity = "contexts";
+    case 'context':
+      entity = 'contexts';
       break;
-    case "strategy":
-      entity = "strategies";
+    case 'strategy':
+      entity = 'strategies';
       break;
-    case "property":
-      entity = "propertyclaims";
+    case 'property':
+      entity = 'propertyclaims';
       break;
-    case "evidence":
-      entity = "evidence";
+    case 'evidence':
+      entity = 'evidence';
       break;
     default:
-      entity = "goals";
+      entity = 'goals';
       break;
   }
 
@@ -867,22 +867,22 @@ export const getAssuranceCaseNode = async (
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
 
     const requestOptions: RequestInit = {
-      method: "GET",
+      method: 'GET',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
-      }
+        'Content-Type': 'application/json',
+      },
     };
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
-      console.log('Something went wrong')
+      console.log('Something went wrong');
     }
 
-    const result = await response.json()
-    return result
+    const result = await response.json();
+    return result;
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return false;
   }
 };
@@ -957,9 +957,9 @@ export const updateAssuranceCase = async (
   let updatedGoals: any;
 
   switch (type) {
-    case "context":
+    case 'context':
       const newContext = assuranceCase.goals[0].context.map((context: any) => {
-        if (context.id === id && context.type === "Context") {
+        if (context.id === id && context.type === 'Context') {
           return {
             ...context,
             ...updatedItem,
@@ -973,11 +973,11 @@ export const updateAssuranceCase = async (
         goals: [{ ...assuranceCase.goals[0], context: newContext }],
       };
       return updatedAssuranceCase;
-    case "strategy":
+    case 'strategy':
       // Create a new strategy array by adding the new context item
       const newStrategy = assuranceCase.goals[0].strategies.map(
         (strategy: any) => {
-          if (strategy.id === id && strategy.type === "Strategy") {
+          if (strategy.id === id && strategy.type === 'Strategy') {
             return {
               ...strategy,
               ...updatedItem,
@@ -998,7 +998,7 @@ export const updateAssuranceCase = async (
         ],
       };
       return updatedAssuranceCase;
-    case "property":
+    case 'property':
       // updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
       if (move) {
         updatedGoals = updatePropertyClaimNestedMove(
@@ -1018,7 +1018,7 @@ export const updateAssuranceCase = async (
         goals: updatedGoals,
       };
       return updatedAssuranceCase;
-    case "evidence":
+    case 'evidence':
       // updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
       if (move) {
         updatedGoals = updateEvidenceNestedMove(
@@ -1059,17 +1059,17 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
   let parentPrefix: number | null = null;
 
   switch (newNodeType.toLowerCase()) {
-    case "context":
+    case 'context':
       newArray = [...parentNode.data.context];
       break;
-    case "strategy":
+    case 'strategy':
       newArray = [...parentNode.data.strategies];
       break;
-    case "property":
+    case 'property':
       parentPrefix = parseFloat(parentNode.data.name.substring(1));
       newArray = [...parentNode.data.property_claims];
       break;
-    case "evidence":
+    case 'evidence':
       newArray = [...parentNode.data.evidence];
       break;
     default:
@@ -1079,9 +1079,9 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
   if (newArray.length > 0) {
     const lastItem = newArray.pop();
 
-    if (newNodeType === "property" && parentNode.type === "property") {
+    if (newNodeType === 'property' && parentNode.type === 'property') {
       const lastIdentifier = parseFloat(lastItem.name.substring(1)).toString();
-      const subIdentifier = lastIdentifier.split(".")[1];
+      const subIdentifier = lastIdentifier.split('.')[1];
       identifier = parseInt(subIdentifier) + 1;
     } else {
       const lastIdentifier = parseFloat(lastItem.name.substring(1));
@@ -1091,7 +1091,7 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
     identifier = 1;
   }
 
-  if (parentNode && parentNode.type === "property" && parentPrefix !== null) {
+  if (parentNode && parentNode.type === 'property' && parentPrefix !== null) {
     return `${parentPrefix}.${identifier}`;
   }
 
@@ -1189,7 +1189,7 @@ export const removeAssuranceCaseNode = (
     id,
     type
   );
-  console.log("updatedGoals", updatedGoals);
+  console.log('updatedGoals', updatedGoals);
   return {
     ...assuranceCase,
     goals: updatedGoals,
@@ -1212,17 +1212,17 @@ export const extractGoalsClaimsStrategies = (array: any) => {
   const traverse = (items: any) => {
     items.forEach((item: any) => {
       // Collect goals
-      if (item.type === "TopLevelNormativeGoal") {
+      if (item.type === 'TopLevelNormativeGoal') {
         result.goal = item;
       }
 
       // Collect property claims
-      if (item.type === "PropertyClaim") {
+      if (item.type === 'PropertyClaim') {
         result.claims.push(item);
       }
 
       // Collect strategies
-      if (item.type !== "Evidence" && item.type !== "Context") {
+      if (item.type !== 'Evidence' && item.type !== 'Context') {
         result.strategies.push(item);
       }
 
@@ -1255,7 +1255,7 @@ export const extractGoalsClaimsStrategies = (array: any) => {
 export const addHiddenProp = async (assuranceCase: any) => {
   if (Array.isArray(assuranceCase)) {
     assuranceCase.forEach(addHiddenProp);
-  } else if (typeof assuranceCase === "object" && assuranceCase !== null) {
+  } else if (typeof assuranceCase === 'object' && assuranceCase !== null) {
     assuranceCase.hidden = false;
 
     Object.keys(assuranceCase).forEach((key) => {
@@ -1272,18 +1272,18 @@ export const addHiddenProp = async (assuranceCase: any) => {
  * @returns {Array<CaseNode>} An array of adjacent nodes.
  */
 const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
-  if (caseNode.type == "AssuranceCase") {
-    return caseNode["goals"];
-  } else if (caseNode.type == "TopLevelNormativeGoal") {
-    return caseNode["context"].concat(
-      caseNode["property_claims"],
-      caseNode["strategies"],
-      caseNode["context"]
+  if (caseNode.type == 'AssuranceCase') {
+    return caseNode['goals'];
+  } else if (caseNode.type == 'TopLevelNormativeGoal') {
+    return caseNode['context'].concat(
+      caseNode['property_claims'],
+      caseNode['strategies'],
+      caseNode['context']
     );
-  } else if (caseNode.type == "Strategy") {
-    return caseNode["property_claims"];
-  } else if (caseNode.type == "PropertyClaim") {
-    return caseNode["property_claims"].concat(caseNode["evidence"]);
+  } else if (caseNode.type == 'Strategy') {
+    return caseNode['property_claims'];
+  } else if (caseNode.type == 'PropertyClaim') {
+    return caseNode['property_claims'].concat(caseNode['evidence']);
   }
 
   return [];
@@ -1376,7 +1376,7 @@ export function toggleHiddenForChildren(
   ): void {
     if (Array.isArray(obj)) {
       obj.forEach((item) => toggleChildren(item, parentId, parentFound, hide));
-    } else if (typeof obj === "object" && obj !== null) {
+    } else if (typeof obj === 'object' && obj !== null) {
       // Check if current object is the parent or one of its descendants
       const isParentOrDescendant = parentFound || obj.id === parentId;
 
@@ -1436,12 +1436,12 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
       return element;
     }
     let childrenKeys = [
-      "goals",
-      "context",
-      "property_claims",
-      "strategies",
-      "evidence",
-      "comments",
+      'goals',
+      'context',
+      'property_claims',
+      'strategies',
+      'evidence',
+      'comments',
     ];
     for (let key of childrenKeys) {
       if (element[key]) {
@@ -1468,18 +1468,18 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
 export function getChildrenHiddenStatus(element: any): boolean[] {
   let hiddenStatus: boolean[] = [];
   let childrenKeys = [
-    "context",
-    "property_claims",
-    "strategies",
-    "evidence",
-    "comments",
+    'context',
+    'property_claims',
+    'strategies',
+    'evidence',
+    'comments',
   ];
   for (let key of childrenKeys) {
     if (element[key]) {
       for (let child of element[key]) {
         hiddenStatus.push(child.hidden);
         // Recursively check nested property claims and strategies
-        if (key === "property_claims" || key === "strategies") {
+        if (key === 'property_claims' || key === 'strategies') {
           hiddenStatus = hiddenStatus.concat(getChildrenHiddenStatus(child));
         }
       }
@@ -1531,7 +1531,7 @@ export const findParentNode = (nodes: any, node: any) => {
     )[0]);
   }
   if (node.data.property_claim_id) {
-    if (node.type === "evidence") {
+    if (node.type === 'evidence') {
       return (parent = nodes.filter(
         (n: any) => n.data.id === node.data.property_claim_id[0]
       )[0]);
@@ -1565,9 +1565,9 @@ export const detachCaseElement = async (
   id: any,
   token: string | null
 ): Promise<any> => {
-  if (!token) return { error: "No token" };
+  if (!token) return { error: 'No token' };
 
-  console.log("Detaching Node", node);
+  console.log('Detaching Node', node);
 
   const payload: any = {
     goal_id: null,
@@ -1577,14 +1577,14 @@ export const detachCaseElement = async (
 
   let entity = null;
   switch (type) {
-    case "context":
-      entity = "contexts";
+    case 'context':
+      entity = 'contexts';
       break;
-    case "strategy":
-      entity = "strategies";
+    case 'strategy':
+      entity = 'strategies';
       break;
-    case "property":
-      entity = "propertyclaims";
+    case 'property':
+      entity = 'propertyclaims';
       if (node.data.goal_id !== null) {
         payload.goal_id = node.data.goal_id;
       }
@@ -1595,8 +1595,8 @@ export const detachCaseElement = async (
         payload.property_claim_id = node.data.property_claim_id;
       }
       break;
-    case "evidence":
-      entity = "evidence";
+    case 'evidence':
+      entity = 'evidence';
       payload.property_claim_id = node.data.property_claim_id[0];
       break;
   }
@@ -1605,10 +1605,10 @@ export const detachCaseElement = async (
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/detach`;
 
     const requestOptions: RequestInit = {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
     };
@@ -1621,7 +1621,7 @@ export const detachCaseElement = async (
 
     return { detached: true };
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return { error };
   }
 };
@@ -1641,9 +1641,9 @@ export const attachCaseElement = async (
   token: string | null,
   parent: any
 ): Promise<any> => {
-  if (!token) return { error: "No token" };
+  if (!token) return { error: 'No token' };
 
-  console.log("Parent", parent);
+  console.log('Parent', parent);
 
   const payload: any = {
     goal_id: null,
@@ -1653,43 +1653,43 @@ export const attachCaseElement = async (
 
   let entity = null;
   switch (orphan.type.toLowerCase()) {
-    case "context":
-      entity = "contexts";
+    case 'context':
+      entity = 'contexts';
       payload.goal_id = parent.data.id;
       break;
-    case "strategy":
-      entity = "strategies";
+    case 'strategy':
+      entity = 'strategies';
       payload.goal_id = parent.data.id;
       break;
-    case "propertyclaim":
-      entity = "propertyclaims";
+    case 'propertyclaim':
+      entity = 'propertyclaims';
 
-      if (parent.type === "property") {
+      if (parent.type === 'property') {
         payload.property_claim_id = parent.data.id;
       }
-      if (parent.type === "strategy") {
+      if (parent.type === 'strategy') {
         payload.strategy_id = parent.data.id;
       }
-      if (parent.type === "goal") {
+      if (parent.type === 'goal') {
         payload.goal_id = parent.data.id;
       }
       break;
-    case "evidence":
-      entity = "evidence";
+    case 'evidence':
+      entity = 'evidence';
       payload.property_claim_id = parent.data.id;
       break;
   }
 
-  console.log("Payload", payload);
+  console.log('Payload', payload);
 
   try {
     let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
 
     const requestOptions: RequestInit = {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
     };
@@ -1701,7 +1701,7 @@ export const attachCaseElement = async (
 
     return { attached: true };
   } catch (error) {
-    console.log("Error", error);
+    console.log('Error', error);
     return { error };
   }
 };
@@ -1712,28 +1712,28 @@ export const addElementComment = async (
   newComment: any,
   token: string | null
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
 
     const requestOptions: RequestInit = {
-        method: "POST",
-        headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newComment),
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newComment),
     };
     const response = await fetch(url, requestOptions);
 
-    if(!response.ok) {
-        console.log('error')
+    if (!response.ok) {
+      console.log('error');
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
-    return result
+    return result;
   } catch (error) {
     console.log(`Could not create comment for ${entity}`, error);
     return { error };
@@ -1747,30 +1747,33 @@ export const updateElementComment = async (
   newCommentId: number,
   token: string | null
 ) => {
-  if (!token) return console.log("No token");
+  if (!token) return console.log('No token');
 
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
 
     const requestOptions: RequestInit = {
-        method: "PUT",
-        headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newComment),
+      method: 'PUT',
+      headers: {
+        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newComment),
     };
     const response = await fetch(url, requestOptions);
 
-    if(!response.ok) {
-        console.log('error')
+    if (!response.ok) {
+      console.log('error');
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
-    return result
+    return result;
   } catch (error) {
-    console.log(`Could not update comment for ${entity}/${newCommentId}`, error);
+    console.log(
+      `Could not update comment for ${entity}/${newCommentId}`,
+      error
+    );
     return { error };
   }
 };

@@ -20,7 +20,7 @@ import Dagre from '@dagrejs/dagre';
 
 type Store = {
   assuranceCase: any;
-  orphanedElements: any[]
+  orphanedElements: any[];
   nodes: Node[];
   edges: Edge[];
   nodeTypes: NodeTypes;
@@ -32,18 +32,18 @@ type Store = {
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
-  viewMembers: any[]
-  editMembers: any[]
-  reviewMembers: any[]
-  setViewMembers: (members: any[]) => void
-  setEditMembers: (members: any[]) => void
-  setReviewMembers: (members: any[]) => void
-  activeUsers: any[]
-  setActiveUsers: (users: any[]) => void
-  nodeComments: any[]
-  setNodeComments: (comments: any[]) => void
-  caseNotes: any[]
-  setCaseNotes: (comments: any[]) => void
+  viewMembers: any[];
+  editMembers: any[];
+  reviewMembers: any[];
+  setViewMembers: (members: any[]) => void;
+  setEditMembers: (members: any[]) => void;
+  setReviewMembers: (members: any[]) => void;
+  activeUsers: any[];
+  setActiveUsers: (users: any[]) => void;
+  nodeComments: any[];
+  setNodeComments: (comments: any[]) => void;
+  caseNotes: any[];
+  setCaseNotes: (comments: any[]) => void;
 };
 
 export type NodeData = {
@@ -106,33 +106,36 @@ const useStore = create<Store>((set, get) => ({
     get().layoutNodes(nodes, edges);
   },
   setOrphanedElements: (orphanedElements: any) => {
-    let newArray: any[] = []
+    let newArray: any[] = [];
 
     if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
       orphanedElements.contexts.map((context: any) => {
-        newArray.push(context)
-      })
+        newArray.push(context);
+      });
     }
 
-    if (orphanedElements.property_claims && orphanedElements.property_claims.length > 0) {
+    if (
+      orphanedElements.property_claims &&
+      orphanedElements.property_claims.length > 0
+    ) {
       orphanedElements.property_claims.map((claim: any) => {
-        newArray.push(claim)
-      })
+        newArray.push(claim);
+      });
     }
 
     if (orphanedElements.strategies && orphanedElements.strategies.length > 0) {
       orphanedElements.strategies.map((strategy: any) => {
-        newArray.push(strategy)
-      })
+        newArray.push(strategy);
+      });
     }
 
     if (orphanedElements.evidence && orphanedElements.evidence.length > 0) {
       orphanedElements.evidence.map((evidence: any) => {
-        newArray.push(evidence)
-      })
+        newArray.push(evidence);
+      });
     }
 
-    set({ orphanedElements: newArray })
+    set({ orphanedElements: newArray });
   },
   setNodes: (nodes: Node[]) => {
     set({ nodes });
@@ -143,7 +146,8 @@ const useStore = create<Store>((set, get) => ({
   fitView: () => {}, // Define fitView function
   layoutNodes: (nodes: Node[], edges: Edge[]) => {
     // Layout nodes vertically
-    const { nodes: layoutedNodes, edges: layoutedEdges } = layoutNodesVertically(nodes, edges);
+    const { nodes: layoutedNodes, edges: layoutedEdges } =
+      layoutNodesVertically(nodes, edges);
 
     // Set the layouted nodes and edges
     set({ nodes: layoutedNodes, edges: layoutedEdges });
@@ -152,29 +156,31 @@ const useStore = create<Store>((set, get) => ({
   editMembers: [],
   reviewMembers: [],
   setViewMembers: (members: any[]) => {
-    set({viewMembers: members});
+    set({ viewMembers: members });
   },
   setEditMembers: (members: any[]) => {
-    set({editMembers: members});
+    set({ editMembers: members });
   },
   setReviewMembers: (members: any[]) => {
-    set({reviewMembers: members});
+    set({ reviewMembers: members });
   },
   activeUsers: [],
   setActiveUsers(users: any) {
-    set({activeUsers: users});
+    set({ activeUsers: users });
   },
   nodeComments: [],
   setNodeComments: (comments: any[]) => {
-    //@ts-ignore
-    const sortedComments = comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    set({nodeComments: sortedComments});
+    const sortedComments = comments.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    set({ nodeComments: sortedComments });
   },
   caseNotes: [],
   setCaseNotes: (comments: any[]) => {
-    //@ts-ignore
-    const sortedComments = comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    set({caseNotes: sortedComments});
+    const sortedComments = comments.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    set({ caseNotes: sortedComments });
   },
 }));
 

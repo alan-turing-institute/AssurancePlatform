@@ -1,17 +1,25 @@
-'use client'
+'use client';
 
 import { Button } from '@/components/ui/button';
 import { DownloadIcon } from 'lucide-react';
 import React from 'react';
 
-const DownloadCaseButton = ({ content, title }: { content: string; title: string }) => {
+const DownloadCaseButton = ({
+  content,
+  title,
+}: {
+  content: string;
+  title: string;
+}) => {
   const downloadJSON = () => {
     try {
       // Parse the content string into a JSON object
       const jsonData = JSON.parse(content);
 
       // Convert JSON object to a Blob
-      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+        type: 'application/json',
+      });
 
       // Create a URL for the Blob
       const url = URL.createObjectURL(blob);
@@ -34,12 +42,15 @@ const DownloadCaseButton = ({ content, title }: { content: string; title: string
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-x-4 mt-4" onClick={downloadJSON}>
+    <div
+      className="flex shrink-0 items-center gap-x-4 mt-4"
+      onClick={downloadJSON}
+    >
       {/* <p className='text-sm text-muted-foreground'>Download</p>
       <DownloadIcon aria-hidden="true" className="size-5 flex-none text-gray-400" /> */}
       <Button variant={'primary'}>
         Download
-        <DownloadIcon className='size-4 ml-2' />
+        <DownloadIcon className="size-4 ml-2" />
       </Button>
     </div>
   );

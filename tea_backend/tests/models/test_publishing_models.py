@@ -7,6 +7,8 @@ This module provides comprehensive tests for:
 - PublishedAssuranceCase model (published case snapshots)
 """
 
+import json
+
 import pytest
 from django.db import IntegrityError
 from django.test import TestCase
@@ -216,8 +218,6 @@ class TestPublishedAssuranceCaseModel(TestCase):
 
     def test_should_handle_json_content(self):
         """Test PublishedAssuranceCase JSON content field."""
-        import json
-
         test_content = {"goals": ["goal1", "goal2"], "evidence": ["evidence1"]}
         published_case = PublishedAssuranceCaseFactory(content=json.dumps(test_content))
 

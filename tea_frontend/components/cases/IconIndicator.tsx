@@ -1,81 +1,86 @@
-'use client'
+'use client';
 
-import useStore from '@/data/store'
-import { ChatBubbleBottomCenterTextIcon, InformationCircleIcon } from '@heroicons/react/20/solid'
-import { useSession } from 'next-auth/react'
-import React, { useEffect, useState } from 'react'
+import useStore from '@/data/store';
+import {
+  ChatBubbleBottomCenterTextIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/20/solid';
+import { useSession } from 'next-auth/react';
+import React, { useEffect, useState } from 'react';
 
 interface IconIndicatorProps {
-  data: any
+  data: any;
 }
 
 const IconIndicator = ({ data }: IconIndicatorProps) => {
-  const [comments, setComments] = useState([])
+  const [comments, setComments] = useState([]);
 
-  const { assumption, justification, type } = data
-  const { data: session } = useSession()
+  const { assumption, justification, type } = data;
+  const { data: session } = useSession();
 
   const hasAssumptionOrJustificationOrContext =
-  (typeof assumption === 'string' && assumption.trim() !== '') ||
-  (typeof justification === 'string' && justification.trim() !== '') ||
-  (Array.isArray(data.context) && data.context.length > 0);
+    (typeof assumption === 'string' && assumption.trim() !== '') ||
+    (typeof justification === 'string' && justification.trim() !== '') ||
+    (Array.isArray(data.context) && data.context.length > 0);
 
   const fetchNodeComments = async () => {
-    let entity
+    let entity;
 
     switch (type) {
-      case "Strategy":
-        entity = "strategies";
+      case 'Strategy':
+        entity = 'strategies';
         break;
-      case "PropertyClaim":
-        entity = "propertyclaims";
+      case 'PropertyClaim':
+        entity = 'propertyclaims';
         break;
-      case "Evidence":
-        entity = "evidence";
+      case 'Evidence':
+        entity = 'evidence';
         break;
       default:
-        entity = "goals";
+        entity = 'goals';
         break;
     }
 
     try {
-        let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${data.id}/comments/`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${data.id}/comments/`;
 
-        const requestOptions: RequestInit = {
-          method: "GET",
-          headers: {
-            Authorization: `Token ${session?.key}`,
-            "Content-Type": "application/json",
-          }
-        };
+      const requestOptions: RequestInit = {
+        method: 'GET',
+        headers: {
+          Authorization: `Token ${session?.key}`,
+          'Content-Type': 'application/json',
+        },
+      };
 
-        const response = await fetch(url, requestOptions);
-        const result = await response.json()
-        // console.log('comments result', result)
-        return result
+      const response = await fetch(url, requestOptions);
+      const result = await response.json();
+      // console.log('comments result', result)
+      return result;
     } catch (error) {
-        console.log('Error', error)
+      console.log('Error', error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchNodeComments().then(result => {
-      setComments(result)
-    })
-  }, [])
+    fetchNodeComments().then((result) => {
+      setComments(result);
+    });
+  }, []);
 
   return (
-    <div className={`inline-flex ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}>
-      <div className='flex justify-start items-center gap-1'>
+    <div
+      className={`inline-flex ${type === 'Strategy' ? 'top-0 right-0' : 'top-[6px] right-4'}`}
+    >
+      <div className="flex justify-start items-center gap-1">
         {hasAssumptionOrJustificationOrContext && (
-          <InformationCircleIcon className='size-3 text-white/90' />
+          <InformationCircleIcon className="size-3 text-white/90" />
         )}
         {comments.length > 0 && (
-          <ChatBubbleBottomCenterTextIcon className='size-3 text-white/90' />
+          <ChatBubbleBottomCenterTextIcon className="size-3 text-white/90" />
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default IconIndicator
+export default IconIndicator;

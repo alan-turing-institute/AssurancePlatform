@@ -20,6 +20,7 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from api.models import AssuranceCase
 from tests.factories.case_factories import AssuranceCaseFactory
 from tests.factories.content_factories import TopLevelNormativeGoalFactory
 from tests.factories.user_factories import EAPGroupFactory, EAPUserFactory
@@ -191,8 +192,6 @@ class TestAssuranceCaseDetailView(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify case was deleted
-        from api.models import AssuranceCase
-
         self.assertFalse(AssuranceCase.objects.filter(id=self.case.id).exists())
 
     def test_delete_case_no_permission(self):

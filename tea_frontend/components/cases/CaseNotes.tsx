@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from "react";
-import NotesSheet from "../ui/notes-sheet";
-import NotesFeed from "./NotesFeed";
-import NotesForm from "./NotesForm";
-import useStore from "@/data/store";
+import { useEffect, useState } from 'react';
+import NotesSheet from '../ui/notes-sheet';
+import NotesFeed from './NotesFeed';
+import NotesForm from './NotesForm';
+import useStore from '@/data/store';
 
 interface CaseNotesProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const CaseNotes = ({ isOpen, onClose } : CaseNotesProps ) => {
-  const { assuranceCase } = useStore()
+const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
+  const { assuranceCase } = useStore();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ const CaseNotes = ({ isOpen, onClose } : CaseNotesProps ) => {
       {assuranceCase.permissions !== 'view' && <NotesForm />}
       <NotesFeed />
     </NotesSheet>
-  )
-}
+  );
+};
 
-export default CaseNotes
+export default CaseNotes;

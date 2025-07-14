@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useEmailModal } from '@/hooks/useEmailModal'
-import { useEffect } from 'react'
+import { useEmailModal } from '@/hooks/useEmailModal';
+import { useEffect } from 'react';
 
 interface CheckUserEmailProps {
-  user: any
+  user: any;
 }
 
-const CheckUserEmail = ({ user } : CheckUserEmailProps) => {
-  const emailModal = useEmailModal()
+const CheckUserEmail = ({ user }: CheckUserEmailProps) => {
+  const emailModal = useEmailModal();
 
   useEffect(() => {
-    if (!user?.email) emailModal.onOpen()
-  }, [user, emailModal])
+    if (!user?.email) emailModal.onOpen();
+  }, [user, emailModal]);
 
-  return null
-}
+  return null;
+};
 
-export default CheckUserEmail
+export default CheckUserEmail;

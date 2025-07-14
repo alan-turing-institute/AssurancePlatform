@@ -4,8 +4,8 @@ import React, {
   useEffect,
   Dispatch,
   SetStateAction,
-} from "react";
-import { Button } from "./ui/button";
+} from 'react';
+import { Button } from './ui/button';
 import {
   ArrowLeft,
   Check,
@@ -15,26 +15,31 @@ import {
   Search,
   SearchIcon,
   X,
-} from "lucide-react";
-import { ModeToggle } from "./ui/theme-toggle";
-import { useRouter } from "next/navigation";
+} from 'lucide-react';
+import { ModeToggle } from './ui/theme-toggle';
+import { useRouter } from 'next/navigation';
 // import { useLoginToken } from "@/hooks/useAuth";
-import useStore from "@/data/store";
-import Link from "next/link";
+import useStore from '@/data/store';
+import Link from 'next/link';
 import {
   useReactFlow,
   useUpdateNodeInternals,
   getNodesBounds,
-} from "reactflow";
-import SearchNodes from "./common/SearchNodes";
+} from 'reactflow';
+import SearchNodes from './common/SearchNodes';
 
-import { toggleHiddenForParent } from "@/lib/case-helper";
-import LogoutButton from "./auth/LogoutButton";
-import ActiveUsersList from "./cases/ActiveUsersList";
-import { ResourcesInfo } from "./cases/ResourcesInfo";
-import { useSession } from "next-auth/react";
-import moment from "moment";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { toggleHiddenForParent } from '@/lib/case-helper';
+import LogoutButton from './auth/LogoutButton';
+import ActiveUsersList from './cases/ActiveUsersList';
+import { ResourcesInfo } from './cases/ResourcesInfo';
+import { useSession } from 'next-auth/react';
+import moment from 'moment';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 interface HeaderProps {
   setOpen: Dispatch<SetStateAction<boolean>>;
@@ -52,7 +57,7 @@ const Header = ({ setOpen }: HeaderProps) => {
   const { fitView, setViewport, setCenter } = useReactFlow();
 
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCaseName(e.target.value);
@@ -69,17 +74,17 @@ const Header = ({ setOpen }: HeaderProps) => {
       };
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
       const requestOptions: RequestInit = {
-        method: "PUT",
+        method: 'PUT',
         headers: {
           Authorization: `Token ${session?.key}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(newData),
       };
 
       const response = await fetch(url, requestOptions);
       if (!response.ok) {
-        console.log("Render a new error");
+        console.log('Render a new error');
       }
       setEditName(false);
       setAssuranceCase({ ...assuranceCase, name: newCaseName });
@@ -100,7 +105,7 @@ const Header = ({ setOpen }: HeaderProps) => {
   };
 
   const focusNode = (value: string) => {
-    console.log("Focus Node");
+    console.log('Focus Node');
     let nodeId: any = nodes.filter((n) => n.id === value)[0].id;
 
     unhideParents(nodeId);
@@ -126,24 +131,24 @@ const Header = ({ setOpen }: HeaderProps) => {
 
         setCenter(centerX, centerY);
       } else {
-        console.error("Node is null");
+        console.error('Node is null');
       }
     } else {
-      console.error("Node ID is undefined");
+      console.error('Node ID is undefined');
     }
   };
 
   useEffect(() => {
-    console.log('header re-rendered', assuranceCase.published)
-  }, [assuranceCase])
+    console.log('header re-rendered', assuranceCase.published);
+  }, [assuranceCase]);
 
   return (
     <div className="fixed top-0 left-0 bg-indigo-600 dark:bg-slate-900 text-white w-full z-50">
       <div className="container py-3 flex justify-between items-center">
         <div className="flex justify-start items-center gap-2">
           <Button
-            variant={"ghost"}
-            size={"icon"}
+            variant={'ghost'}
+            size={'icon'}
             onClick={() => router.back()}
             className="hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white"
           >
@@ -164,29 +169,37 @@ const Header = ({ setOpen }: HeaderProps) => {
           <LogoutButton />
           <ModeToggle className="bg-indigo-500 dark:bg-slate-900 hover:bg-indigo-900/20 hover:dark:bg-gray-100/10 hover:text-white border-none" />
           <TooltipProvider>
-          {assuranceCase.published ? (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 ring-1 ring-green-500/20 ring-inset">
-                  Published
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Published on: {moment(assuranceCase.published_date).format('DD/MM/YYYY HH:mm:ss')}</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="inline-flex items-center rounded-md bg-gray-500/10 px-3 py-2 text-xs font-medium text-gray-400 ring-1 ring-gray-500/20 ring-inset">
-                  Unpublished
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">You can publish using the <strong>Share</strong><br/> action from toolbar</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+            {assuranceCase.published ? (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 ring-1 ring-green-500/20 ring-inset">
+                    Published
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    Published on:{' '}
+                    {moment(assuranceCase.published_date).format(
+                      'DD/MM/YYYY HH:mm:ss'
+                    )}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="inline-flex items-center rounded-md bg-gray-500/10 px-3 py-2 text-xs font-medium text-gray-400 ring-1 ring-gray-500/20 ring-inset">
+                    Unpublished
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    You can publish using the <strong>Share</strong>
+                    <br /> action from toolbar
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </TooltipProvider>
         </div>
       </div>
@@ -194,4 +207,4 @@ const Header = ({ setOpen }: HeaderProps) => {
   );
 };
 
-export default Header
+export default Header;

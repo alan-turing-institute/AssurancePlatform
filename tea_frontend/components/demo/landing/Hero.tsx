@@ -1,4 +1,4 @@
-import Header from '@/app/(landing)/_components/Header'
+import Header from '@/app/(landing)/_components/Header';
 
 export default function Hero() {
   return (
@@ -27,7 +27,12 @@ export default function Hero() {
                 strokeWidth={0}
               />
             </svg>
-            <rect width="100%" height="100%" strokeWidth={0} fill="url(#1f932ae7-37de-4c0a-a8b0-a6e3b4d44b84)" />
+            <rect
+              width="100%"
+              height="100%"
+              strokeWidth={0}
+              fill="url(#1f932ae7-37de-4c0a-a8b0-a6e3b4d44b84)"
+            />
           </svg>
           <div
             className="absolute left-1/2 right-0 top-0 -z-10 -ml-24 transform-gpu overflow-hidden blur-3xl lg:ml-24 xl:ml-48"
@@ -44,15 +49,20 @@ export default function Hero() {
           <div className="overflow-hidden">
             <div className="mx-auto max-w-7xl px-6 pb-32 lg:px-8">
               <div className="mx-auto w-full lg:grid lg:grid-cols-2 lg:items-center gap-8">
-              {/* <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center"> */}
+                {/* <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center"> */}
                 <div className="relative w-full">
                   {/* max-w-xl lg:shrink-0 xl:max-w-2xl */}
-                  <div className='bg-indigo-100 border border-indigo-300 text-indigo-500 text-xs font-semibold rounded-md inline-flex py-2 px-3 mb-6'>Available as a Research Preview</div>
+                  <div className="bg-indigo-100 border border-indigo-300 text-indigo-500 text-xs font-semibold rounded-md inline-flex py-2 px-3 mb-6">
+                    Available as a Research Preview
+                  </div>
                   <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
                     Build trust, collaboratively.
                   </h1>
                   <p className="mt-6 text-lg leading-8 text-gray-600 sm:max-w-full lg:max-w-none">
-                    The Trustworthy and Ethical Assurance (TEA) Platform is an innovative, open-source tool designed to facilite the process of creating, managing and sharing assurance cases for data-driven technologies, such as digital twins or AI.
+                    The Trustworthy and Ethical Assurance (TEA) Platform is an
+                    innovative, open-source tool designed to facilite the
+                    process of creating, managing and sharing assurance cases
+                    for data-driven technologies, such as digital twins or AI.
                   </p>
                   <div className="mt-10 flex items-center gap-x-6">
                     <a
@@ -61,14 +71,17 @@ export default function Hero() {
                     >
                       Get started
                     </a>
-                    <a href="https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/" className="text-sm font-semibold leading-6 text-gray-900">
+                    <a
+                      href="https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/"
+                      className="text-sm font-semibold leading-6 text-gray-900"
+                    >
                       Learn more <span aria-hidden="true">→</span>
                     </a>
                   </div>
                 </div>
                 {/* sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0 */}
                 <div className="mt-14 flex justify-end gap-8">
-                  <div className='w-full rounded-lg overflow-hidden shadow-xl'>
+                  <div className="w-full rounded-lg overflow-hidden shadow-xl">
                     <video
                       src="/images/building-an-assurance-case.mp4"
                       autoPlay
@@ -129,5 +142,5 @@ export default function Hero() {
         </div>
       </main>
     </div>
-  )
+  );
 }

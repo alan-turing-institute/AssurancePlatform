@@ -5,49 +5,61 @@ import {
   FingerPrintIcon,
   LockClosedIcon,
   ServerIcon,
-  AcademicCapIcon, ChatBubbleLeftRightIcon, LightBulbIcon
-} from '@heroicons/react/20/solid'
+  AcademicCapIcon,
+  ChatBubbleLeftRightIcon,
+  LightBulbIcon,
+} from '@heroicons/react/20/solid';
 
 const features = [
   {
     name: 'Structured Methodology.',
-    description: 'Our platform uses a structured methodology for assurance, supported by open and accessible user resources designed by experts in assurance.',
+    description:
+      'Our platform uses a structured methodology for assurance, supported by open and accessible user resources designed by experts in assurance.',
     icon: CloudArrowUpIcon,
   },
   {
     name: 'Best Practices.',
-    description: 'Our aim is to facilitate open sharing and communication of assurance cases, to help enable cross-sector and multi-disciplinary forms of knowledge sharing and best practice.',
+    description:
+      'Our aim is to facilitate open sharing and communication of assurance cases, to help enable cross-sector and multi-disciplinary forms of knowledge sharing and best practice.',
     icon: LockClosedIcon,
   },
   {
     name: 'Responsible research and Innovation.',
-    description: 'Going beyond traditional goals such as safety or security, the TEA platform encourages teams to critically reflect and deliberate about the societal and ethical impact of their research and innovation practices.',
+    description:
+      'Going beyond traditional goals such as safety or security, the TEA platform encourages teams to critically reflect and deliberate about the societal and ethical impact of their research and innovation practices.',
     icon: LightBulbIcon,
   },
   {
     name: 'Community Building.',
-    description: 'The TEA Platform aims to remove barriers to participation and contribution to assurance practices, seeking to build a diverse and inclusive community of practice.',
+    description:
+      'The TEA Platform aims to remove barriers to participation and contribution to assurance practices, seeking to build a diverse and inclusive community of practice.',
     icon: ChatBubbleLeftRightIcon,
   },
   {
     name: 'Privacy and Control.',
-    description: 'Although we promote and encourage openness and transparency, we also support self-hosting to ensure that users who handle sensitive information can manage it securely and privately within their own organisation\'s infrastructure.',
+    description:
+      "Although we promote and encourage openness and transparency, we also support self-hosting to ensure that users who handle sensitive information can manage it securely and privately within their own organisation's infrastructure.",
     icon: FingerPrintIcon,
   },
   {
     name: 'Training and Capacity Building.',
-    description: 'The platform includes freely accessible training resources for a broad range of users and stakeholders, as well as providing information about upcoming events and workshops.',
+    description:
+      'The platform includes freely accessible training resources for a broad range of users and stakeholders, as well as providing information about upcoming events and workshops.',
     icon: AcademicCapIcon,
   },
-]
+];
 
 export default function Features() {
   return (
     <div className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl sm:text-center">
-          <h2 className="text-base font-semibold leading-7 text-indigo-600">Everything you need</h2>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">What TEA offers</p>
+          <h2 className="text-base font-semibold leading-7 text-indigo-600">
+            Everything you need
+          </h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            What TEA offers
+          </p>
           {/* <p className="mt-6 text-lg leading-8 text-gray-600">
             Lorem ipsum, dolor sit amet consectetur adipisicing elit. Maiores impedit perferendis suscipit eaque, iste
             dolor cupiditate blanditiis.
@@ -73,14 +85,20 @@ export default function Features() {
           {features.map((feature) => (
             <div key={feature.name} className="relative pl-9">
               <div className="inline font-semibold text-gray-900">
-                <feature.icon className="absolute left-1 top-1 h-5 w-5 text-indigo-600" aria-hidden="true" />
+                <feature.icon
+                  className="absolute left-1 top-1 h-5 w-5 text-indigo-600"
+                  aria-hidden="true"
+                />
                 {feature.name}
               </div>{' '}
-              <div className="inline text-pretty"><br/>{feature.description}</div>
+              <div className="inline text-pretty">
+                <br />
+                {feature.description}
+              </div>
             </div>
           ))}
         </dl>
       </div>
     </div>
-  )
+  );
 }

@@ -1,25 +1,25 @@
-import '@testing-library/jest-dom'
-import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest'
-import { cleanup } from '@testing-library/react'
-import { server } from './mocks/server'
-import React from 'react'
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import type React from 'react';
+import { afterAll, afterEach, beforeAll, expect, vi } from 'vitest';
+import { server } from './mocks/server';
 
 // Extend Vitest's expect with jest-dom matchers
-expect.extend({})
+expect.extend({});
 
 // Setup MSW
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' })
-})
+  server.listen({ onUnhandledRequest: 'error' });
+});
 
 afterEach(() => {
-  server.resetHandlers()
-  cleanup()
-})
+  server.resetHandlers();
+  cleanup();
+});
 
 afterAll(() => {
-  server.close()
-})
+  server.close();
+});
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -33,15 +33,16 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/',
   useSearchParams: () => new URLSearchParams(),
-}))
+  useParams: () => ({ caseId: '1' }),
+}));
 
 // Mock Next.js image component
 vi.mock('next/image', () => ({
   default: (props: any) => {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />
+    return <img {...props} />;
   },
-}))
+}));
 
 // Mock next-auth
 vi.mock('next-auth/react', () => ({
@@ -52,7 +53,8 @@ vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
   signOut: vi.fn(),
   getSession: vi.fn(),
-}))
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Mock ReactFlow
 vi.mock('reactflow', () => ({
@@ -75,19 +77,19 @@ vi.mock('reactflow', () => ({
   addEdge: vi.fn(),
   useNodesState: () => [[], vi.fn(), vi.fn()],
   useEdgesState: () => [[], vi.fn(), vi.fn()],
-}))
+}));
 
 // Global test utilities
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
-}))
+}));
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -97,4 +99,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-})
+});

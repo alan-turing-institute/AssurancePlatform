@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from "react";
-import EditSheet from "../ui/edit-sheet";
-import MemberEditForm from "./MemberEditForm";
+import { useEffect, useState } from 'react';
+import EditSheet from '../ui/edit-sheet';
+import MemberEditForm from './MemberEditForm';
 
 interface MemberEditProps {
-  member: any
-  isOpen: boolean
-  onClose: () => void
+  member: any;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const MemberEdit = ({ member, isOpen, onClose } : MemberEditProps ) => {
+const MemberEdit = ({ member, isOpen, onClose }: MemberEditProps) => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -22,8 +22,8 @@ const MemberEdit = ({ member, isOpen, onClose } : MemberEditProps ) => {
   }
 
   const onChange = (open: boolean) => {
-    if(!open) {
-      onClose()
+    if (!open) {
+      onClose();
     }
   };
 
@@ -37,7 +37,7 @@ const MemberEdit = ({ member, isOpen, onClose } : MemberEditProps ) => {
     >
       {member && <MemberEditForm member={member} />}
     </EditSheet>
-  )
-}
+  );
+};
 
-export default MemberEdit
+export default MemberEdit;

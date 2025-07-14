@@ -1,29 +1,38 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { EllipsisVerticalIcon, EyeIcon } from 'lucide-react'
-import Link from 'next/link'
-import DeleteCaseButton from './delete-button'
-import UnpublishCaseButton from './unpublish-button'
+import React from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EllipsisVerticalIcon, EyeIcon } from 'lucide-react';
+import Link from 'next/link';
+import DeleteCaseButton from './delete-button';
+import UnpublishCaseButton from './unpublish-button';
 
 interface TableActionsProps {
-  caseStudy: any
+  caseStudy: any;
 }
 
-const TableActions = ({ caseStudy } : TableActionsProps ) => {
+const TableActions = ({ caseStudy }: TableActionsProps) => {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger><EllipsisVerticalIcon className='size-4' /></DropdownMenuTrigger>
+      <DropdownMenuTrigger>
+        <EllipsisVerticalIcon className="size-4" />
+      </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link
             href={`case-studies/${caseStudy.id}`}
-            className='flex items-center'
+            className="flex items-center"
           >
-            <EyeIcon className='size-4 mr-2'/>
+            <EyeIcon className="size-4 mr-2" />
             View
           </Link>
         </DropdownMenuItem>
@@ -51,7 +60,7 @@ const TableActions = ({ caseStudy } : TableActionsProps ) => {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
+  );
+};
 
-export default TableActions
+export default TableActions;

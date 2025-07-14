@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React, { Dispatch, SetStateAction, useEffect, useState } from 'react'
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import {
   Form,
   FormControl,
@@ -9,79 +9,104 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { Textarea } from "../ui/textarea"
-import { Button } from '../ui/button'
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Textarea } from '../ui/textarea';
+import { Button } from '../ui/button';
 import useStore from '@/data/store';
-import { CloudFog, Loader, Loader2, Lock, LockIcon, LockKeyhole } from 'lucide-react'
-import { getLayoutedElements } from '@/lib/layout-helper'
+import {
+  CloudFog,
+  Loader,
+  Loader2,
+  Lock,
+  LockIcon,
+  LockKeyhole,
+} from 'lucide-react';
+import { getLayoutedElements } from '@/lib/layout-helper';
 // import { useLoginToken } from '@/hooks/useAuth'
-import { findItemById, updateAssuranceCase, updateAssuranceCaseNode, caseItemDescription } from '@/lib/case-helper'
-import { useSession } from 'next-auth/react'
+import {
+  findItemById,
+  updateAssuranceCase,
+  updateAssuranceCaseNode,
+  caseItemDescription,
+} from '@/lib/case-helper';
+import { useSession } from 'next-auth/react';
 
 const formSchema = z.object({
-  URL: z.string().min(2, {
-    message: "url must be at least 2 characters.",
-  }).optional(),
+  URL: z
+    .string()
+    .min(2, {
+      message: 'url must be at least 2 characters.',
+    })
+    .optional(),
   description: z.string().min(2, {
-    message: "Description must be atleast 2 characters"
+    message: 'Description must be atleast 2 characters',
   }),
-})
+});
 
 interface EditFormProps {
   node: any;
-  onClose: () => void
-  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>
-};
+  onClose: () => void;
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
+}
 
 const EditForm: React.FC<EditFormProps> = ({
   node,
   onClose,
-  setUnresolvedChanges
+  setUnresolvedChanges,
 }) => {
   const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
-  const [loading, setLoading] = useState(false)
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: node.data || {
       URL: '',
       description: '',
-    }
+    },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log('UPDATING GOAL NODE.......')
-    setLoading(true)
+    console.log('UPDATING GOAL NODE.......');
+    setLoading(true);
     // Update item via api
     const updateItem = {
       short_description: values.description,
-    }
+    };
 
-    if(node.type === 'evidence') {
+    if (node.type === 'evidence') {
       //@ts-ignore
-      updateItem.URL = values.URL
+      updateItem.URL = values.URL;
     }
 
-    const updated = await updateAssuranceCaseNode(node.type, node.data.id, session?.key ?? '', updateItem)
+    const updated = await updateAssuranceCaseNode(
+      node.type,
+      node.data.id,
+      session?.key ?? '',
+      updateItem
+    );
 
-    if(updated) {
+    if (updated) {
       // Assurance Case Update
-      const updatedAssuranceCase = await updateAssuranceCase(node.type, assuranceCase, updateItem, node.data.id, node)
-      if(updatedAssuranceCase) {
-        setAssuranceCase(updatedAssuranceCase)
-        setLoading(false)
+      const updatedAssuranceCase = await updateAssuranceCase(
+        node.type,
+        assuranceCase,
+        updateItem,
+        node.data.id,
+        node
+      );
+      if (updatedAssuranceCase) {
+        setAssuranceCase(updatedAssuranceCase);
+        setLoading(false);
         // window.location.reload()
-        onClose()
+        onClose();
       }
     }
-
   }
 
   useEffect(() => {
@@ -92,7 +117,11 @@ const EditForm: React.FC<EditFormProps> = ({
     });
   }, [form, setUnresolvedChanges]);
 
-  let readOnly = (assuranceCase.permissions === 'view' || assuranceCase.permissions === 'review') ? true : false
+  let readOnly =
+    assuranceCase.permissions === 'view' ||
+    assuranceCase.permissions === 'review'
+      ? true
+      : false;
 
   return (
     <Form {...form}>
@@ -102,15 +131,21 @@ const EditForm: React.FC<EditFormProps> = ({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className='flex justify-start items-center gap-2'>
+              <FormLabel className="flex justify-start items-center gap-2">
                 Description
                 {readOnly && (
-                  <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                  <span
+                    title="Read Only"
+                    className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
+                  >
+                    <Lock className="w-3 h-3" />
+                  </span>
                 )}
               </FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Type your message here." {...field}
+                  placeholder="Type your message here."
+                  {...field}
                   readOnly={readOnly}
                 />
               </FormControl>
@@ -124,34 +159,58 @@ const EditForm: React.FC<EditFormProps> = ({
             name="URL"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className='flex justify-start items-center gap-2'>
+                <FormLabel className="flex justify-start items-center gap-2">
                   Evidence URL
                   {readOnly && (
-                    <span title='Read Only' className='flex justify-start items-center gap-2 text-xs text-muted-foreground py-2'><Lock className='w-3 h-3' /></span>
+                    <span
+                      title="Read Only"
+                      className="flex justify-start items-center gap-2 text-xs text-muted-foreground py-2"
+                    >
+                      <Lock className="w-3 h-3" />
+                    </span>
                   )}
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="www.sample.com" {...field} readOnly={readOnly} />
+                  <Input
+                    placeholder="www.sample.com"
+                    {...field}
+                    readOnly={readOnly}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         )}
-        <div className='flex justify-start items-center gap-3'>
-        {!readOnly && (
-          <Button type="submit" className="bg-indigo-500 hover:bg-indigo-600 dark:text-white" disabled={loading}>
-            {loading ? (
-              <span title='Read Only' className='flex justify-center items-center gap-2'><Loader2 className='w-4 h-4 animate-spin' />Updating...</span>
-            ) : (
-              <span>Update&nbsp;<span className='capitalize'>{caseItemDescription(node.type)}</span></span>
-            )}
-          </Button>
-        )}
+        <div className="flex justify-start items-center gap-3">
+          {!readOnly && (
+            <Button
+              type="submit"
+              className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+              disabled={loading}
+            >
+              {loading ? (
+                <span
+                  title="Read Only"
+                  className="flex justify-center items-center gap-2"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Updating...
+                </span>
+              ) : (
+                <span>
+                  Update&nbsp;
+                  <span className="capitalize">
+                    {caseItemDescription(node.type)}
+                  </span>
+                </span>
+              )}
+            </Button>
+          )}
         </div>
       </form>
     </Form>
-  )
-}
+  );
+};
 
-export default EditForm
+export default EditForm;

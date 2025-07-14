@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Button } from "@/components/ui/button"
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -12,16 +12,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Lock, MoveLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Lock, MoveLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 // import { useLoginToken } from "@/hooks/useAuth"
-import { useState } from "react"
-import { useToast } from "@/components/ui/use-toast"
-import { useSession } from "next-auth/react"
+import { useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { useSession } from 'next-auth/react';
 
-const ACCEPTED_FILE_TYPES = ["jpg"];
+const ACCEPTED_FILE_TYPES = ['jpg'];
 
 const FormSchema = z.object({
   // firstname: z.string().min(2, {
@@ -31,10 +31,10 @@ const FormSchema = z.object({
   //   message: "Lastname must be at least 2 characters.",
   // }),
   username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+    message: 'Username must be at least 2 characters.',
   }),
   email: z.string().min(2, {
-    message: "Email must be at least 2 characters.",
+    message: 'Email must be at least 2 characters.',
   }),
   // avatar: z.any()
   //   .refine(files => {
@@ -50,19 +50,19 @@ const FormSchema = z.object({
   //     }
   //     return true; // Validation passed
   //   })
-})
+});
 
 type PersonalInfoFormProps = {
-  data: any
-}
+  data: any;
+};
 
-export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
-  const [loading, setLoading] = useState<boolean>(false)
+export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const router = useRouter()
+  const router = useRouter();
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
-  const { toast } = useToast()
+  const { data: session } = useSession();
+  const { toast } = useToast();
 
   const notify = (message: string) => {
     toast({
@@ -80,26 +80,26 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: data
-  })
+    defaultValues: data,
+  });
 
   async function onSubmit(values: z.infer<typeof FormSchema>) {
-    setLoading(true)
-    const userId = data.id
+    setLoading(true);
+    const userId = data.id;
 
     const newUserDetails = {
       username: values.username,
-      email: values.email
-    }
+      email: values.email,
+    };
 
     try {
       let url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${userId}/`;
 
       const requestOptions: RequestInit = {
-        method: "PUT",
+        method: 'PUT',
         headers: {
           Authorization: `Token ${session?.key}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(newUserDetails),
       };
@@ -107,36 +107,41 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {
-        notifyError('Something went wrong')
-        return
+        notifyError('Something went wrong');
+        return;
       }
 
       const result = await response.json();
-      notify('User Updated Successfully!')
+      notify('User Updated Successfully!');
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
 
-    setLoading(false)
+    setLoading(false);
   }
 
-  console.log('Current User', data)
+  console.log('Current User', data);
 
   return (
     <>
-    <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
-      <div>
-        <h2 className="text-base font-semibold leading-7 text-foreground">Personal Information</h2>
-        <p className="mt-1 text-sm leading-6 text-gray-400">
-          Use a permanent address where you can receive mail.
-        </p>
-      </div>
+      <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
+        <div>
+          <h2 className="text-base font-semibold leading-7 text-foreground">
+            Personal Information
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-gray-400">
+            Use a permanent address where you can receive mail.
+          </p>
+        </div>
 
-      <div className="md:col-span-2">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
-          <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
-            {/* <FormField
+        <div className="md:col-span-2">
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="w-full space-y-6"
+            >
+              <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:max-w-xl sm:grid-cols-6">
+                {/* <FormField
               control={form.control}
               name="avatar"
               render={({ field: { value, onChange, ...fieldProps } }) => (
@@ -164,7 +169,7 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 </FormItem>
               )}
             /> */}
-            {/* <FormField
+                {/* <FormField
               control={form.control}
               name="firstname"
               render={({ field }) => (
@@ -190,44 +195,69 @@ export function PersonalInfoForm({ data } : PersonalInfoFormProps) {
                 </FormItem>
               )}
             /> */}
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem className="col-span-full">
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="example@gmail.com" {...field} readOnly={session ? true : false} />
-                  </FormControl>
-                  {session && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
-                  <FormMessage />
-                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem className="col-span-full">
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="example@gmail.com"
+                          {...field}
+                          readOnly={session ? true : false}
+                        />
+                      </FormControl>
+                      {session && (
+                        <FormDescription className="text-xs flex justify-start items-center">
+                          <Lock className="w-3 h-3 mr-2" />
+                          Read only
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem className="col-span-full">
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="example@gmail.com"
+                          {...field}
+                          readOnly={data.email == '' ? false : true}
+                        />
+                      </FormControl>
+                      {data.email == ''
+                        ? false
+                        : true && (
+                            <FormDescription className="text-xs flex justify-start items-center">
+                              <Lock className="w-3 h-3 mr-2" />
+                              Read only
+                            </FormDescription>
+                          )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {!data.email && (
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {loading ? 'Updating' : 'Update'}
+                </Button>
               )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem className="col-span-full">
-                  <FormLabel>Email Address</FormLabel>
-                  <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} readOnly={data.email == '' ? false : true} />
-                  </FormControl>
-                  {data.email == '' ? false : true && (<FormDescription className="text-xs flex justify-start items-center"><Lock className="w-3 h-3 mr-2"/>Read only</FormDescription>)}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          {!data.email && (
-            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {loading ? 'Updating' : 'Update'}
-            </Button>
-          )}
-        </form>
-      </Form>
+            </form>
+          </Form>
+        </div>
       </div>
-    </div>
     </>
-  )
+  );
 }

@@ -64,8 +64,8 @@
     },
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit",
-      "source.fixAll": "explicit"
+      "source.organizeImports.biome": "explicit",
+      "source.fixAll.biome": "explicit"
     },
     "[python]": {
       "editor.formatOnSave": true,
@@ -76,21 +76,23 @@
       }
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.defaultFormatter": "biomejs.biome",
       "editor.formatOnSave": true
     },
     "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.defaultFormatter": "biomejs.biome",
       "editor.formatOnSave": true
     },
     "[javascript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.defaultFormatter": "biomejs.biome",
       "editor.formatOnSave": true
     },
     "[json]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "biomejs.biome"
     },
-    "eslint.workingDirectories": ["./tea_frontend"],
+    "[jsonc]": {
+      "editor.defaultFormatter": "biomejs.biome"
+    },
     "typescript.preferences.includePackageJsonAutoImports": "on",
     "typescript.suggest.autoImports": true
   },
@@ -100,7 +102,7 @@
       "ms-python.mypy-type-checker",
       "ms-python.black-formatter",
       "bradlc.vscode-tailwindcss",
-      "esbenp.prettier-vscode",
+      "biomejs.biome",
       "ms-vscode.vscode-typescript-next",
       "ms-vscode.vscode-json",
       "tamasfe.even-better-toml",
@@ -222,6 +224,19 @@
         "label": "Frontend: Lint",
         "type": "shell",
         "command": "cd tea_frontend && pnpm run lint",
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Format",
+        "type": "shell",
+        "command": "cd tea_frontend && pnpm run format",
         "group": "build",
         "presentation": {
           "echo": true,

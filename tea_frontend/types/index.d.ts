@@ -5,14 +5,14 @@ type Note = {
   // imageUrl: string;
   // comment: string;
   // date: Date;
-  author:"Rich",
-  assurance_case:51,
-  content:"asdasdsadasdds",
-  created_at:"2024-04-30T13:03:43.507729Z"
+  author: 'Rich';
+  assurance_case: 51;
+  content: 'asdasdsadasdds';
+  created_at: '2024-04-30T13:03:43.507729Z';
 
-  tags?: string[]
-  assigned?: any
-}
+  tags?: string[];
+  assigned?: any;
+};
 
 export interface Evidence {
   id: number;
@@ -122,8 +122,8 @@ export interface AssuranceCase {
   color_profile: string;
   comments: any[];
   permissions: string;
-  published: boolean,
-  published_date: string | null
+  published: boolean;
+  published_date: string | null;
 }
 
 export type User = {
@@ -133,15 +133,15 @@ export type User = {
   last_login: string;
   date_joined: string;
   is_staff: boolean;
-  all_groups: any[];  // Adjust the type if you know the structure of the groups
+  all_groups: any[]; // Adjust the type if you know the structure of the groups
   owned_groups: any[]; // Adjust the type if you know the structure of the groups
   github_repositories: any[]; // Adjust the type if you know the structure of the repositories
 };
 
 export type Sector = {
-  ID: number
-  Name: string
-  Description: string
-  ISICcode: string,
-  NACEcode: string
-}
+  ID: number;
+  Name: string;
+  Description: string;
+  ISICcode: string;
+  NACEcode: string;
+};

@@ -15,6 +15,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from api.models import TopLevelNormativeGoal
 from tests.factories.case_factories import AssuranceCaseFactory
 from tests.factories.content_factories import (
     ContextFactory,
@@ -140,8 +141,6 @@ class TestTopLevelNormativeGoalViews(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify goal was deleted
-        from api.models import TopLevelNormativeGoal
-
         self.assertFalse(TopLevelNormativeGoal.objects.filter(id=goal.id).exists())
 
 

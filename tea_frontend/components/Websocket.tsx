@@ -9,9 +9,10 @@ import { usePrevious } from '@/hooks/usePrevious';
 import { useSession } from 'next-auth/react';
 
 const WebSocketComponent = () => {
-  const { assuranceCase, setAssuranceCase, activeUsers, setActiveUsers } = useStore();
+  const { assuranceCase, setAssuranceCase, activeUsers, setActiveUsers } =
+    useStore();
   // const [token] = useLoginToken();
-  const { data: session } = useSession()
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<string[]>([]);
   const [debug, setDebug] = useState<boolean>(false);
 
@@ -22,14 +23,18 @@ const WebSocketComponent = () => {
 
   useEffect(() => {
     if (!assuranceCase || !assuranceCase.id) {
-      console.error("AssuranceCase or AssuranceCase ID is undefined, WebSocket cannot be established.");
+      console.error(
+        'AssuranceCase or AssuranceCase ID is undefined, WebSocket cannot be established.'
+      );
       return;
     }
 
     // Construct WebSocket URL with proper protocol handling
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
-      console.error("NEXT_PUBLIC_API_URL is not configured, WebSocket cannot be established.");
+      console.error(
+        'NEXT_PUBLIC_API_URL is not configured, WebSocket cannot be established.'
+      );
       return;
     }
 
@@ -39,32 +44,34 @@ const WebSocketComponent = () => {
     } else if (apiUrl.startsWith('http://')) {
       webSocketUrl = apiUrl.replace('http://', 'ws://');
     } else {
-      console.error("Invalid API_URL format, WebSocket cannot be established.");
+      console.error('Invalid API_URL format, WebSocket cannot be established.');
       return;
     }
 
     if (!session?.key) {
-      console.error("No session key available, WebSocket cannot be established.");
+      console.error(
+        'No session key available, WebSocket cannot be established.'
+      );
       return;
     }
 
     let interval: any;
     const wsUrl = `${webSocketUrl}/ws/case/${assuranceCase.id}/?token=${session.key}`;
-    console.log("WebSocket configuration:", {
+    console.log('WebSocket configuration:', {
       apiUrl: apiUrl,
       webSocketUrl: webSocketUrl,
       caseId: assuranceCase.id,
       hasToken: !!session.key,
-      finalUrl: wsUrl
+      finalUrl: wsUrl,
     });
 
     const setupWebSocket = () => {
       const websocket = new WebSocket(wsUrl);
-      websocketRef.current = websocket;  // Store the WebSocket instance in the ref
+      websocketRef.current = websocket; // Store the WebSocket instance in the ref
 
-      websocket.addEventListener("open", (event: any) => {
-        console.log("WebSocket connection established: ", event);
-        const pingMessage = JSON.stringify({ content: "ping" });
+      websocket.addEventListener('open', (event: any) => {
+        console.log('WebSocket connection established: ', event);
+        const pingMessage = JSON.stringify({ content: 'ping' });
 
         // Send an initial ping message and start ping interval
         websocket.send(pingMessage);
@@ -73,47 +80,56 @@ const WebSocketComponent = () => {
         }, pingInterval);
       });
 
-      websocket.addEventListener("message", (event: any) => {
-        console.log("Message received from server: ", event);
-        setMessages((prevMessages) => [...prevMessages, `Received "${event.data}" from server.`]);
+      websocket.addEventListener('message', (event: any) => {
+        console.log('Message received from server: ', event);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          `Received "${event.data}" from server.`,
+        ]);
 
         const data = JSON.parse(event.data);
 
         // Handle current connections update
         if (data.content.current_connections) {
           const users = data.content.current_connections;
-          setActiveUsers(users);  // Update active users
-          console.log("Updated active users:", users);
+          setActiveUsers(users); // Update active users
+          console.log('Updated active users:', users);
         }
 
         // Handle assurance case updates (only updating the goals)
         if (data.content.assuranceCase) {
           const updatedGoals = data.content.assuranceCase.goals;
           // Merge updated goals into the existing assurance case
-          const updatedAssuranceCase = { ...assuranceCase, goals: updatedGoals };
-          setAssuranceCase(updatedAssuranceCase);  // Only update the goals
-          console.log("Updated assurance case goals:", updatedGoals);
+          const updatedAssuranceCase = {
+            ...assuranceCase,
+            goals: updatedGoals,
+          };
+          setAssuranceCase(updatedAssuranceCase); // Only update the goals
+          console.log('Updated assurance case goals:', updatedGoals);
         }
       });
 
-      websocket.addEventListener("close", (event: any) => {
-        console.log("WebSocket connection closed: ", event);
+      websocket.addEventListener('close', (event: any) => {
+        console.log('WebSocket connection closed: ', event);
         clearInterval(interval);
       });
 
-      websocket.addEventListener("error", (event: any) => {
-        console.error("WebSocket error occurred:", {
+      websocket.addEventListener('error', (event: any) => {
+        console.error('WebSocket error occurred:', {
           url: wsUrl,
           readyState: websocket.readyState,
-          event: event
+          event: event,
         });
         // Check if it's a connection error
-        if (websocket.readyState === WebSocket.CLOSED || websocket.readyState === WebSocket.CLOSING) {
-          console.error("WebSocket failed to connect. Possible causes:");
-          console.error("- Backend server not running");
-          console.error("- WebSocket endpoint not accessible");
-          console.error("- Invalid authentication token");
-          console.error("- CORS/network configuration issue");
+        if (
+          websocket.readyState === WebSocket.CLOSED ||
+          websocket.readyState === WebSocket.CLOSING
+        ) {
+          console.error('WebSocket failed to connect. Possible causes:');
+          console.error('- Backend server not running');
+          console.error('- WebSocket endpoint not accessible');
+          console.error('- Invalid authentication token');
+          console.error('- CORS/network configuration issue');
         }
       });
     };
@@ -123,31 +139,38 @@ const WebSocketComponent = () => {
 
     // Cleanup function to close WebSocket and clear interval on unmount
     return () => {
-      if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
+      if (
+        websocketRef.current &&
+        websocketRef.current.readyState === WebSocket.OPEN
+      ) {
         websocketRef.current.close();
       }
       clearInterval(interval);
     };
   }, [assuranceCase?.id, session?.key, setActiveUsers, setAssuranceCase]); // Run effect when assuranceCase.id or token changes
 
-
   const prevAssuranceCaseString = usePrevious(JSON.stringify(assuranceCase));
 
   useEffect(() => {
-  if (
-    websocketRef.current &&
-    websocketRef.current.readyState === WebSocket.OPEN &&
-    prevAssuranceCaseString !== JSON.stringify(assuranceCase)
-  ) {
-    const message = JSON.stringify({ type: "case_message", content: { assuranceCase } });
-    websocketRef.current.send(message);
-    console.log("Sent updated assurance case:", assuranceCase);
-  }
-}, [assuranceCase, prevAssuranceCaseString]);  // Only re-run when the assuranceCase structure actually changes
+    if (
+      websocketRef.current &&
+      websocketRef.current.readyState === WebSocket.OPEN &&
+      prevAssuranceCaseString !== JSON.stringify(assuranceCase)
+    ) {
+      const message = JSON.stringify({
+        type: 'case_message',
+        content: { assuranceCase },
+      });
+      websocketRef.current.send(message);
+      console.log('Sent updated assurance case:', assuranceCase);
+    }
+  }, [assuranceCase, prevAssuranceCaseString]); // Only re-run when the assuranceCase structure actually changes
 
   return (
-    <div className={`${!debug ? 'hidden' : 'absolute'} w-full h-full z-50 top-0 left-0 bg-background p-4 rounded-md`}>
-      <h1 className='mb-2'>WebSocket | Users</h1>
+    <div
+      className={`${!debug ? 'hidden' : 'absolute'} w-full h-full z-50 top-0 left-0 bg-background p-4 rounded-md`}
+    >
+      <h1 className="mb-2">WebSocket | Users</h1>
       <div className="output">
         <p>Active Users: {activeUsers.length}</p>
         {messages.map((message, index) => (
@@ -157,8 +180,11 @@ const WebSocketComponent = () => {
       <Button
         variant={'ghost'}
         size={'sm'}
-        className='absolute top-2 right-2'
-        onClick={() => setDebug(false)}><X className='w-4 h-4'/></Button>
+        className="absolute top-2 right-2"
+        onClick={() => setDebug(false)}
+      >
+        <X className="w-4 h-4" />
+      </Button>
     </div>
   );
 };

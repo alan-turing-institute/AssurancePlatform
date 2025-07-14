@@ -1,25 +1,22 @@
-'use client'
+'use client';
 
 // import { AssuranceCase } from '@/types'
-import { ArrowUpTrayIcon } from '@heroicons/react/20/solid'
-import React, { useEffect, useState } from 'react'
-import CaseCard from './CaseCard'
+import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
+import React, { useEffect, useState } from 'react';
+import CaseCard from './CaseCard';
 
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
-import { PlusCircleIcon } from '@heroicons/react/24/outline'
-import { useCreateCaseModal } from '@/hooks/useCreateCaseModal'
-import { useImportModal } from '@/hooks/useImportModal'
-import { Input } from '../ui/input'
+import { Card, CardContent } from '@/components/ui/card';
+import { PlusCircleIcon } from '@heroicons/react/24/outline';
+import { useCreateCaseModal } from '@/hooks/useCreateCaseModal';
+import { useImportModal } from '@/hooks/useImportModal';
+import { Input } from '../ui/input';
 
 interface CaseListProps {
-  assuranceCases: any[]
-  showCreate?: boolean
+  assuranceCases: any[];
+  showCreate?: boolean;
 }
 
-const CaseList = ({ assuranceCases, showCreate = false } : CaseListProps) => {
+const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
   const createCaseModal = useCreateCaseModal();
   const importModal = useImportModal();
 
@@ -27,56 +24,64 @@ const CaseList = ({ assuranceCases, showCreate = false } : CaseListProps) => {
   const [filteredCases, setFilteredCases] = useState(assuranceCases);
 
   // Set cases with the last created on first
-  //@ts-ignore
-  filteredCases.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+  filteredCases.sort(
+    (a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+  );
 
   useEffect(() => {
     // Convert searchTerm to lowercase for case-insensitive matching
-    const searchTermLowerCase = searchTerm.toLowerCase()
+    const searchTermLowerCase = searchTerm.toLowerCase();
     if (searchTerm.trim() === '') {
       // If searchTerm is empty, show all assurance cases
-      setFilteredCases(assuranceCases)
+      setFilteredCases(assuranceCases);
     } else {
       // Filter assurance cases by name containing the searchTerm
-      const filtered = assuranceCases.filter(
-        (ac: any) =>
-          ac.name.toLowerCase().includes(searchTermLowerCase)
+      const filtered = assuranceCases.filter((ac: any) =>
+        ac.name.toLowerCase().includes(searchTermLowerCase)
       );
-      setFilteredCases(filtered)
+      setFilteredCases(filtered);
     }
-  }, [searchTerm, assuranceCases])
+  }, [searchTerm, assuranceCases]);
 
   return (
-    <div className='flex flex-col justify-start items-start min-h-screen px-4 sm:px-6 lg:px-8 pb-16'>
-      <div className='w-full flex justify-between items-start gap-6 py-6'>
-        <div className='w-2/3 md:w-1/3'>
+    <div className="flex flex-col justify-start items-start min-h-screen px-4 sm:px-6 lg:px-8 pb-16">
+      <div className="w-full flex justify-between items-start gap-6 py-6">
+        <div className="w-2/3 md:w-1/3">
           <Input
-            type='text'
-            placeholder='Filter by name...'
-            className='w-full'
+            type="text"
+            placeholder="Filter by name..."
+            className="w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className='w-1/3 flex justify-end items-end'>
+        <div className="w-1/3 flex justify-end items-end">
           <button
-              onClick={() => importModal.onOpen()}
-              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-            <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 h-5 w-5" aria-hidden="true" />
-             <span className='hidden md:block'>Import File</span>
+            onClick={() => importModal.onOpen()}
+            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            <ArrowUpTrayIcon
+              className="-ml-0.5 md:mr-1.5 h-5 w-5"
+              aria-hidden="true"
+            />
+            <span className="hidden md:block">Import File</span>
           </button>
         </div>
       </div>
-      <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 w-full'>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 w-full">
         {showCreate && (
-          <button onClick={() => createCaseModal.onOpen()} className='group min-h-[420px]'>
-            <Card className='h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all'>
-              <CardContent className='flex flex-col justify-center items-center gap-2 py-20'>
-                <PlusCircleIcon className='w-10 h-10 group-hover:-translate-y-1 transition-all' />
+          <button
+            onClick={() => createCaseModal.onOpen()}
+            className="group min-h-[420px]"
+          >
+            <Card className="h-full flex justify-center items-center border-dashed group-hover:bg-indigo-500/10 transition-all">
+              <CardContent className="flex flex-col justify-center items-center gap-2 py-20">
+                <PlusCircleIcon className="w-10 h-10 group-hover:-translate-y-1 transition-all" />
                 <div>
-                  <h4 className='text-xl text-center mb-1'>Create new case</h4>
-                  <p className='text-center text-sm text-foreground/70'>Get started with a new case.</p>
+                  <h4 className="text-xl text-center mb-1">Create new case</h4>
+                  <p className="text-center text-sm text-foreground/70">
+                    Get started with a new case.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -87,7 +92,7 @@ const CaseList = ({ assuranceCases, showCreate = false } : CaseListProps) => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CaseList
+export default CaseList;

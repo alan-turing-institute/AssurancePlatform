@@ -8,6 +8,7 @@ This module provides factories for creating test data for:
 
 import factory
 from django.utils import timezone
+from faker import Faker
 
 from api.models import AssuranceCase, TopLevelNormativeGoal
 from tests.factories.base import BaseFactory
@@ -100,8 +101,6 @@ class TopLevelNormativeGoalFactory(BaseFactory):
     @factory.lazy_attribute
     def keywords(self):
         """Generate comma-separated keywords."""
-        from faker import Faker
-
         fake = Faker()
         words = fake.words(nb=5)
         return ", ".join(words)

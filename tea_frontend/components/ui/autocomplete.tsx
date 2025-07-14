@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { cn } from '@/lib/utils';
 import { User } from '@/types';
@@ -10,16 +10,23 @@ type AutoCompleteProps = {
   setSelectedUsers: Dispatch<SetStateAction<User[]>>; // Update the type for setSelectedUsers
 };
 
-const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoCompleteProps) => {
+const AutoComplete = ({
+  options,
+  selectedUsers,
+  setSelectedUsers,
+}: AutoCompleteProps) => {
   const [inputValue, setInputValue] = useState('');
   const [filteredOptions, setFilteredOptions] = useState<User[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (inputValue.length > 0) {
-      const filtered = options.filter((option) =>
-        option.username.toLowerCase().includes(inputValue.toLowerCase()) &&
-        !selectedUsers.some(selectedUser => selectedUser.username === option.username) // Exclude already selected users
+      const filtered = options.filter(
+        (option) =>
+          option.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+          !selectedUsers.some(
+            (selectedUser) => selectedUser.username === option.username
+          ) // Exclude already selected users
       );
       setFilteredOptions(filtered);
       setIsOpen(true);
@@ -55,14 +62,12 @@ const AutoComplete = ({ options, selectedUsers, setSelectedUsers }: AutoComplete
         onFocus={() => setIsOpen(true)}
         onBlur={() => setTimeout(() => setIsOpen(false), 100)}
         className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
         )}
         placeholder="Start typing..."
       />
       {isOpen && filteredOptions.length > 0 && (
-        <ul
-          className="absolute top-full left-0 z-50 w-full p-2 bg-gray-100 dark:bg-slate-900 rounded-md mt-1 space-y-3 shadow-lg"
-        >
+        <ul className="absolute top-full left-0 z-50 w-full p-2 bg-gray-100 dark:bg-slate-900 rounded-md mt-1 space-y-3 shadow-lg">
           {filteredOptions.map((option, index) => (
             <li
               key={index}

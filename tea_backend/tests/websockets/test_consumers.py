@@ -21,6 +21,7 @@ from tests.factories.case_factories import AssuranceCaseFactory
 from tests.factories.content_factories import TopLevelNormativeGoalFactory
 from tests.factories.user_factories import EAPGroupFactory, EAPUserFactory
 from websockets.consumers import AssuranceCaseConsumer
+from websockets.middleware import TokenAuthMiddleware
 
 User = get_user_model()
 
@@ -416,8 +417,6 @@ class TestWebSocketAuthentication(TestCase):
 
     def test_token_authentication_middleware(self):
         """Test WebSocket token authentication middleware."""
-        from websockets.middleware import TokenAuthMiddleware
-
         # Test valid token
         scope = {
             "type": "websocket",
@@ -432,8 +431,6 @@ class TestWebSocketAuthentication(TestCase):
 
     def test_invalid_token_authentication(self):
         """Test authentication with invalid token."""
-        from websockets.middleware import TokenAuthMiddleware
-
         scope = {"type": "websocket", "query_string": b"token=invalid_token", "user": None}
 
         middleware = TokenAuthMiddleware(Mock())
@@ -443,8 +440,6 @@ class TestWebSocketAuthentication(TestCase):
 
     def test_missing_token_authentication(self):
         """Test authentication without token."""
-        from websockets.middleware import TokenAuthMiddleware
-
         scope = {"type": "websocket", "query_string": b"", "user": None}
 
         middleware = TokenAuthMiddleware(Mock())

@@ -1,8 +1,8 @@
-'use server'
+'use server';
 
 import fs from 'fs';
 import path from 'path';
-import { BlobServiceClient } from "@azure/storage-blob";
+import { BlobServiceClient } from '@azure/storage-blob';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -13,8 +13,11 @@ import { revalidatePath } from 'next/cache';
  * @returns {Promise<string>} The URL of the uploaded image in Azure Blob Storage.
  * @throws {Error} If there is an error while saving the image.
  */
-export const capture = async (base64Image: string, assuranceCaseId: string): Promise<string | undefined> => {
-  const filename = `chart-screenshot-case-${assuranceCaseId}.png`
+export const capture = async (
+  base64Image: string,
+  assuranceCaseId: string
+): Promise<string | undefined> => {
+  const filename = `chart-screenshot-case-${assuranceCaseId}.png`;
   try {
     // Remove header from base64 string
     const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
@@ -61,12 +64,16 @@ export const existingImage = async (filePath: string): Promise<boolean> => {
  * @param {string} filename - The name of the file to be saved in the Azure container.
  * @returns {Promise<string | undefined>} The URL of the uploaded image, or `undefined` if there is an error.
  */
-const saveToStorage = async (buffer: Buffer, filename: string): Promise<string | undefined> => {
+const saveToStorage = async (
+  buffer: Buffer,
+  filename: string
+): Promise<string | undefined> => {
   try {
     const containerName = 'sample-container';
     const account = process.env.NEXT_PUBLIC_STORAGESOURCENAME;
 
-    const blobSasUrl = 'https://teamedia.blob.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=co&sp=rwdlacupiytfx&se=2025-05-06T03:42:08Z&st=2024-05-05T19:42:08Z&spr=https&sig=eAyqjGI6Tz5jzZi%2FWrVr%2BGfMnTR%2Fnbe8HLbDYuoVnMY%3D';
+    const blobSasUrl =
+      'https://teamedia.blob.core.windows.net/?sv=2022-11-02&ss=bfqt&srt=co&sp=rwdlacupiytfx&se=2025-05-06T03:42:08Z&st=2024-05-05T19:42:08Z&spr=https&sig=eAyqjGI6Tz5jzZi%2FWrVr%2BGfMnTR%2Fnbe8HLbDYuoVnMY%3D';
 
     const blobServiceClient = new BlobServiceClient(blobSasUrl);
 

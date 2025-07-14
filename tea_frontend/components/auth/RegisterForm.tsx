@@ -1,52 +1,66 @@
-'use client'
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form"
-import { Button } from "../ui/button"
-import { Input } from "../ui/input"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useSession, signIn } from "next-auth/react"
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '../ui/form';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 
 const formSchema = z.object({
-  username: z.string()
+  username: z
+    .string()
     .min(2)
     .max(250)
-    .regex(/^\S*$/, "Username cannot contain spaces"),
-  email: z.string()
-    .min(2)
-    .email(),
-  password1: z.string()
+    .regex(/^\S*$/, 'Username cannot contain spaces'),
+  email: z.string().min(2).email(),
+  password1: z
+    .string()
     .min(8)
-    .regex(/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character"),
-  password2: z.string()
+    .regex(
+      /(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
+      'Password must contain at least one uppercase letter, one number, and one special character'
+    ),
+  password2: z
+    .string()
     .min(8)
-    .regex(/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, "Password must contain at least one uppercase letter, one number, and one special character")
+    .regex(
+      /(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
+      'Password must contain at least one uppercase letter, one number, and one special character'
+    ),
 });
 
 const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>([]);
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
-  const router = useRouter()
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
-      email: "",
-      password1: "",
-      password2: ""
+      username: '',
+      email: '',
+      password1: '',
+      password2: '',
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if(values.password1 !== values.password2) {
-      setErrors(['Your passwords must match, please try again.'])
-      return
+    if (values.password1 !== values.password2) {
+      setErrors(['Your passwords must match, please try again.']);
+      return;
     }
 
     setErrors([]);
@@ -61,23 +75,26 @@ const RegisterForm = () => {
       };
 
       const requestOptions: RequestInit = {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(user),
-      }
+      };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`, requestOptions)
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`,
+        requestOptions
+      );
 
-      console.log(response)
+      console.log(response);
 
-      if(!response.ok) {
+      if (!response.ok) {
         setLoading(false);
         if (response.status === 400) {
           // Handle validation errors
           try {
-            const result = await response.json()
+            const result = await response.json();
             const currentErrors = [];
 
             if (result.username) {
@@ -96,7 +113,11 @@ const RegisterForm = () => {
               currentErrors.push(...result.non_field_errors);
             }
 
-            setErrors(currentErrors.length > 0 ? currentErrors : ['Registration failed. Please try again.']);
+            setErrors(
+              currentErrors.length > 0
+                ? currentErrors
+                : ['Registration failed. Please try again.']
+            );
           } catch (jsonError) {
             setErrors(['Registration failed. Please try again.']);
           }
@@ -121,12 +142,14 @@ const RegisterForm = () => {
           router.push('/dashboard');
         } else {
           setLoading(false);
-          setErrors(['Registration successful but login failed. Please try logging in manually.']);
+          setErrors([
+            'Registration successful but login failed. Please try logging in manually.',
+          ]);
         }
       } else {
         // Handle other success responses that might contain JSON
         try {
-          const result = await response.json()
+          const result = await response.json();
 
           if (result.key) {
             // Registration successful with key, now sign in with NextAuth
@@ -141,41 +164,47 @@ const RegisterForm = () => {
               router.push('/dashboard');
             } else {
               setLoading(false);
-              setErrors(['Registration successful but login failed. Please try logging in manually.']);
+              setErrors([
+                'Registration successful but login failed. Please try logging in manually.',
+              ]);
             }
           } else {
             setLoading(false);
-            setErrors(['Registration completed but unexpected response format.']);
+            setErrors([
+              'Registration completed but unexpected response format.',
+            ]);
           }
         } catch (jsonError) {
           setLoading(false);
-          setErrors(['Registration may have succeeded. Please try logging in.']);
+          setErrors([
+            'Registration may have succeeded. Please try logging in.',
+          ]);
         }
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
   useEffect(() => {
-    let token = session?.key
-    if(token) {
-      router.push('/dashboard')
+    let token = session?.key;
+    if (token) {
+      router.push('/dashboard');
     }
-  },[session?.key, router])
+  }, [session?.key, router]);
 
   return (
     <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
       <div className="bg-white dark:bg-slate-900 px-6 py-12 shadow sm:rounded-lg sm:px-12">
-
-        {errors && errors.map((error: any) => (
-          <div
-          key={crypto.randomUUID()}
-          className='bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mb-6'
-          >
-            <p>{error}</p>
-          </div>
-        ))}
+        {errors &&
+          errors.map((error: any) => (
+            <div
+              key={crypto.randomUUID()}
+              className="bg-rose-500/20 rounded-md text-rose-700 border border-rose-700 py-2 px-4 mb-6"
+            >
+              <p>{error}</p>
+            </div>
+          ))}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -199,7 +228,11 @@ const RegisterForm = () => {
                 <FormItem className="col-span-full">
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type='email' placeholder="example@gmail.com" {...field} />
+                    <Input
+                      type="email"
+                      placeholder="example@gmail.com"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -212,7 +245,7 @@ const RegisterForm = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type='password' {...field} />
+                    <Input type="password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,7 +258,7 @@ const RegisterForm = () => {
                 <FormItem>
                   <FormLabel>Confirm Password</FormLabel>
                   <FormControl>
-                    <Input type='password' {...field} />
+                    <Input type="password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -236,7 +269,7 @@ const RegisterForm = () => {
               disabled={loading}
               className="inline-flex bg-indigo-600 hover:bg-indigo-500 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating Account..." : "Submit"}
+              {loading ? 'Creating Account...' : 'Submit'}
             </Button>
           </form>
         </Form>
@@ -244,12 +277,15 @@ const RegisterForm = () => {
 
       <p className="mt-10 text-center text-sm text-foreground">
         Already a member?{' '}
-        <a href={`/login`} className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+        <a
+          href={`/login`}
+          className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
+        >
           Login here
         </a>
       </p>
     </div>
-  )
-}
+  );
+};
 
-export default RegisterForm
+export default RegisterForm;

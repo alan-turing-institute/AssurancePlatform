@@ -16,7 +16,11 @@ const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
  * @returns {{ nodes: any[], edges: any[] }} An object containing the nodes with updated positions and the original edges.
  *
  */
-export const getLayoutedElements = (nodes: any[], edges: any[], options: any): { nodes: any[], edges: any[] } => {
+export const getLayoutedElements = (
+  nodes: any[],
+  edges: any[],
+  options: any
+): { nodes: any[]; edges: any[] } => {
   // Set the graph layout direction (e.g., 'LR' for left-right, 'TB' for top-bottom)
   g.setGraph({ rankdir: options.direction });
 

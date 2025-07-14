@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
   Sheet,
@@ -7,17 +7,23 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from '@/components/ui/sheet';
 
 interface NotesSheetProps {
-  isOpen: boolean
-  onClose: () => void
-  children?: React.ReactNode
-  title: string
-  description: string
+  isOpen: boolean;
+  onClose: () => void;
+  children?: React.ReactNode;
+  title: string;
+  description: string;
 }
 
-const NotesSheet = ({ isOpen, onClose, children, title, description } : NotesSheetProps ) => {
+const NotesSheet = ({
+  isOpen,
+  onClose,
+  children,
+  title,
+  description,
+}: NotesSheetProps) => {
   const onChange = (open: boolean) => {
     if (!open) {
       onClose();
@@ -29,14 +35,12 @@ const NotesSheet = ({ isOpen, onClose, children, title, description } : NotesShe
       <SheetContent className="overflow-y-scroll min-w-full">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>
-            {description}
-          </SheetDescription>
+          <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
         {children}
       </SheetContent>
     </Sheet>
-  )
-}
+  );
+};
 
-export default NotesSheet
+export default NotesSheet;

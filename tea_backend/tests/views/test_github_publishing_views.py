@@ -18,7 +18,12 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from api.models import GitHubRepository, PublishedAssuranceCase
 from tests.factories.case_factories import AssuranceCaseFactory
+from tests.factories.integration_factories import (
+    GitHubRepositoryFactory,
+    PublishedAssuranceCaseFactory,
+)
 from tests.factories.user_factories import EAPUserFactory
 
 User = get_user_model()
@@ -89,8 +94,6 @@ class TestGitHubRepositoryViews(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create repository using factory
-        from tests.factories.integration_factories import GitHubRepositoryFactory
-
         repo = GitHubRepositoryFactory(owner=self.user)
 
         url = reverse("githubrepository_detail", kwargs={"pk": repo.pk})
@@ -104,8 +107,6 @@ class TestGitHubRepositoryViews(TestCase):
     def test_update_repository_as_owner(self):
         """Test updating repository as owner."""
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import GitHubRepositoryFactory
 
         repo = GitHubRepositoryFactory(owner=self.user)
 
@@ -124,8 +125,6 @@ class TestGitHubRepositoryViews(TestCase):
         """Test deleting repository as owner."""
         self.client.force_authenticate(user=self.user)
 
-        from tests.factories.integration_factories import GitHubRepositoryFactory
-
         repo = GitHubRepositoryFactory(owner=self.user)
 
         url = reverse("githubrepository_detail", kwargs={"pk": repo.pk})
@@ -134,16 +133,12 @@ class TestGitHubRepositoryViews(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify repository was deleted
-        from api.models import GitHubRepository
-
         self.assertFalse(GitHubRepository.objects.filter(id=repo.id).exists())
 
     def test_access_other_user_repository(self):
         """Test accessing another user's repository (should fail)."""
         other_user = EAPUserFactory()
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import GitHubRepositoryFactory
 
         other_repo = GitHubRepositoryFactory(owner=other_user)
 
@@ -259,8 +254,6 @@ class TestPublishingWorkflow(TestCase):
         self.user = EAPUserFactory(auth_provider="github", auth_username="testuser")
         self.case = AssuranceCaseFactory(owner=self.user)
 
-        from tests.factories.integration_factories import GitHubRepositoryFactory
-
         self.repo = GitHubRepositoryFactory(owner=self.user)
 
     @patch("requests.put")
@@ -311,8 +304,6 @@ class TestPublishingWorkflow(TestCase):
     def test_publish_case_no_repository_permission(self):
         """Test publishing case to repository without permission."""
         other_user = EAPUserFactory()
-        from tests.factories.integration_factories import GitHubRepositoryFactory
-
         other_repo = GitHubRepositoryFactory(owner=other_user)
 
         self.client.force_authenticate(user=self.user)
@@ -394,8 +385,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create published cases
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
-
         PublishedAssuranceCaseFactory.create_batch(3)
 
         url = reverse("published_case_list")
@@ -408,8 +397,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
     def test_create_published_case(self):
         """Test creating a published assurance case."""
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import GitHubRepositoryFactory
 
         repo = GitHubRepositoryFactory(owner=self.user)
 
@@ -433,8 +420,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
         """Test retrieving published case details."""
         self.client.force_authenticate(user=self.user)
 
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
-
         published_case = PublishedAssuranceCaseFactory(assurance_case=self.case)
 
         url = reverse("published_case_detail", kwargs={"pk": published_case.pk})
@@ -447,8 +432,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
     def test_update_published_case(self):
         """Test updating published case."""
         self.client.force_authenticate(user=self.user)
-
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
 
         published_case = PublishedAssuranceCaseFactory(assurance_case=self.case)
 
@@ -467,8 +450,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
         """Test deleting published case."""
         self.client.force_authenticate(user=self.user)
 
-        from tests.factories.integration_factories import PublishedAssuranceCaseFactory
-
         published_case = PublishedAssuranceCaseFactory(assurance_case=self.case)
 
         url = reverse("published_case_detail", kwargs={"pk": published_case.pk})
@@ -477,8 +458,6 @@ class TestPublishedAssuranceCaseViews(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         # Verify published case was deleted
-        from api.models import PublishedAssuranceCase
-
         self.assertFalse(PublishedAssuranceCase.objects.filter(id=published_case.id).exists())
 
 

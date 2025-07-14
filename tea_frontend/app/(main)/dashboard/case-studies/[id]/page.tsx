@@ -1,30 +1,38 @@
-import BackButton from '@/components/ui/back-button'
-import PageHeading from '@/components/ui/page-heading'
-import moment from 'moment'
-import React from 'react'
-import CaseStudyForm from '../_components/CaseStudyForm'
-import { deleteCaseStudy, fetchCaseStudyById, updateCaseStudy } from '@/actions/caseStudies'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/authOptions'
-import { redirect } from 'next/navigation'
+import BackButton from '@/components/ui/back-button';
+import PageHeading from '@/components/ui/page-heading';
+import moment from 'moment';
+import React from 'react';
+import CaseStudyForm from '../_components/CaseStudyForm';
+import {
+  deleteCaseStudy,
+  fetchCaseStudyById,
+  updateCaseStudy,
+} from '@/actions/caseStudies';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { redirect } from 'next/navigation';
 
-async function CaseStudyDetails({ params } : { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
+async function CaseStudyDetails({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const session = await getServerSession(authOptions);
 
   // Redirect user to login if no `key`
-  if(!session || !session.key) {
-    redirect('/login')
+  if (!session || !session.key) {
+    redirect('/login');
   }
 
-  const { id } = await params
+  const { id } = await params;
 
-  const caseStudy = await fetchCaseStudyById(session.key, parseInt(id))
+  const caseStudy = await fetchCaseStudyById(session.key, parseInt(id));
 
   return (
     <>
       {caseStudy.published && <PublishedBanner caseStudy={caseStudy} />}
-      <div className='p-8 min-h-screen space-y-4'>
-        <BackButton url='/dashboard/case-studies' />
+      <div className="p-8 min-h-screen space-y-4">
+        <BackButton url="/dashboard/case-studies" />
         <PageHeading
           title={caseStudy.title}
           description={`Created on: ${moment(caseStudy.createdOn).format('DD/MM/YYYY')} | Last modified on: ${moment(caseStudy.last_modified_on).format('DD/MM/YYYY')}`}
@@ -110,20 +118,19 @@ async function CaseStudyDetails({ params } : { params: Promise<{ id: string }> }
             )}
           </div>
         </div> */}
-
       </div>
     </>
-  )
+  );
 }
 
-export default CaseStudyDetails
+export default CaseStudyDetails;
 
-function PublishedBanner({ caseStudy } : any) {
+function PublishedBanner({ caseStudy }: any) {
   return (
     <div className="flex items-center gap-x-6 bg-emerald-500 dark:bg-emerald-600 px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
       <div className="text-sm leading-6 text-white w-full">
-        <div className='flex flex-col md:flex-row justify-center items-center gap-2 w-full py-3 md:py-0'>
-          <div className='flex justify-start items-center gap-2'>
+        <div className="flex flex-col md:flex-row justify-center items-center gap-2 w-full py-3 md:py-0">
+          <div className="flex justify-start items-center gap-2">
             <strong className="font-semibold">Published Case Study</strong>
           </div>
           <svg
@@ -137,5 +144,5 @@ function PublishedBanner({ caseStudy } : any) {
         </div>
       </div>
     </div>
-  )
+  );
 }

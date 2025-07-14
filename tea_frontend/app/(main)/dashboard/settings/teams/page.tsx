@@ -1,5 +1,5 @@
-import React from 'react'
-import SettingsNav from '../_components/SettingsNav'
+import React from 'react';
+import SettingsNav from '../_components/SettingsNav';
 
 const TeamSettings = () => {
   return (
@@ -11,7 +11,7 @@ const TeamSettings = () => {
         <SettingsNav />
       </header>
     </main>
-  )
-}
+  );
+};
 
-export default TeamSettings
+export default TeamSettings;

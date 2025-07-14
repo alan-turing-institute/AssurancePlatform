@@ -2,6 +2,9 @@ ci:
   autoupdate_commit_msg: 'chore: update pre-commit hooks'
   autofix_commit_msg: 'style: pre-commit fixes'
 
+# Global exclusion for all logs directories and their contents
+exclude: (?x)^.*logs\/.*$
+
 repos:
   # Fast syntax and security checks first
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -35,13 +38,17 @@ repos:
         exclude: \.md$
 
   # Frontend formatting and linting with Biome/Ultracite
-  - repo: https://github.com/biomejs/pre-commit
-    rev: v2.1.1
-    hooks:
-      - id: biome-check
-        additional_dependencies: ['@biomejs/biome@2.0.6']
-        args: [--write]
-        files: ^tea_frontend/
+  # TEMPORARILY DISABLED: Due to biome's nested configuration issues with pre-commit
+  # TODO: Consider using Husky or lint-staged instead (run: npx ultracite init)
+  # - repo: local
+  #   hooks:
+  #     - id: biome-check
+  #       name: biome check
+  #       entry: sh -c 'cd tea_frontend && npx @biomejs/biome check --write . --files-ignore-unknown=true'
+  #       language: system
+  #       pass_filenames: false
+  #       files: '^tea_frontend/'
+  #       types_or: [javascript, jsx, typescript, tsx, json]
 
   # Type checking (slower, after formatting)
   - repo: https://github.com/pre-commit/mirrors-mypy

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
   Sheet,
@@ -7,16 +7,21 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from '@/components/ui/sheet';
 
 interface CreateSheetProps {
-  isOpen: boolean
-  onClose: () => void
-  onChange: (open:boolean) => void
-  children?: React.ReactNode
+  isOpen: boolean;
+  onClose: () => void;
+  onChange: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
-const CreateSheet = ({ isOpen, onClose, onChange, children } : CreateSheetProps ) => {
+const CreateSheet = ({
+  isOpen,
+  onClose,
+  onChange,
+  children,
+}: CreateSheetProps) => {
   // const onChange = (open: boolean) => {
   //   if (!open) {
   //     onClose();
@@ -35,7 +40,7 @@ const CreateSheet = ({ isOpen, onClose, onChange, children } : CreateSheetProps 
         {children}
       </SheetContent>
     </Sheet>
-  )
-}
+  );
+};
 
-export default CreateSheet
+export default CreateSheet;

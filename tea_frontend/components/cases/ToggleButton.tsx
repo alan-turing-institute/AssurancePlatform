@@ -1,37 +1,41 @@
-'use client'
+'use client';
 
-import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
-import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Edge, getConnectedEdges, getOutgoers, useReactFlow } from 'reactflow';
 
 import useStore from '@/data/store';
-import { findSiblingHiddenState, toggleHiddenForChildren } from '@/lib/case-helper';
+import {
+  findSiblingHiddenState,
+  toggleHiddenForChildren,
+} from '@/lib/case-helper';
 
 interface ToggleButtonProps {
-  node: any
+  node: any;
 }
 
-const ToggleButton = ({ node } : ToggleButtonProps) => {
+const ToggleButton = ({ node }: ToggleButtonProps) => {
   const [hidden, setHidden] = useState<boolean>(false);
-  const { nodes, edges, layoutNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { nodes, edges, layoutNodes, assuranceCase, setAssuranceCase } =
+    useStore();
   const { fitView } = useReactFlow();
 
   useEffect(() => {
-    const currentNode = nodes.find(n => n.id === node.id);
+    const currentNode = nodes.find((n) => n.id === node.id);
     if (currentNode) {
-        const { property_claims, strategies } = currentNode.data
+      const { property_claims, strategies } = currentNode.data;
 
-        if(property_claims && property_claims.length > 0) {
-          setHidden(property_claims[0].hidden)
-        }
+      if (property_claims && property_claims.length > 0) {
+        setHidden(property_claims[0].hidden);
+      }
 
-        if(strategies && strategies.length > 0) {
-          setHidden(strategies[0].hidden)
-        }
+      if (strategies && strategies.length > 0) {
+        setHidden(strategies[0].hidden);
+      }
     }
-  },[node.id, nodes])
+  }, [node.id, nodes]);
 
-  let stack: any[] = []
+  let stack: any[] = [];
   let outgoers: any[] = [];
   let connectedEdges: any[] = [];
 
@@ -42,7 +46,7 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     return edges;
   };
 
-  const handleToggle = (e:any) => {
+  const handleToggle = (e: any) => {
     e.stopPropagation();
 
     let currentNodeID = node.id;
@@ -72,31 +76,30 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
     });
 
     const updatedNodes = nodes.map((n: any) => {
-      if(childNodeID.includes(n.id)) {
+      if (childNodeID.includes(n.id)) {
         n.hidden = hidden;
       }
-      return n
-    })
+      return n;
+    });
 
     const updatedEdges = edges.map((n: any) => {
-      if(childEdgeID.includes(n.id)) {
+      if (childEdgeID.includes(n.id)) {
         n.hidden = hidden;
       }
-      return n
-    })
+      return n;
+    });
 
-    layoutNodes(updatedNodes, updatedEdges)
+    layoutNodes(updatedNodes, updatedEdges);
 
     // If toggle on Goal node will force focus
-    if(node.type === 'goal') {
+    if (node.type === 'goal') {
       window.requestAnimationFrame(() => {
         fitView();
       });
     }
 
     setHidden(!hidden);
-  }
-
+  };
 
   // const handleToggle = (e: any) => {
   //   e.stopPropagation();
@@ -178,31 +181,34 @@ const ToggleButton = ({ node } : ToggleButtonProps) => {
   // }
 
   const handleToggle2 = async (e: any) => {
-    e.stopPropagation()
+    e.stopPropagation();
 
-    setHidden(!hidden)
+    setHidden(!hidden);
 
-    const currentNode = nodes.find(n => n.id === node.id);
+    const currentNode = nodes.find((n) => n.id === node.id);
     if (currentNode) {
-        // Toggle hidden property for the children of the element with currentNode.data.id
-        const updatedAssuranceCase = toggleHiddenForChildren(assuranceCase, currentNode.data.id);
-        setAssuranceCase(updatedAssuranceCase);
+      // Toggle hidden property for the children of the element with currentNode.data.id
+      const updatedAssuranceCase = toggleHiddenForChildren(
+        assuranceCase,
+        currentNode.data.id
+      );
+      setAssuranceCase(updatedAssuranceCase);
 
-        if(node.type === 'goal') {
-          window.requestAnimationFrame(() => {
-            fitView();
-          })
-        }
+      if (node.type === 'goal') {
+        window.requestAnimationFrame(() => {
+          fitView();
+        });
+      }
     }
-  }
+  };
 
   return (
     <button onClick={(e) => handleToggle2(e)}>
-      <div className='infline-flex hover:bg-slate-900/10 p-1 rounded-full'>
-      {hidden ? <ChevronRight size={18}/> : <ChevronDown size={18}/> }
+      <div className="infline-flex hover:bg-slate-900/10 p-1 rounded-full">
+        {hidden ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
       </div>
     </button>
-  )
-}
+  );
+};
 
-export default ToggleButton
+export default ToggleButton;

@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import React, { useEffect, useState } from 'react'
-import { fetchCurrentUser } from '@/actions/users'
-import { useSession } from 'next-auth/react'
-import { Skeleton } from '../ui/skeleton'
+import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+import { fetchCurrentUser } from '@/actions/users';
+import { useSession } from 'next-auth/react';
+import { Skeleton } from '../ui/skeleton';
 
 const LoggedInUser = () => {
-  const { data } = useSession()
+  const { data } = useSession();
 
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    fetchCurrentUser(data?.key ?? '').then(result => {
-      setCurrentUser(result)
-      setLoading(false)
-    })
-  },[data?.key])
+    fetchCurrentUser(data?.key ?? '').then((result) => {
+      setCurrentUser(result);
+      setLoading(false);
+    });
+  }, [data?.key]);
 
   return (
     <>
@@ -38,7 +38,9 @@ const LoggedInUser = () => {
         >
           <div className="flex items-center gap-3">
             <span className="inline-flex size-10 items-center justify-center rounded-full bg-indigo-900/40 dark:bg-indigo-500">
-              <span className="text-sm font-medium text-white capitalize">{currentUser?.username.charAt(0)}</span>
+              <span className="text-sm font-medium text-white capitalize">
+                {currentUser?.username.charAt(0)}
+              </span>
             </span>
             <div>
               <p className="text-sm font-medium text-white capitalize group-hover:text-white">
@@ -52,7 +54,7 @@ const LoggedInUser = () => {
         </Link>
       )}
     </>
-  )
-}
+  );
+};
 
-export default LoggedInUser
+export default LoggedInUser;

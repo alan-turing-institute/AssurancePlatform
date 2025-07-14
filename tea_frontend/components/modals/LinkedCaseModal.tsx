@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Blocks } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Blocks } from 'lucide-react';
 
 interface LinkedCaseModalProps {
   isOpen: boolean;
@@ -46,7 +46,7 @@ export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
                 rel="noopener noreferrer"
                 className="text-indigo-600 dark:text-indigo-500 hover:underline flex items-center gap-2"
               >
-                <Blocks className="size-4"/>
+                <Blocks className="size-4" />
                 {caseStudy.title}
               </Link>
             </li>

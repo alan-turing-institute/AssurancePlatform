@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { updateCaseStudy } from '@/actions/caseStudies'
-import { useSession } from 'next-auth/react'
-import React from 'react'
-import { useToast } from './use-toast'
-import { useRouter } from 'next/navigation'
+import { updateCaseStudy } from '@/actions/caseStudies';
+import { useSession } from 'next-auth/react';
+import React from 'react';
+import { useToast } from './use-toast';
+import { useRouter } from 'next/navigation';
 
 interface PublishButtonProps {
-  label: string
-  published: boolean
-  caseStudy: any
+  label: string;
+  published: boolean;
+  caseStudy: any;
 }
 
-const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => {
-  const { data } = useSession()
+const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
+  const { data } = useSession();
   const { toast } = useToast();
-  const router = useRouter()
+  const router = useRouter();
 
   // const handlePublish = async () => {
   //   if(published) {
@@ -69,15 +69,18 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
   const handlePublish = async () => {
     const formData = new FormData();
     formData.append('id', caseStudy.id.toString());
-    formData.append('assurance_cases', JSON.stringify(caseStudy.assurance_cases));
+    formData.append(
+      'assurance_cases',
+      JSON.stringify(caseStudy.assurance_cases)
+    );
 
     // Set only the fields that need updating
     if (published) {
-      formData.append("published", "false"); // Convert boolean to string
-      formData.append("published_date", ""); // Clear the published date
+      formData.append('published', 'false'); // Convert boolean to string
+      formData.append('published_date', ''); // Clear the published date
     } else {
-      formData.append("published", "true"); // Convert boolean to string
-      formData.append("published_date", new Date().toISOString()); // Set new date
+      formData.append('published', 'true'); // Convert boolean to string
+      formData.append('published_date', new Date().toISOString()); // Set new date
     }
 
     // Send the formData to the API
@@ -85,18 +88,19 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
 
     if (response) {
       toast({
-        title: published ? "Successfully Unpublished" : "Successfully Published",
-        description: `You have ${published ? "unpublished" : "published"} your case study!`,
+        title: published
+          ? 'Successfully Unpublished'
+          : 'Successfully Published',
+        description: `You have ${published ? 'unpublished' : 'published'} your case study!`,
       });
     } else {
       toast({
-        variant: "destructive",
-        title: "Failed to Update",
-        description: "Something went wrong!",
+        variant: 'destructive',
+        title: 'Failed to Update',
+        description: 'Something went wrong!',
       });
     }
   };
-
 
   return (
     <button
@@ -106,7 +110,7 @@ const PublishButton = ({ label, published, caseStudy } : PublishButtonProps) => 
     >
       {label}
     </button>
-  )
-}
+  );
+};
 
-export default PublishButton
+export default PublishButton;
