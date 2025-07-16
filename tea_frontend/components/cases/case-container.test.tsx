@@ -54,7 +54,7 @@ vi.mock('reactflow', () => ({
 }));
 
 // Mock child components
-vi.mock('./Flow', () => ({
+vi.mock('./flow', () => ({
   default: () => <div data-testid="flow-component">Flow Component</div>,
 }));
 
@@ -74,7 +74,7 @@ vi.mock('./CaseDetails', () => ({
   ),
 }));
 
-vi.mock('../Header', () => ({
+vi.mock('../header', () => ({
   default: ({ setOpen }: { setOpen: (open: boolean) => void }) => (
     <div data-testid="header">
       <button onClick={() => setOpen(true)} type="button">
@@ -84,7 +84,7 @@ vi.mock('../Header', () => ({
   ),
 }));
 
-vi.mock('@/components/Websocket', () => ({
+vi.mock('@/components/websocket', () => ({
   default: () => (
     <div data-testid="websocket-component">WebSocket Component</div>
   ),
