@@ -100,15 +100,12 @@
     "recommendations": [
       "ms-python.python",
       "ms-python.mypy-type-checker",
-      "ms-python.black-formatter",
       "bradlc.vscode-tailwindcss",
       "biomejs.biome",
       "ms-vscode.vscode-typescript-next",
       "ms-vscode.vscode-json",
       "tamasfe.even-better-toml",
-      "redhat.vscode-yaml",
-      "formulahendry.auto-rename-tag",
-      "christian-kohler.path-intellisense"
+      "redhat.vscode-yaml"
     ]
   },
   "tasks": {
