@@ -35,7 +35,7 @@ const AutoComplete = ({
     }
   }, [inputValue, options, selectedUsers]);
 
-  const handleInputChange = (event: any) => {
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
 
@@ -67,12 +67,22 @@ const AutoComplete = ({
         value={inputValue}
       />
       {isOpen && filteredOptions.length > 0 && (
-        <ul className="absolute top-full left-0 z-50 mt-1 w-full space-y-3 rounded-md bg-gray-100 p-2 shadow-lg dark:bg-slate-900">
-          {filteredOptions.map((option, index) => (
-            <li
+        <div
+          className="absolute top-full left-0 z-50 mt-1 w-full space-y-3 rounded-md bg-gray-100 p-2 shadow-lg dark:bg-slate-900"
+          role="listbox"
+        >
+          {filteredOptions.map((option) => (
+            <div
               className="group rounded-md p-2 hover:cursor-pointer hover:bg-indigo-600 hover:text-white"
-              key={index}
+              key={option.username}
               onClick={() => handleOptionClick(option)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleOptionClick(option);
+                }
+              }}
+              role="option"
+              tabIndex={0}
             >
               {option.username}
               {option.email ? (
@@ -80,9 +90,9 @@ const AutoComplete = ({
                   ({option.email})
                 </span>
               ) : null}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

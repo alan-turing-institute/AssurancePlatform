@@ -11,17 +11,30 @@ import {
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
+import type { AssuranceCase, CaseStudy, User } from '@/types';
 import { ShareModal } from './share-modal';
+
+// Regex constants for text matching
+const SHARE_BUTTON_REGEX = /share/i;
+const VALID_EMAIL_REGEX = /valid email/i;
+const AT_LEAST_2_CHARS_REGEX = /at least 2 characters/i;
+const DOWNLOAD_FILE_REGEX = /download file/i;
+const PUBLISH_REGEX = /publish/i;
+const UPDATE_REGEX = /update/i;
+const UNPUBLISH_REGEX = /unpublish/i;
+const PUBLISH_EXACT_REGEX = /^publish$/i;
+const ACCESS_LEVEL_REGEX = /access level/i;
+const FILENAME_DATE_REGEX = /\d{4}-\d+-\d+T\d+-\d+-\d+\.json$/;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: mockAssuranceCase as any,
+  assuranceCase: mockAssuranceCase as AssuranceCase,
   setAssuranceCase: vi.fn(),
-  viewMembers: [] as any[],
+  viewMembers: [] as User[],
   setViewMembers: vi.fn(),
-  editMembers: [] as any[],
+  editMembers: [] as User[],
   setEditMembers: vi.fn(),
-  reviewMembers: [] as any[],
+  reviewMembers: [] as User[],
   setReviewMembers: vi.fn(),
 };
 
@@ -59,7 +72,7 @@ vi.mock('@/components/ui/modal', () => ({
       <div data-testid="modal" role="dialog">
         <h1>{title}</h1>
         <p>{description}</p>
-        <button data-testid="modal-close" onClick={onClose}>
+        <button data-testid="modal-close" onClick={onClose} type="button">
           Close
         </button>
         {children}
@@ -76,11 +89,13 @@ vi.mock('./LinkedCaseModal', () => ({
   }: {
     isOpen: boolean;
     onClose: () => void;
-    linkedCaseStudies: any[];
+    linkedCaseStudies: CaseStudy[];
   }) =>
     isOpen ? (
       <div data-testid="linked-case-modal">
-        <button onClick={onClose}>Close Linked Cases</button>
+        <button onClick={onClose} type="button">
+          Close Linked Cases
+        </button>
         <div data-testid="linked-cases-count">{linkedCaseStudies.length}</div>
       </div>
     ) : null,
@@ -212,13 +227,15 @@ describe('ShareModal', () => {
       renderWithAuth(<ShareModal />);
 
       const emailInput = screen.getByPlaceholderText('Enter email address');
-      const shareButton = screen.getByRole('button', { name: /share/i });
+      const shareButton = screen.getByRole('button', {
+        name: SHARE_BUTTON_REGEX,
+      });
 
       await user.type(emailInput, 'invalid-email');
       await user.click(shareButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/valid email/i)).toBeInTheDocument();
+        expect(screen.getByText(VALID_EMAIL_REGEX)).toBeInTheDocument();
       });
     });
 
@@ -228,13 +245,15 @@ describe('ShareModal', () => {
       renderWithAuth(<ShareModal />);
 
       const emailInput = screen.getByPlaceholderText('Enter email address');
-      const shareButton = screen.getByRole('button', { name: /share/i });
+      const shareButton = screen.getByRole('button', {
+        name: SHARE_BUTTON_REGEX,
+      });
 
       await user.type(emailInput, 'a');
       await user.click(shareButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/at least 2 characters/i)).toBeInTheDocument();
+        expect(screen.getByText(AT_LEAST_2_CHARS_REGEX)).toBeInTheDocument();
       });
     });
 
@@ -250,13 +269,15 @@ describe('ShareModal', () => {
       renderWithAuth(<ShareModal />);
 
       const emailInput = screen.getByPlaceholderText('Enter email address');
-      const shareButton = screen.getByRole('button', { name: /share/i });
+      const shareButton = screen.getByRole('button', {
+        name: SHARE_BUTTON_REGEX,
+      });
 
       await user.type(emailInput, 'test@example.com');
       await user.click(shareButton);
 
       await waitFor(() => {
-        expect(screen.queryByText(/valid email/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(VALID_EMAIL_REGEX)).not.toBeInTheDocument();
       });
     });
   });
@@ -269,7 +290,7 @@ describe('ShareModal', () => {
     it('should share with read access by default', async () => {
       const user = userEvent.setup();
 
-      let capturedRequestBody: any = null;
+      let capturedRequestBody: unknown = null;
       server.use(
         http.post('*/api/cases/*/sharedwith', async ({ request }) => {
           capturedRequestBody = await request.json();
@@ -283,7 +304,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'read@example.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedRequestBody).toEqual([
@@ -298,7 +321,7 @@ describe('ShareModal', () => {
     it('should share with edit access when selected', async () => {
       const user = userEvent.setup();
 
-      let capturedRequestBody: any = null;
+      let capturedRequestBody: unknown = null;
       server.use(
         http.post('*/api/cases/*/sharedwith', async ({ request }) => {
           capturedRequestBody = await request.json();
@@ -313,7 +336,9 @@ describe('ShareModal', () => {
         'edit@example.com'
       );
       await user.click(screen.getByLabelText('Edit'));
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedRequestBody).toEqual([
@@ -328,7 +353,7 @@ describe('ShareModal', () => {
     it('should share with reviewer access when selected', async () => {
       const user = userEvent.setup();
 
-      let capturedRequestBody: any = null;
+      let capturedRequestBody: unknown = null;
       server.use(
         http.post('*/api/cases/*/sharedwith', async ({ request }) => {
           capturedRequestBody = await request.json();
@@ -343,7 +368,9 @@ describe('ShareModal', () => {
         'reviewer@example.com'
       );
       await user.click(screen.getByLabelText('Reviewer'));
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedRequestBody).toEqual([
@@ -370,7 +397,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'success@example.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
@@ -394,7 +423,9 @@ describe('ShareModal', () => {
 
       const emailInput = screen.getByPlaceholderText('Enter email address');
       await user.type(emailInput, 'reset@example.com');
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(emailInput).toHaveValue('');
@@ -416,7 +447,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'error@example.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
@@ -442,7 +475,7 @@ describe('ShareModal', () => {
         screen.getByText('Select the button below to download a JSON file.')
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /download file/i })
+        screen.getByRole('button', { name: DOWNLOAD_FILE_REGEX })
       ).toBeInTheDocument();
     });
 
@@ -451,7 +484,9 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /download file/i }));
+      await user.click(
+        screen.getByRole('button', { name: DOWNLOAD_FILE_REGEX })
+      );
 
       expect(mockSaveAs).toHaveBeenCalled();
       const [blob, filename] = mockSaveAs.mock.calls[0];
@@ -466,7 +501,9 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /download file/i }));
+      await user.click(
+        screen.getByRole('button', { name: DOWNLOAD_FILE_REGEX })
+      );
 
       expect(neatJSON).toHaveBeenCalledWith(mockStore.assuranceCase, {});
     });
@@ -476,10 +513,12 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /download file/i }));
+      await user.click(
+        screen.getByRole('button', { name: DOWNLOAD_FILE_REGEX })
+      );
 
       const [, filename] = mockSaveAs.mock.calls[0];
-      expect(filename).toMatch(/\d{4}-\d+-\d+T\d+-\d+-\d+\.json$/);
+      expect(filename).toMatch(FILENAME_DATE_REGEX);
     });
   });
 
@@ -523,13 +562,13 @@ describe('ShareModal', () => {
       renderWithAuth(<ShareModal />);
 
       expect(
-        screen.getByRole('button', { name: /publish/i })
+        screen.getByRole('button', { name: PUBLISH_REGEX })
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /update/i })
+        screen.queryByRole('button', { name: UPDATE_REGEX })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /unpublish/i })
+        screen.queryByRole('button', { name: UNPUBLISH_REGEX })
       ).not.toBeInTheDocument();
     });
 
@@ -542,13 +581,13 @@ describe('ShareModal', () => {
       renderWithAuth(<ShareModal />);
 
       expect(
-        screen.getByRole('button', { name: /update/i })
+        screen.getByRole('button', { name: UPDATE_REGEX })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /unpublish/i })
+        screen.getByRole('button', { name: UNPUBLISH_REGEX })
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /^publish$/i })
+        screen.queryByRole('button', { name: PUBLISH_EXACT_REGEX })
       ).not.toBeInTheDocument();
     });
 
@@ -563,7 +602,7 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /publish/i }));
+      await user.click(screen.getByRole('button', { name: PUBLISH_REGEX }));
 
       await waitFor(() => {
         expect(window.location.reload).toHaveBeenCalled();
@@ -581,7 +620,7 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /publish/i }));
+      await user.click(screen.getByRole('button', { name: PUBLISH_REGEX }));
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
@@ -606,7 +645,7 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /unpublish/i }));
+      await user.click(screen.getByRole('button', { name: UNPUBLISH_REGEX }));
 
       await waitFor(() => {
         expect(window.location.reload).toHaveBeenCalled();
@@ -635,7 +674,7 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /unpublish/i }));
+      await user.click(screen.getByRole('button', { name: UNPUBLISH_REGEX }));
 
       await waitFor(() => {
         expect(mockShareModal.onClose).toHaveBeenCalled();
@@ -674,7 +713,7 @@ describe('ShareModal', () => {
 
       renderWithAuth(<ShareModal />);
 
-      await user.click(screen.getByRole('button', { name: /unpublish/i }));
+      await user.click(screen.getByRole('button', { name: UNPUBLISH_REGEX }));
 
       // Wait for the toast with the button to appear
       await waitFor(() => {
@@ -707,7 +746,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'view@example.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockStore.setViewMembers).toHaveBeenCalledWith([
@@ -732,7 +773,9 @@ describe('ShareModal', () => {
         'edit@example.com'
       );
       await user.click(screen.getByLabelText('Edit'));
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockStore.setEditMembers).toHaveBeenCalledWith([
@@ -757,7 +800,9 @@ describe('ShareModal', () => {
         'reviewer@example.com'
       );
       await user.click(screen.getByLabelText('Reviewer'));
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockStore.setReviewMembers).toHaveBeenCalledWith([
@@ -775,7 +820,7 @@ describe('ShareModal', () => {
     it('should have proper form labels', () => {
       renderWithAuth(<ShareModal />);
 
-      expect(screen.getByLabelText(/access level/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(ACCESS_LEVEL_REGEX)).toBeInTheDocument();
       expect(screen.getByLabelText('Read')).toBeInTheDocument();
       expect(screen.getByLabelText('Edit')).toBeInTheDocument();
       expect(screen.getByLabelText('Reviewer')).toBeInTheDocument();
@@ -790,9 +835,11 @@ describe('ShareModal', () => {
     it('should have proper button structure', () => {
       renderWithAuth(<ShareModal />);
 
-      const shareButton = screen.getByRole('button', { name: /share/i });
+      const shareButton = screen.getByRole('button', {
+        name: SHARE_BUTTON_REGEX,
+      });
       const downloadButton = screen.getByRole('button', {
-        name: /download file/i,
+        name: DOWNLOAD_FILE_REGEX,
       });
 
       expect(shareButton).toHaveAttribute('type', 'submit');
@@ -830,7 +877,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'test+special@example-domain.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockToast).toHaveBeenCalledWith({
@@ -843,7 +892,9 @@ describe('ShareModal', () => {
 
     it('should handle network errors during sharing', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Empty implementation for test
+      });
 
       server.use(
         http.post('*/api/cases/*/sharedwith', () => {
@@ -857,7 +908,9 @@ describe('ShareModal', () => {
         screen.getByPlaceholderText('Enter email address'),
         'network@example.com'
       );
-      await user.click(screen.getByRole('button', { name: /share/i }));
+      await user.click(
+        screen.getByRole('button', { name: SHARE_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalled();

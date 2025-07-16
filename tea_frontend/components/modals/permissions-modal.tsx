@@ -11,9 +11,13 @@ import {
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
+import type { User } from '@/types';
+
+type Member = User;
+
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import { useToast } from '../ui/use-toast';
@@ -45,7 +49,7 @@ export const PermissionsModal = () => {
   const _router = useRouter();
   const { toast } = useToast();
 
-  const fetchCaseMembers = async () => {
+  const fetchCaseMembers = useCallback(async () => {
     const requestOptions: RequestInit = {
       headers: {
         Authorization: `Token ${session?.key}`,
@@ -63,21 +67,26 @@ export const PermissionsModal = () => {
 
     const result = await response.json();
     return result;
-  };
+  }, [caseId, session?.key]);
 
-  const handleRemovePermissions = async (member: any, level: string) => {
+  const handleRemovePermissions = async (member: Member, level: string) => {
     try {
       setLoading(true);
-      const payload = [];
+      const payload: {
+        email: string;
+        edit: boolean;
+        view: boolean;
+        review: boolean;
+      }[] = [];
 
-      const item = {
+      const payloadItem = {
         email: member.email,
         edit: false,
         view: false,
         review: false,
       };
 
-      payload.push(item);
+      payload.push(payloadItem);
 
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`;
 
@@ -104,25 +113,25 @@ export const PermissionsModal = () => {
 
       if (level === 'read') {
         const removedMembers = viewMembers.filter(
-          (item) => item.email !== member.email
+          (memberItem) => memberItem.email !== member.email
         );
         setViewMembers(removedMembers);
       }
 
       if (level === 'edit') {
         const removedMembers = editMembers.filter(
-          (item) => item.email !== member.email
+          (memberItem) => memberItem.email !== member.email
         );
         setEditMembers(removedMembers);
       }
 
       if (level === 'review') {
         const removedMembers = reviewMembers.filter(
-          (item) => item.email !== member.email
+          (memberItem) => memberItem.email !== member.email
         );
         setReviewMembers(removedMembers);
       }
-    } catch (_error) {
+    } catch (_err) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -162,7 +171,7 @@ export const PermissionsModal = () => {
 
       <div className="my-4">
         {editMembers.length > 0 ? (
-          editMembers.map((member: any) => (
+          editMembers.map((member: Member) => (
             <div
               className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}
@@ -194,7 +203,7 @@ export const PermissionsModal = () => {
 
       <div className="my-4">
         {reviewMembers.length > 0 ? (
-          reviewMembers.map((member: any) => (
+          reviewMembers.map((member: Member) => (
             <div
               className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}
@@ -226,7 +235,7 @@ export const PermissionsModal = () => {
 
       <div className="my-4">
         {viewMembers.length > 0 ? (
-          viewMembers.map((member: any) => (
+          viewMembers.map((member: Member) => (
             <div
               className="group flex items-center justify-start gap-4 rounded-md p-1 px-3 hover:cursor-pointer"
               key={member.id}

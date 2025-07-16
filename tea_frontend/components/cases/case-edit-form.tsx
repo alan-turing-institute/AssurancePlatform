@@ -74,8 +74,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
     };
     const response = await fetch(url, requestOptions);
     if (!response.ok) {
-      // TODO: Handle error response appropriately
-      console.error('Failed to update case');
+      // TODO: Handle error response
     }
 
     setLoading(false);

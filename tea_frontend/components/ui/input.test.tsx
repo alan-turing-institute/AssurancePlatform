@@ -6,6 +6,9 @@ import {
 } from '@/src/__tests__/utils/test-utils';
 import { Input } from './input';
 
+// Regex constants for text matching
+const USERNAME_INPUT_REGEX = /username input/i;
+
 describe('Input', () => {
   it('should render with default props', () => {
     renderWithoutProviders(<Input />);
@@ -101,7 +104,7 @@ describe('Input', () => {
       />
     );
 
-    const input = screen.getByRole('textbox', { name: /username input/i });
+    const input = screen.getByRole('textbox', { name: USERNAME_INPUT_REGEX });
     expect(input).toHaveAttribute('aria-label', 'Username input');
     expect(input).toHaveAttribute('aria-describedby', 'username-help');
     expect(input).toBeRequired();

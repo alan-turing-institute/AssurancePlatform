@@ -1,6 +1,6 @@
 'use client';
 
-type TokenHookReturnType = [string | null, (value: any) => void];
+type TokenHookReturnType = [string | null, (value: string | null) => void];
 
 /**
  * Enforce that the user is logged in.
@@ -50,7 +50,7 @@ export function unauthorized() {
  * @param {string} value - The token to set.
  * @returns {void}
  */
-const setToken = (value: any) => {
+const setToken = (value: string | null) => {
   localStorage.clear();
 
   if (value) {
@@ -66,7 +66,7 @@ const setToken = (value: any) => {
  * @returns {[string, function]} The user's login token and a function to set the token.
  */
 export function useLoginToken(): TokenHookReturnType {
-  let token = null;
+  let token: string | null = null;
   if (typeof window !== 'undefined') {
     token = localStorage.getItem('token');
   }

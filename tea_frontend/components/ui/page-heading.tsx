@@ -1,6 +1,12 @@
+import type { CaseStudy } from '@/types/domain';
 import { Button } from './button';
 import PublishButton from './publish-button';
 import RedirectButton from './redirect-button';
+
+// Extended CaseStudy type for publish functionality
+interface CaseStudyWithAssuranceCases extends CaseStudy {
+  assurance_cases?: number[];
+}
 
 interface PageHeadingProps {
   title: string;
@@ -15,7 +21,7 @@ interface PageHeadingProps {
   };
   redirect?: boolean;
   redirectUrl?: string;
-  caseStudy?: any;
+  caseStudy?: CaseStudyWithAssuranceCases;
 }
 
 export default function PageHeading({
@@ -40,7 +46,7 @@ export default function PageHeading({
       </div>
       <div className="mt-4 flex md:mt-0 md:ml-4">
         {edit && <Button variant={'ghost'}>Edit</Button>}
-        {button && (
+        {button && caseStudy && (
           <PublishButton
             caseStudy={caseStudy}
             label={button.label}

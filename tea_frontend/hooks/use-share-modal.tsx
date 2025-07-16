@@ -29,7 +29,7 @@ interface useShareModalStore {
  * @function
  * @returns {useShareModalStore} The Zustand store with modal state and actions.
  */
-export const useShareModal = create<useShareModalStore>((set: any) => ({
+export const useShareModal = create<useShareModalStore>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),

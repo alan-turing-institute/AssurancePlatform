@@ -1,11 +1,22 @@
 'use client';
 
-import MemberEditForm from '.*/member-edit-form';
 import { useEffect, useState } from 'react';
 import EditSheet from '../ui/edit-sheet';
+import MemberEditForm from './member-edit-form';
+
+type TeamMember = {
+  id: number;
+  name: string;
+  title: string;
+  department: string;
+  email: string;
+  role: string;
+  isAdmin: boolean;
+  image: string;
+};
 
 interface MemberEditProps {
-  member: any;
+  member: TeamMember | null;
   isOpen: boolean;
   onClose: () => void;
 }

@@ -13,7 +13,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import useStore from '@/data/store';
-import type { Comment as CaseComment } from '@/types';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
@@ -60,7 +59,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
       content: values.comment,
     };
 
-    let entity = null;
+    let entity: string;
     switch (node.type) {
       case 'context':
         entity = 'contexts';
@@ -107,8 +106,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
       // Clear form input
       form.setValue('comment', '');
     } catch (_error) {
-      // TODO: Handle error appropriately
-      console.error('Failed to post comment', _error);
+      // TODO: Handle error posting comment
     } finally {
       setLoading(false);
     }

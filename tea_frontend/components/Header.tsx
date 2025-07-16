@@ -3,13 +3,7 @@ import moment from 'moment';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type React from 'react';
-import {
-  type Dispatch,
-  type SetStateAction,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
 import { useReactFlow, useUpdateNodeInternals } from 'reactflow';
 // import { useLoginToken } from ".*/use-auth";
 import useStore from '@/data/store';
@@ -39,7 +33,7 @@ const Header = ({ setOpen }: HeaderProps) => {
   const [newCaseName, setNewCaseName] = useState<string>(assuranceCase.name);
   const _inputRef = useRef<HTMLInputElement>(null);
 
-  const { fitView, setViewport, setCenter } = useReactFlow();
+  const { setCenter } = useReactFlow();
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
@@ -69,10 +63,16 @@ const Header = ({ setOpen }: HeaderProps) => {
 
       const response = await fetch(url, requestOptions);
       if (!response.ok) {
+        // Handle error response - revert the name change
+        setEditName(false);
+        return;
       }
       setEditName(false);
       setAssuranceCase({ ...assuranceCase, name: newCaseName });
-    } catch (_error) {}
+    } catch (_error) {
+      // Silently fail - user will see the old name is still present
+      setEditName(false);
+    }
   };
 
   const unhideParents = (nodeId: string) => {
@@ -87,7 +87,7 @@ const Header = ({ setOpen }: HeaderProps) => {
   };
 
   const focusNode = (value: string) => {
-    const nodeId: any = nodes.filter((n) => n.id === value)[0].id;
+    const nodeId = nodes.filter((n) => n.id === value)[0].id;
 
     unhideParents(nodeId);
 
@@ -112,12 +112,14 @@ const Header = ({ setOpen }: HeaderProps) => {
 
         setCenter(centerX, centerY);
       } else {
+        // Node not found - cannot focus
       }
     } else {
+      // No node found with the given value - cannot focus
     }
   };
 
-  useEffect(() => {}, []);
+  // Component initialization - no side effects needed currently
 
   return (
     <div className="fixed top-0 left-0 z-50 w-full bg-indigo-600 text-white dark:bg-slate-900">
@@ -131,12 +133,13 @@ const Header = ({ setOpen }: HeaderProps) => {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <p
-            className="font-semibold hover:cursor-pointer"
+          <button
+            className="border-none bg-transparent p-0 font-semibold text-white hover:cursor-pointer"
             onClick={() => setOpen(true)}
+            type="button"
           >
             {assuranceCase.name}
-          </p>
+          </button>
         </div>
 
         <div className="flex items-center justify-start gap-2">

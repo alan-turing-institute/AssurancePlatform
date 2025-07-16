@@ -12,12 +12,17 @@ import { MobileNav } from './mobile-nav';
 export const Navbar = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const pageName =
-    pathname === '/'
-      ? 'assurance cases'
-      : pathname.includes('/dashboard/case-studies')
-        ? 'Case Studies'
-        : pathname.split('/').filter(Boolean).pop();
+  const getPageName = (path: string): string => {
+    if (path === '/') {
+      return 'assurance cases';
+    }
+    if (path.includes('/dashboard/case-studies')) {
+      return 'Case Studies';
+    }
+    return path.split('/').filter(Boolean).pop() || '';
+  };
+
+  const pageName = getPageName(pathname);
 
   return (
     <div>

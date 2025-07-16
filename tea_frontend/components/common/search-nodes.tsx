@@ -2,6 +2,7 @@
 
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { Node } from 'reactflow';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import ActionTooltip from '../ui/action-tooltip';
 import { Button } from '../ui/button';
 
 type SearchNodesProps = {
-  nodes: any[];
+  nodes: Node[];
   focusNode: (value: string) => void;
 };
 const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
@@ -79,7 +80,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
                 autoComplete="off"
                 defaultValue=""
                 id="searchValue"
-                onChange={(e: any) => handleSearch(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 value={value}
               />
             </div>
@@ -87,22 +88,26 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
           <div className="max-h-[320px] overflow-y-auto">
             {filteredNodes.map((node) => (
               <div key={node.id}>
-                <div
-                  className="group my-2 flex flex-col items-start justify-start gap-1 rounded-md p-2 hover:cursor-pointer hover:bg-indigo-500 hover:text-white"
+                <button
+                  className="group my-2 flex w-full flex-col items-start justify-start gap-1 rounded-md p-2 text-left hover:bg-indigo-500 hover:text-white"
                   onClick={() => handleSelection(node.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelection(node.id);
+                    }
+                  }}
+                  type="button"
                 >
                   <div className="flex flex-col items-start">
                     <span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
                       Identifier: {node.data.name}
                     </span>
-                    {/* <svg viewBox="0 0 2 2" className="mx-2 inline h-0.5 w-0.5 fill-current" aria-hidden="true">
-                    <circle cx={1} cy={1} r={1} />
-                  </svg> */}
                     <span className="line-clamp-2 w-full text-sm">
                       {node.data.short_description}
                     </span>
                   </div>
-                </div>
+                </button>
                 <Separator />
               </div>
             ))}

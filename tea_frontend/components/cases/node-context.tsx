@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { Node } from 'reactflow';
 import { z } from 'zod';
 import {
   Form,
@@ -24,6 +25,7 @@ import {
   getAssuranceCaseNode,
   removeAssuranceCaseNode,
 } from '@/lib/case-helper';
+import type { Context } from '@/types';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
@@ -37,9 +39,16 @@ const formSchema = z.object({
     .optional(),
 });
 
+interface NodeActions {
+  setSelectedLink: (value: boolean) => void;
+  setLinkToCreate?: (value: string) => void;
+  handleClose: () => void;
+  setAction: (value: string) => void;
+}
+
 interface NodeContextProps {
-  node: any;
-  actions: any;
+  node: Node;
+  actions: NodeActions;
   setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
 }
 
@@ -48,15 +57,15 @@ const NodeConext: React.FC<NodeContextProps> = ({
   actions,
   setUnresolvedChanges,
 }) => {
-  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase } = useStore();
   const { data: session } = useSession();
-  const [contexts, setContexts] = useState<any>([]);
+  const [contexts, setContexts] = useState<Context[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   // console.log('NODE', node)
   // console.log('Case', assuranceCase.goals[0])
 
-  const { setSelectedLink, setLinkToCreate, handleClose, setAction } = actions;
+  const { setSelectedLink, setAction } = actions;
 
   const reset = () => {
     setSelectedLink(false);
@@ -78,7 +87,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
       type: 'Context',
     };
 
-    const result: any = await createAssuranceCaseNode(
+    const result = await createAssuranceCaseNode(
       'contexts',
       newContextItem,
       session?.key ?? ''
@@ -144,36 +153,34 @@ const NodeConext: React.FC<NodeContextProps> = ({
   }
 
   useEffect(() => {
-    const GetCaseElement = async () => {
+    const fetchNodeContext = async () => {
       const result = await getAssuranceCaseNode(
         node.type,
         node.data.id,
         session?.key ?? ''
       );
-      return result;
+
+      if (result.context) {
+        setContexts(result.context);
+      }
     };
 
-    GetCaseElement().then((result) => {
-      if (!result.context) {
-        return;
-      }
-
-      setContexts(result.context);
-    });
+    fetchNodeContext();
   }, [node.data.id, node.type, session?.key]);
 
-  // useEffect(() => {
-  //   form.watch((values, { name }) => {
-  //     if (name === 'description') {
-  //       setUnresolvedChanges(true);
-  //     }
-  //   });
-  // }, [form.watch, setUnresolvedChanges]);
+  useEffect(() => {
+    const subscription = form.watch((_values, { name }) => {
+      if (name === 'description') {
+        setUnresolvedChanges(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, setUnresolvedChanges]);
 
   return (
     <div className="my-4 border-t">
       <div className="mt-4 font-medium text-muted-foreground text-sm">
-        Please add a new context using thr form below.
+        Please add a new context using the form below.
       </div>
 
       <Form {...form}>
@@ -226,10 +233,10 @@ const NodeConext: React.FC<NodeContextProps> = ({
         </div>
       ) : (
         <div className="mb-16 flex w-full flex-col items-start justify-start gap-3">
-          {contexts.map((item: any, index: number) => (
+          {contexts.map((item: Context) => (
             <div
               className="group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer hover:bg-indigo-500 hover:pb-6 hover:text-white"
-              key={index}
+              key={item.id}
             >
               <p className="w-full whitespace-normal">
                 {item.long_description}

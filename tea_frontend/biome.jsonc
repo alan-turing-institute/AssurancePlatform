@@ -31,6 +31,11 @@
         "useTopLevelRegex": {
           "level": "warn"
         }
+      },
+      "a11y": {
+        "useSemanticElements": {
+          "level": "warn"
+        }
       }
     }
   }

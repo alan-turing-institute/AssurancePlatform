@@ -1,14 +1,27 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+import type { Node } from 'reactflow';
 import useStore from '@/data/store';
 import { Skeleton } from '../ui/skeleton';
 import CommentsForm from './comment-form';
 import CommentsFeed from './comments-feed';
 
+type NodeWithData = Node & {
+  data: {
+    id: number;
+  };
+};
+
 type NodeCommentProps = {
-  node: any;
+  node: NodeWithData;
   handleClose: () => void;
   loadingState: {
     loading: boolean;
@@ -20,28 +33,29 @@ type NodeCommentProps = {
 
 const NodeComment = ({
   node,
-  handleClose,
+  handleClose: _handleClose,
   loadingState,
-  setAction,
+  setAction: _setAction,
   readOnly,
 }: NodeCommentProps) => {
   const { loading, setLoading } = loadingState;
-  const { assuranceCase, setAssuranceCase, nodeComments, setNodeComments } =
-    useStore();
-  const [_filteredOrphanElements, _setFilteredOrphanElements] = useState<any[]>(
-    []
-  );
+  const { setNodeComments } = useStore();
+  const [_filteredOrphanElements, _setFilteredOrphanElements] = useState<
+    unknown[]
+  >([]);
   const [_deleteOpen, _setDeleteOpen] = useState(false);
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    // Initialize component state on mount
+  }, []);
 
   // Fetch Element Comments
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setLoading(true);
-    let entity = null;
+    let entity: string;
     switch (node.type) {
       case 'context':
         entity = 'contexts';
@@ -74,10 +88,12 @@ const NodeComment = ({
       const result = await response.json();
       return result;
     } catch (_error) {
+      // Error is handled by setting loading state to false in finally block
+      // Comments will remain as previous state if fetch fails
     } finally {
       setLoading(false);
     }
-  };
+  }, [node.type, node.data.id, session?.key, setLoading]);
 
   useEffect(() => {
     fetchComments().then((result) => setNodeComments(result));

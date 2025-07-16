@@ -14,6 +14,7 @@ import {
 import useStore from '@/data/store';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
+import { useToast } from '../ui/use-toast';
 
 // import { useLoginToken } from '.*/use-auth'
 
@@ -23,19 +24,18 @@ const formSchema = z.object({
   }),
 });
 
-type NotesFormProps = {};
-
-const NotesForm: React.FC<NotesFormProps> = ({}) => {
+const NotesForm: React.FC = () => {
   const {
-    nodes,
-    setNodes,
+    _nodes,
+    _setNodes,
     assuranceCase,
-    setAssuranceCase,
+    _setAssuranceCase,
     caseNotes,
     setCaseNotes,
   } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,6 +62,8 @@ const NotesForm: React.FC<NotesFormProps> = ({}) => {
       const response = await fetch(url, requestOptions);
 
       if (!response.ok) {
+        // Handle error - response not ok
+        throw new Error('Failed to create note');
       }
 
       const result = await response.json();
@@ -78,7 +80,14 @@ const NotesForm: React.FC<NotesFormProps> = ({}) => {
       // setAssuranceCase(updatedAssuranceCase)
 
       form.setValue('note', '');
-    } catch (_error) {}
+    } catch (_error) {
+      // Handle error - show toast notification
+      toast({
+        variant: 'destructive',
+        title: 'Failed to create note',
+        description: 'Something went wrong trying to add the note.',
+      });
+    }
   }
 
   return (

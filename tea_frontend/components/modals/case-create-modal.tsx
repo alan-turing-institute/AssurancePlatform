@@ -87,13 +87,13 @@ export const CaseCreateModal = () => {
     [session, createCaseModal, router]
   );
 
-  const handleCancel = (e: any) => {
+  const handleCancel = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     form.clearErrors();
     createCaseModal.onClose();
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     try {
       // const newCase = templates[parseInt(values.template)]
       // newCase.name = values.name
@@ -106,7 +106,9 @@ export const CaseCreateModal = () => {
         color_profile: 'default',
       };
       CreateCase(JSON.stringify(newCase));
-    } catch (_error) {}
+    } catch (_error) {
+      // Error handling for JSON.stringify or CreateCase call
+    }
   };
 
   // const fetchTemplates = async () => {

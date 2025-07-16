@@ -11,11 +11,17 @@ import {
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
+import type { AssuranceCase } from '@/types';
 import CaseEditForm from './case-edit-form';
+
+// Regex constants for text matching
+const NAME_LABEL_REGEX = /name/i;
+const DESCRIPTION_LABEL_REGEX = /description/i;
+const UPDATE_BUTTON_REGEX = /update/i;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: mockAssuranceCase as any,
+  assuranceCase: mockAssuranceCase as AssuranceCase,
   setAssuranceCase: vi.fn(),
 };
 
@@ -59,8 +65,10 @@ describe('CaseEditForm', () => {
         />
       );
 
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(NAME_LABEL_REGEX)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(DESCRIPTION_LABEL_REGEX)
+      ).toBeInTheDocument();
     });
 
     it('should render update button when user has manage permissions', () => {
@@ -72,7 +80,7 @@ describe('CaseEditForm', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /update/i })
+        screen.getByRole('button', { name: UPDATE_BUTTON_REGEX })
       ).toBeInTheDocument();
     });
 
@@ -87,7 +95,7 @@ describe('CaseEditForm', () => {
       );
 
       expect(
-        screen.queryByRole('button', { name: /update/i })
+        screen.queryByRole('button', { name: UPDATE_BUTTON_REGEX })
       ).not.toBeInTheDocument();
     });
   });
@@ -156,7 +164,9 @@ describe('CaseEditForm', () => {
       await user.clear(nameInput);
       await user.type(nameInput, 'A');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -180,7 +190,9 @@ describe('CaseEditForm', () => {
       await user.clear(descriptionInput);
       await user.type(descriptionInput, 'A');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -214,7 +226,9 @@ describe('CaseEditForm', () => {
       await user.clear(descriptionInput);
       await user.type(descriptionInput, 'Updated test description');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -248,7 +262,9 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       expect(screen.getByText('Updating...')).toBeInTheDocument();
@@ -262,7 +278,8 @@ describe('CaseEditForm', () => {
     it('should send correct API request with updated data', async () => {
       const user = userEvent.setup();
 
-      let capturedRequestBody: any = null;
+      let capturedRequestBody: { name: string; description: string } | null =
+        null;
       server.use(
         http.put('*/api/cases/1/', async ({ request }) => {
           capturedRequestBody = await request.json();
@@ -285,7 +302,9 @@ describe('CaseEditForm', () => {
       await user.clear(descriptionInput);
       await user.type(descriptionInput, 'API test description');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -314,7 +333,9 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -325,7 +346,9 @@ describe('CaseEditForm', () => {
 
     it('should handle API errors gracefully', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Mock console.log to avoid test output noise
+      });
 
       server.use(
         http.put('*/api/cases/1/', () => {
@@ -340,7 +363,9 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -399,7 +424,9 @@ describe('CaseEditForm', () => {
       );
 
       // Click the update button without making changes
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       // setUnresolvedChanges should not be called for form submission
@@ -428,7 +455,9 @@ describe('CaseEditForm', () => {
       await user.clear(nameInput);
       await user.type(nameInput, 'Store Updated Case');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -458,7 +487,9 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -481,8 +512,8 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const nameInput = screen.getByLabelText(/name/i);
-      const descriptionInput = screen.getByLabelText(/description/i);
+      const nameInput = screen.getByLabelText(NAME_LABEL_REGEX);
+      const descriptionInput = screen.getByLabelText(DESCRIPTION_LABEL_REGEX);
 
       expect(nameInput).toBeInTheDocument();
       expect(descriptionInput).toBeInTheDocument();
@@ -502,7 +533,9 @@ describe('CaseEditForm', () => {
       await user.clear(nameInput);
       await user.type(nameInput, 'A');
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       await user.click(updateButton);
 
       await waitFor(() => {
@@ -522,7 +555,9 @@ describe('CaseEditForm', () => {
         />
       );
 
-      const updateButton = screen.getByRole('button', { name: /update/i });
+      const updateButton = screen.getByRole('button', {
+        name: UPDATE_BUTTON_REGEX,
+      });
       expect(updateButton).toBeEnabled();
       expect(updateButton).toHaveClass('bg-indigo-500', 'hover:bg-indigo-600');
     });
@@ -557,7 +592,7 @@ describe('CaseEditForm', () => {
 
       // Should default to read-only behavior
       expect(
-        screen.queryByRole('button', { name: /update/i })
+        screen.queryByRole('button', { name: UPDATE_BUTTON_REGEX })
       ).not.toBeInTheDocument();
     });
 

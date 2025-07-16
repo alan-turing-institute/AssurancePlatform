@@ -1,4 +1,7 @@
+import type { Node } from 'reactflow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PropertyClaim } from '@/types';
+import type { AssuranceCaseWithGoals, ConvertibleItem } from '../convert-case';
 import {
   convertAssuranceCase,
   createEdgesFromNodes,
@@ -77,11 +80,11 @@ describe('convert-case utilities', () => {
       expect(result.caseEdges.length).toBeGreaterThan(0);
 
       // Edges should have proper structure
-      result.caseEdges.forEach((edge) => {
+      for (const edge of result.caseEdges) {
         expect(edge).toHaveProperty('id');
         expect(edge).toHaveProperty('source');
         expect(edge).toHaveProperty('target');
-      });
+      }
     });
 
     it('should handle empty assurance case', async () => {
@@ -153,7 +156,7 @@ describe('convert-case utilities', () => {
     };
 
     it('should create nodes recursively for nested structures', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       createNodesRecursively([mockGoal], 'goal', nodes, visitedIds, 0);
@@ -168,7 +171,7 @@ describe('convert-case utilities', () => {
     });
 
     it('should prevent duplicate nodes', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       // Add the same goal twice
@@ -204,7 +207,7 @@ describe('convert-case utilities', () => {
         ],
       };
 
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
       const maxDepth = 2;
 
@@ -222,7 +225,7 @@ describe('convert-case utilities', () => {
     });
 
     it('should create nodes with correct positioning data', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       createNodesRecursively([mockGoal], 'goal', nodes, visitedIds, 0);
@@ -234,7 +237,7 @@ describe('convert-case utilities', () => {
     });
 
     it('should handle empty arrays', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       createNodesRecursively([], 'goal', nodes, visitedIds, 0);
@@ -243,18 +246,30 @@ describe('convert-case utilities', () => {
     });
 
     it('should handle null/undefined arrays', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
-      createNodesRecursively(null as any, 'goal', nodes, visitedIds, 0);
+      createNodesRecursively(
+        null as unknown as ConvertibleItem[],
+        'goal',
+        nodes,
+        visitedIds,
+        0
+      );
       expect(nodes).toHaveLength(0);
 
-      createNodesRecursively(undefined as any, 'goal', nodes, visitedIds, 0);
+      createNodesRecursively(
+        undefined as unknown as ConvertibleItem[],
+        'goal',
+        nodes,
+        visitedIds,
+        0
+      );
       expect(nodes).toHaveLength(0);
     });
 
     it('should create correct node types for different elements', () => {
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       createNodesRecursively([mockGoal], 'goal', nodes, visitedIds, 0);
@@ -279,7 +294,7 @@ describe('convert-case utilities', () => {
         // Missing short_description and nested arrays
       };
 
-      const nodes: any[] = [];
+      const nodes: Node[] = [];
       const visitedIds = new Set<string>();
 
       expect(() => {
@@ -401,13 +416,13 @@ describe('convert-case utilities', () => {
     it('should create correct edge properties', () => {
       const edges = createEdgesFromNodes(mockNodes);
 
-      edges.forEach((edge) => {
+      for (const edge of edges) {
         expect(edge).toHaveProperty('id');
         expect(edge).toHaveProperty('source');
         expect(edge).toHaveProperty('target');
         expect(edge).toHaveProperty('type');
         expect(edge.type).toBe('default');
-      });
+      }
     });
   });
 
@@ -450,10 +465,10 @@ describe('convert-case utilities', () => {
 
       // Verify node-edge consistency
       const nodeIds = new Set(result.caseNodes.map((n) => n.id));
-      result.caseEdges.forEach((edge) => {
+      for (const edge of result.caseEdges) {
         expect(nodeIds.has(edge.source)).toBe(true);
         expect(nodeIds.has(edge.target)).toBe(true);
-      });
+      }
     });
 
     it('should handle very large assurance cases efficiently', async () => {
@@ -463,10 +478,10 @@ describe('convert-case utilities', () => {
         goals: Array.from({ length: 10 }, (_, i) => ({
           id: i + 1,
           name: `Goal ${i + 1}`,
-          property_claims: Array.from({ length: 5 }, (_, j) => ({
+          property_claims: Array.from({ length: 5 }, (_j, j) => ({
             id: i * 5 + j + 100,
             name: `Claim ${i}-${j}`,
-            evidence: Array.from({ length: 2 }, (_, k) => ({
+            evidence: Array.from({ length: 2 }, (_k, k) => ({
               id: i * 10 + j * 2 + k + 1000,
               name: `Evidence ${i}-${j}-${k}`,
             })),
@@ -516,7 +531,7 @@ describe('convert-case utilities', () => {
 
   describe('Error handling and edge cases', () => {
     it('should handle circular references in data', async () => {
-      const circularCase: any = {
+      const circularCase: AssuranceCaseWithGoals = {
         id: 1,
         name: 'Circular Case',
         goals: [
@@ -537,7 +552,7 @@ describe('convert-case utilities', () => {
       expect(result.caseNodes.length).toBeGreaterThan(0);
     });
 
-    it('should handle malformed data gracefully', async () => {
+    it('should handle malformed data gracefully', () => {
       const malformedCase = {
         id: 'not-a-number',
         name: null,
@@ -550,8 +565,8 @@ describe('convert-case utilities', () => {
         ],
       };
 
-      expect(async () => {
-        await convertAssuranceCase(malformedCase as any);
+      expect(() => {
+        convertAssuranceCase(malformedCase as AssuranceCaseWithGoals);
       }).not.toThrow();
     });
 
@@ -563,7 +578,7 @@ describe('convert-case utilities', () => {
           {
             id: 1,
             name: 'Root Goal',
-            property_claims: [] as any[],
+            property_claims: [] as PropertyClaim[],
           },
         ],
       };

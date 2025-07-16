@@ -29,7 +29,7 @@ interface useImportModalStore {
  * @function
  * @returns {useImportModalStore} The Zustand store with modal state and actions.
  */
-export const useImportModal = create<useImportModalStore>((set: any) => ({
+export const useImportModal = create<useImportModalStore>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),

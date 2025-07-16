@@ -52,7 +52,7 @@ export const ImportModal = () => {
   });
 
   const ImportCreateCase = useCallback(
-    (json: any) => {
+    (json: unknown) => {
       const requestOptions = {
         method: 'POST',
         headers: {
@@ -69,11 +69,12 @@ export const ImportModal = () => {
         requestOptions
       )
         .then((response) => response.json())
-        .then((json) => {
-          if (json.id) {
+        .then((responseData) => {
+          const responseJson = responseData;
+          if ((responseJson as { id?: number }).id) {
             // navigate("/case/" + json.id);
             importModal.onClose();
-            router.push(`/case/${json.id}`);
+            router.push(`/case/${(responseJson as { id: number }).id}`);
           } else {
             setLoading(false);
             setError('An error occurred, please try again later');
@@ -94,9 +95,9 @@ export const ImportModal = () => {
       if (file) {
         const fileReader = new FileReader();
 
-        fileReader.onload = async (event: any) => {
+        fileReader.onload = async (event: ProgressEvent<FileReader>) => {
           try {
-            const json = JSON.parse(event.target.result as string);
+            const json = JSON.parse(event.target?.result as string);
             await ImportCreateCase(json);
           } catch (_error) {
             setError('Error parsing JSON file, bad format.');

@@ -7,6 +7,14 @@ import {
   renderWithoutProviders,
   screen,
 } from '@/src/__tests__/utils/test-utils';
+
+// Regex constants for text matching
+const USERNAME_REGEX = /username/i;
+const EMAIL_REGEX = /email/i;
+const ENTER_USERNAME_REGEX = /enter username/i;
+const ENTER_EMAIL_REGEX = /enter email/i;
+const SUBMIT_REGEX = /submit/i;
+
 import { Button } from './button';
 import {
   Form,
@@ -84,21 +92,25 @@ describe('Form Components', () => {
   it('should render form with all components', () => {
     renderWithoutProviders(<TestForm />);
 
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter username/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/enter email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(USERNAME_REGEX)).toBeInTheDocument();
+    expect(screen.getByLabelText(EMAIL_REGEX)).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(ENTER_USERNAME_REGEX)
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(ENTER_EMAIL_REGEX)).toBeInTheDocument();
     expect(
       screen.getByText('This is your public display name.')
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: SUBMIT_REGEX })
+    ).toBeInTheDocument();
   });
 
   it('should show validation errors for required fields', async () => {
     const user = userEvent.setup();
     renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     expect(
@@ -111,10 +123,10 @@ describe('Form Components', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<TestForm />);
 
-    const emailInput = screen.getByLabelText(/email/i);
+    const emailInput = screen.getByLabelText(EMAIL_REGEX);
     await user.type(emailInput, 'invalid-email');
 
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     expect(screen.getByText('Invalid email address')).toBeInTheDocument();
@@ -125,13 +137,13 @@ describe('Form Components', () => {
     const mockSubmit = vi.fn();
     renderWithoutProviders(<TestForm onSubmit={mockSubmit} />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const emailInput = screen.getByLabelText(/email/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const emailInput = screen.getByLabelText(EMAIL_REGEX);
 
     await user.type(usernameInput, 'testuser');
     await user.type(emailInput, 'test@example.com');
 
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     expect(mockSubmit).toHaveBeenCalledWith({
@@ -145,7 +157,7 @@ describe('Form Components', () => {
     renderWithoutProviders(<TestForm />);
 
     // First trigger validation errors
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     expect(
@@ -153,7 +165,7 @@ describe('Form Components', () => {
     ).toBeInTheDocument();
 
     // Then provide valid input
-    const usernameInput = screen.getByLabelText(/username/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
     await user.type(usernameInput, 'validuser');
 
     // Error should be cleared
@@ -165,8 +177,8 @@ describe('Form Components', () => {
   it('should have proper accessibility attributes', () => {
     renderWithoutProviders(<TestForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const emailInput = screen.getByLabelText(/email/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const emailInput = screen.getByLabelText(EMAIL_REGEX);
 
     // Check that inputs are properly labeled
     expect(usernameInput).toHaveAccessibleName('Username');
@@ -183,11 +195,11 @@ describe('Form Components', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const emailInput = screen.getByLabelText(/email/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+    const emailInput = screen.getByLabelText(EMAIL_REGEX);
 
     expect(usernameInput).toHaveAttribute('aria-invalid', 'true');
     expect(emailInput).toHaveAttribute('aria-invalid', 'true');
@@ -197,7 +209,7 @@ describe('Form Components', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<TestForm />);
 
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     // Wait for validation to trigger
@@ -211,7 +223,7 @@ describe('Form Components', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<TestForm />);
 
-    const usernameInput = screen.getByLabelText(/username/i);
+    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
 
     await user.type(usernameInput, 'newuser');
     expect(usernameInput).toHaveValue('newuser');
@@ -230,7 +242,7 @@ describe('Form Components', () => {
     ).not.toBeInTheDocument();
 
     // Trigger validation
-    const submitButton = screen.getByRole('button', { name: /submit/i });
+    const submitButton = screen.getByRole('button', { name: SUBMIT_REGEX });
     await user.click(submitButton);
 
     // Now error messages should be visible

@@ -29,7 +29,9 @@ describe('useAuth hooks', () => {
     // Clear localStorage
     localStorage.clear();
     // Mock console.log to suppress logs during tests
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {
+      // Intentionally empty to suppress logs during tests
+    });
   });
 
   afterEach(() => {
@@ -293,7 +295,7 @@ describe('useAuth hooks', () => {
   });
 
   describe('Integration tests', () => {
-    it('should work together - login flow', async () => {
+    it('should work together - login flow', () => {
       // Start without token
       const { result: tokenResult } = renderHook(() => useLoginToken());
       renderHook(() => useEnforceLogin());
@@ -309,7 +311,7 @@ describe('useAuth hooks', () => {
       expect(mockReplace).toHaveBeenCalledTimes(1);
     });
 
-    it('should work together - logout flow', async () => {
+    it('should work together - logout flow', () => {
       localStorage.setItem('tea-token', 'valid-token');
       const { result: tokenResult } = renderHook(() => useLoginToken());
       renderHook(() => useEnforceLogout());

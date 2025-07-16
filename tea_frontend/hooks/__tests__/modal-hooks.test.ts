@@ -7,8 +7,15 @@ import { useShareModal } from '.*/use-share-modal';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Type for modal hook return value
+interface ModalHookReturn {
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}
+
 // Helper function to test modal hook behavior
-const testModalHook = (hookName: string, useHook: () => any) => {
+const testModalHook = (hookName: string, useHook: () => ModalHookReturn) => {
   describe(hookName, () => {
     it('should initialize with isOpen as false', () => {
       const { result } = renderHook(useHook);
@@ -317,13 +324,7 @@ describe('Modal Hooks', () => {
     });
 
     it('should maintain consistent performance with multiple hooks', () => {
-      type ModalHook = () => {
-        isOpen: boolean;
-        onOpen: () => void;
-        onClose: () => void;
-      };
-
-      const hooks: ModalHook[] = [
+      const hooks: Array<() => ModalHookReturn> = [
         useCreateCaseModal,
         useShareModal,
         usePermissionsModal,
@@ -335,24 +336,24 @@ describe('Modal Hooks', () => {
       const results = hooks.map((hook) => renderHook(hook));
 
       act(() => {
-        results.forEach(({ result }) => {
+        for (const { result } of results) {
           result.current.onOpen();
-        });
+        }
       });
 
-      results.forEach(({ result }) => {
+      for (const { result } of results) {
         expect(result.current.isOpen).toBe(true);
-      });
+      }
 
       act(() => {
-        results.forEach(({ result }) => {
+        for (const { result } of results) {
           result.current.onClose();
-        });
+        }
       });
 
-      results.forEach(({ result }) => {
+      for (const { result } of results) {
         expect(result.current.isOpen).toBe(false);
-      });
+      }
     });
   });
 

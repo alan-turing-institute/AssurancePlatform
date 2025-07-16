@@ -400,11 +400,9 @@ describe('usePrevious', () => {
     });
 
     it('should handle large objects efficiently', () => {
-      const largeObject = {
-        ...Array.from({ length: 1000 }, (_, i) => ({
-          [`key${i}`]: `value${i}`,
-        })).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
-      };
+      const largeObject = Object.fromEntries(
+        Array.from({ length: 1000 }, (_, i) => [`key${i}`, `value${i}`])
+      );
 
       const { result, rerender } = renderHook(
         ({ value }) => usePrevious(value),

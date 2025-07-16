@@ -17,7 +17,7 @@ export const ResourcesModal = () => {
 
   const components: {
     title: string;
-    icon: any;
+    icon: React.ReactElement;
     href: string;
     description: string;
   }[] = [

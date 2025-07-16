@@ -9,9 +9,15 @@ import { Navbar } from './navbar';
 
 // Mock the navigation components to focus on Navbar logic
 vi.mock('./mobile-nav', () => ({
-  MobileNav: ({ sidebarOpen, setSidebarOpen }: any) => (
+  MobileNav: ({
+    sidebarOpen,
+    setSidebarOpen,
+  }: {
+    sidebarOpen: boolean;
+    setSidebarOpen: (open: boolean) => void;
+  }) => (
     <div data-sidebar-open={sidebarOpen} data-testid="mobile-nav">
-      <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+      <button onClick={() => setSidebarOpen(!sidebarOpen)} type="button">
         Toggle Mobile Nav
       </button>
     </div>
@@ -23,8 +29,16 @@ vi.mock('./desktop-nav', () => ({
 }));
 
 vi.mock('./menu-toggle', () => ({
-  default: ({ setSidebarOpen }: any) => (
-    <button data-testid="menu-toggle" onClick={() => setSidebarOpen(true)}>
+  default: ({
+    setSidebarOpen,
+  }: {
+    setSidebarOpen: (open: boolean) => void;
+  }) => (
+    <button
+      data-testid="menu-toggle"
+      onClick={() => setSidebarOpen(true)}
+      type="button"
+    >
       Menu Toggle
     </button>
   ),
@@ -37,7 +51,7 @@ vi.mock('@/components/FeedbackBanner', () => ({
 // Mock next/navigation with different pathname scenarios
 const mockUsePathname = vi.fn();
 vi.mock('next/navigation', async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     usePathname: () => mockUsePathname(),

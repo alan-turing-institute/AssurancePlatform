@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
+import ReactFlow, {
+  Background,
+  Controls,
+  type Node,
+  useReactFlow,
+} from 'reactflow';
 
 import 'reactflow/dist/style.css';
 import { Loader2, Unplug, X } from 'lucide-react';
@@ -16,9 +21,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 
-type FlowProps = {};
-
-function Flow({}: FlowProps) {
+function Flow() {
   const { fitView } = useReactFlow();
   const {
     nodes,
@@ -32,13 +35,13 @@ function Flow({}: FlowProps) {
     orphanedElements,
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Node | any>(null);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true);
 
   const { toast } = useToast();
 
-  const onLayout = (direction: any) => {
+  const onLayout = (direction: string) => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
 
     setNodes(layouted.nodes);
@@ -65,7 +68,7 @@ function Flow({}: FlowProps) {
     convert();
   }, [convert]);
 
-  const handleNodeClick = (_event: React.MouseEvent, node: Node | any) => {
+  const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
     setEditOpen(true);
   };

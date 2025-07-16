@@ -1,7 +1,19 @@
 'use client';
 
-import MemberEdit from '.*/member-edit';
+import Image from 'next/image';
 import { useState } from 'react';
+import MemberEdit from './member-edit';
+
+type TeamMember = {
+  id: number;
+  name: string;
+  title: string;
+  department: string;
+  email: string;
+  role: string;
+  isAdmin: boolean;
+  image: string;
+};
 
 const people = [
   {
@@ -50,9 +62,9 @@ const people = [
 
 export default function MemberList() {
   const [editOpen, setEditOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState({});
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
-  const handleEdit = (person: any) => {
+  const handleEdit = (person: TeamMember) => {
     setSelectedMember(person);
     setEditOpen(true);
   };
@@ -123,10 +135,12 @@ export default function MemberList() {
                       <td className="whitespace-nowrap py-5 pr-3 pl-4 text-sm sm:pl-0">
                         <div className="flex items-center">
                           <div className="h-11 w-11 flex-shrink-0">
-                            <img
+                            <Image
                               alt=""
                               className="h-11 w-11 rounded-full object-cover"
+                              height={44}
                               src={person.image}
+                              width={44}
                             />
                           </div>
                           <div className="ml-4">
@@ -157,6 +171,7 @@ export default function MemberList() {
                         <button
                           className="text-indigo-600 hover:text-indigo-900"
                           onClick={() => handleEdit(person)}
+                          type="button"
                         >
                           Edit<span className="sr-only">, {person.name}</span>
                         </button>

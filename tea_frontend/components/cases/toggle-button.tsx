@@ -6,6 +6,7 @@ import {
   type Edge,
   getConnectedEdges,
   getOutgoers,
+  type Node,
   useReactFlow,
 } from 'reactflow';
 
@@ -13,7 +14,7 @@ import useStore from '@/data/store';
 import { toggleHiddenForChildren } from '@/lib/case-helper';
 
 interface ToggleButtonProps {
-  node: any;
+  node: Node;
 }
 
 const ToggleButton = ({ node }: ToggleButtonProps) => {
@@ -37,18 +38,18 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
     }
   }, [node.id, nodes]);
 
-  const stack: any[] = [];
-  const outgoers: any[] = [];
-  const connectedEdges: any[] = [];
+  const stack: Node[] = [];
+  const outgoers: Node[] = [];
+  const connectedEdges: Edge[] = [];
 
-  const checkTarget = (edge: any, id: number) => {
-    const edges = edge.filter((ed: any) => {
+  const checkTarget = (edge: Edge[], id: string) => {
+    const filteredEdges = edge.filter((ed: Edge) => {
       return ed.target !== id;
     });
-    return edges;
+    return filteredEdges;
   };
 
-  const _handleToggle = (e: any) => {
+  const _handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
 
     const currentNodeID = node.id;
@@ -59,32 +60,32 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
       const childnode = getOutgoers(lastNode, nodes, edges);
       const childedge = checkTarget(
         getConnectedEdges([lastNode], edges),
-        currentNodeID
+        currentNodeID.toString()
       );
-      childnode.map((goer, _key) => {
+      for (const goer of childnode) {
         stack.push(goer);
         outgoers.push(goer);
-      });
-      childedge.map((edge: Edge) => {
+      }
+      for (const edge of childedge) {
         connectedEdges.push(edge);
-      });
+      }
     }
 
-    const childNodeID = outgoers.map((node) => {
-      return node.id;
+    const childNodeID = outgoers.map((n) => {
+      return n.id;
     });
     const childEdgeID = connectedEdges.map((edge) => {
       return edge.id;
     });
 
-    const updatedNodes = nodes.map((n: any) => {
+    const updatedNodes = nodes.map((n: Node) => {
       if (childNodeID.includes(n.id)) {
         n.hidden = hidden;
       }
       return n;
     });
 
-    const updatedEdges = edges.map((n: any) => {
+    const updatedEdges = edges.map((n: Edge) => {
       if (childEdgeID.includes(n.id)) {
         n.hidden = hidden;
       }
@@ -182,7 +183,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
   //   setHidden(!hidden);
   // }
 
-  const handleToggle2 = async (e: any) => {
+  const handleToggle2 = (e: React.MouseEvent) => {
     e.stopPropagation();
 
     setHidden(!hidden);
@@ -205,7 +206,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
   };
 
   return (
-    <button onClick={(e) => handleToggle2(e)}>
+    <button onClick={(e) => handleToggle2(e)} type="button">
       <div className="infline-flex rounded-full p-1 hover:bg-slate-900/10">
         {hidden ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
       </div>

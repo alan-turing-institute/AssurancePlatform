@@ -39,7 +39,13 @@ export const navigation = [
   // { name: 'Documentation', href: '/documentation', icon: DocumentDuplicateIcon, current: false, externalLink: true },
 ];
 
-export const teams = [
+export const teams: Array<{
+  id: number;
+  name: string;
+  href: string;
+  initial: string;
+  current: boolean;
+}> = [
   // { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
   // { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
   // { id: 3, name: 'General', href: '#', initial: 'G', current: false },

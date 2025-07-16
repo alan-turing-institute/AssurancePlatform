@@ -15,11 +15,12 @@ import {
 } from '@/components/ui/form';
 // import { useLoginToken } from '.*/use-auth'
 import useStore from '@/data/store';
+import type { Comment } from '@/types';
 import { Textarea } from '../ui/textarea';
 import { useToast } from '../ui/use-toast';
 
 type NotesEditFormProps = {
-  note: any;
+  note: Comment;
   setEdit: Dispatch<SetStateAction<boolean | undefined>>;
 };
 
@@ -30,7 +31,7 @@ const formSchema = z.object({
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
   // const [token] = useLoginToken();
   const { data: session } = useSession();
-  const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } =
+  const { _assuranceCase, _setAssuranceCase, caseNotes, setCaseNotes } =
     useStore();
   const [loading, setLoading] = useState<boolean>(false);
   const { toast } = useToast();
@@ -76,7 +77,7 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = caseNotes.map((comment: any) =>
+      const updatedComments = caseNotes.map((comment) =>
         comment.id === updatedComment.id ? updatedComment : comment
       );
 

@@ -54,8 +54,10 @@ describe('case-helper utilities', () => {
     });
 
     it('should handle null and undefined inputs', () => {
-      expect(caseItemDescription(null as any)).toBe('Unknown case item type.');
-      expect(caseItemDescription(undefined as any)).toBe(
+      expect(caseItemDescription(null as unknown as string)).toBe(
+        'Unknown case item type.'
+      );
+      expect(caseItemDescription(undefined as unknown as string)).toBe(
         'Unknown case item type.'
       );
     });
@@ -549,7 +551,7 @@ describe('case-helper utilities', () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue({ success: true }),
-      } as any);
+      } as Response);
     });
 
     describe('createAssuranceCaseNode', () => {
@@ -575,7 +577,7 @@ describe('case-helper utilities', () => {
         vi.mocked(fetch).mockResolvedValue({
           ok: false,
           status: 400,
-        } as any);
+        } as Response);
 
         const result = await createAssuranceCaseNode('cases/1', {}, mockToken);
         expect(result).toEqual({ ok: false, status: 400 });
@@ -664,15 +666,26 @@ describe('case-helper utilities', () => {
         undefined,
       ];
 
-      expect(() => listPropertyClaims(malformedData as any, '1')).not.toThrow();
+      expect(() =>
+        listPropertyClaims(malformedData as PropertyClaim[], '1')
+      ).not.toThrow();
       expect(
-        async () => await findItemById(malformedData as any, 1)
+        async () =>
+          await findItemById(
+            malformedData as NestedArrayItem | AssuranceCase,
+            1
+          )
       ).not.toThrow();
     });
 
     it('should handle circular references without infinite loops', () => {
-      const circularData: any = { id: 1, name: 'Test' };
-      circularData.children = [circularData];
+      const circularData: NestedArrayItem = {
+        id: 1,
+        name: 'Test',
+      } as NestedArrayItem;
+      (circularData as unknown as { children: NestedArrayItem[] }).children = [
+        circularData,
+      ];
 
       // Should not hang or crash
       expect(async () => await findItemById([circularData], 1)).not.toThrow();

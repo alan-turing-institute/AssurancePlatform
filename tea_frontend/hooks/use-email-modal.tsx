@@ -29,7 +29,7 @@ interface useEmailModalStore {
  * @function
  * @returns {useEmailModalStore} The Zustand store with modal state and actions.
  */
-export const useEmailModal = create<useEmailModalStore>((set: any) => ({
+export const useEmailModal = create<useEmailModalStore>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),

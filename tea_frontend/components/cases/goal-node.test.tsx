@@ -1,3 +1,5 @@
+import type { ComponentType } from 'react';
+import type { Node } from 'reactflow';
 import { Position } from 'reactflow';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithAuth, screen } from '@/src/__tests__/utils/test-utils';
@@ -27,13 +29,13 @@ vi.mock('reactflow', async () => {
       Bottom: 'bottom',
       Left: 'left',
     },
-    memo: (component: any) => component,
+    memo: <T extends ComponentType>(component: T) => component,
   };
 });
 
 // Mock child components
 vi.mock('./ToggleButton', () => ({
-  default: ({ node }: { node: any }) => (
+  default: ({ node }: { node: Node }) => (
     <div data-node-id={node.id} data-testid="toggle-button">
       Toggle Button
     </div>
@@ -41,7 +43,11 @@ vi.mock('./ToggleButton', () => ({
 }));
 
 vi.mock('./IconIndicator', () => ({
-  default: ({ data }: { data: any }) => (
+  default: ({
+    data,
+  }: {
+    data: { comments?: Array<{ id: number; content: string }> };
+  }) => (
     <div
       data-has-comments={data.comments?.length > 0}
       data-testid="icon-indicator"

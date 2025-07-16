@@ -104,11 +104,11 @@ describe('layout-helper utilities', () => {
 
       const directions = ['TB', 'LR', 'BT', 'RL'];
 
-      directions.forEach((direction) => {
+      for (const direction of directions) {
         expect(() => {
           getLayoutedElements([], [], { direction });
         }).not.toThrow();
-      });
+      }
     });
 
     it('should handle nodes with hidden property', async () => {
@@ -192,11 +192,17 @@ describe('layout-helper utilities', () => {
 
       // Test with invalid options but valid nodes/edges
       expect(() => {
-        getLayoutedElements([], [], { direction: 'INVALID' as any });
+        getLayoutedElements([], [], {
+          direction: 'INVALID' as 'TB' | 'LR' | 'BT' | 'RL',
+        });
       }).not.toThrow();
 
       expect(() => {
-        getLayoutedElements([], [], {} as any);
+        getLayoutedElements(
+          [],
+          [],
+          {} as { direction?: 'TB' | 'LR' | 'BT' | 'RL' }
+        );
       }).not.toThrow();
     });
   });

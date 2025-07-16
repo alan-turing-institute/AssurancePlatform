@@ -11,25 +11,85 @@ interface Map {
   [key: string]: string | undefined;
 }
 
+// Extended CaseNode interface with proper typing
 interface CaseNode {
   hidden: boolean;
   id: number;
   type: string;
+  name?: string;
+  goals?: Goal[];
+  context?: Context[];
+  property_claims?: PropertyClaim[];
+  strategies?: Strategy[];
+  evidence?: Evidence[];
+  childrenHidden?: boolean;
+  originalHidden?: boolean;
   [key: string]: unknown;
 }
 
-// Union type for items that can contain property claims
-type PropertyClaimContainer = PropertyClaim | Strategy | Goal;
+// Node type for React Flow integration
+interface ReactFlowNode {
+  id: string;
+  type: string;
+  data: {
+    id: number;
+    name: string;
+    type: string;
+    goal_id?: number | null;
+    strategy_id?: number | null;
+    property_claim_id?: number | number[] | null;
+    context?: Context[];
+    property_claims?: PropertyClaim[];
+    strategies?: Strategy[];
+    evidence?: Evidence[];
+    [key: string]: unknown;
+  };
+  position?: { x: number; y: number };
+}
+
+// API Response types
+interface ApiNodeResponse {
+  id: number;
+  name: string;
+  short_description: string;
+  long_description: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+// Payload types for API requests
+interface DetachPayload {
+  goal_id: number | null;
+  strategy_id: number | null;
+  property_claim_id: number | null;
+}
+
+// Comment type for API operations
+interface CommentPayload {
+  content: string;
+  [key: string]: unknown;
+}
+
+// Type for node creation payloads
+type CreateNodePayload =
+  | Partial<Goal>
+  | Partial<Context>
+  | Partial<Strategy>
+  | Partial<PropertyClaim>
+  | Partial<Evidence>;
+
+// Type for nested array items that can contain various node types
+type NestedArrayItem = Goal | PropertyClaim | Strategy | Context | Evidence;
 
 // Type guard to check if an object has property_claims
-function hasPropertyClaims(
+function _hasPropertyClaims(
   obj: unknown
 ): obj is { property_claims: PropertyClaim[] } {
   return typeof obj === 'object' && obj !== null && 'property_claims' in obj;
 }
 
 // Type guard to check if an object has strategies
-function hasStrategies(obj: unknown): obj is { strategies: Strategy[] } {
+function _hasStrategies(obj: unknown): obj is { strategies: Strategy[] } {
   return typeof obj === 'object' && obj !== null && 'strategies' in obj;
 }
 
@@ -52,25 +112,62 @@ export const caseItemDescription = (caseItemName: string) =>
  * @param newPropertyClaim - The new property claim to be added.
  * @returns Returns true if the property claim was found and updated, otherwise false.
  */
+// Helper function to add property claim to a specific claim
+const addPropertyClaimToSpecificClaim = (
+  propertyClaim: PropertyClaim,
+  newPropertyClaim: PropertyClaim
+): void => {
+  if (!propertyClaim.property_claims) {
+    propertyClaim.property_claims = [];
+  }
+  propertyClaim.property_claims.push(newPropertyClaim);
+};
+
+// Helper function to search in nested property claims
+const searchInNestedPropertyClaims = (
+  propertyClaims: PropertyClaim[],
+  parentId: number,
+  newPropertyClaim: PropertyClaim
+): boolean => {
+  const found = addPropertyClaimToNested(
+    propertyClaims,
+    parentId,
+    newPropertyClaim
+  );
+  return found;
+};
+
+// Helper function to search in strategies
+const searchInStrategies = (
+  strategies: Strategy[],
+  parentId: number,
+  newPropertyClaim: PropertyClaim
+): boolean => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims && strategy.property_claims.length > 0) {
+      const found = addPropertyClaimToNested(
+        strategy.property_claims,
+        parentId,
+        newPropertyClaim
+      );
+      if (found) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 export const addPropertyClaimToNested = (
   propertyClaims: PropertyClaim[],
   parentId: number,
   newPropertyClaim: PropertyClaim
 ): boolean => {
   // Iterate through the property claims array
-  for (let i = 0; i < propertyClaims.length; i++) {
-    const propertyClaim = propertyClaims[i];
-
+  for (const propertyClaim of propertyClaims) {
     // Check if this property claim matches the parent ID
     if (propertyClaim.id === parentId) {
-      // Check if the property claim already has property claims array
-      if (!propertyClaim.property_claims) {
-        propertyClaim.property_claims = [];
-      }
-
-      // Add the new property claim to the property claim's property claims
-      propertyClaim.property_claims.push(newPropertyClaim);
-
+      addPropertyClaimToSpecificClaim(propertyClaim, newPropertyClaim);
       return true; // Indicates the property claim was found and updated
     }
 
@@ -79,7 +176,7 @@ export const addPropertyClaimToNested = (
       propertyClaim.property_claims &&
       propertyClaim.property_claims.length > 0
     ) {
-      const found = addPropertyClaimToNested(
+      const found = searchInNestedPropertyClaims(
         propertyClaim.property_claims,
         parentId,
         newPropertyClaim
@@ -91,17 +188,13 @@ export const addPropertyClaimToNested = (
 
     // If this property claim has strategies, recursively search within them
     if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-      for (const strategy of propertyClaim.strategies) {
-        if (strategy.property_claims && strategy.property_claims.length > 0) {
-          const found = addPropertyClaimToNested(
-            strategy.property_claims,
-            parentId,
-            newPropertyClaim
-          );
-          if (found) {
-            return true; // Indicates the property claim was found and updated within nested property claims of strategy
-          }
-        }
+      const found = searchInStrategies(
+        propertyClaim.strategies,
+        parentId,
+        newPropertyClaim
+      );
+      if (found) {
+        return true; // Indicates the property claim was found and updated within nested property claims of strategy
       }
     }
   }
@@ -121,6 +214,87 @@ export const addPropertyClaimToNested = (
  * @param newPropertyClaim - An object containing the properties to update the property claim with.
  * @returns Returns the updated array if the property claim is found and updated, otherwise null.
  */
+// Helper function to update a property claim in place
+const updatePropertyClaimInPlace = (
+  array: PropertyClaim[],
+  index: number,
+  propertyClaim: PropertyClaim,
+  newPropertyClaim: Partial<PropertyClaim>
+): void => {
+  array[index] = { ...propertyClaim, ...newPropertyClaim };
+};
+
+// Helper function to search and update in nested property claims
+const searchAndUpdateInNestedClaims = (
+  propertyClaims: PropertyClaim[],
+  id: number,
+  newPropertyClaim: Partial<PropertyClaim>
+): PropertyClaim[] | null => {
+  return updatePropertyClaimNested(propertyClaims, id, newPropertyClaim);
+};
+
+// Helper function to search and update in strategies
+const searchAndUpdateInStrategiesClaims = (
+  strategies: Strategy[],
+  id: number,
+  newPropertyClaim: Partial<PropertyClaim>
+): PropertyClaim[] | null => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims && strategy.property_claims.length > 0) {
+      const updatedNestedArray = updatePropertyClaimNested(
+        strategy.property_claims,
+        id,
+        newPropertyClaim
+      );
+      if (updatedNestedArray) {
+        return updatedNestedArray;
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to process a single property claim
+const processPropertyClaimForUpdate = (
+  array: PropertyClaim[],
+  index: number,
+  propertyClaim: PropertyClaim,
+  id: number,
+  newPropertyClaim: Partial<PropertyClaim>
+): PropertyClaim[] | null => {
+  // Check if this property claim matches the parent ID
+  if (propertyClaim.id === id && propertyClaim.type === 'PropertyClaim') {
+    updatePropertyClaimInPlace(array, index, propertyClaim, newPropertyClaim);
+    return array;
+  }
+
+  // Check nested property claims
+  if (propertyClaim.property_claims?.length) {
+    const result = searchAndUpdateInNestedClaims(
+      propertyClaim.property_claims,
+      id,
+      newPropertyClaim
+    );
+    if (result) {
+      return array;
+    }
+  }
+
+  // Check strategies
+  if (propertyClaim.strategies?.length) {
+    const result = searchAndUpdateInStrategiesClaims(
+      propertyClaim.strategies,
+      id,
+      newPropertyClaim
+    );
+    if (result) {
+      return array;
+    }
+  }
+
+  return null;
+};
+
 export const updatePropertyClaimNested = (
   array: PropertyClaim[],
   id: number,
@@ -128,44 +302,15 @@ export const updatePropertyClaimNested = (
 ): PropertyClaim[] | null => {
   // Iterate through the property claims array
   for (let i = 0; i < array.length; i++) {
-    const propertyClaim = array[i];
-
-    // Check if this property claim matches the parent ID
-    if (propertyClaim.id === id && propertyClaim.type === 'PropertyClaim') {
-      array[i] = { ...propertyClaim, ...newPropertyClaim };
-
-      return array; // Return the updated array
-    }
-
-    // If this property claim has nested property claims, recursively search within them
-    if (
-      propertyClaim.property_claims &&
-      propertyClaim.property_claims.length > 0
-    ) {
-      const updatedNestedArray = updatePropertyClaimNested(
-        propertyClaim.property_claims,
-        id,
-        newPropertyClaim
-      );
-      if (updatedNestedArray) {
-        return array; // Return the updated array
-      }
-    }
-
-    // If this property claim has strategies, recursively search within them
-    if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-      for (const strategy of propertyClaim.strategies) {
-        if (strategy.property_claims && strategy.property_claims.length > 0) {
-          const updatedNestedArray = updatePropertyClaimNested(
-            strategy.property_claims,
-            id,
-            newPropertyClaim
-          );
-          if (updatedNestedArray) {
-            return array; // Return the updated array
-          }
-        }
-      }
+    const result = processPropertyClaimForUpdate(
+      array,
+      i,
+      array[i],
+      id,
+      newPropertyClaim
+    );
+    if (result) {
+      return result;
     }
   }
 
@@ -288,35 +433,106 @@ const addPropertyClaimToLocation = (
  * @param newPropertyClaim - An object containing the properties to update the property claim with.
  * @returns A new array with the property claim updated and moved to the new location.
  */
+// Helper function to search for property claim in item
+const searchPropertyClaimInItem = (
+  item: PropertyClaim,
+  id: number
+): PropertyClaim | null => {
+  if (item.id === id && item.type === 'PropertyClaim') {
+    return item;
+  }
+  return null;
+};
+
+// Helper function to search in property claims of strategies
+const searchInStrategyPropertyClaims = (
+  strategies: Strategy[],
+  id: number
+): PropertyClaim | null => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims) {
+      const found = searchInNestedPropertyClaimsRecursive(
+        strategy.property_claims,
+        id
+      );
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to search a single item and its nested structure
+const searchPropertyClaimItem = (
+  item: PropertyClaim,
+  id: number
+): PropertyClaim | null => {
+  const found = searchPropertyClaimInItem(item, id);
+  if (found) {
+    return found;
+  }
+
+  if (item.property_claims) {
+    const nestedFound = searchInNestedPropertyClaimsRecursive(
+      item.property_claims,
+      id
+    );
+    if (nestedFound) {
+      return nestedFound;
+    }
+  }
+
+  if (item.strategies) {
+    const strategyFound = searchInStrategyPropertyClaims(item.strategies, id);
+    if (strategyFound) {
+      return strategyFound;
+    }
+  }
+
+  return null;
+};
+
+// Helper function to search in nested property claims recursively
+const searchInNestedPropertyClaimsRecursive = (
+  arr: PropertyClaim[],
+  id: number
+): PropertyClaim | null => {
+  for (const item of arr) {
+    const found = searchPropertyClaimItem(item, id);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
+// Helper function to determine new parent ID
+const determineNewParentId = (
+  updatedPropertyClaim: PropertyClaim
+): number | null => {
+  if (updatedPropertyClaim.goal_id !== null) {
+    return updatedPropertyClaim.goal_id;
+  }
+  if (updatedPropertyClaim.strategy_id !== null) {
+    return updatedPropertyClaim.strategy_id;
+  }
+  if (updatedPropertyClaim.property_claim_id !== null) {
+    return updatedPropertyClaim.property_claim_id;
+  }
+  return null;
+};
+
 export const updatePropertyClaimNestedMove = (
   array: PropertyClaim[],
   id: number,
   newPropertyClaim: Partial<PropertyClaim> & { property_claim_id?: number }
 ): PropertyClaim[] => {
   // Find the existing property claim item
-  let existingPropertyClaim: PropertyClaim | null = null;
-  const findExstingPropertyClaim = (arr: PropertyClaim[]) => {
-    for (let i = 0; i < arr.length; i++) {
-      const item = arr[i];
-
-      if (item.id === id && item.type === 'PropertyClaim') {
-        existingPropertyClaim = item;
-        return;
-      }
-
-      if (item.property_claims) {
-        findExstingPropertyClaim(item.property_claims);
-      }
-      if (item.strategies) {
-        for (const strategy of item.strategies) {
-          if (strategy.property_claims) {
-            findExstingPropertyClaim(strategy.property_claims);
-          }
-        }
-      }
-    }
-  };
-  findExstingPropertyClaim(array);
+  const existingPropertyClaim = searchInNestedPropertyClaimsRecursive(
+    array,
+    id
+  );
 
   // Remove evidence from its old location
   const arrayWithoutOldPropertyClaim = removePropertyClaimFromOldLocation(
@@ -330,26 +546,13 @@ export const updatePropertyClaimNestedMove = (
     ...newPropertyClaim,
   } as PropertyClaim;
 
-  // Add evidence to the new location
-  // const newClaimId = newPropertyClaim.property_claim_id[0];
-
-  let newParentId = null;
-  const newParentType = null;
-
-  if (updatedPropertyClaim.goal_id !== null) {
-    newParentId = updatedPropertyClaim.goal_id;
-  }
-  if (updatedPropertyClaim.strategy_id !== null) {
-    newParentId = updatedPropertyClaim.strategy_id;
-  }
-  if (updatedPropertyClaim.property_claim_id !== null) {
-    newParentId = updatedPropertyClaim.property_claim_id;
-  }
+  // Determine the new parent ID
+  const newParentId = determineNewParentId(updatedPropertyClaim);
 
   const updatedArray = addPropertyClaimToLocation(
     arrayWithoutOldPropertyClaim,
     updatedPropertyClaim,
-    newParentId
+    newParentId as number
   );
 
   return updatedArray;
@@ -367,35 +570,64 @@ export const updatePropertyClaimNestedMove = (
  * @param claims - An array to accumulate the found property claims (used for recursion).
  * @returns An array of property claims excluding the specified current claim.
  */
+// Helper function to check and add property claim to list
+const addPropertyClaimToList = (
+  item: PropertyClaim,
+  currentClaimName: string,
+  claims: PropertyClaim[]
+): void => {
+  if (item.type === 'PropertyClaim' && item.name !== currentClaimName) {
+    claims.push(item);
+  }
+};
+
+// Helper function to process nested property claims
+const processNestedPropertyClaims = (
+  propertyClaims: PropertyClaim[],
+  currentClaimName: string,
+  claims: PropertyClaim[]
+): void => {
+  listPropertyClaims(propertyClaims, currentClaimName, claims);
+};
+
+// Helper function to process strategies with property claims
+const processStrategiesPropertyClaims = (
+  strategies: Strategy[],
+  currentClaimName: string,
+  claims: PropertyClaim[]
+): void => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims && strategy.property_claims.length > 0) {
+      listPropertyClaims(strategy.property_claims, currentClaimName, claims);
+    }
+  }
+};
+
 export const listPropertyClaims = (
   array: PropertyClaim[],
   currentClaimName: string,
   claims: PropertyClaim[] = []
 ): PropertyClaim[] => {
   // Iterate through the property claims array
-  for (let i = 0; i < array.length; i++) {
-    const item = array[i];
-
-    if (item.type === 'PropertyClaim' && item.name !== currentClaimName) {
-      claims.push(item);
-    }
+  for (const item of array) {
+    addPropertyClaimToList(item, currentClaimName, claims);
 
     // If this item has nested property claims, recursively search within them
     if (item.property_claims && item.property_claims.length > 0) {
-      listPropertyClaims(item.property_claims, currentClaimName, claims);
+      processNestedPropertyClaims(
+        item.property_claims,
+        currentClaimName,
+        claims
+      );
     }
 
     // If this property claim has strategies, recursively search within them
     if (item.strategies && item.strategies.length > 0) {
-      for (const strategy of item.strategies) {
-        if (strategy.property_claims && strategy.property_claims.length > 0) {
-          listPropertyClaims(
-            strategy.property_claims,
-            currentClaimName,
-            claims
-          );
-        }
-      }
+      processStrategiesPropertyClaims(
+        item.strategies,
+        currentClaimName,
+        claims
+      );
     }
   }
 
@@ -414,25 +646,58 @@ export const listPropertyClaims = (
  * @param newEvidence - The evidence object to add to the property claim.
  * @returns True if the property claim was found and updated; false otherwise.
  */
+// Helper function to add evidence to a specific claim
+const addEvidenceToSpecificClaim = (
+  propertyClaim: PropertyClaim,
+  newEvidence: Evidence
+): void => {
+  if (!propertyClaim.evidence) {
+    propertyClaim.evidence = [];
+  }
+  propertyClaim.evidence.push(newEvidence);
+};
+
+// Helper function to search in nested property claims for evidence
+const searchInNestedClaimsForEvidence = (
+  propertyClaims: PropertyClaim[],
+  parentId: number,
+  newEvidence: Evidence
+): boolean => {
+  const found = addEvidenceToClaim(propertyClaims, parentId, newEvidence);
+  return found;
+};
+
+// Helper function to search in strategies for evidence
+const searchInStrategiesForEvidence = (
+  strategies: Strategy[],
+  parentId: number,
+  newEvidence: Evidence
+): boolean => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims && strategy.property_claims.length > 0) {
+      const found = addEvidenceToClaim(
+        strategy.property_claims,
+        parentId,
+        newEvidence
+      );
+      if (found) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 export const addEvidenceToClaim = (
   array: PropertyClaim[],
   parentId: number,
   newEvidence: Evidence
 ): boolean => {
   // Iterate through the property claims array
-  for (let i = 0; i < array.length; i++) {
-    const propertyClaim = array[i];
-
+  for (const propertyClaim of array) {
     // Check if this property claim matches the parent ID
     if (propertyClaim.id === parentId) {
-      // Check if the property claim already has evidence array
-      if (!propertyClaim.evidence) {
-        propertyClaim.evidence = [];
-      }
-
-      // Add the new property claim to the property claim's property claims
-      propertyClaim.evidence.push(newEvidence);
-
+      addEvidenceToSpecificClaim(propertyClaim, newEvidence);
       return true; // Indicates the property claim was found and updated
     }
 
@@ -441,7 +706,7 @@ export const addEvidenceToClaim = (
       propertyClaim.property_claims &&
       propertyClaim.property_claims.length > 0
     ) {
-      const found = addEvidenceToClaim(
+      const found = searchInNestedClaimsForEvidence(
         propertyClaim.property_claims,
         parentId,
         newEvidence
@@ -453,17 +718,13 @@ export const addEvidenceToClaim = (
 
     // If this property claim has strategies, recursively search within them
     if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-      for (const strategy of propertyClaim.strategies) {
-        if (strategy.property_claims && strategy.property_claims.length > 0) {
-          const found = addEvidenceToClaim(
-            strategy.property_claims,
-            parentId,
-            newEvidence
-          );
-          if (found) {
-            return true; // Indicates the property claim was found and updated within nested property claims of strategy
-          }
-        }
+      const found = searchInStrategiesForEvidence(
+        propertyClaim.strategies,
+        parentId,
+        newEvidence
+      );
+      if (found) {
+        return true; // Indicates the property claim was found and updated within nested property claims of strategy
       }
     }
   }
@@ -483,6 +744,104 @@ export const addEvidenceToClaim = (
  * @param newEvidence - An object containing the properties to update the evidence with.
  * @returns The updated array with the evidence modified, or null if not found.
  */
+// Helper function to update evidence in place
+const updateEvidenceInPlace = (
+  array: PropertyClaim[],
+  index: number,
+  item: PropertyClaim,
+  newEvidence: Partial<Evidence>
+): void => {
+  array[index] = { ...item, ...newEvidence };
+};
+
+// Helper function to search and update in evidence array
+const searchAndUpdateInEvidence = (
+  evidence: Evidence[],
+  id: number,
+  newEvidence: Partial<Evidence>
+): Evidence[] | null => {
+  return updateEvidenceNested(evidence, id, newEvidence);
+};
+
+// Helper function to search and update in nested property claims for evidence
+const searchAndUpdateInNestedClaimsEvidence = (
+  propertyClaims: PropertyClaim[],
+  id: number,
+  newEvidence: Partial<Evidence>
+): PropertyClaim[] | null => {
+  return updateEvidenceNested(propertyClaims, id, newEvidence);
+};
+
+// Helper function to search and update in strategies for evidence
+const searchAndUpdateInStrategiesEvidence = (
+  strategies: Strategy[],
+  id: number,
+  newEvidence: Partial<Evidence>
+): PropertyClaim[] | null => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims && strategy.property_claims.length > 0) {
+      const updatedNestedArray = updateEvidenceNested(
+        strategy.property_claims,
+        id,
+        newEvidence
+      );
+      if (updatedNestedArray) {
+        return updatedNestedArray;
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to process a single item for evidence update
+const processItemForEvidenceUpdate = (
+  array: PropertyClaim[],
+  index: number,
+  item: PropertyClaim,
+  id: number,
+  newEvidence: Partial<Evidence>
+): PropertyClaim[] | null => {
+  // Check if this evidence matches the parent ID
+  if (item.id === id) {
+    updateEvidenceInPlace(array, index, item, newEvidence);
+    return array;
+  }
+
+  // Check evidence array
+  if (item.evidence?.length) {
+    const result = searchAndUpdateInEvidence(item.evidence, id, newEvidence);
+    if (result) {
+      return array;
+    }
+  }
+
+  // Check nested property claims
+  if (item.property_claims?.length) {
+    const result = searchAndUpdateInNestedClaimsEvidence(
+      item.property_claims,
+      id,
+      newEvidence
+    );
+    if (result) {
+      return array;
+    }
+  }
+
+  // Check strategies
+  if (item.strategies?.length) {
+    const result = searchAndUpdateInStrategiesEvidence(
+      item.strategies,
+      id,
+      newEvidence
+    );
+    if (result) {
+      return array;
+    }
+  }
+
+  return null;
+};
+
 export const updateEvidenceNested = (
   array: PropertyClaim[],
   id: number,
@@ -490,49 +849,15 @@ export const updateEvidenceNested = (
 ): PropertyClaim[] | null => {
   // Iterate through the array
   for (let i = 0; i < array.length; i++) {
-    const item = array[i];
-
-    // Check if this evidence matches the parent ID
-    if (item.id === id) {
-      array[i] = { ...item, ...newEvidence };
-      return array; // Return the updated array
-    }
-
-    if (item.evidence && item.evidence.length > 0) {
-      const updatedNestedArray = updateEvidenceNested(
-        item.evidence,
-        id,
-        newEvidence
-      );
-      if (updatedNestedArray) {
-        return array;
-      }
-    }
-
-    if (item.property_claims && item.property_claims.length > 0) {
-      const updatedNestedArray = updateEvidenceNested(
-        item.property_claims,
-        id,
-        newEvidence
-      );
-      if (updatedNestedArray) {
-        return array;
-      }
-    }
-
-    if (item.strategies && item.strategies.length > 0) {
-      for (const strategy of item.strategies) {
-        if (strategy.property_claims && strategy.property_claims.length > 0) {
-          const updatedNestedArray = updateEvidenceNested(
-            strategy.property_claims,
-            id,
-            newEvidence
-          );
-          if (updatedNestedArray) {
-            return array;
-          }
-        }
-      }
+    const result = processItemForEvidenceUpdate(
+      array,
+      i,
+      array[i],
+      id,
+      newEvidence
+    );
+    if (result) {
+      return result;
     }
   }
 
@@ -644,43 +969,103 @@ const addEvidenceToNewLocation = (
  * @param {any} newEvidence - An object containing the properties to update the evidence with.
  * @returns {any[]} The updated array with the evidence moved to the new location.
  */
-export const updateEvidenceNestedMove = (
-  array: any,
-  id: any,
-  newEvidence: any
-) => {
-  // Find the existing evidence item
-  let existingEvidence = null;
-  const findExistingEvidence = (arr: any) => {
-    for (let i = 0; i < arr.length; i++) {
-      const item = arr[i];
-      if (item.evidence) {
-        for (let j = 0; j < item.evidence.length; j++) {
-          if (item.evidence[j].id === id) {
-            existingEvidence = item.evidence[j];
-            return;
-          }
-        }
-      }
-      if (item.property_claims) {
-        findExistingEvidence(item.property_claims);
-      }
-      if (item.strategies) {
-        for (const strategy of item.strategies) {
-          if (strategy.property_claims) {
-            findExistingEvidence(strategy.property_claims);
-          }
-        }
+// Helper function to search for evidence in item
+const searchEvidenceInItem = (
+  item: PropertyClaim,
+  id: number
+): Evidence | null => {
+  if (item.evidence) {
+    for (const evidence of item.evidence) {
+      if (evidence.id === id) {
+        return evidence;
       }
     }
-  };
-  findExistingEvidence(array);
+  }
+  return null;
+};
+
+// Helper function to search in strategy property claims for evidence
+const searchInStrategyClaimsForEvidence = (
+  strategies: Strategy[],
+  id: number
+): Evidence | null => {
+  for (const strategy of strategies) {
+    if (strategy.property_claims) {
+      const found = searchInNestedStructuresForEvidence(
+        strategy.property_claims,
+        id
+      );
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to search a single property claim for evidence
+const searchSinglePropertyClaimForEvidence = (
+  item: PropertyClaim,
+  id: number
+): Evidence | null => {
+  const found = searchEvidenceInItem(item, id);
+  if (found) {
+    return found;
+  }
+
+  if (item.property_claims) {
+    const nestedFound = searchInNestedStructuresForEvidence(
+      item.property_claims,
+      id
+    );
+    if (nestedFound) {
+      return nestedFound;
+    }
+  }
+
+  if (item.strategies) {
+    const strategyFound = searchInStrategyClaimsForEvidence(
+      item.strategies,
+      id
+    );
+    if (strategyFound) {
+      return strategyFound;
+    }
+  }
+
+  return null;
+};
+
+// Helper function to search in nested structures for evidence
+const searchInNestedStructuresForEvidence = (
+  arr: PropertyClaim[],
+  id: number
+): Evidence | null => {
+  for (const item of arr) {
+    const found = searchSinglePropertyClaimForEvidence(item, id);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
+export const updateEvidenceNestedMove = (
+  array: PropertyClaim[],
+  id: number,
+  newEvidence: Partial<Evidence> & { property_claim_id: number[] }
+): PropertyClaim[] => {
+  // Find the existing evidence item
+  const existingEvidence = searchInNestedStructuresForEvidence(array, id);
 
   // Remove evidence from its old location
   const arrayWithoutOldEvidence = removeEvidenceFromOldLocation(array, id);
 
   // Merge existing evidence properties with updated ones
-  const updatedEvidence = { ...(existingEvidence as any), ...newEvidence };
+  const updatedEvidence = {
+    ...(existingEvidence as Evidence),
+    ...newEvidence,
+  } as Evidence;
 
   // Add evidence to the new location
   const newClaimId = newEvidence.property_claim_id[0];
@@ -703,10 +1088,12 @@ export const updateEvidenceNestedMove = (
  */
 export const createAssuranceCaseNode = async (
   entity: string,
-  newItem: any,
+  newItem: CreateNodePayload,
   token: string | null
-) => {
-  if (!token) return { error: 'No token' };
+): Promise<{ data?: ApiNodeResponse; error?: string | unknown }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
@@ -750,10 +1137,12 @@ export const deleteAssuranceCaseNode = async (
   type: string,
   id: number,
   token: string | null
-): Promise<boolean> => {
-  if (!token) return { error: 'No token' };
+): Promise<boolean | { error: string }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
-  let entity = null;
+  let entity: string | null = null;
   switch (type.toLowerCase()) {
     case 'context':
       entity = 'contexts';
@@ -787,7 +1176,7 @@ export const deleteAssuranceCaseNode = async (
     if (response.ok) {
       return true;
     }
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -806,10 +1195,12 @@ export const updateAssuranceCaseNode = async (
   id: number,
   token: string | null,
   updateItem: unknown
-): Promise<boolean> => {
-  if (!token) return { error: 'No token' };
+): Promise<boolean | { error: string }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
-  let entity = null;
+  let entity: string | null = null;
   switch (type) {
     case 'context':
       entity = 'contexts';
@@ -844,19 +1235,21 @@ export const updateAssuranceCaseNode = async (
     if (response.ok) {
       return true;
     }
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
 
 export const getAssuranceCaseNode = async (
   type: string,
-  id: any,
+  id: number,
   token: string | null
-) => {
-  if (!token) return { error: 'No token' };
+): Promise<ApiNodeResponse | { error: string } | false> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
-  let entity = null;
+  let entity: string | null = null;
   switch (type) {
     case 'context':
       entity = 'contexts';
@@ -888,11 +1281,12 @@ export const getAssuranceCaseNode = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // Handle non-ok response
     }
 
     const result = await response.json();
     return result;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 };
@@ -904,41 +1298,167 @@ export const getAssuranceCaseNode = async (
  * @param {any} id - The ID of the item to find.
  * @returns {Promise<any | null>} The found item if it matches the ID, otherwise null.
  */
-export const findItemById = async (item: any, id: any) => {
-  if (item.id === id) {
-    // updateFn(item); // Update the item
-    return item;
+// Helper function to search in context items
+const searchInContextItems = (
+  context: Context[],
+  id: number
+): NestedArrayItem | null => {
+  for (const contextItem of context) {
+    const found = findItemById(contextItem, id);
+    if (found) {
+      return found;
+    }
   }
-  if (item.context) {
-    item.context.forEach((contextItem: any) => findItemById(contextItem, id));
-  }
-  if (item.property_claims) {
-    item.property_claims.forEach((propertyClaim: any) => {
-      findItemById(propertyClaim, id);
-      if (propertyClaim.property_claims) {
-        propertyClaim.property_claims.forEach((childPropertyClaim: any) =>
-          findItemById(childPropertyClaim, id)
-        );
+  return null;
+};
+
+// Helper function to search in property claims
+const searchInPropertyClaims = (
+  propertyClaims: PropertyClaim[],
+  id: number
+): NestedArrayItem | null => {
+  for (const propertyClaim of propertyClaims) {
+    const found = findItemById(propertyClaim, id);
+    if (found) {
+      return found;
+    }
+
+    if (propertyClaim.property_claims) {
+      for (const childPropertyClaim of propertyClaim.property_claims) {
+        const childFound = findItemById(childPropertyClaim, id);
+        if (childFound) {
+          return childFound;
+        }
       }
-    });
+    }
   }
-  if (item.evidence) {
-    item.evidence.forEach((evidenceItem: any) =>
-      findItemById(evidenceItem, id)
+  return null;
+};
+
+// Helper function to search in evidence items
+const searchInEvidenceItems = (
+  evidence: Evidence[],
+  id: number
+): NestedArrayItem | null => {
+  for (const evidenceItem of evidence) {
+    const found = findItemById(evidenceItem, id);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
+
+// Helper function to search in strategies
+const searchInStrategyItems = (
+  strategies: Strategy[],
+  id: number
+): NestedArrayItem | null => {
+  for (const strategyItem of strategies) {
+    const found = findItemById(strategyItem, id);
+    if (found) {
+      return found;
+    }
+
+    if (strategyItem.property_claims) {
+      for (const childPropertyClaim of strategyItem.property_claims) {
+        const childFound = findItemById(childPropertyClaim, id);
+        if (childFound) {
+          return childFound;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+// Helper function to search context if exists
+const searchContextIfExists = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  if ('context' in item && (item as Goal).context) {
+    return searchInContextItems((item as Goal).context, id);
+  }
+  return null;
+};
+
+// Helper function to search property claims if exists
+const searchPropertyClaimsIfExists = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  if (
+    'property_claims' in item &&
+    (item as Goal | PropertyClaim | Strategy).property_claims
+  ) {
+    return searchInPropertyClaims(
+      (item as Goal | PropertyClaim | Strategy).property_claims,
+      id
     );
   }
-  if (item.strategies) {
-    item.strategies.forEach((strategyItem: any) => {
-      findItemById(strategyItem, id);
-      if (strategyItem.property_claims) {
-        strategyItem.property_claims.forEach((childPropertyClaim: any) =>
-          findItemById(childPropertyClaim, id)
-        );
-      }
-    });
+  return null;
+};
+
+// Helper function to search evidence if exists
+const searchEvidenceIfExists = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  if ('evidence' in item && (item as PropertyClaim).evidence) {
+    return searchInEvidenceItems((item as PropertyClaim).evidence, id);
+  }
+  return null;
+};
+
+// Helper function to search strategies if exists
+const searchStrategiesIfExists = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  if ('strategies' in item && (item as Goal).strategies) {
+    return searchInStrategyItems((item as Goal).strategies, id);
+  }
+  return null;
+};
+
+// Helper function to search in all nested structures
+const searchInAllNestedStructures = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  const contextResult = searchContextIfExists(item, id);
+  if (contextResult) {
+    return contextResult;
+  }
+
+  const propertyClaimsResult = searchPropertyClaimsIfExists(item, id);
+  if (propertyClaimsResult) {
+    return propertyClaimsResult;
+  }
+
+  const evidenceResult = searchEvidenceIfExists(item, id);
+  if (evidenceResult) {
+    return evidenceResult;
+  }
+
+  const strategiesResult = searchStrategiesIfExists(item, id);
+  if (strategiesResult) {
+    return strategiesResult;
   }
 
   return null;
+};
+
+export const findItemById = (
+  item: NestedArrayItem | AssuranceCase,
+  id: number
+): NestedArrayItem | null => {
+  if (item.id === id) {
+    return item;
+  }
+
+  return searchInAllNestedStructures(item, id);
 };
 
 /**
@@ -955,28 +1475,35 @@ export const findItemById = async (item: any, id: any) => {
  * @param {boolean} [move=false] - A flag indicating whether the item should be moved (default is false).
  * @returns {any} The updated assurance case object.
  */
-export const updateAssuranceCase = async (
+export const updateAssuranceCase = (
   type: string,
-  assuranceCase: any,
-  updatedItem: any,
-  id: any,
-  node: any,
+  assuranceCase: AssuranceCase,
+  updatedItem:
+    | Partial<Goal>
+    | Partial<Context>
+    | Partial<Strategy>
+    | Partial<PropertyClaim>
+    | Partial<Evidence>,
+  id: number,
+  _node: ReactFlowNode,
   move = false
-) => {
-  let updatedAssuranceCase: any;
-  let updatedGoals: any;
+): AssuranceCase => {
+  let updatedAssuranceCase: AssuranceCase;
+  let updatedGoals: Goal[];
 
   switch (type) {
     case 'context': {
-      const newContext = assuranceCase.goals[0].context.map((context: any) => {
-        if (context.id === id && context.type === 'Context') {
-          return {
-            ...context,
-            ...updatedItem,
-          };
+      const newContext = assuranceCase.goals[0].context.map(
+        (context: Context) => {
+          if (context.id === id && context.type === 'Context') {
+            return {
+              ...context,
+              ...updatedItem,
+            };
+          }
+          return { ...context };
         }
-        return { ...context };
-      });
+      );
 
       updatedAssuranceCase = {
         ...assuranceCase,
@@ -987,7 +1514,7 @@ export const updateAssuranceCase = async (
     case 'strategy': {
       // Create a new strategy array by adding the new context item
       const newStrategy = assuranceCase.goals[0].strategies.map(
-        (strategy: any) => {
+        (strategy: Strategy) => {
           if (strategy.id === id && strategy.type === 'Strategy') {
             return {
               ...strategy,
@@ -1064,9 +1591,12 @@ export const updateAssuranceCase = async (
   }
 };
 
-export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
+export const setNodeIdentifier = (
+  parentNode: ReactFlowNode,
+  newNodeType: string
+): string => {
   let identifier = 0;
-  let newArray: any[] = [];
+  let newArray: (Context | Strategy | PropertyClaim | Evidence)[] = [];
   let parentPrefix: number | null = null;
 
   switch (newNodeType.toLowerCase()) {
@@ -1095,7 +1625,7 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
         lastItem.name.substring(1)
       ).toString();
       const subIdentifier = lastIdentifier.split('.')[1];
-      identifier = Number.parseInt(subIdentifier) + 1;
+      identifier = Number.parseInt(subIdentifier, 10) + 1;
     } else {
       const lastIdentifier = Number.parseFloat(lastItem.name.substring(1));
       identifier = lastIdentifier + 1;
@@ -1123,64 +1653,81 @@ export const setNodeIdentifier = (parentNode: any, newNodeType: string) => {
  *
  */
 const removeItemFromNestedStructure = (
-  array: any[],
-  id: any,
+  array: NestedArrayItem[],
+  id: number,
   type: string
-): any[] => {
+): NestedArrayItem[] => {
   return array
-    .map((item: any) => {
+    .map((item: NestedArrayItem) => {
       // Remove from property_claims
-      if (item.property_claims) {
-        item.property_claims = item.property_claims.filter(
-          (claim: any) => !(claim.id === id && claim.type === type)
+      if ('property_claims' in item && item.property_claims) {
+        (item as Goal | PropertyClaim | Strategy).property_claims = (
+          item as Goal | PropertyClaim | Strategy
+        ).property_claims.filter(
+          (claim: PropertyClaim) => !(claim.id === id && claim.type === type)
         );
-        item.property_claims = removeItemFromNestedStructure(
-          item.property_claims,
-          id,
-          type
-        );
+        (item as Goal | PropertyClaim | Strategy).property_claims =
+          removeItemFromNestedStructure(
+            (item as Goal | PropertyClaim | Strategy)
+              .property_claims as unknown as NestedArrayItem[],
+            id,
+            type
+          ) as unknown as PropertyClaim[];
       }
 
       // Remove from strategies
-      if (item.strategies) {
-        item.strategies = item.strategies
-          .map((strategy: any) => {
+      if ('strategies' in item && item.strategies) {
+        (item as Goal).strategies = (item as Goal).strategies
+          .map((strategy: Strategy) => {
             if (strategy.property_claims) {
               strategy.property_claims = strategy.property_claims.filter(
-                (claim: any) => !(claim.id === id && claim.type === type)
+                (claim: PropertyClaim) =>
+                  !(claim.id === id && claim.type === type)
               );
               strategy.property_claims = removeItemFromNestedStructure(
-                strategy.property_claims,
+                strategy.property_claims as unknown as NestedArrayItem[],
                 id,
                 type
-              );
+              ) as unknown as PropertyClaim[];
             }
             return strategy;
           })
           .filter(
-            (strategy: any) => !(strategy.id === id && strategy.type === type)
+            (strategy: Strategy) =>
+              !(strategy.id === id && strategy.type === type)
           );
       }
 
       // Remove from contexts
-      if (item.context) {
-        item.context = item.context.filter(
-          (context: any) => !(context.id === id && context.type === type)
+      if ('context' in item && item.context) {
+        (item as Goal).context = (item as Goal).context.filter(
+          (context: Context) => !(context.id === id && context.type === type)
         );
-        item.context = removeItemFromNestedStructure(item.context, id, type);
+        (item as Goal).context = removeItemFromNestedStructure(
+          (item as Goal).context as unknown as NestedArrayItem[],
+          id,
+          type
+        ) as unknown as Context[];
       }
 
       // Remove from evidence
-      if (item.evidence) {
-        item.evidence = item.evidence.filter(
-          (evidence: any) => !(evidence.id === id && evidence.type === type)
+      if ('evidence' in item && item.evidence) {
+        (item as PropertyClaim).evidence = (
+          item as PropertyClaim
+        ).evidence.filter(
+          (evidence: Evidence) =>
+            !(evidence.id === id && evidence.type === type)
         );
-        item.evidence = removeItemFromNestedStructure(item.evidence, id, type);
+        (item as PropertyClaim).evidence = removeItemFromNestedStructure(
+          (item as PropertyClaim).evidence as unknown as NestedArrayItem[],
+          id,
+          type
+        ) as unknown as Evidence[];
       }
 
       return item;
     })
-    .filter((item: any) => !(item.id === id && item.type === type));
+    .filter((item: NestedArrayItem) => !(item.id === id && item.type === type));
 };
 
 /**
@@ -1192,15 +1739,15 @@ const removeItemFromNestedStructure = (
  * @returns {any} A new assurance case object with the specified node removed from its goals.
  */
 export const removeAssuranceCaseNode = (
-  assuranceCase: any,
-  id: any,
+  assuranceCase: AssuranceCase,
+  id: number,
   type: string
-) => {
+): AssuranceCase => {
   const updatedGoals = removeItemFromNestedStructure(
-    assuranceCase.goals,
+    assuranceCase.goals as unknown as NestedArrayItem[],
     id,
     type
-  );
+  ) as unknown as Goal[];
   return {
     ...assuranceCase,
     goals: updatedGoals,
@@ -1213,44 +1760,87 @@ export const removeAssuranceCaseNode = (
  * @param {any} array - The array of items to traverse.
  * @returns {{ goal: any | null, claims: any[], strategies: any[] }} An object containing the extracted goal, claims, and strategies.
  */
-export const extractGoalsClaimsStrategies = (array: any) => {
+// Helper function to collect goals
+const collectGoal = (
+  item: NestedArrayItem,
+  result: {
+    goal: Goal | null;
+    claims: PropertyClaim[];
+    strategies: (Goal | PropertyClaim | Strategy)[];
+  }
+): void => {
+  if (item.type === 'TopLevelNormativeGoal') {
+    result.goal = item as Goal;
+  }
+};
+
+// Helper function to collect property claims
+const collectPropertyClaim = (
+  item: NestedArrayItem,
+  result: {
+    goal: Goal | null;
+    claims: PropertyClaim[];
+    strategies: (Goal | PropertyClaim | Strategy)[];
+  }
+): void => {
+  if (item.type === 'PropertyClaim') {
+    result.claims.push(item as PropertyClaim);
+  }
+};
+
+// Helper function to collect strategies
+const collectStrategy = (
+  item: NestedArrayItem,
+  result: {
+    goal: Goal | null;
+    claims: PropertyClaim[];
+    strategies: (Goal | PropertyClaim | Strategy)[];
+  }
+): void => {
+  if (item.type !== 'Evidence' && item.type !== 'Context') {
+    result.strategies.push(item);
+  }
+};
+
+// Helper function to traverse nested structures
+const traverseNestedStructures = (
+  item: NestedArrayItem,
+  traverse: (items: NestedArrayItem[]) => void
+): void => {
+  if ('property_claims' in item && item.property_claims) {
+    traverse(item.property_claims as NestedArrayItem[]);
+  }
+  if ('strategies' in item && item.strategies) {
+    traverse(item.strategies as NestedArrayItem[]);
+  }
+  if ('context' in item && item.context) {
+    traverse(item.context as NestedArrayItem[]);
+  }
+  if ('evidence' in item && item.evidence) {
+    traverse(item.evidence as NestedArrayItem[]);
+  }
+};
+
+export const extractGoalsClaimsStrategies = (
+  array: NestedArrayItem[]
+): {
+  goal: Goal | null;
+  claims: PropertyClaim[];
+  strategies: (Goal | PropertyClaim | Strategy)[];
+} => {
   const result = {
-    goal: null,
-    claims: <any[]>[],
-    strategies: <any[]>[],
+    goal: null as Goal | null,
+    claims: [] as PropertyClaim[],
+    strategies: [] as (Goal | PropertyClaim | Strategy)[],
   };
 
-  const traverse = (items: any) => {
-    items.forEach((item: any) => {
-      // Collect goals
-      if (item.type === 'TopLevelNormativeGoal') {
-        result.goal = item;
-      }
-
-      // Collect property claims
-      if (item.type === 'PropertyClaim') {
-        result.claims.push(item);
-      }
-
-      // Collect strategies
-      if (item.type !== 'Evidence' && item.type !== 'Context') {
-        result.strategies.push(item);
-      }
-
-      // Traverse nested structures
-      if (item.property_claims) {
-        traverse(item.property_claims);
-      }
-      if (item.strategies) {
-        traverse(item.strategies);
-      }
-      if (item.context) {
-        traverse(item.context);
-      }
-      if (item.evidence) {
-        traverse(item.evidence);
-      }
-    });
+  const traverse = (items: NestedArrayItem[]) => {
+    for (const item of items) {
+      collectGoal(item, result);
+      collectPropertyClaim(item, result);
+      collectStrategy(item, result);
+      traverseNestedStructures(item, traverse);
+    }
   };
 
   traverse(array);
@@ -1263,15 +1853,19 @@ export const extractGoalsClaimsStrategies = (array: any) => {
  * @param {any} assuranceCase - The assurance case or node to process.
  * @returns {Promise<any>} The assurance case with the `hidden` property added to each node.
  */
-export const addHiddenProp = async (assuranceCase: any) => {
+export const addHiddenProp = (
+  assuranceCase: AssuranceCase | NestedArrayItem | NestedArrayItem[]
+): AssuranceCase | NestedArrayItem | NestedArrayItem[] => {
   if (Array.isArray(assuranceCase)) {
-    assuranceCase.forEach(addHiddenProp);
+    for (const item of assuranceCase) {
+      addHiddenProp(item);
+    }
   } else if (typeof assuranceCase === 'object' && assuranceCase !== null) {
     assuranceCase.hidden = false;
 
-    Object.keys(assuranceCase).forEach((key) => {
+    for (const key of Object.keys(assuranceCase)) {
       addHiddenProp(assuranceCase[key]);
-    });
+    }
   }
   return assuranceCase;
 };
@@ -1282,22 +1876,24 @@ export const addHiddenProp = async (assuranceCase: any) => {
  * @param {CaseNode} caseNode - The node for which to find adjacent nodes.
  * @returns {Array<CaseNode>} An array of adjacent nodes.
  */
-const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
-  if (caseNode.type == 'AssuranceCase') {
-    return caseNode['goals'];
+const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
+  if (caseNode.type === 'AssuranceCase') {
+    return (caseNode.goals || []) as unknown as CaseNode[];
   }
-  if (caseNode.type == 'TopLevelNormativeGoal') {
-    return caseNode['context'].concat(
-      caseNode['property_claims'],
-      caseNode['strategies'],
-      caseNode['context']
+  if (caseNode.type === 'TopLevelNormativeGoal') {
+    return ((caseNode.context || []) as unknown as CaseNode[]).concat(
+      (caseNode.property_claims || []) as unknown as CaseNode[],
+      (caseNode.strategies || []) as unknown as CaseNode[],
+      (caseNode.context || []) as unknown as CaseNode[]
     );
   }
-  if (caseNode.type == 'Strategy') {
-    return caseNode['property_claims'];
+  if (caseNode.type === 'Strategy') {
+    return (caseNode.property_claims || []) as unknown as CaseNode[];
   }
-  if (caseNode.type == 'PropertyClaim') {
-    return caseNode['property_claims'].concat(caseNode['evidence']);
+  if (caseNode.type === 'PropertyClaim') {
+    return ((caseNode.property_claims || []) as unknown as CaseNode[]).concat(
+      (caseNode.evidence || []) as unknown as CaseNode[]
+    );
   }
 
   return [];
@@ -1313,19 +1909,19 @@ const getAdjacent = (caseNode: CaseNode): Array<CaseNode> => {
 export function searchWithDeepFirst(
   targetNode: CaseNode,
   assuranceCase: CaseNode
-): Array<any> {
-  const visitedNodes: Array<CaseNode> = [];
-  const parentMap: any = {};
-  let nodesToProcess: Array<CaseNode> = [assuranceCase];
+): [CaseNode | null, Record<number, CaseNode>] {
+  const visitedNodes: CaseNode[] = [];
+  const parentMap: Record<number, CaseNode> = {};
+  let nodesToProcess: CaseNode[] = [assuranceCase];
   let nodeFound: CaseNode | null = null;
 
   while (nodesToProcess.length > 0) {
     const currentNode: CaseNode | undefined = nodesToProcess.shift();
     if (currentNode === undefined) {
-      return [];
+      return [null, {}];
     }
 
-    if (currentNode.id == targetNode.id) {
+    if (currentNode.id === targetNode.id) {
       visitedNodes.push(currentNode);
       nodeFound = currentNode;
       break;
@@ -1333,7 +1929,9 @@ export function searchWithDeepFirst(
     visitedNodes.push(currentNode);
     const adjacentNodes = getAdjacent(currentNode);
 
-    adjacentNodes.forEach((node) => (parentMap[node.id] = currentNode));
+    for (const node of adjacentNodes) {
+      parentMap[node.id] = currentNode;
+    }
 
     nodesToProcess = nodesToProcess.concat(adjacentNodes);
   }
@@ -1349,23 +1947,27 @@ export function searchWithDeepFirst(
  * @returns {AssuranceCase} A new assurance case with updated visibility for the node and its parents.
  */
 export function toggleHiddenForParent(
-  node: any,
+  node: ReactFlowNode,
   assuranceCase: AssuranceCase
 ): AssuranceCase {
-  const newAssuranceCase = JSON.parse(JSON.stringify(assuranceCase));
+  const newAssuranceCase = JSON.parse(
+    JSON.stringify(assuranceCase)
+  ) as AssuranceCase;
   const [nodeFound, parentMap] = searchWithDeepFirst(
-    node.data,
-    newAssuranceCase
+    node.data as unknown as CaseNode,
+    newAssuranceCase as unknown as CaseNode
   );
 
-  let currentNode: CaseNode = nodeFound;
-  const nodesToShow: Array<CaseNode> = [];
+  let currentNode: CaseNode | null = nodeFound;
+  const nodesToShow: CaseNode[] = [];
   while (currentNode != null) {
     nodesToShow.push(currentNode);
     currentNode = parentMap[currentNode.id];
   }
 
-  nodesToShow.forEach((node) => (node.hidden = false));
+  for (const nodeToShow of nodesToShow) {
+    nodeToShow.hidden = false;
+  }
 
   return newAssuranceCase;
 }
@@ -1377,55 +1979,134 @@ export function toggleHiddenForParent(
  * @param {number} parentId - The ID of the parent node whose children visibility will be toggled.
  * @returns {AssuranceCase} A new assurance case with updated visibility for the children of the specified parent node.
  */
+// Helper function to handle array processing
+const processArray = (
+  arr: unknown[],
+  targetParentId: number,
+  parentFound: boolean,
+  hide: boolean,
+  toggleChildren: (
+    item: unknown,
+    targetId: number,
+    isParentFound: boolean,
+    shouldHide: boolean
+  ) => void
+): void => {
+  for (const item of arr) {
+    toggleChildren(item, targetParentId, parentFound, hide);
+  }
+};
+
+// Helper function to handle parent node
+const handleParentNode = (
+  node: CaseNode,
+  targetParentId: number
+): { parentFound: boolean; hide: boolean } => {
+  if (node.id === targetParentId) {
+    const hide = !node.childrenHidden; // Toggle childrenHidden for the parent
+    node.childrenHidden = hide; // Track the state of children visibility
+    return { parentFound: true, hide };
+  }
+  return { parentFound: false, hide: false };
+};
+
+// Helper function to handle child visibility
+const handleChildVisibility = (
+  node: CaseNode,
+  hide: boolean,
+  isChild: boolean
+): void => {
+  if (!isChild) {
+    return;
+  }
+
+  if (hide) {
+    if (node.originalHidden === undefined) {
+      node.originalHidden = !!node.hidden; // Record the original hidden state
+    }
+    node.hidden = true; // Force hidden
+  } else if (node.originalHidden !== undefined) {
+    node.hidden = node.originalHidden; // Reset to original hidden state
+    node.originalHidden = undefined; // Clean up originalHidden property
+  } else {
+    node.hidden = false; // If no original hidden state, set to visible
+  }
+};
+
+// Helper function to process object properties
+const processObjectProperties = (
+  obj: Record<string, unknown>,
+  targetParentId: number,
+  parentFound: boolean,
+  hide: boolean,
+  toggleChildren: (
+    item: unknown,
+    targetId: number,
+    isParentFound: boolean,
+    shouldHide: boolean
+  ) => void
+): void => {
+  for (const key of Object.keys(obj)) {
+    toggleChildren(obj[key], targetParentId, parentFound, hide);
+  }
+};
+
 export function toggleHiddenForChildren(
   assuranceCase: AssuranceCase,
   parentId: number
 ): AssuranceCase {
   function toggleChildren(
-    obj: any,
-    parentId: number,
+    obj: unknown,
+    targetParentId: number,
     parentFound: boolean,
     hide: boolean
   ): void {
     if (Array.isArray(obj)) {
-      obj.forEach((item) => toggleChildren(item, parentId, parentFound, hide));
-    } else if (typeof obj === 'object' && obj !== null) {
-      // Check if current object is the parent or one of its descendants
-      const isParentOrDescendant = parentFound || obj.id === parentId;
-
-      // Reset childrenHidden if it's a descendant and not the direct parent
-      if (isParentOrDescendant && obj.id !== parentId) {
-        obj.childrenHidden = false;
-      }
-
-      if (obj.id === parentId) {
-        parentFound = true;
-        hide = !obj.childrenHidden; // Toggle childrenHidden for the parent
-        obj.childrenHidden = hide; // Track the state of children visibility
-      }
-
-      if (parentFound && obj.id !== parentId) {
-        if (hide) {
-          if (obj.originalHidden === undefined) {
-            obj.originalHidden = !!obj.hidden; // Record the original hidden state
-          }
-          obj.hidden = true; // Force hidden
-        } else if (obj.originalHidden !== undefined) {
-          obj.hidden = obj.originalHidden; // Reset to original hidden state
-          delete obj.originalHidden; // Clean up originalHidden property
-        } else {
-          obj.hidden = false; // If no original hidden state, set to visible
-        }
-      }
-
-      Object.keys(obj).forEach((key) =>
-        toggleChildren(obj[key], parentId, parentFound, hide)
-      );
+      processArray(obj, targetParentId, parentFound, hide, toggleChildren);
+      return;
     }
+
+    if (typeof obj !== 'object' || obj === null) {
+      return;
+    }
+
+    const node = obj as CaseNode;
+    let newParentFound = parentFound;
+    let newHide = hide;
+
+    // Check if current object is the parent or one of its descendants
+    const isParentOrDescendant = parentFound || node.id === targetParentId;
+
+    // Reset childrenHidden if it's a descendant and not the direct parent
+    if (isParentOrDescendant && node.id !== targetParentId) {
+      node.childrenHidden = false;
+    }
+
+    // Handle parent node
+    const parentResult = handleParentNode(node, targetParentId);
+    if (parentResult.parentFound) {
+      newParentFound = true;
+      newHide = parentResult.hide;
+    }
+
+    // Handle child visibility
+    const isChild = newParentFound && node.id !== targetParentId;
+    handleChildVisibility(node, newHide, isChild);
+
+    // Process object properties
+    processObjectProperties(
+      obj as Record<string, unknown>,
+      targetParentId,
+      newParentFound,
+      newHide,
+      toggleChildren
+    );
   }
 
   // Create a deep copy of the assuranceCase to ensure immutability
-  const newAssuranceCase = JSON.parse(JSON.stringify(assuranceCase));
+  const newAssuranceCase = JSON.parse(
+    JSON.stringify(assuranceCase)
+  ) as AssuranceCase;
 
   // Toggle hidden property for the children
   toggleChildren(newAssuranceCase, parentId, false, false);
@@ -1440,12 +2121,42 @@ export function toggleHiddenForChildren(
  * @param {number} id - The unique identifier of the element to find.
  * @returns {any} The found element, or null if not found.
  */
-export function findElementById(assuranceCase: AssuranceCase, id: number): any {
+// Helper function to search in child elements
+const searchInChildElements = (
+  element: NestedArrayItem | AssuranceCase,
+  targetId: number,
+  childrenKeys: string[],
+  searchElement: (
+    el: NestedArrayItem | AssuranceCase,
+    id: number
+  ) => NestedArrayItem | AssuranceCase | null
+): NestedArrayItem | AssuranceCase | null => {
+  for (const key of childrenKeys) {
+    if (element[key]) {
+      for (const child of element[key]) {
+        const result = searchElement(child, targetId);
+        if (result) {
+          return result;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+export function findElementById(
+  assuranceCase: AssuranceCase,
+  id: number
+): NestedArrayItem | AssuranceCase | null {
   // Recursive function to search for the element with the given ID
-  function searchElement(element: any, id: number): any {
-    if (element.id === id) {
+  function searchElement(
+    element: NestedArrayItem | AssuranceCase,
+    targetId: number
+  ): NestedArrayItem | AssuranceCase | null {
+    if (element.id === targetId) {
       return element;
     }
+
     const childrenKeys = [
       'goals',
       'context',
@@ -1454,17 +2165,13 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
       'evidence',
       'comments',
     ];
-    for (const key of childrenKeys) {
-      if (element[key]) {
-        for (const child of element[key]) {
-          const result = searchElement(child, id);
-          if (result) {
-            return result;
-          }
-        }
-      }
-    }
-    return null;
+
+    return searchInChildElements(
+      element,
+      targetId,
+      childrenKeys,
+      searchElement
+    );
   }
 
   return searchElement(assuranceCase, id);
@@ -1476,7 +2183,9 @@ export function findElementById(assuranceCase: AssuranceCase, id: number): any {
  * @param {any} element - The element whose children's hidden status is to be retrieved.
  * @returns {boolean[]} An array of boolean values representing the hidden status of each child element.
  */
-export function getChildrenHiddenStatus(element: any): boolean[] {
+export function getChildrenHiddenStatus(
+  element: NestedArrayItem | AssuranceCase
+): boolean[] {
   let hiddenStatus: boolean[] = [];
   const childrenKeys = [
     'context',
@@ -1529,33 +2238,39 @@ export const findSiblingHiddenState = (
  * @param {any} node - The node for which to find the parent.
  * @returns {any|null} The parent node if found, or null if not found.
  */
-export const findParentNode = (nodes: any, node: any) => {
-  let parent = null;
-
+export const findParentNode = (
+  nodes: ReactFlowNode[],
+  node: ReactFlowNode
+): ReactFlowNode | null => {
   if (node.data.goal_id) {
     // search for goal
-    return (parent = nodes.filter(
-      (n: any) => n.data.id === node.data.goal_id
-    )[0]);
+    const parent = nodes.filter(
+      (n: ReactFlowNode) => n.data.id === node.data.goal_id
+    )[0];
+    return parent || null;
   }
   if (node.data.property_claim_id) {
     if (node.type === 'evidence') {
-      return (parent = nodes.filter(
-        (n: any) => n.data.id === node.data.property_claim_id[0]
-      )[0]);
+      const parent = nodes.filter(
+        (n: ReactFlowNode) =>
+          n.data.id === (node.data.property_claim_id as number[])[0]
+      )[0];
+      return parent || null;
     }
     // search for property claim
-    return (parent = nodes.filter(
-      (n: any) => n.data.id === node.data.property_claim_id
-    )[0]);
+    const parent = nodes.filter(
+      (n: ReactFlowNode) => n.data.id === node.data.property_claim_id
+    )[0];
+    return parent || null;
   }
   if (node.data.strategy_id) {
     // search for strategy
-    return (parent = nodes.filter(
-      (n: any) => n.data.id === node.data.strategy_id
-    )[0]);
+    const parent = nodes.filter(
+      (n: ReactFlowNode) => n.data.id === node.data.strategy_id
+    )[0];
+    return parent || null;
   }
-  return parent;
+  return null;
 };
 
 /**
@@ -1568,20 +2283,22 @@ export const findParentNode = (nodes: any, node: any) => {
  * @returns {Promise<any>} A promise that resolves with the result of the detach operation.
  */
 export const detachCaseElement = async (
-  node: any,
+  node: ReactFlowNode,
   type: string,
-  id: any,
+  id: number,
   token: string | null
-): Promise<any> => {
-  if (!token) return { error: 'No token' };
+): Promise<{ detached: boolean } | { error: string | unknown }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
-  const payload: any = {
+  const payload: DetachPayload = {
     goal_id: null,
     strategy_id: null,
     property_claim_id: null,
   };
 
-  let entity = null;
+  let entity: string | null = null;
   switch (type) {
     case 'context':
       entity = 'contexts';
@@ -1603,7 +2320,10 @@ export const detachCaseElement = async (
       break;
     case 'evidence':
       entity = 'evidence';
-      payload.property_claim_id = node.data.property_claim_id[0];
+      payload.property_claim_id = (node.data.property_claim_id as number[])[0];
+      break;
+    default:
+      entity = 'goals';
       break;
   }
 
@@ -1641,20 +2361,22 @@ export const detachCaseElement = async (
  * @returns {Promise<any>} A promise that resolves with the result of the attach operation.
  */
 export const attachCaseElement = async (
-  orphan: any,
-  id: any,
+  orphan: ReactFlowNode,
+  id: number,
   token: string | null,
-  parent: any
-): Promise<any> => {
-  if (!token) return { error: 'No token' };
+  parent: ReactFlowNode
+): Promise<{ attached: boolean } | { error: string | unknown }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
-  const payload: any = {
+  const payload: DetachPayload = {
     goal_id: null,
     strategy_id: null,
     property_claim_id: null,
   };
 
-  let entity = null;
+  let entity: string | null = null;
   switch (orphan.type.toLowerCase()) {
     case 'context':
       entity = 'contexts';
@@ -1680,6 +2402,9 @@ export const attachCaseElement = async (
     case 'evidence':
       entity = 'evidence';
       payload.property_claim_id = parent.data.id;
+      break;
+    default:
+      // Handle other types
       break;
   }
 
@@ -1709,10 +2434,12 @@ export const attachCaseElement = async (
 export const addElementComment = async (
   entity: string,
   id: number,
-  newComment: any,
+  newComment: CommentPayload,
   token: string | null
-) => {
-  if (!token) return { error: 'No token' };
+): Promise<Comment | { error: string | unknown }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
@@ -1728,6 +2455,7 @@ export const addElementComment = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // Handle non-ok response
     }
 
     const result = await response.json();
@@ -1741,11 +2469,13 @@ export const addElementComment = async (
 export const updateElementComment = async (
   entity: string,
   id: number,
-  newComment: any,
+  newComment: CommentPayload,
   newCommentId: number,
   token: string | null
-) => {
-  if (!token) return { error: 'No token' };
+): Promise<Comment | { error: string | unknown }> => {
+  if (!token) {
+    return { error: 'No token' };
+  }
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
@@ -1761,6 +2491,7 @@ export const updateElementComment = async (
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // Handle non-ok response
     }
 
     const result = await response.json();

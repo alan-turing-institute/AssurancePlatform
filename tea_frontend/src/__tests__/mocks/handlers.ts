@@ -143,7 +143,7 @@ export const handlers = [
   }),
 
   // Fallback for unhandled requests
-  http.all('*', ({ request }) => {
+  http.all('*', () => {
     return new HttpResponse(null, { status: 404 });
   }),
 ];

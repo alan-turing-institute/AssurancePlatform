@@ -1,3 +1,26 @@
+import type { Edge, Node } from 'reactflow';
+import type { Evidence, Goal, PropertyClaim, Strategy } from '@/types';
+
+// Define the structure of items that can be converted to nodes
+export interface ConvertibleItem {
+  id: number;
+  name: string;
+  type: string;
+  short_description?: string;
+  hidden?: boolean;
+  context?: ConvertibleItem[];
+  strategies?: Strategy[];
+  property_claims?: PropertyClaim[];
+  evidence?: Evidence[];
+  [key: string]: unknown;
+}
+
+// Define the structure of the assurance case
+export interface AssuranceCaseWithGoals {
+  goals: Goal[];
+  [key: string]: unknown;
+}
+
 /**
  * Convert Assurance Case
  *
@@ -6,9 +29,9 @@
  * @param {Object} assuranceCase - Assurance case object retrieved from the database
  *
  */
-export const convertAssuranceCase = async (assuranceCase: any) => {
-  let caseNodes: any[] = [],
-    caseEdges: any[] = [];
+export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
+  let caseNodes: Node[] = [],
+    caseEdges: Edge[] = [];
 
   // Create nodes for each child array item
   const goals = assuranceCase.goals;
@@ -39,26 +62,26 @@ export const convertAssuranceCase = async (assuranceCase: any) => {
  *
  */
 export const createNodesRecursively = (
-  items: any,
+  items: ConvertibleItem[],
   nodeType: string,
-  parentNode: any | null = null,
-  processedItems = new Set(),
+  parentNode: Node | null = null,
+  processedItems = new Set<ConvertibleItem>(),
   depth = 10
-) => {
-  const nodes: any[] = [];
+): Node[] => {
+  const nodes: Node[] = [];
 
   if (depth <= 0) {
     return nodes;
   }
 
-  items.forEach((item: any) => {
+  for (const item of items) {
     // Check if the item has already been processed
     if (processedItems.has(item)) {
-      return;
+      continue;
     }
 
     const nodeId = crypto.randomUUID();
-    const node = {
+    const node: Node = {
       id: nodeId,
       type: nodeType,
       data: {
@@ -123,7 +146,7 @@ export const createNodesRecursively = (
       );
       nodes.push(...evidenceNodes);
     }
-  });
+  }
 
   return nodes;
 };
@@ -139,10 +162,10 @@ export const createNodesRecursively = (
  * @returns {any[]} An array of edges, where each edge links a parent node to a child node.
  *
  */
-export const createEdgesFromNodes = (nodes: any[]) => {
-  const edges: any[] = [];
+export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
+  const edges: Edge[] = [];
 
-  nodes.forEach((node) => {
+  for (const node of nodes) {
     // Get the ID of the current node
     const currentNodeId = node.id;
 
@@ -150,9 +173,9 @@ export const createEdgesFromNodes = (nodes: any[]) => {
     if (node.data.parentId) {
       // Create an edge from the parent node to the current node
       const edgeId = `e${crypto.randomUUID()}`;
-      const edge = {
+      const edge: Edge = {
         id: edgeId,
-        source: node.data.parentId,
+        source: node.data.parentId as string,
         target: currentNodeId,
         animated: node.type === 'context',
         sourceHandle: 'c',
@@ -162,7 +185,7 @@ export const createEdgesFromNodes = (nodes: any[]) => {
 
       edges.push(edge);
     }
-  });
+  }
 
   return edges;
 };

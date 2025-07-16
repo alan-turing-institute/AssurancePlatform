@@ -20,6 +20,7 @@ export default function Hero() {
               </pattern>
             </defs>
             <svg className="overflow-visible fill-gray-50" x="50%" y={-1}>
+              <title>Background decoration pattern</title>
               <path
                 d="M-200 0h201v201h-201Z M600 0h201v201h-201Z M-400 600h201v201h-201Z M200 800h201v201h-201Z"
                 strokeWidth={0}

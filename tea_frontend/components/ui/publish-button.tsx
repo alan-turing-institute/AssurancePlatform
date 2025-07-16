@@ -3,12 +3,18 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { updateCaseStudy } from '@/actions/case-studies';
+import type { CaseStudy } from '@/types/domain';
 import { useToast } from './use-toast';
+
+// Extended CaseStudy type for publish functionality
+interface CaseStudyWithAssuranceCases extends CaseStudy {
+  assurance_cases?: number[];
+}
 
 interface PublishButtonProps {
   label: string;
   published: boolean;
-  caseStudy: any;
+  caseStudy: CaseStudyWithAssuranceCases;
 }
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
@@ -70,7 +76,7 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
     formData.append('id', caseStudy.id.toString());
     formData.append(
       'assurance_cases',
-      JSON.stringify(caseStudy.assurance_cases)
+      JSON.stringify(caseStudy.assurance_cases || [])
     );
 
     // Set only the fields that need updating

@@ -4,6 +4,14 @@ import {
   renderWithoutProviders,
   screen,
 } from '@/src/__tests__/utils/test-utils';
+
+// Regex constants for text matching
+const OPEN_DIALOG_REGEX = /open dialog/i;
+const CANCEL_REGEX = /cancel/i;
+const CLOSE_REGEX = /close/i;
+const CONFIRM_REGEX = /confirm/i;
+const OPEN_REGEX = /open/i;
+
 import { Button } from './button';
 import {
   Dialog,
@@ -41,7 +49,7 @@ describe('Dialog', () => {
   it('should render dialog trigger correctly', () => {
     renderWithoutProviders(<DialogDemo />);
 
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     expect(trigger).toBeInTheDocument();
   });
 
@@ -49,7 +57,7 @@ describe('Dialog', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<DialogDemo />);
 
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -65,13 +73,13 @@ describe('Dialog', () => {
     renderWithoutProviders(<DialogDemo />);
 
     // Open dialog
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     // Close dialog using cancel button
-    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    const cancelButton = screen.getByRole('button', { name: CANCEL_REGEX });
     await user.click(cancelButton);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -82,13 +90,13 @@ describe('Dialog', () => {
     renderWithoutProviders(<DialogDemo />);
 
     // Open dialog
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     // Close dialog using X button
-    const closeButton = screen.getByRole('button', { name: /close/i });
+    const closeButton = screen.getByRole('button', { name: CLOSE_REGEX });
     await user.click(closeButton);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -99,7 +107,7 @@ describe('Dialog', () => {
     renderWithoutProviders(<DialogDemo />);
 
     // Open dialog
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -115,7 +123,7 @@ describe('Dialog', () => {
     renderWithoutProviders(<DialogDemo />);
 
     // Open dialog
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     const dialog = screen.getByRole('dialog');
@@ -130,7 +138,7 @@ describe('Dialog', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<DialogDemo />);
 
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     const title = screen.getByText('Dialog Title');
@@ -149,11 +157,11 @@ describe('Dialog', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<DialogDemo />);
 
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
-    const cancelButton = screen.getByRole('button', { name: /cancel/i });
-    const confirmButton = screen.getByRole('button', { name: /confirm/i });
+    const cancelButton = screen.getByRole('button', { name: CANCEL_REGEX });
+    const confirmButton = screen.getByRole('button', { name: CONFIRM_REGEX });
 
     expect(cancelButton).toBeInTheDocument();
     expect(confirmButton).toBeInTheDocument();
@@ -194,7 +202,7 @@ describe('Dialog', () => {
 
     renderWithoutProviders(<CustomDialog />);
 
-    const trigger = screen.getByRole('button', { name: /open/i });
+    const trigger = screen.getByRole('button', { name: OPEN_REGEX });
     await user.click(trigger);
 
     const dialog = screen.getByRole('dialog');
@@ -205,7 +213,7 @@ describe('Dialog', () => {
     const user = userEvent.setup();
     renderWithoutProviders(<DialogDemo />);
 
-    const trigger = screen.getByRole('button', { name: /open dialog/i });
+    const trigger = screen.getByRole('button', { name: OPEN_DIALOG_REGEX });
     await user.click(trigger);
 
     // Radix Dialog should handle body scroll prevention automatically

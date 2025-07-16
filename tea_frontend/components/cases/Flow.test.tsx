@@ -1,3 +1,4 @@
+import type { Edge, Node, NodeTypes, OnNodesChange } from 'reactflow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockAssuranceCase,
@@ -9,13 +10,27 @@ import {
   userEvent,
   waitFor,
 } from '@/src/__tests__/utils/test-utils';
+import type { AssuranceCase, Goal } from '@/types';
 import Flow from './flow';
+
+// Regex constants for text matching
+const LOADING_STATUS_REGEX = /loading/i;
+const DISMISS_BUTTON_REGEX = /close|dismiss|x/i;
 
 // Mock ReactFlow
 const mockFitView = vi.fn();
 const mockReactFlow = {
   fitView: mockFitView,
 };
+
+// Define types for mock ReactFlow props
+interface MockReactFlowProps {
+  nodes: Node[];
+  edges: Edge[];
+  onNodeClick?: (event: React.MouseEvent, node: Node) => void;
+  onNodesChange?: OnNodesChange;
+  children?: React.ReactNode;
+}
 
 vi.mock('reactflow', async () => {
   const actual = await vi.importActual('reactflow');
@@ -26,22 +41,23 @@ vi.mock('reactflow', async () => {
       nodes,
       edges,
       onNodeClick,
-      onNodesChange,
+      onNodesChange: _onNodesChange,
       children,
-    }: any) => (
+    }: MockReactFlowProps) => (
       <div
         data-edges-count={edges.length}
         data-nodes-count={nodes.length}
         data-testid="react-flow"
       >
-        {nodes.map((node: any) => (
-          <div
+        {nodes.map((node: Node) => (
+          <button
             data-testid={`node-${node.id}`}
             key={node.id}
-            onClick={(e) => onNodeClick(e, node)}
+            onClick={(e) => onNodeClick?.(e, node)}
+            type="button"
           >
-            {node.data.label}
-          </div>
+            {node.data?.label}
+          </button>
         ))}
         {children}
       </div>
@@ -52,39 +68,76 @@ vi.mock('reactflow', async () => {
   };
 });
 
+// Define type for orphaned elements
+type OrphanedElement = {
+  id: number;
+  type: string;
+  name: string;
+};
+
 // Mock the store
 const mockStore = {
-  nodes: [] as any[],
-  edges: [] as any[],
-  nodeTypes: {},
-  onNodesChange: vi.fn(),
+  nodes: [] as Node[],
+  edges: [] as Edge[],
+  nodeTypes: {} as NodeTypes,
+  onNodesChange: vi.fn() as unknown as OnNodesChange,
   setNodes: vi.fn(),
   setEdges: vi.fn(),
   layoutNodes: vi.fn(),
-  assuranceCase: mockAssuranceCase as any,
-  orphanedElements: [] as any[],
+  assuranceCase: mockAssuranceCase as AssuranceCase,
+  orphanedElements: [] as OrphanedElement[],
 };
 
 vi.mock('@/data/store', () => ({
   default: () => mockStore,
 }));
 
+// Define types for ActionButtons props
+interface ActionButtonsProps {
+  showCreateGoal: boolean;
+  actions: {
+    onLayout: (direction: string) => void;
+  };
+  notify: (message: string) => void;
+  notifyError: (message: string) => void;
+}
+
 // Mock child components
 vi.mock('./ActionButtons', () => ({
-  default: ({ showCreateGoal, actions, notify, notifyError }: any) => (
+  default: ({
+    showCreateGoal,
+    actions,
+    notify,
+    notifyError,
+  }: ActionButtonsProps) => (
     <div data-show-create-goal={showCreateGoal} data-testid="action-buttons">
-      <button onClick={() => actions.onLayout('TB')}>Layout</button>
-      <button onClick={() => notify('Test notification')}>Notify</button>
-      <button onClick={() => notifyError('Test error')}>Notify Error</button>
+      <button onClick={() => actions.onLayout('TB')} type="button">
+        Layout
+      </button>
+      <button onClick={() => notify('Test notification')} type="button">
+        Notify
+      </button>
+      <button onClick={() => notifyError('Test error')} type="button">
+        Notify Error
+      </button>
     </div>
   ),
 }));
 
+// Define types for NodeEdit props
+interface NodeEditProps {
+  node: Node | null;
+  isOpen: boolean;
+  setEditOpen: (open: boolean) => void;
+}
+
 vi.mock('@/components/common/NodeEdit', () => ({
-  default: ({ node, isOpen, setEditOpen }: any) =>
+  default: ({ node, isOpen, setEditOpen }: NodeEditProps) =>
     isOpen ? (
       <div data-node-id={node?.id} data-testid="node-edit">
-        <button onClick={() => setEditOpen(false)}>Close Edit</button>
+        <button onClick={() => setEditOpen(false)} type="button">
+          Close Edit
+        </button>
       </div>
     ) : null,
 }));
@@ -107,8 +160,8 @@ vi.mock('@/lib/convert-case', () => ({
 }));
 
 vi.mock('@/lib/layout-helper', () => ({
-  getLayoutedElements: vi.fn((nodes, edges) => ({
-    nodes: nodes.map((n: any) => ({ ...n, position: { x: 100, y: 100 } })),
+  getLayoutedElements: vi.fn((nodes: Node[], edges: Edge[]) => ({
+    nodes: nodes.map((n: Node) => ({ ...n, position: { x: 100, y: 100 } })),
     edges,
   })),
 }));
@@ -130,7 +183,20 @@ describe('Flow', () => {
     mockStore.nodes = [];
     mockStore.edges = [];
     mockStore.assuranceCase = createMockAssuranceCase({});
-    mockStore.assuranceCase.goals = [{ id: 1, name: 'Test Goal' } as any];
+    mockStore.assuranceCase.goals = [
+      {
+        id: 1,
+        type: 'goal',
+        name: 'Test Goal',
+        short_description: '',
+        long_description: '',
+        keywords: '',
+        assurance_case_id: 1,
+        context: [],
+        property_claims: [],
+        strategies: [],
+      } as Goal,
+    ];
     mockStore.orphanedElements = [];
     mockFitView.mockClear();
   });
@@ -140,7 +206,7 @@ describe('Flow', () => {
       renderWithAuth(<Flow />);
 
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_STATUS_REGEX })
       ).toBeInTheDocument();
     });
 
@@ -152,7 +218,7 @@ describe('Flow', () => {
   });
 
   describe('ReactFlow Rendering', () => {
-    beforeEach(async () => {
+    beforeEach(() => {
       mockStore.nodes = [
         {
           id: '1',
@@ -364,14 +430,14 @@ describe('Flow', () => {
       );
     });
 
-    it('should handle assurance case without goals', async () => {
+    it('should handle assurance case without goals', () => {
       mockStore.assuranceCase = createMockAssuranceCase({ goals: [] });
 
       renderWithAuth(<Flow />);
 
       // Should not crash and show loading state
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_STATUS_REGEX })
       ).toBeInTheDocument();
     });
 
@@ -388,7 +454,20 @@ describe('Flow', () => {
       mockStore.assuranceCase = createMockAssuranceCase({
         id: 2,
       });
-      mockStore.assuranceCase.goals = [{ id: 2, name: 'New Goal' } as any];
+      mockStore.assuranceCase.goals = [
+        {
+          id: 2,
+          type: 'goal',
+          name: 'New Goal',
+          short_description: '',
+          long_description: '',
+          keywords: '',
+          assurance_case_id: 2,
+          context: [],
+          property_claims: [],
+          strategies: [],
+        } as Goal,
+      ];
 
       rerender(<Flow />);
 
@@ -445,7 +524,9 @@ describe('Flow', () => {
         ).toBeInTheDocument();
       });
 
-      const dismissButton = screen.getByRole('button', { name: '' }); // X button
+      const dismissButton = screen.getByRole('button', {
+        name: DISMISS_BUTTON_REGEX,
+      }); // X button
       await user.click(dismissButton);
 
       expect(
@@ -647,7 +728,9 @@ describe('Flow', () => {
     it('should have proper loading state accessibility', () => {
       renderWithAuth(<Flow />);
 
-      const loadingSpinner = screen.getByRole('status', { name: /loading/i });
+      const loadingSpinner = screen.getByRole('status', {
+        name: LOADING_STATUS_REGEX,
+      });
       expect(loadingSpinner).toHaveClass('animate-spin');
     });
 
@@ -689,24 +772,24 @@ describe('Flow', () => {
 
       // Should not crash and remain in loading state
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_STATUS_REGEX })
       ).toBeInTheDocument();
     });
 
-    it('should handle missing assurance case', async () => {
+    it('should handle missing assurance case', () => {
       mockStore.assuranceCase = null;
 
       renderWithAuth(<Flow />);
 
       // Should handle gracefully
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_STATUS_REGEX })
       ).toBeInTheDocument();
     });
 
     it('should handle malformed node data', async () => {
       mockStore.nodes = [
-        { id: '1', type: 'goal', data: null, position: { x: 0, y: 0 } },
+        { id: '1', type: 'goal', data: null, position: { x: 0, y: 0 } } as Node,
       ];
 
       renderWithAuth(<Flow />);

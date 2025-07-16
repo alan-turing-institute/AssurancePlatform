@@ -29,10 +29,8 @@ interface usePermissionsModalStore {
  * @function
  * @returns {usePermissionsModalStore} The Zustand store with modal state and actions.
  */
-export const usePermissionsModal = create<usePermissionsModalStore>(
-  (set: any) => ({
-    isOpen: false,
-    onOpen: () => set({ isOpen: true }),
-    onClose: () => set({ isOpen: false }),
-  })
-);
+export const usePermissionsModal = create<usePermissionsModalStore>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));

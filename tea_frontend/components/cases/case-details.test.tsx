@@ -35,9 +35,15 @@ vi.mock('./CaseEditForm', () => ({
     setUnresolvedChanges: (val: boolean) => void;
   }) => (
     <div data-testid="case-edit-form">
-      <button onClick={onClose}>Close Form</button>
-      <button onClick={() => setUnresolvedChanges(true)}>Make Changes</button>
-      <button onClick={() => setUnresolvedChanges(false)}>Save Changes</button>
+      <button onClick={onClose} type="button">
+        Close Form
+      </button>
+      <button onClick={() => setUnresolvedChanges(true)} type="button">
+        Make Changes
+      </button>
+      <button onClick={() => setUnresolvedChanges(false)} type="button">
+        Save Changes
+      </button>
     </div>
   ),
 }));
@@ -61,8 +67,12 @@ vi.mock('../ui/case-sheet', () => ({
     <div data-open={isOpen} data-testid="case-sheet">
       <h1>{title}</h1>
       <p>{description}</p>
-      <button onClick={() => onChange(false)}>Sheet Close</button>
-      <button onClick={onClose}>Direct Close</button>
+      <button onClick={() => onChange(false)} type="button">
+        Sheet Close
+      </button>
+      <button onClick={onClose} type="button">
+        Direct Close
+      </button>
       {children}
     </div>
   ),
@@ -87,8 +97,12 @@ vi.mock('../modals/alertModal', () => ({
     isOpen ? (
       <div data-testid="alert-modal">
         <p>{message}</p>
-        <button onClick={onConfirm}>{confirmButtonText}</button>
-        <button onClick={onClose}>{cancelButtonText}</button>
+        <button onClick={onConfirm} type="button">
+          {confirmButtonText}
+        </button>
+        <button onClick={onClose} type="button">
+          {cancelButtonText}
+        </button>
       </div>
     ) : null,
 }));
@@ -347,9 +361,7 @@ describe('CaseDetails', () => {
 
       // Re-render to test if state is reset
       mockSetOpen.mockClear();
-      const { rerender } = renderWithAuth(
-        <CaseDetails isOpen={true} setOpen={mockSetOpen} />
-      );
+      renderWithAuth(<CaseDetails isOpen={true} setOpen={mockSetOpen} />);
 
       // Should be able to close without alert now
       const sheetCloseButton = screen.getByText('Sheet Close');

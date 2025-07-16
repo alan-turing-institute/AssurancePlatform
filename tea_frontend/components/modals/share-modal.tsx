@@ -17,7 +17,7 @@ import {
 import { neatJSON } from 'neatjson';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -61,7 +61,6 @@ const FormSchema = z.object({
 export const ShareModal = () => {
   const {
     assuranceCase,
-    setAssuranceCase,
     viewMembers,
     setViewMembers,
     editMembers,
@@ -109,6 +108,10 @@ export const ShareModal = () => {
         break;
       case 'Reviewer':
         newShareItem.review = true;
+        break;
+      default:
+        // Default to view access
+        newShareItem.view = true;
         break;
     }
 
@@ -235,7 +238,9 @@ export const ShareModal = () => {
       }
 
       window.location.reload();
-    } catch (_error) {}
+    } catch (_error) {
+      // Error handling for publish operation
+    }
   };
 
   const handleUnpublish = async () => {
@@ -280,7 +285,7 @@ export const ShareModal = () => {
 
       if (!response.ok) {
         let errorMessage = 'Something went wrong, unpublishing assurance case';
-        let linkedCases = [];
+        let linkedCases: unknown[] = [];
 
         try {
           const contentType = response.headers.get('content-type');
@@ -293,7 +298,9 @@ export const ShareModal = () => {
             const text = await response.text();
             errorMessage = text || errorMessage;
           }
-        } catch (_err) {}
+        } catch (_err) {
+          // Error parsing response
+        }
 
         shareModal.onClose();
 
@@ -320,10 +327,13 @@ export const ShareModal = () => {
       }
 
       window.location.reload();
-    } catch (_error) {}
+    } catch (_error) {
+      // Error handling for unpublish operation
+    }
   };
 
-  useEffect(() => {}, []);
+  // Remove empty useEffect
+  // useEffect(() => {}, []);
 
   return (
     <>

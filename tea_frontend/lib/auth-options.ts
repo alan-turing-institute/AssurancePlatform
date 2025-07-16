@@ -97,7 +97,7 @@ export const authOptions: NextAuthOptions = {
      * @param {string} params.email - Email associated with the sign-in attempt.
      * @returns {boolean} `true` to allow the sign-in.
      */
-    async signIn({ user, account, profile, email, credentials }) {
+    async signIn({ user, account, profile, _email, _credentials }) {
       if (account?.provider === 'github') {
         // Handle GitHub-specific behavior
         const payload = {
@@ -133,7 +133,9 @@ export const authOptions: NextAuthOptions = {
         }
         try {
           const _errorData = await response.json();
-        } catch (_e) {}
+        } catch (_e) {
+          // Intentionally empty: we don't need to handle the error data
+        }
 
         return false;
       }
@@ -150,7 +152,7 @@ export const authOptions: NextAuthOptions = {
      * @param {string} params.baseUrl - Base URL of the application.
      * @returns {string} Redirect URL after authentication.
      */
-    async redirect({ url, baseUrl }) {
+    redirect({ _url, baseUrl }) {
       // Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
       const authUrl = process.env.NEXTAUTH_URL || baseUrl;
       if (!authUrl) {
@@ -170,7 +172,7 @@ export const authOptions: NextAuthOptions = {
      * @param {Object} params.token - The JWT token associated with the session.
      * @returns {Object} The modified session object with an access token and provider information.
      */
-    async session({ session, user, token }) {
+    session({ session, _user, token }) {
       // session.accessToken = token.accessToken;
       // session.provider = token.provider;
       session.key = token.key; // Add the key to the session object
@@ -189,7 +191,7 @@ export const authOptions: NextAuthOptions = {
      * @param {boolean} params.isNewUser - Flag indicating if this is a new user (optional).
      * @returns {Object} The updated token with access token and provider information.
      */
-    async jwt({ token, user, account, profile, isNewUser }) {
+    jwt({ token, user, _account, _profile, _isNewUser }) {
       // if (account && user) {
       //   token.accessToken = user.accessToken;
       //   token.provider = user.provider;

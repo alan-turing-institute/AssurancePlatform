@@ -1,22 +1,19 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Goal } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { boolean, z } from 'zod';
+import { z } from 'zod';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import useStore from '@/data/store';
 import {
   addHiddenProp,
@@ -46,7 +43,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
   onClose,
   setUnresolvedChanges,
 }) => {
-  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const [loading, setLoading] = useState<boolean>(false);
@@ -60,7 +57,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
   });
 
   useEffect(() => {
-    form.watch((values, { name }) => {
+    form.watch((_values, { name }) => {
       if (name === 'description' || name === 'URL') {
         setUnresolvedChanges(true);
       }
@@ -68,7 +65,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
   }, [form, setUnresolvedChanges]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const identifier = await setNodeIdentifier(null, 'goal');
+    const _identifier = await setNodeIdentifier(null, 'goal');
 
     const newGoal = {
       name: 'G1',
@@ -82,7 +79,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
       type: 'TopLevelNormativeGoal',
     };
 
-    const result: any = await createAssuranceCaseNode(
+    const result = await createAssuranceCaseNode(
       'goals',
       newGoal,
       session?.key ?? ''

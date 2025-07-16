@@ -21,7 +21,6 @@ const EditSheet = ({
   title,
   description,
   isOpen,
-  onClose,
   onChange,
   children,
 }: EditSheetProps) => {

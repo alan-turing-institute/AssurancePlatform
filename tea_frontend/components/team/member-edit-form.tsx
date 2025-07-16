@@ -2,6 +2,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+type TeamMember = {
+  id: number;
+  name: string;
+  title: string;
+  department: string;
+  email: string;
+  role: string;
+  isAdmin: boolean;
+  image: string;
+};
+
 import {
   Form,
   FormControl,
@@ -35,7 +47,7 @@ const formSchema = z.object({
 });
 
 interface MemberEditFormProps {
-  member: any;
+  member: TeamMember;
 }
 
 const MemberEditForm: React.FC<MemberEditFormProps> = ({ member }) => {
@@ -52,7 +64,9 @@ const MemberEditForm: React.FC<MemberEditFormProps> = ({ member }) => {
     defaultValues: member,
   });
 
-  function onSubmit(_values: z.infer<typeof formSchema>) {}
+  function onSubmit(_values: z.infer<typeof formSchema>) {
+    // TODO: Implement form submission logic
+  }
 
   return (
     <Form {...form}>

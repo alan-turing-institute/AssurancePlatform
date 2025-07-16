@@ -67,7 +67,9 @@ vi.mock('./CaseDetails', () => ({
     setOpen: (open: boolean) => void;
   }) => (
     <div data-open={isOpen} data-testid="case-details">
-      <button onClick={() => setOpen(!isOpen)}>Toggle Details</button>
+      <button onClick={() => setOpen(!isOpen)} type="button">
+        Toggle Details
+      </button>
     </div>
   ),
 }));
@@ -75,7 +77,9 @@ vi.mock('./CaseDetails', () => ({
 vi.mock('../Header', () => ({
   default: ({ setOpen }: { setOpen: (open: boolean) => void }) => (
     <div data-testid="header">
-      <button onClick={() => setOpen(true)}>Open Details</button>
+      <button onClick={() => setOpen(true)} type="button">
+        Open Details
+      </button>
     </div>
   ),
 }));
@@ -195,7 +199,9 @@ describe('CaseContainer', () => {
         })
       );
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Mock console.log to avoid test output noise
+      });
 
       renderWithAuth(<CaseContainer caseId="999" />);
 
@@ -213,7 +219,9 @@ describe('CaseContainer', () => {
         })
       );
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {
+        // Mock console.log to avoid test output noise
+      });
 
       renderWithAuth(<CaseContainer caseId="1" />);
 
@@ -263,7 +271,7 @@ describe('CaseContainer', () => {
   });
 
   describe('Successful Case Rendering', () => {
-    beforeEach(async () => {
+    beforeEach(() => {
       const testCase = createMockAssuranceCase({ id: 1, name: 'Test Case' });
       mockStore.assuranceCase = testCase;
 

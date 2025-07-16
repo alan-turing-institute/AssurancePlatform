@@ -9,7 +9,10 @@ import { Skeleton } from '../ui/skeleton';
 const LoggedInUser = () => {
   const { data } = useSession();
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    email: string;
+  } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {

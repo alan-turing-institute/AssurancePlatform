@@ -28,7 +28,7 @@ interface useResourcesModalStore {
  *   </div>
  * );
  */
-export const useResourcesModal = create<useResourcesModalStore>((set: any) => ({
+export const useResourcesModal = create<useResourcesModalStore>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),

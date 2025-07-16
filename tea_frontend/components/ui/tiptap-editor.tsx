@@ -28,6 +28,31 @@ interface TiptapEditorProps {
   placeholder?: string;
 }
 
+interface ToolbarButtonProps {
+  onClick: () => void;
+  isActive?: boolean;
+  children: React.ReactNode;
+  title: string;
+}
+
+const ToolbarButton = ({
+  onClick,
+  isActive,
+  children,
+  title,
+}: ToolbarButtonProps) => (
+  <Button
+    className={cn('h-8 w-8 p-0', isActive && 'bg-muted')}
+    onClick={onClick}
+    size="sm"
+    title={title}
+    type="button"
+    variant="ghost"
+  >
+    {children}
+  </Button>
+);
+
 export default function TiptapEditor({
   value = '',
   onChange,
@@ -57,8 +82,8 @@ export default function TiptapEditor({
       }),
     ],
     content: value,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
+    onUpdate: ({ editor: editorInstance }) => {
+      const html = editorInstance.getHTML();
       onChange?.(html);
     },
   });
@@ -67,28 +92,7 @@ export default function TiptapEditor({
     return null;
   }
 
-  const ToolbarButton = ({
-    onClick,
-    isActive,
-    children,
-    title,
-  }: {
-    onClick: () => void;
-    isActive?: boolean;
-    children: React.ReactNode;
-    title: string;
-  }) => (
-    <Button
-      className={cn('h-8 w-8 p-0', isActive && 'bg-muted')}
-      onClick={onClick}
-      size="sm"
-      title={title}
-      type="button"
-      variant="ghost"
-    >
-      {children}
-    </Button>
-  );
+  // ToolbarButton component is now defined outside
 
   return (
     <div className={cn('rounded-md border', className)}>
@@ -181,7 +185,7 @@ export default function TiptapEditor({
               editor
                 .chain()
                 .focus()
-                .toggleHeading({ level: level as any })
+                .toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 })
                 .run()
             }
             title={`Heading ${level}`}

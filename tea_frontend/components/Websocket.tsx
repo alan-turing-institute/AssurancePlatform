@@ -45,14 +45,14 @@ const WebSocketComponent = () => {
       return;
     }
 
-    let interval: any;
+    let interval: NodeJS.Timeout;
     const wsUrl = `${webSocketUrl}/ws/case/${assuranceCase.id}/?token=${session.key}`;
 
     const setupWebSocket = () => {
       const websocket = new WebSocket(wsUrl);
       websocketRef.current = websocket; // Store the WebSocket instance in the ref
 
-      websocket.addEventListener('open', (_event: any) => {
+      websocket.addEventListener('open', (_event: Event) => {
         const pingMessage = JSON.stringify({ content: 'ping' });
 
         // Send an initial ping message and start ping interval
@@ -62,7 +62,7 @@ const WebSocketComponent = () => {
         }, pingInterval);
       });
 
-      websocket.addEventListener('message', (event: any) => {
+      websocket.addEventListener('message', (event: MessageEvent) => {
         setMessages((prevMessages) => [
           ...prevMessages,
           `Received "${event.data}" from server.`,
@@ -88,16 +88,17 @@ const WebSocketComponent = () => {
         }
       });
 
-      websocket.addEventListener('close', (_event: any) => {
+      websocket.addEventListener('close', (_event: CloseEvent) => {
         clearInterval(interval);
       });
 
-      websocket.addEventListener('error', (_event: any) => {
+      websocket.addEventListener('error', (_event: Event) => {
         // Check if it's a connection error
         if (
           websocket.readyState === WebSocket.CLOSED ||
           websocket.readyState === WebSocket.CLOSING
         ) {
+          // Connection error handling - could add logging here if needed
         }
       });
     };
@@ -147,7 +148,7 @@ const WebSocketComponent = () => {
       <div className="output">
         <p>Active Users: {activeUsers.length}</p>
         {messages.map((message, index) => (
-          <p key={index}>{message}</p>
+          <p key={`msg-${index}-${message.substring(0, 10)}`}>{message}</p>
         ))}
       </div>
       <Button

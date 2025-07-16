@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import {
   type Dispatch,
   type SetStateAction,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -89,8 +90,8 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
       const updatedComment = await response.json();
 
       // Find the index of the updated comment in the existing comments array
-      const updatedComments = nodeComments.map((comment) =>
-        comment.id === updatedComment.id ? updatedComment : comment
+      const updatedComments = nodeComments.map((com) =>
+        com.id === updatedComment.id ? updatedComment : com
       );
 
       setNodeComments(updatedComments);
@@ -107,12 +108,12 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
   }
 
   // Function to adjust the textarea height dynamically
-  const autoResizeTextarea = () => {
+  const autoResizeTextarea = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'; // Reset the height
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Set the height to match content
     }
-  };
+  }, []);
 
   // Resize the textarea when the content or the form loads
   useEffect(() => {

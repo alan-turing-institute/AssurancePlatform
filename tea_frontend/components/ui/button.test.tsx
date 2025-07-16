@@ -6,11 +6,18 @@ import {
 } from '@/src/__tests__/utils/test-utils';
 import { Button } from './button';
 
+// Regex constants for text matching
+const CLICK_ME_REGEX = /click me/i;
+const DISABLED_REGEX = /disabled/i;
+const CUSTOM_REGEX = /custom/i;
+const LINK_BUTTON_REGEX = /link button/i;
+const SUBMIT_FORM_REGEX = /submit form/i;
+
 describe('Button', () => {
   it('should render with default props', () => {
     renderWithoutProviders(<Button>Click me</Button>);
 
-    const button = screen.getByRole('button', { name: /click me/i });
+    const button = screen.getByRole('button', { name: CLICK_ME_REGEX });
     expect(button).toBeInTheDocument();
     expect(button).toHaveClass('inline-flex', 'items-center', 'justify-center');
   });
@@ -59,7 +66,7 @@ describe('Button', () => {
 
     renderWithoutProviders(<Button onClick={handleClick}>Click me</Button>);
 
-    const button = screen.getByRole('button', { name: /click me/i });
+    const button = screen.getByRole('button', { name: CLICK_ME_REGEX });
     await user.click(button);
 
     expect(handleClick).toHaveBeenCalledTimes(1);
@@ -68,7 +75,7 @@ describe('Button', () => {
   it('should be disabled when disabled prop is true', () => {
     renderWithoutProviders(<Button disabled>Disabled</Button>);
 
-    const button = screen.getByRole('button', { name: /disabled/i });
+    const button = screen.getByRole('button', { name: DISABLED_REGEX });
     expect(button).toBeDisabled();
     expect(button).toHaveClass(
       'disabled:pointer-events-none',
@@ -79,7 +86,7 @@ describe('Button', () => {
   it('should accept custom className', () => {
     renderWithoutProviders(<Button className="custom-class">Custom</Button>);
 
-    const button = screen.getByRole('button', { name: /custom/i });
+    const button = screen.getByRole('button', { name: CUSTOM_REGEX });
     expect(button).toHaveClass('custom-class');
   });
 
@@ -90,7 +97,7 @@ describe('Button', () => {
       </Button>
     );
 
-    const link = screen.getByRole('link', { name: /link button/i });
+    const link = screen.getByRole('link', { name: LINK_BUTTON_REGEX });
     expect(link).toBeInTheDocument();
     expect(link.tagName).toBe('A');
     expect(link).toHaveAttribute('href', '/');
@@ -111,7 +118,7 @@ describe('Button', () => {
       </Button>
     );
 
-    const button = screen.getByRole('button', { name: /submit form/i });
+    const button = screen.getByRole('button', { name: SUBMIT_FORM_REGEX });
     expect(button).toHaveAttribute('type', 'submit');
     expect(button).toHaveAttribute('aria-label', 'Submit form');
   });
@@ -126,7 +133,7 @@ describe('Button', () => {
       </Button>
     );
 
-    const button = screen.getByRole('button', { name: /disabled/i });
+    const button = screen.getByRole('button', { name: DISABLED_REGEX });
     await user.click(button);
 
     expect(handleClick).not.toHaveBeenCalled();

@@ -9,6 +9,16 @@ import {
 } from '@/src/__tests__/utils/test-utils';
 import { CaseCreateModal } from './case-create-modal';
 
+// Regex constants for text matching
+const NAME_LABEL_REGEX = /name/i;
+const DESCRIPTION_LABEL_REGEX = /description/i;
+const SUBMIT_BUTTON_REGEX = /submit/i;
+const CANCEL_BUTTON_REGEX = /cancel/i;
+const SELECT_TEMPLATE_REGEX = /select a template/i;
+const LOADING_STATUS_REGEX = /loading/i;
+const REQUIRED_TEXT_REGEX = /required/i;
+const REQUIRED_TEXT_REGEX_LOWER = /required/i;
+
 // Mock the hook
 const mockCreateCaseModal = {
   isOpen: false,
@@ -57,7 +67,7 @@ vi.mock('@/components/ui/modal', () => ({
       <div data-testid="modal" role="dialog">
         <h1>{title}</h1>
         <p>{description}</p>
-        <button data-testid="modal-close" onClick={onClose}>
+        <button data-testid="modal-close" onClick={onClose} type="button">
           Close
         </button>
         {children}
@@ -110,8 +120,10 @@ describe('CaseCreateModal', () => {
     it('should render form fields when not loading', () => {
       renderWithAuth(<CaseCreateModal />);
 
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(NAME_LABEL_REGEX)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(DESCRIPTION_LABEL_REGEX)
+      ).toBeInTheDocument();
     });
 
     it('should render form with correct placeholders', () => {
@@ -127,17 +139,17 @@ describe('CaseCreateModal', () => {
       renderWithAuth(<CaseCreateModal />);
 
       expect(
-        screen.getByRole('button', { name: /submit/i })
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
       ).toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /cancel/i })
+        screen.getByRole('button', { name: CANCEL_BUTTON_REGEX })
       ).toBeInTheDocument();
     });
 
     it('should not render template selection (commented out)', () => {
       renderWithAuth(<CaseCreateModal />);
 
-      expect(screen.queryByText(/select a template/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(SELECT_TEMPLATE_REGEX)).not.toBeInTheDocument();
     });
   });
 
@@ -167,13 +179,15 @@ describe('CaseCreateModal', () => {
       );
 
       // Submit form
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       // Should show loading spinner
       expect(
-        screen.getByRole('status', { name: /loading/i })
+        screen.getByRole('status', { name: LOADING_STATUS_REGEX })
       ).toBeInTheDocument();
-      expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(NAME_LABEL_REGEX)).not.toBeInTheDocument();
     });
 
     it('should disable form fields during loading', async () => {
@@ -194,7 +208,9 @@ describe('CaseCreateModal', () => {
         'Test description'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       // Form should be hidden during loading
       expect(
@@ -218,10 +234,12 @@ describe('CaseCreateModal', () => {
         screen.getByPlaceholderText('Your case description'),
         'Test description'
       );
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
-        expect(screen.getByText(/required/i)).toBeInTheDocument();
+        expect(screen.getByText(REQUIRED_TEXT_REGEX)).toBeInTheDocument();
       });
     });
 
@@ -232,10 +250,12 @@ describe('CaseCreateModal', () => {
 
       // Submit without filling description
       await user.type(screen.getByPlaceholderText('Case name'), 'Test Case');
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
-        expect(screen.getByText(/required/i)).toBeInTheDocument();
+        expect(screen.getByText(REQUIRED_TEXT_REGEX)).toBeInTheDocument();
       });
     });
 
@@ -245,10 +265,12 @@ describe('CaseCreateModal', () => {
       renderWithAuth(<CaseCreateModal />);
 
       // Submit without filling any fields
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
-        const requiredMessages = screen.getAllByText(/required/i);
+        const requiredMessages = screen.getAllByText(REQUIRED_TEXT_REGEX);
         expect(requiredMessages).toHaveLength(2);
       });
     });
@@ -273,11 +295,13 @@ describe('CaseCreateModal', () => {
         'Valid test description'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       // Should not show validation errors
       await waitFor(() => {
-        expect(screen.queryByText(/required/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(REQUIRED_TEXT_REGEX)).not.toBeInTheDocument();
       });
     });
   });
@@ -290,7 +314,7 @@ describe('CaseCreateModal', () => {
     it('should create case with correct data', async () => {
       const user = userEvent.setup();
 
-      let capturedRequestBody: any = null;
+      let capturedRequestBody: Record<string, unknown> | null = null;
       server.use(
         http.post('*/api/cases/', async ({ request }) => {
           capturedRequestBody = await request.json();
@@ -306,7 +330,9 @@ describe('CaseCreateModal', () => {
         'My test description'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedRequestBody).toEqual({
@@ -338,7 +364,9 @@ describe('CaseCreateModal', () => {
         'Test description'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedHeaders.authorization).toBeDefined();
@@ -366,7 +394,9 @@ describe('CaseCreateModal', () => {
         'Test navigation'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockRouter.push).toHaveBeenCalledWith('/case/456');
@@ -393,7 +423,9 @@ describe('CaseCreateModal', () => {
         'Test modal close'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(mockCreateCaseModal.onClose).toHaveBeenCalled();
@@ -408,9 +440,9 @@ describe('CaseCreateModal', () => {
 
     it('should handle API errors gracefully', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Intentionally empty to suppress console errors during test
+      });
 
       server.use(
         http.post('*/api/cases/', () => {
@@ -429,7 +461,9 @@ describe('CaseCreateModal', () => {
         'Test error handling'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalled();
@@ -440,9 +474,9 @@ describe('CaseCreateModal', () => {
 
     it('should handle network errors', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Intentionally empty to suppress console errors during test
+      });
 
       server.use(
         http.post('*/api/cases/', () => {
@@ -461,7 +495,9 @@ describe('CaseCreateModal', () => {
         'Test network error'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalled();
@@ -472,9 +508,9 @@ describe('CaseCreateModal', () => {
 
     it('should handle API response without id', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Intentionally empty to suppress console errors during test
+      });
 
       server.use(
         http.post('*/api/cases/', () => {
@@ -490,7 +526,9 @@ describe('CaseCreateModal', () => {
         'Test failure response'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalled();
@@ -510,7 +548,9 @@ describe('CaseCreateModal', () => {
 
       renderWithAuth(<CaseCreateModal />);
 
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      await user.click(
+        screen.getByRole('button', { name: CANCEL_BUTTON_REGEX })
+      );
 
       expect(mockCreateCaseModal.onClose).toHaveBeenCalled();
     });
@@ -521,14 +561,18 @@ describe('CaseCreateModal', () => {
       renderWithAuth(<CaseCreateModal />);
 
       // Trigger validation errors first
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
-        expect(screen.getAllByText(/required/i)).toHaveLength(2);
+        expect(screen.getAllByText(REQUIRED_TEXT_REGEX)).toHaveLength(2);
       });
 
       // Cancel should clear errors
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      await user.click(
+        screen.getByRole('button', { name: CANCEL_BUTTON_REGEX })
+      );
 
       expect(mockCreateCaseModal.onClose).toHaveBeenCalled();
     });
@@ -601,8 +645,10 @@ describe('CaseCreateModal', () => {
     it('should have proper form labels', () => {
       renderWithAuth(<CaseCreateModal />);
 
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(NAME_LABEL_REGEX)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(DESCRIPTION_LABEL_REGEX)
+      ).toBeInTheDocument();
     });
 
     it('should have proper modal role', () => {
@@ -614,8 +660,12 @@ describe('CaseCreateModal', () => {
     it('should have proper button types', () => {
       renderWithAuth(<CaseCreateModal />);
 
-      const submitButton = screen.getByRole('button', { name: /submit/i });
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      const submitButton = screen.getByRole('button', {
+        name: SUBMIT_BUTTON_REGEX,
+      });
+      const cancelButton = screen.getByRole('button', {
+        name: CANCEL_BUTTON_REGEX,
+      });
 
       expect(submitButton).toHaveAttribute('type', 'submit');
       expect(cancelButton).not.toHaveAttribute('type', 'submit');
@@ -626,13 +676,15 @@ describe('CaseCreateModal', () => {
 
       renderWithAuth(<CaseCreateModal />);
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
-        const errorMessages = screen.getAllByText(/required/i);
-        errorMessages.forEach((error) => {
+        const errorMessages = screen.getAllByText(REQUIRED_TEXT_REGEX_LOWER);
+        for (const error of errorMessages) {
           expect(error).toHaveAttribute('role', 'alert');
-        });
+        }
       });
     });
   });
@@ -661,7 +713,9 @@ describe('CaseCreateModal', () => {
         'Test session'
       );
 
-      await user.click(screen.getByRole('button', { name: /submit/i }));
+      await user.click(
+        screen.getByRole('button', { name: SUBMIT_BUTTON_REGEX })
+      );
 
       await waitFor(() => {
         expect(capturedHeaders.authorization).toContain('Token');
@@ -728,7 +782,9 @@ describe('CaseCreateModal', () => {
         'Rapid submission test'
       );
 
-      const submitButton = screen.getByRole('button', { name: /submit/i });
+      const submitButton = screen.getByRole('button', {
+        name: SUBMIT_BUTTON_REGEX,
+      });
 
       // Rapid clicks
       await user.click(submitButton);

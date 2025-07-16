@@ -15,12 +15,7 @@ interface CreateSheetProps {
   children?: React.ReactNode;
 }
 
-const CreateSheet = ({
-  isOpen,
-  onClose,
-  onChange,
-  children,
-}: CreateSheetProps) => {
+const CreateSheet = ({ isOpen, onChange, children }: CreateSheetProps) => {
   // const onChange = (open: boolean) => {
   //   if (!open) {
   //     onClose();

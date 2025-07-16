@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithAuth, screen } from '@/src/__tests__/utils/test-utils';
 import EvidenceNode from './evidence-node';
@@ -18,13 +19,17 @@ vi.mock('reactflow', async () => {
       Bottom: 'bottom',
       Left: 'left',
     },
-    memo: (component: any) => component,
+    memo: <T extends ComponentType>(component: T) => component,
   };
 });
 
 // Mock child components
 vi.mock('./IconIndicator', () => ({
-  default: ({ data }: { data: any }) => (
+  default: ({
+    data,
+  }: {
+    data: { comments?: Array<{ id: number; content: string }> };
+  }) => (
     <div
       data-has-comments={data.comments?.length > 0}
       data-testid="icon-indicator"

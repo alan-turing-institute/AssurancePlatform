@@ -4,9 +4,9 @@ import { unauthorized } from '.*/use-auth';
 import { PencilLine, Trash2, User2Icon } from 'lucide-react';
 import moment from 'moment';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useStore from '@/data/store';
-import type { Comment as CaseComment, User } from '@/types';
+import type { User } from '@/types';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import CommentsEditForm from './comments-edit-form';
@@ -68,7 +68,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
     // TODO: Add any initialization logic if needed
   }, []);
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = useCallback(async () => {
     const requestOptions: RequestInit = {
       headers: {
         Authorization: `Token ${session?.key}`,
@@ -90,7 +90,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 
     const result = await response.json();
     return result;
-  };
+  }, [session?.key]);
 
   // Fetch current user
   useEffect(() => {

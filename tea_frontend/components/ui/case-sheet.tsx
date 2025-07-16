@@ -12,7 +12,6 @@ interface CaseSheetProps {
   title: string;
   description: string;
   isOpen: boolean;
-  onClose: () => void;
   onChange: (open: boolean) => void;
   children?: React.ReactNode;
 }
@@ -21,7 +20,6 @@ const CaseSheet = ({
   title,
   description,
   isOpen,
-  onClose,
   onChange,
   children,
 }: CaseSheetProps) => {

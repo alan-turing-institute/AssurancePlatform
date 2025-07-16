@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 const components: {
   title: string;
-  icon: any;
+  icon: React.ReactNode;
   href: string;
   description: string;
 }[] = [

@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
  * This hook allows you to capture the previous value of a prop or state variable in a functional component.
  * On every render, it updates the reference with the current value but returns the value from the previous render.
  *
- * @param {any} value - The current value to track and store the previous version of.
- * @returns {any} The previous value of the input variable.
+ * @param {T} value - The current value to track and store the previous version of.
+ * @returns {T | undefined} The previous value of the input variable.
  *
  * @example
  * function MyComponent({ prop }) {
@@ -17,8 +17,8 @@ import { useEffect, useRef } from 'react';
  *   return <div>{prop}</div>;
  * }
  */
-export function usePrevious(value: any) {
-  const ref = useRef();
+export function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
 
   useEffect(() => {
     ref.current = value;

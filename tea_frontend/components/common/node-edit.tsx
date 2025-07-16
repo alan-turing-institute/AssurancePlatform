@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import type { Node } from 'reactflow';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -34,6 +35,7 @@ import {
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
+import type { AssuranceCase, Goal, PropertyClaim, Strategy } from '@/types';
 import NodeAttributes from '../cases/node-attributes';
 import NodeComment from '../cases/node-comments';
 import NodeContext from '../cases/node-context';
@@ -45,16 +47,724 @@ import EditForm from './edit-form';
 // import { useLoginToken } from ".*/use-auth";
 import NewLinkForm from './new-link-form';
 
+interface NodeData {
+  id: number;
+  name: string;
+  type: string;
+  goal_id?: number;
+  short_description?: string;
+}
+
+interface AssuranceCaseNode extends Node {
+  data: NodeData;
+  type: string;
+}
+
+interface MoveElement {
+  id: number;
+  name: string;
+}
+
+interface UpdateItem {
+  goal_id?: number | null;
+  strategy_id?: number | null;
+  property_claim_id?: number | number[] | null;
+  hidden?: boolean;
+}
+
 interface NodeEditProps {
-  node: Node | any;
+  node: AssuranceCaseNode;
   isOpen: boolean;
   setEditOpen: Dispatch<SetStateAction<boolean>>;
 }
 
+// Helper function to handle goal move
+const handleGoalMove = async (
+  node: AssuranceCaseNode,
+  goal: Goal | undefined,
+  assuranceCase: AssuranceCase,
+  setAssuranceCase: (ac: AssuranceCase) => void,
+  setLoading: (loading: boolean) => void,
+  handleClose: () => void,
+  selectedClaimMove: MoveElement,
+  sessionKey: string
+): Promise<void> => {
+  const updateItem: UpdateItem = {
+    goal_id: goal ? goal.id : null,
+    strategy_id: null,
+    property_claim_id: null,
+    hidden: false,
+  };
+
+  const updated = await updateAssuranceCaseNode(
+    'property',
+    node.data.id,
+    sessionKey,
+    updateItem
+  );
+
+  if (updated) {
+    updateItem.hidden = findSiblingHiddenState(
+      assuranceCase,
+      selectedClaimMove.id
+    );
+    const updatedAssuranceCase = await updateAssuranceCase(
+      'property',
+      assuranceCase,
+      updateItem,
+      node.data.id,
+      node,
+      true
+    );
+    if (updatedAssuranceCase) {
+      setAssuranceCase(updatedAssuranceCase);
+      setLoading(false);
+      handleClose();
+    }
+  }
+};
+
+// Helper function to handle property claim move
+const handlePropertyClaimMove = async (
+  node: AssuranceCaseNode,
+  claims: PropertyClaim[],
+  assuranceCase: AssuranceCase,
+  setAssuranceCase: (ac: AssuranceCase) => void,
+  setLoading: (loading: boolean) => void,
+  handleClose: () => void,
+  selectedClaimMove: MoveElement,
+  sessionKey: string
+): Promise<void> => {
+  const elementId = claims?.find(
+    (claim) => claim.id === selectedClaimMove.id
+  )?.id;
+
+  const updateItem: UpdateItem = {
+    goal_id: null,
+    strategy_id: null,
+    property_claim_id: elementId,
+    hidden: false,
+  };
+
+  const updated = await updateAssuranceCaseNode(
+    'property',
+    node.data.id,
+    sessionKey,
+    updateItem
+  );
+
+  if (updated) {
+    updateItem.hidden = findSiblingHiddenState(
+      assuranceCase,
+      selectedClaimMove.id
+    );
+    const updatedAssuranceCase = await updateAssuranceCase(
+      'property',
+      assuranceCase,
+      updateItem,
+      node.data.id,
+      node,
+      true
+    );
+    if (updatedAssuranceCase) {
+      setAssuranceCase(updatedAssuranceCase);
+      setLoading(false);
+      handleClose();
+    }
+  }
+};
+
+// Helper function to handle strategy move
+const handleStrategyMove = async (
+  node: AssuranceCaseNode,
+  strategies: Strategy[],
+  assuranceCase: AssuranceCase,
+  setAssuranceCase: (ac: AssuranceCase) => void,
+  setLoading: (loading: boolean) => void,
+  handleClose: () => void,
+  selectedClaimMove: MoveElement,
+  sessionKey: string
+): Promise<void> => {
+  const elementId = strategies?.find(
+    (strategy) => strategy.id === selectedClaimMove.id
+  )?.id;
+
+  const updateItem: UpdateItem = {
+    goal_id: null,
+    strategy_id: elementId,
+    property_claim_id: null,
+    hidden: false,
+  };
+
+  const updated = await updateAssuranceCaseNode(
+    'property',
+    node.data.id,
+    sessionKey,
+    updateItem
+  );
+
+  if (updated) {
+    updateItem.hidden = findSiblingHiddenState(
+      assuranceCase,
+      selectedClaimMove.id
+    );
+    const updatedAssuranceCase = await updateAssuranceCase(
+      'property',
+      assuranceCase,
+      updateItem,
+      node.data.id,
+      node,
+      true
+    );
+    if (updatedAssuranceCase) {
+      setAssuranceCase(updatedAssuranceCase);
+      setLoading(false);
+      handleClose();
+    }
+  }
+};
+
+// Helper function to handle evidence move
+const handleEvidenceMove = async (
+  node: AssuranceCaseNode,
+  assuranceCase: AssuranceCase,
+  setAssuranceCase: (ac: AssuranceCase) => void,
+  setLoading: (loading: boolean) => void,
+  handleClose: () => void,
+  selectedEvidenceMove: MoveElement,
+  sessionKey: string
+): Promise<void> => {
+  const updateItem: UpdateItem = {
+    property_claim_id: [selectedEvidenceMove.id],
+    hidden: false,
+  };
+
+  const updated = await updateAssuranceCaseNode(
+    'evidence',
+    node.data.id,
+    sessionKey,
+    updateItem
+  );
+
+  if (updated) {
+    updateItem.hidden = findSiblingHiddenState(
+      assuranceCase,
+      selectedEvidenceMove.id
+    );
+    const updatedAssuranceCase = await updateAssuranceCase(
+      'evidence',
+      assuranceCase,
+      updateItem,
+      node.data.id,
+      node,
+      true
+    );
+    if (updatedAssuranceCase) {
+      setAssuranceCase(updatedAssuranceCase);
+      setLoading(false);
+      handleClose();
+    }
+  }
+};
+
+// Helper component for action buttons
+const ActionButtons = ({
+  node,
+  readOnly,
+  setAction,
+}: {
+  node: AssuranceCaseNode;
+  readOnly: boolean;
+  setAction: (action: string) => void;
+}) => (
+  <div className="">
+    <h3 className="mb-2 font-semibold text-lg">Actions</h3>
+    <div className="flex flex-col items-center justify-around gap-2">
+      {node.type === 'goal' && !readOnly && (
+        <Button
+          className="w-full"
+          onClick={() => setAction('context')}
+          variant={'outline'}
+        >
+          <BookOpenText className="mr-2 h-4 w-4" />
+          Manage Context
+        </Button>
+      )}
+      {node.type !== 'evidence' && !readOnly && (
+        <Button
+          className="w-full"
+          onClick={() => setAction('attributes')}
+          variant={'outline'}
+        >
+          <LibraryIcon className="mr-2 h-4 w-4" />
+          Manage Attributes
+        </Button>
+      )}
+      {node.type !== 'context' && node.type !== 'evidence' && !readOnly && (
+        <Button
+          className="w-full"
+          onClick={() => setAction('new')}
+          variant={'outline'}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add New Element
+        </Button>
+      )}
+      {node.type !== 'context' && node.type !== 'evidence' && !readOnly && (
+        <Button
+          className="w-full"
+          onClick={() => setAction('existing')}
+          variant={'outline'}
+        >
+          <Unplug className="mr-2 h-4 w-4" />
+          Reattach Element(s)
+        </Button>
+      )}
+      {node.type !== 'context' &&
+        node.type !== 'goal' &&
+        node.type !== 'strategy' &&
+        !readOnly && (
+          <Button
+            className="w-full"
+            onClick={() => setAction('move')}
+            variant={'outline'}
+          >
+            <Move className="mr-2 h-4 w-4" />
+            Move Item
+          </Button>
+        )}
+      <Button
+        className="w-full"
+        onClick={() => setAction('comment')}
+        variant={'outline'}
+      >
+        <MessageCirclePlus className="mr-2 h-4 w-4" />
+        Comments
+      </Button>
+    </div>
+  </div>
+);
+
+// Helper component for parent description section
+const ParentDescription = ({
+  parentNode,
+  toggleParentDescription,
+  setToggleParentDescription,
+}: {
+  parentNode: AssuranceCaseNode;
+  toggleParentDescription: boolean;
+  setToggleParentDescription: (toggle: boolean) => void;
+}) => (
+  <div className="mt-6 flex flex-col text-sm">
+    <div className="mb-2 flex items-center justify-start gap-2">
+      <p>Parent Description</p>
+      {toggleParentDescription ? (
+        <Eye
+          className="h-4 w-4"
+          onClick={() => setToggleParentDescription(!toggleParentDescription)}
+        />
+      ) : (
+        <EyeOff
+          className="h-4 w-4"
+          onClick={() => setToggleParentDescription(!toggleParentDescription)}
+        />
+      )}
+    </div>
+    {toggleParentDescription && (
+      <>
+        <span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
+          Identifier: {parentNode.data.name}
+        </span>
+        <p className="text-muted-foreground">
+          {parentNode.data.short_description}
+        </p>
+      </>
+    )}
+  </div>
+);
+
+// Helper component for new element selection
+const NewElementSection = ({
+  node,
+  selectLink,
+  setAction,
+}: {
+  node: AssuranceCaseNode;
+  selectLink: (type: string) => void;
+  setAction: (action: string | null) => void;
+}) => (
+  <div className="mt-8 flex flex-col items-start justify-start">
+    <h3 className="mb-2 font-semibold text-lg">Add New</h3>
+    <div className="flex w-full flex-col items-center justify-start gap-4">
+      {node.type === 'goal' && (
+        <>
+          <Button
+            className="w-full"
+            onClick={() => selectLink('strategy')}
+            variant="outline"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Strategy
+          </Button>
+          <Button
+            className="w-full"
+            onClick={() => selectLink('claim')}
+            variant="outline"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Property Claim
+          </Button>
+        </>
+      )}
+      {node.type === 'strategy' && (
+        <Button
+          className="w-full"
+          onClick={() => selectLink('claim')}
+          variant="outline"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Property Claim
+        </Button>
+      )}
+      {node.type === 'property' && (
+        <>
+          <Button
+            className="w-full"
+            onClick={() => selectLink('claim')}
+            variant="outline"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Property Claim
+          </Button>
+          <Button
+            className="w-full"
+            onClick={() => selectLink('evidence')}
+            variant="outline"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Evidence
+          </Button>
+        </>
+      )}
+    </div>
+    <Button
+      className="my-6"
+      onClick={() => setAction(null)}
+      variant={'outline'}
+    >
+      Cancel
+    </Button>
+  </div>
+);
+
+// Helper component for move section
+const MoveSection = ({
+  node,
+  goal,
+  strategies,
+  claims,
+  setSelectedClaimMove,
+  setSelectedEvidenceMove,
+  handleMove,
+  setAction,
+}: {
+  node: AssuranceCaseNode;
+  goal: Goal | undefined;
+  strategies: Strategy[];
+  claims: PropertyClaim[];
+  setSelectedClaimMove: (element: MoveElement | null) => void;
+  setSelectedEvidenceMove: (element: MoveElement | null) => void;
+  handleMove: () => Promise<void>;
+  setAction: (action: string | null) => void;
+}) => (
+  <>
+    {node.type === 'property' || node.type === 'evidence' ? (
+      <div className="w-full pt-4">
+        <h3 className="mt-6 mb-2 font-semibold text-lg capitalize">
+          Move {node.type}
+        </h3>
+        <div className="items-left flex flex-col justify-start gap-2">
+          {node.type === 'property' && (
+            <Select onValueChange={setSelectedClaimMove}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {goal && (
+                  <SelectItem key={crypto.randomUUID()} value={goal}>
+                    <div className="flex flex-col items-start justify-start gap-1">
+                      <div className="flex items-center">
+                        <span className="font-medium">{goal.name}</span>
+                        <svg
+                          aria-hidden="true"
+                          className="mx-2 inline h-0.5 w-0.5 fill-current"
+                          viewBox="0 0 2 2"
+                        >
+                          <circle cx={1} cy={1} r={1} />
+                        </svg>
+                        <span className="max-w-[200px] truncate">
+                          {goal.short_description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                )}
+                {strategies?.map((strategy) => (
+                  <SelectItem key={crypto.randomUUID()} value={strategy}>
+                    <div className="flex items-start justify-start gap-1">
+                      <div className="flex items-center">
+                        <span className="font-medium">{strategy.name}</span>
+                        <svg
+                          aria-hidden="true"
+                          className="mx-2 inline h-0.5 w-0.5 fill-current"
+                          viewBox="0 0 2 2"
+                        >
+                          <circle cx={1} cy={1} r={1} />
+                        </svg>
+                        <span className="max-w-[200px] truncate">
+                          {strategy.short_description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+                {claims?.map((claim) => (
+                  <SelectItem key={crypto.randomUUID()} value={claim}>
+                    <div className="flex flex-col items-start justify-start gap-1">
+                      <div className="flex items-center">
+                        <span className="font-medium">{claim.name}</span>
+                        <svg
+                          aria-hidden="true"
+                          className="mx-2 inline h-0.5 w-0.5 fill-current"
+                          viewBox="0 0 2 2"
+                        >
+                          <circle cx={1} cy={1} r={1} />
+                        </svg>
+                        <span className="max-w-[200px] truncate">
+                          {claim.short_description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+                {strategies?.length === 0 && (
+                  <SelectItem disabled={true} value="{strategy.id}">
+                    No strategies found.
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          )}
+          {node.type === 'evidence' && (
+            <Select onValueChange={setSelectedEvidenceMove}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {claims?.map((claim) => (
+                  <SelectItem key={crypto.randomUUID()} value={claim}>
+                    <div className="flex flex-col items-start justify-start gap-1">
+                      <div className="flex items-center">
+                        <span className="font-medium">{claim.name}</span>
+                        <svg
+                          aria-hidden="true"
+                          className="mx-2 inline h-0.5 w-0.5 fill-current"
+                          viewBox="0 0 2 2"
+                        >
+                          <circle cx={1} cy={1} r={1} />
+                        </svg>
+                        <span className="max-w-[200px] truncate">
+                          {claim.short_description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+                {claims && claims.length === 0 && (
+                  <SelectItem disabled={true} value="{strategy.id}">
+                    No property claims found.
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
+    ) : null}
+    <div className="flex items-center justify-start gap-2">
+      <Button
+        className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+        onClick={handleMove}
+      >
+        Move
+      </Button>
+      <Button
+        className="my-6"
+        onClick={() => setAction(null)}
+        variant={'outline'}
+      >
+        Cancel
+      </Button>
+    </div>
+  </>
+);
+
+// Helper component for delete buttons
+const DeleteButtons = ({
+  node,
+  readOnly,
+  handleDetach,
+  setDeleteOpen,
+}: {
+  node: AssuranceCaseNode;
+  readOnly: boolean;
+  handleDetach: () => Promise<void>;
+  setDeleteOpen: (open: boolean) => void;
+}) => (
+  <>
+    {!readOnly && (
+      <div className="mt-12 flex items-center justify-start gap-4">
+        {node.type !== 'goal' && (
+          <Button
+            className="my-8 w-full"
+            onClick={handleDetach}
+            variant={'outline'}
+          >
+            <Unplug className="mr-2 h-4 w-4" />
+            Detach
+          </Button>
+        )}
+        <Button
+          className="flex w-full items-center justify-center"
+          onClick={() => setDeleteOpen(true)}
+          variant={'destructive'}
+        >
+          <Trash2 className="mr-2" />
+          Delete&nbsp;
+          <span className="capitalize">{node.type}</span>
+        </Button>
+      </div>
+    )}
+  </>
+);
+
+// Helper component for action content
+const ActionContent = ({
+  action,
+  node,
+  readOnly,
+  selectedLink,
+  linkToCreate,
+  setLinkToCreate,
+  setSelectedLink,
+  handleClose,
+  setUnresolvedChanges,
+  selectLink,
+  setAction,
+  goal,
+  strategies,
+  claims,
+  setSelectedClaimMove,
+  setSelectedEvidenceMove,
+  handleMove,
+  loading,
+  setLoading,
+  assuranceCase,
+}: {
+  action: string | null;
+  node: AssuranceCaseNode;
+  readOnly: boolean;
+  selectedLink: boolean;
+  linkToCreate: string;
+  setLinkToCreate: (link: string) => void;
+  setSelectedLink: (selected: boolean) => void;
+  handleClose: () => void;
+  setUnresolvedChanges: (changes: boolean) => void;
+  selectLink: (type: string) => void;
+  setAction: (action: string | null) => void;
+  goal: Goal | undefined;
+  strategies: Strategy[];
+  claims: PropertyClaim[];
+  setSelectedClaimMove: (element: MoveElement | null) => void;
+  setSelectedEvidenceMove: (element: MoveElement | null) => void;
+  handleMove: () => Promise<void>;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+  assuranceCase: AssuranceCase;
+}) => (
+  <>
+    {action === 'new' &&
+      !readOnly &&
+      (selectedLink ? (
+        <NewLinkForm
+          actions={{ setLinkToCreate, setSelectedLink, handleClose }}
+          linkType={linkToCreate}
+          node={node}
+          setUnresolvedChanges={setUnresolvedChanges}
+        />
+      ) : (
+        node.type !== 'context' &&
+        node.type !== 'evidence' && (
+          <NewElementSection
+            node={node}
+            selectLink={selectLink}
+            setAction={setAction}
+          />
+        )
+      ))}
+    {action === 'existing' &&
+      !readOnly &&
+      node.type !== 'evidence' &&
+      node.type !== 'context' && (
+        <OrphanElements
+          handleClose={handleClose}
+          loadingState={{ loading, setLoading }}
+          node={node}
+          setAction={setAction}
+        />
+      )}
+    {action === 'move' && !readOnly && (
+      <MoveSection
+        claims={claims}
+        goal={goal}
+        handleMove={handleMove}
+        node={node}
+        setAction={setAction}
+        setSelectedClaimMove={setSelectedClaimMove}
+        setSelectedEvidenceMove={setSelectedEvidenceMove}
+        strategies={strategies}
+      />
+    )}
+    {action === 'comment' && (
+      <NodeComment
+        handleClose={handleClose}
+        loadingState={{ loading, setLoading }}
+        node={node}
+        readOnly={assuranceCase.permissions === 'view'}
+        setAction={setAction}
+      />
+    )}
+    {action === 'context' && (
+      <NodeContext
+        actions={{ setSelectedLink, handleClose, setAction }}
+        node={node}
+        setUnresolvedChanges={setUnresolvedChanges}
+      />
+    )}
+    {action === 'attributes' && (
+      <NodeAttributes
+        actions={{ setSelectedLink, handleClose, setAction }}
+        node={node}
+        onClose={handleClose}
+        setUnresolvedChanges={setUnresolvedChanges}
+      />
+    )}
+  </>
+);
+
 const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  const { assuranceCase, setAssuranceCase, nodes, orphanedElements } =
-    useStore();
+  const { assuranceCase, setAssuranceCase, nodes } = useStore();
   const [selectedLink, setSelectedLink] = useState(false);
   const [linkToCreate, setLinkToCreate] = useState('');
   const [unresolvedChanges, setUnresolvedChanges] = useState(false);
@@ -65,16 +775,18 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   const [action, setAction] = useState<string | null>(null);
   // const [parentNode, setParentNode] = useState(nodes.filter(n => n.data.id === node.data.goal_id)[0])
 
-  const [selectedClaimMove, setSelectedClaimMove] = useState<any>(null); // State for selected strategy
-  const [selectedEvidenceMove, setSelectedEvidenceMove] = useState<any>(null); // State for selected strategy
-  const [_moveElementType, _setMoveElementType] = useState<string | null>(null); // State for selected strategy
+  const [selectedClaimMove, setSelectedClaimMove] =
+    useState<MoveElement | null>(null);
+  const [selectedEvidenceMove, setSelectedEvidenceMove] =
+    useState<MoveElement | null>(null);
+  const [_moveElementType, _setMoveElementType] = useState<string | null>(null);
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
 
-  let goal: any;
-  let strategies: any[] = [];
-  let claims: any[] = [];
+  let goal: Goal | undefined;
+  let strategies: Strategy[] = [];
+  let claims: PropertyClaim[] = [];
 
   const readOnly = !!(
     assuranceCase.permissions === 'view' ||
@@ -147,183 +859,74 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     }
   };
 
-  const handleMove = async () => {
+  const handleMove = async (): Promise<void> => {
     setLoading(true);
-    if (selectedClaimMove) {
-      const _updatedItem = null;
+    const sessionKey = session?.key ?? '';
 
+    if (selectedClaimMove) {
       // Find id for selected move element
       const type = selectedClaimMove.name.substring(0, 1);
+
       if (type === 'G') {
-        const updateItem = {
-          goal_id: goal ? goal.id : null,
-          strategy_id: null,
-          property_claim_id: null,
-          hidden: false,
-        } as any;
-
-        const updated = await updateAssuranceCaseNode(
-          'property',
-          node.data.id,
-          session?.key ?? '',
-          updateItem
+        await handleGoalMove(
+          node,
+          goal,
+          assuranceCase,
+          setAssuranceCase,
+          setLoading,
+          handleClose,
+          selectedClaimMove,
+          sessionKey
         );
-        // if (updated) {
-        //   window.location.reload()
-        // }
-        if (updated) {
-          updateItem.hidden = findSiblingHiddenState(
-            assuranceCase,
-            selectedClaimMove.id
-          );
-          const updatedAssuranceCase = await updateAssuranceCase(
-            'property',
-            assuranceCase,
-            updateItem,
-            node.data.id,
-            node,
-            true
-          );
-          if (updatedAssuranceCase) {
-            setAssuranceCase(updatedAssuranceCase);
-            setLoading(false);
-            // window.location.reload()
-            handleClose();
-          }
-        }
-      }
-      if (type === 'P') {
-        const elementId = claims?.filter(
-          (claim: any) => claim.id === selectedClaimMove.id
-        )[0].id;
-
-        const updateItem = {
-          goal_id: null,
-          strategy_id: null,
-          property_claim_id: elementId,
-          hidden: false,
-        } as any;
-
-        const updated = await updateAssuranceCaseNode(
-          'property',
-          node.data.id,
-          session?.key ?? '',
-          updateItem
+      } else if (type === 'P') {
+        await handlePropertyClaimMove(
+          node,
+          claims,
+          assuranceCase,
+          setAssuranceCase,
+          setLoading,
+          handleClose,
+          selectedClaimMove,
+          sessionKey
         );
-        // if (updated) {
-        //   window.location.reload()
-        // }
-        if (updated) {
-          updateItem.hidden = findSiblingHiddenState(
-            assuranceCase,
-            selectedClaimMove.id
-          );
-          const updatedAssuranceCase = await updateAssuranceCase(
-            'property',
-            assuranceCase,
-            updateItem,
-            node.data.id,
-            node,
-            true
-          );
-          if (updatedAssuranceCase) {
-            setAssuranceCase(updatedAssuranceCase);
-            setLoading(false);
-            // window.location.reload()
-            handleClose();
-          }
-        }
-      }
-      if (type === 'S') {
-        const elementId = strategies?.filter(
-          (strategy: any) => strategy.id === selectedClaimMove.id
-        )[0].id;
-
-        const updateItem = {
-          goal_id: null,
-          strategy_id: elementId,
-          property_claim_id: null,
-          hidden: false,
-        } as any;
-
-        const updated = await updateAssuranceCaseNode(
-          'property',
-          node.data.id,
-          session?.key ?? '',
-          updateItem
+      } else if (type === 'S') {
+        await handleStrategyMove(
+          node,
+          strategies,
+          assuranceCase,
+          setAssuranceCase,
+          setLoading,
+          handleClose,
+          selectedClaimMove,
+          sessionKey
         );
-        // if (updated) {
-        //   window.location.reload()
-        // }
-        if (updated) {
-          updateItem.hidden = findSiblingHiddenState(
-            assuranceCase,
-            selectedClaimMove.id
-          );
-          const updatedAssuranceCase = await updateAssuranceCase(
-            'property',
-            assuranceCase,
-            updateItem,
-            node.data.id,
-            node,
-            true
-          );
-          if (updatedAssuranceCase) {
-            setAssuranceCase(updatedAssuranceCase);
-            setLoading(false);
-            // window.location.reload()
-            handleClose();
-          }
-        }
       }
     }
+
     if (selectedEvidenceMove) {
-      const updateItem = {
-        property_claim_id: [selectedEvidenceMove.id],
-        hidden: false,
-      } as any;
-      const updated = await updateAssuranceCaseNode(
-        'evidence',
-        node.data.id,
-        session?.key ?? '',
-        updateItem
+      await handleEvidenceMove(
+        node,
+        assuranceCase,
+        setAssuranceCase,
+        setLoading,
+        handleClose,
+        selectedEvidenceMove,
+        sessionKey
       );
-      // if (updated) {
-      //   window.location.reload()
-      // }
-      if (updated) {
-        updateItem.hidden = findSiblingHiddenState(
-          assuranceCase,
-          selectedEvidenceMove.id
-        );
-        const updatedAssuranceCase = await updateAssuranceCase(
-          'evidence',
-          assuranceCase,
-          updateItem,
-          node.data.id,
-          node,
-          true
-        );
-        if (updatedAssuranceCase) {
-          setAssuranceCase(updatedAssuranceCase);
-          setLoading(false);
-          // window.location.reload()
-          handleClose();
-        }
-      }
     }
   };
 
-  const parentNode: any = findParentNode(nodes, node);
+  const parentNode = findParentNode(nodes, node);
 
-  const handleDetach = async () => {
-    const { detached, error }: any = await detachCaseElement(
+  const handleDetach = async (): Promise<void> => {
+    const { detached, error } = await detachCaseElement(
       node,
       node.type,
       node.data.id,
       session?.key ?? ''
     );
     if (error) {
+      // TODO: Handle error properly
     }
 
     if (detached) {
@@ -352,403 +955,55 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       {!action && (
         <div>
           {node.type !== 'goal' && parentNode && (
-            <div className="mt-6 flex flex-col text-sm">
-              <div className="mb-2 flex items-center justify-start gap-2">
-                <p>Parent Description</p>
-                {toggleParentDescription ? (
-                  <Eye
-                    className="h-4 w-4"
-                    onClick={() =>
-                      setToggleParentDescription(!toggleParentDescription)
-                    }
-                  />
-                ) : (
-                  <EyeOff
-                    className="h-4 w-4"
-                    onClick={() =>
-                      setToggleParentDescription(!toggleParentDescription)
-                    }
-                  />
-                )}
-              </div>
-              {toggleParentDescription && (
-                <>
-                  <span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
-                    Identifier: {parentNode.data.name}
-                  </span>
-                  <p className="text-muted-foreground">
-                    {parentNode.data.short_description}
-                  </p>
-                </>
-              )}
-            </div>
+            <ParentDescription
+              parentNode={parentNode}
+              setToggleParentDescription={setToggleParentDescription}
+              toggleParentDescription={toggleParentDescription}
+            />
           )}
           <EditForm
             node={node}
             onClose={handleClose}
             setUnresolvedChanges={setUnresolvedChanges}
           />
-          {readOnly ? (
-            <>
-              <Separator className="my-6" />
-              <div className="">
-                <h3 className="mb-2 font-semibold text-lg">Actions</h3>
-                <div className="flex flex-col items-center justify-around gap-2">
-                  <Button
-                    className="w-full"
-                    onClick={() => setAction('comment')}
-                    variant={'outline'}
-                  >
-                    <MessageCirclePlus className="mr-2 h-4 w-4" />
-                    Comments
-                  </Button>
-                </div>
-              </div>
-              <Separator className="my-6" />
-            </>
-          ) : (
-            <>
-              <Separator className="my-6" />
-              <div className="">
-                <h3 className="mb-2 font-semibold text-lg">Actions</h3>
-                <div className="flex flex-col items-center justify-around gap-2">
-                  {node.type === 'goal' && (
-                    <Button
-                      className="w-full"
-                      onClick={() => setAction('context')}
-                      variant={'outline'}
-                    >
-                      <BookOpenText className="mr-2 h-4 w-4" />
-                      Manage Context
-                    </Button>
-                  )}
-                  {node.type !== 'evidence' && (
-                    <Button
-                      className="w-full"
-                      onClick={() => setAction('attributes')}
-                      variant={'outline'}
-                    >
-                      <LibraryIcon className="mr-2 h-4 w-4" />
-                      Manage Attributes
-                    </Button>
-                  )}
-                  {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button
-                      className="w-full"
-                      onClick={() => setAction('new')}
-                      variant={'outline'}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add New Element
-                    </Button>
-                  )}
-                  {node.type !== 'context' && node.type !== 'evidence' && (
-                    <Button
-                      className="w-full"
-                      onClick={() => setAction('existing')}
-                      variant={'outline'}
-                    >
-                      <Unplug className="mr-2 h-4 w-4" />
-                      Reattach Element(s)
-                    </Button>
-                  )}
-                  {node.type !== 'context' &&
-                    node.type !== 'goal' &&
-                    node.type !== 'strategy' && (
-                      <Button
-                        className="w-full"
-                        onClick={() => setAction('move')}
-                        variant={'outline'}
-                      >
-                        <Move className="mr-2 h-4 w-4" />
-                        Move Item
-                      </Button>
-                    )}
-                  <Button
-                    className="w-full"
-                    onClick={() => setAction('comment')}
-                    variant={'outline'}
-                  >
-                    <MessageCirclePlus className="mr-2 h-4 w-4" />
-                    Comments
-                  </Button>
-                </div>
-              </div>
-              <Separator className="my-6" />
-            </>
-          )}
-
-          {!readOnly && (
-            <div className="mt-12 flex items-center justify-start gap-4">
-              {node.type !== 'goal' && (
-                <Button
-                  className="my-8 w-full"
-                  onClick={handleDetach}
-                  variant={'outline'}
-                >
-                  <Unplug className="mr-2 h-4 w-4" />
-                  Detach
-                </Button>
-              )}
-              <Button
-                className="flex w-full items-center justify-center"
-                onClick={() => setDeleteOpen(true)}
-                variant={'destructive'}
-              >
-                <Trash2 className="mr-2" />
-                Delete&nbsp;
-                <span className="capitalize">{node.type}</span>
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-      {action === 'new' &&
-        !readOnly &&
-        (selectedLink ? (
-          <NewLinkForm
-            actions={{ setLinkToCreate, setSelectedLink, handleClose }}
-            linkType={linkToCreate}
+          <Separator className="my-6" />
+          <ActionButtons
             node={node}
-            setUnresolvedChanges={setUnresolvedChanges}
-          />
-        ) : (
-          node.type !== 'context' &&
-          node.type !== 'evidence' && (
-            <div className="mt-8 flex flex-col items-start justify-start">
-              <h3 className="mb-2 font-semibold text-lg">Add New</h3>
-              <div className="flex w-full flex-col items-center justify-start gap-4">
-                {node.type === 'goal' && (
-                  <>
-                    {/* <Button variant='outline' onClick={() => selectLink('context')} className="w-full"><Plus className="w-4 h-4 mr-2"/>Add Context</Button> */}
-                    <Button
-                      className="w-full"
-                      onClick={() => selectLink('strategy')}
-                      variant="outline"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Strategy
-                    </Button>
-                    <Button
-                      className="w-full"
-                      onClick={() => selectLink('claim')}
-                      variant="outline"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Property Claim
-                    </Button>
-                  </>
-                )}
-                {node.type === 'strategy' && (
-                  <Button
-                    className="w-full"
-                    onClick={() => selectLink('claim')}
-                    variant="outline"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Property Claim
-                  </Button>
-                )}
-                {node.type === 'property' && (
-                  <>
-                    <Button
-                      className="w-full"
-                      onClick={() => selectLink('claim')}
-                      variant="outline"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Property Claim
-                    </Button>
-                    <Button
-                      className="w-full"
-                      onClick={() => selectLink('evidence')}
-                      variant="outline"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Evidence
-                    </Button>
-                  </>
-                )}
-              </div>
-              <Button
-                className="my-6"
-                onClick={() => setAction(null)}
-                variant={'outline'}
-              >
-                Cancel
-              </Button>
-            </div>
-          )
-        ))}
-      {action === 'existing' &&
-        !readOnly &&
-        node.type !== 'evidence' &&
-        node.type !== 'context' && (
-          <OrphanElements
-            handleClose={handleClose}
-            loadingState={{ loading, setLoading }}
-            node={node}
+            readOnly={readOnly}
             setAction={setAction}
           />
-        )}
-      {action === 'move' && !readOnly && (
-        <>
-          {node.type === 'property' || node.type === 'evidence' ? (
-            <div className="w-full pt-4">
-              <h3 className="mt-6 mb-2 font-semibold text-lg capitalize">
-                Move {node.type}
-              </h3>
-              <div className="items-left flex flex-col justify-start gap-2">
-                {node.type === 'property' && (
-                  <Select onValueChange={setSelectedClaimMove}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {goal && (
-                        <SelectItem key={crypto.randomUUID()} value={goal}>
-                          <div className="flex flex-col items-start justify-start gap-1">
-                            <div className="flex items-center">
-                              <span className="font-medium">{goal.name}</span>
-                              <svg
-                                aria-hidden="true"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                viewBox="0 0 2 2"
-                              >
-                                <circle cx={1} cy={1} r={1} />
-                              </svg>
-                              <span className="max-w-[200px] truncate">
-                                {goal.short_description}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      )}
-                      {strategies?.map((strategy: any) => (
-                        <SelectItem key={crypto.randomUUID()} value={strategy}>
-                          <div className="flex items-start justify-start gap-1">
-                            <div className="flex items-center">
-                              <span className="font-medium">
-                                {strategy.name}
-                              </span>
-                              <svg
-                                aria-hidden="true"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                viewBox="0 0 2 2"
-                              >
-                                <circle cx={1} cy={1} r={1} />
-                              </svg>
-                              <span className="max-w-[200px] truncate">
-                                {strategy.short_description}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                      {claims?.map((claim: any) => (
-                        <SelectItem key={crypto.randomUUID()} value={claim}>
-                          <div className="flex flex-col items-start justify-start gap-1">
-                            <div className="flex items-center">
-                              <span className="font-medium">{claim.name}</span>
-                              <svg
-                                aria-hidden="true"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                viewBox="0 0 2 2"
-                              >
-                                <circle cx={1} cy={1} r={1} />
-                              </svg>
-                              <span className="max-w-[200px] truncate">
-                                {claim.short_description}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                      {strategies?.length === 0 && (
-                        <SelectItem disabled={true} value="{strategy.id}">
-                          No strategies found.
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-                {node.type === 'evidence' && (
-                  <Select onValueChange={setSelectedEvidenceMove}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {claims?.map((claim: any) => (
-                        <SelectItem key={crypto.randomUUID()} value={claim}>
-                          <div className="flex flex-col items-start justify-start gap-1">
-                            <div className="flex items-center">
-                              <span className="font-medium">{claim.name}</span>
-                              <svg
-                                aria-hidden="true"
-                                className="mx-2 inline h-0.5 w-0.5 fill-current"
-                                viewBox="0 0 2 2"
-                              >
-                                <circle cx={1} cy={1} r={1} />
-                              </svg>
-                              <span className="max-w-[200px] truncate">
-                                {claim.short_description}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                      {claims && claims.length === 0 && (
-                        <SelectItem disabled={true} value="{strategy.id}">
-                          No property claims found.
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-          ) : null}
-          <div className="flex items-center justify-start gap-2">
-            <Button
-              className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
-              onClick={handleMove}
-            >
-              Move
-            </Button>
-            <Button
-              className="my-6"
-              onClick={() => setAction(null)}
-              variant={'outline'}
-            >
-              Cancel
-            </Button>
-          </div>
-        </>
+          <Separator className="my-6" />
+
+          <DeleteButtons
+            handleDetach={handleDetach}
+            node={node}
+            readOnly={readOnly}
+            setDeleteOpen={setDeleteOpen}
+          />
+        </div>
       )}
-      {action === 'comment' && (
-        <NodeComment
-          handleClose={handleClose}
-          loadingState={{ loading, setLoading }}
-          node={node}
-          readOnly={assuranceCase.permissions === 'view'}
-          setAction={setAction}
-        />
-      )}
-      {action === 'context' && (
-        <NodeContext
-          actions={{ setSelectedLink, handleClose, setAction }}
-          node={node}
-          setUnresolvedChanges={setUnresolvedChanges}
-        />
-      )}
-      {action === 'attributes' && (
-        <NodeAttributes
-          actions={{ setSelectedLink, handleClose, setAction }}
-          node={node}
-          onClose={handleClose}
-          setUnresolvedChanges={setUnresolvedChanges}
-        />
-      )}
+      <ActionContent
+        action={action}
+        assuranceCase={assuranceCase}
+        claims={claims}
+        goal={goal}
+        handleClose={handleClose}
+        handleMove={handleMove}
+        linkToCreate={linkToCreate}
+        loading={loading}
+        node={node}
+        readOnly={readOnly}
+        selectedLink={selectedLink}
+        selectLink={selectLink}
+        setAction={setAction}
+        setLinkToCreate={setLinkToCreate}
+        setLoading={setLoading}
+        setSelectedClaimMove={setSelectedClaimMove}
+        setSelectedEvidenceMove={setSelectedEvidenceMove}
+        setSelectedLink={setSelectedLink}
+        setUnresolvedChanges={setUnresolvedChanges}
+        strategies={strategies}
+      />
       <AlertModal
         cancelButtonText={'No, keep the element'}
         confirmButtonText={'Yes, delete this element!'}

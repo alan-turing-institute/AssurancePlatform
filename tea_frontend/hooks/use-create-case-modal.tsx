@@ -29,10 +29,8 @@ interface useCreateCaseModalStore {
  * @function
  * @returns {useCreateCaseModalStore} The Zustand store with modal state and actions.
  */
-export const useCreateCaseModal = create<useCreateCaseModalStore>(
-  (set: any) => ({
-    isOpen: false,
-    onOpen: () => set({ isOpen: true }),
-    onClose: () => set({ isOpen: false }),
-  })
-);
+export const useCreateCaseModal = create<useCreateCaseModalStore>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));

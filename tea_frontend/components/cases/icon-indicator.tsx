@@ -5,10 +5,23 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/20/solid';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { Context } from '@/types';
+
+type NodeData = {
+  id: number;
+  type: string;
+  name: string;
+  short_description: string;
+  long_description: string;
+  assumption?: string;
+  justification?: string;
+  context?: Context[];
+  parentId?: string;
+};
 
 interface IconIndicatorProps {
-  data: any;
+  data: NodeData;
 }
 
 const IconIndicator = ({ data }: IconIndicatorProps) => {
@@ -22,8 +35,8 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
     (typeof justification === 'string' && justification.trim() !== '') ||
     (Array.isArray(data.context) && data.context.length > 0);
 
-  const fetchNodeComments = async () => {
-    let entity;
+  const fetchNodeComments = useCallback(async () => {
+    let entity: string;
 
     switch (type) {
       case 'Strategy':
@@ -55,8 +68,10 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
       const result = await response.json();
       // console.log('comments result', result)
       return result;
-    } catch (_error) {}
-  };
+    } catch (_error) {
+      // TODO: Handle error fetching comments
+    }
+  }, [data, session?.key, type]);
 
   useEffect(() => {
     fetchNodeComments().then((result) => {

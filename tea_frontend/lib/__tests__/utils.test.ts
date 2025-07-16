@@ -1,3 +1,4 @@
+import type { ClassValue } from 'clsx';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the dependencies properly
@@ -23,32 +24,31 @@ describe('utils', () => {
     vi.clearAllMocks();
 
     // Set up default mock behaviors
-    mockClsx.mockImplementation((inputs: any) => {
-      if (Array.isArray(inputs)) {
-        const result = [];
-        for (const input of inputs) {
-          if (typeof input === 'string' && input) {
-            result.push(input);
-          } else if (
-            typeof input === 'object' &&
-            input !== null &&
-            !Array.isArray(input)
-          ) {
-            for (const [key, value] of Object.entries(input)) {
-              if (value) {
-                result.push(key);
-              }
-            }
-          } else if (Array.isArray(input)) {
-            result.push(...input.filter(Boolean));
-          }
-        }
-        return result.join(' ');
+    mockClsx.mockImplementation((inputs: unknown) => {
+      if (!Array.isArray(inputs)) {
+        return String(inputs || '');
       }
-      return String(inputs || '');
+
+      const processInput = (input: unknown): string[] => {
+        if (typeof input === 'string' && input) {
+          return [input];
+        }
+        if (Array.isArray(input)) {
+          return input.filter(Boolean).map(String);
+        }
+        if (typeof input === 'object' && input !== null) {
+          return Object.entries(input)
+            .filter(([_, value]) => value)
+            .map(([key]) => key);
+        }
+        return [];
+      };
+
+      const result = inputs.flatMap(processInput);
+      return result.join(' ');
     });
 
-    mockTwMerge.mockImplementation((classes: any) => {
+    mockTwMerge.mockImplementation((classes: unknown) => {
       if (typeof classes === 'string') {
         const classArray = classes.split(' ').filter(Boolean);
         const uniqueClasses = [...new Set(classArray)];
@@ -299,7 +299,7 @@ describe('utils', () => {
       const getClass = () => 'function-class';
 
       expect(() => {
-        cn('base', getClass as any);
+        cn('base', getClass as ClassValue);
       }).not.toThrow();
     });
 
@@ -307,23 +307,23 @@ describe('utils', () => {
       const symbolClass = Symbol('test');
 
       // Mock clsx to handle symbols gracefully for this test
-      mockClsx.mockImplementationOnce((inputs: any) => {
+      mockClsx.mockImplementationOnce((inputs: unknown) => {
         if (Array.isArray(inputs)) {
           return inputs
-            .filter((input: any) => typeof input === 'string')
+            .filter((input: unknown) => typeof input === 'string')
             .join(' ');
         }
         return '';
       });
 
       expect(() => {
-        cn('base', symbolClass as any);
+        cn('base', symbolClass as ClassValue);
       }).not.toThrow();
     });
 
     it('should handle numbers as class values', () => {
       expect(() => {
-        cn('base', 123 as any, 'end');
+        cn('base', 123 as unknown as ClassValue, 'end');
       }).not.toThrow();
     });
 
@@ -337,7 +337,7 @@ describe('utils', () => {
       };
 
       expect(() => {
-        cn('base', deepStructure as any);
+        cn('base', deepStructure as ClassValue);
       }).not.toThrow();
     });
   });

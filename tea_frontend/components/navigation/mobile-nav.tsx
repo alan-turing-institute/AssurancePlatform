@@ -17,12 +17,13 @@ interface MobileNavProps {
   setSidebarOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-function classNames(...classes: any) {
+function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
 export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
   const pathname = usePathname();
+  // Page name determined from pathname
   const _pageName =
     pathname === '/' ? 'assurance cases' : pathname.split('/')[1];
 
@@ -146,24 +147,31 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
                           </p>
                         )}
                         {teams.length > 0 &&
-                          teams.map((team: any) => (
-                            <li key={team.name}>
-                              <a
-                                className={classNames(
-                                  team.current
-                                    ? 'bg-indigo-700 text-white'
-                                    : 'text-indigo-200 hover:bg-indigo-700 hover:text-white',
-                                  'group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6'
-                                )}
-                                href={team.href}
-                              >
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-[0.625rem] text-white">
-                                  {team.initial}
-                                </span>
-                                <span className="truncate">{team.name}</span>
-                              </a>
-                            </li>
-                          ))}
+                          teams.map(
+                            (team: {
+                              name: string;
+                              href: string;
+                              initial: string;
+                              current: boolean;
+                            }) => (
+                              <li key={team.name}>
+                                <a
+                                  className={classNames(
+                                    team.current
+                                      ? 'bg-indigo-700 text-white'
+                                      : 'text-indigo-200 hover:bg-indigo-700 hover:text-white',
+                                    'group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6'
+                                  )}
+                                  href={team.href}
+                                >
+                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-[0.625rem] text-white">
+                                    {team.initial}
+                                  </span>
+                                  <span className="truncate">{team.name}</span>
+                                </a>
+                              </li>
+                            )
+                          )}
                       </ul>
                     </li>
                     <li className="mt-auto">

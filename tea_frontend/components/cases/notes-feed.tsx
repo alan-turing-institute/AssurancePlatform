@@ -6,89 +6,89 @@ import moment from 'moment';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import useStore from '@/data/store';
+import type { Comment, User } from '@/types';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 import NotesEditForm from './notes-edit-form';
 
-export default function NotesFeed({}) {
-  const { assuranceCase, setAssuranceCase, caseNotes, setCaseNotes } =
+export default function NotesFeed() {
+  const { assuranceCase, _setAssuranceCase, caseNotes, setCaseNotes } =
     useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const [edit, setEdit] = useState<boolean>();
   const [editId, setEditId] = useState<number>();
-  const [_newComment, _setNewComment] = useState<string>();
-  const [_comments, _setComments] = useState([]);
-  const [user, setUser] = useState<any>();
+  const [user, setUser] = useState<User | undefined>();
   const { toast } = useToast();
 
   assuranceCase.comments.sort(
-    (a: any, b: any) =>
+    (a: Comment, b: Comment) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  const fetchSingleCase = async () => {
-    const requestOptions: RequestInit = {
-      headers: {
-        Authorization: `Token ${session?.key}`,
-      },
-    };
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`,
-      requestOptions
-    );
-
-    if (response.status === 404 || response.status === 403) {
-      return;
-    }
-
-    if (response.status === 401) {
-      return unauthorized();
-    }
-
-    const { comments } = await response.json();
-    return comments;
-  };
-
-  const fetchCurrentUser = async () => {
-    const requestOptions: RequestInit = {
-      headers: {
-        Authorization: `Token ${session?.key}`,
-      },
-    };
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
-      requestOptions
-    );
-
-    if (response.status === 404 || response.status === 403) {
-      return;
-    }
-
-    if (response.status === 401) {
-      return unauthorized();
-    }
-
-    const result = await response.json();
-    return result;
-  };
-
   // Fetch case notes/comments
   useEffect(() => {
-    // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    fetchSingleCase().then((comments) => setCaseNotes(comments));
-  }, [
-    // assuranceCase.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    fetchSingleCase,
-    setCaseNotes,
-  ]);
+    const fetchSingleCase = async () => {
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Token ${session?.key}`,
+        },
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`,
+        requestOptions
+      );
+
+      if (response.status === 404 || response.status === 403) {
+        // Return empty array if case not found or forbidden
+        return [];
+      }
+
+      if (response.status === 401) {
+        // Handle unauthorized access
+        unauthorized();
+        return [];
+      }
+
+      const { comments } = await response.json();
+      return comments;
+    };
+
+    fetchSingleCase().then((comments) => setCaseNotes(comments || []));
+  }, [assuranceCase.id, session?.key, setCaseNotes]);
 
   // Fetch current user
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Token ${session?.key}`,
+        },
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
+        requestOptions
+      );
+
+      if (response.status === 404 || response.status === 403) {
+        // Return undefined if user not found or forbidden
+        return;
+      }
+
+      if (response.status === 401) {
+        // Handle unauthorized access
+        unauthorized();
+        return;
+      }
+
+      const result = await response.json();
+      return result;
+    };
+
     fetchCurrentUser().then((result) => setUser(result));
-  }, [fetchCurrentUser]);
+  }, [session?.key]);
 
   const handleNoteDelete = async (id: number) => {
     try {
@@ -112,9 +112,7 @@ export default function NotesFeed({}) {
         return;
       }
 
-      const updatedComments = caseNotes.filter(
-        (comment: any) => comment.id !== id
-      );
+      const updatedComments = caseNotes.filter((comment) => comment.id !== id);
       setCaseNotes(updatedComments);
     } catch (_error) {
       toast({
@@ -131,7 +129,7 @@ export default function NotesFeed({}) {
         {caseNotes.length === 0 && (
           <p className="text-foreground/70">No notes have been added.</p>
         )}
-        {caseNotes.map((note: any, index: any) => (
+        {caseNotes.map((note: Comment, index: number) => (
           <li key={note.id}>
             <div className="group relative pb-8">
               {index !== caseNotes.length - 1 ? (

@@ -37,10 +37,10 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock Next.js image component
-// biome-ignore lint/performance/noImgElement: Needed for mocking Next.js Image component in tests
 vi.mock('next/image', () => ({
   default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
     // eslint-disable-next-line @next/next/no-img-element
+    // biome-ignore lint/performance/noImgElement: This is a test mock for Next.js Image component
     return <img alt="" {...props} />;
   },
 }));

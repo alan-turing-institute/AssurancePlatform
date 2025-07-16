@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { Node } from 'reactflow';
 import { z } from 'zod';
 import {
   Form,
@@ -39,7 +40,7 @@ const formSchema = z.object({
 });
 
 interface EditFormProps {
-  node: any;
+  node: Node;
   onClose: () => void;
   setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
 }
@@ -49,7 +50,7 @@ const EditForm: React.FC<EditFormProps> = ({
   onClose,
   setUnresolvedChanges,
 }) => {
-  const { nodes, setNodes, assuranceCase, setAssuranceCase } = useStore();
+  const { assuranceCase, setAssuranceCase } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);

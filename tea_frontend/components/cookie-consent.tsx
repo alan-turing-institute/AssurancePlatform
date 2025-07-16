@@ -6,11 +6,21 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 
+interface CookieConsentProps {
+  demo?: boolean;
+  onAcceptCallback?: () => void;
+  onDeclineCallback?: () => void;
+}
+
 export default function CookieConsent({
   demo = false,
-  onAcceptCallback = () => {},
-  onDeclineCallback = () => {},
-}) {
+  onAcceptCallback = () => {
+    // Default accept callback
+  },
+  onDeclineCallback = () => {
+    // Default decline callback
+  },
+}: CookieConsentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [hide, setHide] = useState(false);
 
@@ -18,6 +28,7 @@ export default function CookieConsent({
 
   const accept = () => {
     setIsOpen(false);
+    // biome-ignore lint/suspicious/noDocumentCookie: Essential cookie for consent tracking
     document.cookie =
       'cookieConsent=true; expires=Fri, 31 Dec 9999 23:59:59 GMT';
     setTimeout(() => {

@@ -68,13 +68,17 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
   g.setGraph({ rankdir: 'TB' });
 
   // Set all nodes in the graph, including hidden ones
-  nodes.forEach((node) => g.setNode(node.id, node));
+  for (const node of nodes) {
+    g.setNode(node.id, node);
+  }
 
   // Set edges for visible nodes only
   const visibleEdges = edges.filter(
     (edge) => !(edge as Edge & { hidden?: boolean }).hidden
   );
-  visibleEdges.forEach((edge) => g.setEdge(edge.source, edge.target));
+  for (const edge of visibleEdges) {
+    g.setEdge(edge.source, edge.target);
+  }
 
   Dagre.layout(g);
 
@@ -125,34 +129,21 @@ const useStore = create<Store>((set, get) => ({
     strategies?: OrphanedElement[];
     evidence?: OrphanedElement[];
   }) => {
+    const addElementsToArray = (
+      elements: OrphanedElement[] | undefined,
+      targetArray: OrphanedElement[]
+    ): void => {
+      if (elements && elements.length > 0) {
+        targetArray.push(...elements);
+      }
+    };
+
     const newArray: OrphanedElement[] = [];
 
-    if (orphanedElements.contexts && orphanedElements.contexts.length > 0) {
-      orphanedElements.contexts.forEach((context) => {
-        newArray.push(context);
-      });
-    }
-
-    if (
-      orphanedElements.property_claims &&
-      orphanedElements.property_claims.length > 0
-    ) {
-      orphanedElements.property_claims.forEach((claim) => {
-        newArray.push(claim);
-      });
-    }
-
-    if (orphanedElements.strategies && orphanedElements.strategies.length > 0) {
-      orphanedElements.strategies.forEach((strategy) => {
-        newArray.push(strategy);
-      });
-    }
-
-    if (orphanedElements.evidence && orphanedElements.evidence.length > 0) {
-      orphanedElements.evidence.forEach((evidence) => {
-        newArray.push(evidence);
-      });
-    }
+    addElementsToArray(orphanedElements.contexts, newArray);
+    addElementsToArray(orphanedElements.property_claims, newArray);
+    addElementsToArray(orphanedElements.strategies, newArray);
+    addElementsToArray(orphanedElements.evidence, newArray);
 
     set({ orphanedElements: newArray });
   },
@@ -162,7 +153,9 @@ const useStore = create<Store>((set, get) => ({
   setEdges: (edges: Edge[]) => {
     set({ edges });
   },
-  fitView: () => {}, // Define fitView function
+  fitView: () => {
+    // Placeholder function for fitView - to be implemented when needed
+  },
   layoutNodes: (nodes: Node[], edges: Edge[]) => {
     // Layout nodes vertically
     const { nodes: layoutedNodes, edges: layoutedEdges } =

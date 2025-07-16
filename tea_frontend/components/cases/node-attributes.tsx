@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { Node } from 'reactflow';
 import { z } from 'zod';
 import {
   Form,
@@ -28,9 +29,24 @@ const formSchema = z.object({
   justification: z.string().optional(),
 });
 
+// Define the structure of node.data
+type NodeWithData = Node & {
+  data: {
+    id: number;
+    assumption?: string;
+    justification?: string;
+  };
+};
+
+// Define the structure of actions prop
+interface NodeActions {
+  setSelectedLink: (value: boolean) => void;
+  setAction: (value: string) => void;
+}
+
 interface NodeAttributesProps {
-  node: any;
-  actions: any;
+  node: NodeWithData;
+  actions: NodeActions;
   onClose: () => void;
   setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
 }
@@ -39,7 +55,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
   node,
   actions,
   onClose,
-  setUnresolvedChanges,
+  setUnresolvedChanges: _setUnresolvedChanges,
 }) => {
   const { assuranceCase, setAssuranceCase } = useStore();
   const { data: session } = useSession();

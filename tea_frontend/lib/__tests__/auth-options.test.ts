@@ -62,7 +62,7 @@ describe('authOptions', () => {
       const result = await authOptions.callbacks?.redirect?.({
         url: '/some-url',
         baseUrl: 'http://localhost:3000',
-      } as any);
+      });
 
       expect(result).toBe('http://localhost:3000/dashboard');
     });
@@ -75,7 +75,7 @@ describe('authOptions', () => {
       const result = await authOptions.callbacks?.redirect?.({
         url: '/some-url',
         baseUrl: 'http://fallback:3000',
-      } as any);
+      });
 
       expect(result).toBe('http://fallback:3000/dashboard');
     });
@@ -90,7 +90,7 @@ describe('authOptions', () => {
         session: mockSession,
         user: undefined,
         token: mockToken,
-      } as any);
+      });
 
       expect(result).toEqual({
         user: { name: 'Test User' },
@@ -111,7 +111,7 @@ describe('authOptions', () => {
         account: undefined,
         profile: undefined,
         isNewUser: undefined,
-      } as any);
+      });
 
       expect(result).toEqual({
         key: 'user-token',
@@ -134,7 +134,7 @@ describe('authOptions', () => {
         account: undefined,
         profile: undefined,
         isNewUser: undefined,
-      } as any);
+      });
 
       expect(result).toEqual(mockToken);
     });
@@ -148,7 +148,7 @@ describe('authOptions', () => {
         profile: undefined,
         email: 'test@example.com',
         credentials: undefined,
-      } as any);
+      });
 
       expect(result).toBe(true);
     });
@@ -162,14 +162,14 @@ describe('authOptions', () => {
         profile: undefined,
         email: 'test@example.com',
         credentials: undefined,
-      } as any);
+      });
 
       expect(result).toBe(false);
     });
   });
 
   describe('Error handling', () => {
-    it('should handle missing environment variables gracefully', async () => {
+    it('should handle missing environment variables gracefully', () => {
       vi.stubEnv('NEXTAUTH_SECRET', '');
       vi.stubEnv('GITHUB_APP_CLIENT_ID', '');
       vi.stubEnv('GITHUB_APP_CLIENT_SECRET', '');
@@ -188,7 +188,7 @@ describe('authOptions', () => {
         authOptions.callbacks?.redirect?.({
           url: '/some-url',
           baseUrl: '',
-        } as any)
+        } as { url: string; baseUrl: string })
       ).rejects.toThrow(
         'NEXTAUTH_URL must be configured for authentication redirects'
       );
@@ -200,9 +200,9 @@ describe('authOptions', () => {
 
       const { authOptions } = await import('../authOptions');
 
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        // Empty implementation for test
+      });
 
       const result = await authOptions.callbacks?.signIn?.({
         user: { id: '1' },
@@ -210,7 +210,7 @@ describe('authOptions', () => {
         profile: { email: 'test@github.com' },
         email: 'test@github.com',
         credentials: undefined,
-      } as any);
+      });
 
       expect(result).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -273,7 +273,7 @@ describe('authOptions', () => {
         session: testSession,
         token: testToken,
         user: undefined,
-      } as any);
+      });
 
       expect(sessionResult).toEqual({
         user: { id: '1', name: 'Test' },
@@ -292,7 +292,7 @@ describe('authOptions', () => {
         account: undefined,
         profile: undefined,
         isNewUser: undefined,
-      } as any);
+      });
 
       expect(initialJWT).toEqual({
         key: 'new-key',
@@ -306,7 +306,7 @@ describe('authOptions', () => {
         account: undefined,
         profile: undefined,
         isNewUser: undefined,
-      } as any);
+      });
 
       expect(persistedJWT).toEqual(initialJWT);
     });

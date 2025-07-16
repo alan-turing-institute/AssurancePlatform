@@ -1,8 +1,19 @@
 import { act, renderHook } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ToastAction, type ToastActionElement } from '../toast';
+import {
+  ToastAction,
+  type ToastActionElement,
+  type ToastProps,
+} from '../toast';
 import { useToast } from '../use-toast';
+
+type ToasterToast = ToastProps & {
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+};
 
 describe('useToast', () => {
   beforeEach(() => {
@@ -306,7 +317,13 @@ describe('useToast', () => {
   describe('Return value from toast function', () => {
     it('should return toast object with id and other props', () => {
       const { result } = renderHook(() => useToast());
-      let returnedToast: any;
+      let returnedToast:
+        | {
+            id: string;
+            dismiss: () => void;
+            update: (props: Partial<ToasterToast>) => void;
+          }
+        | undefined;
 
       act(() => {
         returnedToast = result.current.toast({

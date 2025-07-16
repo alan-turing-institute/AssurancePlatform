@@ -25,6 +25,7 @@ export default function MailingList() {
             viewBox="0 0 404 392"
             width={404}
           >
+            <title>Decorative background pattern</title>
             <defs>
               <pattern
                 height={20}
@@ -63,6 +64,7 @@ export default function MailingList() {
                 preserveAspectRatio="xMidYMid slice"
                 viewBox="0 0 1463 360"
               >
+                <title>Background geometric pattern</title>
                 <path
                   className="text-indigo-500 text-opacity-40"
                   d="M-82.673 72l1761.849 472.086-134.327 501.315-1761.85-472.086z"
