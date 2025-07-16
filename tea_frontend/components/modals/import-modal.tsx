@@ -1,6 +1,5 @@
 'use client';
 
-import { useImportModal } from '.*/use-import-modal';
 import { zodResolver } from '@hookform/resolvers/zod';
 // import { useLoginToken } from ".*/use-auth";
 import { useRouter } from 'next/navigation';
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { useImportModal } from '@/hooks/use-import-modal';
 
 const ACCEPTED_FILE_TYPES = ['application/json']; // Correct MIME type for JSON files
 

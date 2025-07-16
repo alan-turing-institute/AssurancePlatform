@@ -1,11 +1,11 @@
-import { useCreateCaseModal } from '.*/use-create-case-modal';
-import { useEmailModal } from '.*/use-email-modal';
-import { useImportModal } from '.*/use-import-modal';
-import { usePermissionsModal } from '.*/use-permissions-modal';
-import { useResourcesModal } from '.*/use-resources-modal';
-import { useShareModal } from '.*/use-share-modal';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useCreateCaseModal } from '@/hooks/use-create-case-modal';
+import { useEmailModal } from '@/hooks/use-email-modal';
+import { useImportModal } from '@/hooks/use-import-modal';
+import { usePermissionsModal } from '@/hooks/use-permissions-modal';
+import { useResourcesModal } from '@/hooks/use-resources-modal';
+import { useShareModal } from '@/hooks/use-share-modal';
 
 // Type for modal hook return value
 interface ModalHookReturn {

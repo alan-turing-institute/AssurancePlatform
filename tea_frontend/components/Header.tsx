@@ -5,12 +5,12 @@ import { useSession } from 'next-auth/react';
 import type React from 'react';
 import { type Dispatch, type SetStateAction, useRef, useState } from 'react';
 import { useReactFlow, useUpdateNodeInternals } from 'reactflow';
+import SearchNodes from '@/components/common/search-nodes';
 // import { useLoginToken } from ".*/use-auth";
 import useStore from '@/data/store';
 import { toggleHiddenForParent } from '@/lib/case-helper';
 import LogoutButton from './auth/logout-button';
 import ActiveUsersList from './cases/active-users-list';
-import SearchNodes from './common/SearchNodes';
 import { Button } from './ui/button';
 import { ModeToggle } from './ui/theme-toggle';
 import {

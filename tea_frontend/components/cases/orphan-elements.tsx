@@ -25,7 +25,7 @@ import {
   deleteAssuranceCaseNode,
 } from '@/lib/case-helper';
 import type { Context, Evidence, PropertyClaim, Strategy } from '@/types';
-import { AlertModal } from '../modals/alertModal';
+import { AlertModal } from '../modals/alert-modal';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';

@@ -1,7 +1,7 @@
 'use client';
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
-import { AlertModal } from '../modals/alertModal';
+import { AlertModal } from '../modals/alert-modal';
 import CreateSheet from '../ui/create-sheet';
 import CreateForm from './create-form';
 

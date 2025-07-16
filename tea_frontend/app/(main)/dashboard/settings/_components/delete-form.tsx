@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
-import { AlertModal } from '@/components/modals/alertModal';
+import { AlertModal } from '@/components/modals/alert-modal';
 import { useToast } from '@/components/ui/use-toast';
 import type { DeleteFormProps } from '@/types/domain';
 

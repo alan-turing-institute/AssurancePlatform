@@ -16,14 +16,14 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import NodeCreate from '@/components/common/node-create';
 import useStore from '@/data/store';
-import { AlertModal } from '../modals/alertModal';
+import { AlertModal } from '../modals/alert-modal';
 import ActionTooltip from '../ui/action-tooltip';
 import CaseNotes from './case-notes';
 import 'react-toastify/dist/ReactToastify.css';
-import { usePermissionsModal } from '.*/use-permissions-modal';
-import { useResourcesModal } from '.*/use-resources-modal';
-import { useShareModal } from '.*/use-share-modal';
 import { useSession } from 'next-auth/react';
+import { usePermissionsModal } from '@/hooks/use-permissions-modal';
+import { useResourcesModal } from '@/hooks/use-resources-modal';
+import { useShareModal } from '@/hooks/use-share-modal';
 
 interface ActionButtonProps {
   showCreateGoal: boolean;

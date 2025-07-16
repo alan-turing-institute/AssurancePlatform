@@ -1,6 +1,5 @@
 'use client';
 
-import { useShareModal } from '.*/use-share-modal';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { saveAs } from 'file-saver';
 import {
@@ -31,6 +30,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
+import { useShareModal } from '@/hooks/use-share-modal';
 // import { unauthorized, useLoginToken } from ".*/use-auth";
 import type { User } from '@/types';
 import { Button } from '../ui/button';

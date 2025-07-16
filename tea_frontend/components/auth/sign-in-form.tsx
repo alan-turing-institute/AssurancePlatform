@@ -106,10 +106,16 @@ const SignInForm = () => {
   };
 
   useEffect(() => {
+    // Only redirect if we have a valid session with a key
+    // This prevents redirect loops during the authentication process
     if (session?.key) {
       router.push('/dashboard');
-    } else if (session?.user && !session?.key) {
-      // Handle session without key
+    } else if (session && !session.key) {
+      // We have a session but no key - this is a stale session
+      // Sign out to clear it
+      signIn('credentials', { redirect: false }).then(() => {
+        // Session will be cleared by NextAuth
+      });
     }
   }, [session, router]);
 

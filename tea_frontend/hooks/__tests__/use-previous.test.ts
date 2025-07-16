@@ -1,6 +1,6 @@
-import { usePrevious } from '.*/use-previous';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usePrevious } from '@/hooks/use-previous';
 
 describe('usePrevious', () => {
   beforeEach(() => {

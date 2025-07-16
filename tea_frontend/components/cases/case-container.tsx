@@ -1,6 +1,5 @@
 'use client';
 
-import { unauthorized } from '.*/use-auth';
 import { Loader2, MessagesSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -9,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ReactFlowProvider } from 'reactflow';
 import WebSocketComponent from '@/components/websocket';
 import useStore from '@/data/store';
+import { unauthorized } from '@/hooks/use-auth';
 import { addHiddenProp } from '@/lib/case-helper';
 import Header from '../header';
 import CaseDetails from './case-details';

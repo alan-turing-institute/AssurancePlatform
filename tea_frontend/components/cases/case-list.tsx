@@ -1,11 +1,11 @@
 'use client';
 
-import { useCreateCaseModal } from '.*/use-create-case-modal';
-import { useImportModal } from '.*/use-import-modal';
 import { ArrowUpTrayIcon } from '@heroicons/react/20/solid';
 import { PlusCircleIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useCreateCaseModal } from '@/hooks/use-create-case-modal';
+import { useImportModal } from '@/hooks/use-import-modal';
 import type { AssuranceCase } from '@/types';
 import { Input } from '../ui/input';
 import CaseCard from './case-card';

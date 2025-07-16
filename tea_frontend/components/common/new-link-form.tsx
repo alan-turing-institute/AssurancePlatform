@@ -344,6 +344,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
+      URL: '',
     },
   });
 

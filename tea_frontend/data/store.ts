@@ -1,4 +1,3 @@
-import { nodeTypes } from '.*/node-types';
 import Dagre from '@dagrejs/dagre';
 import {
   addEdge,
@@ -15,6 +14,7 @@ import {
   type OnNodesChange,
 } from 'reactflow';
 import { create } from 'zustand';
+import { nodeTypes } from '@/data/node-types';
 import type { AssuranceCase, Comment as CaseComment, User } from '@/types';
 import { initEdges } from './edges';
 import { initNodes } from './nodes';

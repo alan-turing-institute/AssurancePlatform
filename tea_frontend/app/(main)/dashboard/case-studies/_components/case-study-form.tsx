@@ -1,6 +1,5 @@
 'use client';
 
-import { useImportModal } from '.*/use-import-modal';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CloudDownload, InfoIcon, Share, Trash2Icon, X } from 'lucide-react';
 import Image from 'next/image';
@@ -14,7 +13,7 @@ import {
   deleteCaseStudy,
   updateCaseStudy,
 } from '@/actions/case-studies';
-import { AlertModal } from '@/components/modals/alertModal';
+import { AlertModal } from '@/components/modals/alert-modal';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -42,6 +41,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { sectors } from '@/config/index';
+import { useImportModal } from '@/hooks/use-import-modal';
 import type { CaseStudyFormProps, FileUploadEvent } from '@/types/domain';
 import DeleteCaseButton from './delete-button';
 import RelatedAssuranceCaseList from './related-assurance-case-list';

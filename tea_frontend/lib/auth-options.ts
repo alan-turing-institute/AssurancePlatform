@@ -152,7 +152,7 @@ export const authOptions: NextAuthOptions = {
      * @param {string} params.baseUrl - Base URL of the application.
      * @returns {string} Redirect URL after authentication.
      */
-    redirect({ _url, baseUrl }) {
+    redirect({ url, baseUrl }) {
       // Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
       const authUrl = process.env.NEXTAUTH_URL || baseUrl;
       if (!authUrl) {
@@ -160,6 +160,26 @@ export const authOptions: NextAuthOptions = {
           'NEXTAUTH_URL must be configured for authentication redirects'
         );
       }
+
+      // Properly parse the callback URL
+      const parsedUrl = new URL(url, authUrl);
+      const callbackUrl =
+        parsedUrl.searchParams.get('callbackUrl') || parsedUrl.pathname;
+
+      // Default to dashboard if no specific callback
+      if (
+        callbackUrl === '/' ||
+        callbackUrl === '/login' ||
+        callbackUrl === '/register'
+      ) {
+        return `${authUrl}/dashboard`;
+      }
+
+      // Ensure the callback URL is within our domain
+      if (callbackUrl.startsWith('/')) {
+        return `${authUrl}${callbackUrl}`;
+      }
+
       return `${authUrl}/dashboard`;
     },
 

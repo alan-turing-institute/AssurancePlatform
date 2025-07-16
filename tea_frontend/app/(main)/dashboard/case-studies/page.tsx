@@ -1,4 +1,3 @@
-import { authOptions } from '.*/auth-options';
 import { CheckCircleIcon } from '@heroicons/react/20/solid';
 import moment from 'moment';
 import Link from 'next/link';
@@ -7,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { fetchCaseStudies } from '@/actions/case-studies';
 import PageHeading from '@/components/ui/page-heading';
 import { Separator } from '@/components/ui/separator';
+import { authOptions } from '@/lib/auth-options';
 import { extractTextFromHtml } from '@/lib/sanitize-html';
 import type { CaseStudy } from '@/types/domain';
 import TableActions from './_components/table-actions';

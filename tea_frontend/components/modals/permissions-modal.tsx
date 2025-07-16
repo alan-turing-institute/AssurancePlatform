@@ -1,7 +1,5 @@
 'use client';
 
-import { unauthorized } from '.*/use-auth';
-import { usePermissionsModal } from '.*/use-permissions-modal';
 import {
   Eye,
   MessageCircleMore,
@@ -14,6 +12,8 @@ import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import useStore from '@/data/store';
+import { unauthorized } from '@/hooks/use-auth';
+import { usePermissionsModal } from '@/hooks/use-permissions-modal';
 import type { User } from '@/types';
 
 type Member = User;

@@ -1,11 +1,11 @@
 'use client';
 
-import { usePrevious } from '.*/use-previous';
 import { X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 // import { useLoginToken } from '.*/use-auth';
 import { useEffect, useRef, useState } from 'react';
 import useStore from '@/data/store';
+import { usePrevious } from '@/hooks/use-previous';
 import { Button } from './ui/button';
 
 const WebSocketComponent = () => {

@@ -1,8 +1,8 @@
 'use client';
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { AlertModal } from '@/components/modals/alert-modal';
 import useStore from '@/data/store';
-import { AlertModal } from '../modals/alertModal';
 import CaseSheet from '../ui/case-sheet';
 import CaseEditForm from './case-edit-form';
 

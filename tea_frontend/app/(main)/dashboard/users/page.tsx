@@ -1,6 +1,6 @@
 'use client';
 
-import MemberList from '.*/member-list';
+import MemberList from '@/components/team/member-list';
 
 const TeamPage = () => {
   return (

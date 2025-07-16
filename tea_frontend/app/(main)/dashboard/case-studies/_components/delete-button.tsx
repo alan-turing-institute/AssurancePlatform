@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { deleteCaseStudy } from '@/actions/case-studies';
-import { AlertModal } from '@/components/modals/alertModal';
+import { AlertModal } from '@/components/modals/alert-modal';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
