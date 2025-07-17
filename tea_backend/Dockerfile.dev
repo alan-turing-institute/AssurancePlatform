@@ -15,4 +15,4 @@ RUN uv pip install --system .
 
 # Skip migrations and admin creation during build for development
 # These will be handled at runtime when the database is available
-CMD sh -c "python manage.py migrate && python manage.py createadmin && daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application"
+CMD sh -c "python manage.py migrate && python manage.py createadmin && python manage.py runserver 0.0.0.0:8000"

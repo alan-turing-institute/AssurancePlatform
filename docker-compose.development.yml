@@ -33,6 +33,7 @@ services:
       - ./tea_backend/.env.local
     volumes:
       - ./tea_backend:/app
+      - ./tea_backend/mediafiles:/app/mediafiles
     networks:
       - tea_dev_network
 
