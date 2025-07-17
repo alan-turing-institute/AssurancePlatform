@@ -94,7 +94,10 @@
       "editor.defaultFormatter": "biomejs.biome"
     },
     "typescript.preferences.includePackageJsonAutoImports": "on",
-    "typescript.suggest.autoImports": true
+    "typescript.suggest.autoImports": true,
+    "biome.lspBin": "${workspaceFolder}/tea_frontend/node_modules/.bin/biome",
+    "biome.enabled": true,
+    "biome.rename": true
   },
   "extensions": {
     "recommendations": [
