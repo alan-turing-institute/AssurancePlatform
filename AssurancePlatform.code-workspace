@@ -7,8 +7,8 @@
   ],
   "settings": {
     "python.defaultInterpreterPath": "./tea_backend/.venv/bin/python",
-    "python.terminal.activateEnvironment": true,
-    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.terminal.activateEnvironment": false,
+    "python.terminal.activateEnvInCurrentTerminal": false,
     "python.envFile": "${workspaceFolder}/tea_backend/.env",
     "python.testing.pytestEnabled": true,
     "python.testing.pytestPath": "./tea_backend/.venv/bin/pytest",
@@ -28,11 +28,10 @@
         "path": "/bin/zsh",
         "args": [
           "-c",
-          "cd tea_backend && source .venv/bin/activate && exec zsh"
+          "cd tea_backend && exec zsh"
         ],
         "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv",
-          "VIRTUAL_ENV": "${workspaceFolder}/tea_backend/.venv"
+          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
         }
       },
       "pnpm (Frontend)": {
@@ -45,11 +44,10 @@
         "path": "/bin/bash",
         "args": [
           "-c",
-          "cd tea_backend && source .venv/bin/activate && exec bash"
+          "cd tea_backend && exec bash"
         ],
         "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv",
-          "VIRTUAL_ENV": "${workspaceFolder}/tea_backend/.venv"
+          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
         }
       },
       "pnpm (Frontend)": {
