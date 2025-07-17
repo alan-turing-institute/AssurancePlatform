@@ -57,6 +57,10 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 
     while (stack.length > 0) {
       const lastNode = stack.pop();
+      if (!lastNode) {
+        continue;
+      }
+
       const childnode = getOutgoers(lastNode, nodes, edges);
       const childedge = checkTarget(
         getConnectedEdges([lastNode], edges),
@@ -189,7 +193,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
     setHidden(!hidden);
 
     const currentNode = nodes.find((n) => n.id === node.id);
-    if (currentNode) {
+    if (currentNode && assuranceCase) {
       // Toggle hidden property for the children of the element with currentNode.data.id
       const updatedAssuranceCase = toggleHiddenForChildren(
         assuranceCase,

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import useStore from '@/data/store';
 import {
+  type ReactFlowNode,
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
@@ -84,28 +85,32 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!(assuranceCase && session?.key && node.type)) {
+      return;
+    }
+
     setLoading(true);
     // Update item via api
     const updateItem = {
-      assumption: values.assumption,
-      justification: values.justification,
+      assumption: values.assumption || '',
+      justification: values.justification || '',
     };
 
     const updated = await updateAssuranceCaseNode(
       node.type,
       node.data.id,
-      session?.key ?? '',
+      session.key,
       updateItem
     );
 
     if (updated) {
       // Assurance Case Update
       const updatedAssuranceCase = await updateAssuranceCase(
-        node.type,
+        node.type || '',
         assuranceCase,
-        updateItem,
+        updateItem as Record<string, string>,
         node.data.id,
-        node
+        node as unknown as ReactFlowNode
       );
       if (updatedAssuranceCase) {
         setAssuranceCase(updatedAssuranceCase);
@@ -116,8 +121,8 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
   }
 
   const readOnly = !!(
-    assuranceCase.permissions === 'view' ||
-    assuranceCase.permissions === 'review'
+    assuranceCase?.permissions === 'view' ||
+    assuranceCase?.permissions === 'review'
   );
 
   // useEffect(() => {

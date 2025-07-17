@@ -10,7 +10,9 @@ import ReactFlow, {
 
 import 'reactflow/dist/style.css';
 import { Loader2, Unplug, X } from 'lucide-react';
-import NodeEdit from '@/components/common/node-edit';
+import NodeEdit, {
+  type AssuranceCaseNode,
+} from '@/components/common/node-edit';
 
 import useStore from '@/data/store';
 import { convertAssuranceCase } from '@/lib/convert-case';
@@ -41,7 +43,7 @@ function Flow() {
 
   const { toast } = useToast();
 
-  const onLayout = (direction: string) => {
+  const onLayout = (direction: 'LR' | 'TB' | 'RL' | 'BT') => {
     const layouted = getLayoutedElements(nodes, edges, { direction });
 
     setNodes(layouted.nodes);
@@ -53,8 +55,11 @@ function Flow() {
   };
 
   const convert = useCallback(async () => {
-    if (assuranceCase?.goals) {
-      const result = await convertAssuranceCase(assuranceCase);
+    if (assuranceCase?.goals && assuranceCase.goals.length > 0) {
+      const result = await convertAssuranceCase({
+        ...assuranceCase,
+        goals: assuranceCase.goals,
+      });
       const { caseNodes, caseEdges } = result;
 
       // Send new nodes & edges to layout function
@@ -119,11 +124,13 @@ function Flow() {
             notifyError={notifyError}
             showCreateGoal={showCreateGoal}
           />
-          <NodeEdit
-            isOpen={editOpen}
-            node={selectedNode}
-            setEditOpen={setEditOpen}
-          />
+          {selectedNode?.type && (
+            <NodeEdit
+              isOpen={editOpen}
+              node={selectedNode as AssuranceCaseNode}
+              setEditOpen={setEditOpen}
+            />
+          )}
           {orphanedElements &&
             orphanedElements.length > 0 &&
             showOrphanMessage && (

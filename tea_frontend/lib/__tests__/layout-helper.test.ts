@@ -21,7 +21,13 @@ describe('layout-helper utilities', () => {
       const { getLayoutedElements } = await import('../layout-helper');
 
       const mockNodes = [
-        { id: 'node-1', type: 'goal', position: { x: 0, y: 0 }, hidden: false },
+        {
+          id: 'node-1',
+          type: 'goal',
+          position: { x: 0, y: 0 },
+          data: {},
+          hidden: false,
+        },
       ];
       const mockEdges = [
         { id: 'edge-1', source: 'node-1', target: 'node-2', hidden: false },
@@ -106,7 +112,9 @@ describe('layout-helper utilities', () => {
 
       for (const direction of directions) {
         expect(() => {
-          getLayoutedElements([], [], { direction });
+          getLayoutedElements([], [], {
+            direction: direction as 'TB' | 'LR' | 'RL' | 'BT',
+          });
         }).not.toThrow();
       }
     });
@@ -119,9 +127,16 @@ describe('layout-helper utilities', () => {
           id: 'visible',
           type: 'goal',
           position: { x: 0, y: 0 },
+          data: {},
           hidden: false,
         },
-        { id: 'hidden', type: 'claim', position: { x: 0, y: 0 }, hidden: true },
+        {
+          id: 'hidden',
+          type: 'claim',
+          position: { x: 0, y: 0 },
+          data: {},
+          hidden: true,
+        },
       ];
 
       const result = getLayoutedElements(mixedNodes, [], { direction: 'TB' });
@@ -150,8 +165,8 @@ describe('layout-helper utilities', () => {
       const { getLayoutedElements } = await import('../layout-helper');
 
       const nodesWithoutHidden = [
-        { id: 'node-1', type: 'goal', position: { x: 0, y: 0 } },
-        { id: 'node-2', type: 'claim', position: { x: 0, y: 0 } },
+        { id: 'node-1', type: 'goal', position: { x: 0, y: 0 }, data: {} },
+        { id: 'node-2', type: 'claim', position: { x: 0, y: 0 }, data: {} },
       ];
 
       expect(() => {
@@ -166,6 +181,7 @@ describe('layout-helper utilities', () => {
         id: `node-${i}`,
         type: 'goal',
         position: { x: 0, y: 0 },
+        data: {},
         hidden: false,
       }));
 
@@ -198,11 +214,9 @@ describe('layout-helper utilities', () => {
       }).not.toThrow();
 
       expect(() => {
-        getLayoutedElements(
-          [],
-          [],
-          {} as { direction?: 'TB' | 'LR' | 'BT' | 'RL' }
-        );
+        getLayoutedElements([], [], { direction: 'TB' } as {
+          direction: 'TB' | 'LR' | 'BT' | 'RL';
+        });
       }).not.toThrow();
     });
   });

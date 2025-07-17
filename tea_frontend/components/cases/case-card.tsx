@@ -14,18 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import type { AssuranceCase } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 
-interface AssuranceCaseWithPermissions {
-  id: number;
-  name: string;
-  description?: string;
-  created_date: string;
-  permissions: string[];
-}
-
 interface CaseCardProps {
-  assuranceCase: AssuranceCaseWithPermissions;
+  assuranceCase: AssuranceCase;
 }
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
@@ -36,6 +29,11 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
   const [loading, setLoading] = useState(false);
   const [imgSrc, setImgSrc] = useState('');
   const [imageLoading, setImageLoading] = useState<boolean>(true);
+
+  // Normalize permissions to always be an array
+  const permissions = Array.isArray(assuranceCase.permissions)
+    ? assuranceCase.permissions
+    : [assuranceCase.permissions];
 
   const onDelete = async () => {
     try {
@@ -122,21 +120,18 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
           <CardFooter className="flex w-full items-center justify-between text-gray-500 text-xs dark:text-gray-300">
             <p>Created on: {moment(created_date).format('DD/MM/YYYY')}</p>
             <div className="flex items-center justify-start gap-2">
-              {assuranceCase.permissions.includes('view') && (
-                <Eye className="h-4 w-4" />
-              )}
-              {assuranceCase.permissions.includes('review') && (
+              {permissions.includes('view') && <Eye className="h-4 w-4" />}
+              {permissions.includes('review') && (
                 <MessageCircleMore className="h-4 w-4" />
               )}
-              {assuranceCase.permissions.includes('edit') && (
+              {permissions.includes('edit') && (
                 <PencilRuler className="h-4 w-4" />
               )}
             </div>
           </CardFooter>
         </Card>
       </Link>
-      {(assuranceCase.permissions.includes('owner') ||
-        assuranceCase.permissions.includes('editor')) && (
+      {(permissions.includes('owner') || permissions.includes('editor')) && (
         <button
           className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
           disabled={loading}

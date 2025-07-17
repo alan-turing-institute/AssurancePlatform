@@ -25,7 +25,7 @@ import {
   getAssuranceCaseNode,
   removeAssuranceCaseNode,
 } from '@/lib/case-helper';
-import type { Context } from '@/types';
+import type { AssuranceCase, Context, Goal } from '@/types';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
@@ -98,21 +98,26 @@ const NodeConext: React.FC<NodeContextProps> = ({
     }
 
     // Create a new context array by adding the new context item
-    const newContext = [...assuranceCase.goals[0].context, result.data];
+    if (assuranceCase?.goals?.[0]) {
+      const newContext = [
+        ...(assuranceCase.goals[0].context || []),
+        result.data,
+      ].filter(Boolean);
 
-    // Create a new assuranceCase object with the updated context array
-    const updatedAssuranceCase = {
-      ...assuranceCase,
-      goals: [
-        {
-          ...assuranceCase.goals[0],
-          context: newContext,
-        },
-      ],
-    };
+      // Create a new assuranceCase object with the updated context array
+      const updatedAssuranceCase = {
+        ...assuranceCase,
+        goals: [
+          {
+            ...assuranceCase.goals[0],
+            context: newContext,
+          } as Goal,
+        ],
+      };
 
-    // Update Assurance Case in state
-    setAssuranceCase(updatedAssuranceCase);
+      // Update Assurance Case in state
+      setAssuranceCase(updatedAssuranceCase as AssuranceCase);
+    }
     form.reset();
   };
 
@@ -125,7 +130,7 @@ const NodeConext: React.FC<NodeContextProps> = ({
       session?.key ?? ''
     );
 
-    if (deleted) {
+    if (deleted && assuranceCase) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(
         assuranceCase,
         id,
@@ -149,19 +154,29 @@ const NodeConext: React.FC<NodeContextProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    await handleContextAdd(values.description ?? '');
+    const description = values.description || '';
+    if (description.trim()) {
+      await handleContextAdd(description);
+    }
   }
 
   useEffect(() => {
     const fetchNodeContext = async () => {
+      const sessionKey = session?.key;
+      if (!sessionKey) {
+        return;
+      }
+
       const result = await getAssuranceCaseNode(
-        node.type,
+        node.type ?? '',
         node.data.id,
-        session?.key ?? ''
+        sessionKey
       );
 
-      if (result.context) {
-        setContexts(result.context);
+      if (result && typeof result === 'object' && 'context' in result) {
+        setContexts(
+          (result as unknown as { context: Context[] }).context || []
+        );
       }
     };
 

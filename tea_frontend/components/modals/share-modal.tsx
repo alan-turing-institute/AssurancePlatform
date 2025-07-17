@@ -78,7 +78,7 @@ export const ShareModal = () => {
   const [_selectedUsers, _setSelectedUsers] = useState<User[]>([]);
 
   const [isLinkedCaseModalOpen, setIsLinkedCaseModalOpen] = useState(false);
-  const [linkedCaseStudies, setLinkedCaseStudies] = useState([]);
+  const [linkedCaseStudies, setLinkedCaseStudies] = useState<unknown[]>([]);
 
   // const [token] = useLoginToken();
   const { data: session } = useSession();
@@ -124,7 +124,7 @@ export const ShareModal = () => {
     payload.push(newShareItem);
 
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/sharedwith`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/sharedwith`;
 
       const requestOptions: RequestInit = {
         method: 'POST',
@@ -158,13 +158,13 @@ export const ShareModal = () => {
       });
 
       if (newShareItem.view) {
-        setViewMembers([...viewMembers, newShareItem]);
+        setViewMembers([...viewMembers, newShareItem as unknown as User]);
       }
       if (newShareItem.edit) {
-        setEditMembers([...editMembers, newShareItem]);
+        setEditMembers([...editMembers, newShareItem as unknown as User]);
       }
       if (newShareItem.review) {
-        setReviewMembers([...reviewMembers, newShareItem]);
+        setReviewMembers([...reviewMembers, newShareItem as unknown as User]);
       }
 
       form.reset();
@@ -182,12 +182,12 @@ export const ShareModal = () => {
   const handleExport = () => {
     setLoading(true);
 
-    let json = neatJSON(assuranceCase, {});
+    let json = neatJSON(assuranceCase || {}, {});
     // Remove the `id` fields, since they are only meaningful to the backend, and might
     // confuse it when importing the JSON exported here.
     json = json.replaceAll(/"id":\d+(,)?/g, '');
 
-    const name = assuranceCase.name;
+    const name = assuranceCase?.name || 'assurance-case';
 
     // Write to a file, which to the user shows as a download.
     const blob = new Blob([json], {
@@ -220,7 +220,7 @@ export const ShareModal = () => {
         published: true,
         published_date: new Date().toISOString(),
       };
-      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/`;
       const requestOptions: RequestInit = {
         method: 'PUT',
         headers: {
@@ -249,7 +249,7 @@ export const ShareModal = () => {
         published: false,
         published_date: null,
       };
-      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/`;
       const requestOptions: RequestInit = {
         method: 'PUT',
         headers: {
@@ -293,7 +293,7 @@ export const ShareModal = () => {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
             linkedCases = errorData.linked_case_studies || [];
-            setLinkedCaseStudies(linkedCases);
+            setLinkedCaseStudies(linkedCases as unknown[]);
           } else {
             const text = await response.text();
             errorMessage = text || errorMessage;
@@ -497,7 +497,7 @@ export const ShareModal = () => {
 
       <LinkedCaseModal
         isOpen={isLinkedCaseModalOpen}
-        linkedCaseStudies={linkedCaseStudies}
+        linkedCaseStudies={linkedCaseStudies as { id: number; title: string }[]}
         loading={false}
         onClose={() => setIsLinkedCaseModalOpen(false)} // or your loading state
       />

@@ -97,7 +97,7 @@ export const authOptions: NextAuthOptions = {
      * @param {string} params.email - Email associated with the sign-in attempt.
      * @returns {boolean} `true` to allow the sign-in.
      */
-    async signIn({ user, account, profile, _email, _credentials }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === 'github') {
         // Handle GitHub-specific behavior
         const payload = {
@@ -192,7 +192,7 @@ export const authOptions: NextAuthOptions = {
      * @param {Object} params.token - The JWT token associated with the session.
      * @returns {Object} The modified session object with an access token and provider information.
      */
-    session({ session, _user, token }) {
+    session({ session, token }) {
       // session.accessToken = token.accessToken;
       // session.provider = token.provider;
       session.key = token.key; // Add the key to the session object
@@ -211,7 +211,7 @@ export const authOptions: NextAuthOptions = {
      * @param {boolean} params.isNewUser - Flag indicating if this is a new user (optional).
      * @returns {Object} The updated token with access token and provider information.
      */
-    jwt({ token, user, _account, _profile, _isNewUser }) {
+    jwt({ token, user }) {
       // if (account && user) {
       //   token.accessToken = user.accessToken;
       //   token.provider = user.provider;

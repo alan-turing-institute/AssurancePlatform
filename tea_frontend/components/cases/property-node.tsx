@@ -28,7 +28,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
           </div>
           <p className="line-clamp-2 text-xs">{data.description}</p>
         </div>
-        <ToggleButton node={props} />
+        <ToggleButton node={{ data, position: { x: 0, y: 0 }, ...props }} />
       </div>
 
       <Handle position={Position.Top} type="target" />

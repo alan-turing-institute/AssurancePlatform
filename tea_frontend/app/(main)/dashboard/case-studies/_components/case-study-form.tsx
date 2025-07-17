@@ -42,7 +42,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { sectors } from '@/config/index';
 import { useImportModal } from '@/hooks/use-import-modal';
-import type { CaseStudyFormProps, FileUploadEvent } from '@/types/domain';
+import type { CaseStudyFormProps } from '@/types/domain';
 import DeleteCaseButton from './delete-button';
 import RelatedAssuranceCaseList from './related-assurance-case-list';
 
@@ -68,6 +68,88 @@ const caseStudyFormSchema = z.object({
   published: z.boolean().optional(),
 });
 
+// Helper function to get default values for the form
+const getDefaultFormValues = (caseStudy?: CaseStudyFormProps['caseStudy']) => {
+  return caseStudy
+    ? {
+        id: caseStudy.id,
+        title: caseStudy.title,
+        description: caseStudy.description || '',
+        authors: caseStudy.authors || '',
+        publishedDate: caseStudy.publishedDate
+          ? new Date(caseStudy.publishedDate)
+          : undefined,
+        createdOn: caseStudy.createdOn
+          ? new Date(caseStudy.createdOn)
+          : undefined,
+        sector: caseStudy.sector || '',
+        type: caseStudy.type || '',
+        contact: caseStudy.contact || '',
+        assuranceCases: caseStudy.assuranceCases || [],
+        published: caseStudy.published,
+      }
+    : {
+        title: '',
+        description: '',
+        authors: '',
+        publishedDate: undefined,
+        lastModifiedOn: undefined,
+        createdOn: undefined,
+        sector: '',
+        type: '',
+        contact: '',
+        assuranceCases: [],
+        image: undefined,
+        published: false,
+      };
+};
+
+// Helper function for author management
+const useAuthorManagement = (
+  form: ReturnType<typeof useForm<z.infer<typeof caseStudyFormSchema>>>
+) => {
+  const [authors, setAuthors] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState('');
+
+  // Sync authors state with form field value
+  useEffect(() => {
+    const formAuthors = form.watch('authors');
+    if (formAuthors) {
+      const authorsArray = formAuthors
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a);
+      setAuthors(authorsArray);
+    } else {
+      setAuthors([]);
+    }
+  }, [form]);
+
+  const addAuthor = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && !authors.includes(trimmed)) {
+      const newAuthors = [...authors, trimmed];
+      setAuthors(newAuthors);
+      form.setValue('authors', newAuthors.join(', '));
+      setInputValue(''); // Clear input
+    }
+  };
+
+  const removeAuthor = (authorToRemove: string) => {
+    const newAuthors = authors.filter((author) => author !== authorToRemove);
+    setAuthors(newAuthors);
+    form.setValue('authors', newAuthors.join(', '));
+  };
+
+  return {
+    authors,
+    inputValue,
+    setInputValue,
+    addAuthor,
+    removeAuthor,
+  };
+};
+
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   const { data } = useSession();
   const { toast } = useToast();
@@ -89,13 +171,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   > | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Authors field state - moved from FormField render function
-  const [authors, setAuthors] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState('');
-
   useEffect(() => {
-    if (caseStudy && caseStudy.assurance_cases.length > 0) {
-      setSelectedAssuranceCases(caseStudy.assurance_cases);
+    if (caseStudy?.assuranceCases && caseStudy.assuranceCases.length > 0) {
+      setSelectedAssuranceCases(caseStudy.assurance_cases || []);
     } else {
       setSelectedAssuranceCases([]);
     }
@@ -104,39 +182,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   // 1. Define your form.
   const form = useForm<z.infer<typeof caseStudyFormSchema>>({
     resolver: zodResolver(caseStudyFormSchema),
-    defaultValues: caseStudy || {
-      title: '',
-      description: '',
-      authors: '',
-      // category: "",
-      publishedDate: undefined,
-      lastModifiedOn: undefined,
-      createdOn: undefined,
-      sector: '',
-      type: '',
-      contact: '',
-      assuranceCases: [],
-      image: undefined,
-      published: false,
-    },
+    defaultValues: getDefaultFormValues(caseStudy),
   });
 
-  // Sync authors state with form field value
-  useEffect(() => {
-    const formAuthors = form.watch('authors');
-    if (formAuthors) {
-      const authorsArray = formAuthors
-        .split(',')
-        .map((a) => a.trim())
-        .filter((a) => a);
-      setAuthors(authorsArray);
-    } else {
-      setAuthors([]);
-    }
-  }, [form]);
+  // Use author management helper
+  const { authors, inputValue, setInputValue, addAuthor, removeAuthor } =
+    useAuthorManagement(form);
 
-  const handleFileChange = (e: FileUploadEvent) => {
-    const file = e.target.files[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setPreviewImage(URL.createObjectURL(file));
       form.setValue('image', file);
@@ -283,7 +337,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy.id}/image`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image`,
         requestOptions
       );
 
@@ -300,23 +354,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       setImageLoading(false);
     }
   }, [data?.key, caseStudy?.id]);
-
-  // Authors management functions - moved from FormField render
-  const addAuthor = () => {
-    const trimmed = inputValue.trim();
-    if (trimmed && !authors.includes(trimmed)) {
-      const newAuthors = [...authors, trimmed];
-      setAuthors(newAuthors);
-      form.setValue('authors', newAuthors.join(', '));
-      setInputValue(''); // Clear input
-    }
-  };
-
-  const removeAuthor = (authorToRemove: string) => {
-    const newAuthors = authors.filter((author) => author !== authorToRemove);
-    setAuthors(newAuthors);
-    form.setValue('authors', newAuthors.join(', '));
-  };
 
   useEffect(() => {
     if (caseStudy) {
@@ -418,11 +455,15 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   }
 
   const handlePublish = async () => {
+    if (!caseStudy) {
+      return;
+    }
+
     const formData = new FormData();
     formData.append('id', caseStudy.id.toString());
     formData.append(
       'assurance_cases',
-      JSON.stringify(caseStudy.assurance_cases)
+      JSON.stringify(caseStudy.assurance_cases || [])
     );
 
     // Set only the fields that need updating
@@ -454,6 +495,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
   };
 
   const _handleDelete = async () => {
+    if (!caseStudy) {
+      return;
+    }
     const deleted = await deleteCaseStudy(data?.key ?? '', caseStudy.id);
 
     if (deleted) {
@@ -721,7 +765,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                           setPreviewImage(''); // Clear preview
                           setFeaturedImage(''); // Clear preview
                           form.setValue('image', ''); // Reset form field
-                          if (featuredImage) {
+                          if (featuredImage && caseStudy) {
                             deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
                           }
                         }}

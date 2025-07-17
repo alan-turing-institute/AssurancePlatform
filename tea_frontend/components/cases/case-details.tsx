@@ -49,7 +49,7 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
       isOpen={isOpen}
       onChange={onChange}
       onClose={handleClose}
-      title={`${assuranceCase.permissions === 'manage' ? 'Update' : ''} Assurance Case`}
+      title={`${assuranceCase?.permissions === 'manage' ? 'Update' : ''} Assurance Case`}
     >
       <div className="my-6">
         <CaseEditForm

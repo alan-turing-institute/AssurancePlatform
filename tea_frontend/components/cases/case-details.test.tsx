@@ -18,7 +18,7 @@ const NO_KEEP_EDITING_REGEX = /no, keep editing/i;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: mockAssuranceCase as AssuranceCase,
+  assuranceCase: mockAssuranceCase as AssuranceCase | null,
 };
 
 vi.mock('@/data/store', () => ({

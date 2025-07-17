@@ -57,6 +57,10 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!assuranceCase) {
+      return;
+    }
+
     setLoading(true);
     const updateItem = {
       name: values.name,
@@ -80,7 +84,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
     setLoading(false);
     setAssuranceCase({
       ...assuranceCase,
-      name: updateItem.name,
+      name: values.name ?? assuranceCase.name,
       description: updateItem.description,
     });
     onClose();
@@ -104,7 +108,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel className="flex items-center justify-start gap-2">
                 Name
-                {assuranceCase.permissions !== 'manage' && (
+                {assuranceCase?.permissions !== 'manage' && (
                   <span
                     className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                     title="Read Only"
@@ -116,7 +120,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
               <FormControl>
                 <Input
                   {...field}
-                  readOnly={assuranceCase.permissions !== 'manage'}
+                  readOnly={assuranceCase?.permissions !== 'manage'}
                 />
               </FormControl>
               <FormMessage />
@@ -130,7 +134,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
             <FormItem>
               <FormLabel className="flex items-center justify-start gap-2">
                 Description
-                {assuranceCase.permissions !== 'manage' && (
+                {assuranceCase?.permissions !== 'manage' && (
                   <span
                     className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
                     title="Read Only"
@@ -143,7 +147,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
                 <Textarea
                   rows={8}
                   {...field}
-                  readOnly={assuranceCase.permissions !== 'manage'}
+                  readOnly={assuranceCase?.permissions !== 'manage'}
                 />
               </FormControl>
               <FormMessage />
@@ -151,7 +155,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
           )}
         />
         <div className="flex items-center justify-start gap-3">
-          {assuranceCase.permissions === 'manage' && (
+          {assuranceCase?.permissions === 'manage' && (
             <Button
               className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
               disabled={loading}

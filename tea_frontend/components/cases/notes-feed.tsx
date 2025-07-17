@@ -12,8 +12,7 @@ import { useToast } from '../ui/use-toast';
 import NotesEditForm from './notes-edit-form';
 
 export default function NotesFeed() {
-  const { assuranceCase, _setAssuranceCase, caseNotes, setCaseNotes } =
-    useStore();
+  const { assuranceCase, caseNotes, setCaseNotes } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const [edit, setEdit] = useState<boolean>();
@@ -21,10 +20,12 @@ export default function NotesFeed() {
   const [user, setUser] = useState<User | undefined>();
   const { toast } = useToast();
 
-  assuranceCase.comments.sort(
-    (a: Comment, b: Comment) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  if (assuranceCase?.comments) {
+    assuranceCase.comments.sort(
+      (a: Comment, b: Comment) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
 
   // Fetch case notes/comments
   useEffect(() => {
@@ -34,6 +35,10 @@ export default function NotesFeed() {
           Authorization: `Token ${session?.key}`,
         },
       };
+
+      if (!assuranceCase) {
+        return [];
+      }
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`,
@@ -56,7 +61,7 @@ export default function NotesFeed() {
     };
 
     fetchSingleCase().then((comments) => setCaseNotes(comments || []));
-  }, [assuranceCase.id, session?.key, setCaseNotes]);
+  }, [assuranceCase, session?.key, setCaseNotes]);
 
   // Fetch current user
   useEffect(() => {
@@ -174,7 +179,7 @@ export default function NotesFeed() {
                   </div>
                 </div>
                 {!edit &&
-                  assuranceCase.permissions !== 'view' &&
+                  assuranceCase?.permissions !== 'view' &&
                   user?.username === note.author && (
                     <div className="hidden items-center justify-center gap-2 group-hover:flex">
                       <Button

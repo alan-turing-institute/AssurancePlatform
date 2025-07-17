@@ -10,6 +10,7 @@ import WebSocketComponent from '@/components/websocket';
 import useStore from '@/data/store';
 import { unauthorized } from '@/hooks/use-auth';
 import { addHiddenProp } from '@/lib/case-helper';
+import type { AssuranceCase } from '@/types';
 import Header from '../header';
 import CaseDetails from './case-details';
 import Flow from './flow';
@@ -89,17 +90,25 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
   );
 
   useEffect(() => {
-    //@ts-expect-error
-    fetchSingleCase(caseId || paramsCaseId).then((result) => {
-      setAssuranceCase(result);
-      setLoading(false);
-    });
+    const id = caseId || paramsCaseId;
+    if (id) {
+      fetchSingleCase(Number(id)).then((result) => {
+        setAssuranceCase((result as AssuranceCase) || null);
+        setLoading(false);
+      });
+    }
   }, [caseId, paramsCaseId, fetchSingleCase, setAssuranceCase]);
 
   useEffect(() => {
-    fetchOrphanedElements(caseId || paramsCaseId).then((result) => {
-      setOrphanedElements(result);
-    });
+    const id = caseId || paramsCaseId;
+    if (id) {
+      const idValue = Array.isArray(id) ? id[0] : id;
+      fetchOrphanedElements(idValue).then((result) => {
+        if (result) {
+          setOrphanedElements(result);
+        }
+      });
+    }
   }, [caseId, paramsCaseId, fetchOrphanedElements, setOrphanedElements]);
 
   return (

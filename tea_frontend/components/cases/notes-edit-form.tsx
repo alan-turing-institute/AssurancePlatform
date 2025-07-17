@@ -31,8 +31,7 @@ const formSchema = z.object({
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
   // const [token] = useLoginToken();
   const { data: session } = useSession();
-  const { _assuranceCase, _setAssuranceCase, caseNotes, setCaseNotes } =
-    useStore();
+  const { caseNotes, setCaseNotes } = useStore();
   const [loading, setLoading] = useState<boolean>(false);
   const { toast } = useToast();
 

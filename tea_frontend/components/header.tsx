@@ -8,7 +8,7 @@ import { useReactFlow, useUpdateNodeInternals } from 'reactflow';
 import SearchNodes from '@/components/common/search-nodes';
 // import { useLoginToken } from ".*/use-auth";
 import useStore from '@/data/store';
-import { toggleHiddenForParent } from '@/lib/case-helper';
+import { type ReactFlowNode, toggleHiddenForParent } from '@/lib/case-helper';
 import LogoutButton from './auth/logout-button';
 import ActiveUsersList from './cases/active-users-list';
 import { Button } from './ui/button';
@@ -30,7 +30,9 @@ const Header = ({ setOpen }: HeaderProps) => {
   const _updateNodeInternals = useUpdateNodeInternals();
 
   const [editName, setEditName] = useState<boolean>(false);
-  const [newCaseName, setNewCaseName] = useState<string>(assuranceCase.name);
+  const [newCaseName, setNewCaseName] = useState<string>(
+    assuranceCase?.name || ''
+  );
   const _inputRef = useRef<HTMLInputElement>(null);
 
   const { setCenter } = useReactFlow();
@@ -51,7 +53,7 @@ const Header = ({ setOpen }: HeaderProps) => {
       const newData = {
         name: newCaseName,
       };
-      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/`;
       const requestOptions: RequestInit = {
         method: 'PUT',
         headers: {
@@ -68,7 +70,9 @@ const Header = ({ setOpen }: HeaderProps) => {
         return;
       }
       setEditName(false);
-      setAssuranceCase({ ...assuranceCase, name: newCaseName });
+      if (assuranceCase) {
+        setAssuranceCase({ ...assuranceCase, name: newCaseName });
+      }
     } catch (_error) {
       // Silently fail - user will see the old name is still present
       setEditName(false);
@@ -78,12 +82,14 @@ const Header = ({ setOpen }: HeaderProps) => {
   const unhideParents = (nodeId: string) => {
     const currentNode = nodes.find((node) => node.id === nodeId);
 
-    const updatedAssuranceCase = toggleHiddenForParent(
-      currentNode,
-      assuranceCase
-    );
+    if (currentNode && assuranceCase) {
+      const updatedAssuranceCase = toggleHiddenForParent(
+        currentNode as ReactFlowNode,
+        assuranceCase
+      );
 
-    setAssuranceCase(updatedAssuranceCase);
+      setAssuranceCase(updatedAssuranceCase);
+    }
   };
 
   const focusNode = (value: string) => {
@@ -138,7 +144,7 @@ const Header = ({ setOpen }: HeaderProps) => {
             onClick={() => setOpen(true)}
             type="button"
           >
-            {assuranceCase.name}
+            {assuranceCase?.name || 'Untitled Case'}
           </button>
         </div>
 
@@ -149,7 +155,7 @@ const Header = ({ setOpen }: HeaderProps) => {
           <LogoutButton />
           <ModeToggle className="border-none bg-indigo-500 hover:bg-indigo-900/20 hover:text-white dark:bg-slate-900 hover:dark:bg-gray-100/10" />
           <TooltipProvider>
-            {assuranceCase.published ? (
+            {assuranceCase?.published ? (
               <Tooltip>
                 <TooltipTrigger>
                   <span className="inline-flex items-center rounded-md bg-green-500/10 px-3 py-2 font-medium text-green-400 text-xs ring-1 ring-green-500/20 ring-inset">
@@ -159,7 +165,7 @@ const Header = ({ setOpen }: HeaderProps) => {
                 <TooltipContent>
                   <p className="text-xs">
                     Published on:{' '}
-                    {moment(assuranceCase.published_date).format(
+                    {moment(assuranceCase?.published_date).format(
                       'DD/MM/YYYY HH:mm:ss'
                     )}
                   </p>

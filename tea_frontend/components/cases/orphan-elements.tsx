@@ -65,21 +65,39 @@ const OrphanElements = ({
 
   const filterOrphanElements = React.useCallback(
     (currentNodeType: string): OrphanElement[] => {
+      // Convert orphanedElements to OrphanElement[] by mapping to proper types
+      const convertedElements = orphanedElements
+        .map((item): OrphanElement | null => {
+          switch (item.type?.toLowerCase()) {
+            case 'context':
+              return item as unknown as Context;
+            case 'evidence':
+              return item as unknown as Evidence;
+            case 'propertyclaim':
+              return item as unknown as PropertyClaim;
+            case 'strategy':
+              return item as unknown as Strategy;
+            default:
+              return null;
+          }
+        })
+        .filter((item): item is OrphanElement => item !== null);
+
       switch (currentNodeType.toLowerCase()) {
         case 'goal':
-          return orphanedElements;
+          return convertedElements;
         case 'strategy':
-          return orphanedElements.filter(
-            (item: OrphanElement) => item.type.toLowerCase() === 'propertyclaim'
+          return convertedElements.filter(
+            (item) => item.type?.toLowerCase() === 'propertyclaim'
           );
         case 'property':
-          return orphanedElements.filter(
-            (item: OrphanElement) =>
-              item.type.toLowerCase() === 'evidence' ||
-              item.type.toLowerCase() === 'propertyclaim'
+          return convertedElements.filter(
+            (item) =>
+              item.type?.toLowerCase() === 'evidence' ||
+              item.type?.toLowerCase() === 'propertyclaim'
           );
         default:
-          return orphanedElements;
+          return convertedElements;
       }
     },
     [orphanedElements]
@@ -87,6 +105,9 @@ const OrphanElements = ({
 
   // Helper functions to break down complexity
   const handleContextAttachment = (orphan: Context) => {
+    if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
+      return;
+    }
     orphan.goal_id = node.data.id;
     const newContext = [...assuranceCase.goals[0].context, orphan];
     const updatedAssuranceCase = {
@@ -104,6 +125,9 @@ const OrphanElements = ({
   };
 
   const handleStrategyAttachment = (orphan: Strategy) => {
+    if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
+      return;
+    }
     orphan.goal_id = node.data.id;
     const newStrategy = [...assuranceCase.goals[0].strategies, orphan];
     const updatedAssuranceCase = {
@@ -121,6 +145,9 @@ const OrphanElements = ({
   };
 
   const handlePropertyClaimToGoal = (orphan: PropertyClaim) => {
+    if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
+      return;
+    }
     orphan.goal_id = node.data.id;
     const newPropertyClaim = [
       ...assuranceCase.goals[0].property_claims,
@@ -141,9 +168,12 @@ const OrphanElements = ({
   };
 
   const handlePropertyClaimToProperty = (orphan: PropertyClaim) => {
+    if (!assuranceCase?.goals) {
+      return;
+    }
     orphan.property_claim_id = node.data.id;
     const added = addPropertyClaimToNested(
-      assuranceCase.goals,
+      assuranceCase.goals as unknown as PropertyClaim[],
       node.data.id,
       orphan
     );
@@ -152,11 +182,7 @@ const OrphanElements = ({
     }
     const updatedAssuranceCase = {
       ...assuranceCase,
-      goals: [
-        {
-          ...assuranceCase.goals[0],
-        },
-      ],
+      goals: assuranceCase.goals,
     };
     setAssuranceCase(updatedAssuranceCase);
     setLoading(false);
@@ -164,6 +190,9 @@ const OrphanElements = ({
   };
 
   const handlePropertyClaimToStrategy = (orphan: PropertyClaim) => {
+    if (!assuranceCase?.goals) {
+      return;
+    }
     orphan.strategy_id = node.data.id;
     const goalContainingStrategy = assuranceCase.goals.find((goal) =>
       goal.strategies?.some((strategy) => strategy.id === node.data.id)
@@ -188,7 +217,7 @@ const OrphanElements = ({
         strategies: updatedStrategies,
       };
 
-      updatedAssuranceCase.goals = assuranceCase.goals.map((goal) => {
+      updatedAssuranceCase.goals = (assuranceCase.goals || []).map((goal) => {
         if (goal === goalContainingStrategy) {
           return updatedGoalContainingStrategy;
         }
@@ -202,19 +231,22 @@ const OrphanElements = ({
   };
 
   const handleEvidenceAttachment = (orphan: Evidence) => {
+    if (!assuranceCase?.goals) {
+      return;
+    }
     orphan.property_claim_id = [node.data.id];
-    const added = addEvidenceToClaim(assuranceCase.goals, node.data.id, orphan);
+    const added = addEvidenceToClaim(
+      assuranceCase.goals as unknown as PropertyClaim[],
+      node.data.id,
+      orphan
+    );
     if (!added) {
       return; // Parent property claim not found
     }
 
     const updatedAssuranceCase = {
       ...assuranceCase,
-      goals: [
-        {
-          ...assuranceCase.goals[0],
-        },
-      ],
+      goals: assuranceCase.goals,
     };
 
     setAssuranceCase(updatedAssuranceCase);
@@ -232,28 +264,29 @@ const OrphanElements = ({
     }
   };
 
-  const handleOrphanSelection = async (orphan: OrphanElement) => {
-    setLoading(true);
+  // Helper function to convert OrphanElement to ReactFlowNode format
+  const convertToReactFlowNode = (orphan: OrphanElement) => ({
+    id: orphan.id.toString(),
+    type: orphan.type || '',
+    position: { x: 0, y: 0 },
+    data: {
+      id: orphan.id,
+      name: orphan.name,
+      type: orphan.type || '',
+      short_description:
+        'short_description' in orphan ? orphan.short_description : '',
+      long_description:
+        'long_description' in orphan ? orphan.long_description : '',
+      goal_id: 'goal_id' in orphan ? orphan.goal_id : null,
+      strategy_id: 'strategy_id' in orphan ? orphan.strategy_id : null,
+      property_claim_id:
+        'property_claim_id' in orphan ? orphan.property_claim_id : null,
+    },
+  });
 
-    const result = await attachCaseElement(
-      orphan,
-      orphan.id,
-      session?.key ?? '',
-      node
-    );
-
-    if (result.error) {
-      // Handle error silently
-      setLoading(false);
-      return;
-    }
-
-    if (!result.attached) {
-      setLoading(false);
-      return;
-    }
-
-    switch (orphan.type.toLowerCase()) {
+  // Helper function to handle orphan attachment based on type
+  const processOrphanAttachment = (orphan: OrphanElement) => {
+    switch (orphan.type?.toLowerCase()) {
       case 'context':
         handleContextAttachment(orphan as Context);
         break;
@@ -272,6 +305,36 @@ const OrphanElements = ({
     }
   };
 
+  const handleOrphanSelection = async (orphan: OrphanElement) => {
+    setLoading(true);
+
+    const orphanAsReactFlowNode = convertToReactFlowNode(orphan);
+
+    const result = await attachCaseElement(
+      orphanAsReactFlowNode,
+      orphan.id,
+      session?.key ?? '',
+      {
+        id: node.id,
+        type: node.type || '',
+        position: { x: 0, y: 0 },
+        data: node.data,
+      }
+    );
+
+    if ('error' in result && result.error) {
+      setLoading(false);
+      return;
+    }
+
+    if ('attached' in result && !result.attached) {
+      setLoading(false);
+      return;
+    }
+
+    processOrphanAttachment(orphan);
+  };
+
   const handleDelete = async () => {
     setLoading(true);
 
@@ -279,7 +342,7 @@ const OrphanElements = ({
       // Collect all deletion promises
       const deletionPromises = filteredOrphanElements.map(async (orphan) => {
         const deleted = await deleteAssuranceCaseNode(
-          orphan.type,
+          orphan.type ?? '',
           orphan.id,
           session?.key ?? ''
         );
@@ -302,7 +365,7 @@ const OrphanElements = ({
 
       // Filter out the orphaned elements whose ids are in the deletedIds array
       const updatedOrphanedElements = orphanedElements.filter(
-        (item: OrphanElement) => !deletedIds.includes(item.id)
+        (item) => !deletedIds.includes(item.id)
       );
 
       // Update state with the filtered orphaned elements
@@ -318,7 +381,7 @@ const OrphanElements = ({
   };
 
   useEffect(() => {
-    const result = filterOrphanElements(node.type);
+    const result = filterOrphanElements(node.type || '');
     setFilteredOrphanElements(result);
   }, [node.type, filterOrphanElements]);
 
@@ -355,7 +418,20 @@ const OrphanElements = ({
                 >
                   <circle cx={1} cy={1} r={1} />
                 </svg>
-                <span className="w-full truncate">{el.short_description}</span>
+                <span className="w-full truncate">
+                  {(() => {
+                    if (
+                      'short_description' in el &&
+                      typeof el.short_description === 'string'
+                    ) {
+                      return el.short_description;
+                    }
+                    if ('name' in el && typeof el.name === 'string') {
+                      return el.name;
+                    }
+                    return '';
+                  })()}
+                </span>
               </button>
               <Separator className="my-2" />
             </div>

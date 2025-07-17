@@ -52,7 +52,7 @@ vi.mock('./IconIndicator', () => ({
     data: { comments?: Array<{ id: number; content: string }> };
   }) => (
     <div
-      data-has-comments={data.comments?.length > 0}
+      data-has-comments={(data.comments?.length ?? 0) > 0}
       data-testid="icon-indicator"
     >
       Icon Indicator

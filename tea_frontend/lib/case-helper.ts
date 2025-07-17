@@ -28,7 +28,7 @@ interface CaseNode {
 }
 
 // Node type for React Flow integration
-interface ReactFlowNode {
+export interface ReactFlowNode {
   id: string;
   type: string;
   data: {
@@ -44,7 +44,7 @@ interface ReactFlowNode {
     evidence?: Evidence[];
     [key: string]: unknown;
   };
-  position?: { x: number; y: number };
+  position: { x: number; y: number };
 }
 
 // API Response types
@@ -79,7 +79,12 @@ type CreateNodePayload =
   | Partial<Evidence>;
 
 // Type for nested array items that can contain various node types
-type NestedArrayItem = Goal | PropertyClaim | Strategy | Context | Evidence;
+export type NestedArrayItem =
+  | Goal
+  | PropertyClaim
+  | Strategy
+  | Context
+  | Evidence;
 
 // Type guard to check if an object has property_claims
 function _hasPropertyClaims(
@@ -745,22 +750,28 @@ export const addEvidenceToClaim = (
  * @returns The updated array with the evidence modified, or null if not found.
  */
 // Helper function to update evidence in place
-const updateEvidenceInPlace = (
-  array: PropertyClaim[],
+const _updateEvidenceInPlace = (
+  array: Evidence[],
   index: number,
-  item: PropertyClaim,
+  item: Evidence,
   newEvidence: Partial<Evidence>
 ): void => {
   array[index] = { ...item, ...newEvidence };
 };
 
 // Helper function to search and update in evidence array
-const searchAndUpdateInEvidence = (
+const _searchAndUpdateInEvidence = (
   evidence: Evidence[],
   id: number,
   newEvidence: Partial<Evidence>
 ): Evidence[] | null => {
-  return updateEvidenceNested(evidence, id, newEvidence);
+  for (let i = 0; i < evidence.length; i++) {
+    if (evidence[i].id === id) {
+      evidence[i] = { ...evidence[i], ...newEvidence };
+      return evidence;
+    }
+  }
+  return null;
 };
 
 // Helper function to search and update in nested property claims for evidence
@@ -796,22 +807,25 @@ const searchAndUpdateInStrategiesEvidence = (
 // Helper function to process a single item for evidence update
 const processItemForEvidenceUpdate = (
   array: PropertyClaim[],
-  index: number,
+  _index: number,
   item: PropertyClaim,
   id: number,
   newEvidence: Partial<Evidence>
 ): PropertyClaim[] | null => {
-  // Check if this evidence matches the parent ID
-  if (item.id === id) {
-    updateEvidenceInPlace(array, index, item, newEvidence);
-    return array;
-  }
+  // Check if this evidence matches the parent ID - this check is actually wrong for evidence update
+  // Skip this check as PropertyClaim items shouldn't match Evidence IDs
+  // if (item.id === id) {
+  //   updateEvidenceInPlace(array, index, item, newEvidence);
+  //   return array;
+  // }
 
   // Check evidence array
   if (item.evidence?.length) {
-    const result = searchAndUpdateInEvidence(item.evidence, id, newEvidence);
-    if (result) {
-      return array;
+    for (let i = 0; i < item.evidence.length; i++) {
+      if (item.evidence[i].id === id) {
+        item.evidence[i] = { ...item.evidence[i], ...newEvidence };
+        return array;
+      }
     }
   }
 
@@ -1176,8 +1190,9 @@ export const deleteAssuranceCaseNode = async (
     if (response.ok) {
       return true;
     }
+    return { error: 'Failed to delete node' };
   } catch (_error) {
-    return false;
+    return { error: 'An error occurred' };
   }
 };
 
@@ -1235,6 +1250,7 @@ export const updateAssuranceCaseNode = async (
     if (response.ok) {
       return true;
     }
+    return false;
   } catch (_error) {
     return false;
   }
@@ -1454,11 +1470,153 @@ export const findItemById = (
   item: NestedArrayItem | AssuranceCase,
   id: number
 ): NestedArrayItem | null => {
-  if (item.id === id) {
-    return item;
+  // Check if it's an AssuranceCase (which doesn't match NestedArrayItem structure)
+  if ('goals' in item && item.id === id) {
+    // AssuranceCase cannot be returned as NestedArrayItem
+    return null;
+  }
+
+  // For NestedArrayItem types
+  if (item.id === id && 'type' in item) {
+    return item as NestedArrayItem;
   }
 
   return searchInAllNestedStructures(item, id);
+};
+
+// Helper function to update context
+const updateContext = (
+  assuranceCase: AssuranceCase,
+  id: number,
+  updatedItem: Partial<Context>
+): AssuranceCase => {
+  const newContext = (assuranceCase.goals?.[0]?.context || []).map(
+    (context: Context) => {
+      if (context.id === id && context.type === 'Context') {
+        return {
+          ...context,
+          ...updatedItem,
+        };
+      }
+      return { ...context };
+    }
+  );
+
+  return {
+    ...assuranceCase,
+    goals: assuranceCase.goals
+      ? [{ ...assuranceCase.goals[0], context: newContext }]
+      : [],
+  };
+};
+
+// Helper function to update strategy
+const updateStrategy = (
+  assuranceCase: AssuranceCase,
+  id: number,
+  updatedItem: Partial<Strategy>
+): AssuranceCase => {
+  const newStrategy = (assuranceCase.goals?.[0]?.strategies || []).map(
+    (strategy: Strategy) => {
+      if (strategy.id === id && strategy.type === 'Strategy') {
+        return {
+          ...strategy,
+          ...updatedItem,
+        };
+      }
+      return { ...strategy };
+    }
+  );
+
+  return {
+    ...assuranceCase,
+    goals: assuranceCase.goals
+      ? [
+          {
+            ...assuranceCase.goals[0],
+            strategies: newStrategy,
+          },
+        ]
+      : [],
+  };
+};
+
+// Helper function to update property claim
+const updatePropertyClaim = (
+  assuranceCase: AssuranceCase,
+  id: number,
+  updatedItem: Partial<PropertyClaim>,
+  move: boolean
+): AssuranceCase => {
+  if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
+    return assuranceCase;
+  }
+
+  const goal = assuranceCase.goals[0];
+  let updatedPropertyClaims: PropertyClaim[] | null = null;
+
+  if (move) {
+    updatedPropertyClaims = updatePropertyClaimNestedMove(
+      goal.property_claims || [],
+      id,
+      updatedItem as Partial<PropertyClaim> & { property_claim_id?: number }
+    );
+  } else {
+    updatedPropertyClaims = updatePropertyClaimNested(
+      goal.property_claims || [],
+      id,
+      updatedItem
+    );
+  }
+
+  return {
+    ...assuranceCase,
+    goals: [
+      {
+        ...goal,
+        property_claims: updatedPropertyClaims || goal.property_claims || [],
+      },
+    ],
+  };
+};
+
+// Helper function to update evidence
+const updateEvidence = (
+  assuranceCase: AssuranceCase,
+  id: number,
+  updatedItem: Partial<Evidence>,
+  move: boolean
+): AssuranceCase => {
+  if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
+    return assuranceCase;
+  }
+
+  const goal = assuranceCase.goals[0];
+  let updatedPropertyClaims: PropertyClaim[] | null = null;
+
+  if (move) {
+    updatedPropertyClaims = updateEvidenceNestedMove(
+      goal.property_claims || [],
+      id,
+      updatedItem as Partial<Evidence> & { property_claim_id: number[] }
+    );
+  } else {
+    updatedPropertyClaims = updateEvidenceNested(
+      goal.property_claims || [],
+      id,
+      updatedItem
+    );
+  }
+
+  return {
+    ...assuranceCase,
+    goals: [
+      {
+        ...goal,
+        property_claims: updatedPropertyClaims || goal.property_claims || [],
+      },
+    ],
+  };
 };
 
 /**
@@ -1488,106 +1646,45 @@ export const updateAssuranceCase = (
   _node: ReactFlowNode,
   move = false
 ): AssuranceCase => {
-  let updatedAssuranceCase: AssuranceCase;
-  let updatedGoals: Goal[];
-
   switch (type) {
-    case 'context': {
-      const newContext = assuranceCase.goals[0].context.map(
-        (context: Context) => {
-          if (context.id === id && context.type === 'Context') {
-            return {
-              ...context,
-              ...updatedItem,
-            };
-          }
-          return { ...context };
-        }
+    case 'context':
+      return updateContext(assuranceCase, id, updatedItem as Partial<Context>);
+
+    case 'strategy':
+      return updateStrategy(
+        assuranceCase,
+        id,
+        updatedItem as Partial<Strategy>
       );
 
-      updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: [{ ...assuranceCase.goals[0], context: newContext }],
-      };
-      return updatedAssuranceCase;
-    }
-    case 'strategy': {
-      // Create a new strategy array by adding the new context item
-      const newStrategy = assuranceCase.goals[0].strategies.map(
-        (strategy: Strategy) => {
-          if (strategy.id === id && strategy.type === 'Strategy') {
-            return {
-              ...strategy,
-              ...updatedItem,
-            };
-          }
-          return { ...strategy };
-        }
-      );
-
-      // Create a new assuranceCase object with the updated strategy array
-      updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: [
-          {
-            ...assuranceCase.goals[0],
-            strategies: newStrategy,
-          },
-        ],
-      };
-      return updatedAssuranceCase;
-    }
     case 'property':
-      // updatedGoals = updatePropertyClaimNested(assuranceCase.goals, id, updatedItem);
-      if (move) {
-        updatedGoals = updatePropertyClaimNestedMove(
-          assuranceCase.goals,
-          id,
-          updatedItem
-        );
-      } else {
-        updatedGoals = updatePropertyClaimNested(
-          assuranceCase.goals,
-          id,
-          updatedItem
-        );
-      }
-      updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: updatedGoals,
-      };
-      return updatedAssuranceCase;
+      return updatePropertyClaim(
+        assuranceCase,
+        id,
+        updatedItem as Partial<PropertyClaim>,
+        move
+      );
+
     case 'evidence':
-      // updatedGoals = updateEvidenceNested(assuranceCase.goals, id, updatedItem);
-      if (move) {
-        updatedGoals = updateEvidenceNestedMove(
-          assuranceCase.goals,
-          id,
-          updatedItem
-        );
-      } else {
-        updatedGoals = updateEvidenceNested(
-          assuranceCase.goals,
-          id,
-          updatedItem
-        );
-      }
-      updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: updatedGoals,
-      };
-      return updatedAssuranceCase;
+      return updateEvidence(
+        assuranceCase,
+        id,
+        updatedItem as Partial<Evidence>,
+        move
+      );
+
     default:
-      updatedAssuranceCase = {
+      return {
         ...assuranceCase,
-        goals: [
-          {
-            ...assuranceCase.goals[0],
-            ...updatedItem,
-          },
-        ],
+        goals: assuranceCase.goals
+          ? [
+              {
+                ...assuranceCase.goals[0],
+                ...updatedItem,
+              } as Goal,
+            ]
+          : [],
       };
-      return updatedAssuranceCase;
   }
 };
 
@@ -1601,17 +1698,17 @@ export const setNodeIdentifier = (
 
   switch (newNodeType.toLowerCase()) {
     case 'context':
-      newArray = [...parentNode.data.context];
+      newArray = [...(parentNode.data.context || [])];
       break;
     case 'strategy':
-      newArray = [...parentNode.data.strategies];
+      newArray = [...(parentNode.data.strategies || [])];
       break;
     case 'property':
       parentPrefix = Number.parseFloat(parentNode.data.name.substring(1));
-      newArray = [...parentNode.data.property_claims];
+      newArray = [...(parentNode.data.property_claims || [])];
       break;
     case 'evidence':
-      newArray = [...parentNode.data.evidence];
+      newArray = [...(parentNode.data.evidence || [])];
       break;
     default:
       break;
@@ -1619,6 +1716,9 @@ export const setNodeIdentifier = (
 
   if (newArray.length > 0) {
     const lastItem = newArray.pop();
+    if (!lastItem) {
+      return '1';
+    }
 
     if (newNodeType === 'property' && parentNode.type === 'property') {
       const lastIdentifier = Number.parseFloat(
@@ -1798,7 +1898,7 @@ const collectStrategy = (
   }
 ): void => {
   if (item.type !== 'Evidence' && item.type !== 'Context') {
-    result.strategies.push(item);
+    result.strategies.push(item as Goal | PropertyClaim | Strategy);
   }
 };
 
@@ -1861,10 +1961,20 @@ export const addHiddenProp = (
       addHiddenProp(item);
     }
   } else if (typeof assuranceCase === 'object' && assuranceCase !== null) {
-    assuranceCase.hidden = false;
+    if ('hidden' in assuranceCase && typeof assuranceCase === 'object') {
+      (assuranceCase as NestedArrayItem).hidden = false;
+    }
 
     for (const key of Object.keys(assuranceCase)) {
-      addHiddenProp(assuranceCase[key]);
+      const value = (assuranceCase as unknown as Record<string, unknown>)[key];
+      if (value && (typeof value === 'object' || Array.isArray(value))) {
+        addHiddenProp(
+          value as unknown as
+            | NestedArrayItem
+            | AssuranceCase
+            | NestedArrayItem[]
+        );
+      }
     }
   }
   return assuranceCase;
@@ -2078,7 +2188,11 @@ export function toggleHiddenForChildren(
     const isParentOrDescendant = parentFound || node.id === targetParentId;
 
     // Reset childrenHidden if it's a descendant and not the direct parent
-    if (isParentOrDescendant && node.id !== targetParentId) {
+    if (
+      isParentOrDescendant &&
+      node.id !== targetParentId &&
+      'childrenHidden' in node
+    ) {
       node.childrenHidden = false;
     }
 
@@ -2121,23 +2235,76 @@ export function toggleHiddenForChildren(
  * @param {number} id - The unique identifier of the element to find.
  * @returns {any} The found element, or null if not found.
  */
+// Helper to get children array by key from element
+const getChildrenByKey = (
+  element: NestedArrayItem | AssuranceCase,
+  key: string
+): unknown[] | undefined => {
+  switch (key) {
+    case 'goals':
+      return 'goals' in element ? (element as AssuranceCase).goals : undefined;
+    case 'context':
+      return 'context' in element ? (element as Goal).context : undefined;
+    case 'property_claims':
+      return 'property_claims' in element
+        ? (element as Goal | PropertyClaim | Strategy).property_claims
+        : undefined;
+    case 'strategies':
+      return 'strategies' in element
+        ? (element as Goal | PropertyClaim).strategies
+        : undefined;
+    case 'evidence':
+      return 'evidence' in element
+        ? (element as PropertyClaim).evidence
+        : undefined;
+    case 'comments':
+      return 'comments' in element
+        ? (element as AssuranceCase).comments
+        : undefined;
+    default:
+      return;
+  }
+};
+
+// Type for the search element function
+type SearchElementFunction = (
+  el: NestedArrayItem | AssuranceCase,
+  id: number
+) => NestedArrayItem | AssuranceCase | null;
+
+// Helper function to search within children array
+const searchInChildrenArray = (
+  children: unknown[],
+  targetId: number,
+  searchElement: SearchElementFunction
+): NestedArrayItem | AssuranceCase | null => {
+  for (const child of children) {
+    if (child && typeof child === 'object' && 'id' in child) {
+      const result = searchElement(
+        child as NestedArrayItem | AssuranceCase,
+        targetId
+      );
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return null;
+};
+
 // Helper function to search in child elements
 const searchInChildElements = (
   element: NestedArrayItem | AssuranceCase,
   targetId: number,
   childrenKeys: string[],
-  searchElement: (
-    el: NestedArrayItem | AssuranceCase,
-    id: number
-  ) => NestedArrayItem | AssuranceCase | null
+  searchElement: SearchElementFunction
 ): NestedArrayItem | AssuranceCase | null => {
   for (const key of childrenKeys) {
-    if (element[key]) {
-      for (const child of element[key]) {
-        const result = searchElement(child, targetId);
-        if (result) {
-          return result;
-        }
+    const children = getChildrenByKey(element, key);
+    if (children) {
+      const result = searchInChildrenArray(children, targetId, searchElement);
+      if (result) {
+        return result;
       }
     }
   }
@@ -2178,6 +2345,28 @@ export function findElementById(
 }
 
 /**
+ * Helper to process children and collect hidden status
+ */
+const processChildrenForHiddenStatus = (
+  children: unknown[],
+  key: string,
+  hiddenStatus: boolean[]
+): void => {
+  for (const child of children) {
+    if (child && typeof child === 'object' && 'hidden' in child) {
+      hiddenStatus.push((child as { hidden: boolean }).hidden);
+    }
+    // Recursively check nested property claims and strategies
+    if (key === 'property_claims' || key === 'strategies') {
+      const nestedStatus = getChildrenHiddenStatus(
+        child as NestedArrayItem | AssuranceCase
+      );
+      hiddenStatus.push(...nestedStatus);
+    }
+  }
+};
+
+/**
  * Retrieves the hidden status of all child elements of a specified element.
  *
  * @param {any} element - The element whose children's hidden status is to be retrieved.
@@ -2186,7 +2375,7 @@ export function findElementById(
 export function getChildrenHiddenStatus(
   element: NestedArrayItem | AssuranceCase
 ): boolean[] {
-  let hiddenStatus: boolean[] = [];
+  const hiddenStatus: boolean[] = [];
   const childrenKeys = [
     'context',
     'property_claims',
@@ -2194,15 +2383,11 @@ export function getChildrenHiddenStatus(
     'evidence',
     'comments',
   ];
+
   for (const key of childrenKeys) {
-    if (element[key]) {
-      for (const child of element[key]) {
-        hiddenStatus.push(child.hidden);
-        // Recursively check nested property claims and strategies
-        if (key === 'property_claims' || key === 'strategies') {
-          hiddenStatus = hiddenStatus.concat(getChildrenHiddenStatus(child));
-        }
-      }
+    const children = getChildrenByKey(element, key);
+    if (children) {
+      processChildrenForHiddenStatus(children, key, hiddenStatus);
     }
   }
   return hiddenStatus;
@@ -2225,9 +2410,9 @@ export const findSiblingHiddenState = (
 
     if (hiddenStatus.length === 0) {
       // then get parents hidden value
-      return element.hidden;
+      return 'hidden' in element ? (element as NestedArrayItem).hidden : false;
     }
-    return hiddenStatus[0];
+    return hiddenStatus[0] ?? false;
   }
 };
 
@@ -2282,6 +2467,53 @@ export const findParentNode = (
  * @param {string|null} token - The authorization token for the request.
  * @returns {Promise<any>} A promise that resolves with the result of the detach operation.
  */
+// Helper to build detach payload for property claims
+const buildPropertyClaimDetachPayload = (
+  node: ReactFlowNode
+): DetachPayload => {
+  const payload: DetachPayload = {
+    goal_id: null,
+    strategy_id: null,
+    property_claim_id: null,
+  };
+
+  if (node.data.goal_id !== null && node.data.goal_id !== undefined) {
+    payload.goal_id = node.data.goal_id;
+  }
+  if (node.data.strategy_id !== null && node.data.strategy_id !== undefined) {
+    payload.strategy_id = node.data.strategy_id;
+  }
+  if (
+    node.data.property_claim_id !== null &&
+    node.data.property_claim_id !== undefined
+  ) {
+    // Handle both single number and array cases
+    if (Array.isArray(node.data.property_claim_id)) {
+      payload.property_claim_id = node.data.property_claim_id[0];
+    } else {
+      payload.property_claim_id = node.data.property_claim_id;
+    }
+  }
+
+  return payload;
+};
+
+// Helper to get entity name from type
+const getEntityName = (type: string): string => {
+  switch (type) {
+    case 'context':
+      return 'contexts';
+    case 'strategy':
+      return 'strategies';
+    case 'property':
+      return 'propertyclaims';
+    case 'evidence':
+      return 'evidence';
+    default:
+      return 'goals';
+  }
+};
+
 export const detachCaseElement = async (
   node: ReactFlowNode,
   type: string,
@@ -2292,39 +2524,23 @@ export const detachCaseElement = async (
     return { error: 'No token' };
   }
 
-  const payload: DetachPayload = {
-    goal_id: null,
-    strategy_id: null,
-    property_claim_id: null,
-  };
+  let payload: DetachPayload;
+  const entity = getEntityName(type);
 
-  let entity: string | null = null;
-  switch (type) {
-    case 'context':
-      entity = 'contexts';
-      break;
-    case 'strategy':
-      entity = 'strategies';
-      break;
-    case 'property':
-      entity = 'propertyclaims';
-      if (node.data.goal_id !== null) {
-        payload.goal_id = node.data.goal_id;
-      }
-      if (node.data.strategy_id !== null) {
-        payload.strategy_id = node.data.strategy_id;
-      }
-      if (node.data.property_claim_id !== null) {
-        payload.property_claim_id = node.data.property_claim_id;
-      }
-      break;
-    case 'evidence':
-      entity = 'evidence';
-      payload.property_claim_id = (node.data.property_claim_id as number[])[0];
-      break;
-    default:
-      entity = 'goals';
-      break;
+  if (type === 'property') {
+    payload = buildPropertyClaimDetachPayload(node);
+  } else if (type === 'evidence') {
+    payload = {
+      goal_id: null,
+      strategy_id: null,
+      property_claim_id: (node.data.property_claim_id as number[])[0],
+    };
+  } else {
+    payload = {
+      goal_id: null,
+      strategy_id: null,
+      property_claim_id: null,
+    };
   }
 
   try {

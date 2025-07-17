@@ -321,7 +321,7 @@ describe('useToast', () => {
         | {
             id: string;
             dismiss: () => void;
-            update: (props: Partial<ToasterToast>) => void;
+            update: (props: ToasterToast) => void;
           }
         | undefined;
 

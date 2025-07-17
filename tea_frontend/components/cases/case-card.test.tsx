@@ -62,7 +62,7 @@ describe('CaseCard', () => {
     name: 'Test Safety Case',
     description: 'A comprehensive safety assurance case',
     created_date: '2024-01-15T10:30:00Z',
-    images: [],
+    permissions: 'manage', // Should be a string, not array
   });
 
   beforeEach(() => {
@@ -215,15 +215,12 @@ describe('CaseCard', () => {
   });
 
   it('should render case with image when available', () => {
-    const caseWithImage = createMockAssuranceCase({
-      ...mockAssuranceCase,
-      images: [{ url: 'https://example.com/case-image.png' }],
-    });
+    // Since AssuranceCase doesn't have images property, this test
+    // should verify the placeholder behavior instead
+    renderWithAuth(<CaseCard assuranceCase={mockAssuranceCase} />);
 
-    renderWithAuth(<CaseCard assuranceCase={caseWithImage} />);
-
-    const image = screen.getByAltText('Test Safety Case');
-    expect(image).toBeInTheDocument();
+    const imageContainer = screen.getByTestId('case-image-container');
+    expect(imageContainer).toBeInTheDocument();
   });
 
   it('should have proper card structure and styling', () => {
@@ -240,10 +237,10 @@ describe('CaseCard', () => {
   });
 
   it('should format date correctly for different timezones', () => {
-    const caseWithDifferentDate = createMockAssuranceCase({
+    const caseWithDifferentDate = {
       ...mockAssuranceCase,
       created_date: '2024-06-30T23:59:59Z',
-    });
+    };
 
     renderWithAuth(<CaseCard assuranceCase={caseWithDifferentDate} />);
 
@@ -267,12 +264,12 @@ describe('CaseCard', () => {
   });
 
   it('should handle long case names and descriptions', () => {
-    const caseWithLongText = createMockAssuranceCase({
+    const caseWithLongText = {
       ...mockAssuranceCase,
       name: 'This is a very long case name that should be handled properly in the UI without breaking the layout',
       description:
         'This is a very long description that contains a lot of text to test how the component handles text overflow and maintains proper layout structure',
-    });
+    };
 
     renderWithAuth(<CaseCard assuranceCase={caseWithLongText} />);
 
@@ -281,10 +278,10 @@ describe('CaseCard', () => {
   });
 
   it('should handle missing or invalid date gracefully', () => {
-    const caseWithInvalidDate = createMockAssuranceCase({
+    const caseWithInvalidDate = {
       ...mockAssuranceCase,
       created_date: '',
-    });
+    };
 
     renderWithAuth(<CaseCard assuranceCase={caseWithInvalidDate} />);
 

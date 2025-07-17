@@ -317,7 +317,10 @@ describe('CaseCreateModal', () => {
       let capturedRequestBody: Record<string, unknown> | null = null;
       server.use(
         http.post('*/api/cases/', async ({ request }) => {
-          capturedRequestBody = await request.json();
+          capturedRequestBody = (await request.json()) as Record<
+            string,
+            unknown
+          >;
           return HttpResponse.json({ id: 123 });
         })
       );

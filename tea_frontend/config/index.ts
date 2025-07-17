@@ -4,7 +4,14 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline';
 import { Blocks } from 'lucide-react';
-import type { Sector } from '@/types';
+
+type Sector = {
+  ID: number;
+  Name: string;
+  Description: string;
+  ISICcode: string;
+  NACEcode: string;
+};
 
 export const navigation = [
   {

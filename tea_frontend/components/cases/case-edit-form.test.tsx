@@ -21,7 +21,7 @@ const UPDATE_BUTTON_REGEX = /update/i;
 
 // Mock the store
 const mockStore = {
-  assuranceCase: mockAssuranceCase as AssuranceCase,
+  assuranceCase: mockAssuranceCase as AssuranceCase | null,
   setAssuranceCase: vi.fn(),
 };
 
@@ -282,7 +282,14 @@ describe('CaseEditForm', () => {
         null;
       server.use(
         http.put('*/api/cases/1/', async ({ request }) => {
-          capturedRequestBody = await request.json();
+          const jsonBody = await request.json();
+          capturedRequestBody =
+            jsonBody &&
+            typeof jsonBody === 'object' &&
+            'name' in jsonBody &&
+            'description' in jsonBody
+              ? (jsonBody as { name: string; description: string })
+              : null;
           return HttpResponse.json({ success: true });
         })
       );

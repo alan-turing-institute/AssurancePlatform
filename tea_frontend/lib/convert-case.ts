@@ -37,7 +37,10 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
   const goals = assuranceCase.goals;
 
   // Create nodes recursively for goals and their children
-  caseNodes = createNodesRecursively(goals, 'goal');
+  caseNodes = createNodesRecursively(
+    goals as unknown as ConvertibleItem[],
+    'goal'
+  );
 
   // Create edges for every node
   caseEdges = createEdgesFromNodes(caseNodes);
@@ -85,11 +88,11 @@ export const createNodesRecursively = (
       id: nodeId,
       type: nodeType,
       data: {
+        ...item,
         id: item.id,
         name: item.name,
         type: item.type,
         description: item.short_description,
-        ...item,
       },
       position: { x: 0, y: 50 },
       // hidden: nodeType === 'goal' ? false : true,
@@ -118,7 +121,7 @@ export const createNodesRecursively = (
     // }
     if (item.strategies && item.strategies.length > 0) {
       const strategyNodes = createNodesRecursively(
-        item.strategies,
+        item.strategies as unknown as ConvertibleItem[],
         'strategy',
         node,
         processedItems,
@@ -128,7 +131,7 @@ export const createNodesRecursively = (
     }
     if (item.property_claims && item.property_claims.length > 0) {
       const propertyClaimNodes = createNodesRecursively(
-        item.property_claims,
+        item.property_claims as unknown as ConvertibleItem[],
         'property',
         node,
         processedItems,
@@ -138,7 +141,7 @@ export const createNodesRecursively = (
     }
     if (item.evidence && item.evidence.length > 0) {
       const evidenceNodes = createNodesRecursively(
-        item.evidence,
+        item.evidence as unknown as ConvertibleItem[],
         'evidence',
         node,
         processedItems,

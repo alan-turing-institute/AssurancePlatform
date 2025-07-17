@@ -15,11 +15,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import useStore from '@/data/store';
+import type { ReactFlowNode } from '@/lib/case-helper';
 import {
   addHiddenProp,
   createAssuranceCaseNode,
   setNodeIdentifier,
 } from '@/lib/case-helper';
+import type { AssuranceCase } from '@/types';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 
@@ -65,14 +67,14 @@ const CreateForm: React.FC<CreateFormProps> = ({
   }, [form, setUnresolvedChanges]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const _identifier = await setNodeIdentifier(null, 'goal');
+    const _identifier = await setNodeIdentifier({} as ReactFlowNode, 'goal');
 
     const newGoal = {
       name: 'G1',
       short_description: values.description,
       long_description: 'N/A',
       keywords: 'N/A',
-      assurance_case_id: assuranceCase.id,
+      assurance_case_id: assuranceCase?.id || 0,
       context: [],
       property_claims: [],
       strategies: [],
@@ -90,13 +92,26 @@ const CreateForm: React.FC<CreateFormProps> = ({
       return; // Handle error silently
     }
 
-    const updatedAssuranceCase = {
-      ...assuranceCase,
-      goals: [result.data],
-    };
+    const updatedAssuranceCase = assuranceCase
+      ? {
+          ...assuranceCase,
+          goals: [result.data].filter(Boolean),
+        }
+      : null;
 
-    const formattedAssuranceCase = await addHiddenProp(updatedAssuranceCase);
-    setAssuranceCase(formattedAssuranceCase);
+    if (updatedAssuranceCase) {
+      const formattedAssuranceCase = await addHiddenProp(
+        updatedAssuranceCase as unknown as AssuranceCase
+      );
+      if (
+        formattedAssuranceCase &&
+        typeof formattedAssuranceCase === 'object' &&
+        !Array.isArray(formattedAssuranceCase) &&
+        'id' in formattedAssuranceCase
+      ) {
+        setAssuranceCase(formattedAssuranceCase as AssuranceCase);
+      }
+    }
     onClose();
     setLoading(false);
     // window.location.reload()

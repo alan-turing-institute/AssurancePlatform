@@ -28,7 +28,7 @@ import { useShareModal } from '@/hooks/use-share-modal';
 interface ActionButtonProps {
   showCreateGoal: boolean;
   actions: {
-    onLayout: (direction: string) => void;
+    onLayout: (direction: 'LR' | 'TB' | 'RL' | 'BT') => void;
   };
   notify: (message: string) => void;
   notifyError: (message: string) => void;
@@ -57,6 +57,10 @@ const ActionButtons = ({
   const resourcesModal = useResourcesModal();
 
   const onDelete = async () => {
+    if (!assuranceCase) {
+      return;
+    }
+
     try {
       setLoading(true);
       const requestOptions: RequestInit = {
@@ -82,6 +86,10 @@ const ActionButtons = ({
   };
 
   const handleCapture = async () => {
+    if (!assuranceCase) {
+      return;
+    }
+
     const token = session?.key ?? '';
     const screenshotTarget = document.getElementById('ReactFlow');
     if (screenshotTarget) {
@@ -117,6 +125,10 @@ const ActionButtons = ({
   };
 
   const handleNameReset = async () => {
+    if (!assuranceCase) {
+      return;
+    }
+
     try {
       setLoading(true);
       const requestOptions: RequestInit = {
@@ -145,8 +157,9 @@ const ActionButtons = ({
       <div className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20">
         <div className="flex items-center justify-center gap-2 border-r-2 border-r-indigo-200 pr-2 dark:border-r-indigo-800/60">
           {showCreateGoal &&
-            (assuranceCase.permissions !== 'view' ||
-              assuranceCase.permissions !== 'review') && (
+            assuranceCase &&
+            assuranceCase.permissions !== 'view' &&
+            assuranceCase.permissions !== 'review' && (
               <ActionTooltip label="New Goal">
                 <button
                   className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
@@ -169,7 +182,8 @@ const ActionButtons = ({
               <span className="sr-only">Focus</span>
             </button>
           </ActionTooltip>
-          {assuranceCase.permissions !== 'view' &&
+          {assuranceCase &&
+            assuranceCase.permissions !== 'view' &&
             assuranceCase.permissions !== 'review' && (
               <ActionTooltip label="Reset Identifiers">
                 <button
@@ -194,7 +208,7 @@ const ActionButtons = ({
           </ActionTooltip>
         </div>
         <div className="flex items-center justify-center gap-2">
-          {assuranceCase.permissions !== 'view' && (
+          {assuranceCase && assuranceCase.permissions !== 'view' && (
             <ActionTooltip label="Share & Export">
               <button
                 className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
@@ -206,7 +220,7 @@ const ActionButtons = ({
               </button>
             </ActionTooltip>
           )}
-          {assuranceCase.permissions === 'manage' && (
+          {assuranceCase && assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Permissions">
               <button
                 className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
@@ -228,20 +242,21 @@ const ActionButtons = ({
               <span className="sr-only">Notes</span>
             </button>
           </ActionTooltip>
-          {(assuranceCase.permissions === 'manage' ||
-            assuranceCase.permissions === 'editor') && (
-            <ActionTooltip label="Capture">
-              <button
-                className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
-                onClick={handleCapture}
-                type="button"
-              >
-                <Camera className="h-5 w-5" />
-                <span className="sr-only">Capture</span>
-              </button>
-            </ActionTooltip>
-          )}
-          {assuranceCase.permissions === 'manage' && (
+          {assuranceCase &&
+            (assuranceCase.permissions === 'manage' ||
+              assuranceCase.permissions === 'editor') && (
+              <ActionTooltip label="Capture">
+                <button
+                  className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+                  onClick={handleCapture}
+                  type="button"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="sr-only">Capture</span>
+                </button>
+              </ActionTooltip>
+            )}
+          {assuranceCase && assuranceCase.permissions === 'manage' && (
             <ActionTooltip label="Delete">
               <button
                 className="h-50 w-50 rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"

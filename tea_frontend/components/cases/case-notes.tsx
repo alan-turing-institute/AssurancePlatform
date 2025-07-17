@@ -19,7 +19,7 @@ const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  if (!(isMounted && assuranceCase)) {
     return null;
   }
 

@@ -40,10 +40,20 @@ type Store = {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   setAssuranceCase: (assuranceCase: AssuranceCase | null) => void;
-  setOrphanedElements: (orphanedElements: OrphanedElement[]) => void;
+  setOrphanedElements: (
+    orphanedElements:
+      | OrphanedElement[]
+      | {
+          contexts?: OrphanedElement[];
+          property_claims?: OrphanedElement[];
+          strategies?: OrphanedElement[];
+          evidence?: OrphanedElement[];
+        }
+  ) => void;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   layoutNodes: (nodes: Node[], edges: Edge[]) => void;
+  fitView: () => void;
   viewMembers: Member[];
   editMembers: Member[];
   reviewMembers: Member[];
@@ -69,7 +79,7 @@ const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
 
   // Set all nodes in the graph, including hidden ones
   for (const node of nodes) {
-    g.setNode(node.id, node);
+    g.setNode(node.id, { width: node.width || 100, height: node.height || 50 });
   }
 
   // Set edges for visible nodes only
@@ -123,12 +133,23 @@ const useStore = create<Store>((set, get) => ({
     // Layout the nodes and edges
     get().layoutNodes(nodes, edges);
   },
-  setOrphanedElements: (orphanedElements: {
-    contexts?: OrphanedElement[];
-    property_claims?: OrphanedElement[];
-    strategies?: OrphanedElement[];
-    evidence?: OrphanedElement[];
-  }) => {
+  setOrphanedElements: (
+    orphanedElements:
+      | OrphanedElement[]
+      | {
+          contexts?: OrphanedElement[];
+          property_claims?: OrphanedElement[];
+          strategies?: OrphanedElement[];
+          evidence?: OrphanedElement[];
+        }
+  ) => {
+    // If it's already an array, set it directly
+    if (Array.isArray(orphanedElements)) {
+      set({ orphanedElements });
+      return;
+    }
+
+    // Otherwise, it's an object with categorized elements
     const addElementsToArray = (
       elements: OrphanedElement[] | undefined,
       targetArray: OrphanedElement[]

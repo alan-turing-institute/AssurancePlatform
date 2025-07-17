@@ -48,7 +48,8 @@ describe('utils', () => {
       return result.join(' ');
     });
 
-    mockTwMerge.mockImplementation((classes: unknown) => {
+    mockTwMerge.mockImplementation((...classLists: ClassValue[]) => {
+      const classes = classLists.join(' ');
       if (typeof classes === 'string') {
         const classArray = classes.split(' ').filter(Boolean);
         const uniqueClasses = [...new Set(classArray)];
@@ -317,7 +318,7 @@ describe('utils', () => {
       });
 
       expect(() => {
-        cn('base', symbolClass as ClassValue);
+        cn('base', symbolClass as unknown as ClassValue);
       }).not.toThrow();
     });
 

@@ -21,6 +21,7 @@ import useStore from '@/data/store';
 // import { useLoginToken } from '.*/use-auth'
 import {
   caseItemDescription,
+  type ReactFlowNode,
   updateAssuranceCase,
   updateAssuranceCaseNode,
 } from '@/lib/case-helper';
@@ -76,20 +77,20 @@ const EditForm: React.FC<EditFormProps> = ({
     }
 
     const updated = await updateAssuranceCaseNode(
-      node.type,
+      node.type || 'unknown',
       node.data.id,
       session?.key ?? '',
       updateItem
     );
 
-    if (updated) {
+    if (updated && assuranceCase) {
       // Assurance Case Update
       const updatedAssuranceCase = await updateAssuranceCase(
-        node.type,
+        node.type || 'unknown',
         assuranceCase,
         updateItem,
         node.data.id,
-        node
+        { ...node, type: node.type || '' } as ReactFlowNode
       );
       if (updatedAssuranceCase) {
         setAssuranceCase(updatedAssuranceCase);
@@ -109,8 +110,8 @@ const EditForm: React.FC<EditFormProps> = ({
   }, [form, setUnresolvedChanges]);
 
   const readOnly = !!(
-    assuranceCase.permissions === 'view' ||
-    assuranceCase.permissions === 'review'
+    assuranceCase?.permissions === 'view' ||
+    assuranceCase?.permissions === 'review'
   );
 
   return (
@@ -191,7 +192,7 @@ const EditForm: React.FC<EditFormProps> = ({
                 <span>
                   Update&nbsp;
                   <span className="capitalize">
-                    {caseItemDescription(node.type)}
+                    {caseItemDescription(node.type || 'unknown')}
                   </span>
                 </span>
               )}

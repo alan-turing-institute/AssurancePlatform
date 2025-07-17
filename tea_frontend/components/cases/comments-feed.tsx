@@ -137,7 +137,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
               </div>
             )}
             {!edit &&
-              assuranceCase.permissions !== 'view' &&
+              assuranceCase?.permissions !== 'view' &&
               user?.username === comment.author && (
                 <div className="absolute right-2 bottom-2 hidden group-hover:block">
                   <div className="flex items-center justify-start gap-2">

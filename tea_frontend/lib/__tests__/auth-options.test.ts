@@ -17,13 +17,13 @@ describe('authOptions', () => {
 
   describe('Module structure', () => {
     it('should export authOptions object', async () => {
-      const module = await import('../authOptions');
+      const module = await import('../auth-options');
       expect(module.authOptions).toBeDefined();
       expect(typeof module.authOptions).toBe('object');
     });
 
     it('should have required configuration properties', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       expect(authOptions).toHaveProperty('secret');
       expect(authOptions).toHaveProperty('session');
@@ -32,20 +32,20 @@ describe('authOptions', () => {
     });
 
     it('should have JWT session strategy', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       expect(authOptions.session).toEqual({ strategy: 'jwt' });
     });
 
     it('should have providers array', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       expect(Array.isArray(authOptions.providers)).toBe(true);
       expect(authOptions.providers.length).toBeGreaterThan(0);
     });
 
     it('should have all required callbacks', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       expect(authOptions.callbacks).toBeDefined();
       expect(typeof authOptions.callbacks?.signIn).toBe('function');
@@ -57,7 +57,7 @@ describe('authOptions', () => {
 
   describe('Callback functions', () => {
     it('should handle redirect callback with NEXTAUTH_URL', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const result = await authOptions.callbacks?.redirect?.({
         url: '/some-url',
@@ -70,7 +70,7 @@ describe('authOptions', () => {
     it('should handle redirect callback with baseUrl fallback', async () => {
       vi.stubEnv('NEXTAUTH_URL', '');
 
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const result = await authOptions.callbacks?.redirect?.({
         url: '/some-url',
@@ -81,36 +81,45 @@ describe('authOptions', () => {
     });
 
     it('should handle session callback', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
-      const mockSession = { user: { name: 'Test User' } };
+      const mockSession = {
+        user: { name: 'Test User' },
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
       const mockToken = { key: 'session-token', provider: 'github' };
 
       const result = await authOptions.callbacks?.session?.({
         session: mockSession,
-        user: undefined,
         token: mockToken,
+        user: { id: 'user-id', email: 'test@example.com', emailVerified: null },
+        newSession: {},
+        trigger: 'update',
       });
 
       expect(result).toEqual({
         user: { name: 'Test User' },
+        expires: expect.any(String),
         key: 'session-token',
         provider: 'github',
       });
     });
 
     it('should handle jwt callback for new user', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const mockToken = {};
-      const mockUser = { key: 'user-token', provider: 'github' };
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        key: 'user-token',
+        provider: 'github',
+      };
 
       const result = await authOptions.callbacks?.jwt?.({
         token: mockToken,
         user: mockUser,
-        account: undefined,
-        profile: undefined,
-        isNewUser: undefined,
+        account: null,
       });
 
       expect(result).toEqual({
@@ -120,7 +129,7 @@ describe('authOptions', () => {
     });
 
     it('should handle jwt callback for existing token', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const mockToken = {
         key: 'existing-token',
@@ -130,37 +139,43 @@ describe('authOptions', () => {
 
       const result = await authOptions.callbacks?.jwt?.({
         token: mockToken,
-        user: undefined,
-        account: undefined,
-        profile: undefined,
-        isNewUser: undefined,
+        user: { id: 'user-id', email: 'test@example.com', emailVerified: null },
+        account: null,
       });
 
       expect(result).toEqual(mockToken);
     });
 
     it('should handle signIn callback for non-GitHub providers', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const result = await authOptions.callbacks?.signIn?.({
         user: { id: '1', email: 'test@example.com' },
-        account: { provider: 'credentials' },
+        account: {
+          provider: 'credentials',
+          providerAccountId: '1',
+          type: 'credentials',
+        },
         profile: undefined,
-        email: 'test@example.com',
+        email: { verificationRequest: false },
         credentials: undefined,
       });
 
       expect(result).toBe(true);
     });
 
-    it('should reject signIn when user is null', async () => {
-      const { authOptions } = await import('../authOptions');
+    it('should reject signIn when user is falsy', async () => {
+      const { authOptions } = await import('../auth-options');
 
       const result = await authOptions.callbacks?.signIn?.({
-        user: null,
-        account: { provider: 'credentials' },
+        user: { id: '', email: 'test@example.com', emailVerified: null },
+        account: {
+          provider: 'credentials',
+          providerAccountId: '1',
+          type: 'credentials',
+        },
         profile: undefined,
-        email: 'test@example.com',
+        email: { verificationRequest: false },
         credentials: undefined,
       });
 
@@ -175,14 +190,14 @@ describe('authOptions', () => {
       vi.stubEnv('GITHUB_APP_CLIENT_SECRET', '');
 
       expect(async () => {
-        await import('../authOptions');
+        await import('../auth-options');
       }).not.toThrow();
     });
 
     it('should handle redirect error when no base URL available', async () => {
       vi.stubEnv('NEXTAUTH_URL', '');
 
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       await expect(
         authOptions.callbacks?.redirect?.({
@@ -198,7 +213,7 @@ describe('authOptions', () => {
       vi.stubEnv('API_URL', '');
       vi.stubEnv('NEXT_PUBLIC_API_URL', '');
 
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {
         // Empty implementation for test
@@ -206,9 +221,14 @@ describe('authOptions', () => {
 
       const result = await authOptions.callbacks?.signIn?.({
         user: { id: '1' },
-        account: { provider: 'github', access_token: 'token' },
+        account: {
+          provider: 'github',
+          access_token: 'token',
+          providerAccountId: '1',
+          type: 'oauth',
+        },
         profile: { email: 'test@github.com' },
-        email: 'test@github.com',
+        email: { verificationRequest: false },
         credentials: undefined,
       });
 
@@ -223,7 +243,7 @@ describe('authOptions', () => {
 
   describe('Configuration flexibility', () => {
     it('should handle different provider configurations', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       // Should handle providers being defined without errors
       expect(authOptions.providers).toBeDefined();
@@ -231,7 +251,7 @@ describe('authOptions', () => {
     });
 
     it('should use environment variable for secret', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       expect(authOptions.secret).toBe('test-secret');
     });
@@ -247,7 +267,7 @@ describe('authOptions', () => {
 
   describe('Integration tests', () => {
     it('should support complete auth flow structure', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       // Verify the complete structure needed for NextAuth
       expect(authOptions).toMatchObject({
@@ -264,34 +284,43 @@ describe('authOptions', () => {
     });
 
     it('should handle session transformation correctly', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
-      const testSession = { user: { id: '1', name: 'Test' } };
+      const testSession = {
+        user: { id: '1', name: 'Test' },
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
       const testToken = { key: 'test-key', provider: 'test-provider' };
 
       const sessionResult = await authOptions.callbacks?.session?.({
         session: testSession,
         token: testToken,
-        user: undefined,
+        user: { id: 'user-id', email: 'test@example.com', emailVerified: null },
+        newSession: {},
+        trigger: 'update',
       });
 
       expect(sessionResult).toEqual({
         user: { id: '1', name: 'Test' },
+        expires: expect.any(String),
         key: 'test-key',
         provider: 'test-provider',
       });
     });
 
     it('should handle JWT token flow correctly', async () => {
-      const { authOptions } = await import('../authOptions');
+      const { authOptions } = await import('../auth-options');
 
       // Test initial JWT creation
       const initialJWT = await authOptions.callbacks?.jwt?.({
         token: {},
-        user: { key: 'new-key', provider: 'new-provider' },
-        account: undefined,
-        profile: undefined,
-        isNewUser: undefined,
+        user: {
+          id: 'user-id',
+          email: 'test@example.com',
+          key: 'new-key',
+          provider: 'new-provider',
+        },
+        account: null,
       });
 
       expect(initialJWT).toEqual({
@@ -301,11 +330,9 @@ describe('authOptions', () => {
 
       // Test JWT persistence
       const persistedJWT = await authOptions.callbacks?.jwt?.({
-        token: initialJWT,
-        user: undefined,
-        account: undefined,
-        profile: undefined,
-        isNewUser: undefined,
+        token: initialJWT || {},
+        user: { id: 'user-id', email: 'test@example.com', emailVerified: null },
+        account: null,
       });
 
       expect(persistedJWT).toEqual(initialJWT);

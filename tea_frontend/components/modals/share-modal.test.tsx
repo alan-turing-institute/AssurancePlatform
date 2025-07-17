@@ -853,7 +853,7 @@ describe('ShareModal', () => {
     });
 
     it('should handle missing assurance case', () => {
-      mockStore.assuranceCase = null;
+      mockStore.assuranceCase = null as unknown as AssuranceCase;
 
       renderWithAuth(<ShareModal />);
 

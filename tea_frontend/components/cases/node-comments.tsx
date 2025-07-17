@@ -104,7 +104,9 @@ const NodeComment = ({
       <h3 className="mb-2 font-semibold text-lg">
         {readOnly ? 'Comments' : 'New Comment'}
       </h3>
-      {!readOnly && <CommentsForm node={node} />}
+      {!readOnly && (
+        <CommentsForm node={node as { type: string; data: { id: number } }} />
+      )}
       {loading ? (
         <div className="flex w-full flex-col justify-start gap-2 py-8">
           <Skeleton className="h-[10px] w-full rounded-full" />
@@ -115,7 +117,7 @@ const NodeComment = ({
           </div>
         </div>
       ) : (
-        <CommentsFeed node={node} />
+        <CommentsFeed node={node as { type: string; data: { id: number } }} />
       )}
     </div>
   );

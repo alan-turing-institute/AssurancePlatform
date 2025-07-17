@@ -67,12 +67,12 @@ const AutoComplete = ({
         value={inputValue}
       />
       {isOpen && filteredOptions.length > 0 && (
-        <div
+        <select
           className="absolute top-full left-0 z-50 mt-1 w-full space-y-3 rounded-md bg-gray-100 p-2 shadow-lg dark:bg-slate-900"
-          role="listbox"
+          size={Math.min(filteredOptions.length, 5)}
         >
           {filteredOptions.map((option) => (
-            <div
+            <option
               className="group rounded-md p-2 hover:cursor-pointer hover:bg-indigo-600 hover:text-white"
               key={option.username}
               onClick={() => handleOptionClick(option)}
@@ -81,18 +81,13 @@ const AutoComplete = ({
                   handleOptionClick(option);
                 }
               }}
-              role="option"
-              tabIndex={0}
+              value={option.username}
             >
               {option.username}
-              {option.email ? (
-                <span className="ml-2 text-muted-foreground text-xs group-hover:text-white">
-                  ({option.email})
-                </span>
-              ) : null}
-            </div>
+              {option.email ? ` (${option.email})` : ''}
+            </option>
           ))}
-        </div>
+        </select>
       )}
     </div>
   );

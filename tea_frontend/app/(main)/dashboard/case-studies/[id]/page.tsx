@@ -34,7 +34,7 @@ async function CaseStudyDetails({
         <BackButton url="/dashboard/case-studies" />
         <PageHeading
           caseStudy={caseStudy}
-          description={`Created on: ${moment(caseStudy.createdOn).format('DD/MM/YYYY')} | Last modified on: ${moment(caseStudy.last_modified_on).format('DD/MM/YYYY')}`}
+          description={`Created on: ${moment(caseStudy.createdOn).format('DD/MM/YYYY')} | Last modified on: ${moment(caseStudy.lastModifiedOn).format('DD/MM/YYYY')}`}
           // button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }}
           title={caseStudy.title}
         />
@@ -139,7 +139,7 @@ function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
           >
             <circle cx={1} cy={1} r={1} />
           </svg>
-          {moment(caseStudy.published_date).format('LLLL')}
+          {moment(caseStudy.publishedDate).format('LLLL')}
         </div>
       </div>
     </div>

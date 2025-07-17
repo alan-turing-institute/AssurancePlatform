@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import useStore from '@/data/store';
+import type { ReactFlowNode } from '@/lib/case-helper';
 import {
   caseItemDescription,
   deleteAssuranceCaseNode,
@@ -51,11 +52,14 @@ interface NodeData {
   id: number;
   name: string;
   type: string;
-  goal_id?: number;
+  goal_id?: number | null;
+  strategy_id?: number | null;
+  property_claim_id?: number | number[] | null;
   short_description?: string;
+  [key: string]: unknown;
 }
 
-interface AssuranceCaseNode extends Node {
+export interface AssuranceCaseNode extends Node {
   data: NodeData;
   type: string;
 }
@@ -113,7 +117,7 @@ const handleGoalMove = async (
       assuranceCase,
       updateItem,
       node.data.id,
-      node,
+      node as ReactFlowNode,
       true
     );
     if (updatedAssuranceCase) {
@@ -163,7 +167,7 @@ const handlePropertyClaimMove = async (
       assuranceCase,
       updateItem,
       node.data.id,
-      node,
+      node as ReactFlowNode,
       true
     );
     if (updatedAssuranceCase) {
@@ -213,7 +217,7 @@ const handleStrategyMove = async (
       assuranceCase,
       updateItem,
       node.data.id,
-      node,
+      node as ReactFlowNode,
       true
     );
     if (updatedAssuranceCase) {
@@ -256,7 +260,7 @@ const handleEvidenceMove = async (
       assuranceCase,
       updateItem,
       node.data.id,
-      node,
+      node as ReactFlowNode,
       true
     );
     if (updatedAssuranceCase) {
@@ -351,7 +355,7 @@ const ParentDescription = ({
   toggleParentDescription,
   setToggleParentDescription,
 }: {
-  parentNode: AssuranceCaseNode;
+  parentNode: ReactFlowNode;
   toggleParentDescription: boolean;
   setToggleParentDescription: (toggle: boolean) => void;
 }) => (
@@ -376,7 +380,7 @@ const ParentDescription = ({
           Identifier: {parentNode.data.name}
         </span>
         <p className="text-muted-foreground">
-          {parentNode.data.short_description}
+          {parentNode.data.short_description as string}
         </p>
       </>
     )}
@@ -391,7 +395,7 @@ const NewElementSection = ({
 }: {
   node: AssuranceCaseNode;
   selectLink: (type: string) => void;
-  setAction: (action: string | null) => void;
+  setAction: Dispatch<SetStateAction<string | null>>;
 }) => (
   <div className="mt-8 flex flex-col items-start justify-start">
     <h3 className="mb-2 font-semibold text-lg">Add New</h3>
@@ -475,7 +479,7 @@ const MoveSection = ({
   setSelectedClaimMove: (element: MoveElement | null) => void;
   setSelectedEvidenceMove: (element: MoveElement | null) => void;
   handleMove: () => Promise<void>;
-  setAction: (action: string | null) => void;
+  setAction: Dispatch<SetStateAction<string | null>>;
 }) => (
   <>
     {node.type === 'property' || node.type === 'evidence' ? (
@@ -485,13 +489,21 @@ const MoveSection = ({
         </h3>
         <div className="items-left flex flex-col justify-start gap-2">
           {node.type === 'property' && (
-            <Select onValueChange={setSelectedClaimMove}>
+            <Select
+              onValueChange={(value) => {
+                const parsedValue = JSON.parse(value);
+                setSelectedClaimMove(parsedValue);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
                 {goal && (
-                  <SelectItem key={crypto.randomUUID()} value={goal}>
+                  <SelectItem
+                    key={crypto.randomUUID()}
+                    value={JSON.stringify({ id: goal.id, name: goal.name })}
+                  >
                     <div className="flex flex-col items-start justify-start gap-1">
                       <div className="flex items-center">
                         <span className="font-medium">{goal.name}</span>
@@ -510,7 +522,13 @@ const MoveSection = ({
                   </SelectItem>
                 )}
                 {strategies?.map((strategy) => (
-                  <SelectItem key={crypto.randomUUID()} value={strategy}>
+                  <SelectItem
+                    key={crypto.randomUUID()}
+                    value={JSON.stringify({
+                      id: strategy.id,
+                      name: strategy.name,
+                    })}
+                  >
                     <div className="flex items-start justify-start gap-1">
                       <div className="flex items-center">
                         <span className="font-medium">{strategy.name}</span>
@@ -529,7 +547,10 @@ const MoveSection = ({
                   </SelectItem>
                 ))}
                 {claims?.map((claim) => (
-                  <SelectItem key={crypto.randomUUID()} value={claim}>
+                  <SelectItem
+                    key={crypto.randomUUID()}
+                    value={JSON.stringify({ id: claim.id, name: claim.name })}
+                  >
                     <div className="flex flex-col items-start justify-start gap-1">
                       <div className="flex items-center">
                         <span className="font-medium">{claim.name}</span>
@@ -556,13 +577,21 @@ const MoveSection = ({
             </Select>
           )}
           {node.type === 'evidence' && (
-            <Select onValueChange={setSelectedEvidenceMove}>
+            <Select
+              onValueChange={(value) => {
+                const parsedValue = JSON.parse(value);
+                setSelectedEvidenceMove(parsedValue);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
                 {claims?.map((claim) => (
-                  <SelectItem key={crypto.randomUUID()} value={claim}>
+                  <SelectItem
+                    key={crypto.randomUUID()}
+                    value={JSON.stringify({ id: claim.id, name: claim.name })}
+                  >
                     <div className="flex flex-col items-start justify-start gap-1">
                       <div className="flex items-center">
                         <span className="font-medium">{claim.name}</span>
@@ -676,12 +705,12 @@ const ActionContent = ({
   readOnly: boolean;
   selectedLink: boolean;
   linkToCreate: string;
-  setLinkToCreate: (link: string) => void;
-  setSelectedLink: (selected: boolean) => void;
+  setLinkToCreate: Dispatch<SetStateAction<string>>;
+  setSelectedLink: Dispatch<SetStateAction<boolean>>;
   handleClose: () => void;
-  setUnresolvedChanges: (changes: boolean) => void;
+  setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
   selectLink: (type: string) => void;
-  setAction: (action: string | null) => void;
+  setAction: Dispatch<SetStateAction<string | null>>;
   goal: Goal | undefined;
   strategies: Strategy[];
   claims: PropertyClaim[];
@@ -689,7 +718,7 @@ const ActionContent = ({
   setSelectedEvidenceMove: (element: MoveElement | null) => void;
   handleMove: () => Promise<void>;
   loading: boolean;
-  setLoading: (loading: boolean) => void;
+  setLoading: Dispatch<SetStateAction<boolean>>;
   assuranceCase: AssuranceCase;
 }) => (
   <>
@@ -740,7 +769,7 @@ const ActionContent = ({
         handleClose={handleClose}
         loadingState={{ loading, setLoading }}
         node={node}
-        readOnly={assuranceCase.permissions === 'view'}
+        readOnly={assuranceCase?.permissions === 'view'}
         setAction={setAction}
       />
     )}
@@ -753,7 +782,7 @@ const ActionContent = ({
     )}
     {action === 'attributes' && (
       <NodeAttributes
-        actions={{ setSelectedLink, handleClose, setAction }}
+        actions={{ setSelectedLink, setAction }}
         node={node}
         onClose={handleClose}
         setUnresolvedChanges={setUnresolvedChanges}
@@ -789,11 +818,11 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
   let claims: PropertyClaim[] = [];
 
   const readOnly = !!(
-    assuranceCase.permissions === 'view' ||
-    assuranceCase.permissions === 'review'
+    assuranceCase?.permissions === 'view' ||
+    assuranceCase?.permissions === 'review'
   );
 
-  if (assuranceCase.goals && assuranceCase.goals.length > 0) {
+  if (assuranceCase?.goals && assuranceCase.goals.length > 0) {
     goal = assuranceCase.goals[0];
     strategies = assuranceCase.goals[0].strategies;
     const lookups = extractGoalsClaimsStrategies(assuranceCase.goals);
@@ -826,7 +855,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       session?.key ?? ''
     );
 
-    if (deleted) {
+    if (deleted && assuranceCase) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(
         assuranceCase,
         node.data.id,
@@ -859,15 +888,16 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     }
   };
 
-  const handleMove = async (): Promise<void> => {
-    setLoading(true);
-    const sessionKey = session?.key ?? '';
+  const processMoveByType = async (
+    type: string,
+    sessionKey: string
+  ): Promise<void> => {
+    if (!(assuranceCase && selectedClaimMove)) {
+      return;
+    }
 
-    if (selectedClaimMove) {
-      // Find id for selected move element
-      const type = selectedClaimMove.name.substring(0, 1);
-
-      if (type === 'G') {
+    switch (type) {
+      case 'G':
         await handleGoalMove(
           node,
           goal,
@@ -878,7 +908,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           selectedClaimMove,
           sessionKey
         );
-      } else if (type === 'P') {
+        break;
+      case 'P':
         await handlePropertyClaimMove(
           node,
           claims,
@@ -889,7 +920,8 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           selectedClaimMove,
           sessionKey
         );
-      } else if (type === 'S') {
+        break;
+      case 'S':
         await handleStrategyMove(
           node,
           strategies,
@@ -900,10 +932,23 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
           selectedClaimMove,
           sessionKey
         );
-      }
+        break;
+      default:
+        // No action needed for other types
+        break;
+    }
+  };
+
+  const handleMove = async (): Promise<void> => {
+    setLoading(true);
+    const sessionKey = session?.key ?? '';
+
+    if (selectedClaimMove) {
+      const type = selectedClaimMove.name.substring(0, 1);
+      await processMoveByType(type, sessionKey);
     }
 
-    if (selectedEvidenceMove) {
+    if (selectedEvidenceMove && assuranceCase) {
       await handleEvidenceMove(
         node,
         assuranceCase,
@@ -916,20 +961,25 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
     }
   };
 
-  const parentNode = findParentNode(nodes, node);
+  const parentNode = findParentNode(
+    nodes as ReactFlowNode[],
+    node as ReactFlowNode
+  );
 
   const handleDetach = async (): Promise<void> => {
-    const { detached, error } = await detachCaseElement(
-      node,
+    const result = await detachCaseElement(
+      node as ReactFlowNode,
       node.type,
       node.data.id,
       session?.key ?? ''
     );
-    if (error) {
+
+    if ('error' in result) {
       // TODO: Handle error properly
+      return;
     }
 
-    if (detached) {
+    if (result.detached && assuranceCase) {
       const updatedAssuranceCase = await removeAssuranceCaseNode(
         assuranceCase,
         node.data.id,
@@ -984,7 +1034,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
       )}
       <ActionContent
         action={action}
-        assuranceCase={assuranceCase}
+        assuranceCase={assuranceCase || ({} as AssuranceCase)}
         claims={claims}
         goal={goal}
         handleClose={handleClose}

@@ -84,7 +84,7 @@ const mockStore = {
   setNodes: vi.fn(),
   setEdges: vi.fn(),
   layoutNodes: vi.fn(),
-  assuranceCase: mockAssuranceCase as AssuranceCase,
+  assuranceCase: mockAssuranceCase as AssuranceCase | null,
   orphanedElements: [] as OrphanedElement[],
 };
 

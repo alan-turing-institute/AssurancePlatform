@@ -25,14 +25,7 @@ const formSchema = z.object({
 });
 
 const NotesForm: React.FC = () => {
-  const {
-    _nodes,
-    _setNodes,
-    assuranceCase,
-    _setAssuranceCase,
-    caseNotes,
-    setCaseNotes,
-  } = useStore();
+  const { assuranceCase, caseNotes, setCaseNotes } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -45,6 +38,15 @@ const NotesForm: React.FC = () => {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!assuranceCase) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No assurance case found',
+      });
+      return;
+    }
+
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/comments/`;
 

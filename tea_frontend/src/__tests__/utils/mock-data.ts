@@ -12,9 +12,11 @@ export const mockUser = {
 
 export const mockAssuranceCase = {
   id: 1,
+  type: 'AssuranceCase',
   name: 'Test Assurance Case',
   description: 'A comprehensive test case for testing purposes',
   created_date: '2024-01-01T00:00:00Z',
+  lock_uuid: null,
   owner: mockUser.id,
   view_groups: [],
   edit_groups: [],
@@ -23,6 +25,7 @@ export const mockAssuranceCase = {
   published: false,
   published_date: null,
   permissions: 'manage' as const,
+  comments: [],
   goals: [],
   property_claims: [],
   evidence: [],

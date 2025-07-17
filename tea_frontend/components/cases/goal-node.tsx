@@ -27,7 +27,7 @@ function GoalNode({ data, ...props }: NodeProps) {
             <p className="line-clamp-2 text-xs">No description available.</p>
           )}
         </div>
-        <ToggleButton node={props} />
+        <ToggleButton node={{ data, position: { x: 0, y: 0 }, ...props }} />
       </div>
 
       {/* <Handle type="source" id='b' position={Position.Right} />

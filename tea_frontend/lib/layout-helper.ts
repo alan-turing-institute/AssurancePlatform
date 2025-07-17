@@ -40,7 +40,10 @@ export const getLayoutedElements = (
 
   // Add nodes to the graph based on visible nodes
   for (const node of visibleNodes) {
-    g.setNode(node.id, node);
+    g.setNode(node.id, {
+      width: node.width || 100,
+      height: node.height || 50,
+    });
   }
 
   // Compute the layout using Dagre's layout algorithm

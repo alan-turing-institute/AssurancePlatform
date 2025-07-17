@@ -13,6 +13,7 @@ interface CaseSheetProps {
   description: string;
   isOpen: boolean;
   onChange: (open: boolean) => void;
+  onClose?: () => void;
   children?: React.ReactNode;
 }
 
