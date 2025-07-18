@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { extractTextFromHtml } from '@/lib/sanitize-html';
+import { normalizeImageUrl } from '@/lib/utils';
 import type { CaseStudiesProps, CaseStudy } from '@/types/domain';
 
 function CaseStudies({ caseStudies }: CaseStudiesProps) {
@@ -92,7 +93,9 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
                       className="aspect-video w-full rounded-2xl bg-gray-100 object-cover sm:aspect-[2/1] lg:aspect-[3/2]"
                       height={400}
                       src={
-                        caseStudy.featuredImage ??
+                        normalizeImageUrl(
+                          caseStudy.feature_image_url || caseStudy.featuredImage
+                        ) ??
                         'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
                       }
                       width={600}

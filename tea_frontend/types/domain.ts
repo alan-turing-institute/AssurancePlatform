@@ -98,6 +98,7 @@ export interface CaseStudy {
   authors: string;
   image?: string;
   featuredImage?: string;
+  feature_image_url?: string; // URL from backend API
   assurance_cases?: number[]; // Array of AssuranceCase IDs
   assuranceCases?: AssuranceCase[]; // Full AssuranceCase objects
 }

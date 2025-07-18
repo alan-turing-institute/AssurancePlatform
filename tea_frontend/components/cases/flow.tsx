@@ -55,15 +55,17 @@ function Flow() {
   };
 
   const convert = useCallback(async () => {
-    if (assuranceCase?.goals && assuranceCase.goals.length > 0) {
+    if (assuranceCase) {
       const result = await convertAssuranceCase({
         ...assuranceCase,
-        goals: assuranceCase.goals,
+        goals: assuranceCase.goals || [],
       });
       const { caseNodes, caseEdges } = result;
 
       // Send new nodes & edges to layout function
       layoutNodes(caseNodes, caseEdges);
+      setLoading(false);
+    } else {
       setLoading(false);
     }
   }, [assuranceCase, layoutNodes]);

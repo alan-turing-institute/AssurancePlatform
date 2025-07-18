@@ -42,6 +42,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { sectors } from '@/config/index';
 import { useImportModal } from '@/hooks/use-import-modal';
+import { normalizeImageUrl } from '@/lib/utils';
 import type { CaseStudyFormProps } from '@/types/domain';
 import DeleteCaseButton from './delete-button';
 import RelatedAssuranceCaseList from './related-assurance-case-list';
@@ -337,17 +338,22 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image/`,
         requestOptions
       );
 
-      // if(response.status == 404) {
-      //   setImgSrc('/images/assurance-case-medium.png')
-      //   return
-      // }
+      if (response.status === 404) {
+        setFeaturedImage('');
+        return;
+      }
 
       const result = await response.json();
-      setFeaturedImage(result.image);
+      // The API returns the image URL, not the full URL with domain
+      const imageUrl = result.image
+        ? `${process.env.NEXT_PUBLIC_API_URL}${result.image}`
+        : '';
+      const normalizedUrl = normalizeImageUrl(imageUrl);
+      setFeaturedImage(normalizedUrl || '');
     } catch (_error) {
       // Silently handle error
     } finally {

@@ -29,6 +29,7 @@ import {
 import type { AssuranceCase, Evidence, Goal, PropertyClaim } from '@/types';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
+import { useToast } from '../ui/use-toast';
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -39,6 +40,7 @@ const formSchema = z.object({
     .min(2, {
       message: 'url must be at least 2 characters.',
     })
+    .or(z.literal(''))
     .optional(),
 });
 
@@ -64,6 +66,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
   const { nodes, assuranceCase, setAssuranceCase } = useStore();
   // const [token] = useLoginToken();
   const { data: session } = useSession();
+  const { toast } = useToast();
   const [loading, setLoading] = useState<boolean>(false);
 
   const { setSelectedLink, setLinkToCreate, handleClose } = actions;
@@ -133,23 +136,33 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
   /** Function used to handle creation of a strategy node linked to a goal */
   const handleStrategyAdd = async (description: string) => {
+    // Validate required data
+    if (!assuranceCase?.goals?.[0]?.id) {
+      setLoading(false);
+      return;
+    }
+
+    if (!session?.key) {
+      setLoading(false);
+      return;
+    }
+
     // Create a new strategy object to add
     const newStrategyItem = {
       short_description: description,
       long_description: description,
-      goal_id: assuranceCase?.goals?.[0]?.id || 0,
-      property_claims: [],
-      type: 'Strategy',
+      goal_id: assuranceCase.goals[0].id,
     };
 
     const result = await createAssuranceCaseNode(
       'strategies',
       newStrategyItem,
-      session?.key ?? ''
+      session.key
     );
 
     if (result.error) {
-      // TODO: Rendering error
+      setLoading(false);
+      return;
     }
 
     if (result.data && assuranceCase) {
@@ -347,18 +360,50 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     setLoading(false);
   };
 
+  /** Helper function to show error toast and set loading false */
+  const handleEvidenceError = (message: string) => {
+    toast({
+      variant: 'destructive',
+      title: 'Error creating evidence',
+      description: message,
+    });
+    setLoading(false);
+  };
+
+  /** Helper function to create evidence data object */
+  const createEvidenceData = (description: string, url?: string) => ({
+    short_description: description,
+    long_description: description,
+    URL: url || '',
+    property_claim_id: [node.data.id],
+    type: 'Evidence',
+  });
+
+  /** Helper function to update assurance case with new evidence */
+  const updateAssuranceCaseWithEvidence = (
+    _evidenceData: Evidence,
+    allPropertyClaims: PropertyClaim[]
+  ) => {
+    if (!assuranceCase) {
+      return;
+    }
+
+    const updatedAssuranceCase = {
+      ...assuranceCase,
+      goals: [
+        {
+          ...(assuranceCase.goals?.[0] || {}),
+          property_claims: allPropertyClaims,
+        } as Goal,
+      ],
+    };
+
+    setAssuranceCase(updatedAssuranceCase as AssuranceCase);
+  };
+
   /** Function used to handle creation of a evidence node linked to a property claim */
   const handleEvidenceAdd = async (description: string, url?: string) => {
-    const property_claim_id = [node.data.id];
-
-    // Create a new evidence object to add
-    const newEvidenceItem = {
-      short_description: description,
-      long_description: description,
-      URL: url || '',
-      property_claim_id,
-      type: 'Evidence',
-    };
+    const newEvidenceItem = createEvidenceData(description, url);
 
     const result = await createAssuranceCaseNode(
       'evidence',
@@ -367,56 +412,59 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
     );
 
     if (result.error) {
-      // TODO: Rendering error
+      const errorMessage =
+        typeof result.error === 'string'
+          ? result.error
+          : 'Failed to create evidence. Please try again.';
+      handleEvidenceError(errorMessage);
+      return;
     }
 
-    if (result.data && assuranceCase) {
+    if (!result.data) {
+      handleEvidenceError('No data returned from server.');
+      return;
+    }
+
+    if (assuranceCase) {
       (result.data as { hidden?: boolean }).hidden = findSiblingHiddenState(
         assuranceCase,
         node.data.id
       );
     }
 
-    // Extract property claims from goals for the nested function
-    const allPropertyClaims = assuranceCase?.goals?.[0]?.property_claims || [];
+    // Deep clone the property claims to ensure React detects the change
+    const allPropertyClaims = JSON.parse(
+      JSON.stringify(assuranceCase?.goals?.[0]?.property_claims || [])
+    );
     const evidenceData = result.data as unknown as Evidence;
     const added = addEvidenceToClaim(
       allPropertyClaims,
       evidenceData?.property_claim_id?.[0] || 0,
       evidenceData || ({} as Evidence)
     );
+
     if (!added) {
-      return; // Parent property claim not found
+      handleEvidenceError('Could not find the parent property claim.');
+      return;
     }
 
-    if (assuranceCase) {
-      const updatedAssuranceCase = {
-        ...assuranceCase,
-        goals: [
-          {
-            ...(assuranceCase.goals?.[0] || {}),
-          } as Goal,
-        ],
-      };
-
-      setAssuranceCase(updatedAssuranceCase as AssuranceCase);
-    }
+    updateAssuranceCaseWithEvidence(evidenceData, allPropertyClaims);
     reset();
     setLoading(false);
-    // window.location.reload()
   };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
-      URL: '',
+      URL: '', // Add empty string as default to prevent uncontrolled input error
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     const description = values.description as string;
+
     switch (linkType) {
       case 'context':
         handleContextAdd(description);
@@ -431,6 +479,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
         handleEvidenceAdd(description, values.URL || '');
         break;
       default:
+        setLoading(false);
         break;
     }
   }

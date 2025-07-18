@@ -110,13 +110,9 @@ const SignInForm = () => {
     // This prevents redirect loops during the authentication process
     if (session?.key) {
       router.push('/dashboard');
-    } else if (session && !session.key) {
-      // We have a session but no key - this is a stale session
-      // Sign out to clear it
-      signIn('credentials', { redirect: false }).then(() => {
-        // Session will be cleared by NextAuth
-      });
     }
+    // Note: Stale sessions (session without key) are handled by middleware
+    // which clears cookies and redirects to /login
   }, [session, router]);
 
   return (
