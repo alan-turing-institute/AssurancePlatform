@@ -46,7 +46,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
   return (
     <div className="flex min-h-screen flex-col items-start justify-start px-4 pb-16 sm:px-6 lg:px-8">
       <div className="flex w-full items-start justify-between gap-6 py-6">
-        <div className="w-2/3 md:w-1/3">
+        <div className="w-2/3 md:w-1/3" data-testid="search-container">
           <Input
             className="w-full"
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -69,7 +69,10 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
           </button>
         </div>
       </div>
-      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div
+        className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        data-testid="case-list-grid"
+      >
         {showCreate && (
           <button
             className="group min-h-[420px]"

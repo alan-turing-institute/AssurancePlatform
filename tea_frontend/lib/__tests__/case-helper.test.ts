@@ -28,6 +28,28 @@ import {
 // Mock fetch for API calls
 global.fetch = vi.fn();
 
+// Helper to create mock fetch response
+const createMockResponse = (data: unknown, options: Partial<Response> = {}) => {
+  return {
+    ok: true,
+    json: vi.fn().mockResolvedValue(data),
+    headers: new Headers(),
+    redirected: false,
+    status: 200,
+    statusText: 'OK',
+    type: 'basic' as ResponseType,
+    url: '',
+    clone: vi.fn(),
+    body: null,
+    bodyUsed: false,
+    arrayBuffer: vi.fn(),
+    blob: vi.fn(),
+    formData: vi.fn(),
+    text: vi.fn(),
+    ...options,
+  } as unknown as Response;
+};
+
 describe('case-helper utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1063,24 +1085,9 @@ describe('case-helper utilities', () => {
     const mockToken = 'test-token';
 
     beforeEach(() => {
-      vi.mocked(fetch).mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({ success: true }),
-        headers: new Headers(),
-        redirected: false,
-        status: 200,
-        statusText: 'OK',
-        type: 'basic' as ResponseType,
-        url: '',
-        clone: vi.fn(),
-        body: null,
-        bodyUsed: false,
-        arrayBuffer: vi.fn(),
-        blob: vi.fn(),
-        formData: vi.fn(),
-        text: vi.fn(),
-        bytes: vi.fn(),
-      } as unknown as Response);
+      vi.mocked(global.fetch).mockResolvedValue(
+        createMockResponse({ success: true })
+      );
     });
 
     describe('createAssuranceCaseNode', () => {
@@ -1103,7 +1110,7 @@ describe('case-helper utilities', () => {
       });
 
       it('should handle API errors', async () => {
-        vi.mocked(fetch).mockResolvedValue({
+        vi.mocked(global.fetch).mockResolvedValue({
           ok: false,
           status: 400,
         } as Response);

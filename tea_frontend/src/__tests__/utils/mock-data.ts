@@ -1,4 +1,5 @@
 // Mock data generators for tests
+import type { AssuranceCase, CaseStudy } from '@/types/domain';
 
 export const mockUser = {
   id: 1,
@@ -129,11 +130,12 @@ export const createMockUser = (overrides: Partial<typeof mockUser> = {}) => ({
 });
 
 export const createMockAssuranceCase = (
-  overrides: Partial<typeof mockAssuranceCase> = {}
-) => ({
-  ...mockAssuranceCase,
-  ...overrides,
-});
+  overrides: Partial<AssuranceCase> = {}
+): AssuranceCase =>
+  ({
+    ...mockAssuranceCase,
+    ...overrides,
+  }) as AssuranceCase;
 
 export const createMockGoal = (overrides: Partial<typeof mockGoal> = {}) => ({
   ...mockGoal,
@@ -172,6 +174,66 @@ export const createMockComment = (
   overrides: Partial<typeof mockComment> = {}
 ) => ({
   ...mockComment,
+  ...overrides,
+});
+
+export const createMockCaseStudy = (
+  overrides: Partial<CaseStudy> = {}
+): CaseStudy =>
+  ({
+    ...mockCaseStudy,
+    ...overrides,
+  }) as CaseStudy;
+
+// Mock team data
+export const mockTeam = {
+  id: 1,
+  name: 'Engineering Team',
+  description: 'Core engineering team',
+  owner: mockUser.id,
+  members: [mockUser.id],
+  created_date: '2024-01-01T00:00:00Z',
+};
+
+export const createMockTeam = (overrides: Partial<typeof mockTeam> = {}) => ({
+  ...mockTeam,
+  ...overrides,
+});
+
+// Mock invitation data
+export const mockInvitation = {
+  id: 1,
+  team: mockTeam.id,
+  team_name: mockTeam.name,
+  inviter: mockUser.id,
+  inviter_name: `${mockUser.first_name} ${mockUser.last_name}`,
+  invitee_email: 'newmember@example.com',
+  status: 'pending' as const,
+  created_date: '2024-01-01T00:00:00Z',
+  expires_at: '2024-01-08T00:00:00Z',
+};
+
+export const createMockInvitation = (
+  overrides: Partial<typeof mockInvitation> = {}
+) => ({
+  ...mockInvitation,
+  ...overrides,
+});
+
+// Mock permission data
+export const mockCasePermission = {
+  id: 1,
+  case: 1,
+  user: 2,
+  user_name: 'Test Collaborator',
+  permission_type: 'view' as const,
+  created_date: '2024-01-01T00:00:00Z',
+};
+
+export const createMockCasePermission = (
+  overrides: Partial<typeof mockCasePermission> = {}
+) => ({
+  ...mockCasePermission,
   ...overrides,
 });
 

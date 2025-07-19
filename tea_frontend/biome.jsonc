@@ -7,19 +7,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!.next/**",
-      "!node_modules/**",
-      "!**/node_modules/**",
-      "!public/documentation/**",
-      "!tea-docs/**",
-      "!logs/**",
-      "!build/**",
-      "!dist/**",
-      "!out/**",
-      "!*.min.js",
-      "!*.min.css"
+    "includes": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "**/*.json", "**/*.jsonc", "**/*.css", "**/*.scss", "**/*.md", "**/*.mdx"],
+    "experimentalScannerIgnores": [
+      ".next",
+      "node_modules",
+      "coverage",
+      "public/documentation",
+      "tea-docs/node_modules",
+      "tea-docs/build",
+      "logs"
     ]
   },
   "linter": {

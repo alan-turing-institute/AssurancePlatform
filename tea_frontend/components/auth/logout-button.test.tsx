@@ -1,5 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
+import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/src/__tests__/mocks/server';
 import {
@@ -9,6 +10,13 @@ import {
 } from '@/src/__tests__/utils/test-utils';
 import LogoutButton from './logout-button';
 
+const { mockPush, mockSignOut } = vi.hoisted(() => {
+  return {
+    mockPush: vi.fn(),
+    mockSignOut: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 // Mock the ActionTooltip component to focus on LogoutButton logic
 vi.mock('../ui/action-tooltip', () => ({
   default: ({
@@ -17,11 +25,19 @@ vi.mock('../ui/action-tooltip', () => ({
   }: {
     children: React.ReactNode;
     label: string;
-  }) => <div title={label}>{children}</div>,
+  }) => {
+    // Clone the children and add the title attribute to the button
+    const childrenWithProps = React.Children.map(children, (child) => {
+      if (React.isValidElement(child)) {
+        return React.cloneElement(child as React.ReactElement, {
+          title: label,
+        });
+      }
+      return child;
+    });
+    return <>{childrenWithProps}</>;
+  },
 }));
-
-const mockPush = vi.fn();
-const mockSignOut = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -32,6 +48,9 @@ vi.mock('next/navigation', () => ({
     forward: vi.fn(),
     refresh: vi.fn(),
   }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({ caseId: '1' }),
 }));
 
 vi.mock('next-auth/react', () => ({
@@ -47,7 +66,8 @@ vi.mock('next-auth/react', () => ({
     },
     status: 'authenticated',
   }),
-  signOut: () => mockSignOut(),
+  signOut: mockSignOut,
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 describe('LogoutButton', () => {
@@ -153,10 +173,16 @@ describe('LogoutButton', () => {
     const button = screen.getByRole('button');
     await user.click(button);
 
-    await vi.waitFor(() => {
-      expect(requestHeaders?.get('Authorization')).toBe('Token mock-token-key');
-      expect(requestHeaders?.get('Content-Type')).toBe('application/json');
-    });
+    await vi.waitFor(
+      () => {
+        expect(requestHeaders).toBeDefined();
+        expect(requestHeaders?.get('Authorization')).toBe(
+          'Token mock-token-key'
+        );
+        expect(requestHeaders?.get('Content-Type')).toBe('application/json');
+      },
+      { timeout: 2000 }
+    );
   });
 
   it('should be accessible via keyboard', async () => {
