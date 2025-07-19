@@ -36,7 +36,7 @@ graph TB
     
     %% Parallel quality checks
     ParallelChecks --> BackendQuality[Backend: Ruff + MyPy]
-    ParallelChecks --> FrontendQuality[Frontend: Ultracite + TSC]
+    ParallelChecks --> FrontendQuality[Frontend: Biome + TSC]
     ParallelChecks --> BackendUnitTests[Backend: Unit Tests]
     ParallelChecks --> FrontendUnitTests[Frontend: Unit Tests]
 
@@ -111,7 +111,7 @@ Three streamlined workflows handle all CI/CD needs:
 Runs on every push and PR:
 - **Parallel Execution**:
   - Backend: Ruff linting + MyPy type checking + Unit tests
-  - Frontend: Ultracite linting + TypeScript checking + Unit tests
+  - Frontend: Biome linting + TypeScript checking + Unit tests
 - **Coverage Requirements**: 90% for both backend and frontend
 - **Fast Feedback**: Results in under 10 minutes
 
@@ -178,7 +178,7 @@ The two-gate system enforces quality at each stage:
 
 ### Quality Tools
 - **Backend**: Ruff (formatting/linting), MyPy (type checking), PyTest (testing)
-- **Frontend**: Ultracite (formatting/linting), TypeScript (type checking), Vitest (testing)
+- **Frontend**: Biome (formatting/linting), TypeScript (type checking), Vitest (testing)
 - **Pre-commit**: Minimal hooks for fast local checks
 
 ### Infrastructure
@@ -215,7 +215,7 @@ on:
 
 jobs:
   backend-checks:    # Ruff, MyPy, PyTest
-  frontend-checks:   # Ultracite, TSC, Vitest
+  frontend-checks:   # Biome, TSC, Vitest
   report-coverage:   # Upload to Codecov
 ```
 

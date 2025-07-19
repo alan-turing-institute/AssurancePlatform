@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
-    "lint": "npx ultracite@latest lint",
-    "format": "npx ultracite@latest format",
+    "lint": "npx @biomejs/biome check",
+    "format": "npx @biomejs/biome check --write",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
@@ -93,7 +93,6 @@
     "semantic-release": "^24.2.0",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
-    "ultracite": "5.0.35",
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
