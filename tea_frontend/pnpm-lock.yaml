@@ -219,6 +219,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.21(postcss@8.5.6)
+      axe-core:
+        specifier: ^4.10.3
+        version: 4.10.3
       conventional-changelog-conventionalcommits:
         specifier: ^8.0.0
         version: 8.0.0
@@ -243,6 +246,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@22.16.3)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.10.4(@types/node@22.16.3)(typescript@5.8.3))
+      vitest-axe:
+        specifier: ^0.1.0
+        version: 0.1.0(vitest@3.2.4(@types/node@22.16.3)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.10.4(@types/node@22.16.3)(typescript@5.8.3)))
 
 packages:
 
@@ -2577,6 +2583,10 @@ packages:
     peerDependencies:
       postcss: ^8.1.0
 
+  axe-core@4.10.3:
+    resolution: {integrity: sha512-Xm7bpRXnDSX2YE2YFfBk2FnF0ep6tmG7xPh8iHee8MIcrgq762Nkce856dYtJYLkuIoYZvGfTs/PbZhideTcEg==}
+    engines: {node: '>=4'}
+
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
@@ -4782,6 +4792,11 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  vitest-axe@0.1.0:
+    resolution: {integrity: sha512-jvtXxeQPg8R/2ANTY8QicA5pvvdRP4F0FsVUAHANJ46YCDASie/cuhlSzu0DGcLmZvGBSBNsNuK3HqfaeknyvA==}
+    peerDependencies:
+      vitest: '>=0.16.0'
 
   vitest@3.2.4:
     resolution: {integrity: sha512-LUCP5ev3GURDysTWiP47wRRUpLKMOfPh+yKTx3kVIEiu5KOMeqzpnYNsKyOoVrULivR8tLcks4+lga33Whn90A==}
@@ -7347,6 +7362,8 @@ snapshots:
       postcss: 8.5.6
       postcss-value-parser: 4.2.0
 
+  axe-core@4.10.3: {}
+
   balanced-match@1.0.2: {}
 
   base64-arraybuffer@1.0.2: {}
@@ -9517,6 +9534,16 @@ snapshots:
       '@types/node': 22.16.3
       fsevents: 2.3.3
       jiti: 1.21.7
+
+  vitest-axe@0.1.0(vitest@3.2.4(@types/node@22.16.3)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.10.4(@types/node@22.16.3)(typescript@5.8.3))):
+    dependencies:
+      aria-query: 5.3.2
+      axe-core: 4.10.3
+      chalk: 5.4.1
+      dom-accessibility-api: 0.5.16
+      lodash-es: 4.17.21
+      redent: 3.0.0
+      vitest: 3.2.4(@types/node@22.16.3)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.10.4(@types/node@22.16.3)(typescript@5.8.3))
 
   vitest@3.2.4(@types/node@22.16.3)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.10.4(@types/node@22.16.3)(typescript@5.8.3)):
     dependencies:

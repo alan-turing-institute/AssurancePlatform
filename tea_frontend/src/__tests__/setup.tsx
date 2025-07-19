@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import * as matchers from '@testing-library/jest-dom/matchers';
 import { cleanup } from '@testing-library/react';
 import type React from 'react';
 import { afterAll, afterEach, beforeAll, expect, vi } from 'vitest';
@@ -8,7 +9,7 @@ import { server } from './mocks/server';
 process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000';
 
 // Extend Vitest's expect with jest-dom matchers
-expect.extend({});
+expect.extend(matchers);
 
 // Setup MSW
 beforeAll(() => {
@@ -413,4 +414,32 @@ if (
       }
     }
   };
+}
+
+// Add DragEvent polyfill for file testing
+if (typeof global.DragEvent === 'undefined') {
+  global.DragEvent = class MockDragEvent extends Event {
+    dataTransfer: DataTransfer | null;
+    clientX: number;
+    clientY: number;
+    screenX: number;
+    screenY: number;
+    ctrlKey: boolean;
+    shiftKey: boolean;
+    altKey: boolean;
+    metaKey: boolean;
+
+    constructor(type: string, eventInitDict?: DragEventInit) {
+      super(type, eventInitDict);
+      this.dataTransfer = eventInitDict?.dataTransfer || null;
+      this.clientX = eventInitDict?.clientX || 0;
+      this.clientY = eventInitDict?.clientY || 0;
+      this.screenX = eventInitDict?.screenX || 0;
+      this.screenY = eventInitDict?.screenY || 0;
+      this.ctrlKey = eventInitDict?.ctrlKey || false;
+      this.shiftKey = eventInitDict?.shiftKey || false;
+      this.altKey = eventInitDict?.altKey || false;
+      this.metaKey = eventInitDict?.metaKey || false;
+    }
+  } as any;
 }
