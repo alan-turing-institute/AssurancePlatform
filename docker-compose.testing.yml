@@ -62,6 +62,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://tea_backend_test:8000
       - NODE_ENV=test
       - CI=true  # Disable interactive mode
+      - NEXTAUTH_URL=http://localhost:3000  # For authentication in tests
     volumes:
       - ./tea_frontend:/app
       - frontend_test_modules:/app/node_modules  # Separate node_modules
