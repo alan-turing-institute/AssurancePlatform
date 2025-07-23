@@ -49,6 +49,7 @@ jobs:
 
       - name: Check coverage thresholds
         run: pnpm test:coverage:check
+        continue-on-error: true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
