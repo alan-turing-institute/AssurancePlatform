@@ -89,47 +89,51 @@ const RelatedAssuranceCaseList = ({
 			)}
 			{assuranceCasesList.length > 0 && (
 				<div className="mt-4">
-					<ScrollArea className={`w-full ${assuranceCasesList.length > 4 ? 'h-72' : 'h-auto max-h-72'}`}>
+					<ScrollArea
+						className={`w-full ${assuranceCasesList.length > 4 ? "h-72" : "h-auto max-h-72"}`}
+					>
 						<div>
-						{assuranceCasesList
-							.sort((a: AssuranceCase, b: AssuranceCase) => {
-								const aSelected = selectedAssuranceCases.includes(a.id);
-								const bSelected = selectedAssuranceCases.includes(b.id);
-								if (aSelected === bSelected) {
-									return 0;
-								}
-								return aSelected ? -1 : 1;
-							})
-							.map((assuranceCase: AssuranceCase) => (
-								<div
-									className="mb-2 w-full rounded-md border transition-colors hover:bg-gray-50 dark:hover:bg-slate-900/50"
-									key={assuranceCase.id}
-								>
-									<label
-										className="flex cursor-pointer items-start space-x-3 p-4"
-										htmlFor={`case-${assuranceCase.id}`}
+							{assuranceCasesList
+								.sort((a: AssuranceCase, b: AssuranceCase) => {
+									const aSelected = selectedAssuranceCases.includes(a.id);
+									const bSelected = selectedAssuranceCases.includes(b.id);
+									if (aSelected === bSelected) {
+										return 0;
+									}
+									return aSelected ? -1 : 1;
+								})
+								.map((assuranceCase: AssuranceCase) => (
+									<div
+										className="mb-2 w-full rounded-md border transition-colors hover:bg-gray-50 dark:hover:bg-slate-900/50"
+										key={assuranceCase.id}
 									>
-										<Checkbox
-											checked={selectedAssuranceCases.includes(
-												assuranceCase.id
-											)}
-											className="mt-1"
-											id={`case-${assuranceCase.id}`}
-											onCheckedChange={() => handleCaseSelect(assuranceCase.id)}
-										/>
-										<div className="flex-1 text-sm">
-											<p className="font-semibold">
-												{assuranceCase.name || assuranceCase.title}
-											</p>
-											<p className="mt-1 text-muted-foreground">
-												{assuranceCase.description !== null
-													? assuranceCase.description
-													: "No description"}
-											</p>
-										</div>
-									</label>
-								</div>
-							))}
+										<label
+											className="flex cursor-pointer items-start space-x-3 p-4"
+											htmlFor={`case-${assuranceCase.id}`}
+										>
+											<Checkbox
+												checked={selectedAssuranceCases.includes(
+													assuranceCase.id
+												)}
+												className="mt-1"
+												id={`case-${assuranceCase.id}`}
+												onCheckedChange={() =>
+													handleCaseSelect(assuranceCase.id)
+												}
+											/>
+											<div className="flex-1 text-sm">
+												<p className="font-semibold">
+													{assuranceCase.name || assuranceCase.title}
+												</p>
+												<p className="mt-1 text-muted-foreground">
+													{assuranceCase.description !== null
+														? assuranceCase.description
+														: "No description"}
+												</p>
+											</div>
+										</label>
+									</div>
+								))}
 						</div>
 					</ScrollArea>
 				</div>

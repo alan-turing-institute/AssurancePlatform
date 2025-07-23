@@ -96,8 +96,10 @@ describe("Published Case Flow Integration Tests", () => {
 		// Clean up any elements added directly to document.body
 		const messages = document.body.querySelectorAll("body > div");
 		messages.forEach((element) => {
-			if (element.textContent?.includes("published successfully") ||
-				element.textContent?.includes("Failed to publish")) {
+			if (
+				element.textContent?.includes("published successfully") ||
+				element.textContent?.includes("Failed to publish")
+			) {
 				element.remove();
 			}
 		});

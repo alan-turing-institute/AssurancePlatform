@@ -10,7 +10,7 @@ export function GET() {
 
 		try {
 			files = fs.readdirSync(templatesDir);
-		} catch (error) {
+		} catch (_error) {
 			// Directory doesn't exist or no permissions
 			return NextResponse.json({ newTemplates: [], defaultCase: undefined });
 		}
@@ -26,10 +26,7 @@ export function GET() {
 				const content = fs.readFileSync(filePath, "utf-8");
 				const parsed = JSON.parse(content);
 				newTemplates.push(parsed);
-			} catch (error) {
-				// Skip files that can't be read or parsed
-				console.error(`Error reading template ${file}:`, error);
-			}
+			} catch (_error) {}
 		}
 
 		// Find default case
@@ -37,7 +34,7 @@ export function GET() {
 			newTemplates.find((c) => c.name === "empty") || newTemplates[0];
 
 		return NextResponse.json({ newTemplates, defaultCase });
-	} catch (error) {
+	} catch (_error) {
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 }

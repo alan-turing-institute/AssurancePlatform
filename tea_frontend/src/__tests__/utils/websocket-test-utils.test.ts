@@ -199,7 +199,7 @@ describe("WebSocket Testing Utilities", () => {
 			const message = createAssuranceCaseUpdate(assuranceCase, "user1");
 
 			expect(message.type).toBe(MessageType.CASE_MESSAGE);
-			expect(message.content.assuranceCase).toEqual(assuranceCase);
+			expect((message.content as any).assuranceCase).toEqual(assuranceCase);
 			expect(message.userId).toBe("user1");
 			expect(message.timestamp).toBeDefined();
 		});
@@ -223,7 +223,7 @@ describe("WebSocket Testing Utilities", () => {
 			const message = createPresenceUpdate(users);
 
 			expect(message.type).toBe(MessageType.PRESENCE_UPDATE);
-			expect(message.content.current_connections).toEqual(users);
+			expect((message.content as any).current_connections).toEqual(users);
 			expect(message.timestamp).toBeDefined();
 		});
 

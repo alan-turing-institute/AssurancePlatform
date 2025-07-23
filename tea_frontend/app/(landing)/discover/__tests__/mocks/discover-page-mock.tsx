@@ -1,6 +1,6 @@
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { AssuranceCase } from "@/types/domain";
 
 export const DiscoverPageMock = () => {
@@ -11,7 +11,7 @@ export const DiscoverPageMock = () => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [sortBy, setSortBy] = useState("published_date_desc");
-	const [retryCount, setRetryCount] = useState(0);
+	const [_retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		const buildQueryParams = () => {
@@ -49,7 +49,7 @@ export const DiscoverPageMock = () => {
 		};
 
 		fetchCases();
-	}, [searchQuery, selectedTags, sortBy, retryCount]);
+	}, [searchQuery, selectedTags, sortBy]);
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();

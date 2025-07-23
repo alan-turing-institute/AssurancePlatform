@@ -56,7 +56,7 @@ export const closeModal = async (modalStore: any) => {
 // Helper to render with modal provider
 export const renderWithModal = (
 	ui: ReactElement,
-	modalStore: any = mockModalStores.permissions
+	_modalStore: any = mockModalStores.permissions
 ) => {
 	// Mock the specific modal hook
 	vi.mock("@/hooks/use-permissions-modal", () => ({

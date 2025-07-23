@@ -250,7 +250,9 @@ const OrphanElements = ({
 			// Check direct property claims
 			if (goal.property_claims && goal.property_claims.length > 0) {
 				added = addEvidenceToClaim(goal.property_claims, node.data.id, orphan);
-				if (added) break;
+				if (added) {
+					break;
+				}
 			}
 			// Check property claims inside strategies
 			if (goal.strategies && goal.strategies.length > 0) {
@@ -261,10 +263,14 @@ const OrphanElements = ({
 							node.data.id,
 							orphan
 						);
-						if (added) break;
+						if (added) {
+							break;
+						}
 					}
 				}
-				if (added) break;
+				if (added) {
+					break;
+				}
 			}
 		}
 		if (!added) {

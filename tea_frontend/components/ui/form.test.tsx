@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
 	renderWithoutProviders,
 	screen,
-	waitFor,
 } from "@/src/__tests__/utils/test-utils";
 
 // Regex constants for text matching

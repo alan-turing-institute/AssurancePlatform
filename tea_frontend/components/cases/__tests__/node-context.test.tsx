@@ -71,9 +71,11 @@ describe("NodeContext", () => {
 		} as ReturnType<typeof useStore>);
 
 		// Mock toast
-		vi.mocked(toast).mockImplementation(() => {
-			// Mock implementation
-		});
+		vi.mocked(toast).mockImplementation(() => ({
+			id: "mock-id",
+			dismiss: () => {},
+			update: () => {},
+		}));
 	});
 
 	it("renders existing contexts", () => {
@@ -99,10 +101,24 @@ describe("NodeContext", () => {
 		vi.mocked(deleteAssuranceCaseNode).mockResolvedValue(true);
 		vi.mocked(removeAssuranceCaseNode).mockReturnValue({
 			id: 1,
+			name: "Test Case",
+			type: "AssuranceCase",
+			lock_uuid: null,
+			comments: [],
+			permissions: "manage",
+			created_date: "2023-01-01T00:00:00Z",
 			goals: [
 				{
 					id: 1,
+					type: "Goal",
+					name: "Test Goal",
+					short_description: "Test goal description",
+					long_description: "Test goal long description",
+					keywords: "",
+					assurance_case_id: 1,
 					context: [],
+					property_claims: [],
+					strategies: [],
 				},
 			],
 		} as AssuranceCase);

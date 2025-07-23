@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 		let body;
 		try {
 			body = await request.json();
-		} catch (error) {
+		} catch (_error) {
 			return NextResponse.json(
 				{ error: "Invalid request body" },
 				{ status: 400 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 		let blob;
 		try {
 			blob = base64ToBlob(image, "image/png");
-		} catch (error) {
+		} catch (_error) {
 			return NextResponse.json(
 				{ error: "Invalid image data" },
 				{ status: 400 }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 				`${backendUrl}/api/cases/${caseId}/upload_image/`,
 				requestOptions
 			);
-		} catch (fetchError) {
+		} catch (_fetchError) {
 			// Network errors should return Internal server error
 			return NextResponse.json(
 				{ error: "Internal server error" },
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
 		const result = await response.json();
 		return NextResponse.json(result);
-	} catch (error) {
+	} catch (_error) {
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 }

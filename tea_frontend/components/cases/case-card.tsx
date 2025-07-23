@@ -93,7 +93,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	useEffect(() => {
 		fetchScreenshot();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [id, session?.key]);
+	}, [fetchScreenshot]);
 
 	return (
 		<div className="group relative min-h-[420px]">

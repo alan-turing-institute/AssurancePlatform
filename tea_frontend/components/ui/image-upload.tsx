@@ -88,18 +88,18 @@ export function ImageUpload({
 				<div className="group relative">
 					<div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-lg border">
 						<Image
-							src={imageToShow}
 							alt="Upload preview"
-							fill
 							className="object-cover"
+							fill
+							src={imageToShow}
 						/>
 					</div>
 					<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
 						<Button
+							disabled={disabled}
+							onClick={handleRemove}
 							type="button"
 							variant="destructive"
-							onClick={handleRemove}
-							disabled={disabled}
 						>
 							<Trash2Icon className="mr-2 h-4 w-4" />
 							Remove Image
@@ -110,7 +110,7 @@ export function ImageUpload({
 				<div
 					{...getRootProps()}
 					className={cn(
-						"border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+						"cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors",
 						isDragActive
 							? "border-primary bg-primary/5"
 							: "border-muted-foreground/25 hover:border-muted-foreground/50",
@@ -128,23 +128,22 @@ export function ImageUpload({
 							)}
 						</div>
 						<div className="space-y-2">
-							<p className="text-lg font-medium">
-								{isDragActive
-									? "Drop your image here"
-									: "Upload an image"}
+							<p className="font-medium text-lg">
+								{isDragActive ? "Drop your image here" : "Upload an image"}
 							</p>
-							<p className="text-sm text-muted-foreground">
+							<p className="text-muted-foreground text-sm">
 								Drag and drop an image file, or click to select
 							</p>
-							<p className="text-xs text-muted-foreground">
-								PNG, JPG, JPEG, GIF, WEBP up to {Math.round(maxSize / 1024 / 1024)}MB
+							<p className="text-muted-foreground text-xs">
+								PNG, JPG, JPEG, GIF, WEBP up to{" "}
+								{Math.round(maxSize / 1024 / 1024)}MB
 							</p>
 						</div>
 					</div>
 				</div>
 			)}
 			{error && (
-				<div className="flex items-center space-x-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+				<div className="flex items-center space-x-2 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 					<X className="h-4 w-4" />
 					<span>{error}</span>
 				</div>

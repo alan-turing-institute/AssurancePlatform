@@ -9,7 +9,7 @@ import CaseCard from "./case-card";
 // Regex constants for test assertions
 const LONG_CASE_NAME_REGEX = /This is a very long case name/;
 const LONG_DESCRIPTION_REGEX = /This is a very long description/;
-const CREATED_ON_REGEX = /Created on: \d{2}\/\d{2}\/\d{4}/;
+const _CREATED_ON_REGEX = /Created on: \d{2}\/\d{2}\/\d{4}/;
 const CREATED_ON_DATE_REGEX = /Created on:/;
 
 // Mock the AlertModal component

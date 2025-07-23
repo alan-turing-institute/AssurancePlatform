@@ -23,7 +23,6 @@ import {
 	addEvidenceToClaim,
 	addPropertyClaimToNested,
 	createAssuranceCaseNode,
-	extractGoalsClaimsStrategies,
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case-helper";

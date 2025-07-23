@@ -148,20 +148,25 @@ vi.mock("@/components/common/NodeEdit", () => ({
 
 // Mock utility functions with proper async timing
 vi.mock("@/lib/convert-case", () => ({
-	convertAssuranceCase: vi.fn(() =>
-		new Promise(resolve =>
-			setTimeout(() => resolve({
-				caseNodes: [
-					{
-						id: "1",
-						type: "goal",
-						data: { label: "Test Goal" },
-						position: { x: 0, y: 0 },
-					},
-				],
-				caseEdges: [],
-			}), 10)
-		)
+	convertAssuranceCase: vi.fn(
+		() =>
+			new Promise((resolve) =>
+				setTimeout(
+					() =>
+						resolve({
+							caseNodes: [
+								{
+									id: "1",
+									type: "goal",
+									data: { label: "Test Goal" },
+									position: { x: 0, y: 0 },
+								},
+							],
+							caseEdges: [],
+						}),
+					10
+				)
+			)
 	),
 }));
 

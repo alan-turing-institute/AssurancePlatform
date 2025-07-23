@@ -65,8 +65,10 @@ const NodeContext: React.FC<NodeContextProps> = ({
 
 	// Helper function to find the current goal in the assurance case
 	const getCurrentGoal = () => {
-		if (!assuranceCase?.goals || node.type !== "goal") return null;
-		return assuranceCase.goals.find(goal => goal.id === node.data.id);
+		if (!assuranceCase?.goals || node.type !== "goal") {
+			return null;
+		}
+		return assuranceCase.goals.find((goal) => goal.id === node.data.id);
 	};
 
 	// console.log('NODE', node)
@@ -107,15 +109,14 @@ const NodeContext: React.FC<NodeContextProps> = ({
 		// Create a new context array by adding the new context item
 		const currentGoal = getCurrentGoal();
 		if (currentGoal && assuranceCase) {
-			const newContext = [
-				...(currentGoal.context || []),
-				result.data,
-			].filter(Boolean);
+			const newContext = [...(currentGoal.context || []), result.data].filter(
+				Boolean
+			);
 
 			// Create a new assuranceCase object with the updated context array
-			const updatedGoals = assuranceCase.goals.map(goal =>
+			const updatedGoals = assuranceCase.goals?.map((goal) =>
 				goal.id === node.data.id
-					? { ...goal, context: newContext } as Goal
+					? ({ ...goal, context: newContext } as Goal)
 					: goal
 			);
 
@@ -150,7 +151,9 @@ const NodeContext: React.FC<NodeContextProps> = ({
 				// Update the assuranceCase which will trigger the useEffect to update contexts
 				setAssuranceCase(updatedAssuranceCase);
 				// Also update local state immediately for responsive UI
-				const updatedGoal = updatedAssuranceCase.goals?.find(goal => goal.id === node.data.id);
+				const updatedGoal = updatedAssuranceCase.goals?.find(
+					(goal) => goal.id === node.data.id
+				);
 				if (updatedGoal?.context) {
 					setContexts(updatedGoal.context);
 				} else {
@@ -221,7 +224,7 @@ const NodeContext: React.FC<NodeContextProps> = ({
 
 			fetchNodeContext();
 		}
-	}, [node.data.id, node.type, session?.key, assuranceCase]);
+	}, [node.data.id, node.type, session?.key, getCurrentGoal, loading]);
 
 	useEffect(() => {
 		const subscription = form.watch((_values, { name }) => {
@@ -309,10 +312,10 @@ const NodeContext: React.FC<NodeContextProps> = ({
 									{item.name}
 								</div>
 								<Button
-									className="hidden group-hover:flex items-center justify-center hover:bg-white/90 [&:hover>svg]:text-red-600"
+									className="hidden items-center justify-center hover:bg-white/90 group-hover:flex [&:hover>svg]:text-red-600"
 									onClick={() => handleContextDelete(item.id)}
-									variant={"ghost"}
 									size={"sm"}
+									variant={"ghost"}
 								>
 									<Trash2 className="h-4 w-4 text-white" />
 								</Button>

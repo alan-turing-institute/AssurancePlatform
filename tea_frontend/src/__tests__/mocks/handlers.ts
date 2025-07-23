@@ -260,8 +260,6 @@ export const handlers = [
 	}),
 
 	http.get(`${API_BASE_URL}/api/cases/:id/`, ({ params, request }) => {
-		console.log("MSW handler called for:", request.url, "with params:", params);
-
 		const caseId = params.id ? Number.parseInt(params.id as string, 10) : 1;
 
 		return HttpResponse.json({

@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { useRouter } from "next/navigation";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
@@ -15,7 +15,8 @@ const LOGIN_REGEX = /login/i;
 const CREATING_ACCOUNT_REGEX = /creating account/i;
 const LOGGING_IN_REGEX = /logging in/i;
 const USERNAME_EMPTY_REGEX = /string must contain at least 2 character/i;
-const PASSWORD_REQUIREMENT_REGEX = /password must contain at least one uppercase letter, one number, and one special character/i;
+const PASSWORD_REQUIREMENT_REGEX =
+	/password must contain at least one uppercase letter, one number, and one special character/i;
 const PASSWORD_MATCH_REGEX = /your passwords must match/i;
 const INVALID_USERNAME_PASSWORD_REGEX = /invalid username or password/i;
 const UNABLE_TO_LOGIN_REGEX = /unable to log in with provided credentials/i;
@@ -319,9 +320,7 @@ describe("Authentication Flow Integration Tests", () => {
 			await user.click(githubButton);
 
 			// Verify loading state
-			expect(
-				githubButton.querySelector(".animate-spin")
-			).toBeInTheDocument();
+			expect(githubButton.querySelector(".animate-spin")).toBeInTheDocument();
 
 			// Verify signIn was called with GitHub provider
 			expect(signIn).toHaveBeenCalledWith("github");
@@ -412,7 +411,9 @@ describe("Authentication Flow Integration Tests", () => {
 
 			// Update existing mocks to use the redirect parameter
 			const { useSearchParams } = await import("next/navigation");
-			vi.mocked(useSearchParams).mockReturnValue(mockSearchParams);
+			vi.mocked(useSearchParams).mockReturnValue(
+				mockSearchParams as ReadonlyURLSearchParams
+			);
 
 			// Mock successful login
 			(signIn as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -437,7 +438,9 @@ describe("Authentication Flow Integration Tests", () => {
 			});
 
 			// Reset the search params mock back to default
-			vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams());
+			vi.mocked(useSearchParams).mockReturnValue(
+				new URLSearchParams() as ReadonlyURLSearchParams
+			);
 		});
 
 		it("should show login page when accessing protected route while logged out", () => {

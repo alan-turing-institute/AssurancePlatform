@@ -279,7 +279,6 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				setLoading(false);
 			})
 			.catch((err) => {
-				console.error("Failed to fetch case data:", err);
 				setError(err.message);
 				setLoading(false);
 			});
@@ -327,9 +326,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				goals: [...(prev?.goals || []), newGoal],
 			}));
 			handleAutoSave();
-		} catch (err) {
-			console.error("Failed to add goal:", err);
-		}
+		} catch (_err) {}
 	};
 
 	const addStrategy = async () => {
@@ -359,9 +356,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				strategies: [...(prev?.strategies || []), newStrategy],
 			}));
 			handleAutoSave();
-		} catch (err) {
-			console.error("Failed to add strategy:", err);
-		}
+		} catch (_err) {}
 	};
 
 	const addEvidence = async () => {
@@ -391,9 +386,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				evidence: [...(prev?.evidence || []), newEvidence],
 			}));
 			handleAutoSave();
-		} catch (err) {
-			console.error("Failed to add evidence:", err);
-		}
+		} catch (_err) {}
 	};
 
 	if (loading) {

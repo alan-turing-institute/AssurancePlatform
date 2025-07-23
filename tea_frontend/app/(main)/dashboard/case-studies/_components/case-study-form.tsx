@@ -23,8 +23,8 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -196,7 +196,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	// Use author management helper
 	const { authors, inputValue, setInputValue, addAuthor, removeAuthor } =
 		useAuthorManagement(form);
-
 
 	// 2. Define a submit handler.
 	// async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
@@ -531,8 +530,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							{/* Basic Information Section */}
 							<div className="space-y-6">
 								<div>
-									<h3 className="text-lg font-medium">Basic Information</h3>
-									<p className="text-sm text-muted-foreground">
+									<h3 className="font-medium text-lg">Basic Information</h3>
+									<p className="text-muted-foreground text-sm">
 										Provide the essential details about your case study
 									</p>
 								</div>
@@ -640,8 +639,8 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							{/* Author Information Section */}
 							<div className="space-y-6">
 								<div>
-									<h3 className="text-lg font-medium">Author Information</h3>
-									<p className="text-sm text-muted-foreground">
+									<h3 className="font-medium text-lg">Author Information</h3>
+									<p className="text-muted-foreground text-sm">
 										Add all authors and specify contact details for
 										correspondence
 									</p>
@@ -698,7 +697,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 														</span>
 													))}
 													{authors.length === 0 && (
-														<span className="italic text-sm text-muted-foreground">
+														<span className="text-muted-foreground text-sm italic">
 															No authors added yet
 														</span>
 													)}
@@ -740,10 +739,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							{/* Description Section */}
 							<div className="space-y-6">
 								<div>
-									<h3 className="text-lg font-medium">
+									<h3 className="font-medium text-lg">
 										Case Study Description
 									</h3>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-muted-foreground text-sm">
 										Provide a detailed description of your case study
 									</p>
 								</div>
@@ -789,11 +788,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							{/* Related Assurance Cases Section */}
 							<div className="space-y-6">
 								<div>
-									<h3 className="text-lg font-medium">
+									<h3 className="font-medium text-lg">
 										Related Assurance Cases
 									</h3>
-									<p className="text-sm text-muted-foreground">
-										Please select one or more assurance cases to link with this case study
+									<p className="text-muted-foreground text-sm">
+										Please select one or more assurance cases to link with this
+										case study
 									</p>
 								</div>
 
@@ -815,14 +815,14 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							{/* Featured Image Section */}
 							<div className="space-y-6">
 								<div>
-									<h3 className="text-lg font-medium">Featured Image</h3>
-									<p className="text-sm text-muted-foreground">
+									<h3 className="font-medium text-lg">Featured Image</h3>
+									<p className="text-muted-foreground text-sm">
 										Upload a representative image for this case study
 									</p>
 								</div>
 
 								<ImageUpload
-									value={previewImage || featuredImage}
+									disabled={caseStudy?.published}
 									onChange={(file) => {
 										if (typeof file === "string") {
 											// Handle string case (when removing)
@@ -842,7 +842,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 											deleteCaseStudyFeatureImage(caseStudy.id);
 										}
 									}}
-									disabled={caseStudy?.published}
+									value={previewImage || featuredImage}
 								/>
 							</div>
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { AssuranceCase } from "@/types/domain";
 
 interface PublicCaseViewMockProps {
@@ -77,36 +77,36 @@ export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 			<h1>{caseData.name}</h1>
 			<p>{caseData.description}</p>
 
-			<button onClick={handleCreateCaseStudy} aria-label="Create case study">
+			<button aria-label="Create case study" onClick={handleCreateCaseStudy}>
 				Create Case Study
 			</button>
 
 			{successMessage && (
-				<div role="alert" aria-live="polite">
+				<div aria-live="polite" role="alert">
 					{successMessage}
 				</div>
 			)}
 
 			{showCreateModal && (
-				<div role="dialog" aria-labelledby="case-study-modal-title">
+				<div aria-labelledby="case-study-modal-title" role="dialog">
 					<div>
 						<h2 id="case-study-modal-title">Create Case Study</h2>
-						<form onSubmit={handleSubmitCaseStudy} aria-label="Case study form">
+						<form aria-label="Case study form" onSubmit={handleSubmitCaseStudy}>
 							<label>
 								Title
-								<input type="text" name="title" aria-label="Title" required />
+								<input aria-label="Title" name="title" required type="text" />
 							</label>
 							<label>
 								Description
-								<textarea name="description" aria-label="Description" />
+								<textarea aria-label="Description" name="description" />
 							</label>
-							<button type="submit" aria-label="Create">
+							<button aria-label="Create" type="submit">
 								Create
 							</button>
 							<button
-								type="button"
-								onClick={() => setShowCreateModal(false)}
 								aria-label="Close modal"
+								onClick={() => setShowCreateModal(false)}
+								type="button"
 							>
 								Cancel
 							</button>

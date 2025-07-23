@@ -15,7 +15,7 @@ const DESCRIPTION_LABEL_REGEX = /description/i;
 const SUBMIT_BUTTON_REGEX = /submit/i;
 const CANCEL_BUTTON_REGEX = /cancel/i;
 const SELECT_TEMPLATE_REGEX = /select a template/i;
-const LOADING_STATUS_REGEX = /loading/i;
+const _LOADING_STATUS_REGEX = /loading/i;
 const REQUIRED_TEXT_REGEX = /String must contain at least 1 character/i;
 const REQUIRED_TEXT_REGEX_LOWER = /String must contain at least 1 character/i;
 

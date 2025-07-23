@@ -215,8 +215,8 @@ export const authOptions: NextAuthOptions = {
 
 			// Check if token has expired and clear it if so
 			if (token.keyExpires && Date.now() > token.keyExpires) {
-				token.key = null;
-				token.keyExpires = null;
+				token.key = undefined;
+				token.keyExpires = undefined;
 			}
 
 			return token;

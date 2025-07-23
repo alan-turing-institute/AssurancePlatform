@@ -3,9 +3,7 @@ import { HttpResponse, http } from "msw";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import useStore from "@/data/store";
 import { server } from "@/src/__tests__/mocks/server";
-import { createMockAssuranceCase } from "@/src/__tests__/utils/mock-data";
 import {
 	mockModalStores,
 	resetModalMocks,
@@ -149,7 +147,9 @@ vi.mock("../modals/alert-modal", () => ({
 		cancelButtonText,
 		message,
 	}: any) => {
-		if (!isOpen) return null;
+		if (!isOpen) {
+			return null;
+		}
 		return (
 			<div role="dialog">
 				{message && <p>{message}</p>}
@@ -284,7 +284,7 @@ const TestProviders = ({ children }: { children: React.ReactNode }) => {
 	);
 };
 
-const renderWithWorkingProviders = (ui: React.ReactElement) => {
+const _renderWithWorkingProviders = (ui: React.ReactElement) => {
 	return render(<TestProviders>{ui}</TestProviders>);
 };
 
@@ -350,8 +350,6 @@ describe("ActionButtons", () => {
 
 			// The store should have manage permissions by default
 			const { container } = render(<ActionButtons {...defaultProps} />);
-			console.log("DEBUG test with reset HTML:", container.innerHTML);
-			console.log("DEBUG test with reset store:", mockStore());
 
 			// Check that we have buttons that require manage permissions
 			expect(screen.getByLabelText("New Goal")).toBeInTheDocument();

@@ -269,7 +269,11 @@ export const MockDialogClose = ({ children, asChild, ...props }: any) => {
 
 	const handleClick = (e: React.MouseEvent) => {
 		// Call the child's onClick if it exists
-		if (asChild && React.isValidElement(children) && (children.props as any).onClick) {
+		if (
+			asChild &&
+			React.isValidElement(children) &&
+			(children.props as any).onClick
+		) {
 			(children.props as any).onClick(e);
 		}
 		context?.setOpen(false);

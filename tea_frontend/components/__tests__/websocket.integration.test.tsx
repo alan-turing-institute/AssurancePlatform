@@ -23,7 +23,7 @@ afterAll(() => {
 });
 
 // First override WebSocket from global setup - must be done before any imports that might use it
-const originalWebSocket = (global as any).WebSocket;
+const _originalWebSocket = (global as any).WebSocket;
 const mockWebSocket = vi.fn();
 (global as any).WebSocket = mockWebSocket;
 
@@ -85,7 +85,6 @@ describe("WebSocket Integration Tests", () => {
 
 		// Mock the WebSocket constructor to return our mock and track calls
 		mockWebSocket.mockImplementation((url: string) => {
-			console.log("WebSocket constructor called with:", url);
 			const mockSocket = wsHelper.getMockSocket();
 			mockSocket.url = url;
 			return mockSocket;
@@ -367,7 +366,7 @@ describe("WebSocket Integration Tests", () => {
 						data: "invalid-json",
 					});
 					wsHelper.getMockSocket().dispatchEvent(mockEvent);
-				} catch (error) {
+				} catch (_error) {
 					// The JSON.parse will throw, which is expected
 				}
 			});

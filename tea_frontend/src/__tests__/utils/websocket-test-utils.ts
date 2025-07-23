@@ -709,7 +709,7 @@ export class ConcurrentUserSimulator {
 				{
 					id: 1,
 					name: `Updated by ${userId} - Edit ${i}`,
-					updated_at: new Date().toISOString(),
+					updatedOn: new Date().toISOString(),
 				},
 				userId
 			);
