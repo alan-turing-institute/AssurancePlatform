@@ -1,0 +1,219 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tea-platform-backend"
+version = "0.2.0"
+description = "TEA Platform Backend - Django REST API with WebSocket support for real-time collaboration"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Christopher Burr", email = "cburr@turing.ac.uk"}
+]
+maintainers = [
+    {name = "Christopher Burr", email = "cburr@turing.ac.uk"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "asgiref==3.8.1",
+    "azure-core==1.31.0",
+    "azure-storage-blob==12.23.1",
+    "certifi==2025.7.9",
+    "channels==4.2.0",
+    "click==8.1.7",
+    "colorama==0.4.6",
+    "dj-rest-auth==6.0.0",
+    "Django==5.1.11",
+    "django-allauth==65.3.0",
+    "django-cors-headers==4.6.0",
+    "django-extensions==3.2.3",
+    "django-storages==1.14.4",
+    "django-test==0.4030",
+    "django-urls==1.1.3",
+    "djangorestframework==3.16.0",
+    "gunicorn==23.0.0",
+    "pillow==11.0.0",
+    "psycopg2-binary==2.9.10",
+    "python-dotenv==1.0.1",
+    "pytz==2024.2",
+    "rest-social-auth==9.0.0",
+    "setuptools==75.6.0",
+    "sqlparse==0.5.2",
+    "daphne==4.1.2",
+    "uvicorn[standard]==0.32.1",
+    "websockets==13.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage==7.6.7",
+    "factory-boy==3.3.1",
+    "mypy==1.13.0",
+    "mypy-extensions==1.0.0",
+    "pre-commit==4.0.1",
+    "pytest==8.3.4",
+    "pytest-django==4.9.0",
+    "pytest-cov==6.0.0",
+    "ruff==0.7.4",
+    "types-requests==2.32.0.20241016",
+    "django-stubs==5.1.0",
+    "djangorestframework-stubs==3.15.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/alan-turing-institute/AssurancePlatform"
+Documentation = "https://assuranceplatform.azurewebsites.net/documentation"
+Repository = "https://github.com/alan-turing-institute/AssurancePlatform"
+Issues = "https://github.com/alan-turing-institute/AssurancePlatform/issues"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W", # flake8
+  "B",           # flake8-bugbear
+  "I",           # isort
+  "ARG",         # flake8-unused-arguments
+  "C4",          # flake8-comprehensions
+  "EM",          # flake8-errmsg
+  "ICN",         # flake8-import-conventions
+  "ISC",         # flake8-implicit-str-concat
+  "G",           # flake8-logging-format
+  "PGH",         # pygrep-hooks
+  "PIE",         # flake8-pie
+  "PL",          # pylint
+  "PT",          # flake8-pytest-style
+  "PTH",         # flake8-use-pathlib
+  "RET",         # flake8-return
+  "SIM",         # flake8-simplify
+  "UP",          # pyupgrade
+  "YTT",         # flake8-2020
+  "EXE",         # flake8-executable
+]
+extend-ignore = [
+  "PLR",    # Design related pylint codes
+  "E501",   # Line too long
+  "RET505", # Unessential return statement
+  "B028",   # Explicit stacklevel
+  "SIM114", # Combine logic
+  "ISC001", # Conflicts with ruff-format
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*" = ["ALL"]
+"tests/**" = ["ARG", "PLR2004", "PT004", "PT009", "F811"]
+"tests/**/*.py" = ["ARG", "PLR2004", "PT004", "PT009", "F811"]
+"*/settings/*" = ["F405", "F403"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+ignore_missing_imports = false
+no_implicit_optional = true
+no_implicit_reexport = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "django_extensions.*",
+    "corsheaders.*",
+    "rest_framework.*",
+    "social_django.*",
+    "channels.*",
+    "daphne.*",
+    "websockets.*",
+    "azure.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tea_backend.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+testpaths = ["tests", "api", "websockets"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "*/migrations/*",
+    "*/venv/*",
+    "*/tests/*",
+    "manage.py",
+    "*/settings/*",
+    "*/__pycache__/*",
+    "*/node_modules/*",
+]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.hatch.build.targets.wheel]
+packages = ["api", "tea_backend", "websockets"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.6.7",
+    "factory-boy>=3.3.1",
+]

@@ -1,0 +1,159 @@
+name: backend-integration-build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tea_backend/**"
+      - ".github/workflows/backend-integration-build.yaml"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "tea_backend/**"
+      - ".github/workflows/backend-integration-build.yaml"
+  release:
+    types:
+      - published
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/tea-backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-3.12-${{ hashFiles('tea_backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-3.12-
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: tea_backend
+
+      - name: Run tests with coverage
+        run: |
+          uv run coverage run manage.py test -v 2
+          uv run coverage report --show-missing
+        continue-on-error: true
+        working-directory: tea_backend
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'postgres' }}
+          POSTGRES_DB: tea_test
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: tea_backend
+
+      - name: Run integration tests
+        run: uv run python manage.py test -v 2 --tag=integration
+        working-directory: tea_backend
+        env:
+          DBHOST: localhost
+          DBPORT: 5432
+          DBNAME: tea_test
+          DBUSER: postgres
+          DBPASSWORD: ${{ secrets.CI_DB_PASSWORD || 'postgres' }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, integration-test]
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'failure') && (needs.integration-test.result == 'success' || needs.integration-test.result == 'failure')
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # set latest tag for default branch
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+            # semantic version for releases
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            # set staging tag for develop branch
+            type=raw,value=staging,enable={{is_default_branch}}
+            # date-based versioning
+            type=raw,value={{date 'YYYY-MM-DD'}}.{{sha}},enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tea_backend
+          file: ./tea_backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1

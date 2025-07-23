@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+# Set Python environment variables for containerized applications
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install uv
+RUN pip install uv
+
+COPY . /app
+WORKDIR /app
+
+# Install dependencies with uv from pyproject.toml
+RUN uv pip install --system .
+
+# Skip migrations and admin creation during build for development
+# These will be handled at runtime when the database is available
+CMD sh -c "python manage.py migrate && python manage.py createadmin && python manage.py runserver 0.0.0.0:8000"
