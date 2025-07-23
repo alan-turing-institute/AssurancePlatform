@@ -28,9 +28,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link . .
-# This will do the trick, use the corresponding env file for each environment.
-COPY --link .env.local .env.production
-# COPY --link .env.production .env.production
+# Note: Environment variables are provided at runtime via Azure App Service configuration
+# or can be passed as build args if needed for build-time configuration
 
 # Build documentation
 RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build

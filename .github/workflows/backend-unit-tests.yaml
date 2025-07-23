@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-uv-${{ matrix.python-version }}-
             ${{ runner.os }}-uv-
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --python ${{ matrix.python-version }}
         working-directory: tea_backend
       - name: Run type checking
         run: uv run mypy .
