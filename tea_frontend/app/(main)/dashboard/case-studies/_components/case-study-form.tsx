@@ -1,8 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CloudDownload, InfoIcon, Share, Trash2Icon, X } from "lucide-react";
-import Image from "next/image";
+import { CloudDownload, InfoIcon, Share, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
@@ -25,6 +24,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
 	Select,
 	SelectContent,
@@ -197,13 +197,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	const { authors, inputValue, setInputValue, addAuthor, removeAuthor } =
 		useAuthorManagement(form);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) {
-			setPreviewImage(URL.createObjectURL(file));
-			form.setValue("image", file);
-		}
-	};
 
 	// 2. Define a submit handler.
 	// async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
@@ -828,36 +821,29 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 									</p>
 								</div>
 
-								<div>
-									{previewImage || featuredImage ? (
-										<div className="group relative mt-6 h-[400px] w-full max-w-2xl">
-											<Image
-												alt="Featured image preview"
-												className="aspect-video rounded-lg object-cover border"
-												fill
-												src={previewImage || featuredImage}
-											/>
-											<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-												<Button
-													onClick={() => {
-														setPreviewImage(""); // Clear preview
-														setFeaturedImage(""); // Clear preview
-														form.setValue("image", ""); // Reset form field
-														if (featuredImage && caseStudy) {
-															deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
-														}
-													}}
-													type="button"
-													variant="destructive"
-												>
-													<Trash2Icon className="mr-2 size-4" /> Remove Image
-												</Button>
-											</div>
-										</div>
-									) : (
-										<Input type="file" accept="image/*" onChange={handleFileChange} />
-									)}
-								</div>
+								<ImageUpload
+									value={previewImage || featuredImage}
+									onChange={(file) => {
+										if (typeof file === "string") {
+											// Handle string case (when removing)
+											setPreviewImage("");
+											form.setValue("image", "");
+										} else {
+											// Handle File case
+											setPreviewImage(URL.createObjectURL(file));
+											form.setValue("image", file);
+										}
+									}}
+									onRemove={() => {
+										setPreviewImage("");
+										setFeaturedImage("");
+										form.setValue("image", "");
+										if (featuredImage && caseStudy) {
+											deleteCaseStudyFeatureImage(caseStudy.id);
+										}
+									}}
+									disabled={caseStudy?.published}
+								/>
 							</div>
 
 							<Separator className="my-6" />

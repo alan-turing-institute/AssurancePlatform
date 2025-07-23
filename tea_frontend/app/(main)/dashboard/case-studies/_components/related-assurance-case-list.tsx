@@ -89,7 +89,7 @@ const RelatedAssuranceCaseList = ({
 			)}
 			{assuranceCasesList.length > 0 && (
 				<div className="mt-4">
-					<ScrollArea className="h-72 w-full">
+					<ScrollArea className={`w-full ${assuranceCasesList.length > 4 ? 'h-72' : 'h-auto max-h-72'}`}>
 						<div>
 						{assuranceCasesList
 							.sort((a: AssuranceCase, b: AssuranceCase) => {
