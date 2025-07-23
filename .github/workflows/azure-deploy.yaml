@@ -28,7 +28,7 @@ jobs:
   deploy-staging:
     if: |
       ((github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') &&
-       contains(github.event.workflow_run.head_branch, 'staging')) ||
+       contains(github.event.workflow_run.head_branch, 'develop')) ||
       (github.event_name == 'workflow_dispatch' &&
        github.event.inputs.environment == 'staging')
     runs-on: ubuntu-latest
