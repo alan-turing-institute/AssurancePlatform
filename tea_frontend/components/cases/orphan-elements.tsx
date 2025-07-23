@@ -24,7 +24,7 @@ import {
 	attachCaseElement,
 	deleteAssuranceCaseNode,
 } from "@/lib/case-helper";
-import type { Context, Evidence, PropertyClaim, Strategy } from "@/types";
+import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 import { AlertModal } from "../modals/alert-modal";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
@@ -238,41 +238,71 @@ const OrphanElements = ({
 		}
 	};
 
+	// Helper function to find and add evidence to property claim
+	const findPropertyClaimAndAddEvidence = (
+		propertyClaims: PropertyClaim[] | undefined,
+		claimId: number,
+		evidence: Evidence
+	): boolean => {
+		if (!propertyClaims || propertyClaims.length === 0) {
+			return false;
+		}
+		return addEvidenceToClaim(propertyClaims, claimId, evidence);
+	};
+
+	// Helper function to search for property claim in strategies
+	const searchPropertyClaimInStrategies = (
+		strategies: Strategy[] | undefined,
+		claimId: number,
+		evidence: Evidence
+	): boolean => {
+		if (!strategies || strategies.length === 0) {
+			return false;
+		}
+
+		for (const strategy of strategies) {
+			if (
+				findPropertyClaimAndAddEvidence(
+					strategy.property_claims,
+					claimId,
+					evidence
+				)
+			) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	// Helper function to search for property claim in goal
+	const searchPropertyClaimInGoal = (
+		goal: Goal,
+		claimId: number,
+		evidence: Evidence
+	): boolean => {
+		// Check direct property claims
+		if (
+			findPropertyClaimAndAddEvidence(goal.property_claims, claimId, evidence)
+		) {
+			return true;
+		}
+		// Check property claims inside strategies
+		return searchPropertyClaimInStrategies(goal.strategies, claimId, evidence);
+	};
+
 	const handleEvidenceAttachment = (orphan: Evidence) => {
 		if (!assuranceCase?.goals) {
 			setLoading(false);
 			return;
 		}
+
 		orphan.property_claim_id = [node.data.id];
+
 		// Try to find the property claim in the goals and their nested structures
-		let added = false;
-		for (const goal of assuranceCase.goals) {
-			// Check direct property claims
-			if (goal.property_claims && goal.property_claims.length > 0) {
-				added = addEvidenceToClaim(goal.property_claims, node.data.id, orphan);
-				if (added) {
-					break;
-				}
-			}
-			// Check property claims inside strategies
-			if (goal.strategies && goal.strategies.length > 0) {
-				for (const strategy of goal.strategies) {
-					if (strategy.property_claims && strategy.property_claims.length > 0) {
-						added = addEvidenceToClaim(
-							strategy.property_claims,
-							node.data.id,
-							orphan
-						);
-						if (added) {
-							break;
-						}
-					}
-				}
-				if (added) {
-					break;
-				}
-			}
-		}
+		const added = assuranceCase.goals.some((goal) =>
+			searchPropertyClaimInGoal(goal, node.data.id, orphan)
+		);
+
 		if (!added) {
 			setLoading(false);
 			return; // Parent property claim not found

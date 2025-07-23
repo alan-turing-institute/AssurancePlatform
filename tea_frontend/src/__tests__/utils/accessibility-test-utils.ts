@@ -836,8 +836,9 @@ async function testWithAccessibilityPreferences<T>(
 	// Mock media queries for accessibility preferences
 	const mockMatchMedia = (query: string) => {
 		const matches: Record<string, boolean> = {
-			"(prefers-reduced-motion: reduce)": preferences.prefersReducedMotion,
-			"(prefers-contrast: high)": preferences.prefersHighContrast,
+			"(prefers-reduced-motion: reduce)":
+				preferences.prefersReducedMotion ?? false,
+			"(prefers-contrast: high)": preferences.prefersHighContrast ?? false,
 			"(prefers-color-scheme: dark)": preferences.colorScheme === "dark",
 		};
 

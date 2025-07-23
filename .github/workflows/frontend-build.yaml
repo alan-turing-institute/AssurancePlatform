@@ -66,7 +66,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./tea_frontend
-          file: ./tea_frontend/docker/staging/Dockerfile
+          file: ./tea_frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -86,7 +86,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./tea_frontend
-          file: ./tea_frontend/docker/staging/Dockerfile
+          file: ./tea_frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -106,7 +106,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./tea_frontend
-          file: ./tea_frontend/docker/staging/Dockerfile
+          file: ./tea_frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

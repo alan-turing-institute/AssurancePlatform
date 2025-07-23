@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Parse request body
-		let body;
+		let body: { image?: string; caseId?: string };
 		try {
 			body = await request.json();
 		} catch (_error) {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 		const filename = "screenshot.png";
 
 		// Convert base64 string to Blob
-		let blob;
+		let blob: Blob;
 		try {
 			blob = base64ToBlob(image, "image/png");
 		} catch (_error) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 			},
 		};
 
-		let response;
+		let response: Response;
 		try {
 			response = await fetch(
 				`${backendUrl}/api/cases/${caseId}/upload_image/`,

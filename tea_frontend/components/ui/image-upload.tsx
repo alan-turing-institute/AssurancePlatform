@@ -3,7 +3,7 @@
 import { ImageIcon, Trash2Icon, UploadIcon, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { type FileRejection, useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export function ImageUpload({
 	const [error, setError] = useState<string>("");
 
 	const onDrop = useCallback(
-		(acceptedFiles: File[], rejectedFiles: any[]) => {
+		(acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
 			setError("");
 
 			if (rejectedFiles.length > 0) {

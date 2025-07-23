@@ -418,10 +418,10 @@ if (typeof global.DragEvent === "undefined") {
 			this.clientY = eventInitDict?.clientY || 0;
 			this.screenX = eventInitDict?.screenX || 0;
 			this.screenY = eventInitDict?.screenY || 0;
-			this.ctrlKey = eventInitDict?.ctrlKey;
-			this.shiftKey = eventInitDict?.shiftKey;
-			this.altKey = eventInitDict?.altKey;
-			this.metaKey = eventInitDict?.metaKey;
+			this.ctrlKey = eventInitDict?.ctrlKey ?? false;
+			this.shiftKey = eventInitDict?.shiftKey ?? false;
+			this.altKey = eventInitDict?.altKey ?? false;
+			this.metaKey = eventInitDict?.metaKey ?? false;
 		}
 	} as any;
 }

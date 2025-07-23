@@ -26,7 +26,13 @@ import {
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case-helper";
-import type { AssuranceCase, Evidence, Goal, PropertyClaim } from "@/types";
+import type {
+	AssuranceCase,
+	Evidence,
+	Goal,
+	PropertyClaim,
+	Strategy,
+} from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useToast } from "../ui/use-toast";
@@ -379,6 +385,45 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		type: "Evidence",
 	});
 
+	/** Helper function to check property claims in strategies */
+	const checkPropertyClaimsInStrategies = (
+		strategies: Strategy[] | undefined,
+		parentClaimId: number,
+		evidence: Evidence
+	): boolean => {
+		if (!strategies) {
+			return false;
+		}
+
+		return strategies.some(
+			(strategy) =>
+				strategy.property_claims &&
+				addEvidenceToClaim(strategy.property_claims, parentClaimId, evidence)
+		);
+	};
+
+	/** Helper function to check property claims in a single goal */
+	const checkPropertyClaimsInGoal = (
+		goal: Goal,
+		parentClaimId: number,
+		evidence: Evidence
+	): boolean => {
+		// Check direct property claims
+		if (
+			goal.property_claims &&
+			addEvidenceToClaim(goal.property_claims, parentClaimId, evidence)
+		) {
+			return true;
+		}
+
+		// Check property claims in strategies
+		return checkPropertyClaimsInStrategies(
+			goal.strategies,
+			parentClaimId,
+			evidence
+		);
+	};
+
 	/** Helper function to add evidence to goals structure */
 	const addEvidenceToGoals = (
 		goals: Goal[],
@@ -386,36 +431,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		evidence: Evidence
 	): boolean => {
 		// Search through all goals for the property claim
-		for (const goal of goals) {
-			// Check direct property claims
-			if (goal.property_claims) {
-				const found = addEvidenceToClaim(
-					goal.property_claims,
-					parentClaimId,
-					evidence
-				);
-				if (found) {
-					return true;
-				}
-			}
-
-			// Check property claims in strategies
-			if (goal.strategies) {
-				for (const strategy of goal.strategies) {
-					if (strategy.property_claims) {
-						const found = addEvidenceToClaim(
-							strategy.property_claims,
-							parentClaimId,
-							evidence
-						);
-						if (found) {
-							return true;
-						}
-					}
-				}
-			}
-		}
-		return false;
+		return goals.some((goal) =>
+			checkPropertyClaimsInGoal(goal, parentClaimId, evidence)
+		);
 	};
 
 	/** Helper function to update assurance case with modified goals */

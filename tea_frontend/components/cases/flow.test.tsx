@@ -229,10 +229,11 @@ describe("Flow", () => {
 				caseEdges: Edge[];
 			}) => void = () => {};
 			vi.mocked(convertAssuranceCase).mockImplementationOnce(
-				() =>
-					new Promise((resolve) => {
+				() => {
+					return new Promise((resolve) => {
 						resolveConversion = resolve;
-					})
+					}) as any;
+				}
 			);
 
 			await renderAndWait(() => renderWithReactFlowAndAuth(<Flow />));
@@ -269,10 +270,11 @@ describe("Flow", () => {
 				caseEdges: Edge[];
 			}) => void = () => {};
 			vi.mocked(convertAssuranceCase).mockImplementationOnce(
-				() =>
-					new Promise((resolve) => {
+				() => {
+					return new Promise((resolve) => {
 						resolveConversion = resolve;
-					})
+					}) as any;
+				}
 			);
 
 			renderWithReactFlowAndAuth(<Flow />);

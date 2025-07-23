@@ -5,7 +5,7 @@ import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import {
 	Card,
@@ -35,7 +35,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 		? assuranceCase.permissions
 		: [assuranceCase.permissions];
 
-	const onDelete = async () => {
+	const onDelete = useCallback(async () => {
 		try {
 			setLoading(true);
 
@@ -59,9 +59,9 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			setLoading(false);
 			setOpen(false);
 		}
-	};
+	}, [session?.key, assuranceCase.id]);
 
-	const fetchScreenshot = async () => {
+	const fetchScreenshot = useCallback(async () => {
 		try {
 			const requestOptions: RequestInit = {
 				method: "GET",
@@ -88,11 +88,10 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 		} finally {
 			setImageLoading(false);
 		}
-	};
+	}, [session?.key, id]);
 
 	useEffect(() => {
 		fetchScreenshot();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [fetchScreenshot]);
 
 	return (

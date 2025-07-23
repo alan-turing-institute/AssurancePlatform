@@ -2,6 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
+interface Template {
+	name: string;
+	[key: string]: unknown;
+}
+
 export function GET() {
 	try {
 		// Read files from the file system using Node.js fs module
@@ -19,14 +24,16 @@ export function GET() {
 		const jsonFiles = files.filter((file) => file.endsWith(".json"));
 
 		// Read JSON content and parse it
-		const newTemplates = [];
+		const newTemplates: Template[] = [];
 		for (const file of jsonFiles) {
 			try {
 				const filePath = path.join(templatesDir, file);
 				const content = fs.readFileSync(filePath, "utf-8");
 				const parsed = JSON.parse(content);
 				newTemplates.push(parsed);
-			} catch (_error) {}
+			} catch (_error) {
+				// Skip files that can't be parsed
+			}
 		}
 
 		// Find default case

@@ -29,9 +29,7 @@ export interface AssuranceCaseWithGoals {
  * @param {Object} assuranceCase - Assurance case object retrieved from the database
  *
  */
-export const convertAssuranceCase = async (
-	assuranceCase: AssuranceCaseWithGoals
-) => {
+export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 	let caseNodes: Node[] = [],
 		caseEdges: Edge[] = [];
 
@@ -71,6 +69,100 @@ export const convertAssuranceCase = async (
  * @returns {any[]} An array of created nodes with their hierarchical relationships preserved.
  *
  */
+
+// Helper function to create a single node
+const createNode = (
+	item: ConvertibleItem,
+	nodeType: string,
+	parentNode: Node | null
+): Node => {
+	const nodeId = `${nodeType}-${item.id}`;
+	const node: Node = {
+		id: nodeId,
+		type: nodeType,
+		data: {
+			...item,
+			id: item.id,
+			name: item.name,
+			type: item.type,
+			description: item.short_description,
+			elementId: item.id, // Add elementId for test compatibility
+			elementType: nodeType, // Add elementType for identification
+			label: item.name, // Add label for compatibility
+		},
+		position: { x: 0, y: 50 },
+		hidden: item.hidden,
+		height: 64,
+		width: 288,
+	};
+
+	if (parentNode) {
+		node.data.parentId = parentNode.id;
+	}
+
+	return node;
+};
+
+// Helper function to process child nodes
+const processChildNodes = (
+	item: ConvertibleItem,
+	node: Node,
+	processedItems: Set<ConvertibleItem>,
+	effectiveDepth: number
+): Node[] => {
+	const childNodes: Node[] = [];
+
+	// Process strategies
+	if (
+		item.strategies &&
+		Array.isArray(item.strategies) &&
+		item.strategies.length > 0
+	) {
+		const strategyNodes = createNodesRecursively(
+			item.strategies as unknown as ConvertibleItem[],
+			"strategy",
+			node,
+			processedItems,
+			effectiveDepth - 1
+		);
+		childNodes.push(...strategyNodes);
+	}
+
+	// Process property claims
+	if (
+		item.property_claims &&
+		Array.isArray(item.property_claims) &&
+		item.property_claims.length > 0
+	) {
+		const propertyClaimNodes = createNodesRecursively(
+			item.property_claims as unknown as ConvertibleItem[],
+			"property",
+			node,
+			processedItems,
+			effectiveDepth - 1
+		);
+		childNodes.push(...propertyClaimNodes);
+	}
+
+	// Process evidence
+	if (
+		item.evidence &&
+		Array.isArray(item.evidence) &&
+		item.evidence.length > 0
+	) {
+		const evidenceNodes = createNodesRecursively(
+			item.evidence as unknown as ConvertibleItem[],
+			"evidence",
+			node,
+			processedItems,
+			effectiveDepth - 1
+		);
+		childNodes.push(...evidenceNodes);
+	}
+
+	return childNodes;
+};
+
 export const createNodesRecursively = (
 	items: ConvertibleItem[],
 	nodeType: string,
@@ -95,98 +187,25 @@ export const createNodesRecursively = (
 
 	for (const item of items) {
 		// Skip invalid items
-		if (!item || typeof item !== "object") {
+		if (!item || typeof item !== "object" || processedItems.has(item)) {
 			continue;
 		}
 
-		// Check if the item has already been processed
-		if (processedItems.has(item)) {
-			continue;
-		}
-
-		// Create predictable node ID based on type and element ID
-		const nodeId = `${nodeType}-${item.id}`;
-		const node: Node = {
-			id: nodeId,
-			type: nodeType,
-			data: {
-				...item,
-				id: item.id,
-				name: item.name,
-				type: item.type,
-				description: item.short_description,
-				elementId: item.id, // Add elementId for test compatibility
-				elementType: nodeType, // Add elementType for identification
-				label: item.name, // Add label for compatibility
-			},
-			position: { x: 0, y: 50 },
-			// hidden: nodeType === 'goal' ? false : true,
-			hidden: item.hidden,
-			height: 64,
-			width: 288,
-		};
-
-		if (parentNode) {
-			node.data.parentId = parentNode.id;
-		}
-
+		// Create node
+		const node = createNode(item, nodeType, parentNode);
 		nodes.push(node);
 
 		// Add the current item to the set of processed items
 		processedItems.add(item);
 
-		// Recursively create nodes for child elements
-
-		/*  DEPRECATED - REMOVE CONTEXT NODES
-        https://github.com/orgs/alan-turing-institute/projects/240/views/1?pane=issue&itemId=86520648&issue=alan-turing-institute%7CAssurancePlatform%7C652
-    */
-		// if (item.context && item.context.length > 0) {
-		//   const contextNodes = createNodesRecursively(item.context, 'context', node, processedItems, depth - 1);
-		//   nodes.push(...contextNodes);
-		// }
-		// Recurse into child elements
-		if (
-			item.strategies &&
-			Array.isArray(item.strategies) &&
-			item.strategies.length > 0
-		) {
-			const strategyNodes = createNodesRecursively(
-				item.strategies as unknown as ConvertibleItem[],
-				"strategy",
-				node,
-				processedItems,
-				effectiveDepth - 1
-			);
-			nodes.push(...strategyNodes);
-		}
-		if (
-			item.property_claims &&
-			Array.isArray(item.property_claims) &&
-			item.property_claims.length > 0
-		) {
-			const propertyClaimNodes = createNodesRecursively(
-				item.property_claims as unknown as ConvertibleItem[],
-				"property",
-				node,
-				processedItems,
-				effectiveDepth - 1
-			);
-			nodes.push(...propertyClaimNodes);
-		}
-		if (
-			item.evidence &&
-			Array.isArray(item.evidence) &&
-			item.evidence.length > 0
-		) {
-			const evidenceNodes = createNodesRecursively(
-				item.evidence as unknown as ConvertibleItem[],
-				"evidence",
-				node,
-				processedItems,
-				effectiveDepth - 1
-			);
-			nodes.push(...evidenceNodes);
-		}
+		// Process child nodes
+		const childNodes = processChildNodes(
+			item,
+			node,
+			processedItems,
+			effectiveDepth
+		);
+		nodes.push(...childNodes);
 	}
 
 	return nodes;

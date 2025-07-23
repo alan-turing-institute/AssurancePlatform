@@ -5,7 +5,13 @@ import { FolderXIcon, Trash2 } from "lucide-react";
 import moment from "moment";
 import { useSession } from "next-auth/react";
 import type React from "react";
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import {
+	type Dispatch,
+	type SetStateAction,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
@@ -64,12 +70,12 @@ const NodeContext: React.FC<NodeContextProps> = ({
 	const [loading, setLoading] = useState<boolean>(false);
 
 	// Helper function to find the current goal in the assurance case
-	const getCurrentGoal = () => {
+	const getCurrentGoal = useCallback(() => {
 		if (!assuranceCase?.goals || node.type !== "goal") {
 			return null;
 		}
 		return assuranceCase.goals.find((goal) => goal.id === node.data.id);
-	};
+	}, [assuranceCase?.goals, node.type, node.data.id]);
 
 	// console.log('NODE', node)
 	// console.log('Case', assuranceCase.goals[0])

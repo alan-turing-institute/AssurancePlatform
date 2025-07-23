@@ -7,6 +7,9 @@ import type {
 	Strategy,
 } from "@/types";
 
+// Regular expressions
+const NUMERIC_ID_PATTERN = /^\d+$/;
+
 interface Map {
 	[key: string]: string | undefined;
 }
@@ -616,7 +619,7 @@ const addPropertyClaimToList = (
 	}
 
 	// Check if currentClaimName is actually an ID (numeric string)
-	const isIdComparison = /^\d+$/.test(currentClaimName);
+	const isIdComparison = NUMERIC_ID_PATTERN.test(currentClaimName);
 
 	if (item.type === "PropertyClaim") {
 		if (isIdComparison) {
@@ -624,11 +627,9 @@ const addPropertyClaimToList = (
 			if (item.id?.toString() !== currentClaimName) {
 				claims.push(item);
 			}
-		} else {
+		} else if (item.name !== currentClaimName) {
 			// Compare by name otherwise
-			if (item.name !== currentClaimName) {
-				claims.push(item);
-			}
+			claims.push(item);
 		}
 	}
 };
@@ -1746,49 +1747,75 @@ export const updateAssuranceCase = (
 	}
 };
 
+// Helper function to get the array based on node type
+const getNodeArray = (
+	parentNode: ReactFlowNode,
+	nodeType: string
+): (Context | Strategy | PropertyClaim | Evidence)[] => {
+	switch (nodeType.toLowerCase()) {
+		case "context":
+			return [...(parentNode.data.context || [])];
+		case "strategy":
+			return [...(parentNode.data.strategies || [])];
+		case "property":
+			return [...(parentNode.data.property_claims || [])];
+		case "evidence":
+			return [...(parentNode.data.evidence || [])];
+		default:
+			return [];
+	}
+};
+
+// Helper function to calculate identifier from last item
+const calculateIdentifierFromLastItem = (
+	lastItem: Context | Strategy | PropertyClaim | Evidence | undefined,
+	newNodeType: string,
+	parentNode: ReactFlowNode,
+	arrayLength: number
+): number => {
+	if (!lastItem?.name || typeof lastItem.name !== "string") {
+		// If there's no valid name, use the original array length as identifier
+		return arrayLength + 1; // +1 because we popped one item
+	}
+
+	if (newNodeType === "property" && parentNode.type === "property") {
+		const lastIdentifier = Number.parseFloat(
+			lastItem.name.substring(1)
+		).toString();
+		const subIdentifier = lastIdentifier.split(".")[1];
+		return Number.parseInt(subIdentifier, 10) + 1;
+	}
+
+	const lastIdentifier = Number.parseFloat(lastItem.name.substring(1));
+	return lastIdentifier + 1;
+};
+
 export const setNodeIdentifier = (
 	parentNode: ReactFlowNode,
 	newNodeType: string
 ): string => {
 	let identifier = 0;
-	let newArray: (Context | Strategy | PropertyClaim | Evidence)[] = [];
 	let parentPrefix: number | null = null;
 
-	switch (newNodeType.toLowerCase()) {
-		case "context":
-			newArray = [...(parentNode.data.context || [])];
-			break;
-		case "strategy":
-			newArray = [...(parentNode.data.strategies || [])];
-			break;
-		case "property":
-			if (parentNode.data.name && typeof parentNode.data.name === "string") {
-				parentPrefix = Number.parseFloat(parentNode.data.name.substring(1));
-			}
-			newArray = [...(parentNode.data.property_claims || [])];
-			break;
-		case "evidence":
-			newArray = [...(parentNode.data.evidence || [])];
-			break;
-		default:
-			break;
+	// Get parent prefix for property nodes
+	if (
+		newNodeType.toLowerCase() === "property" &&
+		parentNode.data.name &&
+		typeof parentNode.data.name === "string"
+	) {
+		parentPrefix = Number.parseFloat(parentNode.data.name.substring(1));
 	}
+
+	const newArray = getNodeArray(parentNode, newNodeType);
 
 	if (newArray.length > 0) {
 		const lastItem = newArray.pop();
-		if (!lastItem?.name || typeof lastItem.name !== "string") {
-			// If there's no valid name, use the original array length as identifier
-			identifier = newArray.length + 1; // +1 because we popped one item
-		} else if (newNodeType === "property" && parentNode.type === "property") {
-			const lastIdentifier = Number.parseFloat(
-				lastItem.name.substring(1)
-			).toString();
-			const subIdentifier = lastIdentifier.split(".")[1];
-			identifier = Number.parseInt(subIdentifier, 10) + 1;
-		} else {
-			const lastIdentifier = Number.parseFloat(lastItem.name.substring(1));
-			identifier = lastIdentifier + 1;
-		}
+		identifier = calculateIdentifierFromLastItem(
+			lastItem,
+			newNodeType,
+			parentNode,
+			newArray.length
+		);
 	} else {
 		identifier = 1;
 	}
@@ -2031,7 +2058,7 @@ export const addHiddenProp = (
 		}
 	} else if (typeof assuranceCase === "object" && assuranceCase !== null) {
 		// Add the hidden property to the object
-		(assuranceCase as any).hidden = false;
+		(assuranceCase as unknown as Record<string, unknown>).hidden = false;
 
 		for (const key of Object.keys(assuranceCase)) {
 			const value = (assuranceCase as unknown as Record<string, unknown>)[key];
