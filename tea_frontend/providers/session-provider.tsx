@@ -1,2 +1,2 @@
-'use client';
-export { SessionProvider as default } from 'next-auth/react';
+"use client";
+export { SessionProvider as default } from "next-auth/react";

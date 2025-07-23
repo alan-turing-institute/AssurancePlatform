@@ -656,3 +656,23 @@ class PublishedAssuranceCaseSerializer(serializers.ModelSerializer):
             "content",
             "created_at",
         ]
+
+
+class CustomLoginSerializer(serializers.Serializer):
+    """Custom login serializer that returns user details along with the auth token."""
+
+    key = serializers.CharField(read_only=True)
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(source="user.get_full_name", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    def to_representation(self, instance):
+        """Override to include user details in the response."""
+        # instance is the Token object
+        user = instance.user
+        return {
+            "key": instance.key,
+            "id": user.id,
+            "name": user.get_full_name() or user.username,
+            "email": user.email,
+        }

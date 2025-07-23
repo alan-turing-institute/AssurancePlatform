@@ -1,27 +1,27 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 /**
  * Defines the shape of the state for the Permissions modal store.
  * @interface usePermissionsModalStore
  */
 interface usePermissionsModalStore {
-  /**
-   * Indicates whether the modal is open or closed.
-   * @type {boolean}
-   */
-  isOpen: boolean;
+	/**
+	 * Indicates whether the modal is open or closed.
+	 * @type {boolean}
+	 */
+	isOpen: boolean;
 
-  /**
-   * Function to open the modal.
-   * @function
-   */
-  onOpen: () => void;
+	/**
+	 * Function to open the modal.
+	 * @function
+	 */
+	onOpen: () => void;
 
-  /**
-   * Function to close the modal.
-   * @function
-   */
-  onClose: () => void;
+	/**
+	 * Function to close the modal.
+	 * @function
+	 */
+	onClose: () => void;
 }
 
 /**
@@ -30,7 +30,7 @@ interface usePermissionsModalStore {
  * @returns {usePermissionsModalStore} The Zustand store with modal state and actions.
  */
 export const usePermissionsModal = create<usePermissionsModalStore>((set) => ({
-  isOpen: false,
-  onOpen: () => set({ isOpen: true }),
-  onClose: () => set({ isOpen: false }),
+	isOpen: false,
+	onOpen: () => set({ isOpen: true }),
+	onClose: () => set({ isOpen: false }),
 }));

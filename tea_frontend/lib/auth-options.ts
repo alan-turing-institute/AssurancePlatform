@@ -1,7 +1,7 @@
-import dotenv from 'dotenv';
-import type { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import GithubProvider from 'next-auth/providers/github';
+import dotenv from "dotenv";
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import GithubProvider from "next-auth/providers/github";
 
 dotenv.config(); // Explicitly load environment variables
 
@@ -26,201 +26,200 @@ dotenv.config(); // Explicitly load environment variables
  * export default NextAuth(authOptions);
  */
 export const authOptions: NextAuthOptions = {
-  // Secret for Next-auth, without this JWT encryption/decryption won't work
-  secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: 'jwt' },
+	// Secret for Next-auth, without this JWT encryption/decryption won't work
+	secret: process.env.NEXTAUTH_SECRET,
+	session: { strategy: "jwt" },
 
-  // Configure one or more authentication providers
-  providers: [
-    GithubProvider({
-      clientId:
-        process.env.GITHUB_APP_CLIENT_ID ||
-        (process.env.GITHUB_APP_CLIENT_ID_STAGING as string),
-      clientSecret:
-        process.env.GITHUB_APP_CLIENT_SECRET ||
-        (process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string),
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials, _req) {
-        const { username, password } = credentials ?? {};
+	// Configure one or more authentication providers
+	providers: [
+		GithubProvider({
+			clientId:
+				process.env.GITHUB_APP_CLIENT_ID ||
+				(process.env.GITHUB_APP_CLIENT_ID_STAGING as string),
+			clientSecret:
+				process.env.GITHUB_APP_CLIENT_SECRET ||
+				(process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string),
+		}),
+		CredentialsProvider({
+			name: "Credentials",
+			credentials: {
+				username: { label: "Username", type: "text" },
+				password: { label: "Password", type: "password" },
+			},
+			async authorize(credentials, _req) {
+				const { username, password } = credentials ?? {};
 
-        try {
-          // Send credentials to your API for verification
-          const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-          if (!apiUrl) {
-            throw new Error(
-              'API_URL or NEXT_PUBLIC_API_URL must be configured'
-            );
-          }
-          const response = await fetch(`${apiUrl}/api/auth/login/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
-          });
+				try {
+					// Send credentials to your API for verification
+					const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+					if (!apiUrl) {
+						throw new Error(
+							"API_URL or NEXT_PUBLIC_API_URL must be configured"
+						);
+					}
 
-          if (!response.ok) {
-            throw new Error('Invalid credentials');
-          }
+					const response = await fetch(`${apiUrl}/api/auth/login/`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ username, password }),
+					});
 
-          const user = await response.json();
+					if (!response.ok) {
+						const _errorText = await response.text();
+						throw new Error("Invalid credentials");
+					}
 
-          if (user) {
-            // Include key (access token) in the user object
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              key: user.key,
-            };
-          }
-          return null;
-        } catch (_error) {
-          return null;
-        }
-      },
-    }),
-  ],
+					const user = await response.json();
 
-  callbacks: {
-    /**
-     * Callback triggered during sign-in.
-     *
-     * @param {Object} params - Parameters provided during sign-in.
-     * @param {Object} params.user - User object returned by the provider.
-     * @param {Object} params.account - Account information including access token.
-     * @param {Object} params.profile - Profile information returned by the provider.
-     * @param {string} params.email - Email associated with the sign-in attempt.
-     * @returns {boolean} `true` to allow the sign-in.
-     */
-    async signIn({ user, account, profile }) {
-      if (account?.provider === 'github') {
-        // Handle GitHub-specific behavior
-        const payload = {
-          access_token: account?.access_token,
-          email: profile?.email,
-        };
+					if (user) {
+						// Include key (access token) in the user object
+						return {
+							id: user.id,
+							name: user.name,
+							email: user.email,
+							key: user.key,
+						};
+					}
+					return null;
+				} catch (_error) {
+					return null;
+				}
+			},
+		}),
+	],
 
-        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-        if (!apiUrl) {
-          return false;
-        }
-        const response = await fetch(
-          `${apiUrl}/api/auth/github/register-by-token/`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }
-        );
+	callbacks: {
+		/**
+		 * Callback triggered during sign-in.
+		 *
+		 * @param {Object} params - Parameters provided during sign-in.
+		 * @param {Object} params.user - User object returned by the provider.
+		 * @param {Object} params.account - Account information including access token.
+		 * @param {Object} params.profile - Profile information returned by the provider.
+		 * @param {string} params.email - Email associated with the sign-in attempt.
+		 * @returns {boolean} `true` to allow the sign-in.
+		 */
+		async signIn({ user, account, profile }) {
+			if (account?.provider === "github") {
+				// Handle GitHub-specific behavior
+				const payload = {
+					access_token: account?.access_token,
+					email: profile?.email,
+				};
 
-        // if (response.ok) {
-        //   const result = await response.json();
-        //   user.accessToken = result.key;
-        //   user.provider = account?.provider;
-        //   return true;
-        // }
+				const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+				if (!apiUrl) {
+					// biome-ignore lint/suspicious/noConsole: Required for error logging in production
+					console.error(
+						"API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication"
+					);
+					return false;
+				}
+				const response = await fetch(
+					`${apiUrl}/api/auth/github/register-by-token/`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload),
+					}
+				);
 
-        if (response.ok) {
-          const result = await response.json();
-          user.key = result.key; // Include the key for GitHub users
-          user.provider = account.provider;
-          return true;
-        }
-        try {
-          const _errorData = await response.json();
-        } catch (_e) {
-          // Intentionally empty: we don't need to handle the error data
-        }
+				// if (response.ok) {
+				//   const result = await response.json();
+				//   user.accessToken = result.key;
+				//   user.provider = account?.provider;
+				//   return true;
+				// }
 
-        return false;
-      }
+				if (response.ok) {
+					const result = await response.json();
+					user.key = result.key; // Include the key for GitHub users
+					user.provider = account.provider;
+					return true;
+				}
+				try {
+					const _errorData = await response.json();
+				} catch (_e) {
+					// Intentionally empty: we don't need to handle the error data
+				}
 
-      // For credentials, allow default processing
-      return !!user;
-    },
+				return false;
+			}
 
-    /**
-     * Callback triggered when redirecting after login or sign-out.
-     *
-     * @param {Object} params - Parameters for the redirect.
-     * @param {string} params.url - Target URL for the redirect.
-     * @param {string} params.baseUrl - Base URL of the application.
-     * @returns {string} Redirect URL after authentication.
-     */
-    redirect({ url, baseUrl }) {
-      // Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
-      const authUrl = process.env.NEXTAUTH_URL || baseUrl;
-      if (!authUrl) {
-        throw new Error(
-          'NEXTAUTH_URL must be configured for authentication redirects'
-        );
-      }
+			// For credentials, allow default processing
+			// Check if user exists and has a valid id
+			return !!user?.id;
+		},
 
-      // Properly parse the callback URL
-      const parsedUrl = new URL(url, authUrl);
-      const callbackUrl =
-        parsedUrl.searchParams.get('callbackUrl') || parsedUrl.pathname;
+		/**
+		 * Callback triggered when redirecting after login or sign-out.
+		 *
+		 * @param {Object} params - Parameters for the redirect.
+		 * @param {string} params.url - Target URL for the redirect.
+		 * @param {string} params.baseUrl - Base URL of the application.
+		 * @returns {string} Redirect URL after authentication.
+		 */
+		// biome-ignore lint/suspicious/useAwait: Required for NextAuth compatibility - expects async function
+		async redirect({ baseUrl }) {
+			// Use NEXTAUTH_URL if available, otherwise fall back to baseUrl
+			const authUrl = process.env.NEXTAUTH_URL || baseUrl;
+			if (!authUrl) {
+				throw new Error(
+					"NEXTAUTH_URL must be configured for authentication redirects"
+				);
+			}
 
-      // Default to dashboard if no specific callback
-      if (
-        callbackUrl === '/' ||
-        callbackUrl === '/login' ||
-        callbackUrl === '/register'
-      ) {
-        return `${authUrl}/dashboard`;
-      }
+			// Always redirect to dashboard
+			return `${authUrl}/dashboard`;
+		},
 
-      // Ensure the callback URL is within our domain
-      if (callbackUrl.startsWith('/')) {
-        return `${authUrl}${callbackUrl}`;
-      }
+		/**
+		 * Callback to handle the session object passed to the client.
+		 *
+		 * @param {Object} params - Parameters related to the session.
+		 * @param {Object} params.session - The current session object.
+		 * @param {Object} params.user - User information attached to the session.
+		 * @param {Object} params.token - The JWT token associated with the session.
+		 * @returns {Object} The modified session object with an access token and provider information.
+		 */
+		session({ session, token }) {
+			// session.accessToken = token.accessToken;
+			// session.provider = token.provider;
+			session.key = token.key; // Add the key to the session object
+			session.provider = token.provider;
+			return session;
+		},
 
-      return `${authUrl}/dashboard`;
-    },
+		/**
+		 * Callback to handle JWT token creation and updates.
+		 *
+		 * @param {Object} params - Parameters related to the JWT.
+		 * @param {Object} params.token - The current token.
+		 * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).
+		 * @param {Object} params.account - The account object from the provider (initial sign-in only).
+		 * @param {Object} params.profile - Profile information from the provider (optional).
+		 * @param {boolean} params.isNewUser - Flag indicating if this is a new user (optional).
+		 * @returns {Object} The updated token with access token and provider information.
+		 */
+		jwt({ token, user }) {
+			// if (account && user) {
+			//   token.accessToken = user.accessToken;
+			//   token.provider = user.provider;
+			// }
+			if (user) {
+				token.key = user.key; // Store the key from the user object
+				token.provider = user.provider || "credentials";
+				// Track token expiry (24 hours from login)
+				token.keyExpires = Date.now() + 24 * 60 * 60 * 1000;
+			}
 
-    /**
-     * Callback to handle the session object passed to the client.
-     *
-     * @param {Object} params - Parameters related to the session.
-     * @param {Object} params.session - The current session object.
-     * @param {Object} params.user - User information attached to the session.
-     * @param {Object} params.token - The JWT token associated with the session.
-     * @returns {Object} The modified session object with an access token and provider information.
-     */
-    session({ session, token }) {
-      // session.accessToken = token.accessToken;
-      // session.provider = token.provider;
-      session.key = token.key; // Add the key to the session object
-      session.provider = token.provider;
-      return session;
-    },
+			// Check if token has expired and clear it if so
+			if (token.keyExpires && Date.now() > token.keyExpires) {
+				token.key = null;
+				token.keyExpires = null;
+			}
 
-    /**
-     * Callback to handle JWT token creation and updates.
-     *
-     * @param {Object} params - Parameters related to the JWT.
-     * @param {Object} params.token - The current token.
-     * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).
-     * @param {Object} params.account - The account object from the provider (initial sign-in only).
-     * @param {Object} params.profile - Profile information from the provider (optional).
-     * @param {boolean} params.isNewUser - Flag indicating if this is a new user (optional).
-     * @returns {Object} The updated token with access token and provider information.
-     */
-    jwt({ token, user }) {
-      // if (account && user) {
-      //   token.accessToken = user.accessToken;
-      //   token.provider = user.provider;
-      // }
-      if (user) {
-        token.key = user.key; // Store the key from the user object
-        token.provider = user.provider || 'credentials';
-      }
-      return token;
-    },
-  },
+			return token;
+		},
+	},
 };

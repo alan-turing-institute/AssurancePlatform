@@ -269,3 +269,10 @@ ACCOUNT_UNIQUE_USERNAME = True
 ASGI_APPLICATION = "tea_backend.asgi.application"
 
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
+# dj-rest-auth settings
+REST_AUTH = {
+    "LOGIN_SERIALIZER": "api.serializers.CustomLoginSerializer",
+    "USE_JWT": False,
+    "TOKEN_SERIALIZER": "api.serializers.CustomLoginSerializer",
+}

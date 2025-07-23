@@ -1,6 +1,7 @@
 import json
 from typing import Any, cast
 
+from django.contrib.auth import authenticate
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -1285,3 +1286,34 @@ def published_assurance_case_detail(request, id):  # noqa: ARG001
 
     serializer = PublishedAssuranceCaseSerializer(pac)
     return JsonResponse(serializer.data, safe=False)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def custom_login(request):
+    """Custom login view that returns user details along with the auth token."""
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    if not username or not password:
+        return Response(
+            {"error": "Username and password are required."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = authenticate(username=username, password=password)
+
+    if user:
+        token, created = Token.objects.get_or_create(user=user)
+        return Response(
+            {
+                "key": token.key,
+                "id": user.id,
+                "name": user.get_full_name() or user.username,
+                "email": user.email,
+            }
+        )
+    else:
+        return Response(
+            {"non_field_errors": ["Unable to log in with provided credentials."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

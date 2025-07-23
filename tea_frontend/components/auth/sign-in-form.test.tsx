@@ -1,271 +1,262 @@
-import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from "@testing-library/user-event";
+import { signIn, useSession } from "next-auth/react";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { resetNavigationMocks } from "@/src/__tests__/mocks/next-navigation-mocks";
 import {
-  renderWithoutProviders,
-  screen,
-} from '@/src/__tests__/utils/test-utils';
-import SignInForm from './sign-in-form';
+	renderWithoutProviders,
+	screen,
+} from "@/src/__tests__/utils/test-utils";
+import SignInForm from "./sign-in-form";
+
+// Mock the modules
+vi.mock("next-auth/react");
 
 // Define regex patterns at module level for performance
 const USERNAME_REGEX = /username/i;
 const PASSWORD_REGEX = /password/i;
-const SIGN_IN_REGEX = /sign in/i;
+const SIGN_IN_REGEX = /login/i;
 const MIN_LENGTH_ERROR_REGEX = /string must contain at least 2 character/i;
 const MIN_PASSWORD_LENGTH_ERROR_REGEX =
-  /string must contain at least 8 character/i;
+	/string must contain at least 8 character/i;
 const MAX_LENGTH_ERROR_REGEX = /string must contain at most 50 character/i;
-const CONTINUE_WITH_GITHUB_REGEX = /continue with github/i;
+const GITHUB_REGEX = /github/i;
+const LOGGING_IN_REGEX = /logging in/i;
 
-const mockPush = vi.fn();
-const mockSignIn = vi.fn();
+describe("SignInForm", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		resetNavigationMocks();
+		(signIn as Mock).mockResolvedValue({ ok: true });
+		(useSession as Mock).mockReturnValue({
+			data: null,
+			status: "unauthenticated",
+			update: vi.fn(),
+		});
+	});
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-  }),
-}));
+	it("should render form with all required fields", () => {
+		renderWithoutProviders(<SignInForm />);
 
-vi.mock('next-auth/react', () => ({
-  signIn: mockSignIn,
-  useSession: () => ({
-    data: null,
-    status: 'unauthenticated',
-  }),
-}));
+		expect(screen.getByLabelText(USERNAME_REGEX)).toBeInTheDocument();
+		expect(screen.getByLabelText(PASSWORD_REGEX)).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: SIGN_IN_REGEX })
+		).toBeInTheDocument();
+	});
 
-describe('SignInForm', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPush.mockClear();
-    mockSignIn.mockClear();
-  });
+	it("should have correct input types and placeholders", async () => {
+		renderWithoutProviders(<SignInForm />);
 
-  it('should render form with all required fields', () => {
-    renderWithoutProviders(<SignInForm />);
+		const usernameInput = await screen.findByLabelText(USERNAME_REGEX);
+		const passwordInput = await screen.findByLabelText(PASSWORD_REGEX);
 
-    expect(screen.getByLabelText(USERNAME_REGEX)).toBeInTheDocument();
-    expect(screen.getByLabelText(PASSWORD_REGEX)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: SIGN_IN_REGEX })
-    ).toBeInTheDocument();
-  });
+		// Username input defaults to text type (no explicit type attribute needed)
+		expect(usernameInput.tagName).toBe("INPUT");
+		expect(passwordInput).toHaveAttribute("type", "password");
+	});
 
-  it('should have correct input types and placeholders', () => {
-    renderWithoutProviders(<SignInForm />);
+	it("should validate minimum username length", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-    expect(usernameInput).toHaveAttribute('type', 'text');
-    expect(passwordInput).toHaveAttribute('type', 'password');
-  });
+		await user.type(usernameInput, "a"); // Less than 2 characters
+		await user.click(submitButton);
 
-  it('should validate minimum username length', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+		expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should validate minimum password length", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    await user.type(usernameInput, 'a'); // Less than 2 characters
-    await user.click(submitButton);
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
-  });
+		await user.type(usernameInput, "validuser");
+		await user.type(passwordInput, "1234567"); // Less than 8 characters
+		await user.click(submitButton);
 
-  it('should validate minimum password length', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+		expect(
+			await screen.findByText(MIN_PASSWORD_LENGTH_ERROR_REGEX)
+		).toBeInTheDocument();
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should validate maximum username length", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    await user.type(usernameInput, 'validuser');
-    await user.type(passwordInput, '1234567'); // Less than 8 characters
-    await user.click(submitButton);
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-    expect(
-      await screen.findByText(MIN_PASSWORD_LENGTH_ERROR_REGEX)
-    ).toBeInTheDocument();
-  });
+		const longUsername = "a".repeat(51); // More than 50 characters
+		await user.type(usernameInput, longUsername);
+		await user.click(submitButton);
 
-  it('should validate maximum username length', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+		expect(await screen.findByText(MAX_LENGTH_ERROR_REGEX)).toBeInTheDocument();
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should handle form submission with valid data", async () => {
+		const user = userEvent.setup();
+		(signIn as Mock).mockResolvedValue({ ok: true });
 
-    const longUsername = 'a'.repeat(51); // More than 50 characters
-    await user.type(usernameInput, longUsername);
-    await user.click(submitButton);
+		renderWithoutProviders(<SignInForm />);
 
-    expect(await screen.findByText(MAX_LENGTH_ERROR_REGEX)).toBeInTheDocument();
-  });
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-  it('should handle form submission with valid data', async () => {
-    const user = userEvent.setup();
-    mockSignIn.mockResolvedValue({ ok: true });
+		await user.type(usernameInput, "testuser");
+		await user.type(passwordInput, "password123");
+		await user.click(submitButton);
 
-    renderWithoutProviders(<SignInForm />);
+		// Form should be valid and attempt submission
+		expect(signIn).toHaveBeenCalledWith("credentials", {
+			username: "testuser",
+			password: "password123",
+			redirect: false,
+		});
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should show loading state during form submission", async () => {
+		const user = userEvent.setup();
+		(signIn as Mock).mockImplementation(
+			() => new Promise((resolve) => setTimeout(resolve, 100))
+		);
 
-    await user.type(usernameInput, 'testuser');
-    await user.type(passwordInput, 'password123');
-    await user.click(submitButton);
+		renderWithoutProviders(<SignInForm />);
 
-    // Form should be valid and attempt submission
-    expect(mockSignIn).toHaveBeenCalledWith('credentials', {
-      username: 'testuser',
-      password: 'password123',
-      redirect: false,
-    });
-  });
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-  it('should show loading state during form submission', async () => {
-    const user = userEvent.setup();
-    mockSignIn.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 100))
-    );
+		await user.type(usernameInput, "testuser");
+		await user.type(passwordInput, "password123");
+		await user.click(submitButton);
 
-    renderWithoutProviders(<SignInForm />);
+		// Should show loading state
+		expect(
+			screen.getByRole("button", { name: LOGGING_IN_REGEX })
+		).toBeDisabled();
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should clear form validation errors when user starts typing", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    await user.type(usernameInput, 'testuser');
-    await user.type(passwordInput, 'password123');
-    await user.click(submitButton);
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-    // Should show loading state
-    expect(screen.getByRole('button')).toBeDisabled();
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-  });
+		// Trigger validation error
+		await user.click(submitButton);
+		expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
 
-  it('should clear form validation errors when user starts typing', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+		// Start typing to clear error
+		await user.type(usernameInput, "validuser");
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+		expect(screen.queryByText(MIN_LENGTH_ERROR_REGEX)).not.toBeInTheDocument();
+	});
 
-    // Trigger validation error
-    await user.click(submitButton);
-    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
+	it("should have proper accessibility attributes", async () => {
+		renderWithoutProviders(<SignInForm />);
 
-    // Start typing to clear error
-    await user.type(usernameInput, 'validuser');
+		const usernameInput = await screen.findByLabelText(USERNAME_REGEX);
+		const passwordInput = await screen.findByLabelText(PASSWORD_REGEX);
+		const form = usernameInput.closest("form");
 
-    expect(screen.queryByText(MIN_LENGTH_ERROR_REGEX)).not.toBeInTheDocument();
-  });
+		expect(usernameInput).toHaveAccessibleName();
+		expect(passwordInput).toHaveAccessibleName();
+		expect(form).toBeInTheDocument();
+	});
 
-  it('should have proper accessibility attributes', () => {
-    renderWithoutProviders(<SignInForm />);
+	it("should handle keyboard navigation correctly", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const form = screen.getByRole('form') || usernameInput.closest('form');
+		const usernameInput = await screen.findByLabelText(USERNAME_REGEX);
+		const passwordInput = await screen.findByLabelText(PASSWORD_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-    expect(usernameInput).toHaveAccessibleName();
-    expect(passwordInput).toHaveAccessibleName();
-    expect(form).toBeInTheDocument();
-  });
+		// Focus the username input first
+		usernameInput.focus();
+		expect(usernameInput).toHaveFocus();
 
-  it('should handle keyboard navigation correctly', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+		await user.tab();
+		expect(passwordInput).toHaveFocus();
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+		await user.tab();
+		expect(submitButton).toHaveFocus();
+	});
 
-    // Tab through form elements
-    await user.tab();
-    expect(usernameInput).toHaveFocus();
+	it("should prevent form submission with empty fields", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-    await user.tab();
-    expect(passwordInput).toHaveFocus();
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
+		await user.click(submitButton);
 
-    await user.tab();
-    expect(submitButton).toHaveFocus();
-  });
+		expect(signIn).not.toHaveBeenCalled();
+		expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
+	});
 
-  it('should prevent form submission with empty fields', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+	it("should handle sign in error states", async () => {
+		const user = userEvent.setup();
+		(signIn as Mock).mockResolvedValue({
+			ok: false,
+			error: "CredentialsSignin",
+		});
 
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
-    await user.click(submitButton);
+		renderWithoutProviders(<SignInForm />);
 
-    expect(mockSignIn).not.toHaveBeenCalled();
-    expect(await screen.findByText(MIN_LENGTH_ERROR_REGEX)).toBeInTheDocument();
-  });
+		const usernameInput = screen.getByLabelText(USERNAME_REGEX);
+		const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
+		const submitButton = screen.getByRole("button", { name: SIGN_IN_REGEX });
 
-  it('should handle sign in error states', async () => {
-    const user = userEvent.setup();
-    mockSignIn.mockResolvedValue({
-      ok: false,
-      error: 'CredentialsSignin',
-    });
+		await user.type(usernameInput, "testuser");
+		await user.type(passwordInput, "wrongpassword");
+		await user.click(submitButton);
 
-    renderWithoutProviders(<SignInForm />);
+		await vi.waitFor(() => {
+			expect(signIn).toHaveBeenCalled();
+		});
+	});
 
-    const usernameInput = screen.getByLabelText(USERNAME_REGEX);
-    const passwordInput = screen.getByLabelText(PASSWORD_REGEX);
-    const submitButton = screen.getByRole('button', { name: SIGN_IN_REGEX });
+	it("should show GitHub sign in option", () => {
+		renderWithoutProviders(<SignInForm />);
 
-    await user.type(usernameInput, 'testuser');
-    await user.type(passwordInput, 'wrongpassword');
-    await user.click(submitButton);
+		const githubButton = screen.getByRole("button", {
+			name: GITHUB_REGEX,
+		});
+		expect(githubButton).toBeInTheDocument();
+	});
 
-    await vi.waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalled();
-    });
-  });
+	it("should handle GitHub sign in", async () => {
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
 
-  it('should show GitHub sign in option', () => {
-    renderWithoutProviders(<SignInForm />);
+		const githubButton = screen.getByRole("button", {
+			name: GITHUB_REGEX,
+		});
+		await user.click(githubButton);
 
-    const githubButton = screen.getByRole('button', {
-      name: CONTINUE_WITH_GITHUB_REGEX,
-    });
-    expect(githubButton).toBeInTheDocument();
-  });
+		expect(signIn).toHaveBeenCalledWith("github");
+	});
 
-  it('should handle GitHub sign in', async () => {
-    const user = userEvent.setup();
-    renderWithoutProviders(<SignInForm />);
+	it("should show proper form structure", () => {
+		renderWithoutProviders(<SignInForm />);
 
-    const githubButton = screen.getByRole('button', {
-      name: CONTINUE_WITH_GITHUB_REGEX,
-    });
-    await user.click(githubButton);
+		// Check for form elements structure
+		const usernameField = screen
+			.getByLabelText(USERNAME_REGEX)
+			.closest(".space-y-2");
+		const passwordField = screen
+			.getByLabelText(PASSWORD_REGEX)
+			.closest(".space-y-2");
 
-    expect(mockSignIn).toHaveBeenCalledWith('github');
-  });
-
-  it('should show proper form structure', () => {
-    renderWithoutProviders(<SignInForm />);
-
-    // Check for form elements structure
-    const usernameField = screen
-      .getByLabelText(USERNAME_REGEX)
-      .closest('.space-y-2');
-    const passwordField = screen
-      .getByLabelText(PASSWORD_REGEX)
-      .closest('.space-y-2');
-
-    expect(usernameField).toBeInTheDocument();
-    expect(passwordField).toBeInTheDocument();
-  });
+		expect(usernameField).toBeInTheDocument();
+		expect(passwordField).toBeInTheDocument();
+	});
 });

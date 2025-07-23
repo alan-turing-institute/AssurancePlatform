@@ -1,117 +1,119 @@
-import { useEffect, useState } from 'react';
-import type { AssuranceCase } from '@/types/domain';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { AssuranceCase } from "@/types/domain";
 
 interface PublicCaseViewMockProps {
-  caseId: number;
+	caseId: number;
 }
 
 export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
-  const [caseData, setCaseData] = useState<AssuranceCase | null>(null);
-  const [loading, setLoading] = useState(true);
+	const router = useRouter();
+	const [caseData, setCaseData] = useState<AssuranceCase | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [successMessage, setSuccessMessage] = useState("");
 
-  useEffect(() => {
-    const fetchCase = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${caseId}/`
-        );
-        const data = await response.json();
-        setCaseData(data);
-      } catch (_error) {
-        // Failed to fetch case
-      } finally {
-        setLoading(false);
-      }
-    };
+	useEffect(() => {
+		const fetchCase = async () => {
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${caseId}/`
+				);
+				const data = await response.json();
+				setCaseData(data);
+			} catch (_error) {
+				// Handle error - in real implementation would set error state
+			} finally {
+				setLoading(false);
+			}
+		};
 
-    fetchCase();
-  }, [caseId]);
+		fetchCase();
+	}, [caseId]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+	const handleCreateCaseStudy = () => {
+		setShowCreateModal(true);
+	};
 
-  if (!caseData) {
-    return <div>Case not found</div>;
-  }
+	const handleSubmitCaseStudy = async (e: React.FormEvent) => {
+		e.preventDefault();
+		const form = e.target as HTMLFormElement;
+		const formData = new FormData(form);
 
-  return (
-    <div>
-      <h1>{caseData.name}</h1>
-      <p>{caseData.description}</p>
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: "Token mock-jwt-token",
+					},
+					body: formData,
+				}
+			);
 
-      <button
-        aria-label="Create case study"
-        onClick={() => {
-          // Show modal dialog
-          const dialog = document.createElement('div');
-          dialog.setAttribute('role', 'dialog');
-          dialog.innerHTML = `
-            <h2>Create Case Study</h2>
-            <form id="case-study-form">
-              <label>
-                Title
-                <input type="text" name="title" aria-label="Title" />
-              </label>
-              <label>
-                Description
-                <textarea name="description" aria-label="Description"></textarea>
-              </label>
-              <button type="submit" aria-label="Create">Create</button>
-            </form>
-          `;
+			if (response.ok) {
+				const result = await response.json();
+				setSuccessMessage("Case study created successfully");
+				setShowCreateModal(false);
+				// Use router.push instead of window.history.pushState
+				router.push(`/dashboard/case-studies/${result.id}`);
+			}
+		} catch (_error) {
+			// Handle error in real implementation
+		}
+	};
 
-          document.body.appendChild(dialog);
+	if (loading) {
+		return <div>Loading case...</div>;
+	}
 
-          const form = dialog.querySelector('form');
-          form?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
+	if (!caseData) {
+		return <div>Case not found</div>;
+	}
 
-            try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`,
-                {
-                  method: 'POST',
-                  headers: {
-                    Authorization: 'Token mock-jwt-token',
-                  },
-                  body: formData,
-                }
-              );
+	return (
+		<div>
+			<h1>{caseData.name}</h1>
+			<p>{caseData.description}</p>
 
-              if (response.ok) {
-                const result = await response.json();
-                const successMsg = document.createElement('div');
-                successMsg.textContent = 'Case study created successfully';
-                document.body.appendChild(successMsg);
+			<button onClick={handleCreateCaseStudy} aria-label="Create case study">
+				Create Case Study
+			</button>
 
-                // Simulate navigation
-                window.history.pushState(
-                  {},
-                  '',
-                  `/dashboard/case-studies/${result.id}`
-                );
-              }
-            } catch (_error) {
-              // Failed to create case study
-            }
-          });
-        }}
-        type="button"
-      >
-        Create Case Study
-      </button>
+			{successMessage && (
+				<div role="alert" aria-live="polite">
+					{successMessage}
+				</div>
+			)}
 
-      {/* Display public case information */}
-      {caseData.goals && (
-        <div>
-          <h2>Goals</h2>
-          {caseData.goals.map((goal) => (
-            <div key={goal.id}>{goal.name}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+			{showCreateModal && (
+				<div role="dialog" aria-labelledby="case-study-modal-title">
+					<div>
+						<h2 id="case-study-modal-title">Create Case Study</h2>
+						<form onSubmit={handleSubmitCaseStudy} aria-label="Case study form">
+							<label>
+								Title
+								<input type="text" name="title" aria-label="Title" required />
+							</label>
+							<label>
+								Description
+								<textarea name="description" aria-label="Description" />
+							</label>
+							<button type="submit" aria-label="Create">
+								Create
+							</button>
+							<button
+								type="button"
+								onClick={() => setShowCreateModal(false)}
+								aria-label="Close modal"
+							>
+								Cancel
+							</button>
+						</form>
+					</div>
+				</div>
+			)}
+		</div>
+	);
 };

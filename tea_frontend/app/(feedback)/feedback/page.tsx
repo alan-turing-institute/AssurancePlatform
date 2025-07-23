@@ -1,9 +1,9 @@
 const FeedbackPage = () => {
-  return (
-    <div>
-      <h2>Feedback</h2>
-    </div>
-  );
+	return (
+		<div>
+			<h2>Feedback</h2>
+		</div>
+	);
 };
 
 export default FeedbackPage;

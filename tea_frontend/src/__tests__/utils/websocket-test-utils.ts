@@ -5,1176 +5,1198 @@
  * real-time collaboration features, and optimistic updates in the TEA Platform.
  */
 
-import { vi, expect } from 'vitest';
-import type { Mock } from 'vitest';
+import type { Mock } from "vitest";
+import { expect, vi } from "vitest";
+import type { AssuranceCase } from "@/types/domain";
 
 /**
  * WebSocket ready states
  */
-export enum WS_READY_STATE {
-  CONNECTING = 0,
-  OPEN = 1,
-  CLOSING = 2,
-  CLOSED = 3,
-}
+export const WS_READY_STATE = {
+	CONNECTING: 0,
+	OPEN: 1,
+	CLOSING: 2,
+	CLOSED: 3,
+} as const;
+
+export type WS_READY_STATE =
+	(typeof WS_READY_STATE)[keyof typeof WS_READY_STATE];
 
 /**
  * Message types used in the TEA Platform WebSocket communication
  */
-export enum MessageType {
-  PING = 'ping',
-  CASE_MESSAGE = 'case_message',
-  USER_UPDATE = 'user_update',
-  CURSOR_UPDATE = 'cursor_update',
-  PRESENCE_UPDATE = 'presence_update',
-}
+export const MessageType = {
+	PING: "ping",
+	CASE_MESSAGE: "case_message",
+	USER_UPDATE: "user_update",
+	CURSOR_UPDATE: "cursor_update",
+	PRESENCE_UPDATE: "presence_update",
+} as const;
+
+export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 /**
  * Mock WebSocket server configuration options
  */
 export interface MockWebSocketServerOptions {
-  url?: string;
-  autoConnect?: boolean;
-  connectionDelay?: number;
-  reconnectAttempts?: number;
-  reconnectDelay?: number;
+	url?: string;
+	autoConnect?: boolean;
+	connectionDelay?: number;
+	reconnectAttempts?: number;
+	reconnectDelay?: number;
 }
 
 /**
  * User presence information for collaboration features
  */
 export interface UserPresence {
-  id: string;
-  username: string;
-  cursor?: {
-    x: number;
-    y: number;
-    elementId?: string;
-  };
-  lastActivity: Date;
-  status: 'active' | 'idle' | 'away';
+	id: string;
+	username: string;
+	cursor?: {
+		x: number;
+		y: number;
+		elementId?: string;
+	};
+	lastActivity: Date;
+	status: "active" | "idle" | "away";
 }
 
 /**
  * WebSocket message structure
  */
-export interface WebSocketMessage<T = any> {
-  type: string;
-  content: T;
-  timestamp?: number;
-  userId?: string;
+export interface WebSocketMessage<T = unknown> {
+	type: string;
+	content: T;
+	timestamp?: number;
+	userId?: string;
 }
 
 /**
  * Mock WebSocket instance with enhanced testing capabilities
  */
 export class MockWebSocket implements Partial<WebSocket> {
-  url: string;
-  readyState: number = WS_READY_STATE.CONNECTING;
+	url: string;
+	readyState: number = WS_READY_STATE.CONNECTING;
 
-  private eventListeners: Map<string, Set<EventListener>> = new Map();
-  private messageQueue: WebSocketMessage[] = [];
-  private sentMessages: WebSocketMessage[] = [];
+	private eventListeners: Map<string, Set<EventListener>> = new Map();
+	private sentMessages: WebSocketMessage[] = [];
 
-  // Mock functions
-  send: Mock;
-  close: Mock;
+	// Mock functions
+	send: Mock;
+	close: Mock;
 
-  constructor(url: string) {
-    this.url = url;
-    this.send = vi.fn(this.handleSend.bind(this));
-    this.close = vi.fn(this.handleClose.bind(this));
-  }
+	constructor(url: string) {
+		this.url = url;
+		this.send = vi.fn(this.handleSend.bind(this));
+		this.close = vi.fn(this.handleClose.bind(this));
+	}
 
-  addEventListener(type: string, listener: EventListener): void {
-    if (!this.eventListeners.has(type)) {
-      this.eventListeners.set(type, new Set());
-    }
-    this.eventListeners.get(type)!.add(listener);
-  }
+	addEventListener(type: string, listener: EventListener): void {
+		if (!this.eventListeners.has(type)) {
+			this.eventListeners.set(type, new Set());
+		}
+		this.eventListeners.get(type)?.add(listener);
+	}
 
-  removeEventListener(type: string, listener: EventListener): void {
-    this.eventListeners.get(type)?.delete(listener);
-  }
+	removeEventListener(type: string, listener: EventListener): void {
+		this.eventListeners.get(type)?.delete(listener);
+	}
 
-  dispatchEvent(event: Event): boolean {
-    const listeners = this.eventListeners.get(event.type);
-    if (listeners) {
-      listeners.forEach((listener) => listener(event));
-    }
-    return true;
-  }
+	dispatchEvent(event: Event): boolean {
+		const listeners = this.eventListeners.get(event.type);
+		if (listeners) {
+			for (const listener of listeners) {
+				listener(event);
+			}
+		}
+		return true;
+	}
 
-  private handleSend(
-    data: string | ArrayBufferLike | Blob | ArrayBufferView
-  ): void {
-    if (this.readyState !== WS_READY_STATE.OPEN) {
-      throw new Error('WebSocket is not open');
-    }
+	private handleSend(
+		data: string | ArrayBufferLike | Blob | ArrayBufferView
+	): void {
+		if (this.readyState !== WS_READY_STATE.OPEN) {
+			throw new Error("WebSocket is not open");
+		}
 
-    try {
-      const message = typeof data === 'string' ? JSON.parse(data) : data;
-      this.sentMessages.push(message);
-    } catch {
-      // Handle non-JSON messages
-      this.sentMessages.push({ type: 'raw', content: data });
-    }
-  }
+		try {
+			const message = typeof data === "string" ? JSON.parse(data) : data;
+			this.sentMessages.push(message);
+		} catch {
+			// Handle non-JSON messages
+			this.sentMessages.push({ type: "raw", content: data });
+		}
+	}
 
-  private handleClose(code?: number, reason?: string): void {
-    this.readyState = WS_READY_STATE.CLOSING;
+	private handleClose(code?: number, reason?: string): void {
+		this.readyState = WS_READY_STATE.CLOSING;
 
-    setTimeout(() => {
-      this.readyState = WS_READY_STATE.CLOSED;
-      const closeEvent = new CloseEvent('close', { code, reason });
-      this.dispatchEvent(closeEvent);
-    }, 0);
-  }
+		setTimeout(() => {
+			this.readyState = WS_READY_STATE.CLOSED;
+			const closeEvent = new CloseEvent("close", { code, reason });
+			this.dispatchEvent(closeEvent);
+		}, 0);
+	}
 
-  /**
-   * Simulate receiving a message from the server
-   */
-  receiveMessage(data: any): void {
-    const messageEvent = new MessageEvent('message', {
-      data: typeof data === 'string' ? data : JSON.stringify(data),
-    });
-    this.dispatchEvent(messageEvent);
-  }
+	/**
+	 * Simulate receiving a message from the server
+	 */
+	receiveMessage(data: unknown): void {
+		const messageEvent = new MessageEvent("message", {
+			data: typeof data === "string" ? data : JSON.stringify(data),
+		});
+		this.dispatchEvent(messageEvent);
+	}
 
-  /**
-   * Simulate connection opening
-   */
-  simulateOpen(): void {
-    this.readyState = WS_READY_STATE.OPEN;
-    const openEvent = new Event('open');
-    this.dispatchEvent(openEvent);
-  }
+	/**
+	 * Simulate connection opening
+	 */
+	simulateOpen(): void {
+		this.readyState = WS_READY_STATE.OPEN;
+		const openEvent = new Event("open");
+		this.dispatchEvent(openEvent);
+	}
 
-  /**
-   * Simulate connection error
-   */
-  simulateError(error?: any): void {
-    const errorEvent = new ErrorEvent('error', { error });
-    this.dispatchEvent(errorEvent);
-  }
+	/**
+	 * Simulate connection error
+	 */
+	simulateError(error?: Error): void {
+		const errorEvent = new ErrorEvent("error", { error });
+		this.dispatchEvent(errorEvent);
+	}
 
-  /**
-   * Get all sent messages
-   */
-  getSentMessages(): WebSocketMessage[] {
-    return [...this.sentMessages];
-  }
+	/**
+	 * Get all sent messages
+	 */
+	getSentMessages(): WebSocketMessage[] {
+		return [...this.sentMessages];
+	}
 
-  /**
-   * Clear sent messages history
-   */
-  clearSentMessages(): void {
-    this.sentMessages = [];
-  }
+	/**
+	 * Clear sent messages history
+	 */
+	clearSentMessages(): void {
+		this.sentMessages = [];
+	}
 }
 
 /**
  * Mock WebSocket server for simulating server-side behavior
  */
 export class MockWebSocketServer {
-  private connections: Map<string, MockWebSocket> = new Map();
-  private options: Required<MockWebSocketServerOptions>;
-  private reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
+	private connections: Map<string, MockWebSocket> = new Map();
+	private options: Required<MockWebSocketServerOptions>;
+	private reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
-  constructor(options: MockWebSocketServerOptions = {}) {
-    this.options = {
-      url: 'ws://localhost:8000/ws',
-      autoConnect: true,
-      connectionDelay: 0,
-      reconnectAttempts: 3,
-      reconnectDelay: 1000,
-      ...options,
-    };
-  }
+	constructor(options: MockWebSocketServerOptions = {}) {
+		this.options = {
+			url: "ws://localhost:8000/ws",
+			autoConnect: true,
+			connectionDelay: 0,
+			reconnectAttempts: 3,
+			reconnectDelay: 1000,
+			...options,
+		};
+	}
 
-  /**
-   * Create a new WebSocket connection
-   */
-  createConnection(id: string = 'default'): MockWebSocket {
-    const ws = new MockWebSocket(this.options.url);
-    this.connections.set(id, ws);
+	/**
+	 * Create a new WebSocket connection
+	 */
+	createConnection(id = "default"): MockWebSocket {
+		const ws = new MockWebSocket(this.options.url);
+		this.connections.set(id, ws);
 
-    if (this.options.autoConnect) {
-      setTimeout(() => {
-        ws.simulateOpen();
-      }, this.options.connectionDelay);
-    }
+		if (this.options.autoConnect) {
+			setTimeout(() => {
+				ws.simulateOpen();
+			}, this.options.connectionDelay);
+		}
 
-    return ws;
-  }
+		return ws;
+	}
 
-  /**
-   * Get a connection by ID
-   */
-  getConnection(id: string = 'default'): MockWebSocket | undefined {
-    return this.connections.get(id);
-  }
+	/**
+	 * Get a connection by ID
+	 */
+	getConnection(id = "default"): MockWebSocket | undefined {
+		return this.connections.get(id);
+	}
 
-  /**
-   * Simulate broadcasting a message to all connected clients
-   */
-  broadcast(message: WebSocketMessage, excludeId?: string): void {
-    this.connections.forEach((ws, id) => {
-      if (id !== excludeId && ws.readyState === WS_READY_STATE.OPEN) {
-        ws.receiveMessage(message);
-      }
-    });
-  }
+	/**
+	 * Simulate broadcasting a message to all connected clients
+	 */
+	broadcast(message: WebSocketMessage, excludeId?: string): void {
+		this.connections.forEach((ws, id) => {
+			if (id !== excludeId && ws.readyState === WS_READY_STATE.OPEN) {
+				ws.receiveMessage(message);
+			}
+		});
+	}
 
-  /**
-   * Simulate server sending a message to a specific client
-   */
-  sendToClient(clientId: string, message: WebSocketMessage): void {
-    const ws = this.connections.get(clientId);
-    if (ws && ws.readyState === WS_READY_STATE.OPEN) {
-      ws.receiveMessage(message);
-    }
-  }
+	/**
+	 * Simulate server sending a message to a specific client
+	 */
+	sendToClient(clientId: string, message: WebSocketMessage): void {
+		const ws = this.connections.get(clientId);
+		if (ws && ws.readyState === WS_READY_STATE.OPEN) {
+			ws.receiveMessage(message);
+		}
+	}
 
-  /**
-   * Simulate connection drop and reconnection
-   */
-  async simulateReconnection(
-    clientId: string = 'default',
-    dropDuration: number = 100
-  ): Promise<void> {
-    const ws = this.connections.get(clientId);
-    if (!ws) return;
+	/**
+	 * Simulate connection drop and reconnection
+	 */
+	async simulateReconnection(
+		clientId = "default",
+		dropDuration = 100
+	): Promise<void> {
+		const ws = this.connections.get(clientId);
+		if (!ws) {
+			return;
+		}
 
-    // Simulate connection drop
-    ws.readyState = WS_READY_STATE.CLOSED;
-    ws.simulateError(new Error('Connection lost'));
-    const closeEvent = new CloseEvent('close', {
-      code: 1006,
-      reason: 'Connection lost',
-    });
-    ws.dispatchEvent(closeEvent);
+		// Simulate connection drop
+		ws.readyState = WS_READY_STATE.CLOSED;
+		ws.simulateError(new Error("Connection lost"));
+		const closeEvent = new CloseEvent("close", {
+			code: 1006,
+			reason: "Connection lost",
+		});
+		ws.dispatchEvent(closeEvent);
 
-    // Wait for drop duration
-    await new Promise((resolve) => setTimeout(resolve, dropDuration));
+		// Wait for drop duration
+		await new Promise((resolve) => setTimeout(resolve, dropDuration));
 
-    // Simulate reconnection
-    ws.readyState = WS_READY_STATE.CONNECTING;
+		// Simulate reconnection
+		ws.readyState = WS_READY_STATE.CONNECTING;
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, this.options.connectionDelay)
-    );
+		await new Promise((resolve) =>
+			setTimeout(resolve, this.options.connectionDelay)
+		);
 
-    ws.simulateOpen();
-  }
+		ws.simulateOpen();
+	}
 
-  /**
-   * Clean up all connections
-   */
-  cleanup(): void {
-    this.reconnectTimers.forEach((timer) => clearTimeout(timer));
-    this.reconnectTimers.clear();
-    this.connections.clear();
-  }
+	/**
+	 * Clean up all connections
+	 */
+	cleanup(): void {
+		for (const timer of this.reconnectTimers.values()) {
+			clearTimeout(timer);
+		}
+		this.reconnectTimers.clear();
+		this.connections.clear();
+	}
 }
 
 /**
  * Message queue for testing message ordering and buffering
  */
-export class MessageQueue<T = any> {
-  private queue: WebSocketMessage<T>[] = [];
-  private processing = false;
-  private processor?: (message: WebSocketMessage<T>) => Promise<void>;
+export class MessageQueue<T = unknown> {
+	private queue: WebSocketMessage<T>[] = [];
+	private processing = false;
+	private processor?: (message: WebSocketMessage<T>) => Promise<void>;
 
-  constructor(processor?: (message: WebSocketMessage<T>) => Promise<void>) {
-    this.processor = processor;
-  }
+	constructor(processor?: (message: WebSocketMessage<T>) => Promise<void>) {
+		this.processor = processor;
+	}
 
-  /**
-   * Add a message to the queue
-   */
-  enqueue(message: WebSocketMessage<T>): void {
-    this.queue.push(message);
-    this.processQueue();
-  }
+	/**
+	 * Add a message to the queue
+	 */
+	enqueue(message: WebSocketMessage<T>): void {
+		this.queue.push(message);
+		this.processQueue();
+	}
 
-  /**
-   * Process messages in the queue
-   */
-  private async processQueue(): Promise<void> {
-    if (this.processing || !this.processor) return;
+	/**
+	 * Process messages in the queue
+	 */
+	private async processQueue(): Promise<void> {
+		if (this.processing || !this.processor) {
+			return;
+		}
 
-    this.processing = true;
+		this.processing = true;
 
-    while (this.queue.length > 0) {
-      const message = this.queue.shift()!;
-      await this.processor(message);
-    }
+		while (this.queue.length > 0) {
+			const message = this.queue.shift();
+			if (!message) {
+				continue;
+			}
+			// Sequential processing is required for message ordering
+			// biome-ignore lint/nursery/noAwaitInLoop: sequential processing needed
+			await this.processor(message);
+		}
 
-    this.processing = false;
-  }
+		this.processing = false;
+	}
 
-  /**
-   * Get current queue size
-   */
-  size(): number {
-    return this.queue.length;
-  }
+	/**
+	 * Get current queue size
+	 */
+	size(): number {
+		return this.queue.length;
+	}
 
-  /**
-   * Clear the queue
-   */
-  clear(): void {
-    this.queue = [];
-  }
+	/**
+	 * Clear the queue
+	 */
+	clear(): void {
+		this.queue = [];
+	}
 
-  /**
-   * Get all messages in queue
-   */
-  getMessages(): WebSocketMessage<T>[] {
-    return [...this.queue];
-  }
+	/**
+	 * Get all messages in queue
+	 */
+	getMessages(): WebSocketMessage<T>[] {
+		return [...this.queue];
+	}
 }
 
 /**
  * Collaboration testing utilities
  */
 export class CollaborationTestUtils {
-  private presenceMap: Map<string, UserPresence> = new Map();
-  private cursorPositions: Map<string, { x: number; y: number }> = new Map();
+	private presenceMap: Map<string, UserPresence> = new Map();
+	private cursorPositions: Map<string, { x: number; y: number }> = new Map();
 
-  /**
-   * Simulate user joining the session
-   */
-  simulateUserJoin(
-    user: Omit<UserPresence, 'lastActivity' | 'status'>
-  ): UserPresence {
-    const presence: UserPresence = {
-      ...user,
-      lastActivity: new Date(),
-      status: 'active',
-    };
+	/**
+	 * Simulate user joining the session
+	 */
+	simulateUserJoin(
+		user: Omit<UserPresence, "lastActivity" | "status">
+	): UserPresence {
+		const presence: UserPresence = {
+			...user,
+			lastActivity: new Date(),
+			status: "active",
+		};
 
-    this.presenceMap.set(user.id, presence);
-    return presence;
-  }
+		this.presenceMap.set(user.id, presence);
+		return presence;
+	}
 
-  /**
-   * Simulate user leaving the session
-   */
-  simulateUserLeave(userId: string): void {
-    this.presenceMap.delete(userId);
-    this.cursorPositions.delete(userId);
-  }
+	/**
+	 * Simulate user leaving the session
+	 */
+	simulateUserLeave(userId: string): void {
+		this.presenceMap.delete(userId);
+		this.cursorPositions.delete(userId);
+	}
 
-  /**
-   * Simulate cursor movement
-   */
-  simulateCursorMove(
-    userId: string,
-    x: number,
-    y: number,
-    elementId?: string
-  ): void {
-    const presence = this.presenceMap.get(userId);
-    if (presence) {
-      presence.cursor = { x, y, elementId };
-      presence.lastActivity = new Date();
-    }
-    this.cursorPositions.set(userId, { x, y });
-  }
+	/**
+	 * Simulate cursor movement
+	 */
+	simulateCursorMove(
+		userId: string,
+		x: number,
+		y: number,
+		elementId?: string
+	): void {
+		const presence = this.presenceMap.get(userId);
+		if (presence) {
+			presence.cursor = { x, y, elementId };
+			presence.lastActivity = new Date();
+		}
+		this.cursorPositions.set(userId, { x, y });
+	}
 
-  /**
-   * Get all active users
-   */
-  getActiveUsers(): UserPresence[] {
-    return Array.from(this.presenceMap.values()).filter(
-      (user) => user.status === 'active'
-    );
-  }
+	/**
+	 * Get all active users
+	 */
+	getActiveUsers(): UserPresence[] {
+		return Array.from(this.presenceMap.values()).filter(
+			(user) => user.status === "active"
+		);
+	}
 
-  /**
-   * Simulate user idle state
-   */
-  simulateUserIdle(userId: string): void {
-    const presence = this.presenceMap.get(userId);
-    if (presence) {
-      presence.status = 'idle';
-    }
-  }
+	/**
+	 * Simulate user idle state
+	 */
+	simulateUserIdle(userId: string): void {
+		const presence = this.presenceMap.get(userId);
+		if (presence) {
+			presence.status = "idle";
+		}
+	}
 
-  /**
-   * Clear all presence data
-   */
-  clearPresence(): void {
-    this.presenceMap.clear();
-    this.cursorPositions.clear();
-  }
+	/**
+	 * Clear all presence data
+	 */
+	clearPresence(): void {
+		this.presenceMap.clear();
+		this.cursorPositions.clear();
+	}
 }
 
 /**
  * Optimistic update testing utilities
  */
 export class OptimisticUpdateTestUtils<T = any> {
-  private pendingUpdates: Map<string, T> = new Map();
-  private confirmedState: T;
-  private rollbackState: T;
+	private pendingUpdates: Map<string, T> = new Map();
+	private confirmedState: T;
+	private rollbackState: T;
 
-  constructor(initialState: T) {
-    this.confirmedState = initialState;
-    this.rollbackState = initialState;
-  }
+	constructor(initialState: T) {
+		this.confirmedState = initialState;
+		this.rollbackState = initialState;
+	}
 
-  /**
-   * Apply an optimistic update
-   */
-  applyOptimisticUpdate(updateId: string, update: Partial<T>): T {
-    const newState = { ...this.confirmedState, ...update };
-    this.pendingUpdates.set(updateId, newState);
-    return newState;
-  }
+	/**
+	 * Apply an optimistic update
+	 */
+	applyOptimisticUpdate(updateId: string, update: Partial<T>): T {
+		const newState = { ...this.confirmedState, ...update };
+		this.pendingUpdates.set(updateId, newState);
+		return newState;
+	}
 
-  /**
-   * Confirm an optimistic update
-   */
-  confirmUpdate(updateId: string, serverState: T): T {
-    this.pendingUpdates.delete(updateId);
-    this.confirmedState = serverState;
-    this.rollbackState = serverState;
-    return this.confirmedState;
-  }
+	/**
+	 * Confirm an optimistic update
+	 */
+	confirmUpdate(updateId: string, serverState: T): T {
+		this.pendingUpdates.delete(updateId);
+		this.confirmedState = serverState;
+		this.rollbackState = serverState;
+		return this.confirmedState;
+	}
 
-  /**
-   * Rollback an optimistic update
-   */
-  rollbackUpdate(updateId: string): T {
-    this.pendingUpdates.delete(updateId);
-    return this.rollbackState;
-  }
+	/**
+	 * Rollback an optimistic update
+	 */
+	rollbackUpdate(updateId: string): T {
+		this.pendingUpdates.delete(updateId);
+		return this.rollbackState;
+	}
 
-  /**
-   * Get current state including pending updates
-   */
-  getCurrentState(): T {
-    if (this.pendingUpdates.size === 0) {
-      return this.confirmedState;
-    }
+	/**
+	 * Get current state including pending updates
+	 */
+	getCurrentState(): T {
+		if (this.pendingUpdates.size === 0) {
+			return this.confirmedState;
+		}
 
-    // Return the most recent pending update
-    const updates = Array.from(this.pendingUpdates.values());
-    return updates[updates.length - 1];
-  }
+		// Return the most recent pending update
+		const updates = Array.from(this.pendingUpdates.values());
+		return updates.at(-1) as T;
+	}
 
-  /**
-   * Check if there are pending updates
-   */
-  hasPendingUpdates(): boolean {
-    return this.pendingUpdates.size > 0;
-  }
+	/**
+	 * Check if there are pending updates
+	 */
+	hasPendingUpdates(): boolean {
+		return this.pendingUpdates.size > 0;
+	}
 
-  /**
-   * Clear all updates
-   */
-  reset(state: T): void {
-    this.pendingUpdates.clear();
-    this.confirmedState = state;
-    this.rollbackState = state;
-  }
+	/**
+	 * Clear all updates
+	 */
+	reset(state: T): void {
+		this.pendingUpdates.clear();
+		this.confirmedState = state;
+		this.rollbackState = state;
+	}
 }
 
 /**
  * WebSocket connection state assertions
  */
 export const assertConnectionState = {
-  /**
-   * Assert WebSocket is open
-   */
-  isOpen(ws: MockWebSocket): void {
-    expect(ws.readyState).toBe(WS_READY_STATE.OPEN);
-  },
+	/**
+	 * Assert WebSocket is open
+	 */
+	isOpen(ws: MockWebSocket): void {
+		expect(ws.readyState).toBe(WS_READY_STATE.OPEN);
+	},
 
-  /**
-   * Assert WebSocket is closed
-   */
-  isClosed(ws: MockWebSocket): void {
-    expect(ws.readyState).toBe(WS_READY_STATE.CLOSED);
-  },
+	/**
+	 * Assert WebSocket is closed
+	 */
+	isClosed(ws: MockWebSocket): void {
+		expect(ws.readyState).toBe(WS_READY_STATE.CLOSED);
+	},
 
-  /**
-   * Assert WebSocket is connecting
-   */
-  isConnecting(ws: MockWebSocket): void {
-    expect(ws.readyState).toBe(WS_READY_STATE.CONNECTING);
-  },
+	/**
+	 * Assert WebSocket is connecting
+	 */
+	isConnecting(ws: MockWebSocket): void {
+		expect(ws.readyState).toBe(WS_READY_STATE.CONNECTING);
+	},
 
-  /**
-   * Assert message was sent
-   */
-  hasSentMessage(
-    ws: MockWebSocket,
-    expectedMessage: Partial<WebSocketMessage>
-  ): void {
-    const sentMessages = ws.getSentMessages();
-    expect(sentMessages).toContainEqual(
-      expect.objectContaining(expectedMessage)
-    );
-  },
+	/**
+	 * Assert message was sent
+	 */
+	hasSentMessage(
+		ws: MockWebSocket,
+		expectedMessage: Partial<WebSocketMessage>
+	): void {
+		const sentMessages = ws.getSentMessages();
+		expect(sentMessages).toContainEqual(
+			expect.objectContaining(expectedMessage)
+		);
+	},
 
-  /**
-   * Assert message count
-   */
-  sentMessageCount(ws: MockWebSocket, count: number): void {
-    expect(ws.getSentMessages()).toHaveLength(count);
-  },
+	/**
+	 * Assert message count
+	 */
+	sentMessageCount(ws: MockWebSocket, count: number): void {
+		expect(ws.getSentMessages()).toHaveLength(count);
+	},
 
-  /**
-   * Assert specific message type was sent
-   */
-  hasSentMessageType(ws: MockWebSocket, messageType: string): void {
-    const sentMessages = ws.getSentMessages();
-    expect(sentMessages.some((msg) => msg.type === messageType)).toBe(true);
-  },
+	/**
+	 * Assert specific message type was sent
+	 */
+	hasSentMessageType(ws: MockWebSocket, messageType: string): void {
+		const sentMessages = ws.getSentMessages();
+		expect(sentMessages.some((msg) => msg.type === messageType)).toBe(true);
+	},
 
-  /**
-   * Assert no messages were sent
-   */
-  hasNoSentMessages(ws: MockWebSocket): void {
-    expect(ws.getSentMessages()).toHaveLength(0);
-  },
+	/**
+	 * Assert no messages were sent
+	 */
+	hasNoSentMessages(ws: MockWebSocket): void {
+		expect(ws.getSentMessages()).toHaveLength(0);
+	},
 
-  /**
-   * Assert message was sent in specific order
-   */
-  hasSentMessagesInOrder(ws: MockWebSocket, expectedTypes: string[]): void {
-    const sentMessages = ws.getSentMessages();
-    const sentTypes = sentMessages.map((msg) => msg.type);
-    expect(sentTypes).toEqual(expectedTypes);
-  },
+	/**
+	 * Assert message was sent in specific order
+	 */
+	hasSentMessagesInOrder(ws: MockWebSocket, expectedTypes: string[]): void {
+		const sentMessages = ws.getSentMessages();
+		const sentTypes = sentMessages.map((msg) => msg.type);
+		expect(sentTypes).toEqual(expectedTypes);
+	},
 };
 
 /**
  * Create a mock WebSocket event
  */
 export function createWebSocketEvent<T extends Event>(
-  type: string,
-  options?: EventInit
+	type: string,
+	options?: EventInit
 ): T {
-  return new Event(type, options) as T;
+	return new Event(type, options) as T;
 }
 
 /**
  * Wait for WebSocket connection to open
  */
 export async function waitForConnection(
-  ws: MockWebSocket,
-  timeout: number = 5000
+	ws: MockWebSocket,
+	timeout = 5000
 ): Promise<void> {
-  const startTime = Date.now();
+	const startTime = Date.now();
 
-  while (ws.readyState !== WS_READY_STATE.OPEN) {
-    if (Date.now() - startTime > timeout) {
-      throw new Error('WebSocket connection timeout');
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
+	while (ws.readyState !== WS_READY_STATE.OPEN) {
+		if (Date.now() - startTime > timeout) {
+			throw new Error("WebSocket connection timeout");
+		}
+		// biome-ignore lint/nursery/noAwaitInLoop: polling for connection state
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
 }
 
 /**
  * Create a mock assurance case update message
  */
 export function createAssuranceCaseUpdate(
-  assuranceCase: any,
-  userId?: string
+	assuranceCase: Partial<AssuranceCase>,
+	userId?: string
 ): WebSocketMessage {
-  return {
-    type: MessageType.CASE_MESSAGE,
-    content: { assuranceCase },
-    timestamp: Date.now(),
-    userId,
-  };
+	return {
+		type: MessageType.CASE_MESSAGE,
+		content: { assuranceCase },
+		timestamp: Date.now(),
+		userId,
+	};
 }
 
 /**
  * Create a mock user presence update message
  */
 export function createPresenceUpdate(users: UserPresence[]): WebSocketMessage {
-  return {
-    type: MessageType.PRESENCE_UPDATE,
-    content: { current_connections: users },
-    timestamp: Date.now(),
-  };
+	return {
+		type: MessageType.PRESENCE_UPDATE,
+		content: { current_connections: users },
+		timestamp: Date.now(),
+	};
 }
 
 /**
  * Simulate a complete WebSocket lifecycle
  */
 export async function simulateWebSocketLifecycle(
-  setup: () => MockWebSocket,
-  test: (ws: MockWebSocket) => Promise<void>,
-  cleanup?: (ws: MockWebSocket) => void
+	setup: () => MockWebSocket,
+	test: (ws: MockWebSocket) => Promise<void>,
+	cleanup?: (ws: MockWebSocket) => void
 ): Promise<void> {
-  const ws = setup();
+	const ws = setup();
 
-  try {
-    ws.simulateOpen();
-    await waitForConnection(ws);
-    await test(ws);
-  } finally {
-    if (cleanup) {
-      cleanup(ws);
-    }
-    ws.close();
-  }
+	try {
+		ws.simulateOpen();
+		await waitForConnection(ws);
+		await test(ws);
+	} finally {
+		if (cleanup) {
+			cleanup(ws);
+		}
+		ws.close();
+	}
 }
 
 /**
  * Enhanced concurrent user simulation utilities
  */
 export class ConcurrentUserSimulator {
-  private users: Map<string, { ws: MockWebSocket; presence: UserPresence }> =
-    new Map();
-  private server: MockWebSocketServer;
+	private users: Map<string, { ws: MockWebSocket; presence: UserPresence }> =
+		new Map();
+	private server: MockWebSocketServer;
 
-  constructor(server: MockWebSocketServer) {
-    this.server = server;
-  }
+	constructor(server: MockWebSocketServer) {
+		this.server = server;
+	}
 
-  /**
-   * Add a concurrent user to the simulation
-   */
-  addUser(
-    userId: string,
-    username: string
-  ): { ws: MockWebSocket; presence: UserPresence } {
-    const ws = this.server.createConnection(userId);
-    const presence: UserPresence = {
-      id: userId,
-      username,
-      lastActivity: new Date(),
-      status: 'active',
-    };
+	/**
+	 * Add a concurrent user to the simulation
+	 */
+	addUser(
+		userId: string,
+		username: string
+	): { ws: MockWebSocket; presence: UserPresence } {
+		const ws = this.server.createConnection(userId);
+		const presence: UserPresence = {
+			id: userId,
+			username,
+			lastActivity: new Date(),
+			status: "active",
+		};
 
-    this.users.set(userId, { ws, presence });
-    return { ws, presence };
-  }
+		this.users.set(userId, { ws, presence });
+		return { ws, presence };
+	}
 
-  /**
-   * Simulate all users connecting
-   */
-  async connectAllUsers(): Promise<void> {
-    const connectionPromises = Array.from(this.users.values()).map(
-      async ({ ws }) => {
-        if (ws.readyState === WS_READY_STATE.CONNECTING) {
-          ws.simulateOpen();
-          await waitForConnection(ws);
-        }
-      }
-    );
+	/**
+	 * Simulate all users connecting
+	 */
+	async connectAllUsers(): Promise<void> {
+		const connectionPromises = Array.from(this.users.values()).map(
+			async ({ ws }) => {
+				if (ws.readyState === WS_READY_STATE.CONNECTING) {
+					ws.simulateOpen();
+					await waitForConnection(ws);
+				}
+			}
+		);
 
-    await Promise.all(connectionPromises);
-  }
+		await Promise.all(connectionPromises);
+	}
 
-  /**
-   * Simulate concurrent edits from multiple users
-   */
-  async simulateConcurrentEdits(
-    editCount: number = 5,
-    delay: number = 100
-  ): Promise<WebSocketMessage[]> {
-    const messages: WebSocketMessage[] = [];
-    const users = Array.from(this.users.entries());
+	/**
+	 * Simulate concurrent edits from multiple users
+	 */
+	async simulateConcurrentEdits(
+		editCount = 5,
+		delay = 100
+	): Promise<WebSocketMessage[]> {
+		const messages: WebSocketMessage[] = [];
+		const users = Array.from(this.users.entries());
 
-    for (let i = 0; i < editCount; i++) {
-      const [userId, { ws }] = users[i % users.length];
-      const message = createAssuranceCaseUpdate(
-        {
-          id: 1,
-          name: `Updated by ${userId} - Edit ${i}`,
-          updated_at: new Date().toISOString(),
-        },
-        userId
-      );
+		for (let i = 0; i < editCount; i++) {
+			const [userId, { ws }] = users[i % users.length];
+			const message = createAssuranceCaseUpdate(
+				{
+					id: 1,
+					name: `Updated by ${userId} - Edit ${i}`,
+					updated_at: new Date().toISOString(),
+				},
+				userId
+			);
 
-      ws.send(JSON.stringify(message));
-      messages.push(message);
+			ws.send(JSON.stringify(message));
+			messages.push(message);
 
-      // Broadcast to other users
-      this.server.broadcast(message, userId);
+			// Broadcast to other users
+			this.server.broadcast(message, userId);
 
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
+			if (delay > 0) {
+				// biome-ignore lint/nursery/noAwaitInLoop: simulating delays between edits
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		}
 
-    return messages;
-  }
+		return messages;
+	}
 
-  /**
-   * Simulate cursor movements from all users
-   */
-  simulateCursorMovements(): void {
-    this.users.forEach(({ ws, presence }, userId) => {
-      const x = Math.random() * 1000;
-      const y = Math.random() * 800;
+	/**
+	 * Simulate cursor movements from all users
+	 */
+	simulateCursorMovements(): void {
+		this.users.forEach(({ ws, presence }, userId) => {
+			const x = Math.random() * 1000;
+			const y = Math.random() * 800;
 
-      presence.cursor = {
-        x,
-        y,
-        elementId: `element-${Math.floor(Math.random() * 10)}`,
-      };
-      presence.lastActivity = new Date();
+			presence.cursor = {
+				x,
+				y,
+				elementId: `element-${Math.floor(Math.random() * 10)}`,
+			};
+			presence.lastActivity = new Date();
 
-      const cursorMessage: WebSocketMessage = {
-        type: MessageType.CURSOR_UPDATE,
-        content: { userId, cursor: presence.cursor },
-        timestamp: Date.now(),
-        userId,
-      };
+			const cursorMessage: WebSocketMessage = {
+				type: MessageType.CURSOR_UPDATE,
+				content: { userId, cursor: presence.cursor },
+				timestamp: Date.now(),
+				userId,
+			};
 
-      this.server.broadcast(cursorMessage, userId);
-    });
-  }
+			this.server.broadcast(cursorMessage, userId);
+		});
+	}
 
-  /**
-   * Get all active users
-   */
-  getActiveUsers(): UserPresence[] {
-    return Array.from(this.users.values()).map((user) => user.presence);
-  }
+	/**
+	 * Get all active users
+	 */
+	getActiveUsers(): UserPresence[] {
+		return Array.from(this.users.values()).map((user) => user.presence);
+	}
 
-  /**
-   * Disconnect a specific user
-   */
-  async disconnectUser(userId: string): Promise<void> {
-    const user = this.users.get(userId);
-    if (user) {
-      user.ws.close();
-      this.users.delete(userId);
-    }
-  }
+	/**
+	 * Disconnect a specific user
+	 */
+	disconnectUser(userId: string): void {
+		const user = this.users.get(userId);
+		if (user) {
+			user.ws.close();
+			this.users.delete(userId);
+		}
+	}
 
-  /**
-   * Clean up all users
-   */
-  cleanup(): void {
-    this.users.forEach(({ ws }) => ws.close());
-    this.users.clear();
-  }
+	/**
+	 * Clean up all users
+	 */
+	cleanup(): void {
+		for (const { ws } of this.users.values()) {
+			ws.close();
+		}
+		this.users.clear();
+	}
 }
 
 /**
  * Network condition simulation utilities
  */
 export class NetworkConditionSimulator {
-  private connections: Map<string, MockWebSocket> = new Map();
+	private connections: Map<string, MockWebSocket> = new Map();
 
-  constructor(connections: Map<string, MockWebSocket>) {
-    this.connections = connections;
-  }
+	constructor(connections: Map<string, MockWebSocket>) {
+		this.connections = connections;
+	}
 
-  /**
-   * Simulate slow network conditions
-   */
-  async simulateSlowNetwork(delay: number = 2000): Promise<void> {
-    // Add artificial delay to all message processing
-    const originalSend = MockWebSocket.prototype.send;
+	/**
+	 * Simulate slow network conditions
+	 */
+	simulateSlowNetwork(delay = 2000): void {
+		// Add artificial delay to all message processing
+		const originalSend = MockWebSocket.prototype.send;
 
-    MockWebSocket.prototype.send = vi.fn(function (
-      this: MockWebSocket,
-      data: string | ArrayBufferLike | Blob | ArrayBufferView
-    ) {
-      setTimeout(() => {
-        originalSend.call(this, data);
-      }, delay);
-    });
-  }
+		MockWebSocket.prototype.send = vi.fn(function (
+			this: MockWebSocket,
+			data: string | ArrayBufferLike | Blob | ArrayBufferView
+		) {
+			setTimeout(() => {
+				originalSend.call(this, data);
+			}, delay);
+		});
+	}
 
-  /**
-   * Simulate network instability
-   */
-  async simulateNetworkInstability(
-    dropProbability: number = 0.2,
-    duration: number = 5000
-  ): Promise<void> {
-    const originalReceiveMessage = MockWebSocket.prototype.receiveMessage;
+	/**
+	 * Simulate network instability
+	 */
+	simulateNetworkInstability(dropProbability = 0.2, duration = 5000): void {
+		const originalReceiveMessage = MockWebSocket.prototype.receiveMessage;
 
-    MockWebSocket.prototype.receiveMessage = function (data: any) {
-      if (Math.random() > dropProbability) {
-        originalReceiveMessage.call(this, data);
-      }
-      // Randomly drop messages based on probability
-    };
+		MockWebSocket.prototype.receiveMessage = function (data: unknown) {
+			if (Math.random() > dropProbability) {
+				originalReceiveMessage.call(this, data);
+			}
+			// Randomly drop messages based on probability
+		};
 
-    setTimeout(() => {
-      // Restore normal behavior
-      MockWebSocket.prototype.receiveMessage = originalReceiveMessage;
-    }, duration);
-  }
+		setTimeout(() => {
+			// Restore normal behavior
+			MockWebSocket.prototype.receiveMessage = originalReceiveMessage;
+		}, duration);
+	}
 
-  /**
-   * Simulate connection timeout
-   */
-  async simulateConnectionTimeout(
-    connectionId: string,
-    timeout: number = 3000
-  ): Promise<void> {
-    const ws = this.connections.get(connectionId);
-    if (ws) {
-      setTimeout(() => {
-        ws.simulateError(new Error('Connection timeout'));
-        ws.readyState = WS_READY_STATE.CLOSED;
-      }, timeout);
-    }
-  }
+	/**
+	 * Simulate connection timeout
+	 */
+	simulateConnectionTimeout(connectionId: string, timeout = 3000): void {
+		const ws = this.connections.get(connectionId);
+		if (ws) {
+			setTimeout(() => {
+				ws.simulateError(new Error("Connection timeout"));
+				ws.readyState = WS_READY_STATE.CLOSED;
+			}, timeout);
+		}
+	}
 }
 
 /**
  * Message integrity and ordering test utilities
  */
 export class MessageIntegrityTester {
-  private messageLog: Array<{
-    timestamp: number;
-    message: WebSocketMessage;
-    source: string;
-  }> = [];
+	private messageLog: Array<{
+		timestamp: number;
+		message: WebSocketMessage;
+		source: string;
+	}> = [];
 
-  /**
-   * Log a message with timestamp and source
-   */
-  logMessage(message: WebSocketMessage, source: string): void {
-    this.messageLog.push({
-      timestamp: Date.now(),
-      message,
-      source,
-    });
-  }
+	/**
+	 * Log a message with timestamp and source
+	 */
+	logMessage(message: WebSocketMessage, source: string): void {
+		this.messageLog.push({
+			timestamp: Date.now(),
+			message,
+			source,
+		});
+	}
 
-  /**
-   * Verify message ordering
-   */
-  verifyMessageOrdering(expectedOrder: string[]): boolean {
-    const actualOrder = this.messageLog.map((entry) => entry.message.type);
-    return JSON.stringify(actualOrder) === JSON.stringify(expectedOrder);
-  }
+	/**
+	 * Verify message ordering
+	 */
+	verifyMessageOrdering(expectedOrder: string[]): boolean {
+		const actualOrder = this.messageLog.map((entry) => entry.message.type);
+		return JSON.stringify(actualOrder) === JSON.stringify(expectedOrder);
+	}
 
-  /**
-   * Check for message duplication
-   */
-  checkForDuplicates(): Array<{ message: WebSocketMessage; count: number }> {
-    const messageMap = new Map<string, number>();
-    const duplicates: Array<{ message: WebSocketMessage; count: number }> = [];
+	/**
+	 * Check for message duplication
+	 */
+	checkForDuplicates(): Array<{ message: WebSocketMessage; count: number }> {
+		const messageMap = new Map<string, number>();
+		const duplicates: Array<{ message: WebSocketMessage; count: number }> = [];
 
-    this.messageLog.forEach((entry) => {
-      const key = JSON.stringify(entry.message);
-      const count = (messageMap.get(key) || 0) + 1;
-      messageMap.set(key, count);
+		for (const entry of this.messageLog) {
+			const key = JSON.stringify(entry.message);
+			const count = (messageMap.get(key) || 0) + 1;
+			messageMap.set(key, count);
 
-      if (count > 1) {
-        duplicates.push({ message: entry.message, count });
-      }
-    });
+			if (count > 1) {
+				duplicates.push({ message: entry.message, count });
+			}
+		}
 
-    return duplicates;
-  }
+		return duplicates;
+	}
 
-  /**
-   * Verify message integrity by checking required fields
-   */
-  verifyMessageIntegrity(): Array<{
-    message: WebSocketMessage;
-    errors: string[];
-  }> {
-    const errors: Array<{ message: WebSocketMessage; errors: string[] }> = [];
+	/**
+	 * Verify message integrity by checking required fields
+	 */
+	verifyMessageIntegrity(): Array<{
+		message: WebSocketMessage;
+		errors: string[];
+	}> {
+		const errors: Array<{ message: WebSocketMessage; errors: string[] }> = [];
 
-    this.messageLog.forEach((entry) => {
-      const messageErrors: string[] = [];
-      const { message } = entry;
+		for (const entry of this.messageLog) {
+			const messageErrors: string[] = [];
+			const { message } = entry;
 
-      if (!message.type) {
-        messageErrors.push('Missing message type');
-      }
+			if (!message.type) {
+				messageErrors.push("Missing message type");
+			}
 
-      if (message.content === undefined || message.content === null) {
-        messageErrors.push('Missing message content');
-      }
+			if (message.content === undefined || message.content === null) {
+				messageErrors.push("Missing message content");
+			}
 
-      if (!message.timestamp) {
-        messageErrors.push('Missing timestamp');
-      }
+			if (!message.timestamp) {
+				messageErrors.push("Missing timestamp");
+			}
 
-      if (messageErrors.length > 0) {
-        errors.push({ message, errors: messageErrors });
-      }
-    });
+			if (messageErrors.length > 0) {
+				errors.push({ message, errors: messageErrors });
+			}
+		}
 
-    return errors;
-  }
+		return errors;
+	}
 
-  /**
-   * Get message statistics
-   */
-  getMessageStats(): {
-    total: number;
-    byType: Record<string, number>;
-    avgTimeBetweenMessages: number;
-    timespan: number;
-  } {
-    const byType: Record<string, number> = {};
+	/**
+	 * Get message statistics
+	 */
+	getMessageStats(): {
+		total: number;
+		byType: Record<string, number>;
+		avgTimeBetweenMessages: number;
+		timespan: number;
+	} {
+		const byType: Record<string, number> = {};
 
-    this.messageLog.forEach((entry) => {
-      byType[entry.message.type] = (byType[entry.message.type] || 0) + 1;
-    });
+		for (const entry of this.messageLog) {
+			byType[entry.message.type] = (byType[entry.message.type] || 0) + 1;
+		}
 
-    const timestamps = this.messageLog.map((entry) => entry.timestamp);
-    const timespan =
-      timestamps.length > 1
-        ? Math.max(...timestamps) - Math.min(...timestamps)
-        : 0;
-    const avgTimeBetweenMessages =
-      timestamps.length > 1 ? timespan / (timestamps.length - 1) : 0;
+		const timestamps = this.messageLog.map((entry) => entry.timestamp);
+		const timespan =
+			timestamps.length > 1
+				? Math.max(...timestamps) - Math.min(...timestamps)
+				: 0;
+		const avgTimeBetweenMessages =
+			timestamps.length > 1 ? timespan / (timestamps.length - 1) : 0;
 
-    return {
-      total: this.messageLog.length,
-      byType,
-      avgTimeBetweenMessages,
-      timespan,
-    };
-  }
+		return {
+			total: this.messageLog.length,
+			byType,
+			avgTimeBetweenMessages,
+			timespan,
+		};
+	}
 
-  /**
-   * Clear message log
-   */
-  clearLog(): void {
-    this.messageLog = [];
-  }
+	/**
+	 * Clear message log
+	 */
+	clearLog(): void {
+		this.messageLog = [];
+	}
 }
 
 /**
  * Reconnection strategy testing utilities
  */
 export class ReconnectionTester {
-  private attempts: Array<{
-    timestamp: number;
-    success: boolean;
-    error?: Error;
-  }> = [];
-  private maxRetries: number;
-  private baseDelay: number;
+	private attempts: Array<{
+		timestamp: number;
+		success: boolean;
+		error?: Error;
+	}> = [];
+	private maxRetries: number;
+	private baseDelay: number;
 
-  constructor(maxRetries: number = 5, baseDelay: number = 1000) {
-    this.maxRetries = maxRetries;
-    this.baseDelay = baseDelay;
-  }
+	constructor(maxRetries = 5, baseDelay = 1000) {
+		this.maxRetries = maxRetries;
+		this.baseDelay = baseDelay;
+	}
 
-  /**
-   * Simulate reconnection with exponential backoff
-   */
-  async simulateReconnectionWithBackoff(
-    createConnection: () => MockWebSocket,
-    shouldFail?: (attempt: number) => boolean
-  ): Promise<MockWebSocket | null> {
-    let attempt = 0;
+	/**
+	 * Simulate reconnection with exponential backoff
+	 */
+	async simulateReconnectionWithBackoff(
+		createConnection: () => MockWebSocket,
+		shouldFail?: (attempt: number) => boolean
+	): Promise<MockWebSocket | null> {
+		let attempt = 0;
 
-    while (attempt < this.maxRetries) {
-      const delay = this.baseDelay * Math.pow(2, attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+		while (attempt < this.maxRetries) {
+			const delay = this.baseDelay * 2 ** attempt;
+			await new Promise((resolve) => setTimeout(resolve, delay));
 
-      try {
-        const ws = createConnection();
+			try {
+				const ws = createConnection();
 
-        if (shouldFail && shouldFail(attempt)) {
-          const error = new Error(
-            `Connection failed on attempt ${attempt + 1}`
-          );
-          this.attempts.push({ timestamp: Date.now(), success: false, error });
-          ws.simulateError(error);
-          throw error;
-        }
+				if (shouldFail?.(attempt)) {
+					const error = new Error(
+						`Connection failed on attempt ${attempt + 1}`
+					);
+					this.attempts.push({ timestamp: Date.now(), success: false, error });
+					ws.simulateError(error);
+					throw error;
+				}
 
-        ws.simulateOpen();
-        await waitForConnection(ws);
+				ws.simulateOpen();
+				await waitForConnection(ws);
 
-        this.attempts.push({ timestamp: Date.now(), success: true });
-        return ws;
-      } catch (error) {
-        this.attempts.push({
-          timestamp: Date.now(),
-          success: false,
-          error: error instanceof Error ? error : new Error('Unknown error'),
-        });
-        attempt++;
+				this.attempts.push({ timestamp: Date.now(), success: true });
+				return ws;
+			} catch (error) {
+				this.attempts.push({
+					timestamp: Date.now(),
+					success: false,
+					error: error instanceof Error ? error : new Error("Unknown error"),
+				});
+				attempt++;
 
-        if (attempt >= this.maxRetries) {
-          throw new Error(
-            `Failed to reconnect after ${this.maxRetries} attempts`
-          );
-        }
-      }
-    }
+				if (attempt >= this.maxRetries) {
+					throw new Error(
+						`Failed to reconnect after ${this.maxRetries} attempts`
+					);
+				}
+			}
+		}
 
-    return null;
-  }
+		return null;
+	}
 
-  /**
-   * Get reconnection statistics
-   */
-  getReconnectionStats(): {
-    totalAttempts: number;
-    successfulAttempts: number;
-    failedAttempts: number;
-    averageDelay: number;
-    lastError?: Error;
-  } {
-    const successfulAttempts = this.attempts.filter((a) => a.success).length;
-    const failedAttempts = this.attempts.filter((a) => !a.success).length;
+	/**
+	 * Get reconnection statistics
+	 */
+	getReconnectionStats(): {
+		totalAttempts: number;
+		successfulAttempts: number;
+		failedAttempts: number;
+		averageDelay: number;
+		lastError?: Error;
+	} {
+		const successfulAttempts = this.attempts.filter((a) => a.success).length;
+		const failedAttempts = this.attempts.filter((a) => !a.success).length;
 
-    const delays = this.attempts
-      .slice(1)
-      .map(
-        (attempt, index) => attempt.timestamp - this.attempts[index].timestamp
-      );
-    const averageDelay =
-      delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
+		const delays = this.attempts
+			.slice(1)
+			.map(
+				(attempt, index) => attempt.timestamp - this.attempts[index].timestamp
+			);
+		const averageDelay =
+			delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
 
-    const lastFailedAttempt = this.attempts
-      .slice()
-      .reverse()
-      .find((a) => !a.success);
+		const lastFailedAttempt = this.attempts
+			.slice()
+			.reverse()
+			.find((a) => !a.success);
 
-    return {
-      totalAttempts: this.attempts.length,
-      successfulAttempts,
-      failedAttempts,
-      averageDelay,
-      lastError: lastFailedAttempt?.error,
-    };
-  }
+		return {
+			totalAttempts: this.attempts.length,
+			successfulAttempts,
+			failedAttempts,
+			averageDelay,
+			lastError: lastFailedAttempt?.error,
+		};
+	}
 
-  /**
-   * Reset reconnection history
-   */
-  reset(): void {
-    this.attempts = [];
-  }
+	/**
+	 * Reset reconnection history
+	 */
+	reset(): void {
+		this.attempts = [];
+	}
 }
 
 /**
  * WebSocket event sequence testing utilities
  */
 export function createEventSequenceTester() {
-  const events: Array<{ type: string; timestamp: number; data?: any }> = [];
+	const events: Array<{ type: string; timestamp: number; data?: unknown }> = [];
 
-  return {
-    /**
-     * Record an event
-     */
-    recordEvent(type: string, data?: any): void {
-      events.push({ type, timestamp: Date.now(), data });
-    },
+	return {
+		/**
+		 * Record an event
+		 */
+		recordEvent(type: string, data?: unknown): void {
+			events.push({ type, timestamp: Date.now(), data });
+		},
 
-    /**
-     * Verify event sequence
-     */
-    verifySequence(expectedSequence: string[]): boolean {
-      const actualSequence = events.map((e) => e.type);
-      return (
-        JSON.stringify(actualSequence) === JSON.stringify(expectedSequence)
-      );
-    },
+		/**
+		 * Verify event sequence
+		 */
+		verifySequence(expectedSequence: string[]): boolean {
+			const actualSequence = events.map((e) => e.type);
+			return (
+				JSON.stringify(actualSequence) === JSON.stringify(expectedSequence)
+			);
+		},
 
-    /**
-     * Check timing between events
-     */
-    checkEventTiming(
-      event1: string,
-      event2: string,
-      maxDelay: number
-    ): boolean {
-      const event1Index = events.findIndex((e) => e.type === event1);
-      const event2Index = events.findIndex((e) => e.type === event2);
+		/**
+		 * Check timing between events
+		 */
+		checkEventTiming(
+			event1: string,
+			event2: string,
+			maxDelay: number
+		): boolean {
+			const event1Index = events.findIndex((e) => e.type === event1);
+			const event2Index = events.findIndex((e) => e.type === event2);
 
-      if (event1Index === -1 || event2Index === -1) return false;
+			if (event1Index === -1 || event2Index === -1) {
+				return false;
+			}
 
-      const delay =
-        events[event2Index].timestamp - events[event1Index].timestamp;
-      return delay <= maxDelay;
-    },
+			const delay =
+				events[event2Index].timestamp - events[event1Index].timestamp;
+			return delay <= maxDelay;
+		},
 
-    /**
-     * Get all recorded events
-     */
-    getEvents(): Array<{ type: string; timestamp: number; data?: any }> {
-      return [...events];
-    },
+		/**
+		 * Get all recorded events
+		 */
+		getEvents(): Array<{ type: string; timestamp: number; data?: unknown }> {
+			return [...events];
+		},
 
-    /**
-     * Clear event history
-     */
-    clear(): void {
-      events.length = 0;
-    },
-  };
+		/**
+		 * Clear event history
+		 */
+		clear(): void {
+			events.length = 0;
+		},
+	};
 }
 
 /**
  * Create comprehensive test scenario for WebSocket collaboration
  */
 export async function createCollaborationTestScenario(options: {
-  userCount?: number;
-  messageCount?: number;
-  simulateNetworkIssues?: boolean;
-  testReconnection?: boolean;
+	userCount?: number;
+	messageCount?: number;
+	simulateNetworkIssues?: boolean;
+	testReconnection?: boolean;
 }): Promise<{
-  server: MockWebSocketServer;
-  userSimulator: ConcurrentUserSimulator;
-  messageIntegrityTester: MessageIntegrityTester;
-  cleanup: () => void;
+	server: MockWebSocketServer;
+	userSimulator: ConcurrentUserSimulator;
+	messageIntegrityTester: MessageIntegrityTester;
+	cleanup: () => void;
 }> {
-  const {
-    userCount = 3,
-    messageCount = 10,
-    simulateNetworkIssues = false,
-    testReconnection = false,
-  } = options;
+	const {
+		userCount = 3,
+		messageCount = 10,
+		simulateNetworkIssues = false,
+		testReconnection = false,
+	} = options;
 
-  const server = new MockWebSocketServer();
-  const userSimulator = new ConcurrentUserSimulator(server);
-  const messageIntegrityTester = new MessageIntegrityTester();
+	const server = new MockWebSocketServer();
+	const userSimulator = new ConcurrentUserSimulator(server);
+	const messageIntegrityTester = new MessageIntegrityTester();
 
-  // Add users
-  for (let i = 0; i < userCount; i++) {
-    userSimulator.addUser(`user${i}`, `User ${i}`);
-  }
+	// Add users
+	for (let i = 0; i < userCount; i++) {
+		userSimulator.addUser(`user${i}`, `User ${i}`);
+	}
 
-  // Connect all users
-  await userSimulator.connectAllUsers();
+	// Connect all users
+	await userSimulator.connectAllUsers();
 
-  // Simulate collaboration activities
-  const messages = await userSimulator.simulateConcurrentEdits(messageCount);
-  userSimulator.simulateCursorMovements();
+	// Simulate collaboration activities
+	const messages = await userSimulator.simulateConcurrentEdits(messageCount);
+	userSimulator.simulateCursorMovements();
 
-  // Log messages for integrity testing
-  messages.forEach((msg) => messageIntegrityTester.logMessage(msg, 'user'));
+	// Log messages for integrity testing
+	for (const msg of messages) {
+		messageIntegrityTester.logMessage(msg, "user");
+	}
 
-  // Simulate network issues if requested
-  if (simulateNetworkIssues) {
-    const networkSim = new NetworkConditionSimulator(server['connections']);
-    await networkSim.simulateNetworkInstability(0.1, 2000);
-  }
+	// Simulate network issues if requested
+	if (simulateNetworkIssues) {
+		const networkSim = new NetworkConditionSimulator(
+			(server as any).connections
+		);
+		await networkSim.simulateNetworkInstability(0.1, 2000);
+	}
 
-  // Test reconnection if requested
-  if (testReconnection) {
-    await server.simulateReconnection('user0', 500);
-  }
+	// Test reconnection if requested
+	if (testReconnection) {
+		await server.simulateReconnection("user0", 500);
+	}
 
-  return {
-    server,
-    userSimulator,
-    messageIntegrityTester,
-    cleanup: () => {
-      userSimulator.cleanup();
-      server.cleanup();
-      messageIntegrityTester.clearLog();
-    },
-  };
+	return {
+		server,
+		userSimulator,
+		messageIntegrityTester,
+		cleanup: () => {
+			userSimulator.cleanup();
+			server.cleanup();
+			messageIntegrityTester.clearLog();
+		},
+	};
 }

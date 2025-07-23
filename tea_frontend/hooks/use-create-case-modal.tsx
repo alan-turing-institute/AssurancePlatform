@@ -1,27 +1,27 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 /**
  * Defines the shape of the state for the create case modal store.
  * @interface useCreateCaseModalStore
  */
 interface useCreateCaseModalStore {
-  /**
-   * Indicates whether the modal is open or closed.
-   * @type {boolean}
-   */
-  isOpen: boolean;
+	/**
+	 * Indicates whether the modal is open or closed.
+	 * @type {boolean}
+	 */
+	isOpen: boolean;
 
-  /**
-   * Function to open the modal.
-   * @function
-   */
-  onOpen: () => void;
+	/**
+	 * Function to open the modal.
+	 * @function
+	 */
+	onOpen: () => void;
 
-  /**
-   * Function to close the modal.
-   * @function
-   */
-  onClose: () => void;
+	/**
+	 * Function to close the modal.
+	 * @function
+	 */
+	onClose: () => void;
 }
 
 /**
@@ -30,7 +30,7 @@ interface useCreateCaseModalStore {
  * @returns {useCreateCaseModalStore} The Zustand store with modal state and actions.
  */
 export const useCreateCaseModal = create<useCreateCaseModalStore>((set) => ({
-  isOpen: false,
-  onOpen: () => set({ isOpen: true }),
-  onClose: () => set({ isOpen: false }),
+	isOpen: false,
+	onOpen: () => set({ isOpen: true }),
+	onClose: () => set({ isOpen: false }),
 }));

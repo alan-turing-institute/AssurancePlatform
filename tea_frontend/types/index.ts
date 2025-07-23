@@ -4,7 +4,7 @@
  */
 
 // Re-export all types from domain.ts
-export * from './domain';
+export * from "./domain";
 
 // Additional types that aren't in domain.ts yet
-export type { User as UserFromIndexD } from './index.d';
+export type { User as UserFromIndexD } from "./index.d";

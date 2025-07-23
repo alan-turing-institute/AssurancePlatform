@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 type TokenHookReturnType = [string | null, (value: string | null) => void];
 
@@ -8,15 +8,15 @@ type TokenHookReturnType = [string | null, (value: string | null) => void];
  * @returns {boolean} Whether the user is logged in.
  */
 export function useEnforceLogin() {
-  const [token] = useLoginToken();
+	const [token] = useLoginToken();
 
-  if (token == null) {
-    window.location.replace('/');
+	if (token == null) {
+		window.location.replace("/");
 
-    return false;
-  }
+		return false;
+	}
 
-  return true;
+	return true;
 }
 
 /**
@@ -25,14 +25,14 @@ export function useEnforceLogin() {
  * @returns {boolean} Whether the user is logged out.
  */
 export function useEnforceLogout() {
-  const [token] = useLoginToken();
+	const [token] = useLoginToken();
 
-  if (token != null) {
-    window.location.replace('/');
-    return false;
-  }
+	if (token != null) {
+		window.location.replace("/");
+		return false;
+	}
 
-  return true;
+	return true;
 }
 
 /**
@@ -41,7 +41,7 @@ export function useEnforceLogout() {
  * @returns {void}
  */
 export function unauthorized() {
-  window.location.replace('/login');
+	window.location.replace("/login");
 }
 
 /**
@@ -51,13 +51,13 @@ export function unauthorized() {
  * @returns {void}
  */
 const setToken = (value: string | null) => {
-  localStorage.clear();
+	localStorage.clear();
 
-  if (value) {
-    localStorage.setItem('token', value);
-  }
+	if (value) {
+		localStorage.setItem("token", value);
+	}
 
-  return null;
+	return null;
 };
 
 /**
@@ -66,9 +66,9 @@ const setToken = (value: string | null) => {
  * @returns {[string, function]} The user's login token and a function to set the token.
  */
 export function useLoginToken(): TokenHookReturnType {
-  let token: string | null = null;
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('token');
-  }
-  return [token, setToken];
+	let token: string | null = null;
+	if (typeof window !== "undefined") {
+		token = localStorage.getItem("token");
+	}
+	return [token, setToken];
 }

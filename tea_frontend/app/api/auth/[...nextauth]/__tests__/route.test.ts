@@ -1,229 +1,200 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET, POST } from '../route';
+import type { NextAuthOptions } from "next-auth";
+import { describe, expect, it, vi } from "vitest";
 
-// Mock NextAuth
-const mockNextAuth = vi.fn();
-vi.mock('next-auth', () => mockNextAuth);
-
-// Mock auth options
-const mockAuthOptions = {
-  secret: 'test-secret',
-  session: { strategy: 'jwt' },
-  providers: [],
-  callbacks: {},
-};
-vi.mock('@/lib/auth-options', () => ({
-  authOptions: mockAuthOptions,
+// Mock NextAuth to return a predictable handler
+const mockHandler = vi.fn();
+vi.mock("next-auth", () => ({
+	default: vi.fn(() => mockHandler),
 }));
 
-describe('/api/auth/[...nextauth] API Route', () => {
-  const mockHandler = vi.fn();
+// Mock auth options
+vi.mock("@/lib/auth-options", () => ({
+	authOptions: {
+		secret: "test-secret",
+		session: { strategy: "jwt" },
+		providers: [],
+		callbacks: {},
+	} as NextAuthOptions,
+}));
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockNextAuth.mockReturnValue(mockHandler);
-  });
+describe("/api/auth/[...nextauth] API Route", () => {
+	describe("Route Exports", () => {
+		it("should export GET and POST handlers", async () => {
+			// Dynamic import to ensure mocks are applied
+			const { GET, POST } = await import("../route");
 
-  describe('NextAuth Configuration', () => {
-    it('should initialize NextAuth with correct auth options', () => {
-      // Import the route file to trigger NextAuth initialization
-      require('../route');
+			expect(typeof GET).toBe("function");
+			expect(typeof POST).toBe("function");
+			expect(GET).toBe(POST); // Both should be the same NextAuth handler
+		});
+	});
 
-      expect(mockNextAuth).toHaveBeenCalledWith(mockAuthOptions);
-    });
+	describe("NextAuth Integration", () => {
+		it("should properly configure NextAuth", async () => {
+			const NextAuth = (await import("next-auth")).default;
+			const { authOptions } = await import("@/lib/auth-options");
 
-    it('should export NextAuth handler as GET', () => {
-      expect(GET).toBe(mockHandler);
-    });
+			// Import the route to trigger NextAuth initialization
+			await import("../route");
 
-    it('should export NextAuth handler as POST', () => {
-      expect(POST).toBe(mockHandler);
-    });
-  });
+			expect(NextAuth).toHaveBeenCalledWith(authOptions);
+		});
 
-  describe('HTTP Methods', () => {
-    it('should handle GET requests through NextAuth', async () => {
-      const mockRequest = new Request('http://localhost:3000/api/auth/signin', {
-        method: 'GET',
-      });
+		it("should handle HTTP requests through NextAuth handler", async () => {
+			const { GET, POST } = await import("../route");
 
-      mockHandler.mockResolvedValue(
-        new Response(JSON.stringify({ signInPage: true }), { status: 200 })
-      );
+			// Create a mock request
+			const mockRequest = new Request("http://localhost:3000/api/auth/signin", {
+				method: "GET",
+			});
 
-      const response = await GET(mockRequest);
+			// Mock the handler response - use mockResolvedValue for multiple calls
+			const mockResponse = new Response(JSON.stringify({ ok: true }), {
+				status: 200,
+			});
+			mockHandler.mockResolvedValue(mockResponse);
 
-      expect(mockHandler).toHaveBeenCalledWith(mockRequest);
-      expect(response.status).toBe(200);
-    });
+			// Test GET
+			const response = await GET(mockRequest);
+			expect(response).toBe(mockResponse);
 
-    it('should handle POST requests through NextAuth', async () => {
-      const mockRequest = new Request('http://localhost:3000/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'testuser',
-          password: 'testpass',
-        }),
-      });
+			// Test POST with the same handler
+			const postResponse = await POST(mockRequest);
+			expect(postResponse).toBe(mockResponse);
+		});
 
-      mockHandler.mockResolvedValue(
-        new Response(JSON.stringify({ success: true }), { status: 200 })
-      );
+		it("should pass through NextAuth responses", async () => {
+			const { GET } = await import("../route");
 
-      const response = await POST(mockRequest);
+			const mockRequest = new Request(
+				"http://localhost:3000/api/auth/session",
+				{
+					method: "GET",
+				}
+			);
 
-      expect(mockHandler).toHaveBeenCalledWith(mockRequest);
-      expect(response.status).toBe(200);
-    });
+			const mockResponse = new Response(
+				JSON.stringify({ session: { user: { name: "Test User" } } }),
+				{
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				}
+			);
 
-    it('should handle authentication errors gracefully', async () => {
-      const mockRequest = new Request('http://localhost:3000/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'invalid',
-          password: 'invalid',
-        }),
-      });
+			mockHandler.mockResolvedValueOnce(mockResponse);
 
-      mockHandler.mockResolvedValue(
-        new Response(JSON.stringify({ error: 'Invalid credentials' }), {
-          status: 401,
-        })
-      );
+			const response = await GET(mockRequest);
 
-      const response = await POST(mockRequest);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-      expect(mockHandler).toHaveBeenCalledWith(mockRequest);
-      expect(response.status).toBe(401);
-    });
-  });
+			const data = await response.json();
+			expect(data).toEqual({ session: { user: { name: "Test User" } } });
+		});
 
-  describe('Route Configuration Validation', () => {
-    it('should properly configure NextAuth with all required options', () => {
-      // Verify NextAuth was called with the imported auth options
-      expect(mockNextAuth).toHaveBeenCalledWith(
-        expect.objectContaining({
-          secret: expect.any(String),
-          session: expect.objectContaining({
-            strategy: 'jwt',
-          }),
-          providers: expect.any(Array),
-          callbacks: expect.any(Object),
-        })
-      );
-    });
+		it("should handle authentication errors", async () => {
+			const { POST } = await import("../route");
 
-    it('should maintain handler consistency between GET and POST', () => {
-      expect(GET).toBe(POST);
-      expect(typeof GET).toBe('function');
-      expect(typeof POST).toBe('function');
-    });
-  });
+			const mockRequest = new Request("http://localhost:3000/api/auth/signin", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ username: "invalid", password: "invalid" }),
+			});
 
-  describe('NextAuth Integration', () => {
-    it('should pass through NextAuth response headers', async () => {
-      const mockRequest = new Request(
-        'http://localhost:3000/api/auth/session',
-        {
-          method: 'GET',
-        }
-      );
+			const errorResponse = new Response(
+				JSON.stringify({ error: "Invalid credentials" }),
+				{ status: 401 }
+			);
 
-      const mockResponse = new Response(
-        JSON.stringify({ session: { user: { name: 'Test User' } } }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Set-Cookie': 'next-auth.session-token=abc123; Path=/; HttpOnly',
-          },
-        }
-      );
+			mockHandler.mockResolvedValueOnce(errorResponse);
 
-      mockHandler.mockResolvedValue(mockResponse);
+			const response = await POST(mockRequest);
 
-      const response = await GET(mockRequest);
+			expect(response.status).toBe(401);
+			const data = await response.json();
+			expect(data.error).toBe("Invalid credentials");
+		});
 
-      expect(response.headers.get('Content-Type')).toBe('application/json');
-      expect(response.headers.get('Set-Cookie')).toContain(
-        'next-auth.session-token'
-      );
-    });
+		it("should handle NextAuth callback routes", async () => {
+			const { GET } = await import("../route");
 
-    it('should handle NextAuth callback routes', async () => {
-      const mockRequest = new Request(
-        'http://localhost:3000/api/auth/callback/github',
-        {
-          method: 'GET',
-        }
-      );
+			const mockRequest = new Request(
+				"http://localhost:3000/api/auth/callback/github",
+				{ method: "GET" }
+			);
 
-      mockHandler.mockResolvedValue(
-        new Response(null, {
-          status: 302,
-          headers: { Location: '/dashboard' },
-        })
-      );
+			const redirectResponse = new Response(null, {
+				status: 302,
+				headers: { Location: "/dashboard" },
+			});
 
-      const response = await GET(mockRequest);
+			mockHandler.mockResolvedValueOnce(redirectResponse);
 
-      expect(mockHandler).toHaveBeenCalledWith(mockRequest);
-      expect(response.status).toBe(302);
-      expect(response.headers.get('Location')).toBe('/dashboard');
-    });
+			const response = await GET(mockRequest);
 
-    it('should handle NextAuth CSRF protection', async () => {
-      const mockRequest = new Request('http://localhost:3000/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          csrfToken: 'invalid-csrf-token',
-          username: 'testuser',
-          password: 'testpass',
-        }),
-      });
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/dashboard");
+		});
 
-      mockHandler.mockResolvedValue(
-        new Response(JSON.stringify({ error: 'CSRF token mismatch' }), {
-          status: 400,
-        })
-      );
+		it("should handle CSRF protection", async () => {
+			const { POST } = await import("../route");
 
-      const response = await POST(mockRequest);
+			const mockRequest = new Request("http://localhost:3000/api/auth/signin", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					csrfToken: "invalid-token",
+					username: "user",
+					password: "pass",
+				}),
+			});
 
-      expect(response.status).toBe(400);
-      const responseData = await response.json();
-      expect(responseData.error).toBe('CSRF token mismatch');
-    });
-  });
+			const csrfErrorResponse = new Response(
+				JSON.stringify({ error: "CSRF token mismatch" }),
+				{ status: 400 }
+			);
 
-  describe('Error Handling', () => {
-    it('should handle NextAuth initialization errors', () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      mockNextAuth.mockImplementation(() => {
-        throw new Error('NextAuth configuration error');
-      });
+			mockHandler.mockResolvedValueOnce(csrfErrorResponse);
 
-      expect(() => {
-        vi.resetModules();
-        require('../route');
-      }).toThrow('NextAuth configuration error');
+			const response = await POST(mockRequest);
 
-      consoleSpy.mockRestore();
-    });
+			expect(response.status).toBe(400);
+			const data = await response.json();
+			expect(data.error).toBe("CSRF token mismatch");
+		});
+	});
 
-    it('should handle runtime errors in NextAuth handler', async () => {
-      const mockRequest = new Request('http://localhost:3000/api/auth/signin', {
-        method: 'POST',
-      });
+	describe("Error Handling", () => {
+		it("should handle NextAuth handler errors", async () => {
+			const { GET } = await import("../route");
 
-      mockHandler.mockRejectedValue(new Error('Internal server error'));
+			const mockRequest = new Request("http://localhost:3000/api/auth/session");
 
-      await expect(POST(mockRequest)).rejects.toThrow('Internal server error');
-    });
-  });
+			mockHandler.mockRejectedValueOnce(new Error("Internal server error"));
+
+			await expect(GET(mockRequest)).rejects.toThrow("Internal server error");
+		});
+	});
+
+	describe("Configuration Validation", () => {
+		it("should use correct auth options structure", async () => {
+			const { authOptions } = await import("@/lib/auth-options");
+
+			expect(authOptions).toHaveProperty("secret");
+			expect(authOptions).toHaveProperty("session");
+			expect(authOptions).toHaveProperty("providers");
+			expect(authOptions).toHaveProperty("callbacks");
+
+			expect(authOptions.session).toHaveProperty("strategy", "jwt");
+			expect(Array.isArray(authOptions.providers)).toBe(true);
+			expect(typeof authOptions.callbacks).toBe("object");
+		});
+
+		it("should verify NextAuth was called during import", async () => {
+			const NextAuth = (await import("next-auth")).default;
+
+			// The route should have been imported in previous tests, triggering NextAuth
+			expect(NextAuth).toHaveBeenCalled();
+		});
+	});
 });

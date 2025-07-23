@@ -1,10 +1,10 @@
-import Dagre from '@dagrejs/dagre';
-import type { Edge, Node } from 'reactflow';
+import Dagre from "@dagrejs/dagre";
+import type { Edge, Node } from "reactflow";
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
 interface LayoutOptions {
-  direction: 'LR' | 'TB' | 'RL' | 'BT';
+	direction: "LR" | "TB" | "RL" | "BT";
 }
 
 /**
@@ -22,43 +22,43 @@ interface LayoutOptions {
  *
  */
 export const getLayoutedElements = (
-  nodes: Node[],
-  edges: Edge[],
-  options: LayoutOptions
+	nodes: Node[],
+	edges: Edge[],
+	options: LayoutOptions
 ): { nodes: Node[]; edges: Edge[] } => {
-  // Set the graph layout direction (e.g., 'LR' for left-right, 'TB' for top-bottom)
-  g.setGraph({ rankdir: options.direction });
+	// Set the graph layout direction (e.g., 'LR' for left-right, 'TB' for top-bottom)
+	g.setGraph({ rankdir: options.direction });
 
-  // Filter out hidden nodes and edges for the layout computation
-  const visibleNodes = nodes.filter((node) => !node.hidden);
-  const visibleEdges = edges.filter((edge) => !edge.hidden);
+	// Filter out hidden nodes and edges for the layout computation
+	const visibleNodes = nodes.filter((node) => !node.hidden);
+	const visibleEdges = edges.filter((edge) => !edge.hidden);
 
-  // Add edges to the graph based on visible edges
-  for (const edge of visibleEdges) {
-    g.setEdge(edge.source, edge.target);
-  }
+	// Add edges to the graph based on visible edges
+	for (const edge of visibleEdges) {
+		g.setEdge(edge.source, edge.target);
+	}
 
-  // Add nodes to the graph based on visible nodes
-  for (const node of visibleNodes) {
-    g.setNode(node.id, {
-      width: node.width || 100,
-      height: node.height || 50,
-    });
-  }
+	// Add nodes to the graph based on visible nodes
+	for (const node of visibleNodes) {
+		g.setNode(node.id, {
+			width: node.width || 100,
+			height: node.height || 50,
+		});
+	}
 
-  // Compute the layout using Dagre's layout algorithm
-  Dagre.layout(g);
+	// Compute the layout using Dagre's layout algorithm
+	Dagre.layout(g);
 
-  // Return the nodes with updated positions (only for visible nodes) and the original edges
-  return {
-    nodes: nodes.map((node) => {
-      // Only update the position for visible nodes
-      if (!node.hidden) {
-        const { x, y } = g.node(node.id);
-        return { ...node, position: { x, y } };
-      }
-      return node;
-    }),
-    edges,
-  };
+	// Return the nodes with updated positions (only for visible nodes) and the original edges
+	return {
+		nodes: nodes.map((node) => {
+			// Only update the position for visible nodes
+			if (!node.hidden) {
+				const { x, y } = g.node(node.id);
+				return { ...node, position: { x, y } };
+			}
+			return node;
+		}),
+		edges,
+	};
 };

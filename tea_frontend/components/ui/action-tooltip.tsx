@@ -1,27 +1,27 @@
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ActionTooltip = ({
-  children,
-  label,
+	children,
+	label,
 }: {
-  children: React.ReactNode;
-  label: string;
+	children: React.ReactNode;
+	label: string;
 }) => {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent>
-          <p>{label}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+	return (
+		<TooltipProvider>
+			<Tooltip>
+				<TooltipTrigger asChild>{children}</TooltipTrigger>
+				<TooltipContent>
+					<p>{label}</p>
+				</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
+	);
 };
 
 export default ActionTooltip;

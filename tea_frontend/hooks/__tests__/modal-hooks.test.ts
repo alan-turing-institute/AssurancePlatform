@@ -1,465 +1,488 @@
-import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useCreateCaseModal } from '@/hooks/use-create-case-modal';
-import { useEmailModal } from '@/hooks/use-email-modal';
-import { useImportModal } from '@/hooks/use-import-modal';
-import { usePermissionsModal } from '@/hooks/use-permissions-modal';
-import { useResourcesModal } from '@/hooks/use-resources-modal';
-import { useShareModal } from '@/hooks/use-share-modal';
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Clear the mocks from the global setup to test the actual implementations
+vi.unmock("@/hooks/use-create-case-modal");
+vi.unmock("@/hooks/use-email-modal");
+vi.unmock("@/hooks/use-import-modal");
+vi.unmock("@/hooks/use-permissions-modal");
+vi.unmock("@/hooks/use-resources-modal");
+vi.unmock("@/hooks/use-share-modal");
+
+import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
+import { useEmailModal } from "@/hooks/use-email-modal";
+import { useImportModal } from "@/hooks/use-import-modal";
+import { usePermissionsModal } from "@/hooks/use-permissions-modal";
+import { useResourcesModal } from "@/hooks/use-resources-modal";
+import { useShareModal } from "@/hooks/use-share-modal";
 
 // Type for modal hook return value
 interface ModalHookReturn {
-  isOpen: boolean;
-  onOpen: () => void;
-  onClose: () => void;
+	isOpen: boolean;
+	onOpen: () => void;
+	onClose: () => void;
 }
 
 // Helper function to test modal hook behavior
 const testModalHook = (hookName: string, useHook: () => ModalHookReturn) => {
-  describe(hookName, () => {
-    it('should initialize with isOpen as false', () => {
-      const { result } = renderHook(useHook);
+	describe(hookName, () => {
+		it("should initialize with isOpen as false", () => {
+			const { result } = renderHook(useHook);
 
-      expect(result.current.isOpen).toBe(false);
-    });
+			expect(result.current.isOpen).toBe(false);
+		});
 
-    it('should have onOpen function', () => {
-      const { result } = renderHook(useHook);
+		it("should have onOpen function", () => {
+			const { result } = renderHook(useHook);
 
-      expect(typeof result.current.onOpen).toBe('function');
-    });
+			expect(typeof result.current.onOpen).toBe("function");
+		});
 
-    it('should have onClose function', () => {
-      const { result } = renderHook(useHook);
+		it("should have onClose function", () => {
+			const { result } = renderHook(useHook);
 
-      expect(typeof result.current.onClose).toBe('function');
-    });
+			expect(typeof result.current.onClose).toBe("function");
+		});
 
-    it('should open modal when onOpen is called', () => {
-      const { result } = renderHook(useHook);
+		it("should open modal when onOpen is called", () => {
+			const { result } = renderHook(useHook);
 
-      act(() => {
-        result.current.onOpen();
-      });
+			act(() => {
+				result.current.onOpen();
+			});
 
-      expect(result.current.isOpen).toBe(true);
-    });
+			expect(result.current.isOpen).toBe(true);
+		});
 
-    it('should close modal when onClose is called', () => {
-      const { result } = renderHook(useHook);
+		it("should close modal when onClose is called", () => {
+			const { result } = renderHook(useHook);
 
-      // First open the modal
-      act(() => {
-        result.current.onOpen();
-      });
+			// First open the modal
+			act(() => {
+				result.current.onOpen();
+			});
 
-      expect(result.current.isOpen).toBe(true);
+			expect(result.current.isOpen).toBe(true);
 
-      // Then close it
-      act(() => {
-        result.current.onClose();
-      });
+			// Then close it
+			act(() => {
+				result.current.onClose();
+			});
 
-      expect(result.current.isOpen).toBe(false);
-    });
+			expect(result.current.isOpen).toBe(false);
+		});
 
-    it('should handle multiple open calls', () => {
-      const { result } = renderHook(useHook);
+		it("should handle multiple open calls", () => {
+			const { result } = renderHook(useHook);
 
-      act(() => {
-        result.current.onOpen();
-        result.current.onOpen();
-        result.current.onOpen();
-      });
+			act(() => {
+				result.current.onOpen();
+				result.current.onOpen();
+				result.current.onOpen();
+			});
 
-      expect(result.current.isOpen).toBe(true);
-    });
+			expect(result.current.isOpen).toBe(true);
+		});
 
-    it('should handle multiple close calls', () => {
-      const { result } = renderHook(useHook);
+		it("should handle multiple close calls", () => {
+			const { result } = renderHook(useHook);
 
-      // Open first
-      act(() => {
-        result.current.onOpen();
-      });
+			// Open first
+			act(() => {
+				result.current.onOpen();
+			});
 
-      // Close multiple times
-      act(() => {
-        result.current.onClose();
-        result.current.onClose();
-        result.current.onClose();
-      });
+			// Close multiple times
+			act(() => {
+				result.current.onClose();
+				result.current.onClose();
+				result.current.onClose();
+			});
 
-      expect(result.current.isOpen).toBe(false);
-    });
+			expect(result.current.isOpen).toBe(false);
+		});
 
-    it('should handle close when already closed', () => {
-      const { result } = renderHook(useHook);
+		it("should handle close when already closed", () => {
+			const { result } = renderHook(useHook);
 
-      // Modal starts closed
-      expect(result.current.isOpen).toBe(false);
+			// Modal starts closed
+			expect(result.current.isOpen).toBe(false);
 
-      // Try to close when already closed
-      act(() => {
-        result.current.onClose();
-      });
+			// Try to close when already closed
+			act(() => {
+				result.current.onClose();
+			});
 
-      expect(result.current.isOpen).toBe(false);
-    });
+			expect(result.current.isOpen).toBe(false);
+		});
 
-    it('should maintain state across re-renders', () => {
-      const { result, rerender } = renderHook(useHook);
+		it("should maintain state across re-renders", () => {
+			const { result, rerender } = renderHook(useHook);
 
-      act(() => {
-        result.current.onOpen();
-      });
+			act(() => {
+				result.current.onOpen();
+			});
 
-      expect(result.current.isOpen).toBe(true);
+			expect(result.current.isOpen).toBe(true);
 
-      rerender();
+			rerender();
 
-      expect(result.current.isOpen).toBe(true);
-    });
+			expect(result.current.isOpen).toBe(true);
+		});
 
-    it('should toggle state correctly', () => {
-      const { result } = renderHook(useHook);
+		it("should toggle state correctly", () => {
+			const { result } = renderHook(useHook);
 
-      // Start closed
-      expect(result.current.isOpen).toBe(false);
+			// Start closed
+			expect(result.current.isOpen).toBe(false);
 
-      // Open
-      act(() => {
-        result.current.onOpen();
-      });
-      expect(result.current.isOpen).toBe(true);
+			// Open
+			act(() => {
+				result.current.onOpen();
+			});
+			expect(result.current.isOpen).toBe(true);
 
-      // Close
-      act(() => {
-        result.current.onClose();
-      });
-      expect(result.current.isOpen).toBe(false);
+			// Close
+			act(() => {
+				result.current.onClose();
+			});
+			expect(result.current.isOpen).toBe(false);
 
-      // Open again
-      act(() => {
-        result.current.onOpen();
-      });
-      expect(result.current.isOpen).toBe(true);
-    });
+			// Open again
+			act(() => {
+				result.current.onOpen();
+			});
+			expect(result.current.isOpen).toBe(true);
+		});
 
-    it('should handle rapid state changes', () => {
-      const { result } = renderHook(useHook);
+		it("should handle rapid state changes", () => {
+			const { result } = renderHook(useHook);
 
-      act(() => {
-        result.current.onOpen();
-        result.current.onClose();
-        result.current.onOpen();
-        result.current.onClose();
-        result.current.onOpen();
-      });
+			act(() => {
+				result.current.onOpen();
+				result.current.onClose();
+				result.current.onOpen();
+				result.current.onClose();
+				result.current.onOpen();
+			});
 
-      expect(result.current.isOpen).toBe(true);
-    });
-  });
+			expect(result.current.isOpen).toBe(true);
+		});
+	});
 };
 
-describe('Modal Hooks', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("Modal Hooks", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		// Reset all Zustand stores to their initial state
+		const stores = [
+			useCreateCaseModal,
+			useShareModal,
+			usePermissionsModal,
+			useImportModal,
+			useEmailModal,
+			useResourcesModal,
+		];
 
-  // Test all modal hooks with the shared test suite
-  testModalHook('useCreateCaseModal', useCreateCaseModal);
-  testModalHook('useShareModal', useShareModal);
-  testModalHook('usePermissionsModal', usePermissionsModal);
-  testModalHook('useImportModal', useImportModal);
-  testModalHook('useEmailModal', useEmailModal);
-  testModalHook('useResourcesModal', useResourcesModal);
+		// Reset each store to its initial state
+		stores.forEach((store) => {
+			store.setState({ isOpen: false });
+		});
+	});
 
-  describe('Cross-modal interactions', () => {
-    it('should allow multiple modals to be open simultaneously', () => {
-      const { result: createModal } = renderHook(() => useCreateCaseModal());
-      const { result: shareModal } = renderHook(() => useShareModal());
-      const { result: permissionsModal } = renderHook(() =>
-        usePermissionsModal()
-      );
+	// Test all modal hooks with the shared test suite
+	testModalHook("useCreateCaseModal", useCreateCaseModal);
+	testModalHook("useShareModal", useShareModal);
+	testModalHook("usePermissionsModal", usePermissionsModal);
+	testModalHook("useImportModal", useImportModal);
+	testModalHook("useEmailModal", useEmailModal);
+	testModalHook("useResourcesModal", useResourcesModal);
 
-      act(() => {
-        createModal.current.onOpen();
-        shareModal.current.onOpen();
-        permissionsModal.current.onOpen();
-      });
+	describe("Cross-modal interactions", () => {
+		it("should allow multiple modals to be open simultaneously", () => {
+			const { result: createModal } = renderHook(() => useCreateCaseModal());
+			const { result: shareModal } = renderHook(() => useShareModal());
+			const { result: permissionsModal } = renderHook(() =>
+				usePermissionsModal()
+			);
 
-      expect(createModal.current.isOpen).toBe(true);
-      expect(shareModal.current.isOpen).toBe(true);
-      expect(permissionsModal.current.isOpen).toBe(true);
-    });
+			act(() => {
+				createModal.current.onOpen();
+				shareModal.current.onOpen();
+				permissionsModal.current.onOpen();
+			});
 
-    it('should maintain independent state between different modal hooks', () => {
-      const { result: modal1 } = renderHook(() => useCreateCaseModal());
-      const { result: modal2 } = renderHook(() => useShareModal());
+			expect(createModal.current.isOpen).toBe(true);
+			expect(shareModal.current.isOpen).toBe(true);
+			expect(permissionsModal.current.isOpen).toBe(true);
+		});
 
-      act(() => {
-        modal1.current.onOpen();
-      });
+		it("should maintain independent state between different modal hooks", () => {
+			const { result: modal1 } = renderHook(() => useCreateCaseModal());
+			const { result: modal2 } = renderHook(() => useShareModal());
 
-      expect(modal1.current.isOpen).toBe(true);
-      expect(modal2.current.isOpen).toBe(false);
+			act(() => {
+				modal1.current.onOpen();
+			});
 
-      act(() => {
-        modal2.current.onOpen();
-      });
+			expect(modal1.current.isOpen).toBe(true);
+			expect(modal2.current.isOpen).toBe(false);
 
-      expect(modal1.current.isOpen).toBe(true);
-      expect(modal2.current.isOpen).toBe(true);
+			act(() => {
+				modal2.current.onOpen();
+			});
 
-      act(() => {
-        modal1.current.onClose();
-      });
+			expect(modal1.current.isOpen).toBe(true);
+			expect(modal2.current.isOpen).toBe(true);
 
-      expect(modal1.current.isOpen).toBe(false);
-      expect(modal2.current.isOpen).toBe(true);
-    });
+			act(() => {
+				modal1.current.onClose();
+			});
 
-    it('should handle concurrent operations across multiple modals', () => {
-      const { result: createModal } = renderHook(() => useCreateCaseModal());
-      const { result: shareModal } = renderHook(() => useShareModal());
-      const { result: importModal } = renderHook(() => useImportModal());
+			expect(modal1.current.isOpen).toBe(false);
+			expect(modal2.current.isOpen).toBe(true);
+		});
 
-      act(() => {
-        // Rapid concurrent operations
-        createModal.current.onOpen();
-        shareModal.current.onOpen();
-        importModal.current.onOpen();
-        createModal.current.onClose();
-        shareModal.current.onClose();
-        importModal.current.onClose();
-        createModal.current.onOpen();
-      });
+		it("should handle concurrent operations across multiple modals", () => {
+			const { result: createModal } = renderHook(() => useCreateCaseModal());
+			const { result: shareModal } = renderHook(() => useShareModal());
+			const { result: importModal } = renderHook(() => useImportModal());
 
-      expect(createModal.current.isOpen).toBe(true);
-      expect(shareModal.current.isOpen).toBe(false);
-      expect(importModal.current.isOpen).toBe(false);
-    });
-  });
+			act(() => {
+				// Rapid concurrent operations
+				createModal.current.onOpen();
+				shareModal.current.onOpen();
+				importModal.current.onOpen();
+				createModal.current.onClose();
+				shareModal.current.onClose();
+				importModal.current.onClose();
+				createModal.current.onOpen();
+			});
 
-  describe('Multiple instances of same hook', () => {
-    it('should maintain separate state for multiple instances of the same hook', () => {
-      const { result: instance1 } = renderHook(() => useCreateCaseModal());
-      const { result: instance2 } = renderHook(() => useCreateCaseModal());
+			expect(createModal.current.isOpen).toBe(true);
+			expect(shareModal.current.isOpen).toBe(false);
+			expect(importModal.current.isOpen).toBe(false);
+		});
+	});
 
-      act(() => {
-        instance1.current.onOpen();
-      });
+	describe("Multiple instances of same hook", () => {
+		it("should maintain separate state for multiple instances of the same hook", () => {
+			const { result: instance1 } = renderHook(() => useCreateCaseModal());
+			const { result: instance2 } = renderHook(() => useCreateCaseModal());
 
-      // Both instances should share the same Zustand store state
-      expect(instance1.current.isOpen).toBe(true);
-      expect(instance2.current.isOpen).toBe(true);
+			act(() => {
+				instance1.current.onOpen();
+			});
 
-      act(() => {
-        instance2.current.onClose();
-      });
+			// Both instances should share the same Zustand store state
+			expect(instance1.current.isOpen).toBe(true);
+			expect(instance2.current.isOpen).toBe(true);
 
-      // Both should be closed since they share state
-      expect(instance1.current.isOpen).toBe(false);
-      expect(instance2.current.isOpen).toBe(false);
-    });
+			act(() => {
+				instance2.current.onClose();
+			});
 
-    it('should sync state changes across multiple hook instances', () => {
-      const { result: instance1 } = renderHook(() => useShareModal());
-      const { result: instance2 } = renderHook(() => useShareModal());
-      const { result: instance3 } = renderHook(() => useShareModal());
+			// Both should be closed since they share state
+			expect(instance1.current.isOpen).toBe(false);
+			expect(instance2.current.isOpen).toBe(false);
+		});
 
-      // Open via first instance
-      act(() => {
-        instance1.current.onOpen();
-      });
+		it("should sync state changes across multiple hook instances", () => {
+			const { result: instance1 } = renderHook(() => useShareModal());
+			const { result: instance2 } = renderHook(() => useShareModal());
+			const { result: instance3 } = renderHook(() => useShareModal());
 
-      // All instances should see the change
-      expect(instance1.current.isOpen).toBe(true);
-      expect(instance2.current.isOpen).toBe(true);
-      expect(instance3.current.isOpen).toBe(true);
+			// Open via first instance
+			act(() => {
+				instance1.current.onOpen();
+			});
 
-      // Close via second instance
-      act(() => {
-        instance2.current.onClose();
-      });
+			// All instances should see the change
+			expect(instance1.current.isOpen).toBe(true);
+			expect(instance2.current.isOpen).toBe(true);
+			expect(instance3.current.isOpen).toBe(true);
 
-      // All instances should see the change
-      expect(instance1.current.isOpen).toBe(false);
-      expect(instance2.current.isOpen).toBe(false);
-      expect(instance3.current.isOpen).toBe(false);
-    });
-  });
+			// Close via second instance
+			act(() => {
+				instance2.current.onClose();
+			});
 
-  describe('Performance and memory', () => {
-    it('should handle cleanup on unmount', () => {
-      const { result, unmount } = renderHook(() => useCreateCaseModal());
+			// All instances should see the change
+			expect(instance1.current.isOpen).toBe(false);
+			expect(instance2.current.isOpen).toBe(false);
+			expect(instance3.current.isOpen).toBe(false);
+		});
+	});
 
-      act(() => {
-        result.current.onOpen();
-      });
+	describe("Performance and memory", () => {
+		it("should handle cleanup on unmount", () => {
+			const { result, unmount } = renderHook(() => useCreateCaseModal());
 
-      expect(result.current.isOpen).toBe(true);
+			act(() => {
+				result.current.onOpen();
+			});
 
-      // Should not throw on unmount
-      unmount();
-    });
+			expect(result.current.isOpen).toBe(true);
 
-    it('should handle large numbers of state changes', () => {
-      const { result } = renderHook(() => useShareModal());
+			// Should not throw on unmount
+			unmount();
+		});
 
-      act(() => {
-        for (let i = 0; i < 1000; i++) {
-          if (i % 2 === 0) {
-            result.current.onOpen();
-          } else {
-            result.current.onClose();
-          }
-        }
-      });
+		it("should handle large numbers of state changes", () => {
+			const { result } = renderHook(() => useShareModal());
 
-      // Should end in closed state (1000 is even, so last operation was onOpen, but 999 was close)
-      // Actually, since we start at 0 (even), we end at 999 (odd), so last operation was onClose
-      expect(result.current.isOpen).toBe(false);
-    });
+			act(() => {
+				for (let i = 0; i < 1000; i++) {
+					if (i % 2 === 0) {
+						result.current.onOpen();
+					} else {
+						result.current.onClose();
+					}
+				}
+			});
 
-    it('should maintain consistent performance with multiple hooks', () => {
-      const hooks: Array<() => ModalHookReturn> = [
-        useCreateCaseModal,
-        useShareModal,
-        usePermissionsModal,
-        useImportModal,
-        useEmailModal,
-        useResourcesModal,
-      ];
+			// Should end in closed state (1000 is even, so last operation was onOpen, but 999 was close)
+			// Actually, since we start at 0 (even), we end at 999 (odd), so last operation was onClose
+			expect(result.current.isOpen).toBe(false);
+		});
 
-      const results = hooks.map((hook) => renderHook(hook));
+		it("should maintain consistent performance with multiple hooks", () => {
+			const hooks: Array<() => ModalHookReturn> = [
+				useCreateCaseModal,
+				useShareModal,
+				usePermissionsModal,
+				useImportModal,
+				useEmailModal,
+				useResourcesModal,
+			];
 
-      act(() => {
-        for (const { result } of results) {
-          result.current.onOpen();
-        }
-      });
+			const results = hooks.map((hook) => renderHook(hook));
 
-      for (const { result } of results) {
-        expect(result.current.isOpen).toBe(true);
-      }
+			act(() => {
+				for (const { result } of results) {
+					result.current.onOpen();
+				}
+			});
 
-      act(() => {
-        for (const { result } of results) {
-          result.current.onClose();
-        }
-      });
+			for (const { result } of results) {
+				expect(result.current.isOpen).toBe(true);
+			}
 
-      for (const { result } of results) {
-        expect(result.current.isOpen).toBe(false);
-      }
-    });
-  });
+			act(() => {
+				for (const { result } of results) {
+					result.current.onClose();
+				}
+			});
 
-  describe('Edge cases', () => {
-    it('should handle null/undefined function calls gracefully', () => {
-      const { result } = renderHook(() => useCreateCaseModal());
+			for (const { result } of results) {
+				expect(result.current.isOpen).toBe(false);
+			}
+		});
+	});
 
-      expect(() => {
-        act(() => {
-          result.current.onOpen();
-          result.current.onClose();
-        });
-      }).not.toThrow();
-    });
+	describe("Edge cases", () => {
+		it("should handle null/undefined function calls gracefully", () => {
+			const { result } = renderHook(() => useCreateCaseModal());
 
-    it('should maintain type safety', () => {
-      const { result } = renderHook(() => useCreateCaseModal());
+			expect(() => {
+				act(() => {
+					result.current.onOpen();
+					result.current.onClose();
+				});
+			}).not.toThrow();
+		});
 
-      // These should all be properly typed
-      expect(typeof result.current.isOpen).toBe('boolean');
-      expect(typeof result.current.onOpen).toBe('function');
-      expect(typeof result.current.onClose).toBe('function');
+		it("should maintain type safety", () => {
+			const { result } = renderHook(() => useCreateCaseModal());
 
-      // Functions should not accept parameters
-      expect(result.current.onOpen.length).toBe(0);
-      expect(result.current.onClose.length).toBe(0);
-    });
+			// These should all be properly typed
+			expect(typeof result.current.isOpen).toBe("boolean");
+			expect(typeof result.current.onOpen).toBe("function");
+			expect(typeof result.current.onClose).toBe("function");
 
-    it('should work in strict mode (double execution)', () => {
-      // Simulate React strict mode by rendering twice
-      const { result } = renderHook(() => useCreateCaseModal());
-      const { result: result2 } = renderHook(() => useCreateCaseModal());
+			// Functions should not accept parameters
+			expect(result.current.onOpen.length).toBe(0);
+			expect(result.current.onClose.length).toBe(0);
+		});
 
-      act(() => {
-        result.current.onOpen();
-        result2.current.onOpen(); // Should not cause issues
-      });
+		it("should work in strict mode (double execution)", () => {
+			// Simulate React strict mode by rendering twice
+			const { result } = renderHook(() => useCreateCaseModal());
+			const { result: result2 } = renderHook(() => useCreateCaseModal());
 
-      expect(result.current.isOpen).toBe(true);
-      expect(result2.current.isOpen).toBe(true);
-    });
-  });
+			act(() => {
+				result.current.onOpen();
+				result2.current.onOpen(); // Should not cause issues
+			});
 
-  describe('Real-world usage patterns', () => {
-    it('should support typical open-edit-close workflow', () => {
-      const { result } = renderHook(() => useCreateCaseModal());
+			expect(result.current.isOpen).toBe(true);
+			expect(result2.current.isOpen).toBe(true);
+		});
+	});
 
-      // User clicks create button
-      act(() => {
-        result.current.onOpen();
-      });
-      expect(result.current.isOpen).toBe(true);
+	describe("Real-world usage patterns", () => {
+		it("should support typical open-edit-close workflow", () => {
+			const { result } = renderHook(() => useCreateCaseModal());
 
-      // User fills form and submits (modal should stay open during loading)
-      expect(result.current.isOpen).toBe(true);
+			// User clicks create button
+			act(() => {
+				result.current.onOpen();
+			});
+			expect(result.current.isOpen).toBe(true);
 
-      // Form submission completes, modal closes
-      act(() => {
-        result.current.onClose();
-      });
-      expect(result.current.isOpen).toBe(false);
-    });
+			// User fills form and submits (modal should stay open during loading)
+			expect(result.current.isOpen).toBe(true);
 
-    it('should support cancellation workflow', () => {
-      const { result } = renderHook(() => useShareModal());
+			// Form submission completes, modal closes
+			act(() => {
+				result.current.onClose();
+			});
+			expect(result.current.isOpen).toBe(false);
+		});
 
-      // User opens modal
-      act(() => {
-        result.current.onOpen();
-      });
-      expect(result.current.isOpen).toBe(true);
+		it("should support cancellation workflow", () => {
+			const { result } = renderHook(() => useShareModal());
 
-      // User clicks cancel or escape
-      act(() => {
-        result.current.onClose();
-      });
-      expect(result.current.isOpen).toBe(false);
-    });
+			// User opens modal
+			act(() => {
+				result.current.onOpen();
+			});
+			expect(result.current.isOpen).toBe(true);
 
-    it('should support modal chaining workflow', () => {
-      const { result: createModal } = renderHook(() => useCreateCaseModal());
-      const { result: shareModal } = renderHook(() => useShareModal());
+			// User clicks cancel or escape
+			act(() => {
+				result.current.onClose();
+			});
+			expect(result.current.isOpen).toBe(false);
+		});
 
-      // User creates case
-      act(() => {
-        createModal.current.onOpen();
-      });
-      expect(createModal.current.isOpen).toBe(true);
+		it("should support modal chaining workflow", () => {
+			const { result: createModal } = renderHook(() => useCreateCaseModal());
+			const { result: shareModal } = renderHook(() => useShareModal());
 
-      // Case creation completes, create modal closes
-      act(() => {
-        createModal.current.onClose();
-      });
-      expect(createModal.current.isOpen).toBe(false);
+			// User creates case
+			act(() => {
+				createModal.current.onOpen();
+			});
+			expect(createModal.current.isOpen).toBe(true);
 
-      // Share modal opens for the new case
-      act(() => {
-        shareModal.current.onOpen();
-      });
-      expect(shareModal.current.isOpen).toBe(true);
+			// Case creation completes, create modal closes
+			act(() => {
+				createModal.current.onClose();
+			});
+			expect(createModal.current.isOpen).toBe(false);
 
-      // Share modal closes
-      act(() => {
-        shareModal.current.onClose();
-      });
-      expect(shareModal.current.isOpen).toBe(false);
-    });
-  });
+			// Share modal opens for the new case
+			act(() => {
+				shareModal.current.onOpen();
+			});
+			expect(shareModal.current.isOpen).toBe(true);
+
+			// Share modal closes
+			act(() => {
+				shareModal.current.onClose();
+			});
+			expect(shareModal.current.isOpen).toBe(false);
+		});
+	});
 });

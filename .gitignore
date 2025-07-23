@@ -208,6 +208,7 @@ TASKS/
 *~
 .vscode/settings.json
 .vscode/launch.json
+.claude
 
 # OS generated files
 Thumbs.db

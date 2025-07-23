@@ -1,5 +1,5 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 /**
  * Utility function to conditionally merge Tailwind CSS classes.
@@ -21,7 +21,7 @@ import { twMerge } from 'tailwind-merge';
  * // Returns: 'p-2 text-center' (tailwind-merge resolves 'p-4' vs 'p-2')
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+	return twMerge(clsx(inputs));
 }
 
 /**
@@ -37,17 +37,17 @@ export function cn(...inputs: ClassValue[]) {
  * // In production: unchanged
  */
 export function normalizeImageUrl(
-  url: string | null | undefined
+	url: string | null | undefined
 ): string | null | undefined {
-  if (!url) {
-    return url;
-  }
+	if (!url) {
+		return url;
+	}
 
-  // Only transform URLs in development environment
-  if (process.env.NODE_ENV === 'development') {
-    // Replace tea-backend:8000 with localhost:8000 for local development
-    return url.replace('http://tea-backend:8000', 'http://localhost:8000');
-  }
+	// Only transform URLs in development environment
+	if (process.env.NODE_ENV === "development") {
+		// Replace tea-backend:8000 with localhost:8000 for local development
+		return url.replace("http://tea-backend:8000", "http://localhost:8000");
+	}
 
-  return url;
+	return url;
 }

@@ -1,47 +1,47 @@
-import moment from 'moment';
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { fetchCaseStudyById } from '@/actions/case-studies';
-import BackButton from '@/components/ui/back-button';
-import PageHeading from '@/components/ui/page-heading';
-import { authOptions } from '@/lib/auth-options';
-import type { CaseStudy } from '@/types/domain';
-import CaseStudyForm from '../_components/case-study-form';
+import moment from "moment";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { fetchCaseStudyById } from "@/actions/case-studies";
+import BackButton from "@/components/ui/back-button";
+import PageHeading from "@/components/ui/page-heading";
+import { authOptions } from "@/lib/auth-options";
+import type { CaseStudy } from "@/types/domain";
+import CaseStudyForm from "../_components/case-study-form";
 
 async function CaseStudyDetails({
-  params,
+	params,
 }: {
-  params: Promise<{ id: string }>;
+	params: Promise<{ id: string }>;
 }) {
-  const session = await getServerSession(authOptions);
+	const session = await getServerSession(authOptions);
 
-  // Redirect user to login if no `key`
-  if (!session?.key) {
-    redirect('/login');
-  }
+	// Redirect user to login if no `key`
+	if (!session?.key) {
+		redirect("/login");
+	}
 
-  const { id } = await params;
+	const { id } = await params;
 
-  const caseStudy = await fetchCaseStudyById(
-    session.key,
-    Number.parseInt(id, 10)
-  );
+	const caseStudy = await fetchCaseStudyById(
+		session.key,
+		Number.parseInt(id, 10)
+	);
 
-  return (
-    <>
-      {caseStudy.published && <PublishedBanner caseStudy={caseStudy} />}
-      <div className="min-h-screen space-y-4 p-8">
-        <BackButton url="/dashboard/case-studies" />
-        <PageHeading
-          caseStudy={caseStudy}
-          description={`Created on: ${moment(caseStudy.createdOn).format('DD/MM/YYYY')} | Last modified on: ${moment(caseStudy.lastModifiedOn).format('DD/MM/YYYY')}`}
-          // button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }}
-          title={caseStudy.title}
-        />
+	return (
+		<>
+			{caseStudy.published && <PublishedBanner caseStudy={caseStudy} />}
+			<div className="min-h-screen space-y-4 p-8">
+				<BackButton url="/dashboard/case-studies" />
+				<PageHeading
+					caseStudy={caseStudy}
+					description={`Created on: ${moment(caseStudy.createdOn).format("DD/MM/YYYY")} | Last modified on: ${moment(caseStudy.lastModifiedOn).format("DD/MM/YYYY")}`}
+					// button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }}
+					title={caseStudy.title}
+				/>
 
-        <CaseStudyForm caseStudy={caseStudy} />
+				<CaseStudyForm caseStudy={caseStudy} />
 
-        {/* <div>
+				{/* <div>
           <div className="mt-6">
             <dl className="grid grid-cols-1 sm:grid-cols-3">
               <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
@@ -117,31 +117,31 @@ async function CaseStudyDetails({
             )}
           </div>
         </div> */}
-      </div>
-    </>
-  );
+			</div>
+		</>
+	);
 }
 
 export default CaseStudyDetails;
 
 function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
-  return (
-    <div className="flex items-center gap-x-6 bg-emerald-500 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 dark:bg-emerald-600">
-      <div className="w-full text-sm text-white leading-6">
-        <div className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0">
-          <div className="flex items-center justify-start gap-2">
-            <strong className="font-semibold">Published Case Study</strong>
-          </div>
-          <svg
-            aria-hidden="true"
-            className="mx-2 hidden h-0.5 w-0.5 fill-current md:block"
-            viewBox="0 0 2 2"
-          >
-            <circle cx={1} cy={1} r={1} />
-          </svg>
-          {moment(caseStudy.publishedDate).format('LLLL')}
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<div className="flex items-center gap-x-6 bg-emerald-500 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 dark:bg-emerald-600">
+			<div className="w-full text-sm text-white leading-6">
+				<div className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0">
+					<div className="flex items-center justify-start gap-2">
+						<strong className="font-semibold">Published Case Study</strong>
+					</div>
+					<svg
+						aria-hidden="true"
+						className="mx-2 hidden h-0.5 w-0.5 fill-current md:block"
+						viewBox="0 0 2 2"
+					>
+						<circle cx={1} cy={1} r={1} />
+					</svg>
+					{moment(caseStudy.publishedDate).format("LLLL")}
+				</div>
+			</div>
+		</div>
+	);
 }

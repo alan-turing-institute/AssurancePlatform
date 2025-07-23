@@ -1,9 +1,9 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface useResourcesModalStore {
-  isOpen: boolean;
-  onOpen: () => void;
-  onClose: () => void;
+	isOpen: boolean;
+	onOpen: () => void;
+	onClose: () => void;
 }
 
 /**
@@ -29,7 +29,7 @@ interface useResourcesModalStore {
  * );
  */
 export const useResourcesModal = create<useResourcesModalStore>((set) => ({
-  isOpen: false,
-  onOpen: () => set({ isOpen: true }),
-  onClose: () => set({ isOpen: false }),
+	isOpen: false,
+	onOpen: () => set({ isOpen: true }),
+	onClose: () => set({ isOpen: false }),
 }));

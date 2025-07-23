@@ -1,575 +1,594 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { CloudDownload, InfoIcon, Share, Trash2Icon, X } from 'lucide-react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CloudDownload, InfoIcon, Share, Trash2Icon, X } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
-  createCaseStudy,
-  deleteCaseStudy,
-  updateCaseStudy,
-} from '@/actions/case-studies';
-import { AlertModal } from '@/components/modals/alert-modal';
-import { Button } from '@/components/ui/button';
+	createCaseStudy,
+	deleteCaseStudy,
+	updateCaseStudy,
+} from "@/actions/case-studies";
+import { AlertModal } from "@/components/modals/alert-modal";
+import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+	Form,
+	FormControl,
+	FormDescription,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import TiptapEditor from '@/components/ui/tiptap-editor';
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import TiptapEditor from "@/components/ui/tiptap-editor";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useToast } from '@/components/ui/use-toast';
-import { sectors } from '@/config/index';
-import { useImportModal } from '@/hooks/use-import-modal';
-import { normalizeImageUrl } from '@/lib/utils';
-import type { CaseStudyFormProps } from '@/types/domain';
-import DeleteCaseButton from './delete-button';
-import RelatedAssuranceCaseList from './related-assurance-case-list';
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { sectors } from "@/config/index";
+import { useImportModal } from "@/hooks/use-import-modal";
+import { normalizeImageUrl } from "@/lib/utils";
+import type { CaseStudyFormProps } from "@/types/domain";
+import DeleteCaseButton from "./delete-button";
+import RelatedAssuranceCaseList from "./related-assurance-case-list";
 
 const assuranceCaseSchema = z.object({
-  id: z.number(),
-  // naxme: z.string(),
+	id: z.number(),
+	// naxme: z.string(),
 });
 
 const caseStudyFormSchema = z.object({
-  id: z.number().optional(), // Optional ID for new case studies
-  title: z.string().min(1, 'Title is required'), // Required
-  description: z.string().optional(),
-  authors: z.string().optional(),
-  // category: z.string().optional(),
-  type: z.string().optional(),
-  publishedDate: z.coerce.date().optional(),
-  lastModifiedOn: z.coerce.date().optional(),
-  createdOn: z.coerce.date().optional(),
-  sector: z.string().optional(),
-  contact: z.string().email().optional(),
-  assuranceCases: z.array(assuranceCaseSchema).optional(),
-  image: z.any().optional(),
-  published: z.boolean().optional(),
+	id: z.number().optional(), // Optional ID for new case studies
+	title: z.string().min(1, "Title is required"), // Required
+	description: z.string().min(1, "Description is required"), // Required
+	authors: z.string().optional(),
+	// category: z.string().optional(),
+	type: z.string().optional(),
+	publishedDate: z.coerce.date().optional(),
+	lastModifiedOn: z.coerce.date().optional(),
+	createdOn: z.coerce.date().optional(),
+	sector: z.string().optional(),
+	contact: z
+		.string()
+		.email("Please enter a valid email address")
+		.optional()
+		.or(z.literal("")),
+	assuranceCases: z.array(assuranceCaseSchema).optional(),
+	image: z.any().optional(),
+	published: z.boolean().optional(),
 });
 
 // Helper function to get default values for the form
-const getDefaultFormValues = (caseStudy?: CaseStudyFormProps['caseStudy']) => {
-  return caseStudy
-    ? {
-        id: caseStudy.id,
-        title: caseStudy.title,
-        description: caseStudy.description || '',
-        authors: caseStudy.authors || '',
-        publishedDate: caseStudy.publishedDate
-          ? new Date(caseStudy.publishedDate)
-          : undefined,
-        createdOn: caseStudy.createdOn
-          ? new Date(caseStudy.createdOn)
-          : undefined,
-        sector: caseStudy.sector || '',
-        type: caseStudy.type || '',
-        contact: caseStudy.contact || '',
-        assuranceCases: caseStudy.assuranceCases || [],
-        published: caseStudy.published,
-      }
-    : {
-        title: '',
-        description: '',
-        authors: '',
-        publishedDate: undefined,
-        lastModifiedOn: undefined,
-        createdOn: undefined,
-        sector: '',
-        type: '',
-        contact: '',
-        assuranceCases: [],
-        image: undefined,
-        published: false,
-      };
+const getDefaultFormValues = (caseStudy?: CaseStudyFormProps["caseStudy"]) => {
+	return caseStudy
+		? {
+				id: caseStudy.id,
+				title: caseStudy.title,
+				description: caseStudy.description || "",
+				authors: caseStudy.authors || "",
+				publishedDate: caseStudy.publishedDate
+					? new Date(caseStudy.publishedDate)
+					: undefined,
+				createdOn: caseStudy.createdOn
+					? new Date(caseStudy.createdOn)
+					: undefined,
+				sector: caseStudy.sector || "",
+				type: caseStudy.type || "",
+				contact: caseStudy.contact || "",
+				assuranceCases: caseStudy.assuranceCases || [],
+				published: caseStudy.published,
+			}
+		: {
+				title: "",
+				description: "",
+				authors: "",
+				publishedDate: undefined,
+				lastModifiedOn: undefined,
+				createdOn: undefined,
+				sector: "",
+				type: "",
+				contact: "",
+				assuranceCases: [],
+				image: undefined,
+				published: false,
+			};
 };
 
 // Helper function for author management
 const useAuthorManagement = (
-  form: ReturnType<typeof useForm<z.infer<typeof caseStudyFormSchema>>>
+	form: ReturnType<typeof useForm<z.infer<typeof caseStudyFormSchema>>>
 ) => {
-  const [authors, setAuthors] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState('');
+	const [authors, setAuthors] = useState<string[]>([]);
+	const [inputValue, setInputValue] = useState("");
 
-  // Sync authors state with form field value
-  useEffect(() => {
-    const formAuthors = form.watch('authors');
-    if (formAuthors) {
-      const authorsArray = formAuthors
-        .split(',')
-        .map((a) => a.trim())
-        .filter((a) => a);
-      setAuthors(authorsArray);
-    } else {
-      setAuthors([]);
-    }
-  }, [form]);
+	// Sync authors state with form field value
+	useEffect(() => {
+		const formAuthors = form.watch("authors");
+		if (formAuthors) {
+			const authorsArray = formAuthors
+				.split(",")
+				.map((a) => a.trim())
+				.filter((a) => a);
+			setAuthors(authorsArray);
+		} else {
+			setAuthors([]);
+		}
+	}, [form]);
 
-  const addAuthor = () => {
-    const trimmed = inputValue.trim();
-    if (trimmed && !authors.includes(trimmed)) {
-      const newAuthors = [...authors, trimmed];
-      setAuthors(newAuthors);
-      form.setValue('authors', newAuthors.join(', '));
-      setInputValue(''); // Clear input
-    }
-  };
+	const addAuthor = () => {
+		const trimmed = inputValue.trim();
+		if (trimmed && !authors.includes(trimmed)) {
+			const newAuthors = [...authors, trimmed];
+			setAuthors(newAuthors);
+			form.setValue("authors", newAuthors.join(", "));
+			setInputValue(""); // Clear input
+		}
+	};
 
-  const removeAuthor = (authorToRemove: string) => {
-    const newAuthors = authors.filter((author) => author !== authorToRemove);
-    setAuthors(newAuthors);
-    form.setValue('authors', newAuthors.join(', '));
-  };
+	const removeAuthor = (authorToRemove: string) => {
+		const newAuthors = authors.filter((author) => author !== authorToRemove);
+		setAuthors(newAuthors);
+		form.setValue("authors", newAuthors.join(", "));
+	};
 
-  return {
-    authors,
-    inputValue,
-    setInputValue,
-    addAuthor,
-    removeAuthor,
-  };
+	return {
+		authors,
+		inputValue,
+		setInputValue,
+		addAuthor,
+		removeAuthor,
+	};
 };
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
-  const { data } = useSession();
-  const { toast } = useToast();
-  const router = useRouter();
-  const _importModal = useImportModal();
+	const { data } = useSession();
+	const { toast } = useToast();
+	const router = useRouter();
+	const _importModal = useImportModal();
 
-  const [value, setValue] = useState('');
-  const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<
-    number[]
-  >([]);
-  const [_imageLoading, setImageLoading] = useState<boolean>(true);
-  const [previewImage, setPreviewImage] = useState('');
-  const [featuredImage, setFeaturedImage] = useState('');
+	const [value, setValue] = useState("");
+	const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<
+		number[]
+	>([]);
+	const [_imageLoading, setImageLoading] = useState<boolean>(true);
+	const [previewImage, setPreviewImage] = useState("");
+	const [featuredImage, setFeaturedImage] = useState("");
 
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [_alertLoading, _setAlertLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState<z.infer<
-    typeof caseStudyFormSchema
-  > | null>(null);
-  const [loading, setLoading] = useState(false);
+	const [alertOpen, setAlertOpen] = useState(false);
+	const [_alertLoading, _setAlertLoading] = useState<boolean>(false);
+	const [formValues, setFormValues] = useState<z.infer<
+		typeof caseStudyFormSchema
+	> | null>(null);
+	const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (caseStudy?.assuranceCases && caseStudy.assuranceCases.length > 0) {
-      setSelectedAssuranceCases(caseStudy.assurance_cases || []);
-    } else {
-      setSelectedAssuranceCases([]);
-    }
-  }, [caseStudy]);
+	useEffect(() => {
+		if (caseStudy?.assuranceCases && caseStudy.assuranceCases.length > 0) {
+			setSelectedAssuranceCases(caseStudy.assurance_cases || []);
+		} else {
+			setSelectedAssuranceCases([]);
+		}
+	}, [caseStudy]);
 
-  // 1. Define your form.
-  const form = useForm<z.infer<typeof caseStudyFormSchema>>({
-    resolver: zodResolver(caseStudyFormSchema),
-    defaultValues: getDefaultFormValues(caseStudy),
-  });
+	// 1. Define your form.
+	const form = useForm<z.infer<typeof caseStudyFormSchema>>({
+		resolver: zodResolver(caseStudyFormSchema),
+		defaultValues: getDefaultFormValues(caseStudy),
+		mode: "onBlur", // This enables real-time validation on blur
+		reValidateMode: "onChange", // Re-validate on every change after initial blur
+	});
 
-  // Use author management helper
-  const { authors, inputValue, setInputValue, addAuthor, removeAuthor } =
-    useAuthorManagement(form);
+	// Use author management helper
+	const { authors, inputValue, setInputValue, addAuthor, removeAuthor } =
+		useAuthorManagement(form);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPreviewImage(URL.createObjectURL(file));
-      form.setValue('image', file);
-    }
-  };
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			setPreviewImage(URL.createObjectURL(file));
+			form.setValue("image", file);
+		}
+	};
 
-  // 2. Define a submit handler.
-  // async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-  //   if (!caseStudy) {
-  //     let newCaseStudy = {
-  //       title: values.title,
-  //       description: values.description,
-  //       authors: values.authors,
-  //       category: values.category,
-  //       // published_date: values.publishedDate?.toISOString(),
-  //       last_modified_on: new Date().toISOString(),
-  //       created_on: new Date().toISOString(),
-  //       sector: values.sector,
-  //       contact: values.contact,
-  //       // assurance_cases": [2, 5],
-  //       // "image": "https://example.com/path-to-image.jpg",
-  //     }
+	// 2. Define a submit handler.
+	// async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+	//   if (!caseStudy) {
+	//     let newCaseStudy = {
+	//       title: values.title,
+	//       description: values.description,
+	//       authors: values.authors,
+	//       category: values.category,
+	//       // published_date: values.publishedDate?.toISOString(),
+	//       last_modified_on: new Date().toISOString(),
+	//       created_on: new Date().toISOString(),
+	//       sector: values.sector,
+	//       contact: values.contact,
+	//       // assurance_cases": [2, 5],
+	//       // "image": "https://example.com/path-to-image.jpg",
+	//     }
 
-  //     const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
+	//     const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
 
-  //     if(createdCaseStudy) {
-  //       toast({
-  //         title: 'Successfully created',
-  //         description: 'You have created a case study!',
-  //       });
-  //       router.back()
-  //     }
+	//     if(createdCaseStudy) {
+	//       toast({
+	//         title: 'Successfully created',
+	//         description: 'You have created a case study!',
+	//       });
+	//       router.back()
+	//     }
 
-  //   } else {
-  //     let newCaseStudy = {
-  //       id: caseStudy.id,
-  //       title: values.title,
-  //       description: values.description,
-  //       authors: values.authors,
-  //       category: values.category,
-  //       // published_date: values.publishedDate?.toISOString(),
-  //       last_modified_on: new Date().toISOString(),
-  //       sector: values.sector,
-  //       contact: values.contact,
-  //       // assurance_cases": [2, 5],
-  //       // "image": "https://example.com/path-to-image.jpg",
-  //     }
+	//   } else {
+	//     let newCaseStudy = {
+	//       id: caseStudy.id,
+	//       title: values.title,
+	//       description: values.description,
+	//       authors: values.authors,
+	//       category: values.category,
+	//       // published_date: values.publishedDate?.toISOString(),
+	//       last_modified_on: new Date().toISOString(),
+	//       sector: values.sector,
+	//       contact: values.contact,
+	//       // assurance_cases": [2, 5],
+	//       // "image": "https://example.com/path-to-image.jpg",
+	//     }
 
-  //     console.log(newCaseStudy)
+	//     console.log(newCaseStudy)
 
-  //     const updated = await updateCaseStudy(data?.key, newCaseStudy)
+	//     const updated = await updateCaseStudy(data?.key, newCaseStudy)
 
-  //     if(updated) {
-  //       toast({
-  //         title: 'Successfully Updated',
-  //         description: 'You have updated a case study!',
-  //       });
-  //     } else {
-  //       toast({
-  //         variant: "destructive",
-  //         title: 'Failed to Update',
-  //         description: 'Something went wrong!',
-  //       });
-  //     }
-  //   }
-  // }
+	//     if(updated) {
+	//       toast({
+	//         title: 'Successfully Updated',
+	//         description: 'You have updated a case study!',
+	//       });
+	//     } else {
+	//       toast({
+	//         variant: "destructive",
+	//         title: 'Failed to Update',
+	//         description: 'Something went wrong!',
+	//       });
+	//     }
+	//   }
+	// }
 
-  async function uploadCaseStudyFeatureImage(
-    caseStudyId: number,
-    imageFile: File
-  ) {
-    const formData = new FormData();
-    formData.append('media', imageFile); // Ensure it matches request.FILES.get("media")
+	async function uploadCaseStudyFeatureImage(
+		caseStudyId: number,
+		imageFile: File
+	) {
+		const formData = new FormData();
+		formData.append("media", imageFile); // Ensure it matches request.FILES.get("media")
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
-        {
-          method: 'POST',
-          body: formData,
-          headers: {
-            Authorization: `Token ${data?.key ?? ''}`, // Replace with actual auth token
-          },
-        }
-      );
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
+				{
+					method: "POST",
+					body: formData,
+					headers: {
+						Authorization: `Token ${data?.key ?? ""}`, // Replace with actual auth token
+					},
+				}
+			);
 
-      if (!response.ok) {
-        throw new Error('Failed to upload feature image');
-      }
+			if (!response.ok) {
+				throw new Error("Failed to upload feature image");
+			}
 
-      const _result = await response.json();
-      // console.log('Feature image uploaded:', result);
-      toast({
-        title: 'Feature Image Uploaded',
-        description: 'Feature image successfully uploaded!',
-      });
-    } catch (_error) {
-      toast({
-        variant: 'destructive',
-        title: 'Image Upload Failed',
-        description: 'Could not upload feature image!',
-      });
-    }
-  }
+			const _result = await response.json();
+			// console.log('Feature image uploaded:', result);
+			toast({
+				title: "Feature Image Uploaded",
+				description: "Feature image successfully uploaded!",
+			});
+		} catch (_error) {
+			toast({
+				variant: "destructive",
+				title: "Image Upload Failed",
+				description: "Could not upload feature image!",
+			});
+		}
+	}
 
-  async function deleteCaseStudyFeatureImage(caseStudyId: number) {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Token ${data?.key ?? ''}`, // Replace with actual auth token
-          },
-        }
-      );
+	async function deleteCaseStudyFeatureImage(caseStudyId: number) {
+		try {
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
+				{
+					method: "DELETE",
+					headers: {
+						Authorization: `Token ${data?.key ?? ""}`, // Replace with actual auth token
+					},
+				}
+			);
 
-      if (!response.ok) {
-        throw new Error('Failed to delete feature image');
-      }
+			if (!response.ok) {
+				throw new Error("Failed to delete feature image");
+			}
 
-      // console.log('Feature image deleted');
-      // toast({
-      //   title: 'Feature Image Removed',
-      //   description: 'Feature image successfully uploaded!',
-      // });
-    } catch (_error) {
-      // toast({
-      //   variant: "destructive",
-      //   title: 'Image Upload Failed',
-      //   description: 'Could not upload feature image!',
-      // });
-    }
-  }
+			// console.log('Feature image deleted');
+			// toast({
+			//   title: 'Feature Image Removed',
+			//   description: 'Feature image successfully uploaded!',
+			// });
+		} catch (_error) {
+			// toast({
+			//   variant: "destructive",
+			//   title: 'Image Upload Failed',
+			//   description: 'Could not upload feature image!',
+			// });
+		}
+	}
 
-  const fetchFeaturedImage = useCallback(async () => {
-    try {
-      const requestOptions: RequestInit = {
-        method: 'GET',
-        headers: {
-          Authorization: `Token ${data?.key}`,
-        },
-        redirect: 'follow',
-      };
+	const fetchFeaturedImage = useCallback(async () => {
+		try {
+			const requestOptions: RequestInit = {
+				method: "GET",
+				headers: {
+					Authorization: `Token ${data?.key}`,
+				},
+				redirect: "follow",
+			};
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image/`,
-        requestOptions
-      );
+			const response = await fetch(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image/`,
+				requestOptions
+			);
 
-      if (response.status === 404) {
-        setFeaturedImage('');
-        return;
-      }
+			if (response.status === 404) {
+				setFeaturedImage("");
+				return;
+			}
 
-      const result = await response.json();
-      // The API returns the image URL, not the full URL with domain
-      const imageUrl = result.image
-        ? `${process.env.NEXT_PUBLIC_API_URL}${result.image}`
-        : '';
-      const normalizedUrl = normalizeImageUrl(imageUrl);
-      setFeaturedImage(normalizedUrl || '');
-    } catch (_error) {
-      // Silently handle error
-    } finally {
-      setImageLoading(false);
-    }
-  }, [data?.key, caseStudy?.id]);
+			const result = await response.json();
+			// The API returns the image URL, not the full URL with domain
+			const imageUrl = result.image
+				? `${process.env.NEXT_PUBLIC_API_URL}${result.image}`
+				: "";
+			const normalizedUrl = normalizeImageUrl(imageUrl);
+			setFeaturedImage(normalizedUrl || "");
+		} catch (_error) {
+			// Silently handle error
+		} finally {
+			setImageLoading(false);
+		}
+	}, [data?.key, caseStudy?.id]);
 
-  useEffect(() => {
-    if (caseStudy) {
-      fetchFeaturedImage();
-    }
-  }, [caseStudy, fetchFeaturedImage]);
+	useEffect(() => {
+		if (caseStudy) {
+			fetchFeaturedImage();
+		}
+	}, [caseStudy, fetchFeaturedImage]);
 
-  async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-    if (caseStudy?.published) {
-      setFormValues(values);
-      setAlertOpen(true);
-      return;
-    }
-    await handleSubmit(values);
-  }
+	async function onSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+		if (caseStudy?.published) {
+			setFormValues(values);
+			setAlertOpen(true);
+			return;
+		}
+		await handleSubmit(values);
+	}
 
-  function buildFormData(values: z.infer<typeof caseStudyFormSchema>) {
-    const formData = new FormData();
+	function buildFormData(values: z.infer<typeof caseStudyFormSchema>) {
+		const formData = new FormData();
 
-    formData.append('title', values.title);
-    formData.append('description', values.description || '');
-    formData.append('authors', values.authors || '');
-    formData.append('last_modified_on', new Date().toISOString());
-    formData.append('created_on', new Date().toISOString());
-    formData.append('sector', values.sector || '');
-    formData.append('type', values.type || '');
-    formData.append('contact', values.contact || '');
+		formData.append("title", values.title);
+		formData.append("description", values.description || "");
+		formData.append("authors", values.authors || "");
+		formData.append("last_modified_on", new Date().toISOString());
+		formData.append("created_on", new Date().toISOString());
+		formData.append("sector", values.sector || "");
+		formData.append("type", values.type || "");
+		formData.append("contact", values.contact || "");
 
-    if (selectedAssuranceCases.length > 0) {
-      formData.append(
-        'assurance_cases',
-        JSON.stringify(selectedAssuranceCases)
-      );
-    }
+		if (selectedAssuranceCases.length > 0) {
+			formData.append(
+				"assurance_cases",
+				JSON.stringify(selectedAssuranceCases)
+			);
+		}
 
-    return formData;
-  }
+		return formData;
+	}
 
-  async function handleUpdateCaseStudy(
-    values: z.infer<typeof caseStudyFormSchema>,
-    formData: FormData
-  ) {
-    if (!caseStudy) {
-      return;
-    }
+	async function handleUpdateCaseStudy(
+		values: z.infer<typeof caseStudyFormSchema>,
+		formData: FormData
+	) {
+		if (!caseStudy) {
+			return;
+		}
 
-    formData.append('id', caseStudy.id.toString());
-    const updated = await updateCaseStudy(data?.key, formData);
+		formData.append("id", caseStudy.id.toString());
+		const updated = await updateCaseStudy(data?.key, formData);
 
-    if (values.image) {
-      await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
-    }
+		if (values.image) {
+			await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
+		}
 
-    if (updated) {
-      toast({
-        title: 'Successfully Updated',
-        description: 'You have updated a case study!',
-      });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to Update',
-        description: 'Something went wrong!',
-      });
-    }
-  }
+		if (updated) {
+			toast({
+				title: "Successfully Updated",
+				description: "You have updated a case study!",
+			});
+		} else {
+			toast({
+				variant: "destructive",
+				title: "Failed to Update",
+				description: "Something went wrong!",
+			});
+		}
+	}
 
-  async function handleCreateCaseStudy(
-    values: z.infer<typeof caseStudyFormSchema>,
-    formData: FormData
-  ) {
-    const createdCaseStudy = await createCaseStudy(data?.key ?? '', formData);
+	async function handleCreateCaseStudy(
+		values: z.infer<typeof caseStudyFormSchema>,
+		formData: FormData
+	) {
+		const createdCaseStudy = await createCaseStudy(data?.key ?? "", formData);
 
-    if (values.image) {
-      await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
-    }
+		if (values.image) {
+			await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
+		}
 
-    toast({
-      title: 'Successfully created',
-      description: 'You have created a case study!',
-    });
+		toast({
+			title: "Successfully created",
+			description: "You have created a case study!",
+		});
 
-    router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
-  }
+		router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
+	}
 
-  async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
-    const formData = buildFormData(values);
-    setLoading(true);
+	async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
+		const formData = buildFormData(values);
+		setLoading(true);
 
-    try {
-      if (caseStudy) {
-        await handleUpdateCaseStudy(values, formData);
-      } else {
-        await handleCreateCaseStudy(values, formData);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+		try {
+			if (caseStudy) {
+				await handleUpdateCaseStudy(values, formData);
+			} else {
+				await handleCreateCaseStudy(values, formData);
+			}
+		} finally {
+			setLoading(false);
+		}
+	}
 
-  const handlePublish = async () => {
-    if (!caseStudy) {
-      return;
-    }
+	const handlePublish = async () => {
+		if (!caseStudy) {
+			return;
+		}
 
-    const formData = new FormData();
-    formData.append('id', caseStudy.id.toString());
-    formData.append(
-      'assurance_cases',
-      JSON.stringify(caseStudy.assurance_cases || [])
-    );
+		const formData = new FormData();
+		formData.append("id", caseStudy.id.toString());
+		formData.append(
+			"assurance_cases",
+			JSON.stringify(caseStudy.assurance_cases || [])
+		);
 
-    // Set only the fields that need updating
-    if (caseStudy.published) {
-      formData.append('published', 'false'); // Convert boolean to string
-      formData.append('published_date', ''); // Clear the published date
-    } else {
-      formData.append('published', 'true'); // Convert boolean to string
-      formData.append('published_date', new Date().toISOString()); // Set new date
-    }
+		// Set only the fields that need updating
+		if (caseStudy.published) {
+			formData.append("published", "false"); // Convert boolean to string
+			formData.append("published_date", ""); // Clear the published date
+		} else {
+			formData.append("published", "true"); // Convert boolean to string
+			formData.append("published_date", new Date().toISOString()); // Set new date
+		}
 
-    // Send the formData to the API
-    const response = await updateCaseStudy(data?.key, formData);
+		// Send the formData to the API
+		const response = await updateCaseStudy(data?.key, formData);
 
-    if (response) {
-      toast({
-        title: caseStudy.published
-          ? 'Successfully Unpublished'
-          : 'Successfully Published',
-        description: `You have ${caseStudy.published ? 'unpublished' : 'published'} your case study!`,
-      });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to Update',
-        description: 'Something went wrong!',
-      });
-    }
-  };
+		if (response) {
+			toast({
+				title: caseStudy.published
+					? "Successfully Unpublished"
+					: "Successfully Published",
+				description: `You have ${caseStudy.published ? "unpublished" : "published"} your case study!`,
+			});
+		} else {
+			toast({
+				variant: "destructive",
+				title: "Failed to Update",
+				description: "Something went wrong!",
+			});
+		}
+	};
 
-  const _handleDelete = async () => {
-    if (!caseStudy) {
-      return;
-    }
-    const deleted = await deleteCaseStudy(data?.key ?? '', caseStudy.id);
+	const _handleDelete = async () => {
+		if (!caseStudy) {
+			return;
+		}
+		const deleted = await deleteCaseStudy(data?.key ?? "", caseStudy.id);
 
-    if (deleted) {
-      toast({
-        title: 'Successfully Deleted',
-        description: 'Case Study Deleted',
-      });
-      router.push('/dashboard/case-studies');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: 'Something went wrong!',
-      });
-    }
-  };
+		if (deleted) {
+			toast({
+				title: "Successfully Deleted",
+				description: "Case Study Deleted",
+			});
+			router.push("/dashboard/case-studies");
+		} else {
+			toast({
+				variant: "destructive",
+				title: "Delete Failed",
+				description: "Something went wrong!",
+			});
+		}
+	};
 
-  return (
-    <>
-      <div className="mt-6">
-        <Separator className="my-6" />
-        <TooltipProvider>
-          <Form {...form}>
-            <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="grid grid-cols-2 gap-8">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sector"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sector</FormLabel>
-                      <FormControl>
-                        <Select
-                          defaultValue={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select sector" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {sectors.map((sector) => (
-                              <SelectItem key={sector.ID} value={sector.Name}>
-                                {sector.Name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* <FormField
+	return (
+		<>
+			<div className="mt-6">
+				<Separator className="my-6" />
+				<TooltipProvider>
+					<Form {...form}>
+						<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
+							{/* Basic Information Section */}
+							<div className="space-y-6">
+								<div>
+									<h3 className="text-lg font-medium">Basic Information</h3>
+									<p className="text-sm text-muted-foreground">
+										Provide the essential details about your case study
+									</p>
+								</div>
+
+								<div className="grid grid-cols-2 gap-8">
+									<FormField
+										control={form.control}
+										name="title"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Title</FormLabel>
+												<FormControl>
+													<Input
+														{...field}
+														placeholder="Enter a descriptive title"
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name="sector"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Sector</FormLabel>
+												<FormControl>
+													<Select
+														defaultValue={field.value}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Select sector" />
+														</SelectTrigger>
+														<SelectContent>
+															{sectors.map((sector) => (
+																<SelectItem key={sector.ID} value={sector.Name}>
+																	{sector.Name}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									{/* <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
@@ -591,266 +610,319 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
                     </FormItem>
                   )}
                 /> */}
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <FormControl>
-                        <Select
-                          defaultValue={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {['Assurance Case', 'Argument Pattern'].map(
-                              (sector) => (
-                                <SelectItem key={sector} value={sector}>
-                                  {sector}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+									<FormField
+										control={form.control}
+										name="type"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Type</FormLabel>
+												<FormControl>
+													<Select
+														defaultValue={field.value}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Select type" />
+														</SelectTrigger>
+														<SelectContent>
+															{["Assurance Case", "Argument Pattern"].map(
+																(sector) => (
+																	<SelectItem key={sector} value={sector}>
+																		{sector}
+																	</SelectItem>
+																)
+															)}
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</div>
+							</div>
 
-              <Separator className="my-6" />
+							<Separator className="my-6" />
 
-              <div className="grid grid-cols-2 gap-8">
-                <FormField
-                  control={form.control}
-                  name="contact"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email for Corresponding Author</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+							{/* Author Information Section */}
+							<div className="space-y-6">
+								<div>
+									<h3 className="text-lg font-medium">Author Information</h3>
+									<p className="text-sm text-muted-foreground">
+										Add all authors and specify contact details for
+										correspondence
+									</p>
+								</div>
 
-                <FormField
-                  control={form.control}
-                  name="authors"
-                  render={() => {
-                    return (
-                      <FormItem>
-                        <FormLabel>Authors</FormLabel>
+								<FormField
+									control={form.control}
+									name="authors"
+									render={() => {
+										return (
+											<FormItem>
+												<FormLabel>Authors</FormLabel>
+												<FormDescription>
+													List all authors who contributed to this case study
+												</FormDescription>
 
-                        <div className="mb-2 flex items-center gap-2">
-                          <Input
-                            onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Enter author name"
-                            value={inputValue}
-                          />
-                          <Button onClick={addAuthor} type="button">
-                            Add Author
-                          </Button>
-                        </div>
+												<div className="mb-2 flex items-center gap-2">
+													<Input
+														onChange={(e) => setInputValue(e.target.value)}
+														onKeyDown={(e) => {
+															if (e.key === "Enter") {
+																e.preventDefault();
+																addAuthor();
+															}
+														}}
+														placeholder="Enter author name"
+														value={inputValue}
+													/>
+													<Button
+														onClick={addAuthor}
+														type="button"
+														variant="secondary"
+													>
+														Add Author
+													</Button>
+												</div>
 
-                        <div className="flex flex-wrap gap-2">
-                          {authors.map((author) => (
-                            <span
-                              className="flex items-center rounded-full bg-muted px-2 py-1 text-sm"
-                              key={author}
-                            >
-                              {author}
-                              {!caseStudy?.published && (
-                                <button
-                                  className="ml-1 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeAuthor(author)}
-                                  type="button"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </span>
-                          ))}
-                        </div>
+												<div className="flex flex-wrap gap-2">
+													{authors.map((author) => (
+														<span
+															className="flex items-center rounded-full bg-muted px-3 py-1.5 text-sm"
+															key={author}
+														>
+															{author}
+															{!caseStudy?.published && (
+																<button
+																	className="ml-2 text-muted-foreground hover:text-destructive"
+																	onClick={() => removeAuthor(author)}
+																	type="button"
+																>
+																	<X className="h-3 w-3" />
+																</button>
+															)}
+														</span>
+													))}
+													{authors.length === 0 && (
+														<span className="italic text-sm text-muted-foreground">
+															No authors added yet
+														</span>
+													)}
+												</div>
 
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-              </div>
+												<FormMessage />
+											</FormItem>
+										);
+									}}
+								/>
 
-              <Separator className="my-6" />
+								<FormField
+									control={form.control}
+									name="contact"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Corresponding Author Email</FormLabel>
+											<FormDescription>
+												Email address of the author who will handle
+												correspondence about this case study (should be one of
+												the authors listed above)
+											</FormDescription>
+											<FormControl>
+												<Input
+													{...field}
+													className="max-w-md"
+													placeholder="author@example.com"
+													type="email"
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="mb-2 flex items-center gap-1">
-                      <FormLabel>Description</FormLabel>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          Provide a clear and concise summary of the case study.
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <FormControl>
-                      <TiptapEditor
-                        className="min-h-[200px]" // Ensure controlled component
-                        onChange={(content) => {
-                          field.onChange(content); // Update form state
-                          setValue(content);
-                        }}
-                        placeholder="Provide a clear and concise summary of the case study..."
-                        value={field.value || value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+							<Separator className="my-6" />
 
-              <Separator className="my-6" />
+							{/* Description Section */}
+							<div className="space-y-6">
+								<div>
+									<h3 className="text-lg font-medium">
+										Case Study Description
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Provide a detailed description of your case study
+									</p>
+								</div>
 
-              <div className="">
-                <div className="flex items-center justify-between">
-                  <p className="mb-4 font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Available Published Assurance Cases
-                  </p>
-                  {/* <button
+								<FormField
+									control={form.control}
+									name="description"
+									render={({ field }) => (
+										<FormItem>
+											<div className="mb-2 flex items-center gap-1">
+												<FormLabel>Description</FormLabel>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<span>
+															<InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
+														</span>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														Provide a clear and concise summary of the case
+														study.
+													</TooltipContent>
+												</Tooltip>
+											</div>
+											<FormControl>
+												<TiptapEditor
+													className="min-h-[200px]" // Ensure controlled component
+													onChange={(content) => {
+														field.onChange(content); // Update form state
+														setValue(content);
+													}}
+													placeholder="Provide a clear and concise summary of the case study..."
+													value={field.value || value}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							<Separator className="my-6" />
+
+							{/* Related Assurance Cases Section */}
+							<div className="space-y-6">
+								<div>
+									<h3 className="text-lg font-medium">
+										Related Assurance Cases
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Please select one or more assurance cases to link with this case study
+									</p>
+								</div>
+
+								{/* <button
                     onClick={() => importModal.onOpen()}
                     className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                   >
                     <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
                     <span className='hidden md:block'>Import</span>
                   </button> */}
-                </div>
-                <RelatedAssuranceCaseList
-                  selectedAssuranceCases={selectedAssuranceCases}
-                  setSelectedAssuranceCases={setSelectedAssuranceCases}
-                />
-              </div>
+								<RelatedAssuranceCaseList
+									selectedAssuranceCases={selectedAssuranceCases}
+									setSelectedAssuranceCases={setSelectedAssuranceCases}
+								/>
+							</div>
 
-              <div>
-                <div className="mb-3 flex items-center gap-1">
-                  <FormLabel htmlFor="image">Featured Image</FormLabel>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      Upload a representative image for this case study.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+							<Separator className="my-6" />
 
-                {previewImage || featuredImage ? (
-                  <div className="group relative mt-6 h-[500px] w-10/12">
-                    <Image
-                      alt="image"
-                      className="aspect-video rounded-lg object-cover"
-                      fill
-                      src={previewImage || featuredImage}
-                    />
-                    <div className="absolute flex h-full w-full items-center justify-center rounded-lg bg-indigo-900/70 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      <Button
-                        onClick={() => {
-                          setPreviewImage(''); // Clear preview
-                          setFeaturedImage(''); // Clear preview
-                          form.setValue('image', ''); // Reset form field
-                          if (featuredImage && caseStudy) {
-                            deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
-                          }
-                        }}
-                        type="button"
-                        variant="destructive"
-                      >
-                        <Trash2Icon className="mr-2 size-4" /> Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Input
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    type="file"
-                  />
-                )}
-              </div>
+							{/* Featured Image Section */}
+							<div className="space-y-6">
+								<div>
+									<h3 className="text-lg font-medium">Featured Image</h3>
+									<p className="text-sm text-muted-foreground">
+										Upload a representative image for this case study
+									</p>
+								</div>
 
-              <div className="flex w-full items-center justify-between gap-4">
-                <div className="flex items-center justify-start gap-2">
-                  {caseStudy && (
-                    <Button type="submit" variant="default">
-                      Save Changes
-                    </Button>
-                  )}
-                  {!caseStudy && (
-                    <Button type="submit" variant="default">
-                      Save
-                    </Button>
-                  )}
-                  {caseStudy && (
-                    <Button
-                      onClick={handlePublish}
-                      type="button"
-                      variant="primary"
-                    >
-                      {caseStudy.published ? (
-                        <>
-                          <CloudDownload className="mr-2 size-4" />
-                          <span>Remove from Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share className="mr-2 size-4" />
-                          <span>Make Public</span>
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-                {caseStudy && (
-                  <DeleteCaseButton
-                    caseStudyId={caseStudy.id}
-                    redirect
-                    variant="destructive"
-                  />
-                )}
-                {/* <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button> */}
-              </div>
-            </form>
-          </Form>
-        </TooltipProvider>
-      </div>
-      <AlertModal
-        confirmButtonText="Update Anyway"
-        isOpen={alertOpen}
-        loading={loading}
-        message="This case study is published. Updating it may affect the live version. Are you sure you want to proceed?"
-        onClose={() => setAlertOpen(false)}
-        onConfirm={async () => {
-          setAlertOpen(false);
-          if (formValues) {
-            await handleSubmit(formValues);
-          }
-        }}
-      />
-    </>
-  );
+								<div>
+									{previewImage || featuredImage ? (
+										<div className="group relative mt-6 h-[400px] w-full max-w-2xl">
+											<Image
+												alt="Featured image preview"
+												className="aspect-video rounded-lg object-cover border"
+												fill
+												src={previewImage || featuredImage}
+											/>
+											<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+												<Button
+													onClick={() => {
+														setPreviewImage(""); // Clear preview
+														setFeaturedImage(""); // Clear preview
+														form.setValue("image", ""); // Reset form field
+														if (featuredImage && caseStudy) {
+															deleteCaseStudyFeatureImage(caseStudy.id); // Delete existing image
+														}
+													}}
+													type="button"
+													variant="destructive"
+												>
+													<Trash2Icon className="mr-2 size-4" /> Remove Image
+												</Button>
+											</div>
+										</div>
+									) : (
+										<Input type="file" accept="image/*" onChange={handleFileChange} />
+									)}
+								</div>
+							</div>
+
+							<Separator className="my-6" />
+
+							{/* Form Actions */}
+							<div className="flex w-full items-center justify-between gap-4">
+								<div className="flex items-center justify-start gap-2">
+									{caseStudy && (
+										<Button type="submit" variant="default">
+											Save Changes
+										</Button>
+									)}
+									{!caseStudy && (
+										<Button type="submit" variant="default">
+											Save
+										</Button>
+									)}
+									{caseStudy && (
+										<Button
+											onClick={handlePublish}
+											type="button"
+											variant="primary"
+										>
+											{caseStudy.published ? (
+												<>
+													<CloudDownload className="mr-2 size-4" />
+													<span>Remove from Public</span>
+												</>
+											) : (
+												<>
+													<Share className="mr-2 size-4" />
+													<span>Make Public</span>
+												</>
+											)}
+										</Button>
+									)}
+								</div>
+								{caseStudy && (
+									<DeleteCaseButton
+										caseStudyId={caseStudy.id}
+										redirect
+										variant="destructive"
+									/>
+								)}
+								{/* <Button variant="destructive" onClick={handleDelete} type="button"><Trash2Icon className="size-4 mr-2"/>Delete</Button> */}
+							</div>
+						</form>
+					</Form>
+				</TooltipProvider>
+			</div>
+			<AlertModal
+				confirmButtonText="Update Anyway"
+				isOpen={alertOpen}
+				loading={loading}
+				message="This case study is published. Updating it may affect the live version. Are you sure you want to proceed?"
+				onClose={() => setAlertOpen(false)}
+				onConfirm={async () => {
+					setAlertOpen(false);
+					if (formValues) {
+						await handleSubmit(formValues);
+					}
+				}}
+			/>
+		</>
+	);
 };
 
 export default CaseStudyForm;

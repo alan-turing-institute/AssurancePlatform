@@ -1,334 +1,334 @@
-import { renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useEnforceLogin,
-  useEnforceLogout,
-  useLoginToken,
-} from '@/hooks/use-auth';
+	useEnforceLogin,
+	useEnforceLogout,
+	useLoginToken,
+} from "@/hooks/use-auth";
 
 // Mock window.location
 const mockReplace = vi.fn();
-Object.defineProperty(window, 'location', {
-  value: { replace: mockReplace },
-  writable: true,
+Object.defineProperty(window, "location", {
+	value: { replace: mockReplace },
+	writable: true,
 });
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+	getItem: vi.fn(),
+	setItem: vi.fn(),
+	removeItem: vi.fn(),
+	clear: vi.fn(),
 };
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
+Object.defineProperty(window, "localStorage", {
+	value: localStorageMock,
+	writable: true,
 });
 
-describe('useAuth hooks', () => {
-  beforeEach(() => {
-    // Clear all mocks before each test
-    vi.clearAllMocks();
-    localStorageMock.getItem.mockReturnValue(null);
-  });
+describe("useAuth hooks", () => {
+	beforeEach(() => {
+		// Clear all mocks before each test
+		vi.clearAllMocks();
+		localStorageMock.getItem.mockReturnValue(null);
+	});
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-  describe('useEnforceLogin', () => {
-    it('should redirect to home when token is null', () => {
-      localStorageMock.getItem.mockReturnValue(null);
+	describe("useEnforceLogin", () => {
+		it("should redirect to home when token is null", () => {
+			localStorageMock.getItem.mockReturnValue(null);
 
-      const { result } = renderHook(() => useEnforceLogin());
+			const { result } = renderHook(() => useEnforceLogin());
 
-      expect(mockReplace).toHaveBeenCalledWith('/');
-      expect(result.current).toBe(false);
-    });
+			expect(mockReplace).toHaveBeenCalledWith("/");
+			expect(result.current).toBe(false);
+		});
 
-    it('should redirect to home when token is undefined', () => {
-      localStorageMock.getItem.mockReturnValue(undefined);
+		it("should redirect to home when token is undefined", () => {
+			localStorageMock.getItem.mockReturnValue(undefined);
 
-      const { result } = renderHook(() => useEnforceLogin());
+			const { result } = renderHook(() => useEnforceLogin());
 
-      expect(mockReplace).toHaveBeenCalledWith('/');
-      expect(result.current).toBe(false);
-    });
+			expect(mockReplace).toHaveBeenCalledWith("/");
+			expect(result.current).toBe(false);
+		});
 
-    it('should not redirect when token exists', () => {
-      localStorageMock.getItem.mockReturnValue('valid-token');
+		it("should not redirect when token exists", () => {
+			localStorageMock.getItem.mockReturnValue("valid-token");
 
-      const { result } = renderHook(() => useEnforceLogin());
+			const { result } = renderHook(() => useEnforceLogin());
 
-      expect(mockReplace).not.toHaveBeenCalled();
-      expect(result.current).toBe(true);
-    });
+			expect(mockReplace).not.toHaveBeenCalled();
+			expect(result.current).toBe(true);
+		});
 
-    it('should return true when user is authenticated', () => {
-      localStorageMock.getItem.mockReturnValue('user-token-123');
+		it("should return true when user is authenticated", () => {
+			localStorageMock.getItem.mockReturnValue("user-token-123");
 
-      const { result } = renderHook(() => useEnforceLogin());
+			const { result } = renderHook(() => useEnforceLogin());
 
-      expect(result.current).toBe(true);
-      expect(mockReplace).not.toHaveBeenCalled();
-    });
-  });
+			expect(result.current).toBe(true);
+			expect(mockReplace).not.toHaveBeenCalled();
+		});
+	});
 
-  describe('useEnforceLogout', () => {
-    it('should redirect to home when token exists', () => {
-      localStorageMock.getItem.mockReturnValue('some-token');
+	describe("useEnforceLogout", () => {
+		it("should redirect to home when token exists", () => {
+			localStorageMock.getItem.mockReturnValue("some-token");
 
-      const { result } = renderHook(() => useEnforceLogout());
+			const { result } = renderHook(() => useEnforceLogout());
 
-      expect(mockReplace).toHaveBeenCalledWith('/');
-      expect(result.current).toBe(false);
-    });
+			expect(mockReplace).toHaveBeenCalledWith("/");
+			expect(result.current).toBe(false);
+		});
 
-    it('should not redirect when token is null', () => {
-      localStorageMock.getItem.mockReturnValue(null);
+		it("should not redirect when token is null", () => {
+			localStorageMock.getItem.mockReturnValue(null);
 
-      const { result } = renderHook(() => useEnforceLogout());
+			const { result } = renderHook(() => useEnforceLogout());
 
-      expect(mockReplace).not.toHaveBeenCalled();
-      expect(result.current).toBe(true);
-    });
+			expect(mockReplace).not.toHaveBeenCalled();
+			expect(result.current).toBe(true);
+		});
 
-    it('should not redirect when token is undefined', () => {
-      localStorageMock.getItem.mockReturnValue(undefined);
+		it("should not redirect when token is undefined", () => {
+			localStorageMock.getItem.mockReturnValue(undefined);
 
-      const { result } = renderHook(() => useEnforceLogout());
+			const { result } = renderHook(() => useEnforceLogout());
 
-      expect(mockReplace).not.toHaveBeenCalled();
-      expect(result.current).toBe(true);
-    });
+			expect(mockReplace).not.toHaveBeenCalled();
+			expect(result.current).toBe(true);
+		});
 
-    it('should return true when user is not authenticated', () => {
-      localStorageMock.getItem.mockReturnValue(null);
+		it("should return true when user is not authenticated", () => {
+			localStorageMock.getItem.mockReturnValue(null);
 
-      const { result } = renderHook(() => useEnforceLogout());
+			const { result } = renderHook(() => useEnforceLogout());
 
-      expect(result.current).toBe(true);
-      expect(mockReplace).not.toHaveBeenCalled();
-    });
-  });
+			expect(result.current).toBe(true);
+			expect(mockReplace).not.toHaveBeenCalled();
+		});
+	});
 
-  describe('useLoginToken', () => {
-    describe('getting token', () => {
-      it('should get token from localStorage', () => {
-        const testToken = 'test-token-123';
-        localStorageMock.getItem.mockReturnValue(testToken);
+	describe("useLoginToken", () => {
+		describe("getting token", () => {
+			it("should get token from localStorage", () => {
+				const testToken = "test-token-123";
+				localStorageMock.getItem.mockReturnValue(testToken);
 
-        const { result } = renderHook(() => useLoginToken());
-        const [token] = result.current;
+				const { result } = renderHook(() => useLoginToken());
+				const [token] = result.current;
 
-        expect(localStorageMock.getItem).toHaveBeenCalledWith('token');
-        expect(token).toBe(testToken);
-      });
+				expect(localStorageMock.getItem).toHaveBeenCalledWith("token");
+				expect(token).toBe(testToken);
+			});
 
-      it('should return null when no token exists', () => {
-        localStorageMock.getItem.mockReturnValue(null);
+			it("should return null when no token exists", () => {
+				localStorageMock.getItem.mockReturnValue(null);
 
-        const { result } = renderHook(() => useLoginToken());
-        const [token] = result.current;
+				const { result } = renderHook(() => useLoginToken());
+				const [token] = result.current;
 
-        expect(token).toBeNull();
-      });
-    });
+				expect(token).toBeNull();
+			});
+		});
 
-    describe('setting token', () => {
-      it('should set token to localStorage', () => {
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+		describe("setting token", () => {
+			it("should set token to localStorage", () => {
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        const newToken = 'new-token-456';
-        setToken(newToken);
+				const newToken = "new-token-456";
+				setToken(newToken);
 
-        expect(localStorageMock.clear).toHaveBeenCalled();
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'token',
-          newToken
-        );
-      });
+				expect(localStorageMock.clear).toHaveBeenCalled();
+				expect(localStorageMock.setItem).toHaveBeenCalledWith(
+					"token",
+					newToken
+				);
+			});
 
-      it('should clear localStorage when setting null', () => {
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+			it("should clear localStorage when setting null", () => {
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken(null);
+				setToken(null);
 
-        expect(localStorageMock.clear).toHaveBeenCalled();
-        expect(localStorageMock.setItem).not.toHaveBeenCalled();
-      });
+				expect(localStorageMock.clear).toHaveBeenCalled();
+				expect(localStorageMock.setItem).not.toHaveBeenCalled();
+			});
 
-      it('should clear localStorage before setting new token', () => {
-        localStorageMock.getItem.mockReturnValue('old-token');
+			it("should clear localStorage before setting new token", () => {
+				localStorageMock.getItem.mockReturnValue("old-token");
 
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken('new-token');
+				setToken("new-token");
 
-        expect(localStorageMock.clear).toHaveBeenCalledTimes(1);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'token',
-          'new-token'
-        );
-      });
+				expect(localStorageMock.clear).toHaveBeenCalledTimes(1);
+				expect(localStorageMock.setItem).toHaveBeenCalledWith(
+					"token",
+					"new-token"
+				);
+			});
 
-      it('should return null from setToken function', () => {
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+			it("should return null from setToken function", () => {
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        const returnValue = setToken('any-token');
+				const returnValue = setToken("any-token");
 
-        expect(returnValue).toBeNull();
-      });
-    });
+				expect(returnValue).toBeNull();
+			});
+		});
 
-    describe('hook behavior', () => {
-      it('should return a tuple with token and setToken function', () => {
-        const { result } = renderHook(() => useLoginToken());
+		describe("hook behavior", () => {
+			it("should return a tuple with token and setToken function", () => {
+				const { result } = renderHook(() => useLoginToken());
 
-        expect(result.current).toHaveLength(2);
-        expect(typeof result.current[0]).toBe('object'); // null is typeof object
-        expect(typeof result.current[1]).toBe('function');
-      });
+				expect(result.current).toHaveLength(2);
+				expect(typeof result.current[0]).toBe("object"); // null is typeof object
+				expect(typeof result.current[1]).toBe("function");
+			});
 
-      it('should maintain the same setToken reference across re-renders', () => {
-        const { result, rerender } = renderHook(() => useLoginToken());
-        const [, setToken1] = result.current;
+			it("should maintain the same setToken reference across re-renders", () => {
+				const { result, rerender } = renderHook(() => useLoginToken());
+				const [, setToken1] = result.current;
 
-        rerender();
-        const [, setToken2] = result.current;
+				rerender();
+				const [, setToken2] = result.current;
 
-        expect(setToken1).toBe(setToken2);
-      });
+				expect(setToken1).toBe(setToken2);
+			});
 
-      it('should reflect token changes immediately', () => {
-        localStorageMock.getItem.mockReturnValue('initial-token');
+			it("should reflect token changes immediately", () => {
+				localStorageMock.getItem.mockReturnValue("initial-token");
 
-        const { result, rerender } = renderHook(() => useLoginToken());
-        const [initialToken] = result.current;
+				const { result, rerender } = renderHook(() => useLoginToken());
+				const [initialToken] = result.current;
 
-        expect(initialToken).toBe('initial-token');
+				expect(initialToken).toBe("initial-token");
 
-        // Simulate token change in localStorage
-        localStorageMock.getItem.mockReturnValue('updated-token');
-        rerender();
+				// Simulate token change in localStorage
+				localStorageMock.getItem.mockReturnValue("updated-token");
+				rerender();
 
-        const [updatedToken] = result.current;
-        expect(updatedToken).toBe('updated-token');
-      });
-    });
+				const [updatedToken] = result.current;
+				expect(updatedToken).toBe("updated-token");
+			});
+		});
 
-    describe('edge cases', () => {
-      it('should handle empty string token', () => {
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+		describe("edge cases", () => {
+			it("should handle empty string token", () => {
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken('');
+				setToken("");
 
-        expect(localStorageMock.clear).toHaveBeenCalled();
-        // Empty string is falsy, so setItem should not be called
-        expect(localStorageMock.setItem).not.toHaveBeenCalled();
-      });
+				expect(localStorageMock.clear).toHaveBeenCalled();
+				// Empty string is falsy, so setItem should not be called
+				expect(localStorageMock.setItem).not.toHaveBeenCalled();
+			});
 
-      it('should handle whitespace-only token', () => {
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+			it("should handle whitespace-only token", () => {
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken('   ');
+				setToken("   ");
 
-        expect(localStorageMock.clear).toHaveBeenCalled();
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('token', '   ');
-      });
+				expect(localStorageMock.clear).toHaveBeenCalled();
+				expect(localStorageMock.setItem).toHaveBeenCalledWith("token", "   ");
+			});
 
-      it('should handle very long tokens', () => {
-        const longToken = 'a'.repeat(10_000);
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+			it("should handle very long tokens", () => {
+				const longToken = "a".repeat(10_000);
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken(longToken);
+				setToken(longToken);
 
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'token',
-          longToken
-        );
-      });
+				expect(localStorageMock.setItem).toHaveBeenCalledWith(
+					"token",
+					longToken
+				);
+			});
 
-      it('should handle special characters in token', () => {
-        const specialToken = '!@#$%^&*()_+-=[]{}|;:"<>?,./~`';
-        const { result } = renderHook(() => useLoginToken());
-        const [, setToken] = result.current;
+			it("should handle special characters in token", () => {
+				const specialToken = '!@#$%^&*()_+-=[]{}|;:"<>?,./~`';
+				const { result } = renderHook(() => useLoginToken());
+				const [, setToken] = result.current;
 
-        setToken(specialToken);
+				setToken(specialToken);
 
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'token',
-          specialToken
-        );
-      });
-    });
-  });
+				expect(localStorageMock.setItem).toHaveBeenCalledWith(
+					"token",
+					specialToken
+				);
+			});
+		});
+	});
 
-  describe('integration scenarios', () => {
-    it('should work correctly when useEnforceLogin is called with valid token', () => {
-      localStorageMock.getItem.mockReturnValue('valid-session-token');
+	describe("integration scenarios", () => {
+		it("should work correctly when useEnforceLogin is called with valid token", () => {
+			localStorageMock.getItem.mockReturnValue("valid-session-token");
 
-      const { result: tokenResult } = renderHook(() => useLoginToken());
-      const { result: enforceResult } = renderHook(() => useEnforceLogin());
+			const { result: tokenResult } = renderHook(() => useLoginToken());
+			const { result: enforceResult } = renderHook(() => useEnforceLogin());
 
-      const [token] = tokenResult.current;
-      expect(token).toBe('valid-session-token');
-      expect(enforceResult.current).toBe(true);
-      expect(mockReplace).not.toHaveBeenCalled();
-    });
+			const [token] = tokenResult.current;
+			expect(token).toBe("valid-session-token");
+			expect(enforceResult.current).toBe(true);
+			expect(mockReplace).not.toHaveBeenCalled();
+		});
 
-    it('should work correctly when useEnforceLogout is called without token', () => {
-      localStorageMock.getItem.mockReturnValue(null);
+		it("should work correctly when useEnforceLogout is called without token", () => {
+			localStorageMock.getItem.mockReturnValue(null);
 
-      const { result: tokenResult } = renderHook(() => useLoginToken());
-      const { result: enforceResult } = renderHook(() => useEnforceLogout());
+			const { result: tokenResult } = renderHook(() => useLoginToken());
+			const { result: enforceResult } = renderHook(() => useEnforceLogout());
 
-      const [token] = tokenResult.current;
-      expect(token).toBeNull();
-      expect(enforceResult.current).toBe(true);
-      expect(mockReplace).not.toHaveBeenCalled();
-    });
+			const [token] = tokenResult.current;
+			expect(token).toBeNull();
+			expect(enforceResult.current).toBe(true);
+			expect(mockReplace).not.toHaveBeenCalled();
+		});
 
-    it('should handle login flow correctly', () => {
-      // Initially no token
-      localStorageMock.getItem.mockReturnValue(null);
+		it("should handle login flow correctly", () => {
+			// Initially no token
+			localStorageMock.getItem.mockReturnValue(null);
 
-      const { result: tokenResult } = renderHook(() => useLoginToken());
-      const [initialToken, setToken] = tokenResult.current;
+			const { result: tokenResult } = renderHook(() => useLoginToken());
+			const [initialToken, setToken] = tokenResult.current;
 
-      expect(initialToken).toBeNull();
+			expect(initialToken).toBeNull();
 
-      // User logs in
-      setToken('user-login-token');
+			// User logs in
+			setToken("user-login-token");
 
-      expect(localStorageMock.clear).toHaveBeenCalled();
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'token',
-        'user-login-token'
-      );
-    });
+			expect(localStorageMock.clear).toHaveBeenCalled();
+			expect(localStorageMock.setItem).toHaveBeenCalledWith(
+				"token",
+				"user-login-token"
+			);
+		});
 
-    it('should handle logout flow correctly', () => {
-      // Initially has token
-      localStorageMock.getItem.mockReturnValue('existing-token');
+		it("should handle logout flow correctly", () => {
+			// Initially has token
+			localStorageMock.getItem.mockReturnValue("existing-token");
 
-      const { result: tokenResult } = renderHook(() => useLoginToken());
-      const [initialToken, setToken] = tokenResult.current;
+			const { result: tokenResult } = renderHook(() => useLoginToken());
+			const [initialToken, setToken] = tokenResult.current;
 
-      expect(initialToken).toBe('existing-token');
+			expect(initialToken).toBe("existing-token");
 
-      // User logs out
-      setToken(null);
+			// User logs out
+			setToken(null);
 
-      expect(localStorageMock.clear).toHaveBeenCalled();
-      expect(localStorageMock.setItem).not.toHaveBeenCalled();
-    });
-  });
+			expect(localStorageMock.clear).toHaveBeenCalled();
+			expect(localStorageMock.setItem).not.toHaveBeenCalled();
+		});
+	});
 });
