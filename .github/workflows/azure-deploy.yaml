@@ -2,22 +2,22 @@ name: azure-deploy
 
 on:
   workflow_run:
-    workflows: ["backend-integration-build", "frontend-build"]
+    workflows: ['backend-integration-build', 'frontend-build']
     types:
       - completed
     branches:
-      - staging
+      - develop
       - main
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to deploy to"
+        description: 'Environment to deploy to'
         required: true
         type: choice
         options:
           - staging
           - production
-        default: "staging"
+        default: 'staging'
 
 env:
   AZURE_WEBAPP_NAME_BACKEND: eap-backend
