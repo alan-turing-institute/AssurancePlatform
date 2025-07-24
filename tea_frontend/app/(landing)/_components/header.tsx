@@ -47,7 +47,7 @@ function Header() {
 							className="h-12 w-auto"
 							height={48}
 							src="/images/tea-logo.png"
-							width={48}
+							width={183}
 						/>
 					</Link>
 				</div>
@@ -106,7 +106,7 @@ function Header() {
 								className="h-12 w-auto"
 								height={48}
 								src="/images/tea-logo.png"
-								width={48}
+								width={183}
 							/>
 						</Link>
 						<button
