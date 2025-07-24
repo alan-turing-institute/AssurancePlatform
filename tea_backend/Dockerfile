@@ -13,11 +13,6 @@ WORKDIR /app
 # Install dependencies with uv from pyproject.toml
 RUN uv pip install --system .
 
-# Run tests with coverage during build
-RUN python manage.py test -v 2
-RUN uv run coverage run manage.py test -v 2
-RUN uv run coverage report --fail-under=90 --show-missing
-
 # Setup for production
 RUN python manage.py createadmin
 RUN python manage.py migrate

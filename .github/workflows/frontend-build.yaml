@@ -81,7 +81,7 @@ jobs:
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_MAIN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
       - name: Build and push Docker image (Staging branch)
         if: github.ref == 'refs/heads/staging'
@@ -101,7 +101,7 @@ jobs:
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
       - name: Build and push Docker image (PR/other branches)
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
@@ -121,4 +121,4 @@ jobs:
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
