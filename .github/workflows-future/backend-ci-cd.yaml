@@ -1,37 +1,39 @@
-name: backend-integration-build
+name: Backend CI/CD
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
       - "tea_backend/**"
-      - ".github/workflows/backend-integration-build.yaml"
+      - ".github/workflows/backend-ci-cd.yaml"
   push:
     branches:
       - main
-      - develop
+      - staging
     paths:
       - "tea_backend/**"
-      - ".github/workflows/backend-integration-build.yaml"
-  release:
-    types:
-      - published
+      - ".github/workflows/backend-ci-cd.yaml"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/tea-backend
 
 jobs:
-  test:
+  quality-checks:
+    name: Quality Checks
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -42,36 +44,59 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-3.12-${{ hashFiles('tea_backend/uv.lock') }}
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('tea_backend/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-3.12-
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --python ${{ matrix.python-version }}
         working-directory: tea_backend
 
-      - name: Run tests with coverage
+      - name: Run type checking
+        run: uv run mypy .
+        working-directory: tea_backend
+
+      - name: Run linting
+        run: uv run ruff check .
+        working-directory: tea_backend
+
+      - name: Run formatting check
+        run: uv run ruff format --check .
+        working-directory: tea_backend
+
+      - name: Run unit tests with coverage
         run: |
           uv run coverage run manage.py test -v 2
           uv run coverage report --show-missing
-        continue-on-error: true
+          uv run coverage xml
         working-directory: tea_backend
 
-  integration-test:
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: tea_backend/coverage.xml
+          flags: backend,unit-tests
+          name: backend-unit-tests-${{ matrix.python-version }}
+          fail_ci_if_error: true
+
+  integration-tests:
+    name: Integration Tests
+    needs: quality-checks
     runs-on: ubuntu-latest
-    needs: test
+
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'postgres' }}
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: tea_test
           POSTGRES_USER: postgres
         options: >-
-          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 5432:5432
 
@@ -101,12 +126,12 @@ jobs:
           DBPORT: 5432
           DBNAME: tea_test
           DBUSER: postgres
-          DBPASSWORD: ${{ secrets.CI_DB_PASSWORD || 'postgres' }}
+          DBPASSWORD: postgres
 
   build:
+    name: Build and Push Docker Image
+    needs: [quality-checks, integration-tests]
     runs-on: ubuntu-latest
-    needs: [test, integration-test]
-    if: always() && (needs.test.result == 'success' || needs.test.result == 'failure') && (needs.integration-test.result == 'success' || needs.integration-test.result == 'failure')
     permissions:
       contents: read
       packages: write
@@ -131,18 +156,22 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # set latest tag for default branch
+            # Branch name
             type=ref,event=branch
+            # PR number
             type=ref,event=pr
-            type=sha
-            # semantic version for releases
+            # SHA (short)
+            type=sha,prefix={{branch}}-
+            # For main branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            # For staging branch
+            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
+            type=raw,value=staging-{{date 'YYYY-MM-DD'}}-{{sha}},enable=${{ github.ref == 'refs/heads/staging' }}
+            # Semantic versions (for releases)
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            # set staging tag for develop branch
-            type=raw,value=staging,enable={{is_default_branch}}
-            # date-based versioning
-            type=raw,value={{date 'YYYY-MM-DD'}}.{{sha}},enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
