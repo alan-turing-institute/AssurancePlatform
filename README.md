@@ -4,7 +4,8 @@
 
 [![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/alan-turing-institute/AssurancePlatform/main.svg)](https://results.pre-commit.ci/latest/github/alan-turing-institute/AssurancePlatform/main)
+![Backend Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/chrisdburr/67a1f941be8d33da7c5d7d5dbc2b5970/raw/backend-coverage.json)
+![Frontend Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/chrisdburr/67a1f941be8d33da7c5d7d5dbc2b5970/raw/frontend-coverage.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Development Quickstart 💻
