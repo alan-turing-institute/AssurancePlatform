@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Starting TEA Backend..."
+echo "Starting TEA Backend (Development)..."
 
 # First, ensure database tables have correct names
 echo "Ensuring database tables have correct names..."
@@ -28,6 +28,6 @@ python manage.py migrate --noinput || {
 echo "Checking for superuser creation..."
 python manage.py createadmin || echo "Skipping superuser creation"
 
-# Start the application
-echo "Starting Daphne server..."
-exec daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application
+# Start the development server
+echo "Starting Django development server..."
+exec python manage.py runserver 0.0.0.0:8000

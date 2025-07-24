@@ -13,6 +13,8 @@ WORKDIR /app
 # Install dependencies with uv from pyproject.toml
 RUN uv pip install --system .
 
-# Skip migrations and admin creation during build for development
-# These will be handled at runtime when the database is available
-CMD sh -c "python manage.py migrate && python manage.py createadmin && python manage.py runserver 0.0.0.0:8000"
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint-dev.sh
+
+# Use the development entrypoint script
+ENTRYPOINT ["/app/docker-entrypoint-dev.sh"]

@@ -11,7 +11,6 @@ from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [
         ("api", "0048_fix_migration_history"),
-        ("websockets", "0001_initial"),
     ]
 
     operations = [
