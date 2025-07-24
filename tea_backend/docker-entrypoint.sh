@@ -3,6 +3,10 @@ set -e
 
 echo "Starting TEA Backend..."
 
+# First, try to fix any known migration issues
+echo "Checking for migration history issues..."
+python manage.py fix_migration_history || true
+
 # Run migrations
 echo "Running database migrations..."
 python manage.py migrate --noinput || {
