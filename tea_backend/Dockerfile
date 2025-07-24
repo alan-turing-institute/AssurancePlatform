@@ -14,5 +14,4 @@ WORKDIR /app
 RUN uv pip install --system .
 
 # Setup for production
-# Note: createadmin and migrate commands moved to runtime (CMD) for better reliability
-CMD python manage.py migrate && python manage.py createadmin && daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application
+CMD ["sh", "-c", "python manage.py migrate && python manage.py createadmin && daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application"]
