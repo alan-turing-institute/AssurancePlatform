@@ -48,8 +48,8 @@ services:
       - ./tea_backend:/app
     networks:
       - tea_test_network
-    # Run migrations and start the server
-    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    # Use the same entrypoint script as development
+    entrypoint: ["/app/docker-entrypoint-dev.sh"]
 
   tea_frontend_test:
     build:
