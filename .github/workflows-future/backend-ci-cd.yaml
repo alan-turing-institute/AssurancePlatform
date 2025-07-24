@@ -22,18 +22,15 @@ jobs:
   quality-checks:
     name: Quality Checks
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.12"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -44,13 +41,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('tea_backend/uv.lock') }}
+          key: ${{ runner.os }}-uv-3.12-${{ hashFiles('tea_backend/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-${{ matrix.python-version }}-
+            ${{ runner.os }}-uv-3.12-
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync --frozen --python ${{ matrix.python-version }}
+        run: uv sync --frozen --python 3.12
         working-directory: tea_backend
 
       - name: Run type checking
@@ -70,15 +67,28 @@ jobs:
           uv run coverage run manage.py test -v 2
           uv run coverage report --show-missing
           uv run coverage xml
+          # Extract coverage percentage for badge
+          COVERAGE=$(uv run coverage report --format=total)
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          # Add coverage to workflow summary
+          echo "### Backend Test Coverage :test_tube:" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          uv run coverage report >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         working-directory: tea_backend
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
-          file: tea_backend/coverage.xml
-          flags: backend,unit-tests
-          name: backend-unit-tests-${{ matrix.python-version }}
-          fail_ci_if_error: true
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: backend-coverage.json
+          label: backend coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COVERAGE >= 80 && 'brightgreen' || env.COVERAGE >= 60 && 'yellow' || 'red' }}
 
   integration-tests:
     name: Integration Tests
