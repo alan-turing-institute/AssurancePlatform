@@ -60,20 +60,31 @@ jobs:
         run: pnpm exec ultracite lint
 
       - name: Run tests with coverage
-        run: pnpm test:coverage
+        run: |
+          pnpm test:coverage
+          # Extract coverage percentage from lcov
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep -oP 'lines\.*: \K[0-9.]+' | head -1)
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          # Add coverage to workflow summary
+          echo "### Frontend Test Coverage :test_tube:" >> $GITHUB_STEP_SUMMARY
+          echo "**Coverage:** ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
         env:
           NODE_ENV: test
 
       - name: Check coverage thresholds
         run: pnpm test:coverage:check
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
-          file: ./tea_frontend/coverage/lcov.info
-          flags: frontend
-          name: frontend-coverage
-          fail_ci_if_error: true
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          filename: frontend-coverage.json
+          label: frontend coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COVERAGE >= 80 && 'brightgreen' || env.COVERAGE >= 60 && 'yellow' || 'red' }}
 
       - name: Build application
         run: pnpm build
