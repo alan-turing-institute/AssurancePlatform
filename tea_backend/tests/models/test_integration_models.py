@@ -13,6 +13,15 @@ from django.test import TestCase
 
 from api.models import AssuranceCaseImage, Comment, GitHubRepository
 from tests.factories.case_factories import AssuranceCaseFactory, TopLevelNormativeGoalFactory
+from tests.factories.collaboration_factories import (
+    AssuranceCaseCommentFactory,
+    CommentFactory,
+    ContextCommentFactory,
+    EvidenceCommentFactory,
+    GoalCommentFactory,
+    PropertyClaimCommentFactory,
+    StrategyCommentFactory,
+)
 from tests.factories.content_factories import (
     ContextFactory,
     EvidenceFactory,
@@ -20,16 +29,9 @@ from tests.factories.content_factories import (
     StrategyFactory,
 )
 from tests.factories.integration_factories import (
-    AssuranceCaseCommentFactory,
     AssuranceCaseImageFactory,
-    CommentFactory,
-    ContextCommentFactory,
-    EvidenceCommentFactory,
     GitHubRepositoryFactory,
     GitHubRepositoryWithoutDescriptionFactory,
-    GoalCommentFactory,
-    PropertyClaimCommentFactory,
-    StrategyCommentFactory,
 )
 from tests.factories.user_factories import EAPUserFactory
 

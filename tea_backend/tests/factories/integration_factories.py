@@ -11,7 +11,13 @@ This module provides FactoryBoy factories for:
 import factory
 from django.utils import timezone
 
-from api.models import CaseStudy, CaseStudyFeatureImage, GitHubRepository, PublishedAssuranceCase
+from api.models import (
+    AssuranceCaseImage,
+    CaseStudy,
+    CaseStudyFeatureImage,
+    GitHubRepository,
+    PublishedAssuranceCase,
+)
 from tests.factories.case_factories import AssuranceCaseFactory
 from tests.factories.user_factories import EAPUserFactory
 
@@ -26,7 +32,14 @@ class GitHubRepositoryFactory(factory.django.DjangoModelFactory):
     url = factory.LazyAttribute(
         lambda obj: f"https://github.com/{obj.owner.auth_username}/{obj.name}"
     )
+    description = factory.Faker("sentence", nb_words=8)
     owner = factory.SubFactory(EAPUserFactory, auth_provider="github")
+
+
+class GitHubRepositoryWithoutDescriptionFactory(GitHubRepositoryFactory):
+    """Factory for GitHubRepository model without description."""
+
+    description = None
 
 
 class PublishedAssuranceCaseFactory(factory.django.DjangoModelFactory):
@@ -70,3 +83,15 @@ class CaseStudyFeatureImageFactory(factory.django.DjangoModelFactory):
     )
     alt_text = factory.Faker("sentence", nb_words=6)
     created_at = factory.LazyFunction(timezone.now)
+
+
+class AssuranceCaseImageFactory(factory.django.DjangoModelFactory):
+    """Factory for AssuranceCaseImage model."""
+
+    class Meta:
+        model = AssuranceCaseImage
+
+    assurance_case = factory.SubFactory(AssuranceCaseFactory)
+    image = factory.django.ImageField(
+        filename="test_case_image.jpg", width=800, height=600, color="blue"
+    )

@@ -9,7 +9,13 @@ import factory
 from django.contrib.contenttypes.models import ContentType
 
 from api.models import Comment
-from tests.factories.content_factories import TopLevelNormativeGoalFactory
+from tests.factories.case_factories import AssuranceCaseFactory, TopLevelNormativeGoalFactory
+from tests.factories.content_factories import (
+    ContextFactory,
+    EvidenceFactory,
+    PropertyClaimFactory,
+    StrategyFactory,
+)
 from tests.factories.user_factories import EAPUserFactory
 
 
@@ -49,3 +55,70 @@ class ReplyCommentFactory(CommentFactory):
 
     parent = factory.SubFactory(CommentFactory)
     content = factory.Faker("sentence", nb_words=10)
+
+
+# Specialized comment factories for different content types
+class AssuranceCaseCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on AssuranceCase."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    assurance_case = factory.SubFactory(AssuranceCaseFactory)
+
+
+class GoalCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on TopLevelNormativeGoal."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    goal = factory.SubFactory(TopLevelNormativeGoalFactory)
+
+
+class ContextCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on Context."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    context = factory.SubFactory(ContextFactory)
+
+
+class StrategyCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on Strategy."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    strategy = factory.SubFactory(StrategyFactory)
+
+
+class PropertyClaimCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on PropertyClaim."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    property_claim = factory.SubFactory(PropertyClaimFactory)
+
+
+class EvidenceCommentFactory(factory.django.DjangoModelFactory):
+    """Factory for comments on Evidence."""
+
+    class Meta:
+        model = Comment
+
+    author = factory.SubFactory(EAPUserFactory)
+    content = factory.Faker("paragraph", nb_sentences=3)
+    evidence = factory.SubFactory(EvidenceFactory)
