@@ -10,8 +10,10 @@ RUN pip install uv
 COPY . /app
 WORKDIR /app
 
-# Install dependencies with uv from pyproject.toml
-RUN uv pip install --system .
+# Install dependencies with uv from pyproject.toml (including dev dependencies)
+# Create venv and install all extras
+RUN uv venv && \
+    uv pip install -e ".[dev]"
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint-dev.sh

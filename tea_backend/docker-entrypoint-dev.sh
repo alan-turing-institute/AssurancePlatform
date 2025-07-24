@@ -3,6 +3,11 @@ set -e
 
 echo "Starting TEA Backend (Development)..."
 
+# Activate the virtual environment if it exists
+if [ -f "/app/.venv/bin/activate" ]; then
+    . /app/.venv/bin/activate
+fi
+
 # First, ensure database tables have correct names
 echo "Ensuring database tables have correct names..."
 python manage.py ensure_correct_table_names || {
