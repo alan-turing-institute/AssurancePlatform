@@ -13,5 +13,8 @@ WORKDIR /app
 # Install dependencies with uv from pyproject.toml
 RUN uv pip install --system .
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Setup for production
-CMD ["sh", "-c", "python manage.py migrate && python manage.py createadmin && daphne -b 0.0.0.0 -p 8000 tea_backend.asgi:application"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
