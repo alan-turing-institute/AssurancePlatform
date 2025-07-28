@@ -40,6 +40,12 @@ const nextConfig = {
 				port: "8000",
 				pathname: "**/*",
 			},
+			{
+				protocol: "http",
+				hostname: "staging-eap-backend.azurewebsites.net",
+				port: "",
+				pathname: "**/*",
+			},
 		],
 	},
 	rewrites() {
