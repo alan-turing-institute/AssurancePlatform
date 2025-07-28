@@ -46,6 +46,8 @@ function Header() {
 							alt="TEA Platform Logo"
 							className="h-12 w-auto"
 							height={48}
+							priority
+							quality={100}
 							src="/images/tea-logo.png"
 							width={183}
 						/>
@@ -105,6 +107,8 @@ function Header() {
 								alt="TEA Platform Logo"
 								className="h-12 w-auto"
 								height={48}
+								priority
+								quality={100}
 								src="/images/tea-logo.png"
 								width={183}
 							/>
