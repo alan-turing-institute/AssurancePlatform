@@ -29,7 +29,9 @@ const DesktopNav = () => {
 								alt="Turing Ethical Assurance Logo"
 								className="w-16"
 								height={64}
+								priority
 								src="/images/tea-logo2.png"
+								unoptimized
 								width={64}
 							/>
 							<span className="-ml-3 text-sm leading-4">

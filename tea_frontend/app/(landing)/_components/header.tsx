@@ -47,8 +47,8 @@ function Header() {
 							className="h-12 w-auto"
 							height={48}
 							priority
-							quality={100}
 							src="/images/tea-logo.png"
+							unoptimized
 							width={183}
 						/>
 					</Link>
@@ -108,8 +108,8 @@ function Header() {
 								className="h-12 w-auto"
 								height={48}
 								priority
-								quality={100}
 								src="/images/tea-logo.png"
+								unoptimized
 								width={183}
 							/>
 						</Link>
