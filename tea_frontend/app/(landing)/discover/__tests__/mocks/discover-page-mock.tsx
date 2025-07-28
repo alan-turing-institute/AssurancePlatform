@@ -11,7 +11,7 @@ export const DiscoverPageMock = () => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [sortBy, setSortBy] = useState("published_date_desc");
-	const [_retryCount, setRetryCount] = useState(0);
+	const [retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		const buildQueryParams = () => {
@@ -41,6 +41,7 @@ export const DiscoverPageMock = () => {
 
 				const data = await response.json();
 				setCases(data);
+				setError(null); // Clear error on successful fetch
 			} catch (err) {
 				setError((err as Error).message);
 			} finally {
@@ -49,7 +50,7 @@ export const DiscoverPageMock = () => {
 		};
 
 		fetchCases();
-	}, [searchQuery, selectedTags, sortBy]);
+	}, [searchQuery, selectedTags, sortBy, retryCount]);
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();

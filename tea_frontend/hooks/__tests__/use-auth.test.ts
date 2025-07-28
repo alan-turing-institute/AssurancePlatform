@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	useEnforceLogin,
 	useEnforceLogout,
@@ -8,10 +8,6 @@ import {
 
 // Mock window.location
 const mockReplace = vi.fn();
-Object.defineProperty(window, "location", {
-	value: { replace: mockReplace },
-	writable: true,
-});
 
 // Mock localStorage
 const localStorageMock = {
@@ -20,15 +16,30 @@ const localStorageMock = {
 	removeItem: vi.fn(),
 	clear: vi.fn(),
 };
-Object.defineProperty(window, "localStorage", {
-	value: localStorageMock,
-	writable: true,
+
+// Set up window mocks before tests
+beforeAll(() => {
+	Object.defineProperty(window, "location", {
+		value: { replace: mockReplace },
+		writable: true,
+		configurable: true,
+	});
+
+	Object.defineProperty(window, "localStorage", {
+		value: localStorageMock,
+		writable: true,
+		configurable: true,
+	});
 });
 
 describe("useAuth hooks", () => {
 	beforeEach(() => {
 		// Clear all mocks before each test
 		vi.clearAllMocks();
+		mockReplace.mockClear();
+		localStorageMock.getItem.mockReset();
+		localStorageMock.setItem.mockReset();
+		localStorageMock.clear.mockReset();
 		localStorageMock.getItem.mockReturnValue(null);
 	});
 
@@ -71,6 +82,12 @@ describe("useAuth hooks", () => {
 
 			expect(result.current).toBe(true);
 			expect(mockReplace).not.toHaveBeenCalled();
+		});
+
+		it("should handle window check in useLoginToken", () => {
+			// Verify window is defined in test environment
+			expect(typeof window).toBe("object");
+			expect(window.localStorage).toBeDefined();
 		});
 	});
 

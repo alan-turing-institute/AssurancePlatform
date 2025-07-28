@@ -41,23 +41,28 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				},
 			};
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
-				requestOptions
-			);
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
+					requestOptions
+				);
 
-			if (response.status === 404 || response.status === 403) {
-				return;
+				if (response.status === 404 || response.status === 403) {
+					return;
+				}
+
+				if (response.status === 401) {
+					return unauthorized();
+				}
+
+				const result = await response.json();
+
+				const formattedAssuranceCase = await addHiddenProp(result);
+				return formattedAssuranceCase;
+			} catch (error) {
+				console.error("Failed to fetch case:", error);
+				return null;
 			}
-
-			if (response.status === 401) {
-				return unauthorized();
-			}
-
-			const result = await response.json();
-
-			const formattedAssuranceCase = await addHiddenProp(result);
-			return formattedAssuranceCase;
 		},
 		[session?.key]
 	);
@@ -70,21 +75,26 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				},
 			};
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
-				requestOptions
-			);
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
+					requestOptions
+				);
 
-			if (response.status === 404 || response.status === 403) {
-				return;
+				if (response.status === 404 || response.status === 403) {
+					return;
+				}
+
+				if (response.status === 401) {
+					return unauthorized();
+				}
+
+				const result = await response.json();
+				return result;
+			} catch (error) {
+				console.error("Failed to fetch orphaned elements:", error);
+				return [];
 			}
-
-			if (response.status === 401) {
-				return unauthorized();
-			}
-
-			const result = await response.json();
-			return result;
 		},
 		[session?.key]
 	);

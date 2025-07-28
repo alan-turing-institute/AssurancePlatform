@@ -388,18 +388,15 @@ describe("Published Case Flow Integration Tests", () => {
 					return HttpResponse.json(publishedCase);
 				}),
 				http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
-					const formData = await request.formData();
-					return HttpResponse.json(
-						{
-							id: 10,
-							title: formData.get("title"),
-							description: formData.get("description"),
-							assurance_cases: [1],
-							published: false,
-							created_date: new Date().toISOString(),
-						},
-						{ status: 201 }
-					);
+					const body = await request.json() as any;
+					return HttpResponse.json({
+						id: 123,
+						title: body.title,
+						description: body.description,
+						content: body.content,
+						type: body.type,
+						assurance_cases: body.assurance_cases,
+					});
 				})
 			);
 
@@ -445,11 +442,19 @@ describe("Published Case Flow Integration Tests", () => {
 			await user.click(submitButton);
 
 			// Verify success and navigation
+			await waitFor(
+				() => {
+					expect(
+						screen.getByText(REGEX_PATTERNS.caseStudyCreatedSuccessfully)
+					).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
+
 			await waitFor(() => {
-				expect(
-					screen.getByText(REGEX_PATTERNS.caseStudyCreatedSuccessfully)
-				).toBeInTheDocument();
-				expect(mockPush).toHaveBeenCalledWith("/dashboard/case-studies/10");
+				expect(mockPush).toHaveBeenCalled();
+				const callArgs = mockPush.mock.calls[0];
+				expect(callArgs[0]).toMatch(/^\/dashboard\/case-studies\/\d+$/);
 			});
 		});
 

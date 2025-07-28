@@ -101,8 +101,8 @@ const ActionButtons = ({
 			myHeaders.append("Content-Type", "application/json");
 
 			const newImage = JSON.stringify({
-				id: assuranceCase.id,
-				base64image,
+				caseId: assuranceCase.id.toString(),
+				image: base64image,
 				token,
 			});
 
@@ -114,10 +114,17 @@ const ActionButtons = ({
 			};
 
 			const response = await fetch("/api/screenshot", requestOptions);
-			const { error, message } = await response.json();
 
-			if (error) {
-				notifyError(message);
+			if (!response.ok) {
+				notifyError("Failed to save screenshot");
+				return;
+			}
+
+			const result = await response.json();
+
+			if (result.error) {
+				notifyError(result.message || "Failed to save screenshot");
+				return;
 			}
 
 			notify("Screenshot Saved!");

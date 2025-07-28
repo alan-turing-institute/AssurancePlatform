@@ -51,24 +51,40 @@ describe("NodeContext", () => {
 	const mockSetActiveUsers = vi.fn();
 	const mockSetUnresolvedChanges = vi.fn();
 
+	// Store the current assurance case state
+	let currentAssuranceCase = {
+		id: 1,
+		goals: [
+			{
+				id: 1,
+				context: [mockContext],
+			},
+		],
+	};
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 
-		// Mock useStore
-		vi.mocked(useStore).mockReturnValue({
-			assuranceCase: {
-				id: 1,
-				goals: [
-					{
-						id: 1,
-						context: [mockContext],
-					},
-				],
-			},
-			setAssuranceCase: mockSetAssuranceCase,
+		// Reset the assurance case state
+		currentAssuranceCase = {
+			id: 1,
+			goals: [
+				{
+					id: 1,
+					context: [mockContext],
+				},
+			],
+		};
+
+		// Mock useStore to return current state and update it when setAssuranceCase is called
+		vi.mocked(useStore).mockImplementation(() => ({
+			assuranceCase: currentAssuranceCase,
+			setAssuranceCase: mockSetAssuranceCase.mockImplementation((newCase) => {
+				currentAssuranceCase = newCase;
+			}),
 			activeUsers: [],
 			setActiveUsers: mockSetActiveUsers,
-		} as ReturnType<typeof useStore>);
+		} as ReturnType<typeof useStore>));
 
 		// Mock toast
 		vi.mocked(toast).mockImplementation(() => ({
@@ -123,7 +139,7 @@ describe("NodeContext", () => {
 			],
 		} as AssuranceCase);
 
-		render(
+		const { rerender } = render(
 			<SessionProvider session={mockSession}>
 				<NodeContext
 					actions={mockActions}
@@ -133,38 +149,62 @@ describe("NodeContext", () => {
 			</SessionProvider>
 		);
 
-		// Hover over the context item to show the Remove button
-		const contextItem = screen
-			.getByText("Test context long description")
-			.closest("div");
-		if (contextItem) {
-			fireEvent.mouseEnter(contextItem);
+		// Ensure the context is initially rendered
+		expect(screen.getByText("Test context long description")).toBeInTheDocument();
+
+		// Find the context item by its description
+		const contextItem = screen.getByText("Test context long description");
+		// Get the parent div that has the hover functionality
+		const contextContainer = contextItem.closest(".group");
+
+		if (contextContainer) {
+			// Hover over the context container to show the delete button
+			fireEvent.mouseEnter(contextContainer);
 		}
 
-		// Click the Remove button
-		const removeButton = screen.getByText("Remove");
-		fireEvent.click(removeButton);
+		// Find the delete button - it's the only button within the context container
+		// that has the Trash2 icon (svg with specific classes)
+		const deleteButton = contextContainer?.querySelector(
+			'button[class*="hover:bg-white/90"]'
+		);
+		if (deleteButton) {
+			fireEvent.click(deleteButton);
+		}
 
 		await waitFor(() => {
 			// Verify API calls
 			expect(deleteAssuranceCaseNode).toHaveBeenCalledWith(
-				"context",
+				"Context",
 				1,
 				"mock-jwt-token"
 			);
 			expect(removeAssuranceCaseNode).toHaveBeenCalledWith(
 				expect.any(Object),
 				1,
-				"context"
+				"Context"
 			);
 
-			// Verify state updates
+			// Verify state updates - the actual call includes the full AssuranceCase object
 			expect(mockSetAssuranceCase).toHaveBeenCalledWith({
 				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				lock_uuid: null,
+				comments: [],
+				permissions: "manage",
+				created_date: "2023-01-01T00:00:00Z",
 				goals: [
 					{
 						id: 1,
+						type: "Goal",
+						name: "Test Goal",
+						short_description: "Test goal description",
+						long_description: "Test goal long description",
+						keywords: "",
+						assurance_case_id: 1,
 						context: [],
+						property_claims: [],
+						strategies: [],
 					},
 				],
 			});
@@ -176,10 +216,23 @@ describe("NodeContext", () => {
 			});
 		});
 
-		// Verify the context is removed from the UI
-		expect(
-			screen.queryByText("Test context long description")
-		).not.toBeInTheDocument();
+		// Force a re-render to simulate the store update
+		rerender(
+			<SessionProvider session={mockSession}>
+				<NodeContext
+					actions={mockActions}
+					node={mockNode}
+					setUnresolvedChanges={mockSetUnresolvedChanges}
+				/>
+			</SessionProvider>
+		);
+
+		// Now verify the context is removed from the UI
+		await waitFor(() => {
+			expect(
+				screen.queryByText("Test context long description")
+			).not.toBeInTheDocument();
+		});
 	});
 
 	it("handles context deletion failure", async () => {
@@ -197,17 +250,24 @@ describe("NodeContext", () => {
 			</SessionProvider>
 		);
 
-		// Hover over the context item to show the Remove button
-		const contextItem = screen
-			.getByText("Test context long description")
-			.closest("div");
-		if (contextItem) {
-			fireEvent.mouseEnter(contextItem);
+		// Find the context item by its description
+		const contextItem = screen.getByText("Test context long description");
+		// Get the parent div that has the hover functionality
+		const contextContainer = contextItem.closest(".group");
+
+		if (contextContainer) {
+			// Hover over the context container to show the delete button
+			fireEvent.mouseEnter(contextContainer);
 		}
 
-		// Click the Remove button
-		const removeButton = screen.getByText("Remove");
-		fireEvent.click(removeButton);
+		// Find the delete button - it's the only button within the context container
+		// that has the Trash2 icon (svg with specific classes)
+		const deleteButton = contextContainer?.querySelector(
+			'button[class*="hover:bg-white/90"]'
+		);
+		if (deleteButton) {
+			fireEvent.click(deleteButton);
+		}
 
 		await waitFor(() => {
 			// Verify error toast

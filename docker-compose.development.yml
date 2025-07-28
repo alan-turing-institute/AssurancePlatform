@@ -36,6 +36,7 @@ services:
       - ./tea_backend/mediafiles:/app/mediafiles
     networks:
       - tea_dev_network
+    entrypoint: ['/app/docker-entrypoint-dev.sh']
 
   tea_frontend:
     build:
@@ -53,9 +54,8 @@ services:
       - frontend_next:/app/.next
     networks:
       - tea_dev_network
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    command: sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
+    command:
+      sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
 
 networks:
   tea_dev_network:

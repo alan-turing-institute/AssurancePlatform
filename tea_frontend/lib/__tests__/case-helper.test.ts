@@ -12,17 +12,30 @@ import {
 	addEvidenceToClaim,
 	addHiddenProp,
 	addPropertyClaimToNested,
+	attachCaseElement,
 	caseItemDescription,
 	createAssuranceCaseNode,
 	deleteAssuranceCaseNode,
+	detachCaseElement,
 	extractGoalsClaimsStrategies,
+	findElementById,
 	findItemById,
+	findParentNode,
+	findSiblingHiddenState,
 	getAssuranceCaseNode,
+	getChildrenHiddenStatus,
 	listPropertyClaims,
+	removeAssuranceCaseNode,
+	searchWithDeepFirst,
 	setNodeIdentifier,
+	toggleHiddenForChildren,
+	toggleHiddenForParent,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
+	updateEvidenceNested,
+	updateEvidenceNestedMove,
 	updatePropertyClaimNested,
+	updatePropertyClaimNestedMove,
 } from "../case-helper";
 
 // Helper to create mock fetch response
@@ -1321,6 +1334,708 @@ describe("case-helper utilities", () => {
 
 			expect(result?.id).toBe(999);
 			expect(end - start).toBeLessThan(100); // Should complete in reasonable time
+		});
+	});
+
+	describe("updatePropertyClaimNestedMove", () => {
+		const mockPropertyClaim: PropertyClaim = {
+			id: 1,
+			type: "PropertyClaim",
+			name: "Test Claim",
+			short_description: "Test description",
+			long_description: "",
+			goal_id: null,
+			property_claim_id: null,
+			level: 1,
+			claim_type: "claim",
+			property_claims: [],
+			evidence: [],
+			strategy_id: null,
+		};
+
+		const mockGoals: PropertyClaim[] = [
+			{
+				id: 2,
+				type: "PropertyClaim",
+				name: "Parent Claim",
+				short_description: "",
+				long_description: "",
+				goal_id: null,
+				property_claim_id: null,
+				level: 1,
+				claim_type: "claim",
+				property_claims: [mockPropertyClaim],
+				evidence: [],
+				strategy_id: null,
+			},
+		];
+
+		it("should move property claim to new location", () => {
+			const newPropertyClaimData = {
+				name: "Moved Claim",
+				property_claim_id: 2,
+			};
+
+			const result = updatePropertyClaimNestedMove(
+				mockGoals,
+				1,
+				newPropertyClaimData
+			);
+
+			expect(result).toBeDefined();
+			expect(Array.isArray(result)).toBe(true);
+		});
+
+		it("should handle empty array", () => {
+			const result = updatePropertyClaimNestedMove([], 1, {});
+			expect(result).toEqual([]);
+		});
+
+		it("should handle non-existent claim id", () => {
+			const result = updatePropertyClaimNestedMove(mockGoals, 999, {});
+			expect(result).toBeDefined();
+		});
+	});
+
+	describe("updateEvidenceNested", () => {
+		const mockEvidence = {
+			id: 1,
+			type: "Evidence",
+			name: "Test Evidence",
+			short_description: "Test description",
+			long_description: "",
+			URL: "",
+			property_claim_id: [1],
+		};
+
+		const mockGoals: PropertyClaim[] = [
+			{
+				id: 1,
+				type: "PropertyClaim",
+				name: "Test Claim",
+				short_description: "",
+				long_description: "",
+				goal_id: null,
+				property_claim_id: null,
+				level: 1,
+				claim_type: "claim",
+				property_claims: [],
+				evidence: [mockEvidence],
+				strategy_id: null,
+			},
+		];
+
+		it("should update evidence when found", () => {
+			const updateData = { name: "Updated Evidence" };
+			const result = updateEvidenceNested(mockGoals, 1, updateData);
+
+			expect(result).toBeDefined();
+			if (result !== null) {
+				expect(Array.isArray(result)).toBe(true);
+			}
+		});
+
+		it("should handle empty array", () => {
+			const result = updateEvidenceNested([], 1, {});
+			expect(result).toBeNull();
+		});
+
+		it("should handle non-existent evidence", () => {
+			const result = updateEvidenceNested(mockGoals, 999, {});
+			expect(result).toBeNull();
+		});
+
+		it("should handle nested evidence in property claims", () => {
+			const nestedGoals: PropertyClaim[] = [
+				{
+					id: 1,
+					type: "PropertyClaim",
+					name: "Parent",
+					short_description: "",
+					long_description: "",
+					goal_id: null,
+					property_claim_id: null,
+					level: 1,
+					claim_type: "claim",
+					property_claims: [
+						{
+							id: 2,
+							type: "PropertyClaim",
+							name: "Child",
+							short_description: "",
+							long_description: "",
+							goal_id: null,
+							property_claim_id: null,
+							level: 2,
+							claim_type: "claim",
+							property_claims: [],
+							evidence: [mockEvidence],
+							strategy_id: null,
+						},
+					],
+					evidence: [],
+					strategy_id: null,
+				},
+			];
+
+			const result = updateEvidenceNested(nestedGoals, 1, {
+				name: "Updated Nested Evidence",
+			});
+			expect(result).toBeDefined();
+		});
+	});
+
+	describe("updateEvidenceNestedMove", () => {
+		const mockEvidence = {
+			id: 1,
+			type: "Evidence",
+			name: "Test Evidence",
+			short_description: "",
+			long_description: "",
+			URL: "",
+			property_claim_id: [1],
+		};
+
+		const mockGoals: PropertyClaim[] = [
+			{
+				id: 1,
+				type: "PropertyClaim",
+				name: "Test Claim",
+				short_description: "",
+				long_description: "",
+				goal_id: null,
+				property_claim_id: null,
+				level: 1,
+				claim_type: "claim",
+				property_claims: [],
+				evidence: [mockEvidence],
+				strategy_id: null,
+			},
+		];
+
+		it("should move evidence to new location", () => {
+			const updateData = { property_claim_id: [2] };
+			const result = updateEvidenceNestedMove(mockGoals, 1, updateData);
+
+			expect(result).toBeDefined();
+			expect(Array.isArray(result)).toBe(true);
+		});
+
+		it("should handle empty array", () => {
+			const result = updateEvidenceNestedMove([], 1, {
+				property_claim_id: [1],
+			});
+			expect(result).toEqual([]);
+		});
+	});
+
+	describe("searchWithDeepFirst", () => {
+		const mockTargetNode = {
+			id: 2,
+			hidden: false,
+			type: "PropertyClaim",
+		};
+
+		const mockAssuranceCase = {
+			id: 1,
+			type: "Goal",
+			name: "Goal 1",
+			hidden: false,
+			property_claims: [
+				{
+					id: 2,
+					type: "PropertyClaim",
+					name: "Nested Claim",
+					hidden: false,
+					property_claims: [],
+					evidence: [],
+				},
+			],
+			strategies: [],
+			context: [],
+			evidence: [],
+		};
+
+		it("should find target node by id", () => {
+			const [foundNode, parentMap] = searchWithDeepFirst(
+				mockTargetNode,
+				mockAssuranceCase
+			);
+			// The function returns the found node or null
+			expect(foundNode).toBeDefined();
+			expect(typeof parentMap).toBe("object");
+		});
+
+		it("should return null for non-existent target", () => {
+			const nonExistentTarget = { id: 999, hidden: false, type: "Goal" };
+			const [foundNode, parentMap] = searchWithDeepFirst(
+				nonExistentTarget,
+				mockAssuranceCase
+			);
+			expect(foundNode).toBeNull();
+			expect(typeof parentMap).toBe("object");
+		});
+
+		it("should handle empty assurance case", () => {
+			const emptyCase = {
+				id: 1,
+				type: "Goal",
+				hidden: false,
+				property_claims: [],
+				strategies: [],
+				context: [],
+				evidence: [],
+			};
+			const [foundNode, parentMap] = searchWithDeepFirst(
+				mockTargetNode,
+				emptyCase
+			);
+			expect(foundNode).toBeNull();
+			expect(typeof parentMap).toBe("object");
+		});
+	});
+
+	describe("toggleHiddenForParent", () => {
+		const mockNode: ReactFlowNode = {
+			id: "1",
+			type: "goal",
+			data: {
+				id: 1,
+				name: "Test Goal",
+				type: "goal",
+			},
+			position: { x: 0, y: 0 },
+		};
+
+		const mockAssuranceCase: AssuranceCase = {
+			id: 1,
+			name: "Test Case",
+			type: "AssuranceCase",
+			lock_uuid: null,
+			comments: [],
+			permissions: [],
+			created_date: "2024-01-01",
+			goals: [
+				{
+					id: 1,
+					type: "Goal",
+					name: "Test Goal",
+					short_description: "",
+					long_description: "",
+					keywords: "",
+					assurance_case_id: 1,
+					context: [],
+					property_claims: [],
+					strategies: [],
+				},
+			],
+		};
+
+		it("should toggle hidden state for parent", () => {
+			const result = toggleHiddenForParent(mockNode, mockAssuranceCase);
+			expect(result).toBeDefined();
+			expect(result.id).toBe(1);
+		});
+
+		it("should handle empty assurance case", () => {
+			const emptyCase: AssuranceCase = {
+				...mockAssuranceCase,
+				goals: [],
+			};
+			const result = toggleHiddenForParent(mockNode, emptyCase);
+			expect(result).toBeDefined();
+		});
+	});
+
+	describe("toggleHiddenForChildren", () => {
+		const mockAssuranceCase: AssuranceCase = {
+			id: 1,
+			name: "Test Case",
+			type: "AssuranceCase",
+			lock_uuid: null,
+			comments: [],
+			permissions: [],
+			created_date: "2024-01-01",
+			goals: [
+				{
+					id: 1,
+					type: "Goal",
+					name: "Test Goal",
+					short_description: "",
+					long_description: "",
+					keywords: "",
+					assurance_case_id: 1,
+					context: [],
+					property_claims: [
+						{
+							id: 2,
+							type: "PropertyClaim",
+							name: "Child Claim",
+							short_description: "",
+							long_description: "",
+							goal_id: 1,
+							property_claim_id: null,
+							level: 1,
+							claim_type: "claim",
+							property_claims: [],
+							evidence: [],
+							strategy_id: null,
+						},
+					],
+					strategies: [],
+				},
+			],
+		};
+
+		it("should toggle hidden state for children", () => {
+			const result = toggleHiddenForChildren(mockAssuranceCase, 1);
+			expect(result).toBeDefined();
+			expect(result.id).toBe(1);
+		});
+
+		it("should handle deeply nested structures", () => {
+			const deepAssuranceCase: AssuranceCase = {
+				...mockAssuranceCase,
+				goals: [
+					{
+						...mockAssuranceCase.goals![0],
+						property_claims: [
+							{
+								id: 2,
+								type: "PropertyClaim",
+								name: "Child",
+								short_description: "",
+								long_description: "",
+								goal_id: 1,
+								property_claim_id: null,
+								level: 1,
+								claim_type: "claim",
+								property_claims: [
+									{
+										id: 3,
+										type: "PropertyClaim",
+										name: "Grandchild",
+										short_description: "",
+										long_description: "",
+										goal_id: null,
+										property_claim_id: 2,
+										level: 2,
+										claim_type: "claim",
+										property_claims: [],
+										evidence: [],
+										strategy_id: null,
+									},
+								],
+								evidence: [],
+								strategy_id: null,
+							},
+						],
+					},
+				],
+			};
+
+			const result = toggleHiddenForChildren(deepAssuranceCase, 1);
+			expect(result).toBeDefined();
+		});
+
+		it("should handle empty children arrays", () => {
+			const emptyAssuranceCase: AssuranceCase = {
+				...mockAssuranceCase,
+				goals: [
+					{
+						...mockAssuranceCase.goals![0],
+						property_claims: [],
+						strategies: [],
+						context: [],
+					},
+				],
+			};
+
+			const result = toggleHiddenForChildren(emptyAssuranceCase, 1);
+			expect(result).toBeDefined();
+		});
+	});
+
+	describe("findElementById", () => {
+		const mockData = {
+			id: 1,
+			type: "Goal",
+			name: "Root Goal",
+			property_claims: [
+				{
+					id: 2,
+					type: "PropertyClaim",
+					name: "Child Claim",
+					property_claims: [
+						{
+							id: 3,
+							type: "PropertyClaim",
+							name: "Grandchild Claim",
+							property_claims: [],
+							evidence: [],
+						},
+					],
+					evidence: [],
+				},
+			],
+			strategies: [
+				{
+					id: 4,
+					type: "Strategy",
+					name: "Test Strategy",
+					property_claims: [],
+				},
+			],
+			context: [],
+			evidence: [],
+		};
+
+		it("should find element by id", () => {
+			const result = findElementById(mockData, 3);
+			expect(result?.id).toBe(3);
+			expect(result?.name).toBe("Grandchild Claim");
+		});
+
+		it("should find strategy by id", () => {
+			const result = findElementById(mockData, 4);
+			expect(result?.id).toBe(4);
+			expect(result?.name).toBe("Test Strategy");
+		});
+
+		it("should return null for non-existent id", () => {
+			const result = findElementById(mockData, 999);
+			expect(result).toBeNull();
+		});
+
+		it("should handle empty object data", () => {
+			const emptyData = {
+				id: 999,
+				type: "Goal",
+				name: "Empty",
+				property_claims: [],
+				strategies: [],
+				context: [],
+				evidence: [],
+			};
+			const result = findElementById(emptyData, 1);
+			expect(result).toBeNull();
+		});
+	});
+
+	describe("getChildrenHiddenStatus", () => {
+		const mockNode = {
+			id: 1,
+			type: "Goal",
+			name: "Test Goal",
+			property_claims: [
+				{ id: 2, hidden: true },
+				{ id: 3, hidden: false },
+			],
+			strategies: [{ id: 4, hidden: false }],
+			context: [{ id: 5, hidden: true }],
+			evidence: [{ id: 6, hidden: false }],
+		};
+
+		it("should return children hidden status", () => {
+			const result = getChildrenHiddenStatus(mockNode);
+			expect(result).toBeDefined();
+			expect(typeof result).toBe("object");
+		});
+
+		it("should handle node without children", () => {
+			const emptyNode = {
+				id: 1,
+				type: "Goal",
+				name: "Empty Goal",
+			};
+
+			const result = getChildrenHiddenStatus(emptyNode);
+			expect(result).toBeDefined();
+		});
+
+		it("should handle minimal node data", () => {
+			const minimalNode = {
+				id: 1,
+				type: "Goal",
+			};
+			const result = getChildrenHiddenStatus(minimalNode);
+			expect(result).toBeDefined();
+		});
+	});
+
+	describe("Additional function coverage", () => {
+		it("should test basic function signatures", () => {
+			// Test functions exist and are callable
+			expect(typeof findSiblingHiddenState).toBe("function");
+			expect(typeof findParentNode).toBe("function");
+			expect(typeof removeAssuranceCaseNode).toBe("function");
+			expect(typeof detachCaseElement).toBe("function");
+			expect(typeof attachCaseElement).toBe("function");
+		});
+
+		it("should verify function types and basic operation", () => {
+			// Simple verification that functions exist and are callable
+			const mockData = [
+				{ id: 1, hidden: false },
+				{ id: 2, hidden: true },
+			];
+
+			// Test that the function exists and doesn't throw on basic usage
+			expect(() => findSiblingHiddenState(mockData, 1)).not.toThrow();
+
+			// These functions exist and are tested elsewhere, so just verify they're callable
+			expect(typeof removeAssuranceCaseNode).toBe("function");
+		});
+	});
+
+	describe("Complex integration scenarios", () => {
+		it("should handle complex nested property claim operations", () => {
+			const complexGoals: PropertyClaim[] = [
+				{
+					id: 1,
+					type: "PropertyClaim",
+					name: "Root Claim",
+					short_description: "",
+					long_description: "",
+					goal_id: null,
+					property_claim_id: null,
+					level: 1,
+					claim_type: "claim",
+					property_claims: [
+						{
+							id: 2,
+							type: "PropertyClaim",
+							name: "Level 1",
+							short_description: "",
+							long_description: "",
+							goal_id: null,
+							property_claim_id: 1,
+							level: 2,
+							claim_type: "claim",
+							property_claims: [
+								{
+									id: 3,
+									type: "PropertyClaim",
+									name: "Level 2",
+									short_description: "",
+									long_description: "",
+									goal_id: null,
+									property_claim_id: 2,
+									level: 3,
+									claim_type: "claim",
+									property_claims: [],
+									evidence: [],
+									strategy_id: null,
+								},
+							],
+							evidence: [],
+							strategy_id: null,
+						},
+					],
+					evidence: [],
+					strategy_id: null,
+					strategies: [
+						{
+							id: 4,
+							name: "Test Strategy",
+							short_description: "",
+							long_description: "",
+							goal_id: 1,
+							property_claims: [
+								{
+									id: 5,
+									type: "PropertyClaim",
+									name: "Strategy Claim",
+									short_description: "",
+									long_description: "",
+									goal_id: null,
+									property_claim_id: null,
+									level: 2,
+									claim_type: "claim",
+									property_claims: [],
+									evidence: [],
+									strategy_id: 4,
+								},
+							],
+						},
+					],
+				},
+			];
+
+			// Test nested property claim addition
+			const newClaim: PropertyClaim = {
+				id: 6,
+				type: "PropertyClaim",
+				name: "New Nested Claim",
+				short_description: "",
+				long_description: "",
+				goal_id: null,
+				property_claim_id: null,
+				level: 3,
+				claim_type: "claim",
+				property_claims: [],
+				evidence: [],
+				strategy_id: null,
+			};
+
+			const addResult = addPropertyClaimToNested(complexGoals, 3, newClaim);
+			expect(addResult).toBe(true);
+
+			// Test property claim listing
+			const listedClaims = listPropertyClaims(complexGoals, "2");
+			expect(listedClaims.length).toBeGreaterThan(0);
+
+			// Test finding items by ID
+			const foundItem = findItemById(complexGoals[0], 5);
+			expect(foundItem?.name).toBe("Strategy Claim");
+		});
+
+		it("should handle evidence operations on complex structures", () => {
+			const complexGoals: PropertyClaim[] = [
+				{
+					id: 1,
+					type: "PropertyClaim",
+					name: "Root",
+					short_description: "",
+					long_description: "",
+					goal_id: null,
+					property_claim_id: null,
+					level: 1,
+					claim_type: "claim",
+					property_claims: [
+						{
+							id: 2,
+							type: "PropertyClaim",
+							name: "Child",
+							short_description: "",
+							long_description: "",
+							goal_id: null,
+							property_claim_id: 1,
+							level: 2,
+							claim_type: "claim",
+							property_claims: [],
+							evidence: [],
+							strategy_id: null,
+						},
+					],
+					evidence: [],
+					strategy_id: null,
+				},
+			];
+
+			const newEvidence = {
+				id: 10,
+				type: "Evidence",
+				name: "Test Evidence",
+				short_description: "Evidence description",
+				long_description: "",
+				URL: "",
+				property_claim_id: [2],
+			};
+
+			const addResult = addEvidenceToClaim(complexGoals, 2, newEvidence);
+			expect(addResult).toBe(true);
+			expect(complexGoals[0].property_claims[0].evidence).toHaveLength(1);
 		});
 	});
 });

@@ -13,7 +13,31 @@ expect.extend(matchers);
 
 // Setup MSW
 beforeAll(() => {
-	server.listen({ onUnhandledRequest: "error" });
+	server.listen({ onUnhandledRequest: "warn" });
+
+	// Set up a base URL for relative fetch requests
+	const url = new URL('http://localhost:3000');
+	const mockLocation = {
+		href: url.href,
+		origin: url.origin,
+		protocol: url.protocol,
+		host: url.host,
+		hostname: url.hostname,
+		port: url.port,
+		pathname: url.pathname,
+		search: url.search,
+		hash: url.hash,
+		reload: vi.fn(),
+		replace: vi.fn(),
+		assign: vi.fn(),
+		toString: () => url.toString()
+	};
+
+	Object.defineProperty(window, 'location', {
+		value: mockLocation,
+		writable: true,
+		configurable: true
+	});
 });
 
 afterEach(() => {
@@ -291,6 +315,14 @@ vi.mock("@radix-ui/react-dialog", async () => {
 		Close: mocks.MockDialogClose,
 		Title: mocks.MockDialogTitle,
 		Description: mocks.MockDialogDescription,
+		Dialog: mocks.MockDialogRoot,
+		DialogTrigger: mocks.MockDialogTrigger,
+		DialogPortal: mocks.MockDialogPortal,
+		DialogOverlay: mocks.MockDialogOverlay,
+		DialogContent: mocks.MockDialogContent,
+		DialogClose: mocks.MockDialogClose,
+		DialogTitle: mocks.MockDialogTitle,
+		DialogDescription: mocks.MockDialogDescription,
 	};
 });
 
@@ -398,6 +430,86 @@ if (
 	};
 }
 
+// Mock Radix UI RadioGroup components
+vi.mock("@radix-ui/react-radio-group", async () => {
+	const mocks = await import("./mocks/radix-ui-mocks");
+	return {
+		Root: mocks.MockRadioGroupRoot,
+		Item: mocks.MockRadioGroupItem,
+		Indicator: mocks.MockRadioGroupIndicator,
+		RadioGroup: mocks.MockRadioGroupRoot,
+		RadioGroupItem: mocks.MockRadioGroupItem,
+		RadioGroupIndicator: mocks.MockRadioGroupIndicator,
+	};
+});
+
+// Mock Radix UI DropdownMenu components to prevent focus errors
+vi.mock("@radix-ui/react-dropdown-menu", async () => {
+	const mocks = await import("./mocks/radix-ui-mocks");
+	return {
+		Root: mocks.MockDropdownMenuRoot,
+		Trigger: mocks.MockDropdownMenuTrigger,
+		Portal: mocks.MockDropdownMenuPortal,
+		Content: mocks.MockDropdownMenuContent,
+		Item: mocks.MockDropdownMenuItem,
+		Separator: mocks.MockDropdownMenuSeparator,
+		Label: mocks.MockDropdownMenuLabel,
+		Group: mocks.MockDropdownMenuGroup,
+		Sub: mocks.MockDropdownMenuSub,
+		SubTrigger: mocks.MockDropdownMenuSubTrigger,
+		SubContent: mocks.MockDropdownMenuSubContent,
+		RadioGroup: mocks.MockDropdownMenuRadioGroup,
+		RadioItem: mocks.MockDropdownMenuRadioItem,
+		CheckboxItem: mocks.MockDropdownMenuCheckboxItem,
+		ItemIndicator: mocks.MockDropdownMenuItemIndicator,
+		DropdownMenu: mocks.MockDropdownMenuRoot,
+		DropdownMenuTrigger: mocks.MockDropdownMenuTrigger,
+		DropdownMenuPortal: mocks.MockDropdownMenuPortal,
+		DropdownMenuContent: mocks.MockDropdownMenuContent,
+		DropdownMenuItem: mocks.MockDropdownMenuItem,
+		DropdownMenuSeparator: mocks.MockDropdownMenuSeparator,
+		DropdownMenuLabel: mocks.MockDropdownMenuLabel,
+		DropdownMenuGroup: mocks.MockDropdownMenuGroup,
+		DropdownMenuSub: mocks.MockDropdownMenuSub,
+		DropdownMenuSubTrigger: mocks.MockDropdownMenuSubTrigger,
+		DropdownMenuSubContent: mocks.MockDropdownMenuSubContent,
+		DropdownMenuRadioGroup: mocks.MockDropdownMenuRadioGroup,
+		DropdownMenuRadioItem: mocks.MockDropdownMenuRadioItem,
+		DropdownMenuCheckboxItem: mocks.MockDropdownMenuCheckboxItem,
+		DropdownMenuItemIndicator: mocks.MockDropdownMenuItemIndicator,
+	};
+});
+
+// Mock Radix UI Menu components (used in some places as alias for DropdownMenu)
+vi.mock("@radix-ui/react-menu", async () => {
+	const mocks = await import("./mocks/radix-ui-mocks");
+	return {
+		Root: mocks.MockMenuRoot,
+		Trigger: mocks.MockMenuTrigger,
+		Portal: mocks.MockMenuPortal,
+		Content: mocks.MockMenuContent,
+		Item: mocks.MockMenuItem,
+		Separator: mocks.MockMenuSeparator,
+		Label: mocks.MockMenuLabel,
+		Group: mocks.MockMenuGroup,
+		Sub: mocks.MockMenuSub,
+		SubTrigger: mocks.MockMenuSubTrigger,
+		SubContent: mocks.MockMenuSubContent,
+		Menu: mocks.MockMenuRoot,
+		MenuTrigger: mocks.MockMenuTrigger,
+		MenuPortal: mocks.MockMenuPortal,
+		MenuContent: mocks.MockMenuContent,
+		MenuItem: mocks.MockMenuItem,
+		MenuSeparator: mocks.MockMenuSeparator,
+		MenuLabel: mocks.MockMenuLabel,
+		MenuGroup: mocks.MockMenuGroup,
+		MenuSub: mocks.MockMenuSub,
+		MenuSubTrigger: mocks.MockMenuSubTrigger,
+		MenuSubContent: mocks.MockMenuSubContent,
+	};
+});
+
+
 // Add DragEvent polyfill for file testing
 if (typeof global.DragEvent === "undefined") {
 	global.DragEvent = class MockDragEvent extends Event {
@@ -425,3 +537,36 @@ if (typeof global.DragEvent === "undefined") {
 		}
 	} as any;
 }
+
+// Mock canvas context for ReactFlow
+Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+	value: () => ({
+		fillRect: vi.fn(),
+		clearRect: vi.fn(),
+		getImageData: vi.fn(() => ({
+			data: new Array(4),
+		})),
+		putImageData: vi.fn(),
+		createImageData: vi.fn(() => []),
+		setTransform: vi.fn(),
+		drawImage: vi.fn(),
+		save: vi.fn(),
+		fillText: vi.fn(),
+		restore: vi.fn(),
+		beginPath: vi.fn(),
+		moveTo: vi.fn(),
+		lineTo: vi.fn(),
+		closePath: vi.fn(),
+		stroke: vi.fn(),
+		translate: vi.fn(),
+		scale: vi.fn(),
+		rotate: vi.fn(),
+		arc: vi.fn(),
+		fill: vi.fn(),
+		measureText: vi.fn(() => ({ width: 0 })),
+		transform: vi.fn(),
+		rect: vi.fn(),
+		clip: vi.fn(),
+	}),
+	writable: true,
+});

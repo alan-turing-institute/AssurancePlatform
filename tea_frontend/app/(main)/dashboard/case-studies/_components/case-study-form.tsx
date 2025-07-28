@@ -852,12 +852,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							<div className="flex w-full items-center justify-between gap-4">
 								<div className="flex items-center justify-start gap-2">
 									{caseStudy && (
-										<Button type="submit" variant="default">
+										<Button disabled={loading} type="submit" variant="default">
 											Save Changes
 										</Button>
 									)}
 									{!caseStudy && (
-										<Button type="submit" variant="default">
+										<Button disabled={loading} type="submit" variant="default">
 											Save
 										</Button>
 									)}

@@ -10,6 +10,7 @@ import {
 	screen,
 	waitFor,
 } from "@/src/__tests__/utils/test-utils";
+import { act } from "@testing-library/react";
 import RegisterForm from "./register-form";
 
 // Mock next-auth signIn function
@@ -495,7 +496,7 @@ describe("RegisterForm", () => {
 	});
 
 	describe("Successful Registration Flow", () => {
-		it("should handle successful registration with 204 response and auto-login", async () => {
+		it("should handle successful registration with 204 response and redirect to login", async () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<RegisterForm />);
 
@@ -525,16 +526,9 @@ describe("RegisterForm", () => {
 				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
 			);
 
+			// Should redirect to login page with success message
 			await waitFor(() => {
-				expect(mockSignIn).toHaveBeenCalledWith("credentials", {
-					redirect: false,
-					username: VALID_USERNAME,
-					password: VALID_PASSWORD,
-				});
-			});
-
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith("/dashboard");
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 
@@ -568,16 +562,9 @@ describe("RegisterForm", () => {
 				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
 			);
 
+			// Should redirect to login page with success message
 			await waitFor(() => {
-				expect(mockSignIn).toHaveBeenCalledWith("credentials", {
-					redirect: false,
-					username: VALID_USERNAME,
-					password: VALID_PASSWORD,
-				});
-			});
-
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith("/dashboard");
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 
@@ -754,7 +741,7 @@ describe("RegisterForm", () => {
 			});
 		});
 
-		it("should handle successful registration but failed auto-login", async () => {
+		it("should handle successful registration", async () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<RegisterForm />);
 
@@ -764,9 +751,6 @@ describe("RegisterForm", () => {
 					return new HttpResponse(null, { status: 204 });
 				})
 			);
-
-			// Mock failed login
-			mockSignIn.mockResolvedValue({ ok: false, error: "Invalid credentials" });
 
 			// Fill and submit form
 			await user.type(
@@ -787,10 +771,9 @@ describe("RegisterForm", () => {
 				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
 			);
 
+			// Should redirect to login page
 			await waitFor(() => {
-				expect(
-					screen.getByText(REGISTRATION_SUCCESS_LOGIN_FAILED_REGEX)
-				).toBeInTheDocument();
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 
@@ -798,7 +781,8 @@ describe("RegisterForm", () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<RegisterForm />);
 
-			// Mock unexpected response format
+			// Mock unexpected response format - this is still a successful 200 response
+			// so it should redirect to login page
 			server.use(
 				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
 					return HttpResponse.json({ unexpected: "format" });
@@ -824,18 +808,17 @@ describe("RegisterForm", () => {
 				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
 			);
 
+			// Since it's a 200 response, it should redirect to login
 			await waitFor(() => {
-				expect(
-					screen.getByText(REGISTRATION_UNEXPECTED_RESPONSE_REGEX)
-				).toBeInTheDocument();
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 
-		it("should handle invalid JSON response", async () => {
+		it("should handle invalid JSON response as successful registration", async () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<RegisterForm />);
 
-			// Mock invalid JSON response
+			// Mock invalid JSON response with 200 status - this is treated as success
 			server.use(
 				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
 					return new HttpResponse("Invalid JSON", {
@@ -864,10 +847,9 @@ describe("RegisterForm", () => {
 				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
 			);
 
+			// Since it's a 200 response, it should redirect to login
 			await waitFor(() => {
-				expect(
-					screen.getByText(REGISTRATION_MAY_HAVE_SUCCEEDED_REGEX)
-				).toBeInTheDocument();
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 	});
@@ -914,7 +896,7 @@ describe("RegisterForm", () => {
 
 			// Wait for completion
 			await waitFor(() => {
-				expect(mockSignIn).toHaveBeenCalled();
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 
@@ -956,7 +938,7 @@ describe("RegisterForm", () => {
 
 			// Wait for completion
 			await waitFor(() => {
-				expect(mockSignIn).toHaveBeenCalled();
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
 			});
 		});
 	});
