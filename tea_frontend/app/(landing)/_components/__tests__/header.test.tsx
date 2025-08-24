@@ -1,8 +1,51 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSession } from "next-auth/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "../header";
+
+// Define regex patterns at module level for performance
+const OPEN_MAIN_MENU_REGEX = /open main menu/i;
+const LOG_IN_REGEX = /log in/i;
+const GET_STARTED_REGEX = /get started/i;
+const DOCUMENTATION_REGEX = /documentation/i;
+const GITHUB_REGEX = /github/i;
+const DISCOVER_REGEX = /discover/i;
+const CLOSE_MENU_REGEX = /close menu/i;
+
+// Type definitions for mock components
+interface MockImageProps {
+	src: string;
+	alt: string;
+	className?: string;
+	width?: string | number;
+	height?: string | number;
+}
+
+interface MockLinkProps {
+	href: string;
+	children: React.ReactNode;
+	className?: string;
+}
+
+interface MockIconProps {
+	className?: string;
+	[key: string]: unknown;
+}
+
+interface MockDialogProps {
+	children:
+		| React.ReactNode
+		| ((props: Record<string, unknown>) => React.ReactNode);
+	open: boolean;
+	onClose: () => void;
+	className?: string;
+}
+
+interface MockPanelProps {
+	children: React.ReactNode;
+	className?: string;
+}
 
 // Mock next-auth
 vi.mock("next-auth/react", () => ({
@@ -11,22 +54,22 @@ vi.mock("next-auth/react", () => ({
 
 // Mock Next.js Image component
 vi.mock("next/image", () => ({
-	default: ({ src, alt, className, width, height }: any) => (
-		// eslint-disable-next-line @next/next/no-img-element
+	default: ({ src, alt, className, width, height }: MockImageProps) => (
+		// biome-ignore lint/performance/noImgElement: This is a test mock for Next.js Image
 		<img
-			src={src}
 			alt={alt}
 			className={className}
-			width={width}
 			height={height}
+			src={src}
+			width={width}
 		/>
 	),
 }));
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
-	default: ({ href, children, className }: any) => (
-		<a href={href} className={className}>
+	default: ({ href, children, className }: MockLinkProps) => (
+		<a className={className} href={href}>
 			{children}
 		</a>
 	),
@@ -34,13 +77,15 @@ vi.mock("next/link", () => ({
 
 // Mock Heroicons
 vi.mock("@heroicons/react/24/outline", () => ({
-	Bars3Icon: ({ className, ...props }: any) => (
+	Bars3Icon: ({ className, ...props }: MockIconProps) => (
 		<svg className={className} data-testid="bars3-icon" {...props}>
+			<title>Menu Icon</title>
 			<path d="M3 6h18M3 12h18M3 18h18" />
 		</svg>
 	),
-	XMarkIcon: ({ className, ...props }: any) => (
+	XMarkIcon: ({ className, ...props }: MockIconProps) => (
 		<svg className={className} data-testid="xmark-icon" {...props}>
+			<title>Close Icon</title>
 			<path d="M6 18L18 6M6 6l12 12" />
 		</svg>
 	),
@@ -49,14 +94,14 @@ vi.mock("@heroicons/react/24/outline", () => ({
 // Mock Headless UI Dialog
 vi.mock("@headlessui/react", () => ({
 	Dialog: Object.assign(
-		({ children, open, onClose, className }: any) =>
+		({ children, open, className }: MockDialogProps) =>
 			open ? (
 				<div className={className} data-testid="mobile-dialog">
-					{typeof children === 'function' ? children({}) : children}
+					{typeof children === "function" ? children({}) : children}
 				</div>
 			) : null,
 		{
-			Panel: ({ children, className }: any) => (
+			Panel: ({ children, className }: MockPanelProps) => (
 				<div className={className} data-testid="dialog-panel">
 					{children}
 				</div>
@@ -91,15 +136,23 @@ describe("Header", () => {
 		it("should render navigation links", () => {
 			render(<Header />);
 
-			expect(screen.getByRole("link", { name: /documentation/i })).toBeInTheDocument();
-			expect(screen.getByRole("link", { name: /github/i })).toBeInTheDocument();
-			expect(screen.getByRole("link", { name: /discover/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: DOCUMENTATION_REGEX })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: GITHUB_REGEX })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: DISCOVER_REGEX })
+			).toBeInTheDocument();
 		});
 
 		it("should render mobile menu toggle button", () => {
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			expect(mobileMenuButton).toBeInTheDocument();
 			expect(screen.getByTestId("bars3-icon")).toBeInTheDocument();
 		});
@@ -115,14 +168,17 @@ describe("Header", () => {
 
 			render(<Header />);
 
-			const loginLink = screen.getByRole("link", { name: /log in/i });
+			const loginLink = screen.getByRole("link", { name: LOG_IN_REGEX });
 			expect(loginLink).toBeInTheDocument();
 			expect(loginLink).toHaveAttribute("href", "/login");
 		});
 
 		it("should show get started link when user is authenticated", async () => {
 			mockUseSession.mockReturnValue({
-				data: { key: "mock-session-key" } as any,
+				data: {
+					key: "mock-session-key",
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			});
@@ -130,7 +186,9 @@ describe("Header", () => {
 			render(<Header />);
 
 			await waitFor(() => {
-				const getStartedLink = screen.getByRole("link", { name: /get started/i });
+				const getStartedLink = screen.getByRole("link", {
+					name: GET_STARTED_REGEX,
+				});
 				expect(getStartedLink).toBeInTheDocument();
 				expect(getStartedLink).toHaveAttribute("href", "/dashboard");
 			});
@@ -140,11 +198,16 @@ describe("Header", () => {
 			const { rerender } = render(<Header />);
 
 			// Initially not authenticated
-			expect(screen.getByRole("link", { name: /log in/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: LOG_IN_REGEX })
+			).toBeInTheDocument();
 
 			// Update session to authenticated
 			mockUseSession.mockReturnValue({
-				data: { key: "mock-session-key" } as any,
+				data: {
+					key: "mock-session-key",
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			});
@@ -152,7 +215,9 @@ describe("Header", () => {
 			rerender(<Header />);
 
 			await waitFor(() => {
-				expect(screen.getByRole("link", { name: /get started/i })).toBeInTheDocument();
+				expect(
+					screen.getByRole("link", { name: GET_STARTED_REGEX })
+				).toBeInTheDocument();
 			});
 		});
 	});
@@ -161,21 +226,28 @@ describe("Header", () => {
 		it("should have correct href attributes for navigation links", () => {
 			render(<Header />);
 
-			const documentationLink = screen.getByRole("link", { name: /documentation/i });
-			const githubLink = screen.getByRole("link", { name: /github/i });
-			const discoverLink = screen.getByRole("link", { name: /discover/i });
+			const documentationLink = screen.getByRole("link", {
+				name: DOCUMENTATION_REGEX,
+			});
+			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
+			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
 			expect(documentationLink).toHaveAttribute("href", "/documentation");
-			expect(githubLink).toHaveAttribute("href", "https://github.com/alan-turing-institute/AssurancePlatform");
+			expect(githubLink).toHaveAttribute(
+				"href",
+				"https://github.com/alan-turing-institute/AssurancePlatform"
+			);
 			expect(discoverLink).toHaveAttribute("href", "/discover");
 		});
 
 		it("should have correct target attributes for external links", () => {
 			render(<Header />);
 
-			const documentationLink = screen.getByRole("link", { name: /documentation/i });
-			const githubLink = screen.getByRole("link", { name: /github/i });
-			const discoverLink = screen.getByRole("link", { name: /discover/i });
+			const documentationLink = screen.getByRole("link", {
+				name: DOCUMENTATION_REGEX,
+			});
+			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
+			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
 			expect(documentationLink).toHaveAttribute("target", "_blank");
 			expect(githubLink).toHaveAttribute("target", "_blank");
@@ -186,7 +258,9 @@ describe("Header", () => {
 			render(<Header />);
 
 			const logoLinks = screen.getAllByRole("link");
-			const homeLink = logoLinks.find(link => link.getAttribute("href") === "/");
+			const homeLink = logoLinks.find(
+				(link) => link.getAttribute("href") === "/"
+			);
 
 			expect(homeLink).toBeInTheDocument();
 			expect(homeLink?.querySelector("img")).toBeInTheDocument();
@@ -204,7 +278,9 @@ describe("Header", () => {
 			const user = userEvent.setup();
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			await user.click(mobileMenuButton);
 
 			await waitFor(() => {
@@ -217,7 +293,9 @@ describe("Header", () => {
 			render(<Header />);
 
 			// Open mobile menu
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			await user.click(mobileMenuButton);
 
 			await waitFor(() => {
@@ -225,7 +303,9 @@ describe("Header", () => {
 			});
 
 			// Close mobile menu
-			const closeButton = screen.getByRole("button", { name: /close menu/i });
+			const closeButton = screen.getByRole("button", {
+				name: CLOSE_MENU_REGEX,
+			});
 			await user.click(closeButton);
 
 			await waitFor(() => {
@@ -237,7 +317,9 @@ describe("Header", () => {
 			const user = userEvent.setup();
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			await user.click(mobileMenuButton);
 
 			await waitFor(() => {
@@ -246,9 +328,15 @@ describe("Header", () => {
 
 				// Check that navigation links are present in mobile menu
 				const allLinks = screen.getAllByRole("link");
-				const documentationLinks = allLinks.filter(link => link.textContent?.includes("Documentation"));
-				const githubLinks = allLinks.filter(link => link.textContent?.includes("GitHub"));
-				const discoverLinks = allLinks.filter(link => link.textContent?.includes("Discover"));
+				const documentationLinks = allLinks.filter((link) =>
+					link.textContent?.includes("Documentation")
+				);
+				const githubLinks = allLinks.filter((link) =>
+					link.textContent?.includes("GitHub")
+				);
+				const discoverLinks = allLinks.filter((link) =>
+					link.textContent?.includes("Discover")
+				);
 
 				expect(documentationLinks.length).toBeGreaterThan(0);
 				expect(githubLinks.length).toBeGreaterThan(0);
@@ -260,7 +348,9 @@ describe("Header", () => {
 			const user = userEvent.setup();
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			await user.click(mobileMenuButton);
 
 			await waitFor(() => {
@@ -274,20 +364,32 @@ describe("Header", () => {
 			render(<Header />);
 
 			const nav = screen.getByRole("navigation");
-			expect(nav).toHaveClass("mx-auto", "flex", "max-w-7xl", "items-center", "justify-between", "p-6", "lg:px-8");
+			expect(nav).toHaveClass(
+				"mx-auto",
+				"flex",
+				"max-w-7xl",
+				"items-center",
+				"justify-between",
+				"p-6",
+				"lg:px-8"
+			);
 		});
 
 		it("should hide desktop navigation on mobile", () => {
 			render(<Header />);
 
-			const desktopNavContainer = screen.getByRole("navigation").querySelector(".hidden.lg\\:flex.lg\\:gap-x-12");
+			const desktopNavContainer = screen
+				.getByRole("navigation")
+				.querySelector(".hidden.lg\\:flex.lg\\:gap-x-12");
 			expect(desktopNavContainer).toBeInTheDocument();
 		});
 
 		it("should hide mobile menu button on desktop", () => {
 			render(<Header />);
 
-			const mobileMenuContainer = screen.getByRole("button", { name: /open main menu/i }).closest(".flex.lg\\:hidden");
+			const mobileMenuContainer = screen
+				.getByRole("button", { name: OPEN_MAIN_MENU_REGEX })
+				.closest(".flex.lg\\:hidden");
 			expect(mobileMenuContainer).toBeInTheDocument();
 		});
 	});
@@ -299,7 +401,9 @@ describe("Header", () => {
 			const nav = screen.getByRole("navigation");
 			expect(nav).toHaveAttribute("aria-label", "Global");
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 			expect(mobileMenuButton).toBeInTheDocument();
 		});
 
@@ -321,9 +425,9 @@ describe("Header", () => {
 			render(<Header />);
 
 			const icons = screen.getAllByTestId("bars3-icon");
-			icons.forEach(icon => {
+			for (const icon of icons) {
 				expect(icon).toHaveAttribute("aria-hidden", "true");
-			});
+			}
 		});
 	});
 
@@ -331,14 +435,17 @@ describe("Header", () => {
 		it("should have correct styling classes for navigation links", () => {
 			render(<Header />);
 
-			const navigationLinks = screen.getAllByRole("link").filter(link =>
-				link.textContent?.includes("Documentation") ||
-				link.textContent?.includes("GitHub") ||
-				link.textContent?.includes("Discover")
-			);
+			const navigationLinks = screen
+				.getAllByRole("link")
+				.filter(
+					(link) =>
+						link.textContent?.includes("Documentation") ||
+						link.textContent?.includes("GitHub") ||
+						link.textContent?.includes("Discover")
+				);
 
 			// Check desktop navigation links
-			const desktopNavLinks = navigationLinks.filter(link =>
+			const desktopNavLinks = navigationLinks.filter((link) =>
 				link.className.includes("font-semibold text-gray-900 text-sm leading-6")
 			);
 			expect(desktopNavLinks.length).toBeGreaterThan(0);
@@ -347,15 +454,28 @@ describe("Header", () => {
 		it("should have correct button styling", () => {
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
-			expect(mobileMenuButton).toHaveClass("-m-2.5", "inline-flex", "items-center", "justify-center", "rounded-md", "p-2.5", "text-gray-700");
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
+			expect(mobileMenuButton).toHaveClass(
+				"-m-2.5",
+				"inline-flex",
+				"items-center",
+				"justify-center",
+				"rounded-md",
+				"p-2.5",
+				"text-gray-700"
+			);
 		});
 	});
 
 	describe("Edge Cases", () => {
-		it("should handle session with undefined key", async () => {
+		it("should handle session with undefined key", () => {
 			mockUseSession.mockReturnValue({
-				data: { user: { email: "test@example.com" } } as any,
+				data: {
+					user: { email: "test@example.com" },
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			});
@@ -363,14 +483,18 @@ describe("Header", () => {
 			render(<Header />);
 
 			// Should still show login link since session.key is undefined
-			expect(screen.getByRole("link", { name: /log in/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: LOG_IN_REGEX })
+			).toBeInTheDocument();
 		});
 
 		it("should handle multiple clicks on mobile menu toggle", async () => {
 			const user = userEvent.setup();
 			render(<Header />);
 
-			const mobileMenuButton = screen.getByRole("button", { name: /open main menu/i });
+			const mobileMenuButton = screen.getByRole("button", {
+				name: OPEN_MAIN_MENU_REGEX,
+			});
 
 			// Click multiple times rapidly
 			await user.click(mobileMenuButton);
@@ -388,7 +512,10 @@ describe("Header", () => {
 
 			// Rapidly change session states
 			mockUseSession.mockReturnValue({
-				data: { key: "test-key" } as any,
+				data: {
+					key: "test-key",
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			});
@@ -402,14 +529,19 @@ describe("Header", () => {
 			rerender(<Header />);
 
 			mockUseSession.mockReturnValue({
-				data: { key: "new-key" } as any,
+				data: {
+					key: "new-key",
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			});
 			rerender(<Header />);
 
 			await waitFor(() => {
-				expect(screen.getByRole("link", { name: /get started/i })).toBeInTheDocument();
+				expect(
+					screen.getByRole("link", { name: GET_STARTED_REGEX })
+				).toBeInTheDocument();
 			});
 		});
 	});

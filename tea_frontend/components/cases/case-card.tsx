@@ -72,7 +72,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			};
 
 			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${id}/image`,
+				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/image`,
 				requestOptions
 			);
 
@@ -91,7 +91,9 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	}, [session?.key, id]);
 
 	useEffect(() => {
-		fetchScreenshot();
+		fetchScreenshot().catch(() => {
+			// Handle error silently - image loading state already updated in fetchScreenshot
+		});
 	}, [fetchScreenshot]);
 
 	return (

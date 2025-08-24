@@ -105,7 +105,7 @@ describe("sanitize-html", () => {
 		});
 
 		it("should handle very long strings efficiently", () => {
-			const longContent = "A".repeat(10000);
+			const longContent = "A".repeat(10_000);
 			const input = `<p>${longContent}</p><p><br></p><p>${longContent}</p>`;
 			const expected = `<p>${longContent}</p><p>${longContent}</p>`;
 
@@ -118,14 +118,15 @@ describe("sanitize-html", () => {
 		});
 
 		it("should handle input with many replacements", () => {
-			const input = Array(100).fill("<p><br></p>").join("") + "<p>Final</p>";
+			const input = `${new Array(100).fill("<p><br></p>").join("")}<p>Final</p>`;
 			// Only removes the first occurrence
-			const expected = Array(99).fill("<p><br></p>").join("") + "<p>Final</p>";
+			const expected = `${new Array(99).fill("<p><br></p>").join("")}<p>Final</p>`;
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
 		it("should handle Unicode content correctly", () => {
-			const input = "<p>🚀 Émojis and açcénts</p><p><br></p><p>More ünïcode</p>";
+			const input =
+				"<p>🚀 Émojis and açcénts</p><p><br></p><p>More ünïcode</p>";
 			const expected = "<p>🚀 Émojis and açcénts</p><p>More ünïcode</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
@@ -169,8 +170,8 @@ describe("sanitize-html", () => {
 			});
 
 			afterEach(() => {
-				delete (global as any).window;
-				delete (global as any).document;
+				(global as any).window = undefined;
+				(global as any).document = undefined;
 				vi.restoreAllMocks();
 			});
 
@@ -248,7 +249,7 @@ describe("sanitize-html", () => {
 		describe("server-side environment", () => {
 			beforeEach(() => {
 				// Ensure window is undefined for server-side tests
-				delete (global as any).window;
+				(global as any).window = undefined;
 			});
 
 			it("should remove HTML tags using regex on server-side", () => {
@@ -259,7 +260,8 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle complex nested HTML", () => {
-				const input = "<div><p>Nested <span>content</span></p><br><a href='#'>Link</a></div>";
+				const input =
+					"<div><p>Nested <span>content</span></p><br><a href='#'>Link</a></div>";
 				const expected = "Nested contentLink";
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);
@@ -273,7 +275,8 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle HTML with attributes", () => {
-				const input = '<p class="test" id="content">Text with <a href="http://example.com" target="_blank">link</a></p>';
+				const input =
+					'<p class="test" id="content">Text with <a href="http://example.com" target="_blank">link</a></p>';
 				const expected = "Text with link";
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);
@@ -313,7 +316,8 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle mixed content types", () => {
-				const input = "Plain text <p>Paragraph</p> more text <span>span content</span>";
+				const input =
+					"Plain text <p>Paragraph</p> more text <span>span content</span>";
 				const expected = "Plain text Paragraph more text span content";
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);
@@ -327,16 +331,20 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle script and style tags", () => {
-				const input = '<p>Content</p><script>alert("xss")</script><style>body{color:red}</style><p>More</p>';
-				const expected = "Contentalert(\"xss\")body{color:red}More";
+				const input =
+					'<p>Content</p><script>alert("xss")</script><style>body{color:red}</style><p>More</p>';
+				const expected = 'Contentalert("xss")body{color:red}More';
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);
 			});
 
 			// Security-focused tests
 			it("should not execute JavaScript during text extraction", () => {
-				const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-				const input = '<script>console.log("Should not execute")</script><p>Safe content</p>';
+				const consoleSpy = vi
+					.spyOn(console, "log")
+					.mockImplementation(() => {});
+				const input =
+					'<script>console.log("Should not execute")</script><p>Safe content</p>';
 
 				const result = extractTextFromHtml(input);
 
@@ -361,7 +369,7 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle very long HTML strings efficiently", () => {
-				const longText = "A".repeat(10000);
+				const longText = "A".repeat(10_000);
 				const input = `<div><p>${longText}</p></div>`;
 
 				const startTime = performance.now();
@@ -373,7 +381,8 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle deeply nested HTML", () => {
-				const input = "<div><p><span><strong><em>Deeply nested content</em></strong></span></p></div>";
+				const input =
+					"<div><p><span><strong><em>Deeply nested content</em></strong></span></p></div>";
 				const expected = "Deeply nested content";
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);
@@ -411,7 +420,7 @@ describe("sanitize-html", () => {
 				const expectedText = "Simple text content";
 
 				// Test server-side (no window)
-				delete (global as any).window;
+				(global as any).window = undefined;
 				const serverResult = extractTextFromHtml(input);
 
 				// Test browser-side (with window)
@@ -438,19 +447,19 @@ describe("sanitize-html", () => {
 				expect(serverResult).toBe(browserResult);
 
 				// Cleanup
-				delete (global as any).window;
-				delete (global as any).document;
+				(global as any).window = undefined;
+				(global as any).document = undefined;
 			});
 		});
 
 		// Performance and edge case tests
 		describe("performance and edge cases", () => {
 			beforeEach(() => {
-				delete (global as any).window;
+				(global as any).window = undefined;
 			});
 
 			it("should handle extremely large HTML documents", () => {
-				const largeContent = "Content ".repeat(50000); // 350KB+ of text
+				const largeContent = "Content ".repeat(50_000); // 350KB+ of text
 				const input = `<div><p>${largeContent}</p></div>`;
 
 				const startTime = performance.now();
@@ -475,7 +484,8 @@ describe("sanitize-html", () => {
 			});
 
 			it("should handle HTML with unusual but valid tag structures", () => {
-				const input = "<article><header><h1>Title</h1></header><main><section><p>Content</p></section></main></article>";
+				const input =
+					"<article><header><h1>Title</h1></header><main><section><p>Content</p></section></main></article>";
 				const expected = "TitleContent";
 				const result = extractTextFromHtml(input);
 				expect(result).toBe(expected);

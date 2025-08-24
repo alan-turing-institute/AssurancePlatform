@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	renderWithoutProviders,
-	screen,
-	waitFor,
-} from "@/src/__tests__/utils/test-utils";
-import {
 	adminMember,
 	regularMember,
 } from "@/src/__tests__/utils/team-mock-data";
+import {
+	renderWithoutProviders,
+	screen,
+} from "@/src/__tests__/utils/test-utils";
 import MemberEdit from "../member-edit";
 
 // Mock the EditSheet component
@@ -68,11 +67,7 @@ describe("MemberEdit", () => {
 	describe("Component Mounting and Rendering", () => {
 		it("should render when mounted and isOpen is true", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("edit-sheet")).toBeInTheDocument();
@@ -87,11 +82,7 @@ describe("MemberEdit", () => {
 
 		it("should not render sheet content when isOpen is false", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={false}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={false} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("edit-sheet")).toBeInTheDocument();
@@ -102,29 +93,27 @@ describe("MemberEdit", () => {
 	describe("Member Data Handling", () => {
 		it("should render MemberEditForm when member is provided", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const memberEditForm = screen.getByTestId("member-edit-form");
 			expect(memberEditForm).toBeInTheDocument();
 
 			// Check that member data is passed to the form
-			expect(screen.getByTestId("member-name")).toHaveTextContent(adminMember.name);
-			expect(screen.getByTestId("member-title")).toHaveTextContent(adminMember.title);
-			expect(screen.getByTestId("member-email")).toHaveTextContent(adminMember.email);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				adminMember.name
+			);
+			expect(screen.getByTestId("member-title")).toHaveTextContent(
+				adminMember.title
+			);
+			expect(screen.getByTestId("member-email")).toHaveTextContent(
+				adminMember.email
+			);
 		});
 
 		it("should not render MemberEditForm when member is null", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={null}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={null} onClose={mockOnClose} />
 			);
 
 			expect(screen.queryByTestId("member-edit-form")).not.toBeInTheDocument();
@@ -133,36 +122,32 @@ describe("MemberEdit", () => {
 		it("should handle different member types correctly", () => {
 			// Test with admin member
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(adminMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				adminMember.name
+			);
 
 			// Test with regular member
 			rerender(
 				<MemberEdit
-					member={regularMember}
 					isOpen={true}
+					member={regularMember}
 					onClose={mockOnClose}
 				/>
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(regularMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				regularMember.name
+			);
 		});
 	});
 
 	describe("Sheet Behavior", () => {
 		it("should call onClose when sheet onChange is triggered with false", async () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const closeButton = screen.getByTestId("edit-sheet-close");
@@ -173,11 +158,7 @@ describe("MemberEdit", () => {
 
 		it("should not call onClose when sheet onChange is triggered with true", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			// Since we can't easily trigger onChange with true in our mock,
@@ -188,14 +169,12 @@ describe("MemberEdit", () => {
 
 		it("should pass correct props to EditSheet", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
-			expect(screen.getByTestId("edit-sheet-title")).toHaveTextContent("Editing Member");
+			expect(screen.getByTestId("edit-sheet-title")).toHaveTextContent(
+				"Editing Member"
+			);
 			expect(screen.getByTestId("edit-sheet-description")).toHaveTextContent(
 				"Use this form to update members."
 			);
@@ -205,22 +184,14 @@ describe("MemberEdit", () => {
 	describe("State Management", () => {
 		it("should handle isOpen state changes", () => {
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={false}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={false} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.queryByTestId("sheet-is-open")).not.toBeInTheDocument();
 
 			// Update to open
 			rerender(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("sheet-is-open")).toBeInTheDocument();
@@ -228,33 +199,29 @@ describe("MemberEdit", () => {
 
 		it("should handle member prop changes", () => {
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(adminMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				adminMember.name
+			);
 
 			// Change member
 			rerender(
 				<MemberEdit
-					member={regularMember}
 					isOpen={true}
+					member={regularMember}
 					onClose={mockOnClose}
 				/>
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(regularMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				regularMember.name
+			);
 
 			// Set member to null
 			rerender(
-				<MemberEdit
-					member={null}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={null} onClose={mockOnClose} />
 			);
 
 			expect(screen.queryByTestId("member-edit-form")).not.toBeInTheDocument();
@@ -265,8 +232,8 @@ describe("MemberEdit", () => {
 		it("should handle member being undefined", () => {
 			renderWithoutProviders(
 				<MemberEdit
-					member={undefined as any}
 					isOpen={true}
+					member={undefined as any}
 					onClose={mockOnClose}
 				/>
 			);
@@ -277,11 +244,7 @@ describe("MemberEdit", () => {
 
 		it("should handle onClose being called multiple times", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const closeButton = screen.getByTestId("edit-sheet-close");
@@ -296,32 +259,20 @@ describe("MemberEdit", () => {
 
 		it("should handle rapid open/close state changes", () => {
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("sheet-is-open")).toBeInTheDocument();
 
 			// Rapid state changes
 			rerender(
-				<MemberEdit
-					member={adminMember}
-					isOpen={false}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={false} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.queryByTestId("sheet-is-open")).not.toBeInTheDocument();
 
 			rerender(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("sheet-is-open")).toBeInTheDocument();
@@ -331,11 +282,7 @@ describe("MemberEdit", () => {
 	describe("Integration with EditSheet", () => {
 		it("should pass all required props to EditSheet", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const editSheet = screen.getByTestId("edit-sheet");
@@ -349,11 +296,7 @@ describe("MemberEdit", () => {
 
 		it("should render children inside EditSheet", () => {
 			renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const content = screen.getByTestId("edit-sheet-content");
@@ -364,11 +307,7 @@ describe("MemberEdit", () => {
 	describe("Component Lifecycle", () => {
 		it("should handle component unmounting gracefully", () => {
 			const { unmount } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			expect(screen.getByTestId("edit-sheet")).toBeInTheDocument();
@@ -379,26 +318,26 @@ describe("MemberEdit", () => {
 
 		it("should handle re-mounting with different props", () => {
 			const { unmount } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(adminMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				adminMember.name
+			);
 			unmount();
 
 			// Re-mount with different member
 			renderWithoutProviders(
 				<MemberEdit
-					member={regularMember}
 					isOpen={false}
+					member={regularMember}
 					onClose={mockOnClose}
 				/>
 			);
 
-			expect(screen.getByTestId("member-name")).toHaveTextContent(regularMember.name);
+			expect(screen.getByTestId("member-name")).toHaveTextContent(
+				regularMember.name
+			);
 			expect(screen.queryByTestId("sheet-is-open")).not.toBeInTheDocument();
 		});
 	});
@@ -406,22 +345,14 @@ describe("MemberEdit", () => {
 	describe("Performance", () => {
 		it("should not cause unnecessary re-renders when props don't change", () => {
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			const initialElement = screen.getByTestId("edit-sheet");
 
 			// Re-render with same props
 			rerender(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			// Element should still be in the document
@@ -430,11 +361,7 @@ describe("MemberEdit", () => {
 
 		it("should handle frequent member updates efficiently", () => {
 			const { rerender } = renderWithoutProviders(
-				<MemberEdit
-					member={adminMember}
-					isOpen={true}
-					onClose={mockOnClose}
-				/>
+				<MemberEdit isOpen={true} member={adminMember} onClose={mockOnClose} />
 			);
 
 			// Simulate frequent updates
@@ -446,8 +373,8 @@ describe("MemberEdit", () => {
 
 				rerender(
 					<MemberEdit
-						member={updatedMember}
 						isOpen={true}
+						member={updatedMember}
 						onClose={mockOnClose}
 					/>
 				);

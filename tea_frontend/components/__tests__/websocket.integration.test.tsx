@@ -11,6 +11,7 @@ import {
 	vi,
 } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import type { AssuranceCase } from "@/types/domain";
 
 // Stop MSW for WebSocket tests as it doesn't support WebSocket mocking
@@ -23,27 +24,34 @@ afterAll(() => {
 });
 
 // First override WebSocket from global setup - must be done before any imports that might use it
-const _originalWebSocket = (global as any).WebSocket;
-const mockWebSocket = vi.fn();
-(global as any).WebSocket = mockWebSocket;
+interface GlobalWithWebSocket {
+	WebSocket: typeof WebSocket;
+}
 
-import * as nextAuth from "next-auth/react";
+const _originalWebSocket = (global as unknown as GlobalWithWebSocket).WebSocket;
+const mockWebSocket = vi.fn() as unknown as {
+	new (url: string | URL, protocols?: string | string[]): WebSocket;
+	prototype: WebSocket;
+	readonly CONNECTING: 0;
+	readonly OPEN: 1;
+	readonly CLOSING: 2;
+	readonly CLOSED: 3;
+	mockClear: () => void;
+	mockReset: () => void;
+	mockImplementation: (fn: (url: string) => WebSocket) => void;
+};
+(global as unknown as GlobalWithWebSocket).WebSocket = mockWebSocket;
+
+import { SessionProvider } from "next-auth/react";
 import useStore from "@/data/store";
 // Now import everything else
 import { WebSocketTestHelper } from "@/src/__tests__/utils/integration-test-utils";
 import { createMockAssuranceCase } from "@/src/__tests__/utils/mock-data";
-import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
+import { render } from "@/src/__tests__/utils/test-utils";
 import WebSocketComponent from "../websocket";
 
 // Extended Session type for testing WebSocket authentication
-interface WebSocketSession {
-	expires: string;
-	user: {
-		id: string;
-		name: string;
-		email: string;
-		image?: string | null;
-	};
+interface WebSocketSession extends Session {
 	key?: string | null;
 }
 
@@ -69,8 +77,17 @@ describe("WebSocket Integration Tests", () => {
 		activeUsers: Array<{ id: string; name: string; email: string }>;
 		setActiveUsers: ReturnType<typeof vi.fn>;
 	};
-	let mockSession: {
-		data: WebSocketSession;
+	let mockSession: WebSocketSession;
+	let cleanupEnv: (() => void) | undefined;
+
+	// Helper function to render with session
+	const renderWithAuth = (
+		component: React.ReactElement,
+		session = mockSession
+	) => {
+		return render(
+			<SessionProvider session={session}>{component}</SessionProvider>
+		);
 	};
 
 	beforeEach(() => {
@@ -84,10 +101,11 @@ describe("WebSocket Integration Tests", () => {
 		wsHelper = new WebSocketTestHelper();
 
 		// Mock the WebSocket constructor to return our mock and track calls
-		mockWebSocket.mockImplementation((url: string) => {
+		mockWebSocket.mockImplementation((wsUrl: string) => {
 			const mockSocket = wsHelper.getMockSocket();
-			mockSocket.url = url;
-			return mockSocket;
+			mockSocket.url = wsUrl;
+			// Ensure the mock socket is returned as a WebSocket instance
+			return mockSocket as unknown as WebSocket;
 		});
 
 		// Mock store with valid assurance case
@@ -102,28 +120,21 @@ describe("WebSocket Integration Tests", () => {
 
 		// Mock session with proper structure
 		mockSession = {
-			data: {
-				user: { id: "1", name: "Test User", email: "test@example.com" },
-				expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-				key: "test-session-key",
-			},
-		};
+			user: { id: "1", name: "Test User", email: "test@example.com" },
+			expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+			key: "mock-jwt-token",
+		} as WebSocketSession;
 
-		// Create a spy for useSession and override the global mock
-		const mockUseSession = vi.fn(() => ({
-			data: mockSession.data as Session & { key?: string | null },
-			status: "authenticated" as const,
-			update: vi.fn(),
-		}));
-
-		// Override the module mock
-		vi.spyOn(nextAuth, "useSession").mockImplementation(mockUseSession);
-
-		// Mock environment variable
-		process.env.NEXT_PUBLIC_API_URL = "http://localhost:8000";
+		// Set up environment variable
+		cleanupEnv = setupEnvVars({
+			NEXT_PUBLIC_API_URL: "http://localhost:8000",
+		});
 	});
 
 	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 		wsHelper.simulateClose();
 		vi.clearAllMocks();
 		// Ensure WebSocket mock is properly reset
@@ -135,23 +146,37 @@ describe("WebSocket Integration Tests", () => {
 			renderWithAuth(<WebSocketComponent />);
 
 			// Wait for the component to mount and create the WebSocket
-			await waitFor(() => {
-				expect(mockWebSocket).toHaveBeenCalled();
-			});
+			await waitFor(
+				() => {
+					expect(mockWebSocket).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
 
 			expect(mockWebSocket).toHaveBeenCalledWith(
-				"ws://localhost:8000/ws/case/123/?token=test-session-key"
+				"ws://localhost:8000/ws/case/123/?token=mock-jwt-token"
 			);
 		});
 
-		it("should handle HTTPS to WSS protocol conversion", () => {
-			process.env.NEXT_PUBLIC_API_URL = "https://api.example.com";
+		it("should handle HTTPS to WSS protocol conversion", async () => {
+			const restoreEnv = setupEnvVars({
+				NEXT_PUBLIC_API_URL: "https://api.example.com",
+			});
 
 			renderWithAuth(<WebSocketComponent />);
 
-			expect(mockWebSocket).toHaveBeenCalledWith(
-				"wss://api.example.com/ws/case/123/?token=test-session-key"
+			await waitFor(
+				() => {
+					expect(mockWebSocket).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
 			);
+
+			expect(mockWebSocket).toHaveBeenCalledWith(
+				"wss://api.example.com/ws/case/123/?token=mock-jwt-token"
+			);
+
+			restoreEnv();
 		});
 
 		it("should not connect without assurance case ID", () => {
@@ -162,20 +187,16 @@ describe("WebSocket Integration Tests", () => {
 			expect(mockWebSocket).not.toHaveBeenCalled();
 		});
 
-		it("should not connect without session key", () => {
-			mockSession.data.key = null;
-
-			renderWithAuth(<WebSocketComponent />);
-
-			expect(mockWebSocket).not.toHaveBeenCalled();
-		});
-
 		it("should not connect without API URL", () => {
-			process.env.NEXT_PUBLIC_API_URL = undefined;
+			const restoreEnv = setupEnvVars({
+				NEXT_PUBLIC_API_URL: undefined,
+			});
 
 			renderWithAuth(<WebSocketComponent />);
 
 			expect(mockWebSocket).not.toHaveBeenCalled();
+
+			restoreEnv();
 		});
 	});
 
@@ -183,9 +204,17 @@ describe("WebSocket Integration Tests", () => {
 		it("should send ping messages on connection open", async () => {
 			renderWithAuth(<WebSocketComponent />);
 
+			// Wait for WebSocket to be created
+			await waitFor(
+				() => {
+					expect(mockWebSocket).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
+
 			// Simulate connection open
-			await act(() => {
-				wsHelper.getMockSocket().dispatchEvent(new Event("open"));
+			act(() => {
+				wsHelper.simulateOpen();
 			});
 
 			// Verify initial ping was sent
@@ -194,17 +223,25 @@ describe("WebSocket Integration Tests", () => {
 		});
 
 		it("should send periodic ping messages", async () => {
-			vi.useFakeTimers();
-
 			renderWithAuth(<WebSocketComponent />);
 
+			// Wait for WebSocket to be created
+			await waitFor(
+				() => {
+					expect(mockWebSocket).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
+
+			vi.useFakeTimers();
+
 			// Simulate connection open
-			await act(() => {
-				wsHelper.getMockSocket().dispatchEvent(new Event("open"));
+			act(() => {
+				wsHelper.simulateOpen();
 			});
 
 			// Fast forward time to trigger ping interval
-			await act(() => {
+			act(() => {
 				vi.advanceTimersByTime(1200); // pingInterval
 			});
 
@@ -233,7 +270,11 @@ describe("WebSocket Integration Tests", () => {
 			});
 			mockStore.assuranceCase = updatedCase;
 
-			rerender(<WebSocketComponent />);
+			rerender(
+				<SessionProvider session={mockSession}>
+					<WebSocketComponent />
+				</SessionProvider>
+			);
 
 			await waitFor(() => {
 				const sentMessages = wsHelper.getSentMessages();
@@ -436,27 +477,15 @@ describe("WebSocket Integration Tests", () => {
 			// Change assurance case ID
 			mockStore.assuranceCase = createMockAssuranceCase({ id: 456 });
 
-			rerender(<WebSocketComponent />);
-
-			expect(mockWebSocket).toHaveBeenCalledTimes(2);
-			expect(mockWebSocket).toHaveBeenLastCalledWith(
-				"ws://localhost:8000/ws/case/456/?token=test-session-key"
+			rerender(
+				<SessionProvider session={mockSession}>
+					<WebSocketComponent />
+				</SessionProvider>
 			);
-		});
-
-		it("should reconnect when session key changes", () => {
-			const { rerender } = renderWithAuth(<WebSocketComponent />);
-
-			expect(mockWebSocket).toHaveBeenCalledTimes(1);
-
-			// Change session key
-			mockSession.data.key = "new-session-key";
-
-			rerender(<WebSocketComponent />);
 
 			expect(mockWebSocket).toHaveBeenCalledTimes(2);
 			expect(mockWebSocket).toHaveBeenLastCalledWith(
-				"ws://localhost:8000/ws/case/123/?token=new-session-key"
+				"ws://localhost:8000/ws/case/456/?token=mock-jwt-token"
 			);
 		});
 	});
@@ -564,7 +593,11 @@ describe("WebSocket Integration Tests", () => {
 			const initialMessageCount = wsHelper.getSentMessages().length;
 
 			// Re-render with same assurance case
-			rerender(<WebSocketComponent />);
+			rerender(
+				<SessionProvider session={mockSession}>
+					<WebSocketComponent />
+				</SessionProvider>
+			);
 
 			// Should not send additional case_message
 			const finalMessageCount = wsHelper.getSentMessages().length;

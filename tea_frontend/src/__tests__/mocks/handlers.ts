@@ -59,13 +59,6 @@ interface InviteRequest {
 	email: string;
 }
 
-interface CaseStudyRequest {
-	title: string;
-	description: string;
-	content: string;
-	type: string;
-}
-
 interface PropertyClaimRequest {
 	name: string;
 	short_description?: string;
@@ -200,16 +193,7 @@ export const handlers = [
 	}),
 
 	http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-		return HttpResponse.json({
-			user: {
-				id: 2,
-				username: "newuser",
-				email: "new@example.com",
-				first_name: "New",
-				last_name: "User",
-			},
-			token: "mock-jwt-token",
-		});
+		return new HttpResponse(null, { status: 204 });
 	}),
 
 	http.get(`${API_BASE_URL}/api/auth/user/`, () => {
@@ -275,7 +259,7 @@ export const handlers = [
 		return HttpResponse.json([]);
 	}),
 
-	http.get(`${API_BASE_URL}/api/cases/:id/`, ({ params, request }) => {
+	http.get(`${API_BASE_URL}/api/cases/:id/`, ({ params }) => {
 		const caseId = params.id ? Number.parseInt(params.id as string, 10) : 1;
 
 		return HttpResponse.json({
@@ -330,9 +314,9 @@ export const handlers = [
 
 	// Case deletion endpoint
 	http.delete(`${API_BASE_URL}/api/cases/:id/`, async ({ params }) => {
-		const caseId = Number.parseInt(params.id as string, 10);
+		const _caseId = Number.parseInt(params.id as string, 10);
 		// Add delay to allow loading state to be visible in tests
-		await new Promise(resolve => setTimeout(resolve, 500));
+		await new Promise((resolve) => setTimeout(resolve, 500));
 		return new HttpResponse(null, { status: 204 });
 	}),
 
@@ -340,11 +324,14 @@ export const handlers = [
 	http.post(`${API_BASE_URL}/api/cases/:id/update-ids`, async ({ params }) => {
 		const caseId = Number.parseInt(params.id as string, 10);
 		// Add delay to allow loading state to be visible in tests
-		await new Promise(resolve => setTimeout(resolve, 100));
-		return HttpResponse.json({
-			message: "Identifiers updated successfully",
-			case_id: caseId,
-		}, { status: 200 });
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		return HttpResponse.json(
+			{
+				message: "Identifiers updated successfully",
+				case_id: caseId,
+			},
+			{ status: 200 }
+		);
 	}),
 
 	// Goals endpoints
@@ -540,7 +527,7 @@ export const handlers = [
 
 	// Screenshot endpoint - Next.js API route
 	http.post("/api/screenshot", async ({ request }) => {
-		const body = await request.json() as {
+		const body = (await request.json()) as {
 			caseId: string;
 			image: string;
 			token: string;
@@ -560,7 +547,7 @@ export const handlers = [
 
 	// Screenshot endpoint with absolute URL - fallback
 	http.post("http://localhost:3000/api/screenshot", async ({ request }) => {
-		const body = await request.json() as {
+		const body = (await request.json()) as {
 			caseId: string;
 			image: string;
 			token: string;
@@ -614,7 +601,7 @@ export const handlers = [
 	}),
 
 	// Case image upload endpoint
-	http.post(`${API_BASE_URL}/api/cases/:id/image`, async ({ params }) => {
+	http.post(`${API_BASE_URL}/api/cases/:id/image`, ({ params }) => {
 		const caseId = Number.parseInt(params.id as string, 10);
 		return HttpResponse.json({
 			message: "Image uploaded successfully",
@@ -862,24 +849,29 @@ export const handlers = [
 	}),
 
 	// Update case study endpoint
-	http.put(`${API_BASE_URL}/api/case-studies/:id/`, async ({ params, request }) => {
-		const caseStudyId = Number.parseInt(params.id as string, 10);
-		const body = await request.formData();
-		return HttpResponse.json({
-			id: caseStudyId,
-			title: body.get("title") || "Updated Title",
-			description: body.get("description") || "",
-			content: body.get("content") || "",
-			type: body.get("type") || "learning",
-			owner: mockUser.id,
-			updated_date: new Date().toISOString(),
-			image: body.get("image") ? `/media/case-studies/${caseStudyId}/image.png` : null,
-		});
-	}),
+	http.put(
+		`${API_BASE_URL}/api/case-studies/:id/`,
+		async ({ params, request }) => {
+			const caseStudyId = Number.parseInt(params.id as string, 10);
+			const body = await request.formData();
+			return HttpResponse.json({
+				id: caseStudyId,
+				title: body.get("title") || "Updated Title",
+				description: body.get("description") || "",
+				content: body.get("content") || "",
+				type: body.get("type") || "learning",
+				owner: mockUser.id,
+				updated_date: new Date().toISOString(),
+				image: body.get("image")
+					? `/media/case-studies/${caseStudyId}/image.png`
+					: null,
+			});
+		}
+	),
 
 	// Delete case study endpoint
 	http.delete(`${API_BASE_URL}/api/case-studies/:id/`, ({ params }) => {
-		const caseStudyId = Number.parseInt(params.id as string, 10);
+		const _caseStudyId = Number.parseInt(params.id as string, 10);
 		return new HttpResponse(null, { status: 204 });
 	}),
 
@@ -939,7 +931,7 @@ export const handlers = [
 
 	http.get(`${API_BASE_URL}/api/team-members/:id/`, ({ params }) => {
 		const memberId = Number.parseInt(params.id as string, 10);
-		const member = mockTeamMembers.find(m => m.id === memberId);
+		const member = mockTeamMembers.find((m) => m.id === memberId);
 
 		if (!member) {
 			return new HttpResponse(null, { status: 404 });
@@ -957,37 +949,40 @@ export const handlers = [
 			department: body.department,
 			email: body.email,
 			role: body.isAdmin ? "Admin" : "Member",
-			isAdmin: body.isAdmin || false,
+			isAdmin: body.isAdmin,
 			image: "https://via.placeholder.com/44", // Default placeholder image
 		};
 
 		return HttpResponse.json(newMember, { status: 201 });
 	}),
 
-	http.put(`${API_BASE_URL}/api/team-members/:id/`, async ({ params, request }) => {
-		const memberId = Number.parseInt(params.id as string, 10);
-		const body = (await request.json()) as TeamMemberUpdateRequest;
-		const existingMember = mockTeamMembers.find(m => m.id === memberId);
+	http.put(
+		`${API_BASE_URL}/api/team-members/:id/`,
+		async ({ params, request }) => {
+			const memberId = Number.parseInt(params.id as string, 10);
+			const body = (await request.json()) as TeamMemberUpdateRequest;
+			const existingMember = mockTeamMembers.find((m) => m.id === memberId);
 
-		if (!existingMember) {
-			return new HttpResponse(null, { status: 404 });
+			if (!existingMember) {
+				return new HttpResponse(null, { status: 404 });
+			}
+
+			const updatedMember = {
+				...existingMember,
+				name: body.name,
+				title: body.title,
+				department: body.department,
+				role: body.isAdmin ? "Admin" : "Member",
+				isAdmin: body.isAdmin,
+			};
+
+			return HttpResponse.json(updatedMember);
 		}
-
-		const updatedMember = {
-			...existingMember,
-			name: body.name,
-			title: body.title,
-			department: body.department,
-			role: body.isAdmin ? "Admin" : "Member",
-			isAdmin: body.isAdmin || false,
-		};
-
-		return HttpResponse.json(updatedMember);
-	}),
+	),
 
 	http.delete(`${API_BASE_URL}/api/team-members/:id/`, ({ params }) => {
 		const memberId = Number.parseInt(params.id as string, 10);
-		const member = mockTeamMembers.find(m => m.id === memberId);
+		const member = mockTeamMembers.find((m) => m.id === memberId);
 
 		if (!member) {
 			return new HttpResponse(null, { status: 404 });
@@ -997,28 +992,31 @@ export const handlers = [
 	}),
 
 	// Team Member role/permission updates
-	http.patch(`${API_BASE_URL}/api/team-members/:id/role/`, async ({ params, request }) => {
-		const memberId = Number.parseInt(params.id as string, 10);
-		const body = (await request.json()) as { role: string; isAdmin: boolean };
-		const existingMember = mockTeamMembers.find(m => m.id === memberId);
+	http.patch(
+		`${API_BASE_URL}/api/team-members/:id/role/`,
+		async ({ params, request }) => {
+			const memberId = Number.parseInt(params.id as string, 10);
+			const body = (await request.json()) as { role: string; isAdmin: boolean };
+			const existingMember = mockTeamMembers.find((m) => m.id === memberId);
 
-		if (!existingMember) {
-			return new HttpResponse(null, { status: 404 });
+			if (!existingMember) {
+				return new HttpResponse(null, { status: 404 });
+			}
+
+			const updatedMember = {
+				...existingMember,
+				role: body.role,
+				isAdmin: body.isAdmin,
+			};
+
+			return HttpResponse.json(updatedMember);
 		}
-
-		const updatedMember = {
-			...existingMember,
-			role: body.role,
-			isAdmin: body.isAdmin,
-		};
-
-		return HttpResponse.json(updatedMember);
-	}),
+	),
 
 	// Team Member activation/deactivation
 	http.patch(`${API_BASE_URL}/api/team-members/:id/activate/`, ({ params }) => {
 		const memberId = Number.parseInt(params.id as string, 10);
-		const member = mockTeamMembers.find(m => m.id === memberId);
+		const member = mockTeamMembers.find((m) => m.id === memberId);
 
 		if (!member) {
 			return new HttpResponse(null, { status: 404 });
@@ -1030,55 +1028,68 @@ export const handlers = [
 		});
 	}),
 
-	http.patch(`${API_BASE_URL}/api/team-members/:id/deactivate/`, ({ params }) => {
-		const memberId = Number.parseInt(params.id as string, 10);
-		const member = mockTeamMembers.find(m => m.id === memberId);
+	http.patch(
+		`${API_BASE_URL}/api/team-members/:id/deactivate/`,
+		({ params }) => {
+			const memberId = Number.parseInt(params.id as string, 10);
+			const member = mockTeamMembers.find((m) => m.id === memberId);
 
-		if (!member) {
-			return new HttpResponse(null, { status: 404 });
+			if (!member) {
+				return new HttpResponse(null, { status: 404 });
+			}
+
+			return HttpResponse.json({
+				...member,
+				status: "inactive",
+			});
 		}
-
-		return HttpResponse.json({
-			...member,
-			status: "inactive",
-		});
-	}),
+	),
 
 	// Team Member validation endpoints (for testing form validation)
-	http.post(`${API_BASE_URL}/api/team-members/validate-email/`, async ({ request }) => {
-		const body = (await request.json()) as { email: string };
-		const emailExists = mockTeamMembers.some(m => m.email === body.email);
+	http.post(
+		`${API_BASE_URL}/api/team-members/validate-email/`,
+		async ({ request }) => {
+			const body = (await request.json()) as { email: string };
+			const emailExists = mockTeamMembers.some((m) => m.email === body.email);
 
-		if (emailExists) {
-			return HttpResponse.json(
-				{ error: "Email already in use" },
-				{ status: 400 }
-			);
+			if (emailExists) {
+				return HttpResponse.json(
+					{ error: "Email already in use" },
+					{ status: 400 }
+				);
+			}
+
+			return HttpResponse.json({ valid: true });
 		}
-
-		return HttpResponse.json({ valid: true });
-	}),
+	),
 
 	// Bulk team member operations
-	http.post(`${API_BASE_URL}/api/team-members/bulk-update/`, async ({ request }) => {
-		const body = (await request.json()) as {
-			memberIds: number[];
-			updates: Partial<TeamMemberUpdateRequest>;
-		};
-
-		const updatedMembers = body.memberIds.map(id => {
-			const member = mockTeamMembers.find(m => m.id === id);
-			if (!member) return null;
-
-			return {
-				...member,
-				...body.updates,
-				role: body.updates.isAdmin ? "Admin" : member.role,
+	http.post(
+		`${API_BASE_URL}/api/team-members/bulk-update/`,
+		async ({ request }) => {
+			const body = (await request.json()) as {
+				memberIds: number[];
+				updates: Partial<TeamMemberUpdateRequest>;
 			};
-		}).filter(Boolean);
 
-		return HttpResponse.json(updatedMembers);
-	}),
+			const updatedMembers = body.memberIds
+				.map((id) => {
+					const member = mockTeamMembers.find((m) => m.id === id);
+					if (!member) {
+						return null;
+					}
+
+					return {
+						...member,
+						...body.updates,
+						role: body.updates.isAdmin ? "Admin" : member.role,
+					};
+				})
+				.filter(Boolean);
+
+			return HttpResponse.json(updatedMembers);
+		}
+	),
 
 	// Team Member search/filter endpoints
 	http.get(`${API_BASE_URL}/api/team-members/search/`, ({ request }) => {
@@ -1090,22 +1101,23 @@ export const handlers = [
 		let filteredMembers = mockTeamMembers;
 
 		if (query) {
-			filteredMembers = filteredMembers.filter(member =>
-				member.name.toLowerCase().includes(query.toLowerCase()) ||
-				member.email.toLowerCase().includes(query.toLowerCase()) ||
-				member.title.toLowerCase().includes(query.toLowerCase())
+			filteredMembers = filteredMembers.filter(
+				(member) =>
+					member.name.toLowerCase().includes(query.toLowerCase()) ||
+					member.email.toLowerCase().includes(query.toLowerCase()) ||
+					member.title.toLowerCase().includes(query.toLowerCase())
 			);
 		}
 
 		if (department) {
-			filteredMembers = filteredMembers.filter(member =>
-				member.department === department
+			filteredMembers = filteredMembers.filter(
+				(member) => member.department === department
 			);
 		}
 
 		if (role) {
-			filteredMembers = filteredMembers.filter(member =>
-				member.role === role
+			filteredMembers = filteredMembers.filter(
+				(member) => member.role === role
 			);
 		}
 

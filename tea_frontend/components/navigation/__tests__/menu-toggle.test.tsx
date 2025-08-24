@@ -5,8 +5,18 @@ import { MenuToggleButton } from "../menu-toggle";
 
 // Mock the Heroicons component
 vi.mock("@heroicons/react/24/outline", () => ({
-	Bars3Icon: ({ className, "aria-hidden": ariaHidden }: { className: string; "aria-hidden": boolean }) => (
-		<div className={className} aria-hidden={ariaHidden} data-testid="bars3-icon">
+	Bars3Icon: ({
+		className,
+		"aria-hidden": ariaHidden,
+	}: {
+		className: string;
+		"aria-hidden": boolean;
+	}) => (
+		<div
+			aria-hidden={ariaHidden}
+			className={className}
+			data-testid="bars3-icon"
+		>
 			Bars3Icon
 		</div>
 	),
@@ -145,7 +155,7 @@ describe("MenuToggleButton", () => {
 			const parentClickHandler = vi.fn();
 
 			render(
-				<div onClick={parentClickHandler}>
+				<div onClick={parentClickHandler} role="none">
 					<MenuToggleButton setSidebarOpen={mockSetSidebarOpen} />
 				</div>
 			);
@@ -186,9 +196,12 @@ describe("MenuToggleButton", () => {
 		it("should work with different setSidebarOpen implementations", async () => {
 			const user = userEvent.setup();
 			let sidebarState = false;
-			const customHandler = (value: boolean) => {
-				sidebarState = value;
-			};
+			const customHandler = vi.fn(
+				(value: boolean | ((prev: boolean) => boolean)) => {
+					sidebarState =
+						typeof value === "function" ? value(sidebarState) : value;
+				}
+			);
 
 			render(<MenuToggleButton setSidebarOpen={customHandler} />);
 
@@ -203,9 +216,11 @@ describe("MenuToggleButton", () => {
 		it("should work as a controlled component", async () => {
 			const user = userEvent.setup();
 			let isOpen = false;
-			const toggleSidebar = (value: boolean) => {
-				isOpen = value;
-			};
+			const toggleSidebar = vi.fn(
+				(value: boolean | ((prev: boolean) => boolean)) => {
+					isOpen = typeof value === "function" ? value(isOpen) : value;
+				}
+			);
 
 			render(<MenuToggleButton setSidebarOpen={toggleSidebar} />);
 
@@ -219,7 +234,9 @@ describe("MenuToggleButton", () => {
 
 		it("should maintain consistent behavior across re-renders", async () => {
 			const user = userEvent.setup();
-			const { rerender } = render(<MenuToggleButton setSidebarOpen={mockSetSidebarOpen} />);
+			const { rerender } = render(
+				<MenuToggleButton setSidebarOpen={mockSetSidebarOpen} />
+			);
 
 			const button = screen.getByRole("button");
 			await user.click(button);
@@ -236,17 +253,22 @@ describe("MenuToggleButton", () => {
 		});
 	});
 
-
 	describe("Performance", () => {
 		it("should not cause unnecessary re-renders", () => {
 			const renderCount = vi.fn();
 
-			const TestComponent = ({ setSidebarOpen }: { setSidebarOpen: (value: boolean) => void }) => {
+			const TestComponent = ({
+				setSidebarOpen,
+			}: {
+				setSidebarOpen: (value: boolean | ((prev: boolean) => boolean)) => void;
+			}) => {
 				renderCount();
 				return <MenuToggleButton setSidebarOpen={setSidebarOpen} />;
 			};
 
-			const { rerender } = render(<TestComponent setSidebarOpen={mockSetSidebarOpen} />);
+			const { rerender } = render(
+				<TestComponent setSidebarOpen={mockSetSidebarOpen} />
+			);
 
 			expect(renderCount).toHaveBeenCalledTimes(1);
 

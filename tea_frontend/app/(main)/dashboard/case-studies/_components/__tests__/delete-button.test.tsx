@@ -1,12 +1,10 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/src/__tests__/mocks/server";
-import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
 import { deleteCaseStudy } from "@/actions/case-studies";
+import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
 import DeleteCaseButton from "../delete-button";
 
 // Mock Next.js navigation
@@ -50,7 +48,8 @@ vi.mock("@/actions/case-studies", () => ({
 // Get the mocked function
 const mockDeleteCaseStudy = vi.mocked(deleteCaseStudy);
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const _API_BASE_URL =
+	process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const mockUser = {
 	id: 1,
@@ -58,6 +57,12 @@ const mockUser = {
 	email: "test@example.com",
 	key: "mock-session-key",
 };
+
+// Regex patterns for button selectors
+const DELETE_BUTTON_REGEX = /delete/i;
+const NO_BUTTON_REGEX = /no/i;
+const CONFIRM_DELETE_REGEX = /yes, remove case study!/i;
+const CLOSE_BUTTON_REGEX = /close/i;
 
 describe("DeleteCaseButton Component", () => {
 	const user = userEvent.setup();
@@ -83,12 +88,14 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toBeInTheDocument();
 			expect(deleteButton).toHaveClass("bg-rose-500");
 
@@ -99,14 +106,12 @@ describe("DeleteCaseButton Component", () => {
 
 		it("should render link variant with trash icon", () => {
 			renderWithAuth(
-				<DeleteCaseButton
-					caseStudyId={1}
-					variant="link"
-					redirect={false}
-				/>
+				<DeleteCaseButton caseStudyId={1} redirect={false} variant="link" />
 			);
 
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toBeInTheDocument();
 
 			// Link variant should be a regular button element
@@ -123,12 +128,14 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			// Check for confirmation modal
@@ -141,10 +148,10 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check for modal buttons
 			expect(
-				screen.getByRole("button", { name: /no/i })
+				screen.getByRole("button", { name: NO_BUTTON_REGEX })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /yes, remove case study!/i })
+				screen.getByRole("button", { name: CONFIRM_DELETE_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -152,13 +159,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -166,7 +175,7 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			// Click 'No' button
-			const noButton = screen.getByRole("button", { name: /no/i });
+			const noButton = screen.getByRole("button", { name: NO_BUTTON_REGEX });
 			await user.click(noButton);
 
 			// Check modal is closed
@@ -179,13 +188,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -193,7 +204,9 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			// Click the close button (X button)
-			const closeButton = screen.getByRole("button", { name: /close/i });
+			const closeButton = screen.getByRole("button", {
+				name: CLOSE_BUTTON_REGEX,
+			});
 			await user.click(closeButton);
 
 			// Check modal is closed
@@ -211,13 +224,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -225,16 +240,13 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
-					1
-				);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
 			});
 
 			// Check success toast
@@ -256,13 +268,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={true}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -270,16 +284,13 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
-					1
-				);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
 			});
 
 			// Check success toast
@@ -303,13 +314,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -317,16 +330,13 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
-					1
-				);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
 			});
 
 			// Check error toast
@@ -343,19 +353,21 @@ describe("DeleteCaseButton Component", () => {
 		});
 
 		it("should handle API errors gracefully", async () => {
-			// Mock API error
-			mockDeleteCaseStudy.mockRejectedValue(new Error("Network error"));
+			// Mock API error - the component expects false on error, not a rejection
+			mockDeleteCaseStudy.mockResolvedValue(false);
 
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -363,16 +375,22 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
-					1
-				);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
+			});
+
+			// Check error toast
+			await waitFor(() => {
+				expect(mockToast).toHaveBeenCalledWith({
+					variant: "destructive",
+					title: "Delete Failed",
+					description: "Something went wrong!",
+				});
 			});
 
 			// Should not redirect on error
@@ -384,20 +402,21 @@ describe("DeleteCaseButton Component", () => {
 		it("should handle async deletion properly", async () => {
 			// Mock slow deletion
 			mockDeleteCaseStudy.mockImplementation(
-				() =>
-					new Promise((resolve) => setTimeout(() => resolve(true), 100))
+				() => new Promise((resolve) => setTimeout(() => resolve(true), 100))
 			);
 
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -405,7 +424,7 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -430,13 +449,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -444,7 +465,7 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -464,13 +485,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -478,7 +501,7 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -497,13 +520,15 @@ describe("DeleteCaseButton Component", () => {
 			const { rerender } = renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={5}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -511,29 +536,24 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(confirmButton);
 
 			// Check deletion was called with correct ID
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
-					5
-				);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 5);
 			});
 
 			// Test with another ID
 			vi.clearAllMocks();
 			rerender(
-				<DeleteCaseButton
-					caseStudyId={10}
-					variant="link"
-					redirect={true}
-				/>
+				<DeleteCaseButton caseStudyId={10} redirect={true} variant="link" />
 			);
 
-			const newDeleteButton = screen.getByRole("button", { name: /delete/i });
+			const newDeleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(newDeleteButton);
 
 			await waitFor(() => {
@@ -541,7 +561,7 @@ describe("DeleteCaseButton Component", () => {
 			});
 
 			const newConfirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			await user.click(newConfirmButton);
 
@@ -559,12 +579,14 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toBeInTheDocument();
 			expect(deleteButton).toHaveAttribute("type", "button");
 		});
@@ -573,12 +595,14 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 
 			// Focus the button
 			deleteButton.focus();
@@ -593,7 +617,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Modal should be present and interactive
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, remove case study!/i,
+				name: CONFIRM_DELETE_REGEX,
 			});
 			expect(confirmButton).toBeInTheDocument();
 
@@ -606,13 +630,15 @@ describe("DeleteCaseButton Component", () => {
 			renderWithAuth(
 				<DeleteCaseButton
 					caseStudyId={1}
-					variant="destructive"
 					redirect={false}
+					variant="destructive"
 				/>
 			);
 
 			// Open modal
-			const deleteButton = screen.getByRole("button", { name: /delete/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			await waitFor(() => {
@@ -625,10 +651,10 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check buttons have clear labels
 			expect(
-				screen.getByRole("button", { name: /no/i })
+				screen.getByRole("button", { name: NO_BUTTON_REGEX })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /yes, remove case study!/i })
+				screen.getByRole("button", { name: CONFIRM_DELETE_REGEX })
 			).toBeInTheDocument();
 		});
 	});

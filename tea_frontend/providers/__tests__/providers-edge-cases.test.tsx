@@ -7,7 +7,9 @@ vi.unmock("@/providers/modal-provider");
 
 // Mock all modal components
 vi.mock("@/components/modals/case-create-modal", () => ({
-	CaseCreateModal: () => <div data-testid="case-create-modal">CaseCreateModal</div>,
+	CaseCreateModal: () => (
+		<div data-testid="case-create-modal">CaseCreateModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/email-modal", () => ({
@@ -19,7 +21,9 @@ vi.mock("@/components/modals/import-modal", () => ({
 }));
 
 vi.mock("@/components/modals/permissions-modal", () => ({
-	PermissionsModal: () => <div data-testid="permissions-modal">PermissionsModal</div>,
+	PermissionsModal: () => (
+		<div data-testid="permissions-modal">PermissionsModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/resources-modal", () => ({
@@ -32,8 +36,14 @@ vi.mock("@/components/modals/share-modal", () => ({
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
-	SessionProvider: ({ children, ...props }: { children: React.ReactNode; [key: string]: any }) => (
-		<div data-testid="session-provider" data-props={JSON.stringify(props)}>
+	SessionProvider: ({
+		children,
+		...props
+	}: {
+		children: React.ReactNode;
+		[key: string]: unknown;
+	}) => (
+		<div data-props={JSON.stringify(props)} data-testid="session-provider">
 			{children}
 		</div>
 	),
@@ -41,38 +51,20 @@ vi.mock("next-auth/react", () => ({
 
 // Mock next-themes
 vi.mock("next-themes", () => ({
-	ThemeProvider: ({ children, ...props }: { children: React.ReactNode; [key: string]: any }) => (
-		<div data-testid="next-themes-provider" data-props={JSON.stringify(props)}>
+	ThemeProvider: ({
+		children,
+		...props
+	}: {
+		children: React.ReactNode;
+		[key: string]: unknown;
+	}) => (
+		<div data-props={JSON.stringify(props)} data-testid="next-themes-provider">
 			{children}
 		</div>
 	),
 }));
 
-// Error boundary for testing error scenarios
-class TestErrorBoundary extends React.Component<
-	{ children: React.ReactNode; onError?: (error: Error) => void },
-	{ hasError: boolean; error?: Error }
-> {
-	constructor(props: { children: React.ReactNode; onError?: (error: Error) => void }) {
-		super(props);
-		this.state = { hasError: false };
-	}
-
-	static getDerivedStateFromError(error: Error) {
-		return { hasError: true, error };
-	}
-
-	componentDidCatch(error: Error) {
-		this.props.onError?.(error);
-	}
-
-	render() {
-		if (this.state.hasError) {
-			return <div data-testid="error-boundary">Error caught: {this.state.error?.message}</div>;
-		}
-		return this.props.children;
-	}
-}
+// Error boundary removed as it was unused
 
 // Import providers after mocking
 const { ModalProvider } = await import("../modal-provider");
@@ -114,7 +106,9 @@ describe("Providers Edge Cases and Error Handling", () => {
 			});
 
 			// Cleanup all providers
-			providers.forEach(unmount => unmount());
+			for (const unmount of providers) {
+				unmount();
+			}
 
 			// Should not cause memory issues
 			expect(true).toBe(true);
@@ -126,7 +120,7 @@ describe("Providers Edge Cases and Error Handling", () => {
 
 				React.useEffect(() => {
 					const interval = setInterval(() => {
-						setCount(c => c + 1);
+						setCount((c) => c + 1);
 					}, 10);
 
 					setTimeout(() => clearInterval(interval), 100);
@@ -182,7 +176,14 @@ describe("Providers Edge Cases and Error Handling", () => {
 		});
 
 		it("should handle circular reference in session data", () => {
-			const circularSession: any = { user: { name: "Test" } };
+			const circularSession: {
+				user: { name: string };
+				expires: string;
+				self?: unknown;
+			} = {
+				user: { name: "Test" },
+				expires: "2024-12-31T23:59:59.999Z",
+			};
 			circularSession.self = circularSession;
 
 			// Mock JSON.stringify to handle circular references
@@ -190,7 +191,7 @@ describe("Providers Edge Cases and Error Handling", () => {
 			JSON.stringify = vi.fn().mockImplementation((obj) => {
 				try {
 					return originalStringify(obj);
-				} catch (error) {
+				} catch (_error) {
 					return '{"user":{"name":"Test"},"self":"[Circular]"}';
 				}
 			});
@@ -211,12 +212,18 @@ describe("Providers Edge Cases and Error Handling", () => {
 			const largeSession = {
 				user: {
 					name: "A".repeat(1000),
-					data: Array(100).fill(0).map((_, i) => ({ key: i, value: "B".repeat(100) })),
+					data: new Array(100)
+						.fill(0)
+						.map((_, i) => ({ key: i, value: "B".repeat(100) })),
 				},
-				metadata: Array(50).fill(0).reduce((acc, _, i) => {
-					acc[`field_${i}`] = "C".repeat(200);
-					return acc;
-				}, {} as Record<string, string>),
+				expires: "2099-01-01",
+				metadata: new Array(50).fill(0).reduce(
+					(acc, _, i) => {
+						acc[`field_${i}`] = "C".repeat(200);
+						return acc;
+					},
+					{} as Record<string, string>
+				),
 			};
 
 			render(
@@ -230,14 +237,14 @@ describe("Providers Edge Cases and Error Handling", () => {
 		});
 
 		it("should handle session updates during render", () => {
-			let sessionData = { user: { name: "Initial" } };
+			let sessionData = { user: { name: "Initial" }, expires: "2099-01-01" };
 
 			const DynamicApp = () => {
 				const [, forceUpdate] = React.useState({});
 
 				React.useEffect(() => {
 					setTimeout(() => {
-						sessionData = { user: { name: "Updated" } };
+						sessionData = { user: { name: "Updated" }, expires: "2099-01-01" };
 						forceUpdate({});
 					}, 10);
 				}, []);
@@ -262,8 +269,10 @@ describe("Providers Edge Cases and Error Handling", () => {
 
 			for (const invalidTheme of invalidThemes) {
 				const { unmount } = render(
-					<ThemeProvider themes={invalidTheme as any}>
-						<div data-testid={`invalid-theme-${String(invalidTheme)}`}>Content</div>
+					<ThemeProvider themes={invalidTheme as string[]}>
+						<div data-testid={`invalid-theme-${String(invalidTheme)}`}>
+							Content
+						</div>
 					</ThemeProvider>
 				);
 
@@ -273,11 +282,7 @@ describe("Providers Edge Cases and Error Handling", () => {
 		});
 
 		it("should handle extremely long theme names", () => {
-			const longThemes = [
-				"A".repeat(100),
-				"B".repeat(500),
-				"C".repeat(1000),
-			];
+			const longThemes = ["A".repeat(100), "B".repeat(500), "C".repeat(1000)];
 
 			render(
 				<ThemeProvider themes={longThemes}>
@@ -316,9 +321,15 @@ describe("Providers Edge Cases and Error Handling", () => {
 			const originalLocalStorage = global.localStorage;
 			Object.defineProperty(global, "localStorage", {
 				value: {
-					getItem: () => { throw new Error("Storage error"); },
-					setItem: () => { throw new Error("Storage error"); },
-					removeItem: () => { throw new Error("Storage error"); },
+					getItem: () => {
+						throw new Error("Storage error");
+					},
+					setItem: () => {
+						throw new Error("Storage error");
+					},
+					removeItem: () => {
+						throw new Error("Storage error");
+					},
 				},
 				writable: true,
 			});
@@ -404,17 +415,25 @@ describe("Providers Edge Cases and Error Handling", () => {
 	describe("Resource Exhaustion Scenarios", () => {
 		it("should handle memory exhaustion during provider rendering", async () => {
 			// Simulate memory pressure by creating large objects
-			const createLargeData = () => Array(100).fill(0).map(() => ({
-				data: "x".repeat(100),
-				nested: Array(10).fill(0).map(() => ({ value: "y".repeat(100) }))
-			}));
+			const createLargeData = () =>
+				new Array(100).fill(0).map(() => ({
+					data: "x".repeat(100),
+					nested: new Array(10).fill(0).map(() => ({ value: "y".repeat(100) })),
+				}));
 
 			const MemoryIntensiveApp = () => {
-				const [data] = React.useState(createLargeData);
+				const [_data] = React.useState(createLargeData);
 
 				return (
-					<SessionProvider session={{ largeData: data }}>
-						<ThemeProvider themes={Array(10).fill(0).map((_, i) => `theme-${i}`)}>
+					<SessionProvider
+						session={{
+							user: { name: "MemoryUser" },
+							expires: "2024-12-31T23:59:59.999Z",
+						}}
+					>
+						<ThemeProvider
+							themes={new Array(10).fill(0).map((_, i) => `theme-${i}`)}
+						>
 							<ModalProvider />
 							<div data-testid="memory-intensive">Memory Intensive App</div>
 						</ThemeProvider>
@@ -440,7 +459,7 @@ describe("Providers Edge Cases and Error Handling", () => {
 				React.useEffect(() => {
 					// Simulate CPU intensive work
 					let sum = 0;
-					for (let i = 0; i < 10000; i++) {
+					for (let i = 0; i < 10_000; i++) {
 						sum += Math.random();
 					}
 					setResult(sum);
@@ -499,7 +518,7 @@ describe("Providers Edge Cases and Error Handling", () => {
 
 				React.useEffect(() => {
 					const interval = setInterval(() => {
-						setCount(c => c + 1);
+						setCount((c) => c + 1);
 					}, 1);
 
 					setTimeout(() => clearInterval(interval), 20);
@@ -507,7 +526,12 @@ describe("Providers Edge Cases and Error Handling", () => {
 				}, []);
 
 				return (
-					<SessionProvider session={{ counter: count }}>
+					<SessionProvider
+						session={{
+							user: { name: `RapidUser${count}` },
+							expires: "2024-12-31T23:59:59.999Z",
+						}}
+					>
 						<ThemeProvider defaultTheme={count % 2 === 0 ? "light" : "dark"}>
 							<ModalProvider />
 							<div data-testid="rapid-count">{count}</div>
@@ -518,19 +542,23 @@ describe("Providers Edge Cases and Error Handling", () => {
 
 			render(<RapidChangeApp />);
 
-			await waitFor(() => {
-				expect(screen.getByTestId("case-create-modal")).toBeInTheDocument();
-			}, { timeout: 100 });
+			await waitFor(
+				() => {
+					expect(screen.getByTestId("case-create-modal")).toBeInTheDocument();
+				},
+				{ timeout: 100 }
+			);
 
 			expect(screen.getByTestId("rapid-count")).toBeInTheDocument();
 		});
 
 		it("should handle concurrent provider initialization", async () => {
-			const promises = Array(5).fill(0).map((_, i) =>
-				new Promise<void>(resolve => {
+			const promises = new Array(5).fill(0).map((_, i) => {
+				const uniqueKey = `concurrent-provider-${Date.now()}-${Math.random()}`;
+				return new Promise<void>((resolve) => {
 					setTimeout(() => {
 						render(
-							<div key={i}>
+							<div key={uniqueKey}>
 								<SessionProvider>
 									<ThemeProvider>
 										<div data-testid={`concurrent-${i}`}>Concurrent {i}</div>
@@ -540,8 +568,8 @@ describe("Providers Edge Cases and Error Handling", () => {
 						);
 						resolve();
 					}, Math.random() * 10);
-				})
-			);
+				});
+			});
 
 			await Promise.all(promises);
 
@@ -552,7 +580,13 @@ describe("Providers Edge Cases and Error Handling", () => {
 
 	describe("Error Handling", () => {
 		it("should handle graceful degradation", () => {
-			const GracefulApp = ({ withTheme, withSession }: { withTheme: boolean; withSession: boolean }) => {
+			const GracefulApp = ({
+				withTheme,
+				withSession,
+			}: {
+				withTheme: boolean;
+				withSession: boolean;
+			}) => {
 				let content = <div data-testid="base-content">Base Content</div>;
 
 				if (withTheme) {
@@ -566,13 +600,15 @@ describe("Providers Edge Cases and Error Handling", () => {
 				return content;
 			};
 
-			const { rerender } = render(<GracefulApp withTheme={false} withSession={false} />);
+			const { rerender } = render(
+				<GracefulApp withSession={false} withTheme={false} />
+			);
 			expect(screen.getByTestId("base-content")).toBeInTheDocument();
 
-			rerender(<GracefulApp withTheme={true} withSession={false} />);
+			rerender(<GracefulApp withSession={false} withTheme={true} />);
 			expect(screen.getByTestId("next-themes-provider")).toBeInTheDocument();
 
-			rerender(<GracefulApp withTheme={true} withSession={true} />);
+			rerender(<GracefulApp withSession={true} withTheme={true} />);
 			expect(screen.getByTestId("session-provider")).toBeInTheDocument();
 			expect(screen.getByTestId("next-themes-provider")).toBeInTheDocument();
 		});

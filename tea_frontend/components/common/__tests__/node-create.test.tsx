@@ -9,12 +9,26 @@ import NodeCreate from "../node-create";
 
 // Mock CreateSheet component
 vi.mock("../../ui/create-sheet", () => ({
-	default: ({ children, isOpen, onChange, onClose }: any) => (
+	default: ({
+		children,
+		isOpen,
+		onChange,
+		onClose,
+	}: {
+		children?: React.ReactNode;
+		isOpen: boolean;
+		onChange: (value: boolean) => void;
+		onClose: () => void;
+	}) => (
 		<div data-testid="create-sheet">
 			{isOpen && (
 				<div>
-					<button onClick={() => onChange(false)}>Close Sheet</button>
-					<button onClick={onClose}>Force Close</button>
+					<button onClick={() => onChange(false)} type="button">
+						Close Sheet
+					</button>
+					<button onClick={onClose} type="button">
+						Force Close
+					</button>
 					{children}
 				</div>
 			)}
@@ -24,24 +38,54 @@ vi.mock("../../ui/create-sheet", () => ({
 
 // Mock CreateForm component
 vi.mock("../create-form", () => ({
-	default: ({ onClose, setUnresolvedChanges }: any) => (
+	default: ({
+		onClose,
+		setUnresolvedChanges,
+	}: {
+		onClose: () => void;
+		setUnresolvedChanges: (value: boolean) => void;
+	}) => (
 		<div data-testid="create-form">
-			<button onClick={onClose}>Form Close</button>
-			<button onClick={() => setUnresolvedChanges(true)}>Make Changes</button>
-			<button onClick={() => setUnresolvedChanges(false)}>Clear Changes</button>
+			<button onClick={onClose} type="button">
+				Form Close
+			</button>
+			<button onClick={() => setUnresolvedChanges(true)} type="button">
+				Make Changes
+			</button>
+			<button onClick={() => setUnresolvedChanges(false)} type="button">
+				Clear Changes
+			</button>
 		</div>
 	),
 }));
 
 // Mock AlertModal component
 vi.mock("../../modals/alert-modal", () => ({
-	AlertModal: ({ isOpen, onClose, onConfirm, message, cancelButtonText, confirmButtonText }: any) => (
+	AlertModal: ({
+		isOpen,
+		onClose,
+		onConfirm,
+		message,
+		cancelButtonText,
+		confirmButtonText,
+	}: {
+		isOpen: boolean;
+		onClose: () => void;
+		onConfirm: () => void;
+		message?: string;
+		cancelButtonText?: string;
+		confirmButtonText?: string;
+	}) => (
 		<div data-testid="alert-modal">
 			{isOpen && (
 				<div>
 					<p>{message}</p>
-					<button onClick={onClose}>{cancelButtonText}</button>
-					<button onClick={onConfirm}>{confirmButtonText}</button>
+					<button onClick={onClose} type="button">
+						{cancelButtonText}
+					</button>
+					<button onClick={onConfirm} type="button">
+						{confirmButtonText}
+					</button>
 				</div>
 			)}
 		</div>
@@ -57,22 +101,17 @@ describe("NodeCreate", () => {
 
 	describe("Component Mounting", () => {
 		it("should not render when not mounted", () => {
-			// Mock the mounted state to false
-			vi.spyOn(require("react"), "useEffect").mockImplementation((fn) => {
-				// Don't call the effect to simulate not mounted
-			});
+			renderWithAuth(<NodeCreate isOpen={false} setOpen={mockSetOpen} />);
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
-
-			expect(screen.queryByTestId("create-sheet")).not.toBeInTheDocument();
+			// When isOpen is false, the sheet should be in the DOM but not visible
+			const sheet = screen.getByTestId("create-sheet");
+			expect(sheet).toBeInTheDocument();
+			// Check that the content is not visible when closed
+			expect(screen.queryByTestId("create-form")).not.toBeInTheDocument();
 		});
 
 		it("should render when mounted and open", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-sheet")).toBeInTheDocument();
@@ -80,9 +119,7 @@ describe("NodeCreate", () => {
 		});
 
 		it("should render child components when open", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-form")).toBeInTheDocument();
@@ -91,9 +128,7 @@ describe("NodeCreate", () => {
 		});
 
 		it("should not render when closed", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={false} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={false} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-sheet")).toBeInTheDocument();
@@ -106,9 +141,7 @@ describe("NodeCreate", () => {
 
 	describe("Sheet Interaction", () => {
 		it("should render CreateSheet with correct props", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-sheet")).toBeInTheDocument();
@@ -120,9 +153,7 @@ describe("NodeCreate", () => {
 		it("should handle sheet onChange when no unresolved changes", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Close Sheet")).toBeInTheDocument();
@@ -136,9 +167,7 @@ describe("NodeCreate", () => {
 		it("should handle direct onClose from sheet", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Force Close")).toBeInTheDocument();
@@ -152,9 +181,7 @@ describe("NodeCreate", () => {
 
 	describe("Form Interaction", () => {
 		it("should render CreateForm with correct props", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-form")).toBeInTheDocument();
@@ -166,9 +193,7 @@ describe("NodeCreate", () => {
 		it("should handle form close action", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Form Close")).toBeInTheDocument();
@@ -182,9 +207,7 @@ describe("NodeCreate", () => {
 		it("should track unresolved changes", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Make Changes")).toBeInTheDocument();
@@ -204,9 +227,7 @@ describe("NodeCreate", () => {
 		it("should show alert modal when closing with unresolved changes", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Make Changes")).toBeInTheDocument();
@@ -231,9 +252,7 @@ describe("NodeCreate", () => {
 		it("should allow closing without alert when no unresolved changes", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Close Sheet")).toBeInTheDocument();
@@ -248,9 +267,7 @@ describe("NodeCreate", () => {
 		it("should clear unresolved changes after making and clearing them", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Make Changes")).toBeInTheDocument();
@@ -271,9 +288,7 @@ describe("NodeCreate", () => {
 
 	describe("Alert Modal Interaction", () => {
 		it("should render AlertModal initially closed", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("alert-modal")).toBeInTheDocument();
@@ -285,9 +300,7 @@ describe("NodeCreate", () => {
 		it("should handle alert modal cancel action", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			// Make changes and trigger alert
 			await waitFor(() => {
@@ -311,9 +324,7 @@ describe("NodeCreate", () => {
 		it("should handle alert modal confirm action", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			// Make changes and trigger alert
 			await waitFor(() => {
@@ -337,28 +348,26 @@ describe("NodeCreate", () => {
 
 	describe("State Management", () => {
 		it("should initialize with correct default state", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={false} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
-				// CreateSheet should be rendered
+				// CreateSheet should be rendered with content
 				expect(screen.getByTestId("create-sheet")).toBeInTheDocument();
-				// But should not show content when closed
-				expect(screen.queryByText("Form Close")).not.toBeInTheDocument();
+				expect(screen.getByTestId("create-form")).toBeInTheDocument();
 
-				// AlertModal should be rendered but not show content
+				// AlertModal should be rendered but not visible initially
 				expect(screen.getByTestId("alert-modal")).toBeInTheDocument();
 				expect(screen.queryByText("No, keep editing")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Yes, discard changes!")
+				).not.toBeInTheDocument();
 			});
 		});
 
 		it("should reset all state when closing", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			// Make changes
 			await waitFor(() => {
@@ -377,7 +386,7 @@ describe("NodeCreate", () => {
 		});
 
 		it("should handle rapid open/close cycles", async () => {
-			const user = userEvent.setup();
+			const _user = userEvent.setup();
 
 			const { rerender } = renderWithAuth(
 				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
@@ -404,9 +413,7 @@ describe("NodeCreate", () => {
 
 	describe("Loading State", () => {
 		it("should handle loading state correctly", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			// The loading state is managed internally and component should render without issues
 			await waitFor(() => {
@@ -415,9 +422,7 @@ describe("NodeCreate", () => {
 		});
 
 		it("should render without loading issues", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			// The component should render without crashes
 			await waitFor(() => {
@@ -429,12 +434,10 @@ describe("NodeCreate", () => {
 	});
 
 	describe("Edge Cases", () => {
-		it("should handle undefined setOpen gracefully", async () => {
+		it("should handle undefined setOpen gracefully", () => {
 			// This would typically cause an error, but let's test component robustness
 			expect(() => {
-				renderWithAuth(
-					<NodeCreate isOpen={true} setOpen={undefined as any} />
-				);
+				renderWithAuth(<NodeCreate isOpen={true} setOpen={vi.fn()} />);
 			}).not.toThrow();
 		});
 
@@ -460,9 +463,7 @@ describe("NodeCreate", () => {
 		it("should handle multiple rapid change events", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("Make Changes")).toBeInTheDocument();
@@ -482,9 +483,7 @@ describe("NodeCreate", () => {
 
 	describe("Component Integration", () => {
 		it("should properly integrate CreateForm and CreateSheet", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("create-sheet")).toBeInTheDocument();
@@ -496,9 +495,7 @@ describe("NodeCreate", () => {
 		});
 
 		it("should properly integrate AlertModal", async () => {
-			renderWithAuth(
-				<NodeCreate isOpen={true} setOpen={mockSetOpen} />
-			);
+			renderWithAuth(<NodeCreate isOpen={true} setOpen={mockSetOpen} />);
 
 			await waitFor(() => {
 				expect(screen.getByTestId("alert-modal")).toBeInTheDocument();

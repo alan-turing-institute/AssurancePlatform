@@ -1,17 +1,17 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { server } from "@/src/__tests__/mocks/server";
 import { HttpResponse, http } from "msw";
-import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import {
+	createCaseStudy,
+	deleteCaseStudy,
 	fetchCaseStudies,
+	fetchCaseStudyById,
+	fetchPublishedAssuranceCaseId,
 	fetchPublishedCaseStudies,
 	fetchPublishedCaseStudyById,
-	fetchCaseStudyById,
-	createCaseStudy,
 	updateCaseStudy,
-	deleteCaseStudy,
-	fetchPublishedAssuranceCaseId,
 } from "../case-studies";
 
 // Mock Next.js functions
@@ -27,15 +27,21 @@ const mockApiUrl = "http://localhost:8000";
 
 describe("Case Studies Actions", () => {
 	const mockToken = "test-token-123";
+	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		// Set environment variables
-		process.env.API_URL = mockApiUrl;
-		process.env.NEXT_PUBLIC_API_URL = mockApiUrl;
+		cleanupEnv = setupEnvVars({
+			API_URL: mockApiUrl,
+			NEXT_PUBLIC_API_URL: mockApiUrl,
+		});
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 		server.resetHandlers();
 		vi.clearAllMocks();
 	});
@@ -174,9 +180,12 @@ describe("Case Studies Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`, () => {
-					return HttpResponse.json(mockCaseStudy);
-				})
+				http.get(
+					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
+					() => {
+						return HttpResponse.json(mockCaseStudy);
+					}
+				)
 			);
 
 			const result = await fetchPublishedCaseStudyById(mockCaseStudyId);
@@ -186,26 +195,34 @@ describe("Case Studies Actions", () => {
 
 		it("should call notFound() when case study is not found (404)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
+					() => {
+						return new HttpResponse(null, { status: 404 });
+					}
+				)
 			);
 
 			// The function first checks response.ok, then checks if status is 404
 			// If 404, it calls notFound() which doesn't return normally
-			await expect(fetchPublishedCaseStudyById(mockCaseStudyId)).rejects.toThrow();
+			await expect(
+				fetchPublishedCaseStudyById(mockCaseStudyId)
+			).rejects.toThrow();
 		});
 
 		it("should throw error for other HTTP errors", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.get(
+					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
+					() => {
+						return new HttpResponse(null, { status: 500 });
+					}
+				)
 			);
 
-			await expect(fetchPublishedCaseStudyById(mockCaseStudyId)).rejects.toThrow(
-				"HTTP error! status: 500"
-			);
+			await expect(
+				fetchPublishedCaseStudyById(mockCaseStudyId)
+			).rejects.toThrow("HTTP error! status: 500");
 		});
 	});
 
@@ -222,13 +239,16 @@ describe("Case Studies Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, ({ request }) => {
-					// Verify authorization header
-					const authHeader = request.headers.get("Authorization");
-					expect(authHeader).toBe(`Token ${mockToken}`);
+				http.get(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					({ request }) => {
+						// Verify authorization header
+						const authHeader = request.headers.get("Authorization");
+						expect(authHeader).toBe(`Token ${mockToken}`);
 
-					return HttpResponse.json(mockCaseStudy);
-				})
+						return HttpResponse.json(mockCaseStudy);
+					}
+				)
 			);
 
 			const result = await fetchCaseStudyById(mockToken, mockCaseStudyId);
@@ -243,9 +263,9 @@ describe("Case Studies Actions", () => {
 				})
 			);
 
-			await expect(fetchCaseStudyById(mockToken, mockCaseStudyId)).rejects.toThrow(
-				"HTTP error! status: 403"
-			);
+			await expect(
+				fetchCaseStudyById(mockToken, mockCaseStudyId)
+			).rejects.toThrow("HTTP error! status: 403");
 		});
 	});
 
@@ -267,7 +287,7 @@ describe("Case Studies Actions", () => {
 
 			// Reset all handlers to ensure ours takes precedence
 			server.resetHandlers(
-				http.post(`${mockApiUrl}/api/case-studies/`, async ({ request }) => {
+				http.post(`${mockApiUrl}/api/case-studies/`, ({ request }) => {
 					// Verify authorization header
 					const authHeader = request.headers.get("Authorization");
 					expect(authHeader).toBe(`Token ${mockToken}`);
@@ -308,7 +328,9 @@ describe("Case Studies Actions", () => {
 
 		it("should handle FormData with file upload", async () => {
 			const mockFormData = new FormData();
-			const mockFile = new File(["test content"], "test.png", { type: "image/png" });
+			const mockFile = new File(["test content"], "test.png", {
+				type: "image/png",
+			});
 			mockFormData.append("title", "Case Study with Image");
 			mockFormData.append("image", mockFile);
 
@@ -319,7 +341,7 @@ describe("Case Studies Actions", () => {
 			};
 
 			server.resetHandlers(
-				http.post(`${mockApiUrl}/api/case-studies/`, async ({ request }) => {
+				http.post(`${mockApiUrl}/api/case-studies/`, ({ request }) => {
 					// Verify authorization header
 					const authHeader = request.headers.get("Authorization");
 					expect(authHeader).toBe(`Token ${mockToken}`);
@@ -346,21 +368,28 @@ describe("Case Studies Actions", () => {
 
 			// Reset handlers to ensure our test handler takes precedence
 			server.resetHandlers(
-				http.put(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, async ({ request }) => {
-					// Verify authorization header
-					const authHeader = request.headers.get("Authorization");
-					expect(authHeader).toBe(`Token ${mockToken}`);
+				http.put(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					({ request }) => {
+						// Verify authorization header
+						const authHeader = request.headers.get("Authorization");
+						expect(authHeader).toBe(`Token ${mockToken}`);
 
-					// Skip FormData validation due to MSW compatibility issues
-					return HttpResponse.json({ success: true });
-				})
+						// Skip FormData validation due to MSW compatibility issues
+						return HttpResponse.json({ success: true });
+					}
+				)
 			);
 
 			const result = await updateCaseStudy(mockToken, mockFormData);
 
 			expect(result).toBe(true);
-			expect(revalidatePath).toHaveBeenCalledWith(`/dashboard/case-studies/${mockCaseStudyId}`);
-			expect(revalidatePath).toHaveBeenCalledWith(`/discover/${mockCaseStudyId}`);
+			expect(revalidatePath).toHaveBeenCalledWith(
+				`/dashboard/case-studies/${mockCaseStudyId}`
+			);
+			expect(revalidatePath).toHaveBeenCalledWith(
+				`/discover/${mockCaseStudyId}`
+			);
 			expect(revalidatePath).toHaveBeenCalledWith("/discover");
 		});
 
@@ -390,20 +419,25 @@ describe("Case Studies Actions", () => {
 
 		it("should handle FormData with file update", async () => {
 			const mockFormData = new FormData();
-			const mockFile = new File(["updated content"], "updated.png", { type: "image/png" });
+			const mockFile = new File(["updated content"], "updated.png", {
+				type: "image/png",
+			});
 			mockFormData.append("id", mockCaseStudyId.toString());
 			mockFormData.append("title", "Updated with Image");
 			mockFormData.append("image", mockFile);
 
 			server.resetHandlers(
-				http.put(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, async ({ request }) => {
-					// Verify authorization header
-					const authHeader = request.headers.get("Authorization");
-					expect(authHeader).toBe(`Token ${mockToken}`);
+				http.put(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					({ request }) => {
+						// Verify authorization header
+						const authHeader = request.headers.get("Authorization");
+						expect(authHeader).toBe(`Token ${mockToken}`);
 
-					// Skip FormData validation due to MSW compatibility issues
-					return HttpResponse.json({ success: true });
-				})
+						// Skip FormData validation due to MSW compatibility issues
+						return HttpResponse.json({ success: true });
+					}
+				)
 			);
 
 			const result = await updateCaseStudy(mockToken, mockFormData);
@@ -417,13 +451,16 @@ describe("Case Studies Actions", () => {
 
 		it("should delete case study successfully", async () => {
 			server.use(
-				http.delete(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, ({ request }) => {
-					// Verify authorization header
-					const authHeader = request.headers.get("Authorization");
-					expect(authHeader).toBe(`Token ${mockToken}`);
+				http.delete(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					({ request }) => {
+						// Verify authorization header
+						const authHeader = request.headers.get("Authorization");
+						expect(authHeader).toBe(`Token ${mockToken}`);
 
-					return new HttpResponse(null, { status: 204 });
-				})
+						return new HttpResponse(null, { status: 204 });
+					}
+				)
 			);
 
 			const result = await deleteCaseStudy(mockToken, mockCaseStudyId);
@@ -434,9 +471,12 @@ describe("Case Studies Actions", () => {
 
 		it("should return false when HTTP request fails", async () => {
 			server.use(
-				http.delete(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.delete(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					() => {
+						return new HttpResponse(null, { status: 500 });
+					}
+				)
 			);
 
 			const result = await deleteCaseStudy(mockToken, mockCaseStudyId);
@@ -446,9 +486,12 @@ describe("Case Studies Actions", () => {
 
 		it("should return false when case study not found", async () => {
 			server.use(
-				http.delete(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.delete(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					() => {
+						return new HttpResponse(null, { status: 404 });
+					}
+				)
 			);
 
 			const result = await deleteCaseStudy(mockToken, mockCaseStudyId);
@@ -458,9 +501,12 @@ describe("Case Studies Actions", () => {
 
 		it("should return false when unauthorized", async () => {
 			server.use(
-				http.delete(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.delete(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					() => {
+						return new HttpResponse(null, { status: 403 });
+					}
+				)
 			);
 
 			const result = await deleteCaseStudy(mockToken, mockCaseStudyId);
@@ -482,9 +528,12 @@ describe("Case Studies Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`, () => {
-					return HttpResponse.json(mockAssuranceCase);
-				})
+				http.get(
+					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
+					() => {
+						return HttpResponse.json(mockAssuranceCase);
+					}
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCaseId(mockAssuranceCaseId);
@@ -494,62 +543,82 @@ describe("Case Studies Actions", () => {
 
 		it("should throw error when HTTP request fails", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
+					() => {
+						return new HttpResponse(null, { status: 404 });
+					}
+				)
 			);
 
-			await expect(fetchPublishedAssuranceCaseId(mockAssuranceCaseId)).rejects.toThrow(
-				"HTTP error! status: 404"
-			);
+			await expect(
+				fetchPublishedAssuranceCaseId(mockAssuranceCaseId)
+			).rejects.toThrow("HTTP error! status: 404");
 		});
 
 		it("should handle network errors", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`, () => {
-					return HttpResponse.error();
-				})
+				http.get(
+					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
+					() => {
+						return HttpResponse.error();
+					}
+				)
 			);
 
-			await expect(fetchPublishedAssuranceCaseId(mockAssuranceCaseId)).rejects.toThrow();
+			await expect(
+				fetchPublishedAssuranceCaseId(mockAssuranceCaseId)
+			).rejects.toThrow();
 		});
 	});
 
 	describe("Environment variable handling", () => {
 		it("should use API_URL when both API_URL and NEXT_PUBLIC_API_URL are set", async () => {
-			process.env.API_URL = "http://priority.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL = "http://secondary.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: "http://priority.localhost:8000",
+				NEXT_PUBLIC_API_URL: "http://secondary.localhost:8000",
+			});
 
 			let usedUrl = "";
 
 			server.use(
-				http.get("http://priority.localhost:8000/api/case-studies/", ({ request }) => {
-					usedUrl = request.url;
-					return HttpResponse.json([]);
-				})
+				http.get(
+					"http://priority.localhost:8000/api/case-studies/",
+					({ request }) => {
+						usedUrl = request.url;
+						return HttpResponse.json([]);
+					}
+				)
 			);
 
 			await fetchCaseStudies(mockToken);
 
 			expect(usedUrl).toContain("http://priority.localhost:8000");
+			restoreEnv();
 		});
 
 		it("should use NEXT_PUBLIC_API_URL when API_URL is not set", async () => {
-			delete process.env.API_URL;
-			process.env.NEXT_PUBLIC_API_URL = "http://public.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: "http://public.localhost:8000",
+			});
 
 			let usedUrl = "";
 
 			server.use(
-				http.get("http://public.localhost:8000/api/case-studies/", ({ request }) => {
-					usedUrl = request.url;
-					return HttpResponse.json([]);
-				})
+				http.get(
+					"http://public.localhost:8000/api/case-studies/",
+					({ request }) => {
+						usedUrl = request.url;
+						return HttpResponse.json([]);
+					}
+				)
 			);
 
 			await fetchCaseStudies(mockToken);
 
 			expect(usedUrl).toContain("http://public.localhost:8000");
+			restoreEnv();
 		});
 	});
 
@@ -568,7 +637,7 @@ describe("Case Studies Actions", () => {
 
 		it("should handle timeout errors", async () => {
 			server.use(
-				http.post(`${mockApiUrl}/api/case-studies/`, async () => {
+				http.post(`${mockApiUrl}/api/case-studies/`, () => {
 					// Simulate timeout by returning an error response
 					return HttpResponse.error();
 				})
@@ -625,7 +694,9 @@ describe("Case Studies Actions", () => {
 
 			await updateCaseStudy(mockToken, mockFormData);
 
-			expect(revalidatePath).toHaveBeenCalledWith("/dashboard/case-studies/456");
+			expect(revalidatePath).toHaveBeenCalledWith(
+				"/dashboard/case-studies/456"
+			);
 			expect(revalidatePath).toHaveBeenCalledWith("/discover/456");
 			expect(revalidatePath).toHaveBeenCalledWith("/discover");
 			expect(revalidatePath).toHaveBeenCalledTimes(3);

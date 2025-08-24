@@ -12,6 +12,9 @@ import {
 import type { AssuranceCase } from "@/types";
 import NodeContext from "../node-context";
 
+// Regex constants
+const TEST_CONTEXT_REGEX = /Test Context/;
+
 // Mock dependencies
 vi.mock("@/lib/case-helper");
 vi.mock("@/data/store");
@@ -77,20 +80,29 @@ describe("NodeContext", () => {
 		};
 
 		// Mock useStore to return current state and update it when setAssuranceCase is called
-		vi.mocked(useStore).mockImplementation(() => ({
-			assuranceCase: currentAssuranceCase,
-			setAssuranceCase: mockSetAssuranceCase.mockImplementation((newCase) => {
-				currentAssuranceCase = newCase;
-			}),
-			activeUsers: [],
-			setActiveUsers: mockSetActiveUsers,
-		} as ReturnType<typeof useStore>));
+		vi.mocked(useStore).mockImplementation(
+			() =>
+				({
+					assuranceCase: currentAssuranceCase,
+					setAssuranceCase: mockSetAssuranceCase.mockImplementation(
+						(newCase) => {
+							currentAssuranceCase = newCase;
+						}
+					),
+					activeUsers: [],
+					setActiveUsers: mockSetActiveUsers,
+				}) as ReturnType<typeof useStore>
+		);
 
 		// Mock toast
 		vi.mocked(toast).mockImplementation(() => ({
 			id: "mock-id",
-			dismiss: () => {},
-			update: () => {},
+			dismiss: () => {
+				// Mock implementation
+			},
+			update: () => {
+				// Mock implementation
+			},
 		}));
 	});
 
@@ -109,7 +121,7 @@ describe("NodeContext", () => {
 			screen.getByText("Test context long description")
 		).toBeInTheDocument();
 		// Check that the context name is rendered
-		const contextInfo = screen.getByText(/Test Context/);
+		const contextInfo = screen.getByText(TEST_CONTEXT_REGEX);
 		expect(contextInfo).toBeInTheDocument();
 	});
 
@@ -150,7 +162,9 @@ describe("NodeContext", () => {
 		);
 
 		// Ensure the context is initially rendered
-		expect(screen.getByText("Test context long description")).toBeInTheDocument();
+		expect(
+			screen.getByText("Test context long description")
+		).toBeInTheDocument();
 
 		// Find the context item by its description
 		const contextItem = screen.getByText("Test context long description");

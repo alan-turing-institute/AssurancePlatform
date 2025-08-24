@@ -1,11 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	renderWithoutProviders,
-	screen,
-	waitFor,
-} from "@/src/__tests__/utils/test-utils";
-import {
 	adminMember,
 	corporateMember,
 	createMockTeamMember,
@@ -18,6 +13,11 @@ import {
 	projectsMember,
 	regularMember,
 } from "@/src/__tests__/utils/team-mock-data";
+import {
+	renderWithoutProviders,
+	screen,
+	waitFor,
+} from "@/src/__tests__/utils/test-utils";
 import MemberEditForm from "../member-edit-form";
 
 // Regex constants for test assertions
@@ -27,15 +27,16 @@ const DEPARTMENT_LABEL_REGEX = /department/i;
 const ADMIN_LABEL_REGEX = /admin/i;
 const UPDATE_MEMBER_BUTTON_REGEX = /update member/i;
 const DEACTIVATE_BUTTON_REGEX = /deactivate/i;
-const SELECT_TEAM_PLACEHOLDER_REGEX = /select a team/i;
+const _SELECT_TEAM_PLACEHOLDER_REGEX = /select a team/i;
 
 // Validation error regex patterns
 const NAME_MIN_2_CHAR_REGEX = /name must be at least 2 characters/i;
 const TITLE_MIN_2_CHAR_REGEX = /job title must be atleast 2 characters/i;
-const SELECT_TEAM_ERROR_REGEX = /please select a team/i;
+const _SELECT_TEAM_ERROR_REGEX = /please select a team/i;
 
 // Admin description text
-const ADMIN_DESCRIPTION_REGEX = /the admin has full control over the application/i;
+const ADMIN_DESCRIPTION_REGEX =
+	/the admin has full control over the application/i;
 
 describe("MemberEditForm", () => {
 	beforeEach(() => {
@@ -165,7 +166,9 @@ describe("MemberEditForm", () => {
 
 			// Should not show validation errors
 			expect(screen.queryByText(NAME_MIN_2_CHAR_REGEX)).not.toBeInTheDocument();
-			expect(screen.queryByText(TITLE_MIN_2_CHAR_REGEX)).not.toBeInTheDocument();
+			expect(
+				screen.queryByText(TITLE_MIN_2_CHAR_REGEX)
+			).not.toBeInTheDocument();
 		});
 	});
 
@@ -177,7 +180,9 @@ describe("MemberEditForm", () => {
 					department,
 				});
 
-				const { unmount } = renderWithoutProviders(<MemberEditForm member={testMember} />);
+				const { unmount } = renderWithoutProviders(
+					<MemberEditForm member={testMember} />
+				);
 
 				const departmentSelect = screen.getByLabelText(DEPARTMENT_LABEL_REGEX);
 				expect(departmentSelect).toBeInTheDocument();
@@ -243,7 +248,9 @@ describe("MemberEditForm", () => {
 
 		it("should start with correct admin status based on member data", () => {
 			// Test admin member
-			const { unmount: unmountAdmin } = renderWithoutProviders(<MemberEditForm member={adminMember} />);
+			const { unmount: unmountAdmin } = renderWithoutProviders(
+				<MemberEditForm member={adminMember} />
+			);
 			expect(screen.getByLabelText(ADMIN_LABEL_REGEX)).toBeChecked();
 			unmountAdmin();
 
@@ -277,7 +284,9 @@ describe("MemberEditForm", () => {
 			// we can't test the actual submission logic yet
 			// This test verifies the form can be submitted without validation errors
 			expect(screen.queryByText(NAME_MIN_2_CHAR_REGEX)).not.toBeInTheDocument();
-			expect(screen.queryByText(TITLE_MIN_2_CHAR_REGEX)).not.toBeInTheDocument();
+			expect(
+				screen.queryByText(TITLE_MIN_2_CHAR_REGEX)
+			).not.toBeInTheDocument();
 		});
 
 		it("should prevent submission with invalid data", async () => {
@@ -311,7 +320,9 @@ describe("MemberEditForm", () => {
 		});
 
 		it("should handle member with special characters in name", () => {
-			renderWithoutProviders(<MemberEditForm member={memberWithSpecialCharacters} />);
+			renderWithoutProviders(
+				<MemberEditForm member={memberWithSpecialCharacters} />
+			);
 
 			const nameInput = screen.getByLabelText(NAME_LABEL_REGEX);
 			const titleInput = screen.getByLabelText(JOB_TITLE_LABEL_REGEX);
@@ -436,10 +447,14 @@ describe("MemberEditForm", () => {
 			expect(screen.getByLabelText(ADMIN_LABEL_REGEX)).toHaveFocus();
 
 			await user.tab(); // Update button
-			expect(screen.getByRole("button", { name: UPDATE_MEMBER_BUTTON_REGEX })).toHaveFocus();
+			expect(
+				screen.getByRole("button", { name: UPDATE_MEMBER_BUTTON_REGEX })
+			).toHaveFocus();
 
 			await user.tab(); // Deactivate button
-			expect(screen.getByRole("button", { name: DEACTIVATE_BUTTON_REGEX })).toHaveFocus();
+			expect(
+				screen.getByRole("button", { name: DEACTIVATE_BUTTON_REGEX })
+			).toHaveFocus();
 		});
 
 		it("should handle Enter key submission", async () => {

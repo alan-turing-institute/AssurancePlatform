@@ -12,14 +12,14 @@ import RegisterPage from "../register/page";
 const PASSWORD_REGEX = /password/i;
 const SUBMIT_REGEX = /submit/i;
 const LOGIN_REGEX = /login/i;
-const CREATING_ACCOUNT_REGEX = /creating account/i;
+const _CREATING_ACCOUNT_REGEX = /creating account/i;
 const LOGGING_IN_REGEX = /logging in/i;
 const USERNAME_EMPTY_REGEX = /string must contain at least 2 character/i;
 const PASSWORD_REQUIREMENT_REGEX =
 	/password must contain at least one uppercase letter, one number, and one special character/i;
 const PASSWORD_MATCH_REGEX = /your passwords must match/i;
 const INVALID_USERNAME_PASSWORD_REGEX = /invalid username or password/i;
-const UNABLE_TO_LOGIN_REGEX = /unable to log in with provided credentials/i;
+const _UNABLE_TO_LOGIN_REGEX = /unable to log in with provided credentials/i;
 const GITHUB_REGEX = /github/i;
 const SIGN_UP_TODAY_REGEX = /sign up today/i;
 const INVALID_CREDENTIALS_REGEX = /invalid credentials/i;
@@ -91,20 +91,26 @@ describe("Authentication Flow Integration Tests", () => {
 			const password1Input = passwordInputs[0];
 			const password2Input = passwordInputs[1];
 
-			await user.type(usernameInput, "testuser");
-			await user.type(emailInput, "test@example.com");
-			await user.type(password1Input, "TestPassword123!");
-			await user.type(password2Input, "TestPassword123!");
+			await act(async () => {
+				await user.type(usernameInput, "testuser");
+				await user.type(emailInput, "test@example.com");
+				await user.type(password1Input, "TestPassword123!");
+				await user.type(password2Input, "TestPassword123!");
+			});
 
 			// Submit form
 			const submitButton = screen.getByRole("button", { name: SUBMIT_REGEX });
-			await user.click(submitButton);
-
-			// Since the registration happens quickly, we might not catch the loading state
-			// Let's just verify the redirect happens
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
+			await act(async () => {
+				await user.click(submitButton);
 			});
+
+			// Wait for the async operation to complete and verify redirect
+			await waitFor(
+				() => {
+					expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		it("should show validation errors for invalid registration data", async () => {
@@ -287,7 +293,11 @@ describe("Authentication Flow Integration Tests", () => {
 
 			// Check for generic error message
 			await waitFor(() => {
-				expect(screen.getByText("Connection error. Please check your internet and try again.")).toBeInTheDocument();
+				expect(
+					screen.getByText(
+						"Connection error. Please check your internet and try again."
+					)
+				).toBeInTheDocument();
 			});
 		});
 	});

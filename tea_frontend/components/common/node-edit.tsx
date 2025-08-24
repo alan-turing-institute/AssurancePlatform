@@ -1023,6 +1023,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 				</div>
 			}
 			isOpen={isOpen}
+			nodeId={node.id}
 			onChange={onChange}
 			onClose={handleClose}
 			title={`${readOnly ? "Viewing" : "Editing"} ${node.data.name}`}

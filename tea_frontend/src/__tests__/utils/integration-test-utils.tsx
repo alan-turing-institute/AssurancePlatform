@@ -19,6 +19,14 @@ import { render, renderWithAuth } from "./test-utils";
 export { mockRouter };
 export const mockSearchParams = new URLSearchParams();
 
+// Regex constants for form field matching
+const EMAIL_REGEX = /email/i;
+const PASSWORD_REGEX = /password/i;
+const NAME_REGEX = /name/i;
+const CONFIRM_PASSWORD_REGEX = /confirm password/i;
+const SIGN_IN_REGEX = /sign in/i;
+const SIGN_UP_REGEX = /sign up/i;
+
 // Setup navigation mocks
 export const setupNavigationMocks = () => {
 	mockUseRouter.mockReturnValue(mockRouter);
@@ -77,9 +85,9 @@ export class AuthFlow {
 		const { getByLabelText, getByRole } = render(component);
 
 		// Fill in login form
-		const emailInput = getByLabelText(/email/i);
-		const passwordInput = getByLabelText(/password/i);
-		const submitButton = getByRole("button", { name: /sign in/i });
+		const emailInput = getByLabelText(EMAIL_REGEX);
+		const passwordInput = getByLabelText(PASSWORD_REGEX);
+		const submitButton = getByRole("button", { name: SIGN_IN_REGEX });
 
 		await this.user.type(emailInput, email);
 		await this.user.type(passwordInput, password);
@@ -98,12 +106,12 @@ export class AuthFlow {
 				image: null,
 			},
 			expires: "2025-12-31",
-		} as any;
+		} as Session;
 
 		return this.session;
 	}
 
-	async logout() {
+	logout() {
 		// Simulate logout API call
 		server.use(
 			http.post("/api/auth/logout", () => {
@@ -124,11 +132,11 @@ export class AuthFlow {
 		const { getByLabelText, getByRole } = render(component);
 
 		// Fill in registration form
-		const nameInput = getByLabelText(/name/i);
-		const emailInput = getByLabelText(/email/i);
-		const passwordInput = getByLabelText(/password/i);
-		const confirmPasswordInput = getByLabelText(/confirm password/i);
-		const submitButton = getByRole("button", { name: /sign up/i });
+		const nameInput = getByLabelText(NAME_REGEX);
+		const emailInput = getByLabelText(EMAIL_REGEX);
+		const passwordInput = getByLabelText(PASSWORD_REGEX);
+		const confirmPasswordInput = getByLabelText(CONFIRM_PASSWORD_REGEX);
+		const submitButton = getByRole("button", { name: SIGN_UP_REGEX });
 
 		await this.user.type(nameInput, name);
 		await this.user.type(emailInput, email);
@@ -149,7 +157,7 @@ export class AuthFlow {
 				image: null,
 			},
 			expires: "2025-12-31",
-		} as any;
+		} as Session;
 
 		return this.session;
 	}
@@ -165,10 +173,10 @@ export class AuthFlow {
 
 // Helper for API state management in tests
 export class ApiStateManager {
-	private apiResponses: Map<string, any> = new Map();
+	private apiResponses: Map<string, unknown> = new Map();
 	private apiErrors: Map<string, Error> = new Map();
 
-	setResponse(endpoint: string, response: any) {
+	setResponse(endpoint: string, response: unknown) {
 		this.apiResponses.set(endpoint, response);
 
 		// Setup MSW handler
@@ -255,7 +263,7 @@ export class UserJourney {
 		this.apiState = new ApiStateManager();
 	}
 
-	async startAt(
+	startAt(
 		component: React.ReactElement,
 		options?: { authenticated?: boolean }
 	) {
@@ -366,16 +374,30 @@ export class UserJourney {
 
 // Helper for testing WebSocket connections
 export class WebSocketTestHelper {
-	private mockSocket: any;
-	private handlers: Map<string, Function> = new Map();
+	private mockSocket: Partial<WebSocket> & {
+		send: ReturnType<typeof vi.fn>;
+		close: ReturnType<typeof vi.fn>;
+		addEventListener: ReturnType<typeof vi.fn>;
+		removeEventListener: ReturnType<typeof vi.fn>;
+		dispatchEvent: ReturnType<typeof vi.fn>;
+	};
+	private handlers: Map<
+		string,
+		(event: Event | MessageEvent | CloseEvent) => void
+	> = new Map();
 
 	constructor() {
 		this.mockSocket = {
 			send: vi.fn(),
 			close: vi.fn(),
-			addEventListener: vi.fn((event: string, handler: Function) => {
-				this.handlers.set(event, handler);
-			}),
+			addEventListener: vi.fn(
+				(
+					eventType: string,
+					handler: (event: Event | MessageEvent | CloseEvent) => void
+				) => {
+					this.handlers.set(eventType, handler);
+				}
+			),
 			removeEventListener: vi.fn((event: string) => {
 				this.handlers.delete(event);
 			}),
@@ -392,20 +414,36 @@ export class WebSocketTestHelper {
 			OPEN: 1,
 			CLOSING: 2,
 			CLOSED: 3,
+			onopen: null,
+			onclose: null,
+			onerror: null,
+			onmessage: null,
+			protocol: "",
+			extensions: "",
+			bufferedAmount: 0,
+			binaryType: "blob" as BinaryType,
 		};
 	}
 
-	simulateMessage(data: any) {
+	simulateMessage(data: unknown) {
 		const handler = this.handlers.get("message");
 		if (handler) {
-			handler({ data: JSON.stringify(data) });
+			const messageEvent = new MessageEvent("message", {
+				data: JSON.stringify(data),
+			});
+			handler(messageEvent);
 		}
 	}
 
 	simulateError(error: Error) {
 		const handler = this.handlers.get("error");
 		if (handler) {
-			handler(error);
+			const errorEvent = new Event("error");
+			Object.defineProperty(errorEvent, "error", {
+				value: error,
+				enumerable: true,
+			});
+			handler(errorEvent);
 		}
 	}
 
@@ -413,7 +451,8 @@ export class WebSocketTestHelper {
 		this.mockSocket.readyState = WebSocket.OPEN;
 		const handler = this.handlers.get("open");
 		if (handler) {
-			handler(new Event("open"));
+			const openEvent = new Event("open");
+			handler(openEvent);
 		}
 	}
 
@@ -430,7 +469,7 @@ export class WebSocketTestHelper {
 	}
 
 	getSentMessages() {
-		return this.mockSocket.send.mock.calls.map((call: any[]) => {
+		return this.mockSocket.send.mock.calls.map((call: unknown[]) => {
 			try {
 				return JSON.parse(call[0]);
 			} catch {

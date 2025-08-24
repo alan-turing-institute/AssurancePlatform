@@ -101,8 +101,13 @@ describe("SettingsNav", () => {
 			const accountLink = screen.getByRole("link", { name: "Account" });
 			expect(accountLink).toHaveAttribute("href", "/settings");
 
-			const notificationsLink = screen.getByRole("link", { name: "Notifications" });
-			expect(notificationsLink).toHaveAttribute("href", "/settings/notifications");
+			const notificationsLink = screen.getByRole("link", {
+				name: "Notifications",
+			});
+			expect(notificationsLink).toHaveAttribute(
+				"href",
+				"/settings/notifications"
+			);
 
 			const billingLink = screen.getByRole("link", { name: "Billing" });
 			expect(billingLink).toHaveAttribute("href", "/settings/billing");
@@ -110,8 +115,13 @@ describe("SettingsNav", () => {
 			const teamsLink = screen.getByRole("link", { name: "Teams" });
 			expect(teamsLink).toHaveAttribute("href", "/settings/teams");
 
-			const integrationsLink = screen.getByRole("link", { name: "Integrations" });
-			expect(integrationsLink).toHaveAttribute("href", "/settings/integrations");
+			const integrationsLink = screen.getByRole("link", {
+				name: "Integrations",
+			});
+			expect(integrationsLink).toHaveAttribute(
+				"href",
+				"/settings/integrations"
+			);
 		});
 	});
 
@@ -128,7 +138,9 @@ describe("SettingsNav", () => {
 			mockUsePathname.mockReturnValue("/settings/notifications");
 			render(<SettingsNav />);
 
-			const notificationsLink = screen.getByRole("link", { name: "Notifications" });
+			const notificationsLink = screen.getByRole("link", {
+				name: "Notifications",
+			});
 			expect(notificationsLink).toHaveClass("text-indigo-500");
 		});
 
@@ -152,7 +164,9 @@ describe("SettingsNav", () => {
 			mockUsePathname.mockReturnValue("/settings/integrations");
 			render(<SettingsNav />);
 
-			const integrationsLink = screen.getByRole("link", { name: "Integrations" });
+			const integrationsLink = screen.getByRole("link", {
+				name: "Integrations",
+			});
 			expect(integrationsLink).toHaveClass("text-indigo-500");
 		});
 
@@ -160,10 +174,14 @@ describe("SettingsNav", () => {
 			mockUsePathname.mockReturnValue("/settings");
 			render(<SettingsNav />);
 
-			const notificationsLink = screen.getByRole("link", { name: "Notifications" });
+			const notificationsLink = screen.getByRole("link", {
+				name: "Notifications",
+			});
 			const billingLink = screen.getByRole("link", { name: "Billing" });
 			const teamsLink = screen.getByRole("link", { name: "Teams" });
-			const integrationsLink = screen.getByRole("link", { name: "Integrations" });
+			const integrationsLink = screen.getByRole("link", {
+				name: "Integrations",
+			});
 
 			expect(notificationsLink).not.toHaveClass("text-indigo-500");
 			expect(billingLink).not.toHaveClass("text-indigo-500");
@@ -177,9 +195,9 @@ describe("SettingsNav", () => {
 
 			// No links should be highlighted for unknown paths
 			const links = screen.getAllByRole("link");
-			links.forEach(link => {
+			for (const link of links) {
 				expect(link).not.toHaveClass("text-indigo-500");
-			});
+			}
 		});
 	});
 
@@ -306,13 +324,13 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const links = screen.getAllByRole("link");
-			links.forEach(link => {
+			for (const link of links) {
 				expect(link).toHaveAttribute("href");
 				expect(link.textContent).toBeTruthy();
-			});
+			}
 		});
 
-		it("should be keyboard navigable", async () => {
+		it("should be keyboard navigable", () => {
 			render(<SettingsNav />);
 
 			const firstLink = screen.getByRole("link", { name: "Account" });
@@ -325,10 +343,14 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const accountLink = screen.getByRole("link", { name: "Account" });
-			const notificationsLink = screen.getByRole("link", { name: "Notifications" });
+			const notificationsLink = screen.getByRole("link", {
+				name: "Notifications",
+			});
 			const billingLink = screen.getByRole("link", { name: "Billing" });
 			const teamsLink = screen.getByRole("link", { name: "Teams" });
-			const integrationsLink = screen.getByRole("link", { name: "Integrations" });
+			const integrationsLink = screen.getByRole("link", {
+				name: "Integrations",
+			});
 
 			expect(accountLink).toHaveTextContent("Account");
 			expect(notificationsLink).toHaveTextContent("Notifications");
@@ -367,14 +389,14 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const links = screen.getAllByRole("link");
-			const linkTexts = links.map(link => link.textContent);
+			const linkTexts = links.map((link) => link.textContent);
 
 			expect(linkTexts).toEqual([
 				"Account",
 				"Notifications",
 				"Billing",
 				"Teams",
-				"Integrations"
+				"Integrations",
 			]);
 		});
 	});
@@ -404,15 +426,20 @@ describe("SettingsNav", () => {
 		it("should handle rapid pathname changes", () => {
 			const { rerender } = render(<SettingsNav />);
 
-			const pathnames = ["/settings", "/settings/notifications", "/settings/teams", "/settings"];
+			const pathnames = [
+				"/settings",
+				"/settings/notifications",
+				"/settings/teams",
+				"/settings",
+			];
 
-			pathnames.forEach(pathname => {
+			for (const pathname of pathnames) {
 				mockUsePathname.mockReturnValue(pathname);
 				rerender(<SettingsNav />);
 
 				// Should not crash and should render correctly
 				expect(screen.getByRole("navigation")).toBeInTheDocument();
-			});
+			}
 		});
 	});
 
@@ -443,10 +470,10 @@ describe("SettingsNav", () => {
 			expect(links).toHaveLength(5);
 
 			// Each link should be properly rendered
-			links.forEach(link => {
+			for (const link of links) {
 				expect(link).toBeInTheDocument();
 				expect(link).toHaveAttribute("href");
-			});
+			}
 		});
 	});
 });

@@ -3,10 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { updateCaseStudy } from "@/actions/case-studies";
 import { server } from "@/src/__tests__/mocks/server";
 import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
-import { updateCaseStudy } from "@/actions/case-studies";
 import UnpublishCaseButton from "../unpublish-button";
+
+// Top-level regex patterns for performance
+const UNPUBLISH_REGEX = /unpublish/i;
+const NO_REGEX = /no/i;
+const YES_UNPUBLISH_CASE_STUDY_REGEX = /yes, unpublish case study!/i;
+const CLOSE_REGEX = /close/i;
 
 // Mock next-auth
 vi.mock("next-auth/react", () => ({
@@ -57,7 +63,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should render unpublish button with cloud download icon", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			expect(unpublishButton).toBeInTheDocument();
 
 			// Check for cloud download icon
@@ -65,13 +73,15 @@ describe("UnpublishCaseButton Component", () => {
 			expect(cloudIcon).toBeInTheDocument();
 
 			// Check button text
-			expect(unpublishButton.textContent).toMatch(/unpublish/i);
+			expect(unpublishButton.textContent).toMatch(UNPUBLISH_REGEX);
 		});
 
 		it("should have proper button styling", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			expect(unpublishButton).toHaveAttribute("type", "button");
 			expect(unpublishButton).toHaveClass("transition-colors");
 		});
@@ -81,23 +91,27 @@ describe("UnpublishCaseButton Component", () => {
 		it("should open confirmation modal when unpublish button is clicked", async () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			// Check for confirmation modal
 			await waitFor(() => {
 				expect(screen.getByRole("dialog")).toBeInTheDocument();
 				expect(
-					screen.getByText("Are you sure you want to unpublish this case study?")
+					screen.getByText(
+						"Are you sure you want to unpublish this case study?"
+					)
 				).toBeInTheDocument();
 			});
 
 			// Check for modal buttons
 			expect(
-				screen.getByRole("button", { name: /no/i })
+				screen.getByRole("button", { name: NO_REGEX })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /yes, unpublish case study!/i })
+				screen.getByRole("button", { name: YES_UNPUBLISH_CASE_STUDY_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -105,7 +119,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -113,7 +129,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			// Click 'No' button
-			const noButton = screen.getByRole("button", { name: /no/i });
+			const noButton = screen.getByRole("button", { name: NO_REGEX });
 			await user.click(noButton);
 
 			// Check modal is closed
@@ -126,7 +142,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -134,7 +152,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			// Click the close button (X button)
-			const closeButton = screen.getByRole("button", { name: /close/i });
+			const closeButton = screen.getByRole("button", { name: CLOSE_REGEX });
 			await user.click(closeButton);
 
 			// Check modal is closed
@@ -147,7 +165,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -172,7 +192,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -180,7 +202,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -220,7 +242,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -228,7 +252,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -259,7 +283,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -267,7 +293,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -308,7 +334,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -316,7 +344,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -335,14 +363,15 @@ describe("UnpublishCaseButton Component", () => {
 		it("should handle async unpublish properly", async () => {
 			// Mock slow unpublish
 			mockUpdateCaseStudy.mockImplementation(
-				() =>
-					new Promise((resolve) => setTimeout(() => resolve(true), 100))
+				() => new Promise((resolve) => setTimeout(() => resolve(true), 100))
 			);
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -350,7 +379,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -370,7 +399,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -378,7 +409,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -400,7 +431,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -408,7 +441,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -431,7 +464,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -439,7 +474,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -458,10 +493,14 @@ describe("UnpublishCaseButton Component", () => {
 			mockUpdateCaseStudy.mockResolvedValue(true);
 
 			// Test with different case study ID
-			const { rerender } = renderWithAuth(<UnpublishCaseButton caseStudyId={5} />);
+			const { rerender } = renderWithAuth(
+				<UnpublishCaseButton caseStudyId={5} />
+			);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -469,7 +508,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -484,7 +523,9 @@ describe("UnpublishCaseButton Component", () => {
 			vi.clearAllMocks();
 			rerender(<UnpublishCaseButton caseStudyId={10} />);
 
-			const newUnpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const newUnpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(newUnpublishButton);
 
 			await waitFor(() => {
@@ -492,7 +533,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const newConfirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(newConfirmButton);
 
@@ -509,7 +550,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={0} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -517,7 +560,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -537,7 +580,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal and confirm unpublish
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -545,7 +590,7 @@ describe("UnpublishCaseButton Component", () => {
 			});
 
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -570,7 +615,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should have proper accessibility attributes", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			expect(unpublishButton).toBeInTheDocument();
 			expect(unpublishButton).toHaveAttribute("type", "button");
 		});
@@ -578,7 +625,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should support keyboard navigation", async () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 
 			// Focus the button
 			unpublishButton.focus();
@@ -593,7 +642,7 @@ describe("UnpublishCaseButton Component", () => {
 
 			// Modal should be present and interactive
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			expect(confirmButton).toBeInTheDocument();
 
@@ -606,7 +655,9 @@ describe("UnpublishCaseButton Component", () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
 			// Open modal
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -619,17 +670,19 @@ describe("UnpublishCaseButton Component", () => {
 
 			// Check buttons have clear labels
 			expect(
-				screen.getByRole("button", { name: /no/i })
+				screen.getByRole("button", { name: NO_REGEX })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /yes, unpublish case study!/i })
+				screen.getByRole("button", { name: YES_UNPUBLISH_CASE_STUDY_REGEX })
 			).toBeInTheDocument();
 		});
 
 		it("should maintain focus management", async () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 
 			// Focus the trigger
 			unpublishButton.focus();
@@ -644,7 +697,7 @@ describe("UnpublishCaseButton Component", () => {
 
 			// Modal should be present with confirm button
 			const confirmButton = screen.getByRole("button", {
-				name: /yes, unpublish case study!/i,
+				name: YES_UNPUBLISH_CASE_STUDY_REGEX,
 			});
 			expect(confirmButton).toBeInTheDocument();
 
@@ -662,7 +715,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should display correct confirmation message", async () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -678,7 +733,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should have correct button labels", async () => {
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
-			const unpublishButton = screen.getByRole("button", { name: /unpublish/i });
+			const unpublishButton = screen.getByRole("button", {
+				name: UNPUBLISH_REGEX,
+			});
 			await user.click(unpublishButton);
 
 			await waitFor(() => {
@@ -690,7 +747,7 @@ describe("UnpublishCaseButton Component", () => {
 			expect(cancelButton).toBeInTheDocument();
 
 			const confirmButton = screen.getByRole("button", {
-				name: "Yes, unpublish case study!"
+				name: "Yes, unpublish case study!",
 			});
 			expect(confirmButton).toBeInTheDocument();
 		});

@@ -134,11 +134,9 @@ describe("Test Factories", () => {
 		});
 
 		it("creates an assurance case with permissions", () => {
-			const { assuranceCase, permissions, users } =
-				AssuranceCaseFactory.createWithPermissions([
-					{ type: "edit" },
-					{ type: "view" },
-				]);
+			const { permissions, users } = AssuranceCaseFactory.createWithPermissions(
+				[{ type: "edit" }, { type: "view" }]
+			);
 
 			expect(permissions).toHaveLength(2);
 			expect(users).toHaveLength(2);
@@ -177,9 +175,9 @@ describe("Test Factories", () => {
 			const evidenceList = EvidenceFactory.createForClaim(claimId, 3);
 
 			expect(evidenceList).toHaveLength(3);
-			evidenceList.forEach((evidence) => {
+			for (const evidence of evidenceList) {
 				expect(evidence.property_claim_id).toContain(claimId);
-			});
+			}
 		});
 	});
 
@@ -208,9 +206,9 @@ describe("Test Factories", () => {
 			expect(assuranceCases).toHaveLength(3);
 			expect(caseStudy.assurance_cases).toHaveLength(3);
 
-			assuranceCases.forEach((ac) => {
+			for (const ac of assuranceCases) {
 				expect(ac.published).toBe(true);
-			});
+			}
 		});
 	});
 

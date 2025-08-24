@@ -31,8 +31,12 @@ export const DiscoverPageMock = () => {
 		const fetchCases = async () => {
 			try {
 				setLoading(true);
+				setError(null); // Clear any previous errors when fetching
 				const params = buildQueryParams();
-				const url = `${process.env.NEXT_PUBLIC_API_URL}/api/public/published-cases/?${params.toString()}`;
+				const apiUrl =
+					process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+				// Include retryCount in URL to force refetch on retry
+				const url = `${apiUrl}/api/public/published-cases/?${params.toString()}${retryCount > 0 ? `&retry=${retryCount}` : ""}`;
 				const response = await fetch(url);
 
 				if (!response.ok) {
@@ -41,7 +45,6 @@ export const DiscoverPageMock = () => {
 
 				const data = await response.json();
 				setCases(data);
-				setError(null); // Clear error on successful fetch
 			} catch (err) {
 				setError((err as Error).message);
 			} finally {

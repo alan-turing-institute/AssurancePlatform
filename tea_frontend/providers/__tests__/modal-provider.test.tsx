@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Clear global modal provider mock to test actual implementation
@@ -7,7 +7,9 @@ vi.unmock("@/providers/modal-provider");
 
 // Mock all modal components
 vi.mock("@/components/modals/case-create-modal", () => ({
-	CaseCreateModal: () => <div data-testid="case-create-modal">CaseCreateModal</div>,
+	CaseCreateModal: () => (
+		<div data-testid="case-create-modal">CaseCreateModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/email-modal", () => ({
@@ -19,7 +21,9 @@ vi.mock("@/components/modals/import-modal", () => ({
 }));
 
 vi.mock("@/components/modals/permissions-modal", () => ({
-	PermissionsModal: () => <div data-testid="permissions-modal">PermissionsModal</div>,
+	PermissionsModal: () => (
+		<div data-testid="permissions-modal">PermissionsModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/resources-modal", () => ({
@@ -40,7 +44,6 @@ describe("ModalProvider", () => {
 	});
 
 	describe("Component Rendering", () => {
-
 		it("should render all modals after mounting on client-side", async () => {
 			render(<ModalProvider />);
 
@@ -109,7 +112,7 @@ describe("ModalProvider", () => {
 				"import-modal",
 				"permissions-modal",
 				"resources-modal",
-				"share-modal"
+				"share-modal",
 			];
 
 			for (const testId of modalTestIds) {
@@ -191,7 +194,9 @@ describe("ModalProvider", () => {
 
 		it("should maintain state consistency", async () => {
 			// Mock console.error to ensure no errors are logged
-			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+			const consoleErrorSpy = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
 
 			render(<ModalProvider />);
 

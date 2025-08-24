@@ -1,16 +1,29 @@
+import type { Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	updateAssuranceCase,
+	updateAssuranceCaseNode,
+} from "@/lib/case-helper";
+import { AssuranceCaseFactory } from "@/src/__tests__/utils/test-factories";
 import {
 	renderWithAuth,
 	screen,
 	userEvent,
 	waitFor,
 } from "@/src/__tests__/utils/test-utils";
-import type { Node } from "reactflow";
-import { updateAssuranceCaseNode, updateAssuranceCase } from "@/lib/case-helper";
 import EditForm from "../edit-form";
 
+// Regex constants
+const DESCRIPTION_REGEX = /description/i;
+const UPDATE_REGEX = /update/i;
+const EVIDENCE_URL_REGEX = /evidence url/i;
+const UPDATE_STRATEGY_REGEX = /update strategy/i;
+
 // Mock the store
-const mockStore = {
+const mockStore: {
+	assuranceCase: { id: number; permissions: string | string[] } | null;
+	setAssuranceCase: ReturnType<typeof vi.fn>;
+} = {
 	assuranceCase: {
 		id: 1,
 		permissions: "manage",
@@ -59,16 +72,18 @@ describe("EditForm", () => {
 		mockStore.setAssuranceCase.mockClear();
 		mockUpdateAssuranceCaseNode.mockClear();
 		mockUpdateAssuranceCase.mockClear();
-		mockStore.assuranceCase = {
+		mockStore.assuranceCase = AssuranceCaseFactory.create({
 			id: 1,
-			permissions: "manage",
-		};
+			permissions: "manage" as const,
+		});
 		// Reset to default implementations
 		mockUpdateAssuranceCaseNode.mockResolvedValue(true);
-		mockUpdateAssuranceCase.mockResolvedValue({
-			id: 1,
-			goals: [],
-		});
+		mockUpdateAssuranceCase.mockResolvedValue(
+			AssuranceCaseFactory.create({
+				id: 1,
+				goals: [],
+			})
+		);
 	});
 
 	describe("Form Rendering", () => {
@@ -83,8 +98,10 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-			expect(screen.getByDisplayValue("Test goal description")).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
+			expect(
+				screen.getByDisplayValue("Test goal description")
+			).toBeInTheDocument();
 		});
 
 		it("should render update button for manageable cases", () => {
@@ -98,15 +115,17 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByRole("button", { name: /update/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: UPDATE_REGEX })
+			).toBeInTheDocument();
 		});
 
 		it("should not render update button for read-only cases", () => {
 			const node = createMockNode();
-			mockStore.assuranceCase = {
+			mockStore.assuranceCase = AssuranceCaseFactory.create({
 				id: 1,
-				permissions: "view",
-			};
+				permissions: "view" as const,
+			});
 
 			renderWithAuth(
 				<EditForm
@@ -117,7 +136,7 @@ describe("EditForm", () => {
 			);
 
 			expect(
-				screen.queryByRole("button", { name: /update/i })
+				screen.queryByRole("button", { name: UPDATE_REGEX })
 			).not.toBeInTheDocument();
 		});
 
@@ -142,8 +161,10 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByLabelText(/evidence url/i)).toBeInTheDocument();
-			expect(screen.getByDisplayValue("https://example.com")).toBeInTheDocument();
+			expect(screen.getByLabelText(EVIDENCE_URL_REGEX)).toBeInTheDocument();
+			expect(
+				screen.getByDisplayValue("https://example.com")
+			).toBeInTheDocument();
 		});
 
 		it("should not render URL field for non-evidence nodes", () => {
@@ -160,7 +181,7 @@ describe("EditForm", () => {
 			);
 
 			expect(
-				screen.queryByLabelText(/evidence url/i)
+				screen.queryByLabelText(EVIDENCE_URL_REGEX)
 			).not.toBeInTheDocument();
 		});
 	});
@@ -168,10 +189,10 @@ describe("EditForm", () => {
 	describe("Read-Only State", () => {
 		it("should show read-only indicators for view permissions", () => {
 			const node = createMockNode();
-			mockStore.assuranceCase = {
+			mockStore.assuranceCase = AssuranceCaseFactory.create({
 				id: 1,
-				permissions: "view",
-			};
+				permissions: "view" as const,
+			});
 
 			renderWithAuth(
 				<EditForm
@@ -189,10 +210,10 @@ describe("EditForm", () => {
 
 		it("should allow editing for manage permissions", () => {
 			const node = createMockNode();
-			mockStore.assuranceCase = {
+			mockStore.assuranceCase = AssuranceCaseFactory.create({
 				id: 1,
-				permissions: "manage",
-			};
+				permissions: "manage" as const,
+			});
 
 			renderWithAuth(
 				<EditForm
@@ -222,11 +243,11 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.clear(descriptionInput);
 			await user.type(descriptionInput, "A");
 
-			const updateButton = screen.getByRole("button", { name: /update/i });
+			const updateButton = screen.getByRole("button", { name: UPDATE_REGEX });
 			await user.click(updateButton);
 
 			await waitFor(() => {
@@ -248,11 +269,11 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.clear(descriptionInput);
 			await user.type(descriptionInput, "Updated description");
 
-			const updateButton = screen.getByRole("button", { name: /update/i });
+			const updateButton = screen.getByRole("button", { name: UPDATE_REGEX });
 			await user.click(updateButton);
 
 			// Should not show validation error
@@ -280,7 +301,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const updateButton = screen.getByRole("button", { name: /update/i });
+			const updateButton = screen.getByRole("button", { name: UPDATE_REGEX });
 			await user.click(updateButton);
 
 			// Check if button is disabled during submission
@@ -301,7 +322,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const updateButton = screen.getByRole("button", { name: /update/i });
+			const updateButton = screen.getByRole("button", { name: UPDATE_REGEX });
 			await user.click(updateButton);
 
 			await waitFor(() => {
@@ -323,7 +344,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, " Modified");
 
 			await waitFor(() => {
@@ -352,7 +373,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const urlInput = screen.getByLabelText(/evidence url/i);
+			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
 			await user.type(urlInput, "/modified");
 
 			await waitFor(() => {
@@ -377,7 +398,7 @@ describe("EditForm", () => {
 			);
 
 			expect(
-				screen.getByRole("button", { name: /update strategy/i })
+				screen.getByRole("button", { name: UPDATE_STRATEGY_REGEX })
 			).toBeInTheDocument();
 		});
 	});
@@ -402,7 +423,9 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByDisplayValue("Existing description")).toBeInTheDocument();
+			expect(
+				screen.getByDisplayValue("Existing description")
+			).toBeInTheDocument();
 		});
 
 		it("should handle missing node data gracefully", () => {
@@ -419,7 +442,7 @@ describe("EditForm", () => {
 			);
 
 			// Should use default values
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			expect(descriptionInput).toHaveValue("");
 		});
 	});
@@ -436,15 +459,15 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
 		});
 
 		it("should have proper button states for disabled form", () => {
 			const node = createMockNode();
-			mockStore.assuranceCase = {
+			mockStore.assuranceCase = AssuranceCaseFactory.create({
 				id: 1,
-				permissions: "view",
-			};
+				permissions: "view" as const,
+			});
 
 			renderWithAuth(
 				<EditForm
@@ -456,13 +479,13 @@ describe("EditForm", () => {
 
 			// Should not have update button in read-only mode
 			expect(
-				screen.queryByRole("button", { name: /update/i })
+				screen.queryByRole("button", { name: UPDATE_REGEX })
 			).not.toBeInTheDocument();
 		});
 	});
 
 	describe("Edge Cases", () => {
-		it("should handle null assurance case", async () => {
+		it("should handle null assurance case", () => {
 			const node = createMockNode();
 			mockStore.assuranceCase = null;
 
@@ -476,7 +499,7 @@ describe("EditForm", () => {
 
 			// Should show update button when assurance case is null (since readOnly check is for view/review permissions)
 			expect(
-				screen.getByRole("button", { name: /update/i })
+				screen.getByRole("button", { name: UPDATE_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -493,7 +516,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.clear(descriptionInput);
 			await user.type(descriptionInput, longDescription);
 

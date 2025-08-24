@@ -17,6 +17,14 @@ interface PublishCaseRequest {
 	published_date?: string | null;
 }
 
+interface CaseStudyRequest {
+	title: string;
+	description: string;
+	content: string;
+	type: string;
+	assurance_cases: number[];
+}
+
 // Regex patterns for UI elements - extracted to avoid performance issues
 const REGEX_PATTERNS = {
 	settings: /settings/i,
@@ -37,6 +45,7 @@ const REGEX_PATTERNS = {
 	safety: /safety/i,
 	applyFilters: /apply filters/i,
 	sortBy: /sort by/i,
+	dashboardCaseStudiesPath: /^\/dashboard\/case-studies\/\d+$/,
 	failedToPublishCase: /failed to publish case/i,
 	unableToLoadPublishedCases: /unable to load published cases/i,
 	retry: /retry/i,
@@ -95,14 +104,14 @@ describe("Published Case Flow Integration Tests", () => {
 	afterEach(() => {
 		// Clean up any elements added directly to document.body
 		const messages = document.body.querySelectorAll("body > div");
-		messages.forEach((element) => {
+		for (const element of messages) {
 			if (
 				element.textContent?.includes("published successfully") ||
 				element.textContent?.includes("Failed to publish")
 			) {
 				element.remove();
 			}
-		});
+		}
 	});
 
 	describe("Publishing a Case", () => {
@@ -388,7 +397,7 @@ describe("Published Case Flow Integration Tests", () => {
 					return HttpResponse.json(publishedCase);
 				}),
 				http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
-					const body = await request.json() as any;
+					const body = (await request.json()) as CaseStudyRequest;
 					return HttpResponse.json({
 						id: 123,
 						title: body.title,
@@ -454,7 +463,7 @@ describe("Published Case Flow Integration Tests", () => {
 			await waitFor(() => {
 				expect(mockPush).toHaveBeenCalled();
 				const callArgs = mockPush.mock.calls[0];
-				expect(callArgs[0]).toMatch(/^\/dashboard\/case-studies\/\d+$/);
+				expect(callArgs[0]).toMatch(REGEX_PATTERNS.dashboardCaseStudiesPath);
 			});
 		});
 

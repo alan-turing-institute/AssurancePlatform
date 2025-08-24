@@ -4,15 +4,25 @@ import DesktopNav from "../desktop-nav";
 
 // Mock Next.js components
 vi.mock("next/image", () => ({
-	default: ({ alt, className, src }: { alt: string; className: string; src: string }) => (
-		<img alt={alt} className={className} src={src} />
-	),
+	default: ({
+		alt,
+		className,
+		src,
+	}: {
+		alt: string;
+		className: string;
+		src: string;
+	}) => <img alt={alt} className={className} src={src} />,
 }));
 
 vi.mock("next/link", () => ({
-	default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-		<a href={href}>{children}</a>
-	),
+	default: ({
+		children,
+		href,
+	}: {
+		children: React.ReactNode;
+		href: string;
+	}) => <a href={href}>{children}</a>,
 }));
 
 // Mock the LoggedInUser component
@@ -85,16 +95,19 @@ describe("DesktopNav", () => {
 			expect(logo).toHaveClass("w-16");
 			expect(logo).toHaveAttribute("src", "/images/tea-logo2.png");
 
-			expect(screen.getByText("Trustworthy and Ethical Assurance Platform")).toBeInTheDocument();
+			expect(
+				screen.getByText("Trustworthy and Ethical Assurance Platform")
+			).toBeInTheDocument();
 		});
 
 		it("should wrap logo in dashboard link", () => {
 			render(<DesktopNav />);
 
 			const links = screen.getAllByRole("link");
-			const logoLink = links.find(link =>
-				link.getAttribute("href") === "/dashboard" &&
-				link.querySelector('img[alt="Turing Ethical Assurance Logo"]')
+			const logoLink = links.find(
+				(link) =>
+					link.getAttribute("href") === "/dashboard" &&
+					link.querySelector('img[alt="Turing Ethical Assurance Logo"]')
 			);
 			expect(logoLink).toBeInTheDocument();
 			expect(logoLink).toHaveAttribute("href", "/dashboard");
@@ -116,9 +129,10 @@ describe("DesktopNav", () => {
 			render(<DesktopNav />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.textContent?.includes("My Assurance Cases") &&
-				link.getAttribute("href") === "/dashboard"
+			const activeLink = links.find(
+				(link) =>
+					link.textContent?.includes("My Assurance Cases") &&
+					link.getAttribute("href") === "/dashboard"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});
@@ -128,7 +142,7 @@ describe("DesktopNav", () => {
 			render(<DesktopNav />);
 
 			const links = screen.getAllByRole("link");
-			const inactiveLink = links.find(link =>
+			const inactiveLink = links.find((link) =>
 				link.textContent?.includes("Shared With Me")
 			);
 			expect(inactiveLink).toHaveClass("text-indigo-200");
@@ -137,17 +151,17 @@ describe("DesktopNav", () => {
 		it("should handle external links with proper attributes", () => {
 			render(<DesktopNav />);
 
-			const externalLinks = screen.getAllByRole("link").filter(link =>
-				link.getAttribute("target") === "_blank"
-			);
+			const externalLinks = screen
+				.getAllByRole("link")
+				.filter((link) => link.getAttribute("target") === "_blank");
 			expect(externalLinks.length).toBeGreaterThan(0);
 
-			externalLinks.forEach(link => {
+			for (const link of externalLinks) {
 				expect(link).toHaveAttribute("target", "_blank");
 				if (link.getAttribute("rel")) {
 					expect(link).toHaveAttribute("rel", "noopener");
 				}
-			});
+			}
 		});
 	});
 
@@ -229,8 +243,8 @@ describe("DesktopNav", () => {
 			render(<DesktopNav />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.getAttribute("href") === "/dashboard/shared"
+			const activeLink = links.find(
+				(link) => link.getAttribute("href") === "/dashboard/shared"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});
@@ -248,8 +262,8 @@ describe("DesktopNav", () => {
 			render(<DesktopNav />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.getAttribute("href") === "/discover"
+			const activeLink = links.find(
+				(link) => link.getAttribute("href") === "/discover"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});

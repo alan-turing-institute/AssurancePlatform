@@ -161,7 +161,11 @@ const ActionButtons = ({
 
 	return (
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
-			<div className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20">
+			<div
+				className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20"
+				data-show-create-goal={showCreateGoal}
+				data-testid="action-buttons"
+			>
 				<div className="flex items-center justify-center gap-2 border-r-2 border-r-indigo-200 pr-2 dark:border-r-indigo-800/60">
 					{showCreateGoal &&
 						assuranceCase &&

@@ -16,8 +16,10 @@ export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 	useEffect(() => {
 		const fetchCase = async () => {
 			try {
+				const apiUrl =
+					process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 				const response = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${caseId}/`
+					`${apiUrl}/api/public/assurance-case/${caseId}/`
 				);
 				const data = await response.json();
 				setCaseData(data);
@@ -50,17 +52,15 @@ export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 		};
 
 		try {
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: "Token mock-jwt-token",
-					},
-					body: JSON.stringify(data),
-				}
-			);
+			const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+			const response = await fetch(`${apiUrl}/api/case-studies/`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Token mock-jwt-token",
+				},
+				body: JSON.stringify(data),
+			});
 
 			if (response.ok) {
 				const result = await response.json();
@@ -72,11 +72,9 @@ export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 					router.push(`/dashboard/case-studies/${result.id}`);
 				}, 100);
 			} else {
-				console.error("Response not OK:", response.status);
 				setSuccessMessage("Failed to create case study");
 			}
-		} catch (error) {
-			console.error("Error creating case study:", error);
+		} catch (_error) {
 			setSuccessMessage("Error creating case study");
 		}
 	};
@@ -94,7 +92,11 @@ export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 			<h1>{caseData.name}</h1>
 			<p>{caseData.description}</p>
 
-			<button aria-label="Create case study" onClick={handleCreateCaseStudy}>
+			<button
+				aria-label="Create case study"
+				onClick={handleCreateCaseStudy}
+				type="button"
+			>
 				Create Case Study
 			</button>
 

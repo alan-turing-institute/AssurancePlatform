@@ -1,14 +1,37 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	createCaseStudy,
+	deleteCaseStudy,
+	updateCaseStudy,
+} from "@/actions/case-studies";
 import { server } from "@/src/__tests__/mocks/server";
 import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
 import type { CaseStudy } from "@/types/domain";
-import { createCaseStudy, updateCaseStudy, deleteCaseStudy } from "@/actions/case-studies";
 import CaseStudyForm from "../case-study-form";
+
+// Top-level regex patterns for performance
+const TITLE_REGEX = /title/i;
+const CORRESPONDING_AUTHOR_EMAIL_REGEX = /corresponding author email/i;
+const SAVE_REGEX = /save$/i;
+const SAVE_CHANGES_REGEX = /save changes/i;
+const MAKE_PUBLIC_REGEX = /make public/i;
+const DELETE_REGEX = /delete/i;
+const REMOVE_FROM_PUBLIC_REGEX = /remove from public/i;
+const X_BUTTON_REGEX = /×/i;
+const ADD_AUTHOR_REGEX = /add author/i;
+const UPDATE_ANYWAY_REGEX = /update anyway/i;
+const REMOVE_REGEX = /remove/i;
+
+// Type definitions for mocks
+interface MockIconProps {
+	className?: string;
+	[key: string]: unknown;
+}
 
 // Mock Next.js navigation
 const mockPush = vi.fn();
@@ -89,16 +112,20 @@ vi.mock("@/components/ui/image-upload", () => ({
 		<div data-testid="image-upload">
 			<input
 				accept="image/*"
-				disabled={disabled}
 				data-testid="image-input"
+				disabled={disabled}
 				onChange={(e) => {
 					const file = e.target.files?.[0];
-					if (file) onChange(file);
+					if (file) {
+						onChange(file);
+					}
 				}}
 				type="file"
 			/>
 			{value && (
 				<div>
+					{/* eslint-disable-next-line @next/next/no-img-element */}
+					{/* biome-ignore lint/performance/noImgElement: This is a test mock component */}
 					<img alt="Preview" src={value} />
 					<button onClick={onRemove} type="button">
 						Remove
@@ -108,6 +135,48 @@ vi.mock("@/components/ui/image-upload", () => ({
 		</div>
 	),
 }));
+
+// Mock lucide-react icons with a more comprehensive approach
+vi.mock("lucide-react", async () => {
+	const actual = (await vi.importActual("lucide-react")) as Record<
+		string,
+		unknown
+	>;
+	const mockIcon =
+		(name: string) =>
+		({ className, ...props }: MockIconProps) => (
+			<span
+				className={className}
+				data-testid={`${name.toLowerCase()}-icon`}
+				{...props}
+			>
+				{name}
+			</span>
+		);
+
+	// Create mocks for all icons, preserving the original exports structure
+	const mocked: Record<string, unknown> = {};
+	for (const key in actual) {
+		if (typeof actual[key] === "function" || key.endsWith("Icon")) {
+			mocked[key] = mockIcon(key);
+		} else {
+			mocked[key] = actual[key];
+		}
+	}
+
+	// Ensure specific icons we use are mocked
+	return {
+		...mocked,
+		CloudDownload: mockIcon("CloudDownload"),
+		InfoIcon: mockIcon("InfoIcon"),
+		Share: mockIcon("Share"),
+		X: mockIcon("X"),
+		ChevronDown: mockIcon("ChevronDown"),
+		ChevronUp: mockIcon("ChevronUp"),
+		Check: mockIcon("Check"),
+		MoveRightIcon: mockIcon("MoveRightIcon"),
+	};
+});
 
 // Mock sectors config
 vi.mock("@/config/index", () => ({
@@ -129,7 +198,7 @@ vi.mock("@/actions/case-studies", () => ({
 // Get the mocked functions
 const mockCreateCaseStudy = vi.mocked(createCaseStudy);
 const mockUpdateCaseStudy = vi.mocked(updateCaseStudy);
-const mockDeleteCaseStudy = vi.mocked(deleteCaseStudy);
+const _mockDeleteCaseStudy = vi.mocked(deleteCaseStudy);
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -196,15 +265,17 @@ describe("CaseStudyForm Component", () => {
 
 			// Check basic information section
 			expect(screen.getByText("Basic Information")).toBeInTheDocument();
-			expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
 			expect(screen.getByText("Sector")).toBeInTheDocument();
 			expect(screen.getByText("Type")).toBeInTheDocument();
 
 			// Check author information section
 			expect(screen.getByText("Author Information")).toBeInTheDocument();
-			expect(screen.getByPlaceholderText("Enter author name")).toBeInTheDocument();
 			expect(
-				screen.getByLabelText(/corresponding author email/i)
+				screen.getByPlaceholderText("Enter author name")
+			).toBeInTheDocument();
+			expect(
+				screen.getByLabelText(CORRESPONDING_AUTHOR_EMAIL_REGEX)
 			).toBeInTheDocument();
 
 			// Check description section
@@ -220,7 +291,7 @@ describe("CaseStudyForm Component", () => {
 
 			// Check save button for new case study
 			expect(
-				screen.getByRole("button", { name: /save$/i })
+				screen.getByRole("button", { name: SAVE_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -243,17 +314,17 @@ describe("CaseStudyForm Component", () => {
 
 			// Check save changes button for existing case study
 			expect(
-				screen.getByRole("button", { name: /save changes/i })
+				screen.getByRole("button", { name: SAVE_CHANGES_REGEX })
 			).toBeInTheDocument();
 
 			// Check publish/unpublish button for existing case study
 			expect(
-				screen.getByRole("button", { name: /make public/i })
+				screen.getByRole("button", { name: MAKE_PUBLIC_REGEX })
 			).toBeInTheDocument();
 
 			// Check delete button is present
 			expect(
-				screen.getByRole("button", { name: /delete/i })
+				screen.getByRole("button", { name: DELETE_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -262,7 +333,7 @@ describe("CaseStudyForm Component", () => {
 
 			// Check remove from public button for published case study
 			expect(
-				screen.getByRole("button", { name: /remove from public/i })
+				screen.getByRole("button", { name: REMOVE_FROM_PUBLIC_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -274,7 +345,9 @@ describe("CaseStudyForm Component", () => {
 			expect(imageInput).toBeDisabled();
 
 			// Author removal buttons should not be visible for published case studies
-			const removeButtons = screen.queryAllByRole("button", { name: /×/i });
+			const removeButtons = screen.queryAllByRole("button", {
+				name: X_BUTTON_REGEX,
+			});
 			// Only close buttons from modals should be present, not author removal buttons
 			expect(removeButtons.length).toBe(0);
 		});
@@ -285,15 +358,13 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Try to submit form without filling required fields
-			const saveButton = screen.getByRole("button", { name: /save$/i });
+			const saveButton = screen.getByRole("button", { name: SAVE_REGEX });
 			await user.click(saveButton);
 
 			// Check for validation errors
 			await waitFor(() => {
 				expect(screen.getByText("Title is required")).toBeInTheDocument();
-				expect(
-					screen.getByText("Description is required")
-				).toBeInTheDocument();
+				expect(screen.getByText("Description is required")).toBeInTheDocument();
 			});
 		});
 
@@ -301,26 +372,24 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Fill required fields
-			await user.type(screen.getByLabelText(/title/i), "Test Title");
-			await user.type(
-				screen.getByTestId("tiptap-editor"),
-				"Test description"
-			);
+			await user.type(screen.getByLabelText(TITLE_REGEX), "Test Title");
+			await user.type(screen.getByTestId("tiptap-editor"), "Test description");
 
 			// Enter invalid email
-			await user.type(
-				screen.getByLabelText(/corresponding author email/i),
-				"invalid-email"
+			const emailInput = screen.getByLabelText(
+				CORRESPONDING_AUTHOR_EMAIL_REGEX
 			);
+			await user.type(emailInput, "invalid-email");
 
-			// Submit form
-			const saveButton = screen.getByRole("button", { name: /save$/i });
-			await user.click(saveButton);
+			// Trigger validation by blurring the field
+			await user.tab();
 
-			// Check for email validation error (looking for a generic email validation message)
+			// Check for email validation error
 			await waitFor(() => {
-				const errorMessage = screen.queryByText(/email/i) || screen.queryByText(/invalid/i);
-				expect(errorMessage).toBeInTheDocument();
+				// The validation message from the schema is "Please enter a valid email address"
+				expect(
+					screen.getByText("Please enter a valid email address")
+				).toBeInTheDocument();
 			});
 		});
 	});
@@ -332,21 +401,34 @@ describe("CaseStudyForm Component", () => {
 			// Add first author
 			const authorInput = screen.getByPlaceholderText("Enter author name");
 			await user.type(authorInput, "John Doe");
-			await user.click(screen.getByRole("button", { name: /add author/i }));
+			await user.click(screen.getByRole("button", { name: ADD_AUTHOR_REGEX }));
 
 			// Check author is added
 			expect(screen.getByText("John Doe")).toBeInTheDocument();
 
 			// Add second author
 			await user.type(authorInput, "Jane Smith");
-			await user.click(screen.getByRole("button", { name: /add author/i }));
+			await user.click(screen.getByRole("button", { name: ADD_AUTHOR_REGEX }));
 
 			// Check second author is added
 			expect(screen.getByText("Jane Smith")).toBeInTheDocument();
 
-			// Remove first author
-			const removeButtons = screen.getAllByRole("button", { name: /×/i });
-			await user.click(removeButtons[0]);
+			// Remove first author - find the author container
+			const johnDoeElement = screen.getByText("John Doe");
+			const authorSpan = johnDoeElement.closest(
+				'span[class*="flex items-center"]'
+			);
+			expect(authorSpan).toBeDefined();
+
+			// Find the X icon button within the same container
+			if (!authorSpan) {
+				throw new Error("Author span not found");
+			}
+			const removeButton = within(authorSpan as HTMLElement).getByRole(
+				"button"
+			);
+			expect(removeButton).toBeDefined();
+			await user.click(removeButton);
 
 			// Check first author is removed
 			expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
@@ -367,7 +449,7 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			const authorInput = screen.getByPlaceholderText("Enter author name");
-			const addButton = screen.getByRole("button", { name: /add author/i });
+			const addButton = screen.getByRole("button", { name: ADD_AUTHOR_REGEX });
 
 			// Add first author
 			await user.type(authorInput, "John Doe");
@@ -394,19 +476,16 @@ describe("CaseStudyForm Component", () => {
 	describe("Form Submission", () => {
 		it("should create new case study successfully", async () => {
 			// Mock successful creation using the action
-			mockCreateCaseStudy.mockResolvedValue(3);
+			mockCreateCaseStudy.mockResolvedValue({ id: 3 });
 
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Fill required fields
-			await user.type(screen.getByLabelText(/title/i), "New Case Study");
-			await user.type(
-				screen.getByTestId("tiptap-editor"),
-				"New description"
-			);
+			await user.type(screen.getByLabelText(TITLE_REGEX), "New Case Study");
+			await user.type(screen.getByTestId("tiptap-editor"), "New description");
 
 			// Submit form
-			const saveButton = screen.getByRole("button", { name: /save$/i });
+			const saveButton = screen.getByRole("button", { name: SAVE_REGEX });
 			await user.click(saveButton);
 
 			// Check for success message and navigation
@@ -427,7 +506,9 @@ describe("CaseStudyForm Component", () => {
 			await user.type(titleInput, "Updated Case Study");
 
 			// Submit form
-			const saveButton = screen.getByRole("button", { name: /save changes/i });
+			const saveButton = screen.getByRole("button", {
+				name: SAVE_CHANGES_REGEX,
+			});
 			await user.click(saveButton);
 
 			// Check for success (no navigation for updates)
@@ -445,7 +526,9 @@ describe("CaseStudyForm Component", () => {
 			await user.type(titleInput, "Updated Published Case Study");
 
 			// Submit form
-			const saveButton = screen.getByRole("button", { name: /save changes/i });
+			const saveButton = screen.getByRole("button", {
+				name: SAVE_CHANGES_REGEX,
+			});
 			await user.click(saveButton);
 
 			// Check for confirmation dialog
@@ -459,7 +542,7 @@ describe("CaseStudyForm Component", () => {
 
 			// Confirm update
 			const confirmButton = screen.getByRole("button", {
-				name: /update anyway/i,
+				name: UPDATE_ANYWAY_REGEX,
 			});
 			await user.click(confirmButton);
 
@@ -482,7 +565,9 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={mockCaseStudy} />);
 
 			// Click publish button
-			const publishButton = screen.getByRole("button", { name: /make public/i });
+			const publishButton = screen.getByRole("button", {
+				name: MAKE_PUBLIC_REGEX,
+			});
 			await user.click(publishButton);
 
 			// Check that the action was called
@@ -499,7 +584,7 @@ describe("CaseStudyForm Component", () => {
 
 			// Click unpublish button
 			const unpublishButton = screen.getByRole("button", {
-				name: /remove from public/i,
+				name: REMOVE_FROM_PUBLIC_REGEX,
 			});
 			await user.click(unpublishButton);
 
@@ -543,8 +628,13 @@ describe("CaseStudyForm Component", () => {
 				image: "/media/case-studies/1/existing.jpg",
 			};
 
-			// Mock successful image deletion
+			// Mock successful image fetch - return object with image property
 			server.use(
+				http.get(`${API_BASE_URL}/api/case-studies/1/image/`, () => {
+					return HttpResponse.json({
+						image: "/media/case-studies/1/existing.jpg",
+					});
+				}),
 				http.delete(`${API_BASE_URL}/api/case-studies/1/image/`, () => {
 					return new HttpResponse(null, { status: 204 });
 				})
@@ -552,8 +642,16 @@ describe("CaseStudyForm Component", () => {
 
 			renderWithAuth(<CaseStudyForm caseStudy={caseStudyWithImage} />);
 
+			// Wait for image to load
+			await waitFor(
+				() => {
+					expect(screen.getByAltText("Preview")).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
+
 			// Remove image
-			const removeButton = screen.getByRole("button", { name: /remove/i });
+			const removeButton = screen.getByRole("button", { name: REMOVE_REGEX });
 			await user.click(removeButton);
 
 			// Check image is removed
@@ -565,25 +663,33 @@ describe("CaseStudyForm Component", () => {
 
 	describe("Error Handling", () => {
 		it("should handle creation errors gracefully", async () => {
-			// Mock creation error
-			mockCreateCaseStudy.mockResolvedValue(null);
+			// Mock to reject the promise
+			mockCreateCaseStudy.mockRejectedValue(new Error("Failed to create"));
+
+			// Silence console error for this test
+			const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
+				// Intentionally empty mock implementation
+			});
 
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Fill and submit form
-			await user.type(screen.getByLabelText(/title/i), "New Case Study");
-			await user.type(
-				screen.getByTestId("tiptap-editor"),
-				"New description"
-			);
+			await user.type(screen.getByLabelText(TITLE_REGEX), "New Case Study");
+			await user.type(screen.getByTestId("tiptap-editor"), "New description");
 
-			const saveButton = screen.getByRole("button", { name: /save$/i });
-			await user.click(saveButton);
+			const saveButton = screen.getByRole("button", { name: SAVE_REGEX });
 
-			// Check for error handling (no navigation)
+			await act(async () => {
+				await user.click(saveButton);
+			});
+
+			// Check for error handling (no navigation should occur)
 			await waitFor(() => {
 				expect(mockPush).not.toHaveBeenCalled();
 			});
+
+			// Restore console.error
+			consoleError.mockRestore();
 		});
 
 		it("should handle update errors gracefully", async () => {
@@ -597,7 +703,9 @@ describe("CaseStudyForm Component", () => {
 			await user.clear(titleInput);
 			await user.type(titleInput, "Updated Case Study");
 
-			const saveButton = screen.getByRole("button", { name: /save changes/i });
+			const saveButton = screen.getByRole("button", {
+				name: SAVE_CHANGES_REGEX,
+			});
 			await user.click(saveButton);
 
 			// Check for error handling (loading state should end)
@@ -617,13 +725,10 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Fill and submit form
-			await user.type(screen.getByLabelText(/title/i), "New Case Study");
-			await user.type(
-				screen.getByTestId("tiptap-editor"),
-				"New description"
-			);
+			await user.type(screen.getByLabelText(TITLE_REGEX), "New Case Study");
+			await user.type(screen.getByTestId("tiptap-editor"), "New description");
 
-			const saveButton = screen.getByRole("button", { name: /save$/i });
+			const saveButton = screen.getByRole("button", { name: SAVE_REGEX });
 			await user.click(saveButton);
 
 			// Check button is disabled during loading
@@ -644,19 +749,19 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Check form has proper labels
-			expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(TITLE_REGEX)).toBeInTheDocument();
 			expect(screen.getByText("Sector")).toBeInTheDocument();
 			expect(screen.getByText("Type")).toBeInTheDocument();
 			expect(
-				screen.getByLabelText(/corresponding author email/i)
+				screen.getByLabelText(CORRESPONDING_AUTHOR_EMAIL_REGEX)
 			).toBeInTheDocument();
 
 			// Check buttons have accessible names
 			expect(
-				screen.getByRole("button", { name: /add author/i })
+				screen.getByRole("button", { name: ADD_AUTHOR_REGEX })
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /save$/i })
+				screen.getByRole("button", { name: SAVE_REGEX })
 			).toBeInTheDocument();
 		});
 
@@ -664,13 +769,14 @@ describe("CaseStudyForm Component", () => {
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
 			// Test tab navigation
-			const titleInput = screen.getByLabelText(/title/i);
+			const titleInput = screen.getByLabelText(TITLE_REGEX);
 			titleInput.focus();
 			expect(titleInput).toHaveFocus();
 
-			// Tab to next field
+			// Tab to next field - should be the sector select
 			await user.tab();
-			const sectorSelect = screen.getByRole("combobox");
+			const comboboxes = screen.getAllByRole("combobox");
+			const sectorSelect = comboboxes[0]; // First combobox is sector
 			expect(sectorSelect).toHaveFocus();
 		});
 	});

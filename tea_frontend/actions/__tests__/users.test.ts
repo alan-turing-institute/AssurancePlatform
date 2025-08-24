@@ -1,21 +1,28 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { server } from "@/src/__tests__/mocks/server";
 import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import { fetchCurrentUser } from "../users";
 
 const mockApiUrl = "http://localhost:8000";
 
 describe("Users Actions", () => {
 	const mockToken = "test-token-123";
+	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		// Set environment variables
-		process.env.API_URL = mockApiUrl;
-		process.env.NEXT_PUBLIC_API_URL = mockApiUrl;
+		cleanupEnv = setupEnvVars({
+			API_URL: mockApiUrl,
+			NEXT_PUBLIC_API_URL: mockApiUrl,
+		});
 		vi.clearAllMocks();
 	});
 
 	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 		server.resetHandlers();
 		vi.clearAllMocks();
 	});
@@ -111,7 +118,7 @@ describe("Users Actions", () => {
 		});
 
 		it("should set correct authorization header", async () => {
-			let requestHeaders: Headers | null = null;
+			let requestHeaders: Headers | undefined;
 
 			server.use(
 				http.get(`${mockApiUrl}/api/user/`, ({ request }) => {
@@ -261,8 +268,10 @@ describe("Users Actions", () => {
 
 	describe("Environment variable handling", () => {
 		it("should use API_URL when both API_URL and NEXT_PUBLIC_API_URL are set", async () => {
-			process.env.API_URL = "http://priority.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL = "http://secondary.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: "http://priority.localhost:8000",
+				NEXT_PUBLIC_API_URL: "http://secondary.localhost:8000",
+			});
 
 			let usedUrl = "";
 
@@ -276,11 +285,14 @@ describe("Users Actions", () => {
 			await fetchCurrentUser(mockToken);
 
 			expect(usedUrl).toContain("http://priority.localhost:8000");
+			restoreEnv();
 		});
 
 		it("should use NEXT_PUBLIC_API_URL when API_URL is not set", async () => {
-			delete process.env.API_URL;
-			process.env.NEXT_PUBLIC_API_URL = "http://public.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: "http://public.localhost:8000",
+			});
 
 			let usedUrl = "";
 
@@ -294,11 +306,14 @@ describe("Users Actions", () => {
 			await fetchCurrentUser(mockToken);
 
 			expect(usedUrl).toContain("http://public.localhost:8000");
+			restoreEnv();
 		});
 
 		it("should handle undefined environment variables gracefully", async () => {
-			delete process.env.API_URL;
-			delete process.env.NEXT_PUBLIC_API_URL;
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: undefined,
+			});
 
 			// When both URLs are undefined, the function attempts to make a request to undefined
 			// This returns undefined rather than throwing an error
@@ -306,6 +321,7 @@ describe("Users Actions", () => {
 
 			// The result should be undefined since the request can't be made
 			expect(result).toBeUndefined();
+			restoreEnv();
 		});
 	});
 
@@ -472,7 +488,7 @@ describe("Users Actions", () => {
 			server.use(
 				http.get(`${mockApiUrl}/api/user/`, async () => {
 					// Simulate slow response
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 					return HttpResponse.json(mockUser);
 				})
 			);
@@ -483,7 +499,7 @@ describe("Users Actions", () => {
 		});
 
 		it("should handle request with custom headers", async () => {
-			let allHeaders: Record<string, string> = {};
+			const allHeaders: Record<string, string> = {};
 
 			server.use(
 				http.get(`${mockApiUrl}/api/user/`, ({ request }) => {

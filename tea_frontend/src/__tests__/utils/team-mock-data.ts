@@ -19,7 +19,8 @@ export const mockTeamMember: TeamMember = {
 	email: "rich.griffiths89@gmail.com",
 	role: "Admin",
 	isAdmin: true,
-	image: "https://res.cloudinary.com/dfs5xyvsv/image/upload/v1688998317/self_port-0142_edited_p5jqqw.jpg",
+	image:
+		"https://res.cloudinary.com/dfs5xyvsv/image/upload/v1688998317/self_port-0142_edited_p5jqqw.jpg",
 };
 
 export const mockTeamMembers: TeamMember[] = [
@@ -31,7 +32,8 @@ export const mockTeamMembers: TeamMember[] = [
 		email: "rich.griffiths89@gmail.com",
 		role: "Admin",
 		isAdmin: true,
-		image: "https://res.cloudinary.com/dfs5xyvsv/image/upload/v1688998317/self_port-0142_edited_p5jqqw.jpg",
+		image:
+			"https://res.cloudinary.com/dfs5xyvsv/image/upload/v1688998317/self_port-0142_edited_p5jqqw.jpg",
 	},
 	{
 		id: 2,
@@ -66,7 +68,9 @@ export const mockTeamMembers: TeamMember[] = [
 ];
 
 // Factory function for creating test team members
-export const createMockTeamMember = (overrides: Partial<TeamMember> = {}): TeamMember => ({
+export const createMockTeamMember = (
+	overrides: Partial<TeamMember> = {}
+): TeamMember => ({
 	...mockTeamMember,
 	...overrides,
 });

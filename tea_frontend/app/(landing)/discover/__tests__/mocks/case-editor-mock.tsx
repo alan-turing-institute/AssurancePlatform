@@ -11,44 +11,40 @@ export const CaseEditorMock = ({ caseData }: CaseEditorMockProps) => {
 	const [publicDescription, setPublicDescription] = useState(
 		caseData.description || ""
 	);
+	const [message, setMessage] = useState<string | null>(null);
 
 	const handleSaveSettings = async () => {
 		try {
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseData.id}/`,
-				{
-					method: "PUT",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: "Token mock-jwt-token",
-					},
-					body: JSON.stringify({
-						...caseData,
-						published: isPublished,
-						public_description: publicDescription,
-					}),
-				}
-			);
+			const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+			const response = await fetch(`${apiUrl}/api/cases/${caseData.id}/`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Token mock-jwt-token",
+				},
+				body: JSON.stringify({
+					...caseData,
+					published: isPublished,
+					public_description: publicDescription,
+				}),
+			});
 
 			if (!response.ok) {
 				throw new Error("Failed to publish case");
 			}
 
 			// Show success message
-			const message = isPublished
+			const successMessage = isPublished
 				? "Case published successfully"
 				: "Case unpublished successfully";
 
-			// Create a temporary element to show the message
-			const messageEl = document.createElement("div");
-			messageEl.textContent = message;
-			document.body.appendChild(messageEl);
-
+			setMessage(successMessage);
 			setIsSettingsOpen(false);
+
+			// Clear message after a delay (optional - to mimic real behavior)
+			setTimeout(() => setMessage(null), 5000);
 		} catch (error) {
-			const messageEl = document.createElement("div");
-			messageEl.textContent = (error as Error).message;
-			document.body.appendChild(messageEl);
+			setMessage((error as Error).message);
 		}
 	};
 
@@ -62,6 +58,8 @@ export const CaseEditorMock = ({ caseData }: CaseEditorMockProps) => {
 			>
 				Settings
 			</button>
+
+			{message && <div>{message}</div>}
 
 			{isSettingsOpen && (
 				<div role="dialog">

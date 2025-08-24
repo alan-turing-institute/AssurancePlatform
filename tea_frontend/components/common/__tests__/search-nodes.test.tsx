@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Node } from "reactflow";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	renderWithAuth,
 	screen,
@@ -10,20 +10,28 @@ import SearchNodes from "../search-nodes";
 
 // Mock ActionTooltip component
 vi.mock("../../ui/action-tooltip", () => ({
-	default: ({ children, label }: { children: React.ReactNode; label: string }) => (
-		<div title={label}>{children}</div>
-	),
+	default: ({
+		children,
+		label,
+	}: {
+		children: React.ReactNode;
+		label: string;
+	}) => <div title={label}>{children}</div>,
 }));
 
 describe("SearchNodes", () => {
 	const mockFocusNode = vi.fn();
 
-	const createMockNode = (id: string, name: string, description: string): Node => ({
+	const createMockNode = (
+		id: string,
+		name: string,
+		description: string
+	): Node => ({
 		id,
 		type: "goal",
 		position: { x: 0, y: 0 },
 		data: {
-			id: parseInt(id),
+			id: Number.parseInt(id, 10),
 			name,
 			short_description: description,
 			type: "goal",
@@ -45,7 +53,7 @@ describe("SearchNodes", () => {
 	describe("Component Rendering", () => {
 		it("should render search button", () => {
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			expect(screen.getByRole("button")).toBeInTheDocument();
@@ -54,7 +62,7 @@ describe("SearchNodes", () => {
 
 		it("should render search icon", () => {
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			expect(screen.getByText("Search")).toBeInTheDocument();
@@ -62,7 +70,7 @@ describe("SearchNodes", () => {
 
 		it("should not show dialog initially", () => {
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			expect(screen.queryByText("Search Nodes")).not.toBeInTheDocument();
@@ -74,7 +82,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			const searchButton = screen.getByRole("button");
@@ -89,7 +97,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -97,7 +105,9 @@ describe("SearchNodes", () => {
 			await waitFor(() => {
 				expect(screen.getByText("Search Nodes")).toBeInTheDocument();
 				expect(
-					screen.getByText("Enter your keywords into the input below to find a node.")
+					screen.getByText(
+						"Enter your keywords into the input below to find a node."
+					)
 				).toBeInTheDocument();
 				expect(screen.getByRole("textbox")).toBeInTheDocument();
 			});
@@ -109,15 +119,19 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
 
 			await waitFor(() => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
-				expect(screen.getByText("Testing strategy for the system")).toBeInTheDocument();
-				expect(screen.getByText("Performance property claim")).toBeInTheDocument();
+				expect(
+					screen.getByText("Testing strategy for the system")
+				).toBeInTheDocument();
+				expect(
+					screen.getByText("Performance property claim")
+				).toBeInTheDocument();
 				expect(screen.getByText("Unit test evidence")).toBeInTheDocument();
 				expect(screen.getByText("Secondary safety goal")).toBeInTheDocument();
 			});
@@ -127,7 +141,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -142,9 +156,15 @@ describe("SearchNodes", () => {
 			await waitFor(() => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
 				expect(screen.getByText("Secondary safety goal")).toBeInTheDocument();
-				expect(screen.queryByText("Testing strategy for the system")).not.toBeInTheDocument();
-				expect(screen.queryByText("Performance property claim")).not.toBeInTheDocument();
-				expect(screen.queryByText("Unit test evidence")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Testing strategy for the system")
+				).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Performance property claim")
+				).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Unit test evidence")
+				).not.toBeInTheDocument();
 			});
 		});
 
@@ -152,7 +172,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -170,7 +190,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -179,8 +199,12 @@ describe("SearchNodes", () => {
 			await user.type(searchInput, "strategy");
 
 			await waitFor(() => {
-				expect(screen.getByText("Testing strategy for the system")).toBeInTheDocument();
-				expect(screen.queryByText("Primary system goal")).not.toBeInTheDocument();
+				expect(
+					screen.getByText("Testing strategy for the system")
+				).toBeInTheDocument();
+				expect(
+					screen.queryByText("Primary system goal")
+				).not.toBeInTheDocument();
 			});
 		});
 
@@ -188,7 +212,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -197,8 +221,12 @@ describe("SearchNodes", () => {
 			await user.type(searchInput, "nonexistent");
 
 			await waitFor(() => {
-				expect(screen.queryByText("Primary system goal")).not.toBeInTheDocument();
-				expect(screen.queryByText("Testing strategy for the system")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Primary system goal")
+				).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Testing strategy for the system")
+				).not.toBeInTheDocument();
 			});
 		});
 	});
@@ -208,7 +236,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -217,10 +245,15 @@ describe("SearchNodes", () => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
 			});
 
-			const nodeButton = screen.getByText("Primary system goal").closest("button");
+			const nodeButton = screen
+				.getByText("Primary system goal")
+				.closest("button");
 			expect(nodeButton).toBeInTheDocument();
 
-			await user.click(nodeButton!);
+			if (!nodeButton) {
+				throw new Error("Node button not found");
+			}
+			await user.click(nodeButton);
 
 			expect(mockFocusNode).toHaveBeenCalledWith("1");
 		});
@@ -229,7 +262,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -238,7 +271,9 @@ describe("SearchNodes", () => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
 			});
 
-			const nodeButton = screen.getByText("Primary system goal").closest("button");
+			const nodeButton = screen
+				.getByText("Primary system goal")
+				.closest("button");
 
 			// Test Enter key
 			nodeButton?.focus();
@@ -251,7 +286,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -260,7 +295,9 @@ describe("SearchNodes", () => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
 			});
 
-			const nodeButton = screen.getByText("Primary system goal").closest("button");
+			const nodeButton = screen
+				.getByText("Primary system goal")
+				.closest("button");
 
 			// Test Space key
 			nodeButton?.focus();
@@ -275,7 +312,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -291,14 +328,16 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
 
 			await waitFor(() => {
 				expect(screen.getByText("Primary system goal")).toBeInTheDocument();
-				expect(screen.getByText("Testing strategy for the system")).toBeInTheDocument();
+				expect(
+					screen.getByText("Testing strategy for the system")
+				).toBeInTheDocument();
 			});
 		});
 
@@ -306,14 +345,14 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
 
 			await waitFor(() => {
 				// Check for separator elements with proper classes
-				const separators = document.querySelectorAll('.shrink-0.bg-border');
+				const separators = document.querySelectorAll(".shrink-0.bg-border");
 				expect(separators.length).toBeGreaterThan(0);
 			});
 		});
@@ -323,9 +362,7 @@ describe("SearchNodes", () => {
 		it("should handle empty nodes array", async () => {
 			const user = userEvent.setup();
 
-			renderWithAuth(
-				<SearchNodes nodes={[]} focusNode={mockFocusNode} />
-			);
+			renderWithAuth(<SearchNodes focusNode={mockFocusNode} nodes={[]} />);
 
 			await user.click(screen.getByRole("button"));
 
@@ -345,7 +382,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={nodesWithLongDesc} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={nodesWithLongDesc} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -363,7 +400,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={nodesWithSpecialChars} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={nodesWithSpecialChars} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -372,7 +409,9 @@ describe("SearchNodes", () => {
 			await user.type(searchInput, "!@#");
 
 			await waitFor(() => {
-				expect(screen.getByText("Test with special chars: !@#$%^&*()")).toBeInTheDocument();
+				expect(
+					screen.getByText("Test with special chars: !@#$%^&*()")
+				).toBeInTheDocument();
 			});
 		});
 
@@ -380,7 +419,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			const { rerender } = renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -391,11 +430,13 @@ describe("SearchNodes", () => {
 
 			// Update nodes prop
 			const newNodes = [createMockNode("10", "G10", "New goal")];
-			rerender(<SearchNodes nodes={newNodes} focusNode={mockFocusNode} />);
+			rerender(<SearchNodes focusNode={mockFocusNode} nodes={newNodes} />);
 
 			await waitFor(() => {
 				expect(screen.getByText("New goal")).toBeInTheDocument();
-				expect(screen.queryByText("Primary system goal")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Primary system goal")
+				).not.toBeInTheDocument();
 			});
 		});
 	});
@@ -405,7 +446,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -420,7 +461,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -435,7 +476,7 @@ describe("SearchNodes", () => {
 	describe("Accessibility", () => {
 		it("should have screen reader text", () => {
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			expect(screen.getByText("Search")).toBeInTheDocument();
@@ -445,7 +486,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			const button = screen.getByRole("button");
@@ -463,7 +504,7 @@ describe("SearchNodes", () => {
 			const user = userEvent.setup();
 
 			renderWithAuth(
-				<SearchNodes nodes={mockNodes} focusNode={mockFocusNode} />
+				<SearchNodes focusNode={mockFocusNode} nodes={mockNodes} />
 			);
 
 			await user.click(screen.getByRole("button"));
@@ -471,7 +512,11 @@ describe("SearchNodes", () => {
 			await waitFor(() => {
 				expect(screen.getByRole("dialog")).toBeInTheDocument();
 				expect(screen.getByText("Search Nodes")).toBeInTheDocument();
-				expect(screen.getByText("Enter your keywords into the input below to find a node.")).toBeInTheDocument();
+				expect(
+					screen.getByText(
+						"Enter your keywords into the input below to find a node."
+					)
+				).toBeInTheDocument();
 			});
 		});
 	});

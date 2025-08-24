@@ -343,7 +343,9 @@ interface RadioGroupContextValue {
 	setValue: (value: string) => void;
 }
 
-const RadioGroupContext = React.createContext<RadioGroupContextValue | null>(null);
+const RadioGroupContext = React.createContext<RadioGroupContextValue | null>(
+	null
+);
 
 export const MockRadioGroupRoot = ({
 	children,
@@ -354,7 +356,7 @@ export const MockRadioGroupRoot = ({
 }: any) => {
 	// For controlled component, use controlledValue directly
 	// For uncontrolled, use internal state
-	const [internalValue, setInternalValue] = useState(defaultValue ?? '');
+	const [internalValue, setInternalValue] = useState(defaultValue ?? "");
 	const isControlled = controlledValue !== undefined;
 	const currentValue = isControlled ? controlledValue : internalValue;
 
@@ -367,8 +369,10 @@ export const MockRadioGroupRoot = ({
 	};
 
 	return (
-		<RadioGroupContext.Provider value={{ value: currentValue, setValue: handleValueChange }}>
-			<div role="radiogroup" aria-required={props.required} {...props}>
+		<RadioGroupContext.Provider
+			value={{ value: currentValue, setValue: handleValueChange }}
+		>
+			<div aria-required={props.required} role="radiogroup" {...props}>
 				{children}
 			</div>
 		</RadioGroupContext.Provider>
@@ -384,7 +388,7 @@ export const MockRadioGroupItem = ({
 	const context = React.useContext(RadioGroupContext);
 
 	if (!context) {
-		throw new Error('RadioGroupItem must be used within a RadioGroup');
+		throw new Error("RadioGroupItem must be used within a RadioGroup");
 	}
 
 	const isChecked = context.value === itemValue;
@@ -400,15 +404,15 @@ export const MockRadioGroupItem = ({
 	// Render to match Radix UI's actual behavior
 	return (
 		<button
-			type="button"
-			role="radio"
 			aria-checked={isChecked}
 			data-state={isChecked ? "checked" : "unchecked"}
 			data-value={itemValue}
-			value={itemValue}
-			onClick={handleClick}
-			onMouseDown={(e) => e.preventDefault()} // Prevent focus issues
 			disabled={disabled}
+			onClick={handleClick}
+			onMouseDown={(e) => e.preventDefault()}
+			role="radio"
+			type="button" // Prevent focus issues
+			value={itemValue}
 			{...props}
 		>
 			{children}
@@ -417,7 +421,11 @@ export const MockRadioGroupItem = ({
 };
 
 // Add the Indicator mock
-export const MockRadioGroupIndicator = ({ children }: { children: React.ReactNode }) => {
+export const MockRadioGroupIndicator = ({
+	children,
+}: {
+	children: React.ReactNode;
+}) => {
 	return <>{children}</>;
 };
 
@@ -427,7 +435,8 @@ interface DropdownMenuContextValue {
 	setOpen: (open: boolean) => void;
 }
 
-const DropdownMenuContext = React.createContext<DropdownMenuContextValue | null>(null);
+const DropdownMenuContext =
+	React.createContext<DropdownMenuContextValue | null>(null);
 
 export const MockDropdownMenuRoot = ({
 	children,
@@ -457,7 +466,11 @@ export const MockDropdownMenuRoot = ({
 	);
 };
 
-export const MockDropdownMenuTrigger = ({ children, asChild, ...props }: any) => {
+export const MockDropdownMenuTrigger = ({
+	children,
+	asChild,
+	...props
+}: any) => {
 	const context = React.useContext(DropdownMenuContext);
 
 	const handleClick = (e: React.MouseEvent) => {
@@ -466,10 +479,10 @@ export const MockDropdownMenuTrigger = ({ children, asChild, ...props }: any) =>
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === 'Enter' || e.key === ' ') {
+		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
 			context?.setOpen(!context.open);
-		} else if (e.key === 'ArrowDown') {
+		} else if (e.key === "ArrowDown") {
 			e.preventDefault();
 			context?.setOpen(true);
 		}
@@ -495,7 +508,11 @@ export const MockDropdownMenuTrigger = ({ children, asChild, ...props }: any) =>
 	);
 };
 
-export const MockDropdownMenuPortal = ({ children }: { children: ReactNode }) => {
+export const MockDropdownMenuPortal = ({
+	children,
+}: {
+	children: ReactNode;
+}) => {
 	const context = React.useContext(DropdownMenuContext);
 
 	if (!context?.open) {
@@ -516,7 +533,9 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 
 		// Focus first menu item when opened
 		setTimeout(() => {
-			const firstMenuItem = contentRef.current?.querySelector('[role="menuitem"]:not([aria-disabled="true"])') as HTMLElement;
+			const firstMenuItem = contentRef.current?.querySelector(
+				'[role="menuitem"]:not([aria-disabled="true"])'
+			) as HTMLElement;
 			if (firstMenuItem) {
 				firstMenuItem.focus();
 			}
@@ -527,16 +546,24 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 				context?.setOpen(false);
 			} else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 				event.preventDefault();
-				const menuItems = contentRef.current?.querySelectorAll('[role="menuitem"]:not([aria-disabled="true"])') as NodeListOf<HTMLElement>;
-				if (!menuItems || menuItems.length === 0) return;
+				const menuItems = contentRef.current?.querySelectorAll(
+					'[role="menuitem"]:not([aria-disabled="true"])'
+				) as NodeListOf<HTMLElement>;
+				if (!menuItems || menuItems.length === 0) {
+					return;
+				}
 
-				const currentIndex = Array.from(menuItems).findIndex(item => item === document.activeElement);
+				const currentIndex = Array.from(menuItems).indexOf(
+					document.activeElement as HTMLElement
+				);
 				let nextIndex: number;
 
 				if (event.key === "ArrowDown") {
-					nextIndex = currentIndex < menuItems.length - 1 ? currentIndex + 1 : 0;
+					nextIndex =
+						currentIndex < menuItems.length - 1 ? currentIndex + 1 : 0;
 				} else {
-					nextIndex = currentIndex > 0 ? currentIndex - 1 : menuItems.length - 1;
+					nextIndex =
+						currentIndex > 0 ? currentIndex - 1 : menuItems.length - 1;
 				}
 
 				menuItems[nextIndex]?.focus();
@@ -567,8 +594,8 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 
 	return (
 		<div
-			ref={contentRef}
 			data-testid="dropdown-content"
+			ref={contentRef}
 			role="menu"
 			{...domProps}
 		>
@@ -577,12 +604,20 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 	);
 };
 
-export const MockDropdownMenuItem = ({ children, onSelect, disabled, asChild, ...props }: any) => {
+export const MockDropdownMenuItem = ({
+	children,
+	onSelect,
+	disabled,
+	asChild,
+	...props
+}: any) => {
 	const context = React.useContext(DropdownMenuContext);
 	const ref = useRef<HTMLDivElement>(null);
 
 	const handleClick = (e: React.MouseEvent) => {
-		if (disabled) return;
+		if (disabled) {
+			return;
+		}
 
 		e.preventDefault();
 		onSelect?.(e);
@@ -590,9 +625,11 @@ export const MockDropdownMenuItem = ({ children, onSelect, disabled, asChild, ..
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (disabled) return;
+		if (disabled) {
+			return;
+		}
 
-		if (e.key === 'Enter' || e.key === ' ') {
+		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
 			onSelect?.(e);
 			context?.setOpen(false);
@@ -621,13 +658,13 @@ export const MockDropdownMenuItem = ({ children, onSelect, disabled, asChild, ..
 
 	return (
 		<div
-			ref={ref}
-			role="menuitem"
-			tabIndex={disabled ? -1 : 0}
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
+			ref={ref}
+			role="menuitem"
+			tabIndex={disabled ? -1 : 0}
 			{...domProps}
 		>
 			{children}
@@ -636,15 +673,23 @@ export const MockDropdownMenuItem = ({ children, onSelect, disabled, asChild, ..
 };
 
 export const MockDropdownMenuSeparator = ({ ...props }: any) => {
-	return <div role="separator" aria-orientation="horizontal" {...props} />;
+	return <div aria-orientation="horizontal" role="separator" {...props} />;
 };
 
 export const MockDropdownMenuLabel = ({ children, ...props }: any) => {
-	return <div role="none" {...props}>{children}</div>;
+	return (
+		<div role="none" {...props}>
+			{children}
+		</div>
+	);
 };
 
 export const MockDropdownMenuGroup = ({ children, ...props }: any) => {
-	return <div role="group" {...props}>{children}</div>;
+	return (
+		<div role="group" {...props}>
+			{children}
+		</div>
+	);
 };
 
 export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => {
@@ -653,7 +698,7 @@ export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => {
 
 export const MockDropdownMenuSubTrigger = ({ children, ...props }: any) => {
 	return (
-		<div role="menuitem" aria-haspopup="menu" {...props}>
+		<div aria-haspopup="menu" role="menuitem" {...props}>
 			{children}
 		</div>
 	);
@@ -675,20 +720,28 @@ export const MockDropdownMenuRadioGroup = ({ children, ...props }: any) => {
 	);
 };
 
-export const MockDropdownMenuRadioItem = ({ children, value, onSelect, disabled, ...props }: any) => {
+export const MockDropdownMenuRadioItem = ({
+	children,
+	value,
+	onSelect,
+	disabled,
+	...props
+}: any) => {
 	const handleClick = (e: React.MouseEvent) => {
-		if (disabled) return;
+		if (disabled) {
+			return;
+		}
 		e.preventDefault();
 		onSelect?.(value);
 	};
 
 	return (
 		<div
-			role="menuitemradio"
-			tabIndex={disabled ? -1 : 0}
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			role="menuitemradio"
+			tabIndex={disabled ? -1 : 0}
 			{...props}
 		>
 			{children}
@@ -696,21 +749,29 @@ export const MockDropdownMenuRadioItem = ({ children, value, onSelect, disabled,
 	);
 };
 
-export const MockDropdownMenuCheckboxItem = ({ children, checked, onCheckedChange, disabled, ...props }: any) => {
+export const MockDropdownMenuCheckboxItem = ({
+	children,
+	checked,
+	onCheckedChange,
+	disabled,
+	...props
+}: any) => {
 	const handleClick = (e: React.MouseEvent) => {
-		if (disabled) return;
+		if (disabled) {
+			return;
+		}
 		e.preventDefault();
 		onCheckedChange?.(!checked);
 	};
 
 	return (
 		<div
-			role="menuitemcheckbox"
 			aria-checked={checked}
-			tabIndex={disabled ? -1 : 0}
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			role="menuitemcheckbox"
+			tabIndex={disabled ? -1 : 0}
 			{...props}
 		>
 			{children}
@@ -718,7 +779,11 @@ export const MockDropdownMenuCheckboxItem = ({ children, checked, onCheckedChang
 	);
 };
 
-export const MockDropdownMenuItemIndicator = ({ children }: { children: React.ReactNode }) => {
+export const MockDropdownMenuItemIndicator = ({
+	children,
+}: {
+	children: React.ReactNode;
+}) => {
 	return <>{children}</>;
 };
 

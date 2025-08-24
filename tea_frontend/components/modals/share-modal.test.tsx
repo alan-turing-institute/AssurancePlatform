@@ -124,7 +124,7 @@ vi.mock("../ui/use-toast", () => ({
 
 // window.location.reload is already mocked in setup.tsx
 // We just need to access it for our assertions
-const mockReload = window.location.reload as ReturnType<typeof vi.fn>;
+const _mockReload = window.location.reload as ReturnType<typeof vi.fn>;
 
 describe("ShareModal", () => {
 	beforeEach(() => {
@@ -219,7 +219,6 @@ describe("ShareModal", () => {
 			const readRadio = screen.getByLabelText("Read");
 			expect(readRadio).toBeChecked();
 		});
-
 	});
 
 	describe("Form Validation", () => {
@@ -345,7 +344,9 @@ describe("ShareModal", () => {
 
 			// Find the Edit radio button by its value
 			const radioButtons = screen.getAllByRole("radio");
-			const editRadio = radioButtons.find(radio => radio.getAttribute("value") === "Edit");
+			const editRadio = radioButtons.find(
+				(radio) => radio.getAttribute("value") === "Edit"
+			);
 
 			if (!editRadio) {
 				throw new Error("Edit radio button not found");
@@ -859,7 +860,9 @@ describe("ShareModal", () => {
 			// Check that radio buttons are properly labeled
 			expect(screen.getByRole("radio", { name: "Read" })).toBeInTheDocument();
 			expect(screen.getByRole("radio", { name: "Edit" })).toBeInTheDocument();
-			expect(screen.getByRole("radio", { name: "Reviewer" })).toBeInTheDocument();
+			expect(
+				screen.getByRole("radio", { name: "Reviewer" })
+			).toBeInTheDocument();
 		});
 
 		it("should have proper modal role", () => {

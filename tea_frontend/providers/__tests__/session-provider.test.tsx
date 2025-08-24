@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionProvider } from "next-auth/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SessionProviderDefault from "../session-provider";
 
 // Mock next-auth/react to test our re-export
@@ -11,22 +11,22 @@ vi.mock("next-auth/react", () => {
 		basePath,
 		refetchInterval,
 		refetchOnWindowFocus,
-		refetchWhenOffline
+		refetchWhenOffline,
 	}: {
 		children: React.ReactNode;
-		session?: any;
+		session?: object | null;
 		basePath?: string;
 		refetchInterval?: number;
 		refetchOnWindowFocus?: boolean;
 		refetchWhenOffline?: boolean;
 	}) => (
 		<div
-			data-testid="session-provider"
-			data-session={session ? "provided" : "null"}
 			data-base-path={basePath}
 			data-refetch-interval={refetchInterval}
 			data-refetch-on-window-focus={refetchOnWindowFocus}
 			data-refetch-when-offline={refetchWhenOffline}
+			data-session={session ? "provided" : "null"}
+			data-testid="session-provider"
 		>
 			{children}
 		</div>
@@ -93,7 +93,7 @@ describe("SessionProvider", () => {
 		});
 
 		it("should render with no children", () => {
-			render(<SessionProviderDefault />);
+			render(<SessionProviderDefault>{null}</SessionProviderDefault>);
 
 			expect(screen.getByTestId("session-provider")).toBeInTheDocument();
 		});
@@ -162,13 +162,13 @@ describe("SessionProvider", () => {
 
 		it("should forward refetchWhenOffline prop", () => {
 			render(
-				<SessionProviderDefault refetchWhenOffline={true}>
+				<SessionProviderDefault refetchWhenOffline={false}>
 					<div>Test Content</div>
 				</SessionProviderDefault>
 			);
 
 			const provider = screen.getByTestId("session-provider");
-			expect(provider).toHaveAttribute("data-refetch-when-offline", "true");
+			expect(provider).toHaveAttribute("data-refetch-when-offline", "false");
 		});
 	});
 
@@ -206,11 +206,11 @@ describe("SessionProvider", () => {
 
 			render(
 				<SessionProviderDefault
-					session={session}
 					basePath="/api/auth"
 					refetchInterval={600}
 					refetchOnWindowFocus={true}
 					refetchWhenOffline={false}
+					session={session}
 				>
 					<div>All Props Test</div>
 				</SessionProviderDefault>
@@ -266,8 +266,14 @@ describe("SessionProvider", () => {
 
 	describe("Re-rendering and Updates", () => {
 		it("should handle session updates", () => {
-			const initialSession = { user: { name: "Initial User" } };
-			const updatedSession = { user: { name: "Updated User" } };
+			const initialSession = {
+				user: { name: "Initial User" },
+				expires: "2099-01-01",
+			};
+			const updatedSession = {
+				user: { name: "Updated User" },
+				expires: "2099-01-01",
+			};
 
 			const { rerender } = render(
 				<SessionProviderDefault session={initialSession}>
@@ -289,7 +295,7 @@ describe("SessionProvider", () => {
 		});
 
 		it("should handle session becoming null", () => {
-			const session = { user: { name: "User" } };
+			const session = { user: { name: "User" }, expires: "2099-01-01" };
 
 			const { rerender } = render(
 				<SessionProviderDefault session={session}>
@@ -369,7 +375,7 @@ describe("SessionProvider", () => {
 			const longSession = {
 				user: {
 					name: "A".repeat(1000),
-					email: "B".repeat(500) + "@example.com",
+					email: `${"B".repeat(500)}@example.com`,
 					id: "C".repeat(100),
 				},
 				expires: "2024-12-31",
@@ -388,9 +394,8 @@ describe("SessionProvider", () => {
 
 		it("should handle malformed session data", () => {
 			const malformedSession = {
-				user: null,
-				expires: undefined,
-				accessToken: "",
+				user: undefined,
+				expires: "2024-12-31T23:59:59.999Z",
 			};
 
 			render(
@@ -434,7 +439,7 @@ describe("SessionProvider", () => {
 				basePath: "/auth",
 				refetchInterval: 300,
 				refetchOnWindowFocus: true,
-				refetchWhenOffline: false,
+				refetchWhenOffline: false as const,
 			};
 
 			render(
@@ -477,7 +482,10 @@ describe("SessionProvider", () => {
 		});
 
 		it("should maintain session state across component updates", () => {
-			const session = { user: { name: "Persistent User" } };
+			const session = {
+				user: { name: "Persistent User" },
+				expires: "2099-01-01",
+			};
 
 			const App = ({ title }: { title: string }) => (
 				<SessionProviderDefault session={session}>
@@ -489,12 +497,18 @@ describe("SessionProvider", () => {
 			const { rerender } = render(<App title="Initial Title" />);
 
 			expect(screen.getByText("Initial Title")).toBeInTheDocument();
-			expect(screen.getByTestId("session-provider")).toHaveAttribute("data-session", "provided");
+			expect(screen.getByTestId("session-provider")).toHaveAttribute(
+				"data-session",
+				"provided"
+			);
 
 			rerender(<App title="Updated Title" />);
 
 			expect(screen.getByText("Updated Title")).toBeInTheDocument();
-			expect(screen.getByTestId("session-provider")).toHaveAttribute("data-session", "provided");
+			expect(screen.getByTestId("session-provider")).toHaveAttribute(
+				"data-session",
+				"provided"
+			);
 		});
 	});
 });

@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Clear global mocks to test actual implementations
@@ -7,7 +7,9 @@ vi.unmock("@/providers/modal-provider");
 
 // Mock all modal components
 vi.mock("@/components/modals/case-create-modal", () => ({
-	CaseCreateModal: () => <div data-testid="case-create-modal">CaseCreateModal</div>,
+	CaseCreateModal: () => (
+		<div data-testid="case-create-modal">CaseCreateModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/email-modal", () => ({
@@ -19,7 +21,9 @@ vi.mock("@/components/modals/import-modal", () => ({
 }));
 
 vi.mock("@/components/modals/permissions-modal", () => ({
-	PermissionsModal: () => <div data-testid="permissions-modal">PermissionsModal</div>,
+	PermissionsModal: () => (
+		<div data-testid="permissions-modal">PermissionsModal</div>
+	),
 }));
 
 vi.mock("@/components/modals/resources-modal", () => ({
@@ -32,8 +36,14 @@ vi.mock("@/components/modals/share-modal", () => ({
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
-	SessionProvider: ({ children, ...props }: { children: React.ReactNode; [key: string]: any }) => (
-		<div data-testid="session-provider" data-props={JSON.stringify(props)}>
+	SessionProvider: ({
+		children,
+		...props
+	}: {
+		children: React.ReactNode;
+		[key: string]: unknown;
+	}) => (
+		<div data-props={JSON.stringify(props)} data-testid="session-provider">
 			{children}
 		</div>
 	),
@@ -45,8 +55,14 @@ vi.mock("next-auth/react", () => ({
 
 // Mock next-themes
 vi.mock("next-themes", () => ({
-	ThemeProvider: ({ children, ...props }: { children: React.ReactNode; [key: string]: any }) => (
-		<div data-testid="next-themes-provider" data-props={JSON.stringify(props)}>
+	ThemeProvider: ({
+		children,
+		...props
+	}: {
+		children: React.ReactNode;
+		[key: string]: unknown;
+	}) => (
+		<div data-props={JSON.stringify(props)} data-testid="next-themes-provider">
 			{children}
 		</div>
 	),
@@ -122,7 +138,9 @@ describe("Providers Integration", () => {
 			);
 
 			const App = () => (
-				<SessionProvider session={{ user: { name: "Test" } }}>
+				<SessionProvider
+					session={{ user: { name: "Test" }, expires: "2099-01-01" }}
+				>
 					<AppLayout>
 						<ThemeProvider defaultTheme="dark">
 							<div data-testid="themed-content">Themed Content</div>
@@ -186,8 +204,12 @@ describe("Providers Integration", () => {
 			expect(themeProvider).toBeInTheDocument();
 
 			// Verify props are passed correctly
-			const sessionPropsData = JSON.parse(sessionProvider.getAttribute("data-props") || "{}");
-			const themePropsData = JSON.parse(themeProvider.getAttribute("data-props") || "{}");
+			const sessionPropsData = JSON.parse(
+				sessionProvider.getAttribute("data-props") || "{}"
+			);
+			const themePropsData = JSON.parse(
+				themeProvider.getAttribute("data-props") || "{}"
+			);
 
 			expect(sessionPropsData).toMatchObject({
 				session,
@@ -212,12 +234,16 @@ describe("Providers Integration", () => {
 		it("should handle prop updates across providers", async () => {
 			const App = ({
 				theme,
-				sessionData
+				sessionData,
 			}: {
 				theme: string;
-				sessionData: any;
+				sessionData: object | null;
 			}) => (
-				<SessionProvider session={sessionData}>
+				<SessionProvider
+					session={
+						sessionData ? { ...sessionData, expires: "2099-01-01" } : null
+					}
+				>
 					<ThemeProvider defaultTheme={theme}>
 						<ModalProvider />
 						<div data-testid="dynamic-content">Dynamic Content</div>
@@ -229,7 +255,7 @@ describe("Providers Integration", () => {
 			const updatedSession = { user: { name: "Updated User" } };
 
 			const { rerender } = render(
-				<App theme="light" sessionData={initialSession} />
+				<App sessionData={initialSession} theme="light" />
 			);
 
 			await waitFor(() => {
@@ -237,7 +263,7 @@ describe("Providers Integration", () => {
 			});
 
 			// Update props
-			rerender(<App theme="dark" sessionData={updatedSession} />);
+			rerender(<App sessionData={updatedSession} theme="dark" />);
 
 			// All providers should still be rendered
 			expect(screen.getByTestId("session-provider")).toBeInTheDocument();
@@ -286,8 +312,8 @@ describe("Providers Integration", () => {
 
 			const App = () => (
 				<SessionProvider
-					session={{ user: { name: "App User" } }}
 					refetchInterval={300}
+					session={{ user: { name: "App User" }, expires: "2099-01-01" }}
 				>
 					<ThemeProvider
 						defaultTheme="system"
@@ -329,7 +355,7 @@ describe("Providers Integration", () => {
 			const App = ({
 				withAuth,
 				withThemes,
-				withModals
+				withModals,
 			}: {
 				withAuth: boolean;
 				withThemes: boolean;
@@ -359,7 +385,7 @@ describe("Providers Integration", () => {
 
 			// Test all providers enabled
 			const { rerender } = render(
-				<App withAuth={true} withThemes={true} withModals={true} />
+				<App withAuth={true} withModals={true} withThemes={true} />
 			);
 
 			expect(screen.getByTestId("session-provider")).toBeInTheDocument();
@@ -371,7 +397,7 @@ describe("Providers Integration", () => {
 			});
 
 			// Test with only session and themes
-			rerender(<App withAuth={true} withThemes={true} withModals={false} />);
+			rerender(<App withAuth={true} withModals={false} withThemes={true} />);
 
 			expect(screen.getByTestId("session-provider")).toBeInTheDocument();
 			expect(screen.getByTestId("next-themes-provider")).toBeInTheDocument();
@@ -379,10 +405,12 @@ describe("Providers Integration", () => {
 			expect(screen.queryByTestId("case-create-modal")).not.toBeInTheDocument();
 
 			// Test with no providers
-			rerender(<App withAuth={false} withThemes={false} withModals={false} />);
+			rerender(<App withAuth={false} withModals={false} withThemes={false} />);
 
 			expect(screen.queryByTestId("session-provider")).not.toBeInTheDocument();
-			expect(screen.queryByTestId("next-themes-provider")).not.toBeInTheDocument();
+			expect(
+				screen.queryByTestId("next-themes-provider")
+			).not.toBeInTheDocument();
 			expect(screen.getByTestId("app-content")).toBeInTheDocument();
 		});
 	});
@@ -397,10 +425,11 @@ describe("Providers Integration", () => {
 				</SessionProvider>
 			);
 
-			// Test multiple mount/unmount cycles
+			// Test multiple mount/unmount cycles - run sequentially
 			for (let i = 0; i < 5; i++) {
 				const { unmount } = render(<App />);
 
+				// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution needed to avoid multiple providers
 				await waitFor(() => {
 					expect(screen.getByTestId("case-create-modal")).toBeInTheDocument();
 				});
@@ -409,6 +438,13 @@ describe("Providers Integration", () => {
 				expect(screen.getByTestId("next-themes-provider")).toBeInTheDocument();
 
 				unmount();
+
+				// Wait for cleanup to complete
+				await waitFor(() => {
+					expect(
+						screen.queryByTestId("session-provider")
+					).not.toBeInTheDocument();
+				});
 			}
 
 			// Should not cause memory leaks
@@ -417,7 +453,12 @@ describe("Providers Integration", () => {
 
 		it("should handle rapid re-renders across all providers", async () => {
 			const App = ({ version }: { version: number }) => (
-				<SessionProvider session={{ version }}>
+				<SessionProvider
+					session={{
+						user: { name: `User${version}` },
+						expires: "2024-12-31T23:59:59.999Z",
+					}}
+				>
 					<ThemeProvider defaultTheme={version % 2 === 0 ? "light" : "dark"}>
 						<ModalProvider />
 						<div data-testid="version">Version: {version}</div>
@@ -456,7 +497,9 @@ describe("Providers Integration", () => {
 			};
 
 			const App = () => (
-				<SessionProvider session={{ user: { name: "Context User" } }}>
+				<SessionProvider
+					session={{ user: { name: "Context User" }, expires: "2099-01-01" }}
+				>
 					<ThemeProvider defaultTheme="light">
 						<TestComponent />
 						<ModalProvider />
@@ -477,8 +520,16 @@ describe("Providers Integration", () => {
 		});
 
 		it("should handle provider state changes without affecting others", async () => {
-			const App = ({ sessionUser, theme }: { sessionUser: string; theme: string }) => (
-				<SessionProvider session={{ user: { name: sessionUser } }}>
+			const App = ({
+				sessionUser,
+				theme,
+			}: {
+				sessionUser: string;
+				theme: string;
+			}) => (
+				<SessionProvider
+					session={{ user: { name: sessionUser }, expires: "2099-01-01" }}
+				>
 					<ThemeProvider defaultTheme={theme}>
 						<ModalProvider />
 						<div data-testid="app-state">
@@ -515,10 +566,10 @@ describe("Providers Integration", () => {
 			const App = () => (
 				<SessionProvider>
 					<ThemeProvider>
-						<div role="main">
+						<main>
 							<h1>Main Content</h1>
 							<button type="button">Interactive Element</button>
-						</div>
+						</main>
 						<ModalProvider />
 					</ThemeProvider>
 				</SessionProvider>
@@ -541,8 +592,16 @@ describe("Providers Integration", () => {
 		});
 
 		it("should not create accessibility violations with nested providers", async () => {
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+			const consoleWarnSpy = vi
+				.spyOn(console, "warn")
+				.mockImplementation(() => {
+					// Intentionally empty - suppressing console output during test
+				});
+			const consoleErrorSpy = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {
+					// Intentionally empty - suppressing console output during test
+				});
 
 			const App = () => (
 				<SessionProvider>
@@ -551,8 +610,12 @@ describe("Providers Integration", () => {
 							<h1>Accessible App</h1>
 							<nav>
 								<ul>
-									<li><a href="/home">Home</a></li>
-									<li><a href="/about">About</a></li>
+									<li>
+										<a href="/home">Home</a>
+									</li>
+									<li>
+										<a href="/about">About</a>
+									</li>
 								</ul>
 							</nav>
 						</main>

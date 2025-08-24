@@ -1,14 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock next-themes to control the ThemeProvider behavior
 vi.mock("next-themes", () => ({
 	ThemeProvider: vi.fn(({ children, ...props }) => (
-		<div
-			data-testid="next-themes-provider"
-			data-props={JSON.stringify(props)}
-		>
+		<div data-props={JSON.stringify(props)} data-testid="next-themes-provider">
 			{children}
 		</div>
 	)),
@@ -60,7 +57,7 @@ describe("ThemeProvider", () => {
 	describe("Props Forwarding", () => {
 		it("should forward all props to NextThemesProvider", () => {
 			const props = {
-				attribute: "data-theme",
+				attribute: "data-theme" as const,
 				defaultTheme: "system",
 				enableSystem: true,
 				themes: ["light", "dark", "system"],
@@ -145,7 +142,7 @@ describe("ThemeProvider", () => {
 	describe("Props Combinations", () => {
 		it("should handle all props together", () => {
 			const allProps = {
-				attribute: "data-theme",
+				attribute: "data-theme" as const,
 				defaultTheme: "system",
 				enableSystem: true,
 				themes: ["light", "dark", "system"],
@@ -354,9 +351,11 @@ describe("ThemeProvider", () => {
 		});
 
 		it("should work with generic children types", () => {
-			const ComponentWithChildren = ({ children }: { children: React.ReactNode }) => (
-				<div>{children}</div>
-			);
+			const ComponentWithChildren = ({
+				children,
+			}: {
+				children: React.ReactNode;
+			}) => <div>{children}</div>;
 
 			render(
 				<ThemeProvider>
@@ -393,8 +392,8 @@ describe("ThemeProvider", () => {
 		it("should handle theme configuration changes", () => {
 			const App = ({ isDarkModeOnly }: { isDarkModeOnly: boolean }) => (
 				<ThemeProvider
-					themes={isDarkModeOnly ? ["dark"] : ["light", "dark", "system"]}
 					defaultTheme={isDarkModeOnly ? "dark" : "system"}
+					themes={isDarkModeOnly ? ["dark"] : ["light", "dark", "system"]}
 				>
 					<div>Theme Config App</div>
 				</ThemeProvider>

@@ -1,10 +1,11 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { server } from "@/src/__tests__/mocks/server";
 import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import {
 	fetchAssuranceCases,
-	fetchSharedAssuranceCases,
 	fetchPublishedAssuranceCases,
+	fetchSharedAssuranceCases,
 } from "../assurance-cases";
 
 // Mock environment variables
@@ -12,17 +13,22 @@ const mockApiUrl = "http://localhost:8000";
 
 describe("Assurance Cases Actions", () => {
 	const mockToken = "test-token-123";
+	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
-		// Set environment variables
-		process.env.API_URL = mockApiUrl;
-		process.env.NEXT_PUBLIC_API_URL = mockApiUrl;
-		// Clear any staging URLs to test primary URL fallback
-		delete process.env.API_URL_STAGING;
-		delete process.env.NEXT_PUBLIC_API_URL_STAGING;
+		// Set environment variables for all tests
+		cleanupEnv = setupEnvVars({
+			API_URL: mockApiUrl,
+			NEXT_PUBLIC_API_URL: mockApiUrl,
+			API_URL_STAGING: undefined,
+			NEXT_PUBLIC_API_URL_STAGING: undefined,
+		});
 	});
 
 	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 		server.resetHandlers();
 		vi.clearAllMocks();
 	});
@@ -98,11 +104,13 @@ describe("Assurance Cases Actions", () => {
 		});
 
 		it("should use staging URL when primary URL is not available", async () => {
-			// Clear primary URLs and set staging URLs
-			delete process.env.API_URL;
-			delete process.env.NEXT_PUBLIC_API_URL;
-			process.env.API_URL_STAGING = "http://staging.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL_STAGING = "http://staging.localhost:8000";
+			// Temporarily override env vars for this test
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: undefined,
+				API_URL_STAGING: "http://staging.localhost:8000",
+				NEXT_PUBLIC_API_URL_STAGING: "http://staging.localhost:8000",
+			});
 
 			const mockCases = [{ id: 1, name: "Staging Case" }];
 
@@ -115,6 +123,9 @@ describe("Assurance Cases Actions", () => {
 			const result = await fetchAssuranceCases(mockToken);
 
 			expect(result).toEqual(mockCases);
+
+			// Restore environment
+			restoreEnv();
 		});
 
 		it("should handle empty response", async () => {
@@ -130,7 +141,7 @@ describe("Assurance Cases Actions", () => {
 		});
 
 		it("should set correct headers", async () => {
-			let requestHeaders: Headers | null = null;
+			let requestHeaders: Headers | undefined;
 
 			server.use(
 				http.get(`${mockApiUrl}/api/cases`, ({ request }) => {
@@ -217,11 +228,13 @@ describe("Assurance Cases Actions", () => {
 		});
 
 		it("should use staging URL when primary URL is not available", async () => {
-			// Clear primary URLs and set staging URLs
-			delete process.env.API_URL;
-			delete process.env.NEXT_PUBLIC_API_URL;
-			process.env.API_URL_STAGING = "http://staging.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL_STAGING = "http://staging.localhost:8000";
+			// Temporarily override env vars for this test
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: undefined,
+				API_URL_STAGING: "http://staging.localhost:8000",
+				NEXT_PUBLIC_API_URL_STAGING: "http://staging.localhost:8000",
+			});
 
 			const mockCases = [{ id: 1, name: "Staging Shared Case" }];
 
@@ -234,6 +247,9 @@ describe("Assurance Cases Actions", () => {
 			const result = await fetchSharedAssuranceCases(mockToken);
 
 			expect(result).toEqual(mockCases);
+
+			// Restore environment
+			restoreEnv();
 		});
 	});
 
@@ -306,11 +322,13 @@ describe("Assurance Cases Actions", () => {
 		});
 
 		it("should use staging URL when primary URL is not available", async () => {
-			// Clear primary URLs and set staging URLs
-			delete process.env.API_URL;
-			delete process.env.NEXT_PUBLIC_API_URL;
-			process.env.API_URL_STAGING = "http://staging.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL_STAGING = "http://staging.localhost:8000";
+			// Temporarily override env vars for this test
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: undefined,
+				API_URL_STAGING: "http://staging.localhost:8000",
+				NEXT_PUBLIC_API_URL_STAGING: "http://staging.localhost:8000",
+			});
 
 			const mockCases = [
 				{
@@ -321,14 +339,20 @@ describe("Assurance Cases Actions", () => {
 			];
 
 			server.use(
-				http.get("http://staging.localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json(mockCases);
-				})
+				http.get(
+					"http://staging.localhost:8000/api/published-assurance-cases/",
+					() => {
+						return HttpResponse.json(mockCases);
+					}
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
 
 			expect(result).toEqual(mockCases);
+
+			// Restore environment
+			restoreEnv();
 		});
 
 		it("should handle malformed JSON response", async () => {
@@ -348,8 +372,10 @@ describe("Assurance Cases Actions", () => {
 
 	describe("API URL fallback logic", () => {
 		it("should prioritize API_URL over NEXT_PUBLIC_API_URL", async () => {
-			process.env.API_URL = "http://priority.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL = "http://secondary.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: "http://priority.localhost:8000",
+				NEXT_PUBLIC_API_URL: "http://secondary.localhost:8000",
+			});
 
 			let usedUrl = "";
 
@@ -363,13 +389,17 @@ describe("Assurance Cases Actions", () => {
 			await fetchAssuranceCases(mockToken);
 
 			expect(usedUrl).toContain("http://priority.localhost:8000");
+
+			restoreEnv();
 		});
 
 		it("should fall back to staging URLs when primary URLs are undefined", async () => {
-			delete process.env.API_URL;
-			delete process.env.NEXT_PUBLIC_API_URL;
-			process.env.API_URL_STAGING = "http://staging1.localhost:8000";
-			process.env.NEXT_PUBLIC_API_URL_STAGING = "http://staging2.localhost:8000";
+			const restoreEnv = setupEnvVars({
+				API_URL: undefined,
+				NEXT_PUBLIC_API_URL: undefined,
+				API_URL_STAGING: "http://staging1.localhost:8000",
+				NEXT_PUBLIC_API_URL_STAGING: "http://staging2.localhost:8000",
+			});
 
 			let usedUrl = "";
 
@@ -383,6 +413,8 @@ describe("Assurance Cases Actions", () => {
 			await fetchAssuranceCases(mockToken);
 
 			expect(usedUrl).toContain("http://staging1.localhost:8000");
+
+			restoreEnv();
 		});
 	});
 
@@ -391,7 +423,7 @@ describe("Assurance Cases Actions", () => {
 			server.use(
 				http.get(`${mockApiUrl}/api/cases`, async () => {
 					// Simulate timeout
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 					return HttpResponse.error();
 				})
 			);

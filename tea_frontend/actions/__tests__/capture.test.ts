@@ -1,7 +1,28 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { capture, existingImage, test } from "../capture";
+
+// Mock types for Azure Blob Storage
+interface MockBlockBlobClient {
+	uploadData: ReturnType<typeof vi.fn>;
+}
+
+interface MockContainerClient {
+	getBlockBlobClient: ReturnType<typeof vi.fn>;
+}
+
+interface MockBlobServiceClient {
+	getContainerClient: ReturnType<typeof vi.fn>;
+}
+
+interface MockStats {
+	isFile: ReturnType<typeof vi.fn>;
+}
+
+interface ErrorWithCode extends Error {
+	code: string;
+}
 
 // Mock Node.js fs module
 vi.mock("node:fs");
@@ -20,11 +41,12 @@ describe("Capture Actions", () => {
 	const mockAssuranceCaseId = "123";
 	const mockBase64Image =
 		"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-	const mockBase64Data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+	const mockBase64Data =
+		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-	let mockBlobServiceClient: any;
-	let mockContainerClient: any;
-	let mockBlockBlobClient: any;
+	let mockBlobServiceClient: MockBlobServiceClient;
+	let mockContainerClient: MockContainerClient;
+	let mockBlockBlobClient: MockBlockBlobClient;
 
 	beforeEach(() => {
 		// Set up environment variables
@@ -46,12 +68,14 @@ describe("Capture Actions", () => {
 			getContainerClient: vi.fn().mockReturnValue(mockContainerClient),
 		};
 
-		(BlobServiceClient as any).mockImplementation(() => mockBlobServiceClient);
+		(
+			BlobServiceClient as unknown as ReturnType<typeof vi.fn>
+		).mockImplementation(() => mockBlobServiceClient);
 	});
 
 	afterEach(() => {
 		vi.resetAllMocks();
-		delete process.env.NEXT_PUBLIC_STORAGESOURCENAME;
+		process.env.NEXT_PUBLIC_STORAGESOURCENAME = undefined;
 	});
 
 	describe("capture", () => {
@@ -109,7 +133,9 @@ describe("Capture Actions", () => {
 		});
 
 		it("should return undefined when BlobServiceClient creation fails", async () => {
-			(BlobServiceClient as any).mockImplementation(() => {
+			(
+				BlobServiceClient as unknown as ReturnType<typeof vi.fn>
+			).mockImplementation(() => {
 				throw new Error("BlobServiceClient creation failed");
 			});
 
@@ -139,7 +165,8 @@ describe("Capture Actions", () => {
 		});
 
 		it("should handle different image formats", async () => {
-			const jpegBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/gA=";
+			const jpegBase64 =
+				"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/gA=";
 
 			const result = await capture(jpegBase64, mockAssuranceCaseId);
 
@@ -185,8 +212,10 @@ describe("Capture Actions", () => {
 		const mockFilePath = "/path/to/image.png";
 
 		it("should return true when file exists", () => {
-			const mockStats = { isFile: vi.fn().mockReturnValue(true) };
-			(fs.statSync as any).mockReturnValue(mockStats);
+			const mockStats: MockStats = { isFile: vi.fn().mockReturnValue(true) };
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+				mockStats
+			);
 
 			const result = existingImage(mockFilePath);
 
@@ -195,11 +224,15 @@ describe("Capture Actions", () => {
 		});
 
 		it("should return false when file does not exist (ENOENT error)", () => {
-			const enoentError = new Error("File not found");
-			(enoentError as any).code = "ENOENT";
-			(fs.statSync as any).mockImplementation(() => {
-				throw enoentError;
-			});
+			const enoentError: ErrorWithCode = Object.assign(
+				new Error("File not found"),
+				{ code: "ENOENT" }
+			);
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+				() => {
+					throw enoentError;
+				}
+			);
 
 			const result = existingImage(mockFilePath);
 
@@ -208,11 +241,15 @@ describe("Capture Actions", () => {
 		});
 
 		it("should return false when other filesystem error occurs", () => {
-			const otherError = new Error("Permission denied");
-			(otherError as any).code = "EACCES";
-			(fs.statSync as any).mockImplementation(() => {
-				throw otherError;
-			});
+			const otherError: ErrorWithCode = Object.assign(
+				new Error("Permission denied"),
+				{ code: "EACCES" }
+			);
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+				() => {
+					throw otherError;
+				}
+			);
 
 			const result = existingImage(mockFilePath);
 
@@ -222,9 +259,11 @@ describe("Capture Actions", () => {
 
 		it("should return false when error without code property occurs", () => {
 			const genericError = new Error("Generic error");
-			(fs.statSync as any).mockImplementation(() => {
-				throw genericError;
-			});
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+				() => {
+					throw genericError;
+				}
+			);
 
 			const result = existingImage(mockFilePath);
 
@@ -233,9 +272,11 @@ describe("Capture Actions", () => {
 		});
 
 		it("should return false when non-Error is thrown", () => {
-			(fs.statSync as any).mockImplementation(() => {
-				throw "String error";
-			});
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+				() => {
+					throw new Error("String error");
+				}
+			);
 
 			const result = existingImage(mockFilePath);
 
@@ -251,13 +292,15 @@ describe("Capture Actions", () => {
 				"C:\\Windows\\path\\image.png", // Windows path
 			];
 
-			(fs.statSync as any).mockReturnValue({ isFile: vi.fn().mockReturnValue(true) });
+			(fs.statSync as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+				isFile: vi.fn().mockReturnValue(true),
+			});
 
-			paths.forEach((path) => {
+			for (const path of paths) {
 				const result = existingImage(path);
 				expect(result).toBe(true);
 				expect(fs.statSync).toHaveBeenCalledWith(path);
-			});
+			}
 		});
 	});
 
@@ -279,7 +322,7 @@ describe("Capture Actions", () => {
 
 	describe("Azure Blob Storage integration edge cases", () => {
 		it("should handle missing storage account name", async () => {
-			delete process.env.NEXT_PUBLIC_STORAGESOURCENAME;
+			process.env.NEXT_PUBLIC_STORAGESOURCENAME = undefined;
 
 			const result = await capture(mockBase64Image, mockAssuranceCaseId);
 
@@ -288,8 +331,10 @@ describe("Capture Actions", () => {
 		});
 
 		it("should handle Azure service errors during upload", async () => {
-			const azureError = new Error("Azure service unavailable");
-			(azureError as any).code = "ServiceUnavailable";
+			const azureError: ErrorWithCode = Object.assign(
+				new Error("Azure service unavailable"),
+				{ code: "ServiceUnavailable" }
+			);
 			mockBlockBlobClient.uploadData.mockRejectedValue(azureError);
 
 			const result = await capture(mockBase64Image, mockAssuranceCaseId);
@@ -298,8 +343,10 @@ describe("Capture Actions", () => {
 		});
 
 		it("should handle network timeout during upload", async () => {
-			const timeoutError = new Error("Request timeout");
-			(timeoutError as any).code = "ETIMEDOUT";
+			const timeoutError: ErrorWithCode = Object.assign(
+				new Error("Request timeout"),
+				{ code: "ETIMEDOUT" }
+			);
 			mockBlockBlobClient.uploadData.mockRejectedValue(timeoutError);
 
 			const result = await capture(mockBase64Image, mockAssuranceCaseId);
@@ -348,7 +395,8 @@ describe("Capture Actions", () => {
 
 	describe("Base64 data handling edge cases", () => {
 		it("should handle WebP image format", async () => {
-			const webpBase64Data = "UklGRjIAAABXRUJQVlA4ICYAAACyAgCdASoAAQABAAwJaQAAaGbdaGbdaP4A";
+			const webpBase64Data =
+				"UklGRjIAAABXRUJQVlA4ICYAAACyAgCdASoAAQABAAwJaQAAaGbdaGbdaP4A";
 			const webpBase64 = `data:image/webp;base64,${webpBase64Data}`;
 
 			const result = await capture(webpBase64, mockAssuranceCaseId);
@@ -369,7 +417,8 @@ CAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==`;
 		});
 
 		it("should handle base64 with padding", async () => {
-			const base64WithPadding = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+			const base64WithPadding =
+				"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 			const result = await capture(base64WithPadding, mockAssuranceCaseId);
 

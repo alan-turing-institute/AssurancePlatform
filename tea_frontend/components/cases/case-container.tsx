@@ -59,8 +59,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 
 				const formattedAssuranceCase = await addHiddenProp(result);
 				return formattedAssuranceCase;
-			} catch (error) {
-				console.error("Failed to fetch case:", error);
+			} catch (_error) {
 				return null;
 			}
 		},
@@ -91,8 +90,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 
 				const result = await response.json();
 				return result;
-			} catch (error) {
-				console.error("Failed to fetch orphaned elements:", error);
+			} catch (_error) {
 				return [];
 			}
 		},
@@ -100,26 +98,42 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 
 	useEffect(() => {
-		const id = caseId || paramsCaseId;
-		if (id) {
-			fetchSingleCase(Number(id)).then((result) => {
-				setAssuranceCase((result as AssuranceCase) || null);
-				setLoading(false);
-			});
-		}
+		const loadCase = async () => {
+			const id = caseId || paramsCaseId;
+			if (id) {
+				try {
+					const result = await fetchSingleCase(Number(id));
+					setAssuranceCase((result as AssuranceCase) || null);
+					setLoading(false);
+				} catch {
+					// Handle error silently
+					setLoading(false);
+				}
+			}
+		};
+
+		loadCase();
 	}, [caseId, paramsCaseId, fetchSingleCase, setAssuranceCase]);
 
-	useEffect(() => {
+	const loadOrphanedElementsData = useCallback(async () => {
 		const id = caseId || paramsCaseId;
-		if (id) {
-			const idValue = Array.isArray(id) ? id[0] : id;
-			fetchOrphanedElements(idValue).then((result) => {
-				if (result) {
-					setOrphanedElements(result);
-				}
-			});
+		if (!id) {
+			return;
+		}
+
+		const idValue = Array.isArray(id) ? id[0] : id;
+		try {
+			const result = await fetchOrphanedElements(idValue);
+			setOrphanedElements(result || []);
+		} catch {
+			// Handle error silently
+			setOrphanedElements([]);
 		}
 	}, [caseId, paramsCaseId, fetchOrphanedElements, setOrphanedElements]);
+
+	useEffect(() => {
+		loadOrphanedElementsData();
+	}, [loadOrphanedElementsData]);
 
 	return (
 		<>

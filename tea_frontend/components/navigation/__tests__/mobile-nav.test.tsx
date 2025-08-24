@@ -5,40 +5,87 @@ import { MobileNav } from "../mobile-nav";
 
 // Mock Next.js components
 vi.mock("next/image", () => ({
-	default: ({ alt, className, src }: { alt: string; className: string; src: string }) => (
-		<img alt={alt} className={className} src={src} />
-	),
+	default: ({
+		alt,
+		className,
+		src,
+	}: {
+		alt: string;
+		className: string;
+		src: string;
+	}) => <img alt={alt} className={className} src={src} />,
 }));
 
 vi.mock("next/link", () => ({
-	default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-		<a href={href}>{children}</a>
-	),
+	default: ({
+		children,
+		href,
+	}: {
+		children: React.ReactNode;
+		href: string;
+	}) => <a href={href}>{children}</a>,
 }));
 
 // Mock Headless UI components
 vi.mock("@headlessui/react", () => {
+	type DialogProps = {
+		children: React.ReactNode;
+		className?: string;
+		as?: React.ElementType;
+		onClose?: () => void;
+	};
+
+	type PanelProps = {
+		children: React.ReactNode;
+		className?: string;
+	};
+
 	const Dialog = Object.assign(
-		({ children, className, as, onClose }: any) => (
-			<div data-testid="dialog" className={className}>{children}</div>
+		({ children, className }: DialogProps) => (
+			<div className={className} data-testid="dialog">
+				{children}
+			</div>
 		),
 		{
-			Panel: ({ children, className }: any) => (
-				<div className={className} data-testid="dialog-panel">{children}</div>
+			Panel: ({ children, className }: PanelProps) => (
+				<div className={className} data-testid="dialog-panel">
+					{children}
+				</div>
 			),
 		}
 	);
 
+	type TransitionProps = {
+		children: React.ReactNode;
+		show?: boolean;
+		as?: React.ElementType;
+	};
+
+	type TransitionChildProps = {
+		children: React.ReactNode;
+		as?: React.ElementType;
+		enter?: string;
+		enterFrom?: string;
+		enterTo?: string;
+		leave?: string;
+		leaveFrom?: string;
+		leaveTo?: string;
+	};
+
 	const Transition = Object.assign(
-		({ children, show, as }: any) => {
-			if (show === false) return null;
+		({ children, show }: TransitionProps) => {
+			if (show === false) {
+				return null;
+			}
 			return <>{children}</>;
 		},
 		{
-			Root: ({ children, show, as }: any) => (
-				<div data-testid="transition-root" data-show={show}>{children}</div>
+			Root: ({ children, show }: TransitionProps) => (
+				<div data-show={show} data-testid="transition-root">
+					{children}
+				</div>
 			),
-			Child: ({ children, as, enter, enterFrom, enterTo, leave, leaveFrom, leaveTo }: any) => (
+			Child: ({ children }: TransitionChildProps) => (
 				<div data-testid="transition-child">{children}</div>
 			),
 		}
@@ -47,14 +94,24 @@ vi.mock("@headlessui/react", () => {
 	return {
 		Dialog,
 		Transition,
-		Fragment: ({ children }: any) => <>{children}</>,
+		Fragment: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	};
 });
 
 // Mock Heroicons
 vi.mock("@heroicons/react/24/outline", () => ({
-	XMarkIcon: ({ className, "aria-hidden": ariaHidden }: { className: string; "aria-hidden": boolean }) => (
-		<div className={className} aria-hidden={ariaHidden} data-testid="x-mark-icon">
+	XMarkIcon: ({
+		className,
+		"aria-hidden": ariaHidden,
+	}: {
+		className: string;
+		"aria-hidden": boolean;
+	}) => (
+		<div
+			aria-hidden={ariaHidden}
+			className={className}
+			data-testid="x-mark-icon"
+		>
 			XMarkIcon
 		</div>
 	),
@@ -235,22 +292,26 @@ describe("MobileNav", () => {
 			expect(logo).toHaveClass("w-16");
 			expect(logo).toHaveAttribute("src", "/images/tea-logo2.png");
 
-			expect(screen.getByText("Trustworthy and Ethical Assurance Platform")).toBeInTheDocument();
+			expect(
+				screen.getByText("Trustworthy and Ethical Assurance Platform")
+			).toBeInTheDocument();
 		});
 
 		it("should wrap logo in dashboard link", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const logoLink = screen.getAllByRole("link").find(link =>
-				link.getAttribute("href") === "/dashboard"
-			);
+			const logoLink = screen
+				.getAllByRole("link")
+				.find((link) => link.getAttribute("href") === "/dashboard");
 			expect(logoLink).toBeInTheDocument();
 		});
 
 		it("should have proper logo container styling", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const logoContainer = screen.getByText("Trustworthy and Ethical Assurance Platform").parentElement;
+			const logoContainer = screen.getByText(
+				"Trustworthy and Ethical Assurance Platform"
+			).parentElement;
 			expect(logoContainer).toHaveClass(
 				"my-3",
 				"flex",
@@ -278,9 +339,10 @@ describe("MobileNav", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.textContent?.includes("My Assurance Cases") &&
-				link.getAttribute("href") === "/dashboard"
+			const activeLink = links.find(
+				(link) =>
+					link.textContent?.includes("My Assurance Cases") &&
+					link.getAttribute("href") === "/dashboard"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});
@@ -290,7 +352,7 @@ describe("MobileNav", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
 			const links = screen.getAllByRole("link");
-			const inactiveLink = links.find(link =>
+			const inactiveLink = links.find((link) =>
 				link.textContent?.includes("Shared With Me")
 			);
 			expect(inactiveLink).toHaveClass("text-indigo-200");
@@ -299,17 +361,17 @@ describe("MobileNav", () => {
 		it("should handle external links with proper attributes", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const externalLinks = screen.getAllByRole("link").filter(link =>
-				link.getAttribute("target") === "_blank"
-			);
+			const externalLinks = screen
+				.getAllByRole("link")
+				.filter((link) => link.getAttribute("target") === "_blank");
 			expect(externalLinks.length).toBeGreaterThan(0);
 
-			externalLinks.forEach(link => {
+			for (const link of externalLinks) {
 				expect(link).toHaveAttribute("target", "_blank");
 				if (link.getAttribute("rel")) {
 					expect(link).toHaveAttribute("rel", "noopener");
 				}
-			});
+			}
 		});
 	});
 
@@ -360,9 +422,10 @@ describe("MobileNav", () => {
 			expect(separators.length).toBeGreaterThan(0);
 
 			// Check for separator with user-specific styling
-			const userSeparator = separators.find(sep =>
-				sep.className.includes("my-4") &&
-				sep.className.includes("bg-indigo-700/80")
+			const userSeparator = separators.find(
+				(sep) =>
+					sep.className.includes("my-4") &&
+					sep.className.includes("bg-indigo-700/80")
 			);
 			expect(userSeparator).toBeInTheDocument();
 		});
@@ -372,7 +435,9 @@ describe("MobileNav", () => {
 		it("should have proper sidebar styling", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const sidebar = screen.getByTestId("dialog-panel").querySelector(".bg-indigo-600");
+			const sidebar = screen
+				.getByTestId("dialog-panel")
+				.querySelector(".bg-indigo-600");
 			expect(sidebar).toHaveClass(
 				"flex",
 				"grow",
@@ -414,15 +479,24 @@ describe("MobileNav", () => {
 		it("should have mobile-specific header styling", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const headerContainer = screen.getByText("Trustworthy and Ethical Assurance Platform")
-				.closest('.my-4');
-			expect(headerContainer).toHaveClass("my-4", "flex", "h-16", "shrink-0", "items-center");
+			const headerContainer = screen
+				.getByText("Trustworthy and Ethical Assurance Platform")
+				.closest(".my-4");
+			expect(headerContainer).toHaveClass(
+				"my-4",
+				"flex",
+				"h-16",
+				"shrink-0",
+				"items-center"
+			);
 		});
 	});
 
 	describe("Props Handling", () => {
 		it("should handle sidebarOpen prop changes", () => {
-			const { rerender } = render(<MobileNav {...defaultProps} sidebarOpen={false} />);
+			const { rerender } = render(
+				<MobileNav {...defaultProps} sidebarOpen={false} />
+			);
 
 			let transitionRoot = screen.getByTestId("transition-root");
 			expect(transitionRoot).toHaveAttribute("data-show", "false");
@@ -451,8 +525,8 @@ describe("MobileNav", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.getAttribute("href") === "/dashboard/shared"
+			const activeLink = links.find(
+				(link) => link.getAttribute("href") === "/dashboard/shared"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});
@@ -470,8 +544,8 @@ describe("MobileNav", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
 			const links = screen.getAllByRole("link");
-			const activeLink = links.find(link =>
-				link.getAttribute("href") === "/discover"
+			const activeLink = links.find(
+				(link) => link.getAttribute("href") === "/discover"
 			);
 			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
 		});
@@ -514,7 +588,9 @@ describe("MobileNav", () => {
 		it("should have dark mode classes", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
-			const sidebar = screen.getByTestId("dialog-panel").querySelector(".bg-indigo-600");
+			const sidebar = screen
+				.getByTestId("dialog-panel")
+				.querySelector(".bg-indigo-600");
 			expect(sidebar).toHaveClass("dark:bg-slate-900");
 		});
 
@@ -522,9 +598,9 @@ describe("MobileNav", () => {
 			render(<MobileNav {...defaultProps} sidebarOpen={true} />);
 
 			const separators = screen.getAllByTestId("separator");
-			separators.forEach(separator => {
+			for (const separator of separators) {
 				expect(separator.className).toContain("dark:bg-slate-800");
-			});
+			}
 		});
 	});
 });

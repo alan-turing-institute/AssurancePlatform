@@ -1,21 +1,65 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import AutoComplete from "../autocomplete";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@/types";
+import AutoComplete from "../autocomplete";
+
+// Regex constants for testing
+const JOHN_DOE_REGEX = /john\.doe/;
+const BOB_JOHNSON_REGEX = /bob\.johnson/;
+const JANE_SMITH_REGEX = /jane\.smith/;
+const CHARLIE_BROWN_REGEX = /charlie\.brown/;
+const CHARLIE_BROWN_EMPTY_EMAIL_REGEX = /charlie\.brown \(\)/;
+const INCOMPLETE_REGEX = /incomplete/;
+const USER_SPECIAL_REGEX = /user@special/;
 
 // Mock the utils function
 vi.mock("@/lib/utils", () => ({
-	cn: (...args: any[]) => args.filter(Boolean).join(" "),
+	cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
 
 describe("AutoComplete", () => {
 	const mockUsers: User[] = [
-		{ id: 1, username: "john.doe", email: "john@example.com", name: "John Doe" },
-		{ id: 2, username: "jane.smith", email: "jane@example.com", name: "Jane Smith" },
-		{ id: 3, username: "bob.johnson", email: "bob@example.com", name: "Bob Johnson" },
-		{ id: 4, username: "alice.wilson", email: "alice@example.com", name: "Alice Wilson" },
-		{ id: 5, username: "charlie.brown", email: "", name: "Charlie Brown" }, // User without email
+		{
+			id: 1,
+			username: "john.doe",
+			email: "john@example.com",
+			firstName: "John",
+			lastName: "Doe",
+			createdAt: "2024-01-01T00:00:00Z",
+		},
+		{
+			id: 2,
+			username: "jane.smith",
+			email: "jane@example.com",
+			firstName: "Jane",
+			lastName: "Smith",
+			createdAt: "2024-01-01T00:00:00Z",
+		},
+		{
+			id: 3,
+			username: "bob.johnson",
+			email: "bob@example.com",
+			firstName: "Bob",
+			lastName: "Johnson",
+			createdAt: "2024-01-01T00:00:00Z",
+		},
+		{
+			id: 4,
+			username: "alice.wilson",
+			email: "alice@example.com",
+			firstName: "Alice",
+			lastName: "Wilson",
+			createdAt: "2024-01-01T00:00:00Z",
+		},
+		{
+			id: 5,
+			username: "charlie.brown",
+			email: "",
+			firstName: "Charlie",
+			lastName: "Brown",
+			createdAt: "2024-01-01T00:00:00Z",
+		}, // User without email
 	];
 
 	const mockSetSelectedUsers = vi.fn();
@@ -60,7 +104,9 @@ describe("AutoComplete", () => {
 				/>
 			);
 
-			const container = screen.getByPlaceholderText("Start typing...").closest(".autocomplete");
+			const container = screen
+				.getByPlaceholderText("Start typing...")
+				.closest(".autocomplete");
 			expect(container).toHaveClass("autocomplete", "relative");
 		});
 
@@ -75,8 +121,17 @@ describe("AutoComplete", () => {
 
 			const input = screen.getByPlaceholderText("Start typing...");
 			expect(input).toHaveClass(
-				"flex", "h-10", "w-full", "rounded-md", "border", "border-input",
-				"bg-background", "px-3", "py-2", "text-sm", "ring-offset-background"
+				"flex",
+				"h-10",
+				"w-full",
+				"rounded-md",
+				"border",
+				"border-input",
+				"bg-background",
+				"px-3",
+				"py-2",
+				"text-sm",
+				"ring-offset-background"
 			);
 		});
 	});
@@ -175,9 +230,9 @@ describe("AutoComplete", () => {
 
 			await waitFor(() => {
 				// Check for text content that includes username
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
-				expect(screen.getByText(/bob\.johnson/)).toBeInTheDocument();
-				expect(screen.queryByText(/jane\.smith/)).not.toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
+				expect(screen.getByText(BOB_JOHNSON_REGEX)).toBeInTheDocument();
+				expect(screen.queryByText(JANE_SMITH_REGEX)).not.toBeInTheDocument();
 			});
 		});
 
@@ -196,8 +251,8 @@ describe("AutoComplete", () => {
 
 			await waitFor(() => {
 				// Check for text content that includes username
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
-				expect(screen.getByText(/bob\.johnson/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
+				expect(screen.getByText(BOB_JOHNSON_REGEX)).toBeInTheDocument();
 			});
 		});
 
@@ -218,8 +273,8 @@ describe("AutoComplete", () => {
 
 			await waitFor(() => {
 				// john.doe should be excluded as it's already selected
-				expect(screen.queryByText(/john\.doe/)).not.toBeInTheDocument();
-				expect(screen.getByText(/bob\.johnson/)).toBeInTheDocument();
+				expect(screen.queryByText(JOHN_DOE_REGEX)).not.toBeInTheDocument();
+				expect(screen.getByText(BOB_JOHNSON_REGEX)).toBeInTheDocument();
 			});
 		});
 
@@ -238,8 +293,8 @@ describe("AutoComplete", () => {
 
 			await waitFor(() => {
 				// Only jane.smith should match "smith"
-				expect(screen.getByText(/jane\.smith/)).toBeInTheDocument();
-				expect(screen.queryByText(/john\.doe/)).not.toBeInTheDocument();
+				expect(screen.getByText(JANE_SMITH_REGEX)).toBeInTheDocument();
+				expect(screen.queryByText(JOHN_DOE_REGEX)).not.toBeInTheDocument();
 			});
 		});
 
@@ -277,10 +332,10 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText(/john\.doe/));
+			await user.click(screen.getByText(JOHN_DOE_REGEX));
 
 			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[0]]);
 		});
@@ -299,10 +354,10 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText(/john\.doe/));
+			await user.click(screen.getByText(JOHN_DOE_REGEX));
 
 			expect(input).toHaveValue("");
 		});
@@ -324,7 +379,7 @@ describe("AutoComplete", () => {
 				expect(screen.getByRole("listbox")).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText(/john\.doe/));
+			await user.click(screen.getByText(JOHN_DOE_REGEX));
 
 			await waitFor(() => {
 				expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
@@ -347,12 +402,15 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText(/john\.doe/));
+			await user.click(screen.getByText(JOHN_DOE_REGEX));
 
-			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[1], mockUsers[0]]);
+			expect(mockSetSelectedUsers).toHaveBeenCalledWith([
+				mockUsers[1],
+				mockUsers[0],
+			]);
 		});
 
 		it("should not add already selected user", async () => {
@@ -371,12 +429,15 @@ describe("AutoComplete", () => {
 			await user.type(input, "bob");
 
 			await waitFor(() => {
-				expect(screen.getByText(/bob\.johnson/)).toBeInTheDocument();
+				expect(screen.getByText(BOB_JOHNSON_REGEX)).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText(/bob\.johnson/));
+			await user.click(screen.getByText(BOB_JOHNSON_REGEX));
 
-			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[0], mockUsers[2]]);
+			expect(mockSetSelectedUsers).toHaveBeenCalledWith([
+				mockUsers[0],
+				mockUsers[2],
+			]);
 		});
 	});
 
@@ -395,10 +456,10 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 
-			const option = screen.getByText(/john\.doe/);
+			const option = screen.getByText(JOHN_DOE_REGEX);
 			await user.type(option, "{Enter}");
 
 			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[0]]);
@@ -418,10 +479,10 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 
-			const option = screen.getByText(/john\.doe/);
+			const option = screen.getByText(JOHN_DOE_REGEX);
 			await user.type(option, " ");
 
 			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[0]]);
@@ -472,9 +533,12 @@ describe("AutoComplete", () => {
 			expect(screen.getByRole("listbox")).toBeInTheDocument();
 
 			// After delay, should be closed
-			await waitFor(() => {
-				expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-			}, { timeout: 200 });
+			await waitFor(
+				() => {
+					expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+				},
+				{ timeout: 200 }
+			);
 		});
 	});
 
@@ -493,7 +557,9 @@ describe("AutoComplete", () => {
 			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText("john.doe (john@example.com)")).toBeInTheDocument();
+				expect(
+					screen.getByText("john.doe (john@example.com)")
+				).toBeInTheDocument();
 			});
 		});
 
@@ -511,9 +577,11 @@ describe("AutoComplete", () => {
 			await user.type(input, "charlie");
 
 			await waitFor(() => {
-				expect(screen.getByText(/charlie\.brown/)).toBeInTheDocument();
+				expect(screen.getByText(CHARLIE_BROWN_REGEX)).toBeInTheDocument();
 				// Should not have empty parentheses when email is empty
-				expect(screen.queryByText(/charlie\.brown \(\)/)).not.toBeInTheDocument();
+				expect(
+					screen.queryByText(CHARLIE_BROWN_EMPTY_EMAIL_REGEX)
+				).not.toBeInTheDocument();
 			});
 		});
 	});
@@ -535,8 +603,18 @@ describe("AutoComplete", () => {
 			await waitFor(() => {
 				const dropdown = screen.getByRole("listbox");
 				expect(dropdown).toHaveClass(
-					"absolute", "top-full", "left-0", "z-50", "mt-1", "w-full",
-					"space-y-3", "rounded-md", "bg-gray-100", "p-2", "shadow-lg", "dark:bg-slate-900"
+					"absolute",
+					"top-full",
+					"left-0",
+					"z-50",
+					"mt-1",
+					"w-full",
+					"space-y-3",
+					"rounded-md",
+					"bg-gray-100",
+					"p-2",
+					"shadow-lg",
+					"dark:bg-slate-900"
 				);
 			});
 		});
@@ -591,12 +669,19 @@ describe("AutoComplete", () => {
 				/>
 			);
 
-			expect(screen.getByPlaceholderText("Start typing...")).toBeInTheDocument();
+			expect(
+				screen.getByPlaceholderText("Start typing...")
+			).toBeInTheDocument();
 		});
 
 		it("should handle options with missing properties", async () => {
 			const incompleteUsers = [
-				{ id: 1, username: "incomplete", email: "", name: "" },
+				{
+					id: 1,
+					username: "incomplete",
+					email: "",
+					createdAt: "2024-01-01T00:00:00Z",
+				},
 			] as User[];
 
 			const user = userEvent.setup();
@@ -612,13 +697,20 @@ describe("AutoComplete", () => {
 			await user.type(input, "incomplete");
 
 			await waitFor(() => {
-				expect(screen.getByText(/incomplete/)).toBeInTheDocument();
+				expect(screen.getByText(INCOMPLETE_REGEX)).toBeInTheDocument();
 			});
 		});
 
 		it("should handle special characters in search", async () => {
 			const specialUsers = [
-				{ id: 1, username: "user@special", email: "test@example.com", name: "Special User" },
+				{
+					id: 1,
+					username: "user@special",
+					email: "test@example.com",
+					firstName: "Special",
+					lastName: "User",
+					createdAt: "2024-01-01T00:00:00Z",
+				},
 			] as User[];
 
 			const user = userEvent.setup();
@@ -634,7 +726,7 @@ describe("AutoComplete", () => {
 			await user.type(input, "@special");
 
 			await waitFor(() => {
-				expect(screen.getByText(/user@special/)).toBeInTheDocument();
+				expect(screen.getByText(USER_SPECIAL_REGEX)).toBeInTheDocument();
 			});
 		});
 
@@ -651,17 +743,24 @@ describe("AutoComplete", () => {
 			const input = screen.getByPlaceholderText("Start typing...");
 
 			// Type rapidly
-			await user.type(input, "john", { delay: 1 });
+			await user.type(input, "john");
 
 			await waitFor(() => {
-				expect(screen.getByText(/john\.doe/)).toBeInTheDocument();
+				expect(screen.getByText(JOHN_DOE_REGEX)).toBeInTheDocument();
 			});
 		});
 
 		it("should handle selection of user with duplicate username", async () => {
 			const duplicateUsers = [
 				...mockUsers,
-				{ id: 6, username: "john.doe", email: "john2@example.com", name: "John Doe 2" },
+				{
+					id: 6,
+					username: "john.doe",
+					email: "john2@example.com",
+					firstName: "John",
+					lastName: "Doe 2",
+					createdAt: "2024-01-01T00:00:00Z",
+				},
 			] as User[];
 
 			const user = userEvent.setup();
@@ -677,12 +776,12 @@ describe("AutoComplete", () => {
 			await user.type(input, "john.doe");
 
 			await waitFor(() => {
-				const options = screen.getAllByText(/john\.doe/);
+				const options = screen.getAllByText(JOHN_DOE_REGEX);
 				expect(options).toHaveLength(2);
 			});
 
 			// Click the first option which includes the email
-			const firstOption = screen.getAllByText(/john\.doe/)[0];
+			const firstOption = screen.getAllByText(JOHN_DOE_REGEX)[0];
 			await user.click(firstOption);
 
 			expect(mockSetSelectedUsers).toHaveBeenCalledWith([mockUsers[0]]);

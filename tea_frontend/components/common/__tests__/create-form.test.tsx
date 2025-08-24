@@ -7,6 +7,10 @@ import {
 } from "@/src/__tests__/utils/test-utils";
 import CreateForm from "../create-form";
 
+// Regex constants
+const DESCRIPTION_PATTERN = /description/i;
+const CREATE_GOAL_PATTERN = /create goal/i;
+
 // Mock the store
 const mockStore = {
 	assuranceCase: {
@@ -56,8 +60,10 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: /create goal/i })).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_PATTERN)).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: CREATE_GOAL_PATTERN })
+			).toBeInTheDocument();
 		});
 
 		it("should render form with proper structure", () => {
@@ -69,7 +75,9 @@ describe("CreateForm", () => {
 			);
 
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
-			expect(screen.getByPlaceholderText("Type your message here.")).toBeInTheDocument();
+			expect(
+				screen.getByPlaceholderText("Type your message here.")
+			).toBeInTheDocument();
 		});
 
 		it("should have empty default values", () => {
@@ -80,7 +88,7 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			expect(descriptionInput).toHaveValue("");
 		});
 	});
@@ -96,10 +104,12 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, "A");
 
-			const createButton = screen.getByRole("button", { name: /create goal/i });
+			const createButton = screen.getByRole("button", {
+				name: CREATE_GOAL_PATTERN,
+			});
 			await user.click(createButton);
 
 			await waitFor(() => {
@@ -119,10 +129,12 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, "Valid test description");
 
-			const createButton = screen.getByRole("button", { name: /create goal/i });
+			const createButton = screen.getByRole("button", {
+				name: CREATE_GOAL_PATTERN,
+			});
 			await user.click(createButton);
 
 			// Should not show validation error
@@ -143,10 +155,12 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, "Test goal description");
 
-			const createButton = screen.getByRole("button", { name: /create goal/i });
+			const createButton = screen.getByRole("button", {
+				name: CREATE_GOAL_PATTERN,
+			});
 			await user.click(createButton);
 
 			// The form should submit successfully with mocked functions
@@ -165,10 +179,12 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, "Test goal description");
 
-			const createButton = screen.getByRole("button", { name: /create goal/i });
+			const createButton = screen.getByRole("button", {
+				name: CREATE_GOAL_PATTERN,
+			});
 			await user.click(createButton);
 
 			await waitFor(() => {
@@ -188,7 +204,7 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, "Test");
 
 			await waitFor(() => {
@@ -206,7 +222,7 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			expect(descriptionInput).toBeInTheDocument();
 		});
 
@@ -218,7 +234,9 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const createButton = screen.getByRole("button", { name: /create goal/i });
+			const createButton = screen.getByRole("button", {
+				name: CREATE_GOAL_PATTERN,
+			});
 			expect(createButton).toBeEnabled();
 			expect(createButton).toHaveClass("bg-indigo-500");
 		});
@@ -236,7 +254,7 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, longDescription);
 
 			expect(descriptionInput).toHaveValue(longDescription);
@@ -253,7 +271,7 @@ describe("CreateForm", () => {
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_PATTERN);
 			await user.type(descriptionInput, specialChars);
 
 			expect(descriptionInput).toHaveValue(specialChars);

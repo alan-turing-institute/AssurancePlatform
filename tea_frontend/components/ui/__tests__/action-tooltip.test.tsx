@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import ActionTooltip from "../action-tooltip";
 
 // Mock the tooltip components
@@ -15,7 +15,7 @@ vi.mock("../tooltip", () => ({
 		<div data-testid="tooltip-provider">{children}</div>
 	),
 	TooltipTrigger: ({ children, asChild }: any) => (
-		<div data-testid="tooltip-trigger" data-as-child={asChild}>
+		<div data-as-child={asChild} data-testid="tooltip-trigger">
 			{children}
 		</div>
 	),
@@ -34,7 +34,9 @@ describe("ActionTooltip", () => {
 			expect(screen.getByTestId("tooltip")).toBeInTheDocument();
 			expect(screen.getByTestId("tooltip-trigger")).toBeInTheDocument();
 			expect(screen.getByTestId("tooltip-content")).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Test Button" })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "Test Button" })
+			).toBeInTheDocument();
 		});
 
 		it("should render label text in tooltip content", () => {
@@ -117,7 +119,8 @@ describe("ActionTooltip", () => {
 		});
 
 		it("should handle long labels", () => {
-			const longLabel = "This is a very long tooltip label that contains a lot of text to test how the component handles lengthy descriptions.";
+			const longLabel =
+				"This is a very long tooltip label that contains a lot of text to test how the component handles lengthy descriptions.";
 
 			render(
 				<ActionTooltip label={longLabel}>
@@ -129,7 +132,8 @@ describe("ActionTooltip", () => {
 		});
 
 		it("should handle labels with special characters", () => {
-			const specialLabel = "Special chars: @#$%^&*()_+{}|:<>?[]\\;'\",./ and émojis 🎉";
+			const specialLabel =
+				"Special chars: @#$%^&*()_+{}|:<>?[]\\;'\",./ and émojis 🎉";
 
 			render(
 				<ActionTooltip label={specialLabel}>
@@ -167,7 +171,9 @@ describe("ActionTooltip", () => {
 				</ActionTooltip>
 			);
 
-			const paragraphElement = screen.getByTestId("tooltip-content").querySelector("p");
+			const paragraphElement = screen
+				.getByTestId("tooltip-content")
+				.querySelector("p");
 			expect(paragraphElement).toBeInTheDocument();
 			expect(paragraphElement).toHaveTextContent("Test tooltip");
 		});
@@ -219,9 +225,7 @@ describe("ActionTooltip", () => {
 	describe("Edge Cases", () => {
 		it("should handle null children gracefully", () => {
 			render(
-				<ActionTooltip label="Null children tooltip">
-					{null}
-				</ActionTooltip>
+				<ActionTooltip label="Null children tooltip">{null}</ActionTooltip>
 			);
 
 			expect(screen.getByTestId("tooltip-provider")).toBeInTheDocument();
@@ -241,9 +245,7 @@ describe("ActionTooltip", () => {
 
 		it("should handle text-only children", () => {
 			render(
-				<ActionTooltip label="Text tooltip">
-					Plain text child
-				</ActionTooltip>
+				<ActionTooltip label="Text tooltip">Plain text child</ActionTooltip>
 			);
 
 			expect(screen.getByText("Plain text child")).toBeInTheDocument();
@@ -264,8 +266,12 @@ describe("ActionTooltip", () => {
 			);
 
 			expect(screen.getByText("Outer span")).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Nested button" })).toBeInTheDocument();
-			expect(screen.getByRole("link", { name: "Nested link" })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "Nested button" })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Nested link" })
+			).toBeInTheDocument();
 			expect(screen.getByRole("tooltip")).toBeInTheDocument();
 		});
 
@@ -295,7 +301,9 @@ describe("ActionTooltip", () => {
 				</ActionTooltip>
 			);
 
-			expect(screen.getByRole("button", { name: "First button" })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "First button" })
+			).toBeInTheDocument();
 
 			rerender(
 				<ActionTooltip label="Consistent label">
@@ -361,7 +369,7 @@ describe("ActionTooltip", () => {
 				</ActionTooltip>
 			);
 
-			const initialProvider = screen.getByTestId("tooltip-provider");
+			const _initialProvider = screen.getByTestId("tooltip-provider");
 
 			// Re-render with same props
 			rerender(

@@ -25,10 +25,7 @@
       "*.mjs",
       "!**/*.min.js",
       "!**/node_modules/**",
-      "!**/.next/**",
-      "!**/__tests__/**",
-      "!**/*.test.*",
-      "!**/*.spec.*"
+      "!**/.next/**"
     ]
   },
   "formatter": {

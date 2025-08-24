@@ -1,12 +1,25 @@
 import "@testing-library/jest-dom";
-import * as matchers from "@testing-library/jest-dom/matchers";
+import {
+	toBeInTheDocument,
+	toHaveAttribute,
+	toHaveClass,
+	toHaveTextContent,
+} from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
 import type React from "react";
 import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 import { server } from "./mocks/server";
 
+const matchers = {
+	toBeInTheDocument,
+	toHaveAttribute,
+	toHaveClass,
+	toHaveTextContent,
+};
+
 // Set up environment variables for tests
-process.env.NEXT_PUBLIC_API_URL = "http://localhost:8000";
+// Note: Removed global env var setting to allow individual tests to control their environment
+// process.env.NEXT_PUBLIC_API_URL = "http://localhost:8000";
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
@@ -16,7 +29,7 @@ beforeAll(() => {
 	server.listen({ onUnhandledRequest: "warn" });
 
 	// Set up a base URL for relative fetch requests
-	const url = new URL('http://localhost:3000');
+	const url = new URL("http://localhost:3000");
 	const mockLocation = {
 		href: url.href,
 		origin: url.origin,
@@ -30,13 +43,13 @@ beforeAll(() => {
 		reload: vi.fn(),
 		replace: vi.fn(),
 		assign: vi.fn(),
-		toString: () => url.toString()
+		toString: () => url.toString(),
 	};
 
-	Object.defineProperty(window, 'location', {
+	Object.defineProperty(window, "location", {
 		value: mockLocation,
 		writable: true,
-		configurable: true
+		configurable: true,
 	});
 });
 
@@ -68,10 +81,23 @@ vi.mock("next/navigation", () => ({
 
 // Mock Next.js image component
 vi.mock("next/image", () => ({
-	default: (props: any) => {
+	default: (props: {
+		fill?: boolean;
+		priority?: boolean;
+		quality?: number;
+		placeholder?: string;
+		blurDataURL?: string;
+		[key: string]: unknown;
+	}) => {
 		// Filter out Next.js specific props that aren't valid for HTML img element
-		const { fill, priority, quality, placeholder, blurDataURL, ...imgProps } =
-			props;
+		const {
+			fill: _fill,
+			priority: _priority,
+			quality: _quality,
+			placeholder: _placeholder,
+			blurDataURL: _blurDataURL,
+			...imgProps
+		} = props;
 		// eslint-disable-next-line @next/next/no-img-element
 		// biome-ignore lint/performance/noImgElement: This is a test mock for Next.js Image component
 		return <img alt="" {...imgProps} />;
@@ -363,7 +389,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 // Mock window.matchMedia
 Object.defineProperty(window, "matchMedia", {
 	writable: true,
-	value: vi.fn().mockImplementation((query) => ({
+	value: vi.fn().mockImplementation((query: string) => ({
 		matches: false,
 		media: query,
 		onchange: null,
@@ -374,6 +400,22 @@ Object.defineProperty(window, "matchMedia", {
 		dispatchEvent: vi.fn(),
 	})),
 });
+
+// Mock window.getComputedStyle for axe-core
+const originalGetComputedStyle = window.getComputedStyle;
+window.getComputedStyle = vi
+	.fn()
+	.mockImplementation((element: Element, pseudoElt?: string | null) => {
+		// Return empty object for pseudo elements (not supported in jsdom)
+		if (pseudoElt) {
+			return {
+				getPropertyValue: () => "",
+				length: 0,
+			};
+		}
+		// Use the original getComputedStyle for regular elements
+		return originalGetComputedStyle(element);
+	});
 
 // Add missing pointer event methods to HTMLElement prototype
 if (!HTMLElement.prototype.hasPointerCapture) {
@@ -397,11 +439,13 @@ if (!Element.prototype.scrollIntoView) {
 if (typeof HTMLDialogElement !== "undefined") {
 	HTMLDialogElement.prototype.showModal = vi.fn(function (
 		this: HTMLDialogElement
-	) {
+	): void {
 		this.open = true;
 		this.setAttribute("open", "");
 	});
-	HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+	HTMLDialogElement.prototype.close = vi.fn(function (
+		this: HTMLDialogElement
+	): void {
 		this.open = false;
 		this.removeAttribute("open");
 	});
@@ -509,9 +553,20 @@ vi.mock("@radix-ui/react-menu", async () => {
 	};
 });
 
-
 // Add DragEvent polyfill for file testing
 if (typeof global.DragEvent === "undefined") {
+	interface MockDragEventInit extends EventInit {
+		dataTransfer?: DataTransfer | null;
+		clientX?: number;
+		clientY?: number;
+		screenX?: number;
+		screenY?: number;
+		ctrlKey?: boolean;
+		shiftKey?: boolean;
+		altKey?: boolean;
+		metaKey?: boolean;
+	}
+
 	global.DragEvent = class MockDragEvent extends Event {
 		dataTransfer: DataTransfer | null;
 		clientX: number;
@@ -523,7 +578,7 @@ if (typeof global.DragEvent === "undefined") {
 		altKey: boolean;
 		metaKey: boolean;
 
-		constructor(type: string, eventInitDict?: DragEventInit) {
+		constructor(type: string, eventInitDict?: MockDragEventInit) {
 			super(type, eventInitDict);
 			this.dataTransfer = eventInitDict?.dataTransfer || null;
 			this.clientX = eventInitDict?.clientX || 0;
@@ -535,7 +590,7 @@ if (typeof global.DragEvent === "undefined") {
 			this.altKey = eventInitDict?.altKey ?? false;
 			this.metaKey = eventInitDict?.metaKey ?? false;
 		}
-	} as any;
+	} as unknown as typeof DragEvent;
 }
 
 // Mock canvas context for ReactFlow

@@ -1,7 +1,23 @@
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, act } from "@/src/__tests__/utils/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
+import { render, screen, waitFor } from "@/src/__tests__/utils/test-utils";
 import { DeleteForm } from "../delete-form";
+
+// Constants for regex patterns used in tests
+const DELETE_BUTTON_REGEX = /yes, delete my account/i;
+const NO_LONGER_WANT_REGEX = /No longer want to use our service/;
+
+// Type definitions
+interface AlertModalProps {
+	isOpen: boolean;
+	loading: boolean;
+	message: string;
+	cancelButtonText: string;
+	confirmButtonText: string;
+	onClose: () => void;
+	onConfirm: () => Promise<void> | void;
+}
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -24,13 +40,15 @@ vi.mock("next/navigation", async (importOriginal) => {
 const mockUseSession = vi.fn();
 vi.mock("next-auth/react", () => ({
 	useSession: () => mockUseSession(),
-	SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+	SessionProvider: ({ children }: { children: React.ReactNode }) => (
+		<>{children}</>
+	),
 }));
 
 // Mock the AlertModal component
 const mockAlertModal = vi.fn();
 vi.mock("@/components/modals/alert-modal", () => ({
-	AlertModal: (props: any) => {
+	AlertModal: (props: AlertModalProps) => {
 		mockAlertModal(props);
 
 		// Create a click handler that properly handles async onConfirm
@@ -53,9 +71,9 @@ vi.mock("@/components/modals/alert-modal", () => ({
 				</button>
 				<button
 					data-testid="confirm-button"
+					disabled={props.loading}
 					onClick={handleConfirmClick}
 					type="button"
-					disabled={props.loading}
 				>
 					{props.confirmButtonText}
 				</button>
@@ -75,19 +93,22 @@ const mockFetch = vi.fn();
 // Store original fetch
 const originalFetch = global.fetch;
 // Replace global fetch
-global.fetch = mockFetch as any;
+global.fetch = mockFetch as typeof fetch;
 
 describe("DeleteForm", () => {
 	const mockUser = {
 		id: 123,
 		username: "testuser",
 		email: "test@example.com",
+		createdAt: "2024-01-01T00:00:00Z",
 	};
 
 	const mockSession = {
 		key: "test-session-key",
 		user: { id: "123" },
 	};
+
+	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -97,15 +118,22 @@ describe("DeleteForm", () => {
 			status: "authenticated",
 		});
 
-		// Set up environment variables
-		process.env.NEXT_PUBLIC_API_URL = "https://api.example.com";
-		process.env.NEXT_PUBLIC_API_URL_STAGING = "https://staging.example.com";
+		// Set up environment variables for all tests in this suite
+		cleanupEnv = setupEnvVars({
+			NEXT_PUBLIC_API_URL: "https://api.example.com",
+			NEXT_PUBLIC_API_URL_STAGING: "https://staging.example.com",
+		});
 
 		// Ensure fetch is mocked
-		global.fetch = mockFetch as any;
+		global.fetch = mockFetch as typeof fetch;
 	});
 
 	afterEach(() => {
+		// Restore environment variables
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
+
 		// Restore original fetch if needed
 		if (originalFetch) {
 			global.fetch = originalFetch;
@@ -117,13 +145,15 @@ describe("DeleteForm", () => {
 			render(<DeleteForm user={mockUser} />);
 
 			expect(screen.getByText("Delete account")).toBeInTheDocument();
-			expect(screen.getByText(/No longer want to use our service/)).toBeInTheDocument();
+			expect(screen.getByText(NO_LONGER_WANT_REGEX)).toBeInTheDocument();
 		});
 
 		it("should render the delete button", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toBeInTheDocument();
 		});
 
@@ -160,7 +190,7 @@ describe("DeleteForm", () => {
 		it("should have proper description styling", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const description = screen.getByText(/No longer want to use our service/);
+			const description = screen.getByText(NO_LONGER_WANT_REGEX);
 			expect(description).toHaveClass(
 				"mt-1",
 				"text-gray-400",
@@ -172,7 +202,9 @@ describe("DeleteForm", () => {
 		it("should have proper delete button styling", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toHaveClass(
 				"rounded-md",
 				"bg-red-500",
@@ -198,7 +230,9 @@ describe("DeleteForm", () => {
 			const user = userEvent.setup();
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			expect(screen.getByTestId("alert-modal")).toBeInTheDocument();
@@ -208,16 +242,19 @@ describe("DeleteForm", () => {
 			const user = userEvent.setup();
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			expect(mockAlertModal).toHaveBeenCalledWith(
 				expect.objectContaining({
 					isOpen: true,
 					loading: false,
-					message: "Are you sure you want to delete your account? This will sign you out immediatley.",
+					message:
+						"Are you sure you want to delete your account? This will sign you out immediatley.",
 					cancelButtonText: "No, keep my account",
-					confirmButtonText: "Yes, delete my account!"
+					confirmButtonText: "Yes, delete my account!",
 				})
 			);
 		});
@@ -227,7 +264,9 @@ describe("DeleteForm", () => {
 			render(<DeleteForm user={mockUser} />);
 
 			// Open modal
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			expect(screen.getByTestId("alert-modal")).toBeInTheDocument();
@@ -245,7 +284,9 @@ describe("DeleteForm", () => {
 			const user = userEvent.setup();
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const modalMessage = screen.getByTestId("modal-message");
@@ -266,7 +307,9 @@ describe("DeleteForm", () => {
 			render(<DeleteForm user={mockUser} />);
 
 			// Open modal and confirm deletion
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			// Verify modal is open
@@ -293,9 +336,12 @@ describe("DeleteForm", () => {
 
 		it("should use staging URL when primary URL is not available", async () => {
 			const user = userEvent.setup();
-			// Use delete to properly remove the environment variable
-			delete process.env.NEXT_PUBLIC_API_URL;
-			process.env.NEXT_PUBLIC_API_URL_STAGING = "https://staging.example.com";
+
+			// Temporarily override env vars for this test
+			const restoreEnv = setupEnvVars({
+				NEXT_PUBLIC_API_URL: undefined,
+				NEXT_PUBLIC_API_URL_STAGING: "https://staging.example.com",
+			});
 
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
@@ -304,7 +350,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -316,6 +364,9 @@ describe("DeleteForm", () => {
 					expect.any(Object)
 				);
 			});
+
+			// Restore environment
+			restoreEnv();
 		});
 
 		it("should redirect to login on successful deletion", async () => {
@@ -327,7 +378,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -347,7 +400,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -369,7 +424,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -390,7 +447,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -414,7 +473,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -438,7 +499,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			// Should still render and be clickable
@@ -459,7 +522,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -481,17 +546,23 @@ describe("DeleteForm", () => {
 	describe("Form Behavior", () => {
 		it("should prevent default form submission", async () => {
 			const user = userEvent.setup();
-			const mockPreventDefault = vi.fn();
+			const _mockPreventDefault = vi.fn();
 
 			render(<DeleteForm user={mockUser} />);
 
-			const form = screen.getByRole("button", { name: /yes, delete my account/i }).closest("form");
+			const form = screen
+				.getByRole("button", { name: DELETE_BUTTON_REGEX })
+				.closest("form");
 
 			// Simulate form submission
-			form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+			form?.dispatchEvent(
+				new Event("submit", { bubbles: true, cancelable: true })
+			);
 
 			// The button click should prevent default form submission
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			// Modal should open instead of form submitting
@@ -501,14 +572,18 @@ describe("DeleteForm", () => {
 		it("should have proper form structure", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const form = screen.getByRole("button", { name: /yes, delete my account/i }).closest("form");
+			const form = screen
+				.getByRole("button", { name: DELETE_BUTTON_REGEX })
+				.closest("form");
 			expect(form).toHaveClass("flex", "items-start", "md:col-span-2");
 		});
 
 		it("should have proper button type", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toHaveAttribute("type", "submit");
 		});
 	});
@@ -525,7 +600,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={differentUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -541,7 +618,7 @@ describe("DeleteForm", () => {
 
 		it("should handle string user IDs", async () => {
 			const user = userEvent.setup();
-			const stringIdUser = { ...mockUser, id: "789" };
+			const stringIdUser = { ...mockUser, id: 789 };
 
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
@@ -550,7 +627,9 @@ describe("DeleteForm", () => {
 
 			render(<DeleteForm user={stringIdUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.click(deleteButton);
 
 			const confirmButton = screen.getByTestId("confirm-button");
@@ -576,7 +655,9 @@ describe("DeleteForm", () => {
 		it("should have descriptive button text", () => {
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			expect(deleteButton).toBeInTheDocument();
 		});
 
@@ -584,7 +665,9 @@ describe("DeleteForm", () => {
 			const user = userEvent.setup();
 			render(<DeleteForm user={mockUser} />);
 
-			const deleteButton = screen.getByRole("button", { name: /yes, delete my account/i });
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_BUTTON_REGEX,
+			});
 			await user.tab();
 
 			expect(deleteButton).toHaveFocus();

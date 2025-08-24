@@ -2,13 +2,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
 	AssuranceCase,
 	Context,
+	Evidence,
 	Goal,
 	PropertyClaim,
 	Strategy,
 } from "@/types";
 import type { NestedArrayItem, ReactFlowNode } from "../case-helper";
 
+// Import CaseNode interface to use in tests
+interface CaseNode {
+	hidden: boolean;
+	id: number;
+	type: string;
+	name?: string;
+	goals?: Goal[];
+	context?: Context[];
+	property_claims?: PropertyClaim[];
+	strategies?: Strategy[];
+	evidence?: Evidence[];
+	childrenHidden?: boolean;
+	originalHidden?: boolean;
+	[key: string]: unknown;
+}
+
 import {
+	addElementComment,
 	addEvidenceToClaim,
 	addHiddenProp,
 	addPropertyClaimToNested,
@@ -32,6 +50,7 @@ import {
 	toggleHiddenForParent,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
+	updateElementComment,
 	updateEvidenceNested,
 	updateEvidenceNestedMove,
 	updatePropertyClaimNested,
@@ -1558,8 +1577,8 @@ describe("case-helper utilities", () => {
 
 		it("should find target node by id", () => {
 			const [foundNode, parentMap] = searchWithDeepFirst(
-				mockTargetNode,
-				mockAssuranceCase
+				mockTargetNode as CaseNode & { hidden: boolean },
+				mockAssuranceCase as unknown as CaseNode
 			);
 			// The function returns the found node or null
 			expect(foundNode).toBeDefined();
@@ -1569,8 +1588,8 @@ describe("case-helper utilities", () => {
 		it("should return null for non-existent target", () => {
 			const nonExistentTarget = { id: 999, hidden: false, type: "Goal" };
 			const [foundNode, parentMap] = searchWithDeepFirst(
-				nonExistentTarget,
-				mockAssuranceCase
+				nonExistentTarget as CaseNode & { hidden: boolean },
+				mockAssuranceCase as unknown as CaseNode
 			);
 			expect(foundNode).toBeNull();
 			expect(typeof parentMap).toBe("object");
@@ -1587,8 +1606,8 @@ describe("case-helper utilities", () => {
 				evidence: [],
 			};
 			const [foundNode, parentMap] = searchWithDeepFirst(
-				mockTargetNode,
-				emptyCase
+				mockTargetNode as CaseNode & { hidden: boolean },
+				emptyCase as unknown as CaseNode
 			);
 			expect(foundNode).toBeNull();
 			expect(typeof parentMap).toBe("object");
@@ -1698,7 +1717,15 @@ describe("case-helper utilities", () => {
 				...mockAssuranceCase,
 				goals: [
 					{
-						...mockAssuranceCase.goals![0],
+						id: 1,
+						type: "Goal",
+						name: "Test Goal",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						strategies: [],
 						property_claims: [
 							{
 								id: 2,
@@ -1743,7 +1770,13 @@ describe("case-helper utilities", () => {
 				...mockAssuranceCase,
 				goals: [
 					{
-						...mockAssuranceCase.goals![0],
+						id: 1,
+						type: "Goal",
+						name: "Test Goal",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
 						property_claims: [],
 						strategies: [],
 						context: [],
@@ -1791,19 +1824,19 @@ describe("case-helper utilities", () => {
 		};
 
 		it("should find element by id", () => {
-			const result = findElementById(mockData, 3);
+			const result = findElementById(mockData as unknown as AssuranceCase, 3);
 			expect(result?.id).toBe(3);
 			expect(result?.name).toBe("Grandchild Claim");
 		});
 
 		it("should find strategy by id", () => {
-			const result = findElementById(mockData, 4);
+			const result = findElementById(mockData as unknown as AssuranceCase, 4);
 			expect(result?.id).toBe(4);
 			expect(result?.name).toBe("Test Strategy");
 		});
 
 		it("should return null for non-existent id", () => {
-			const result = findElementById(mockData, 999);
+			const result = findElementById(mockData as unknown as AssuranceCase, 999);
 			expect(result).toBeNull();
 		});
 
@@ -1817,7 +1850,7 @@ describe("case-helper utilities", () => {
 				context: [],
 				evidence: [],
 			};
-			const result = findElementById(emptyData, 1);
+			const result = findElementById(emptyData as unknown as AssuranceCase, 1);
 			expect(result).toBeNull();
 		});
 	});
@@ -1837,7 +1870,9 @@ describe("case-helper utilities", () => {
 		};
 
 		it("should return children hidden status", () => {
-			const result = getChildrenHiddenStatus(mockNode);
+			const result = getChildrenHiddenStatus(
+				mockNode as unknown as AssuranceCase | NestedArrayItem
+			);
 			expect(result).toBeDefined();
 			expect(typeof result).toBe("object");
 		});
@@ -1849,7 +1884,9 @@ describe("case-helper utilities", () => {
 				name: "Empty Goal",
 			};
 
-			const result = getChildrenHiddenStatus(emptyNode);
+			const result = getChildrenHiddenStatus(
+				emptyNode as unknown as AssuranceCase | NestedArrayItem
+			);
 			expect(result).toBeDefined();
 		});
 
@@ -1857,8 +1894,18 @@ describe("case-helper utilities", () => {
 			const minimalNode = {
 				id: 1,
 				type: "Goal",
+				name: "Minimal Goal",
+				short_description: "Test",
+				long_description: "Test goal",
+				keywords: "test",
+				assurance_case_id: 1,
+				context: [],
+				property_claims: [],
+				strategies: [],
 			};
-			const result = getChildrenHiddenStatus(minimalNode);
+			const result = getChildrenHiddenStatus(
+				minimalNode as unknown as AssuranceCase | NestedArrayItem
+			);
 			expect(result).toBeDefined();
 		});
 	});
@@ -1881,7 +1928,9 @@ describe("case-helper utilities", () => {
 			];
 
 			// Test that the function exists and doesn't throw on basic usage
-			expect(() => findSiblingHiddenState(mockData, 1)).not.toThrow();
+			expect(() =>
+				findSiblingHiddenState(mockData as unknown as AssuranceCase, 1)
+			).not.toThrow();
 
 			// These functions exist and are tested elsewhere, so just verify they're callable
 			expect(typeof removeAssuranceCaseNode).toBe("function");
@@ -2036,6 +2085,633 @@ describe("case-helper utilities", () => {
 			const addResult = addEvidenceToClaim(complexGoals, 2, newEvidence);
 			expect(addResult).toBe(true);
 			expect(complexGoals[0].property_claims[0].evidence).toHaveLength(1);
+		});
+	});
+
+	describe("removeAssuranceCaseNode", () => {
+		it("should remove a goal from assurance case", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [
+					{
+						id: 1,
+						type: "Goal",
+						name: "Goal 1",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						property_claims: [],
+						strategies: [],
+					},
+					{
+						id: 2,
+						type: "Goal",
+						name: "Goal 2",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						property_claims: [],
+						strategies: [],
+					},
+				],
+			};
+
+			const result = removeAssuranceCaseNode(assuranceCase, 1, "Goal");
+			expect(result.goals).toHaveLength(1);
+			expect(result.goals?.[0]?.id).toBe(2);
+		});
+
+		it("should remove nested property claim", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [
+					{
+						id: 1,
+						type: "Goal",
+						name: "Goal 1",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						property_claims: [
+							{
+								id: 10,
+								type: "PropertyClaim",
+								name: "Claim 1",
+								short_description: "",
+								long_description: "",
+								goal_id: 1,
+								property_claim_id: null,
+								level: 1,
+								claim_type: "claim",
+								property_claims: [],
+								evidence: [],
+								strategy_id: null,
+							},
+						],
+						strategies: [],
+					},
+				],
+			};
+
+			const result = removeAssuranceCaseNode(
+				assuranceCase,
+				10,
+				"PropertyClaim"
+			);
+			expect(result.goals?.[0]?.property_claims).toHaveLength(0);
+		});
+
+		it("should handle removing non-existent node", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [],
+			};
+
+			const result = removeAssuranceCaseNode(assuranceCase, 999, "Goal");
+			expect(result).toEqual(assuranceCase);
+		});
+	});
+
+	describe("findSiblingHiddenState", () => {
+		it("should find hidden state from siblings", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [
+					{
+						id: 1,
+						type: "Goal",
+						name: "Goal 1",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						property_claims: [],
+						strategies: [],
+						hidden: false,
+					},
+				],
+			};
+
+			// When element has no children, it returns the element's own hidden state
+			const result = findSiblingHiddenState(assuranceCase, 1);
+			expect(result).toBe(false);
+		});
+
+		it("should return parent hidden state when no children", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [
+					{
+						id: 1,
+						type: "Goal",
+						name: "Goal 1",
+						short_description: "",
+						long_description: "",
+						keywords: "",
+						assurance_case_id: 1,
+						context: [],
+						property_claims: [],
+						strategies: [],
+						hidden: false,
+					},
+				],
+			};
+
+			const result = findSiblingHiddenState(assuranceCase, 1);
+			expect(result).toBe(false);
+		});
+
+		it("should handle non-existent element", () => {
+			const assuranceCase: AssuranceCase = {
+				id: 1,
+				name: "Test Case",
+				type: "AssuranceCase",
+				description: "Test",
+				created_date: new Date().toISOString(),
+				lock_uuid: null,
+				comments: [],
+				permissions: [],
+				goals: [],
+			};
+
+			const result = findSiblingHiddenState(assuranceCase, 999);
+			expect(result).toBeUndefined();
+		});
+	});
+
+	describe("findParentNode", () => {
+		const createNode = (
+			id: string,
+			type: string,
+			data: { id: number; name: string; type: string; [key: string]: unknown }
+		): ReactFlowNode => ({
+			id,
+			type,
+			data,
+			position: { x: 0, y: 0 },
+		});
+
+		it("should find parent goal for node with goal_id", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "goal", { id: 1, name: "Goal 1", type: "goal" }),
+				createNode("2", "property", {
+					id: 2,
+					name: "Property 2",
+					type: "property",
+					goal_id: 1,
+				}),
+			];
+
+			const result = findParentNode(nodes, nodes[1]);
+			expect(result).toEqual(nodes[0]);
+		});
+
+		it("should find parent property claim for evidence", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "property", {
+					id: 10,
+					name: "Claim 1",
+					type: "property",
+				}),
+				createNode("2", "evidence", {
+					id: 20,
+					name: "Evidence 20",
+					type: "evidence",
+					property_claim_id: [10],
+				}),
+			];
+
+			const result = findParentNode(nodes, nodes[1]);
+			expect(result).toEqual(nodes[0]);
+		});
+
+		it("should find parent property claim for nested claim", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "property", {
+					id: 10,
+					name: "Parent Claim",
+					type: "property",
+				}),
+				createNode("2", "property", {
+					id: 11,
+					name: "Child Claim",
+					type: "property",
+					property_claim_id: 10,
+				}),
+			];
+
+			const result = findParentNode(nodes, nodes[1]);
+			expect(result).toEqual(nodes[0]);
+		});
+
+		it("should find parent strategy", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "strategy", {
+					id: 30,
+					name: "Strategy 1",
+					type: "strategy",
+				}),
+				createNode("2", "property", {
+					id: 31,
+					name: "Property 31",
+					type: "property",
+					strategy_id: 30,
+				}),
+			];
+
+			const result = findParentNode(nodes, nodes[1]);
+			expect(result).toEqual(nodes[0]);
+		});
+
+		it("should return null when parent not found", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "goal", { id: 1, name: "Goal 1", type: "goal" }),
+				createNode("2", "property", {
+					id: 2,
+					name: "Property 2",
+					type: "property",
+					goal_id: 999,
+				}),
+			];
+
+			const result = findParentNode(nodes, nodes[1]);
+			expect(result).toBeNull();
+		});
+
+		it("should return null for node without parent references", () => {
+			const nodes: ReactFlowNode[] = [
+				createNode("1", "goal", { id: 1, name: "Goal 1", type: "goal" }),
+			];
+
+			const result = findParentNode(nodes, nodes[0]);
+			expect(result).toBeNull();
+		});
+	});
+
+	describe("detachCaseElement", () => {
+		beforeEach(() => {
+			vi.clearAllMocks();
+			global.fetch = vi.fn();
+		});
+
+		it("should detach element successfully", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "property",
+				data: { id: 10, name: "Test Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true }),
+			});
+
+			const result = await detachCaseElement(
+				mockNode,
+				"property",
+				10,
+				"test-token"
+			);
+			expect(result).toEqual({ detached: true });
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/propertyclaims/10/detach`,
+				expect.objectContaining({
+					method: "POST",
+					headers: expect.objectContaining({
+						Authorization: "Token test-token",
+					}),
+				})
+			);
+		});
+
+		it("should handle API error", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "property",
+				data: { id: 10, name: "Test Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: false,
+				status: 400,
+			});
+
+			const result = await detachCaseElement(
+				mockNode,
+				"property",
+				10,
+				"test-token"
+			);
+			expect(result).toEqual({ error: "Something went wrong 400" });
+		});
+
+		it("should handle network error", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "property",
+				data: { id: 10, name: "Test Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			const error = new Error("Network error");
+			(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
+
+			const result = await detachCaseElement(
+				mockNode,
+				"property",
+				10,
+				"test-token"
+			);
+			expect(result).toEqual({ error });
+		});
+	});
+
+	describe("attachCaseElement", () => {
+		beforeEach(() => {
+			vi.clearAllMocks();
+			global.fetch = vi.fn();
+		});
+
+		it("should attach element to goal", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "propertyclaim",
+				data: { id: 10, name: "Test Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			const parentNode: ReactFlowNode = {
+				id: "2",
+				type: "goal",
+				data: { id: 1, name: "Parent Goal", type: "goal" },
+				position: { x: 0, y: 0 },
+			};
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true }),
+			});
+
+			const result = await attachCaseElement(
+				mockNode,
+				10,
+				"test-token",
+				parentNode
+			);
+			expect(result).toEqual({ attached: true });
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/propertyclaims/10/attach`,
+				expect.objectContaining({
+					method: "POST",
+					body: JSON.stringify({
+						goal_id: 1,
+						strategy_id: null,
+						property_claim_id: null,
+					}),
+				})
+			);
+		});
+
+		it("should attach evidence to property claim", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "evidence",
+				data: { id: 20, name: "Test Evidence", type: "evidence" },
+				position: { x: 0, y: 0 },
+			};
+
+			const parentNode: ReactFlowNode = {
+				id: "2",
+				type: "property",
+				data: { id: 10, name: "Parent Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true }),
+			});
+
+			const result = await attachCaseElement(
+				mockNode,
+				20,
+				"test-token",
+				parentNode
+			);
+			expect(result).toEqual({ attached: true });
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/evidence/20/attach`,
+				expect.objectContaining({
+					method: "POST",
+					body: JSON.stringify({
+						goal_id: null,
+						strategy_id: null,
+						property_claim_id: 10,
+					}),
+				})
+			);
+		});
+
+		it("should handle API error", async () => {
+			const mockNode: ReactFlowNode = {
+				id: "1",
+				type: "propertyclaim",
+				data: { id: 10, name: "Test Claim", type: "property" },
+				position: { x: 0, y: 0 },
+			};
+
+			const parentNode: ReactFlowNode = {
+				id: "2",
+				type: "goal",
+				data: { id: 1, name: "Parent Goal", type: "goal" },
+				position: { x: 0, y: 0 },
+			};
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: false,
+				status: 400,
+			});
+
+			const result = await attachCaseElement(
+				mockNode,
+				10,
+				"test-token",
+				parentNode
+			);
+			expect(result).toEqual({ error: "Something went wrong 400" });
+		});
+	});
+
+	describe("addElementComment", () => {
+		beforeEach(() => {
+			vi.clearAllMocks();
+			global.fetch = vi.fn();
+		});
+
+		it("should add comment to goal", async () => {
+			const comment = { content: "Test comment" };
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ id: 100, content: "Test comment" }),
+			});
+
+			const result = await addElementComment("goals", 1, comment, "test-token");
+			expect(result).toEqual({ id: 100, content: "Test comment" });
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/goals/1/comment`,
+				expect.objectContaining({
+					method: "POST",
+					body: JSON.stringify(comment),
+				})
+			);
+		});
+
+		it("should add comment to strategy", async () => {
+			const comment = { content: "Strategy comment" };
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ id: 101, content: "Strategy comment" }),
+			});
+
+			const result = await addElementComment(
+				"strategies",
+				30,
+				comment,
+				"test-token"
+			);
+			expect(result).toEqual({ id: 101, content: "Strategy comment" });
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/30/comment`,
+				expect.objectContaining({
+					method: "POST",
+				})
+			);
+		});
+
+		it("should handle API error", async () => {
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: false,
+				status: 400,
+				json: async () => ({ error: "Bad request" }),
+			});
+
+			const result = await addElementComment(
+				"goals",
+				1,
+				{ content: "Test" },
+				"test-token"
+			);
+			expect(result).toEqual({ error: "Bad request" });
+		});
+	});
+
+	describe("updateElementComment", () => {
+		beforeEach(() => {
+			vi.clearAllMocks();
+			global.fetch = vi.fn();
+		});
+
+		it("should update comment successfully", async () => {
+			const comment = { content: "Updated comment" };
+			const updatedComment = { id: 100, content: "Updated comment" };
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => updatedComment,
+			});
+
+			const result = await updateElementComment(
+				"goals",
+				1,
+				comment,
+				100,
+				"test-token"
+			);
+			expect(result).toEqual(updatedComment);
+			expect(global.fetch).toHaveBeenCalledWith(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/goals/1/comment/100`,
+				expect.objectContaining({
+					method: "PUT",
+					body: JSON.stringify(comment),
+				})
+			);
+		});
+
+		it("should handle API error", async () => {
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: false,
+				status: 400,
+				json: async () => ({ error: "Bad request" }),
+			});
+
+			const result = await updateElementComment(
+				"goals",
+				1,
+				{ content: "Test" },
+				100,
+				"test-token"
+			);
+			expect(result).toEqual({ error: "Bad request" });
+		});
+
+		it("should handle network error", async () => {
+			const error = new Error("Network error");
+			(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
+
+			const result = await updateElementComment(
+				"goals",
+				1,
+				{ content: "Test" },
+				100,
+				"test-token"
+			);
+			expect(result).toEqual({ error });
 		});
 	});
 });

@@ -74,7 +74,7 @@ const AutoComplete = ({
 					{filteredOptions.map((option) => (
 						<option
 							className="group rounded-md p-2 hover:cursor-pointer hover:bg-indigo-600 hover:text-white"
-							key={option.username}
+							key={option.id}
 							onClick={() => handleOptionClick(option)}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {

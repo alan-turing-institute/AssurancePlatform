@@ -1,4 +1,5 @@
 import { HttpResponse, http } from "msw";
+import { act } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import {
@@ -326,7 +327,9 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				goals: [...(prev?.goals || []), newGoal],
 			}));
 			handleAutoSave();
-		} catch (_err) {}
+		} catch (_err) {
+			// Intentionally empty - error handling not needed for test
+		}
 	};
 
 	const addStrategy = async () => {
@@ -356,7 +359,9 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				strategies: [...(prev?.strategies || []), newStrategy],
 			}));
 			handleAutoSave();
-		} catch (_err) {}
+		} catch (_err) {
+			// Intentionally empty - error handling not needed for test
+		}
 	};
 
 	const addEvidence = async () => {
@@ -386,7 +391,9 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				evidence: [...(prev?.evidence || []), newEvidence],
 			}));
 			handleAutoSave();
-		} catch (_err) {}
+		} catch (_err) {
+			// Intentionally empty - error handling not needed for test
+		}
 	};
 
 	if (loading) {
@@ -479,7 +486,12 @@ describe("Case Management Integration Tests", () => {
 			}),
 			// Add handlers for POST operations
 			http.post("http://localhost:8000/api/goals/", async ({ request }) => {
-				const body = (await request.json()) as any;
+				const body = (await request.json()) as {
+					name: string;
+					short_description?: string;
+					long_description?: string;
+					assurance_case: number;
+				};
 				return HttpResponse.json(
 					{
 						id: Date.now(),
@@ -494,7 +506,13 @@ describe("Case Management Integration Tests", () => {
 			http.post(
 				"http://localhost:8000/api/strategies/",
 				async ({ request }) => {
-					const body = (await request.json()) as any;
+					const body = (await request.json()) as {
+						name: string;
+						short_description?: string;
+						long_description?: string;
+						goal: number;
+						assurance_case: number;
+					};
 					return HttpResponse.json(
 						{
 							id: Date.now(),
@@ -509,7 +527,13 @@ describe("Case Management Integration Tests", () => {
 				}
 			),
 			http.post("http://localhost:8000/api/evidence/", async ({ request }) => {
-				const body = (await request.json()) as any;
+				const body = (await request.json()) as {
+					name: string;
+					short_description?: string;
+					long_description?: string;
+					URL?: string;
+					assurance_case: number;
+				};
 				return HttpResponse.json(
 					{
 						id: Date.now(),
@@ -627,7 +651,9 @@ describe("Case Management Integration Tests", () => {
 		});
 
 		test("should load case editor with correct data", async () => {
-			renderWithAuth(<CaseEditor caseId="1" />);
+			await act(() => {
+				renderWithAuth(<CaseEditor caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(screen.getByText("Test Assurance Case")).toBeInTheDocument();
@@ -639,7 +665,9 @@ describe("Case Management Integration Tests", () => {
 	describe("Adding goals, strategies, and evidence", () => {
 		test("should add a new goal to the case", async () => {
 			const user = userEvent.setup();
-			renderWithAuth(<CaseEditor caseId="1" />);
+			await act(() => {
+				renderWithAuth(<CaseEditor caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("case-editor")).toBeInTheDocument();
@@ -655,7 +683,9 @@ describe("Case Management Integration Tests", () => {
 
 		test("should add a strategy under the goal", async () => {
 			const user = userEvent.setup();
-			renderWithAuth(<CaseEditor caseId="1" />);
+			await act(() => {
+				renderWithAuth(<CaseEditor caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("case-editor")).toBeInTheDocument();
@@ -680,7 +710,9 @@ describe("Case Management Integration Tests", () => {
 
 		test("should add evidence to support the strategy", async () => {
 			const user = userEvent.setup();
-			renderWithAuth(<CaseEditor caseId="1" />);
+			await act(() => {
+				renderWithAuth(<CaseEditor caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("case-editor")).toBeInTheDocument();
@@ -698,7 +730,9 @@ describe("Case Management Integration Tests", () => {
 	describe("Auto-save functionality", () => {
 		test("should trigger auto-save after making changes", async () => {
 			const user = userEvent.setup();
-			renderWithAuth(<CaseEditor caseId="1" />);
+			await act(() => {
+				renderWithAuth(<CaseEditor caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("case-editor")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -22,10 +22,10 @@ describe("auth-helpers", () => {
 	});
 
 	describe("isValidSession", () => {
-		const futureDate = new Date(Date.now() + 86400000).toISOString(); // 24 hours from now
-		const pastDate = new Date(Date.now() - 86400000).toISOString(); // 24 hours ago
-		const futureTimestamp = Date.now() + 86400000; // 24 hours from now
-		const pastTimestamp = Date.now() - 86400000; // 24 hours ago
+		const futureDate = new Date(Date.now() + 86_400_000).toISOString(); // 24 hours from now
+		const pastDate = new Date(Date.now() - 86_400_000).toISOString(); // 24 hours ago
+		const futureTimestamp = Date.now() + 86_400_000; // 24 hours from now
+		const pastTimestamp = Date.now() - 86_400_000; // 24 hours ago
 
 		it("should return false for null session", () => {
 			expect(isValidSession(null)).toBe(false);
@@ -99,6 +99,7 @@ describe("auth-helpers", () => {
 			const session: Session = {
 				user: { name: "Test User" },
 				key: "valid-key",
+				expires: futureDate,
 			};
 			expect(isValidSession(session)).toBe(true);
 		});
@@ -140,7 +141,7 @@ describe("auth-helpers", () => {
 
 		it("should handle session with additional properties", () => {
 			const session: Session = {
-				user: { name: "Test User", id: "123" },
+				user: { name: "Test User" },
 				expires: futureDate,
 				key: "valid-key",
 				provider: "github",
@@ -373,9 +374,9 @@ describe("auth-helpers", () => {
 		it("should return true for Error with network-related messages", () => {
 			expect(isNetworkError(new Error("fetch failed"))).toBe(true);
 			expect(isNetworkError(new Error("Network error occurred"))).toBe(true);
-			expect(isNetworkError(new Error("ECONNREFUSED: Connection refused"))).toBe(
-				true
-			);
+			expect(
+				isNetworkError(new Error("ECONNREFUSED: Connection refused"))
+			).toBe(true);
 			expect(isNetworkError(new Error("ETIMEDOUT: Operation timed out"))).toBe(
 				true
 			);
@@ -404,7 +405,8 @@ describe("auth-helpers", () => {
 		});
 
 		it("should return false for Error without message", () => {
-			const errorWithoutMessage = new Error();
+			// biome-ignore lint/suspicious/useErrorMessage: Testing error without message intentionally
+			const errorWithoutMessage = new Error("");
 			errorWithoutMessage.message = "";
 			expect(isNetworkError(errorWithoutMessage)).toBe(false);
 		});
@@ -415,9 +417,9 @@ describe("auth-helpers", () => {
 					new Error("Request failed due to network connectivity issues")
 				)
 			).toBe(true);
-			expect(
-				isNetworkError(new Error("The fetch failed unexpectedly"))
-			).toBe(true);
+			expect(isNetworkError(new Error("The fetch failed unexpectedly"))).toBe(
+				true
+			);
 		});
 
 		it("should return false for similar but non-matching patterns", () => {
@@ -525,7 +527,7 @@ describe("auth-helpers", () => {
 
 		it("should handle custom Error objects", () => {
 			class CustomError extends Error {
-				public code: number;
+				code: number;
 				constructor(message: string, code: number) {
 					super(message);
 					this.name = "CustomError";
@@ -587,10 +589,14 @@ describe("auth-helpers", () => {
 		});
 
 		it("should preserve Error properties that are not sensitive", () => {
-			const error = new Error("Test error");
-			(error as any).code = "AUTH_FAILED";
-			(error as any).statusCode = 401;
-			(error as any).timestamp = Date.now();
+			const error = new Error("Test error") as Error & {
+				code?: string;
+				statusCode?: number;
+				timestamp?: number;
+			};
+			error.code = "AUTH_FAILED";
+			error.statusCode = 401;
+			error.timestamp = Date.now();
 
 			const result = sanitizeErrorForLogging(error);
 
@@ -631,10 +637,10 @@ describe("auth-helpers", () => {
 			expect(
 				isValidSession({
 					user: { name: "Test", email: "test@example.com" },
-					expires: new Date(Date.now() + 86400000).toISOString(),
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
 					key: "valid-key",
 					provider: "github",
-					keyExpires: Date.now() + 86400000,
+					keyExpires: Date.now() + 86_400_000,
 				})
 			).toBe(true);
 		});
@@ -647,12 +653,12 @@ describe("auth-helpers", () => {
 				"SessionExpired",
 			];
 
-			securityErrors.forEach((error) => {
+			for (const error of securityErrors) {
 				const message = getAuthError(error);
 				expect(message).not.toContain("undefined");
 				expect(message).not.toContain("null");
 				expect(message.length).toBeGreaterThan(10); // Non-empty meaningful message
-			});
+			}
 		});
 
 		it("should handle network error detection for monitoring scenarios", () => {
@@ -664,9 +670,9 @@ describe("auth-helpers", () => {
 				new Error("timeout ETIMEDOUT"),
 			];
 
-			networkErrors.forEach((error) => {
+			for (const error of networkErrors) {
 				expect(isNetworkError(error)).toBe(true);
-			});
+			}
 
 			const nonNetworkErrors = [
 				new Error("401 Unauthorized"),
@@ -674,9 +680,9 @@ describe("auth-helpers", () => {
 				new Error("User not found"),
 			];
 
-			nonNetworkErrors.forEach((error) => {
+			for (const error of nonNetworkErrors) {
 				expect(isNetworkError(error)).toBe(false);
-			});
+			}
 		});
 
 		it("should handle error sanitization for different environments", () => {

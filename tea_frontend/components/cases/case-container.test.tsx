@@ -1,4 +1,5 @@
 import { HttpResponse, http } from "msw";
+import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import { createMockAssuranceCase } from "@/src/__tests__/utils/mock-data";
@@ -144,7 +145,9 @@ describe("CaseContainer", () => {
 				})
 			);
 
-			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
+			await act(() => {
+				renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(mockStore.setAssuranceCase).toHaveBeenCalledWith(
@@ -165,7 +168,9 @@ describe("CaseContainer", () => {
 				})
 			);
 
-			renderWithReactFlowAndAuth(<CaseContainer />);
+			await act(() => {
+				renderWithReactFlowAndAuth(<CaseContainer />);
+			});
 
 			await waitFor(() => {
 				expect(mockStore.setAssuranceCase).toHaveBeenCalledWith(
@@ -189,7 +194,9 @@ describe("CaseContainer", () => {
 				})
 			);
 
-			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
+			await act(() => {
+				renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
+			});
 
 			await waitFor(() => {
 				expect(mockStore.setOrphanedElements).toHaveBeenCalledWith(
@@ -260,10 +267,10 @@ describe("CaseContainer", () => {
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
 
-			// The component stays in loading state when there's a network error
-			// since the promise is not caught and setLoading(false) is not called
+			// With error handling in place, the component should exit loading state
+			// and show "No Case Found" when there's a network error
 			await waitFor(() => {
-				expect(screen.getByText("Rendering your chart...")).toBeInTheDocument();
+				expect(screen.getByText("No Case Found")).toBeInTheDocument();
 			});
 
 			consoleErrorSpy.mockRestore();
@@ -381,7 +388,9 @@ describe("CaseContainer", () => {
 
 			// Open details via header button
 			const openButton = screen.getByText("Open Details");
-			openButton.click();
+			act(() => {
+				openButton.click();
+			});
 
 			await waitFor(() => {
 				const caseDetails = screen.getByTestId("case-details");

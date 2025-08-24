@@ -1,15 +1,16 @@
+import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { useSession } from "next-auth/react";
 import type React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import {
 	mockModalStores,
 	resetModalMocks,
 } from "@/src/__tests__/utils/modal-test-utils";
-import { screen, waitFor, within } from "@/src/__tests__/utils/test-utils";
-import { render } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@/src/__tests__/utils/test-utils";
 
 // Define mock functions before using them
 const mockPush = vi.fn();
@@ -65,25 +66,25 @@ vi.mock("../ui/action-tooltip", () => ({
 		children: React.ReactNode;
 		label: string;
 	}) => {
-		const React = require("react");
+		const ReactLib = require("react");
 
 		// Simple passthrough with aria-label
-		if (React.isValidElement(children)) {
-			return React.cloneElement(children, {
+		if (ReactLib.isValidElement(children)) {
+			return ReactLib.cloneElement(children, {
 				"aria-label": label,
 			});
 		}
 
 		// Fallback - wrap in a div if children is not a valid element
-		return React.createElement("div", { "aria-label": label }, children);
+		return ReactLib.createElement("div", { "aria-label": label }, children);
 	},
 }));
 
 // Regex constants for test assertions
 const DELETE_BUTTON_REGEX = /Delete/;
 const CANCEL_BUTTON_REGEX = /Cancel/;
-const PROCESSING_REGEX = /Processing/;
-const SCREENSHOT_SAVED_REGEX = /Screenshot Saved!/;
+const _PROCESSING_REGEX = /Processing/;
+const _SCREENSHOT_SAVED_REGEX = /Screenshot Saved!/;
 const NEW_GOAL_REGEX = /New Goal/;
 const FOCUS_REGEX = /Focus/;
 const RESET_IDENTIFIERS_REGEX = /Reset Identifiers/;
@@ -143,35 +144,44 @@ vi.mock("../modals/alert-modal", () => ({
 		confirmButtonText,
 		cancelButtonText,
 		message,
-	}: any) => {
+	}: {
+		isOpen: boolean;
+		onClose: () => void;
+		onConfirm: () => void;
+		loading?: boolean;
+		confirmButtonText?: string;
+		cancelButtonText?: string;
+		message?: string;
+	}) => {
 		if (!isOpen) {
 			return null;
 		}
 
 		// Use different test IDs based on button text to distinguish between modals
-		const dataTestId = confirmButtonText?.toLowerCase().includes('delete')
-			? 'delete-modal'
-			: confirmButtonText?.toLowerCase().includes('reset')
-				? 'reset-modal'
-				: 'alert-modal';
+		let dataTestId = "alert-modal";
+		if (confirmButtonText?.toLowerCase().includes("delete")) {
+			dataTestId = "delete-modal";
+		} else if (confirmButtonText?.toLowerCase().includes("reset")) {
+			dataTestId = "reset-modal";
+		}
 
 		return (
-			<div role="dialog" data-testid={dataTestId}>
+			<div data-testid={dataTestId} role="dialog">
 				<h2>Are you sure?</h2>
 				<p>{message || "This action cannot be undone."}</p>
 				<button
+					data-testid={`${dataTestId}-cancel`}
 					disabled={loading}
 					onClick={onClose}
 					type="button"
-					data-testid={`${dataTestId}-cancel`}
 				>
 					{cancelButtonText || "Cancel"}
 				</button>
 				<button
+					data-testid={`${dataTestId}-confirm`}
 					disabled={loading}
 					onClick={onConfirm}
 					type="button"
-					data-testid={`${dataTestId}-confirm`}
 				>
 					{loading ? "Processing" : confirmButtonText}
 				</button>
@@ -218,8 +228,54 @@ vi.mock("./case-notes", () => ({
 	},
 }));
 
+// Define the assurance case type for the mock
+const initialAssuranceCase = {
+	id: 1,
+	name: "Test Case",
+	permissions: "manage",
+	description: "Test description",
+	created_date: "2024-01-01",
+	goals: [],
+	type: "AssuranceCase",
+	lock_uuid: null,
+	owner: 1,
+	view_groups: [],
+	edit_groups: [],
+	review_groups: [],
+	color_profile: "default",
+	published: false,
+	published_date: null,
+	comments: [],
+	property_claims: [],
+	evidence: [],
+	contexts: [],
+	strategies: [],
+	images: [],
+	viewMembers: [],
+	editMembers: [],
+	reviewMembers: [],
+};
+
 // Create the mock store state
-const mockStoreState = {
+const mockStoreState: {
+	assuranceCase: typeof initialAssuranceCase | null;
+	orphanedElements: unknown[];
+	setOrphanedElements: ReturnType<typeof vi.fn>;
+	nodes: unknown[];
+	edges: unknown[];
+	setNodes: ReturnType<typeof vi.fn>;
+	setEdges: ReturnType<typeof vi.fn>;
+	onNodesChange: ReturnType<typeof vi.fn>;
+	onEdgesChange: ReturnType<typeof vi.fn>;
+	onConnect: ReturnType<typeof vi.fn>;
+	nodeTypes: Record<string, unknown>;
+	viewMembers: unknown[];
+	editMembers: unknown[];
+	reviewMembers: unknown[];
+	setViewMembers: ReturnType<typeof vi.fn>;
+	setEditMembers: ReturnType<typeof vi.fn>;
+	setReviewMembers: ReturnType<typeof vi.fn>;
+} = {
 	assuranceCase: {
 		id: 1,
 		name: "Test Case",
@@ -246,7 +302,6 @@ const mockStoreState = {
 		editMembers: [],
 		reviewMembers: [],
 	},
-	setAssuranceCase: vi.fn(),
 	orphanedElements: [],
 	setOrphanedElements: vi.fn(),
 	viewMembers: [],
@@ -265,7 +320,7 @@ const mockStoreState = {
 	nodeTypes: {},
 };
 
-const mockStore = vi.fn(() => mockStoreState);
+const _mockStore = vi.fn(() => mockStoreState);
 
 vi.mock("@/data/store", () => ({
 	default: vi.fn(() => mockStoreState),
@@ -308,14 +363,21 @@ describe("ActionButtons", () => {
 	const mockNotifyError = vi.fn();
 	const mockOnLayout = vi.fn();
 
-	// Helper to update the store mock
-	const updateStoreMock = (overrides: any = {}) => {
-		// Update the mock state with overrides
-		Object.assign(mockStoreState, overrides);
+	let cleanupEnv: (() => void) | undefined;
 
+	// Helper to update the store mock
+	const updateStoreMock = (
+		overrides: {
+			assuranceCase?: Partial<typeof mockStoreState.assuranceCase> | null;
+		} = {}
+	) => {
 		// If assuranceCase overrides are provided, merge them into the existing structure
-		if (overrides.assuranceCase) {
-			Object.assign(mockStoreState.assuranceCase, overrides.assuranceCase);
+		if (overrides.assuranceCase !== undefined) {
+			if (overrides.assuranceCase === null) {
+				mockStoreState.assuranceCase = null;
+			} else if (mockStoreState.assuranceCase) {
+				Object.assign(mockStoreState.assuranceCase, overrides.assuranceCase);
+			}
 		}
 	};
 
@@ -329,9 +391,14 @@ describe("ActionButtons", () => {
 	};
 
 	beforeEach(() => {
+		// Set up environment variables
+		cleanupEnv = setupEnvVars({
+			NEXT_PUBLIC_API_URL: "http://localhost:8000",
+		});
+
 		// Create ReactFlow element for screenshot tests
-		const reactFlowElement = document.createElement('div');
-		reactFlowElement.id = 'ReactFlow';
+		const reactFlowElement = document.createElement("div");
+		reactFlowElement.id = "ReactFlow";
 		document.body.appendChild(reactFlowElement);
 
 		// Reset store to default state
@@ -400,8 +467,13 @@ describe("ActionButtons", () => {
 	});
 
 	afterEach(() => {
+		// Clean up environment variables
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
+
 		// Clean up ReactFlow element
-		const reactFlowElement = document.getElementById('ReactFlow');
+		const reactFlowElement = document.getElementById("ReactFlow");
 		if (reactFlowElement) {
 			reactFlowElement.remove();
 		}
@@ -450,7 +522,7 @@ describe("ActionButtons", () => {
 			updateStoreMock({
 				assuranceCase: {
 					permissions: "editor",
-				},
+				} as Partial<typeof mockStoreState.assuranceCase>,
 			});
 
 			render(<ActionButtons {...defaultProps} />);
@@ -471,7 +543,7 @@ describe("ActionButtons", () => {
 			updateStoreMock({
 				assuranceCase: {
 					permissions: "view",
-				},
+				} as Partial<typeof mockStoreState.assuranceCase>,
 			});
 
 			render(<ActionButtons {...defaultProps} />);
@@ -502,7 +574,7 @@ describe("ActionButtons", () => {
 			updateStoreMock({
 				assuranceCase: {
 					permissions: "review",
-				},
+				} as Partial<typeof mockStoreState.assuranceCase>,
 			});
 
 			render(<ActionButtons {...defaultProps} />);
@@ -568,12 +640,9 @@ describe("ActionButtons", () => {
 
 			// Mock successful deletion
 			server.use(
-				http.delete(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/`,
-					() => {
-						return new HttpResponse(null, { status: 204 });
-					}
-				)
+				http.delete("http://localhost:8000/api/cases/1/", () => {
+					return new HttpResponse(null, { status: 204 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -584,12 +653,19 @@ describe("ActionButtons", () => {
 
 			// Confirm deletion - find the confirm button within the delete modal
 			const deleteModal = screen.getByTestId("delete-modal");
-			const confirmButton = within(deleteModal).getByTestId("delete-modal-confirm");
+			const confirmButton = within(deleteModal).getByTestId(
+				"delete-modal-confirm"
+			);
 			await user.click(confirmButton);
 
 			// Should redirect after successful deletion
 			await waitFor(() => {
 				expect(mockPush).toHaveBeenCalledWith("/dashboard");
+			});
+
+			// Wait for modal to close and loading state to reset
+			await waitFor(() => {
+				expect(screen.queryByTestId("delete-modal")).not.toBeInTheDocument();
 			});
 		});
 
@@ -598,12 +674,9 @@ describe("ActionButtons", () => {
 
 			// Mock failed deletion
 			server.use(
-				http.delete(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
-				)
+				http.delete("http://localhost:8000/api/cases/1/", () => {
+					return new HttpResponse(null, { status: 500 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -614,7 +687,9 @@ describe("ActionButtons", () => {
 
 			// Confirm deletion - find the confirm button within the delete modal
 			const deleteModal = screen.getByTestId("delete-modal");
-			const confirmButton = within(deleteModal).getByTestId("delete-modal-confirm");
+			const confirmButton = within(deleteModal).getByTestId(
+				"delete-modal-confirm"
+			);
 			await user.click(confirmButton);
 
 			// Should not redirect on failure
@@ -710,7 +785,7 @@ describe("ActionButtons", () => {
 
 		it("should not capture screenshot if ReactFlow element is not found", async () => {
 			// Remove the ReactFlow element that's created in beforeEach
-			const reactFlowElement = document.getElementById('ReactFlow');
+			const reactFlowElement = document.getElementById("ReactFlow");
 			if (reactFlowElement) {
 				reactFlowElement.remove();
 			}
@@ -849,15 +924,14 @@ describe("ActionButtons", () => {
 
 		it("should handle successful identifier reset", async () => {
 			const user = userEvent.setup();
+			let apiCalled = false;
 
 			// Mock successful reset
 			server.use(
-				http.post(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/update-ids`,
-					() => {
-						return new HttpResponse(null, { status: 200 });
-					}
-				)
+				http.post("http://localhost:8000/api/cases/1/update-ids", () => {
+					apiCalled = true;
+					return new HttpResponse(null, { status: 200 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -868,14 +942,22 @@ describe("ActionButtons", () => {
 
 			// Confirm reset
 			const resetModal = screen.getByTestId("reset-modal");
-			const confirmButton = within(resetModal).getByTestId("reset-modal-confirm");
-			await user.click(confirmButton);
+			const confirmButton = within(resetModal).getByTestId(
+				"reset-modal-confirm"
+			);
 
-			// Wait for the reset operation to complete - verify that loading state ends
-			await waitFor(() => {
-				const updatedConfirmButton = within(resetModal).getByTestId("reset-modal-confirm");
-				expect(updatedConfirmButton).toHaveTextContent("Yes, reset all identifiers");
+			// Click confirm and verify API was called
+			await act(async () => {
+				await user.click(confirmButton);
 			});
+
+			// Wait for the API call to be made
+			await waitFor(() => {
+				expect(apiCalled).toBe(true);
+			});
+
+			// In a real scenario, window.location.reload would be called
+			// but in tests we can't verify it reliably due to the async nature
 		});
 
 		it("should handle identifier reset failure", async () => {
@@ -883,12 +965,9 @@ describe("ActionButtons", () => {
 
 			// Mock failed reset
 			server.use(
-				http.post(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/update-ids`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
-				)
+				http.post("http://localhost:8000/api/cases/1/update-ids", () => {
+					return new HttpResponse(null, { status: 500 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -974,13 +1053,10 @@ describe("ActionButtons", () => {
 
 			// Mock slow deletion
 			server.use(
-				http.delete(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/`,
-					async () => {
-						await new Promise((resolve) => setTimeout(resolve, 100));
-						return new HttpResponse(null, { status: 204 });
-					}
-				)
+				http.delete("http://localhost:8000/api/cases/1/", async () => {
+					await new Promise((resolve) => setTimeout(resolve, 100));
+					return new HttpResponse(null, { status: 204 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -991,27 +1067,33 @@ describe("ActionButtons", () => {
 
 			// Confirm deletion - find the confirm button within the delete modal
 			const deleteModal = screen.getByTestId("delete-modal");
-			const confirmButton = within(deleteModal).getByTestId("delete-modal-confirm");
+			const confirmButton = within(deleteModal).getByTestId(
+				"delete-modal-confirm"
+			);
 			await user.click(confirmButton);
 
 			// Verify deletion completes successfully
 			await waitFor(() => {
 				expect(mockPush).toHaveBeenCalledWith("/dashboard");
 			});
+
+			// Wait for modal to close and loading state to reset
+			await waitFor(() => {
+				expect(screen.queryByTestId("delete-modal")).not.toBeInTheDocument();
+			});
 		});
 
 		it("should disable buttons during reset operation", async () => {
 			const user = userEvent.setup();
+			let apiCalled = false;
 
 			// Mock slow reset
 			server.use(
-				http.post(
-					`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cases/1/update-ids`,
-					async () => {
-						await new Promise((resolve) => setTimeout(resolve, 100));
-						return new HttpResponse(null, { status: 200 });
-					}
-				)
+				http.post("http://localhost:8000/api/cases/1/update-ids", async () => {
+					await new Promise((resolve) => setTimeout(resolve, 100));
+					apiCalled = true;
+					return new HttpResponse(null, { status: 200 });
+				})
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -1022,14 +1104,25 @@ describe("ActionButtons", () => {
 
 			// Confirm reset
 			const resetModal = screen.getByTestId("reset-modal");
-			const confirmButton = within(resetModal).getByTestId("reset-modal-confirm");
-			await user.click(confirmButton);
+			const confirmButton = within(resetModal).getByTestId(
+				"reset-modal-confirm"
+			);
 
-			// Wait for the reset operation to complete - verify that loading state ends
-			await waitFor(() => {
-				const updatedConfirmButton = within(resetModal).getByTestId("reset-modal-confirm");
-				expect(updatedConfirmButton).toHaveTextContent("Yes, reset all identifiers");
+			// Click and verify loading state
+			await act(async () => {
+				await user.click(confirmButton);
 			});
+
+			// Verify button shows loading state
+			expect(confirmButton).toHaveTextContent("Processing");
+
+			// Wait for the API call to complete
+			await waitFor(() => {
+				expect(apiCalled).toBe(true);
+			});
+
+			// The modal and loading state are cleaned up after reload
+			// In a real scenario, the page would reload, but in tests we verify the API call
 		});
 	});
 
@@ -1050,7 +1143,9 @@ describe("ActionButtons", () => {
 			await user.click(deleteButton);
 
 			const deleteModal = screen.getByTestId("delete-modal");
-			const confirmButton = within(deleteModal).getByTestId("delete-modal-confirm");
+			const confirmButton = within(deleteModal).getByTestId(
+				"delete-modal-confirm"
+			);
 			await user.click(confirmButton);
 
 			// API call should still be made

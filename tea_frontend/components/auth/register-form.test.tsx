@@ -3,14 +3,14 @@ import { HttpResponse, http } from "msw";
 import { useRouter } from "next/navigation";
 import type { Session } from "next-auth";
 import { signIn, useSession } from "next-auth/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import {
 	renderWithoutProviders,
 	screen,
 	waitFor,
 } from "@/src/__tests__/utils/test-utils";
-import { act } from "@testing-library/react";
 import RegisterForm from "./register-form";
 
 // Mock next-auth signIn function
@@ -67,11 +67,11 @@ const ENTER_VALID_EMAIL_REGEX = /enter a valid email address/i;
 const PASSWORD_TOO_COMMON_REGEX = /this password is too common/i;
 const UNABLE_CREATE_ACCOUNT_REGEX = /unable to create account at this time/i;
 const REGISTRATION_FAILED_REGEX = /registration failed. please try again/i;
-const REGISTRATION_SUCCESS_LOGIN_FAILED_REGEX =
+const _REGISTRATION_SUCCESS_LOGIN_FAILED_REGEX =
 	/registration successful but login failed. please try logging in manually/i;
-const REGISTRATION_UNEXPECTED_RESPONSE_REGEX =
+const _REGISTRATION_UNEXPECTED_RESPONSE_REGEX =
 	/registration completed but unexpected response format/i;
-const REGISTRATION_MAY_HAVE_SUCCEEDED_REGEX =
+const _REGISTRATION_MAY_HAVE_SUCCEEDED_REGEX =
 	/registration may have succeeded. please try logging in/i;
 const USERNAME_ALREADY_TAKEN_REGEX = /username already taken/i;
 const USERNAME_ALREADY_EXISTS_SHORT_REGEX = /username already exists/i;
@@ -90,11 +90,12 @@ const PASSWORD_NO_NUMBER = "Test!@#abc";
 const PASSWORD_NO_SPECIAL = "Test12345";
 const SHORT_PASSWORD = "Test1!";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = "http://localhost:8000";
 
 describe("RegisterForm", () => {
 	const mockPush = vi.fn();
 	const mockSignIn = signIn as unknown as ReturnType<typeof vi.fn>;
+	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -102,6 +103,17 @@ describe("RegisterForm", () => {
 			push: mockPush,
 		});
 		mockSignIn.mockResolvedValue({ ok: true });
+
+		// Set up environment variables
+		cleanupEnv = setupEnvVars({
+			NEXT_PUBLIC_API_URL: API_BASE_URL,
+		});
+	});
+
+	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 	});
 
 	describe("Form Rendering", () => {
@@ -856,10 +868,7 @@ describe("RegisterForm", () => {
 
 	describe("Loading States", () => {
 		it("should show loading state during submission", async () => {
-			const user = userEvent.setup();
-			renderWithoutProviders(<RegisterForm />);
-
-			// Mock slow response
+			// Mock slow response first
 			server.use(
 				http.post(`${API_BASE_URL}/api/auth/register/`, async () => {
 					await new Promise((resolve) => setTimeout(resolve, 100));
@@ -867,50 +876,8 @@ describe("RegisterForm", () => {
 				})
 			);
 
-			// Fill and submit form
-			await user.type(
-				screen.getByLabelText(USERNAME_LABEL_REGEX),
-				VALID_USERNAME
-			);
-			await user.type(screen.getByLabelText(EMAIL_LABEL_REGEX), VALID_EMAIL);
-			await user.type(
-				screen.getByLabelText(PASSWORD_LABEL_REGEX),
-				VALID_PASSWORD
-			);
-			await user.type(
-				screen.getByLabelText(CONFIRM_PASSWORD_REGEX),
-				VALID_PASSWORD
-			);
-
-			await user.click(
-				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
-			);
-
-			// Check loading state
-			expect(
-				screen.getByRole("button", { name: CREATING_ACCOUNT_REGEX })
-			).toBeInTheDocument();
-			expect(
-				screen.getByRole("button", { name: CREATING_ACCOUNT_REGEX })
-			).toBeDisabled();
-
-			// Wait for completion
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
-			});
-		});
-
-		it("should disable submit button while loading", async () => {
-			const user = userEvent.setup();
+			const user = userEvent.setup({ delay: null });
 			renderWithoutProviders(<RegisterForm />);
-
-			// Mock slow response
-			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, async () => {
-					await new Promise((resolve) => setTimeout(resolve, 100));
-					return new HttpResponse(null, { status: 204 });
-				})
-			);
 
 			// Fill and submit form
 			await user.type(
@@ -930,15 +897,83 @@ describe("RegisterForm", () => {
 			const submitButton = screen.getByRole("button", {
 				name: SUBMIT_BUTTON_REGEX,
 			});
+
+			// Click and immediately check for loading state
 			await user.click(submitButton);
 
-			// Button should be disabled during loading
-			expect(submitButton).toBeDisabled();
-			expect(submitButton).toHaveTextContent("Creating Account...");
+			// Check loading state immediately after click
+			await waitFor(() => {
+				const loadingButton = screen.getByRole("button", {
+					name: CREATING_ACCOUNT_REGEX,
+				});
+				expect(loadingButton).toBeInTheDocument();
+				expect(loadingButton).toBeDisabled();
+			});
 
 			// Wait for completion
 			await waitFor(() => {
 				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
+			});
+
+			// Ensure all state updates are complete
+			await waitFor(() => {
+				expect(
+					screen.queryByText(CREATING_ACCOUNT_REGEX)
+				).not.toBeInTheDocument();
+			});
+		});
+
+		it("should disable submit button while loading", async () => {
+			// Mock slow response first
+			server.use(
+				http.post(`${API_BASE_URL}/api/auth/register/`, async () => {
+					await new Promise((resolve) => setTimeout(resolve, 100));
+					return new HttpResponse(null, { status: 204 });
+				})
+			);
+
+			const user = userEvent.setup({ delay: null });
+			renderWithoutProviders(<RegisterForm />);
+
+			// Fill and submit form
+			await user.type(
+				screen.getByLabelText(USERNAME_LABEL_REGEX),
+				VALID_USERNAME
+			);
+			await user.type(screen.getByLabelText(EMAIL_LABEL_REGEX), VALID_EMAIL);
+			await user.type(
+				screen.getByLabelText(PASSWORD_LABEL_REGEX),
+				VALID_PASSWORD
+			);
+			await user.type(
+				screen.getByLabelText(CONFIRM_PASSWORD_REGEX),
+				VALID_PASSWORD
+			);
+
+			const submitButton = screen.getByRole("button", {
+				name: SUBMIT_BUTTON_REGEX,
+			});
+
+			// Click the submit button
+			await user.click(submitButton);
+
+			// Check for loading state and disabled button
+			await waitFor(() => {
+				const button = screen.getByRole("button");
+				expect(button).toHaveTextContent("Creating Account...");
+				expect(button).toBeDisabled();
+			});
+
+			// Wait for completion
+			await waitFor(() => {
+				expect(mockPush).toHaveBeenCalledWith("/login?registered=true");
+			});
+
+			// Ensure all state updates are complete
+			await waitFor(() => {
+				expect(
+					screen.queryByText(CREATING_ACCOUNT_REGEX)
+				).not.toBeInTheDocument();
 			});
 		});
 	});

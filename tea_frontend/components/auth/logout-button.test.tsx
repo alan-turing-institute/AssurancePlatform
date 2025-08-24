@@ -1,8 +1,9 @@
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
+import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import {
 	renderWithAuth,
 	renderWithoutProviders,
@@ -71,10 +72,23 @@ vi.mock("next-auth/react", () => ({
 }));
 
 describe("LogoutButton", () => {
+	let cleanupEnv: (() => void) | undefined;
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockPush.mockClear();
 		mockSignOut.mockClear();
+
+		// Set up environment variables
+		cleanupEnv = setupEnvVars({
+			NEXT_PUBLIC_API_URL: "http://localhost:8000",
+		});
+	});
+
+	afterEach(() => {
+		if (cleanupEnv) {
+			cleanupEnv();
+		}
 	});
 
 	it("should render logout button with icon and accessibility label", () => {
@@ -108,12 +122,9 @@ describe("LogoutButton", () => {
 
 		// Mock successful logout API response
 		server.use(
-			http.post(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/logout/`,
-				() => {
-					return new HttpResponse(null, { status: 200 });
-				}
-			)
+			http.post("http://localhost:8000/api/auth/logout/", () => {
+				return new HttpResponse(null, { status: 200 });
+			})
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -133,12 +144,9 @@ describe("LogoutButton", () => {
 
 		// Mock failed logout API response
 		server.use(
-			http.post(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/logout/`,
-				() => {
-					return new HttpResponse(null, { status: 500 });
-				}
-			)
+			http.post("http://localhost:8000/api/auth/logout/", () => {
+				return new HttpResponse(null, { status: 500 });
+			})
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -159,13 +167,10 @@ describe("LogoutButton", () => {
 
 		// Capture request headers
 		server.use(
-			http.post(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/logout/`,
-				({ request }) => {
-					requestHeaders = request.headers;
-					return new HttpResponse(null, { status: 200 });
-				}
-			)
+			http.post("http://localhost:8000/api/auth/logout/", ({ request }) => {
+				requestHeaders = request.headers;
+				return new HttpResponse(null, { status: 200 });
+			})
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -189,12 +194,9 @@ describe("LogoutButton", () => {
 		const user = userEvent.setup();
 
 		server.use(
-			http.post(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/logout/`,
-				() => {
-					return new HttpResponse(null, { status: 200 });
-				}
-			)
+			http.post("http://localhost:8000/api/auth/logout/", () => {
+				return new HttpResponse(null, { status: 200 });
+			})
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -256,12 +258,9 @@ describe("LogoutButton", () => {
 		const user = userEvent.setup();
 
 		server.use(
-			http.post(
-				`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/logout/`,
-				() => {
-					return new HttpResponse(null, { status: 200 });
-				}
-			)
+			http.post("http://localhost:8000/api/auth/logout/", () => {
+				return new HttpResponse(null, { status: 200 });
+			})
 		);
 
 		renderWithoutProviders(<LogoutButton />);

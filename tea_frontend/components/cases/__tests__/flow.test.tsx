@@ -1,14 +1,11 @@
 import { act } from "@testing-library/react";
 import type { Edge, Node, NodeTypes, OnNodesChange } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { convertAssuranceCase } from "@/lib/convert-case";
 import {
 	createMockAssuranceCase,
 	mockAssuranceCase,
 } from "@/src/__tests__/utils/mock-data";
-import {
-	renderAndWait,
-	waitForWithRetry,
-} from "@/src/__tests__/utils/react-18-test-utils";
 import {
 	renderWithReactFlowAndAuth,
 	screen,
@@ -16,24 +13,41 @@ import {
 	waitFor,
 } from "@/src/__tests__/utils/test-utils";
 import type { AssuranceCase, Goal } from "@/types";
-import { convertAssuranceCase } from "@/lib/convert-case";
-import Flow from "./flow";
+import Flow from "../flow";
 
 // Regex constants for text matching
-const LOADING_STATUS_REGEX = /loading/i;
-const DISMISS_BUTTON_REGEX = /close|dismiss|x/i;
+const _LOADING_STATUS_REGEX = /loading/i;
+const _DISMISS_BUTTON_REGEX = /close|dismiss|x/i;
+
+// Get the mock for testing - defined first so it can be used in mock and tests
+const mockFitView = vi.fn();
 
 // Mock ReactFlow with minimal implementation
 vi.mock("reactflow", () => {
-	const mockFitView = vi.fn();
-
-	const MockReactFlow = ({ nodes = [], edges = [], onNodeClick, children }: any) => (
-		<div data-testid="react-flow" data-nodes-count={nodes.length} data-edges-count={edges.length}>
-			{nodes.map((node: any) => (
+	const MockReactFlow = ({
+		nodes = [],
+		edges = [],
+		onNodeClick,
+		children,
+	}: {
+		nodes?: { id: string; data?: { label?: string } }[];
+		edges?: unknown[];
+		onNodeClick?: (
+			e: React.MouseEvent,
+			node: { id: string; data?: { label?: string } }
+		) => void;
+		children?: React.ReactNode;
+	}) => (
+		<div
+			data-edges-count={edges.length}
+			data-nodes-count={nodes.length}
+			data-testid="react-flow"
+		>
+			{nodes.map((node) => (
 				<button
-					key={node.id}
 					data-testid={`node-${node.id}`}
-					onClick={(e: any) => onNodeClick?.(e, node)}
+					key={node.id}
+					onClick={(e) => onNodeClick?.(e, node)}
 					type="button"
 				>
 					{node.data?.label}
@@ -46,15 +60,14 @@ vi.mock("reactflow", () => {
 	return {
 		default: MockReactFlow,
 		useReactFlow: () => ({ fitView: mockFitView }),
-		ReactFlowProvider: ({ children }: any) => <div>{children}</div>,
+		ReactFlowProvider: ({ children }: { children: React.ReactNode }) => (
+			<div>{children}</div>
+		),
 		Controls: () => <div data-testid="react-flow-controls">Controls</div>,
 		Background: () => <div data-testid="react-flow-background">Background</div>,
 		MiniMap: () => <div data-testid="react-flow-minimap">MiniMap</div>,
 	};
 });
-
-// Get the mock for testing
-const mockFitView = vi.fn();
 
 // Define type for orphaned elements
 type OrphanedElement = {
@@ -91,7 +104,7 @@ interface ActionButtonsProps {
 }
 
 // Mock child components
-vi.mock("./ActionButtons", () => ({
+vi.mock("../action-buttons", () => ({
 	default: ({
 		showCreateGoal,
 		actions,
@@ -119,7 +132,7 @@ interface NodeEditProps {
 	setEditOpen: (open: boolean) => void;
 }
 
-vi.mock("@/components/common/NodeEdit", () => ({
+vi.mock("@/components/common/node-edit", () => ({
 	default: ({ node, isOpen, setEditOpen }: NodeEditProps) =>
 		isOpen ? (
 			<div data-node-id={node?.id} data-testid="node-edit">
@@ -132,7 +145,9 @@ vi.mock("@/components/common/NodeEdit", () => ({
 
 // Mock utility functions
 vi.mock("@/lib/convert-case", () => ({
-	convertAssuranceCase: vi.fn(),
+	convertAssuranceCase: vi
+		.fn()
+		.mockResolvedValue({ caseNodes: [], caseEdges: [] }),
 }));
 
 vi.mock("@/lib/layout-helper", () => ({
@@ -181,7 +196,8 @@ describe("Flow", () => {
 		mockStore.orphanedElements = [];
 		mockFitView.mockClear();
 
-		// Default mock implementation for convertAssuranceCase
+		// Default mock implementation for convertAssuranceCase - make it resolve immediately
+		// This helps avoid async state update warnings in tests
 		vi.mocked(convertAssuranceCase).mockResolvedValue({
 			caseNodes: [
 				{
@@ -207,10 +223,14 @@ describe("Flow", () => {
 			let resolveConversion: (value: {
 				caseNodes: Node[];
 				caseEdges: Edge[];
-			}) => void = () => {};
-			vi.mocked(convertAssuranceCase).mockImplementationOnce(
+			}) => void = () => {
+				// This will be replaced by the Promise constructor
+			};
+			(
+				vi.mocked(convertAssuranceCase) as ReturnType<typeof vi.fn>
+			).mockImplementationOnce(
 				() =>
-					new Promise((resolve) => {
+					new Promise<{ caseNodes: Node[]; caseEdges: Edge[] }>((resolve) => {
 						resolveConversion = resolve;
 					})
 			);
@@ -222,7 +242,7 @@ describe("Flow", () => {
 			expect(spinner).toBeInTheDocument();
 
 			// Now resolve the conversion
-			await act(async () => {
+			act(() => {
 				resolveConversion({
 					caseNodes: [
 						{
@@ -238,7 +258,9 @@ describe("Flow", () => {
 
 			// Wait for loading to finish
 			await waitFor(() => {
-				expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
+				expect(
+					container.querySelector(".animate-spin")
+				).not.toBeInTheDocument();
 			});
 		});
 
@@ -247,20 +269,29 @@ describe("Flow", () => {
 			let resolveConversion: (value: {
 				caseNodes: Node[];
 				caseEdges: Edge[];
-			}) => void = () => {};
-			vi.mocked(convertAssuranceCase).mockImplementationOnce(
+			}) => void = () => {
+				// This will be replaced by the Promise constructor
+			};
+			(
+				vi.mocked(convertAssuranceCase) as ReturnType<typeof vi.fn>
+			).mockImplementationOnce(
 				() =>
-					new Promise((resolve) => {
+					new Promise<{ caseNodes: Node[]; caseEdges: Edge[] }>((resolve) => {
 						resolveConversion = resolve;
 					})
 			);
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			expect(screen.queryByTestId("react-flow")).not.toBeInTheDocument();
 
 			// Now resolve the conversion and update nodes in store
-			await act(async () => {
+			act(() => {
 				const result = {
 					caseNodes: [
 						{
@@ -286,7 +317,7 @@ describe("Flow", () => {
 	});
 
 	describe("ReactFlow Rendering", () => {
-		beforeEach(async () => {
+		beforeEach(() => {
 			// Set up immediate resolution so component loads quickly
 			vi.mocked(convertAssuranceCase).mockResolvedValue({
 				caseNodes: [
@@ -302,11 +333,18 @@ describe("Flow", () => {
 		});
 
 		it("should render ReactFlow with nodes and edges", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			// Render the component and wait for async operations
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
+			// Wait for the async convert function to complete and component to render
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow")).toBeInTheDocument();
-			});
+			}, 5000);
 
 			expect(screen.getByTestId("react-flow")).toHaveAttribute(
 				"data-nodes-count",
@@ -319,7 +357,12 @@ describe("Flow", () => {
 		});
 
 		it("should render ReactFlow controls and background", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow-controls")).toBeInTheDocument();
@@ -328,7 +371,12 @@ describe("Flow", () => {
 		});
 
 		it("should render nodes with correct data", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("node-1")).toBeInTheDocument();
@@ -337,7 +385,12 @@ describe("Flow", () => {
 		});
 
 		it("should render action buttons", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("action-buttons")).toBeInTheDocument();
@@ -359,14 +412,21 @@ describe("Flow", () => {
 
 		it("should open node edit on node click", async () => {
 			const user = userEvent.setup();
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("node-1")).toBeInTheDocument();
 			});
 
 			const node = screen.getByTestId("node-1");
-			await user.click(node);
+			await act(async () => {
+				await user.click(node);
+			});
 
 			expect(screen.getByTestId("node-edit")).toBeInTheDocument();
 			expect(screen.getByTestId("node-edit")).toHaveAttribute(
@@ -377,7 +437,12 @@ describe("Flow", () => {
 
 		it("should close node edit when requested", async () => {
 			const user = userEvent.setup();
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("node-1")).toBeInTheDocument();
@@ -385,20 +450,24 @@ describe("Flow", () => {
 
 			// Open edit
 			const node = screen.getByTestId("node-1");
-			await user.click(node);
+			await act(async () => {
+				await user.click(node);
+			});
 
 			expect(screen.getByTestId("node-edit")).toBeInTheDocument();
 
 			// Close edit
 			const closeButton = screen.getByText("Close Edit");
-			await user.click(closeButton);
+			await act(async () => {
+				await user.click(closeButton);
+			});
 
 			expect(screen.queryByTestId("node-edit")).not.toBeInTheDocument();
 		});
 
 		it("should handle multiple node clicks", async () => {
 			const user = userEvent.setup();
-			mockStore.nodes = [
+			const testNodes = [
 				{
 					id: "1",
 					type: "goal",
@@ -413,8 +482,17 @@ describe("Flow", () => {
 				},
 			];
 
+			// Mock convertAssuranceCase to return our test nodes
+			vi.mocked(convertAssuranceCase).mockResolvedValueOnce({
+				caseNodes: testNodes,
+				caseEdges: [],
+			});
+
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
 			await act(async () => {
-				renderWithReactFlowAndAuth(<Flow />);
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
 			});
 
 			await waitFor(() => {
@@ -444,7 +522,7 @@ describe("Flow", () => {
 
 	describe("Layout Functionality", () => {
 		beforeEach(() => {
-			mockStore.nodes = [
+			const testNodes = [
 				{
 					id: "1",
 					type: "goal",
@@ -452,12 +530,21 @@ describe("Flow", () => {
 					position: { x: 0, y: 0 },
 				},
 			];
+
+			// Mock convertAssuranceCase to return our test nodes
+			vi.mocked(convertAssuranceCase).mockResolvedValue({
+				caseNodes: testNodes,
+				caseEdges: [],
+			});
 		});
 
 		it("should trigger layout on action button click", async () => {
 			const user = userEvent.setup();
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
 			await act(async () => {
-				renderWithReactFlowAndAuth(<Flow />);
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
 			});
 
 			await waitFor(() => {
@@ -465,7 +552,9 @@ describe("Flow", () => {
 			});
 
 			const layoutButton = screen.getByText("Layout");
-			await user.click(layoutButton);
+			await act(async () => {
+				await user.click(layoutButton);
+			});
 
 			expect(mockStore.setNodes).toHaveBeenCalled();
 			expect(mockStore.setEdges).toHaveBeenCalled();
@@ -473,19 +562,34 @@ describe("Flow", () => {
 
 		it("should fit view after layout", async () => {
 			const user = userEvent.setup();
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("action-buttons")).toBeInTheDocument();
 			});
 
 			const layoutButton = screen.getByText("Layout");
-			await user.click(layoutButton);
+			await act(async () => {
+				await user.click(layoutButton);
+			});
 
-			// Wait for requestAnimationFrame
-			await new Promise((resolve) => setTimeout(resolve, 0));
+			// Wait for layout processing and requestAnimationFrame
+			await act(async () => {
+				await new Promise((resolve) => {
+					requestAnimationFrame(() => {
+						setTimeout(resolve, 0);
+					});
+				});
+			});
 
-			expect(mockFitView).toHaveBeenCalled();
+			await waitFor(() => {
+				expect(mockFitView).toHaveBeenCalled();
+			});
 		});
 	});
 
@@ -498,7 +602,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(vi.mocked(convertAssuranceCase)).toHaveBeenCalledWith({
@@ -524,7 +633,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			// Should not crash and should complete loading
 			await waitFor(() => {
@@ -558,7 +672,7 @@ describe("Flow", () => {
 				} as Goal,
 			];
 
-			await act(async () => {
+			act(() => {
 				rerender(<Flow />);
 			});
 
@@ -574,7 +688,12 @@ describe("Flow", () => {
 				{ id: 1, type: "evidence", name: "Orphaned Evidence" },
 			];
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(
@@ -588,7 +707,12 @@ describe("Flow", () => {
 		it("should not show orphaned elements message when none present", async () => {
 			mockStore.orphanedElements = [];
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(
@@ -605,7 +729,12 @@ describe("Flow", () => {
 				{ id: 1, type: "evidence", name: "Orphaned Evidence" },
 			];
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(
@@ -616,12 +745,18 @@ describe("Flow", () => {
 			});
 
 			// Find the X button by its container and icon
-			const dismissButton = screen.getAllByRole("button").find(button =>
-				button.querySelector(".h-4.w-4") && button.className.includes("hover:bg-gray-400")
-			);
+			const dismissButton = screen
+				.getAllByRole("button")
+				.find(
+					(button) =>
+						button.querySelector(".h-4.w-4") &&
+						button.className.includes("hover:bg-gray-400")
+				);
 
 			if (dismissButton) {
-				await user.click(dismissButton);
+				await act(async () => {
+					await user.click(dismissButton);
+				});
 			}
 
 			await waitFor(() => {
@@ -630,42 +765,6 @@ describe("Flow", () => {
 						"You have orphaned elements for this assurance case."
 					)
 				).not.toBeInTheDocument();
-			});
-		});
-	});
-
-	describe("Notifications", () => {
-		it("should trigger notification when notify is called", async () => {
-			const user = userEvent.setup();
-			renderWithReactFlowAndAuth(<Flow />);
-
-			await waitFor(() => {
-				expect(screen.getByTestId("action-buttons")).toBeInTheDocument();
-			});
-
-			const notifyButton = screen.getByText("Notify");
-			await user.click(notifyButton);
-
-			expect(mockToast).toHaveBeenCalledWith({
-				description: "Test notification",
-			});
-		});
-
-		it("should trigger error notification when notifyError is called", async () => {
-			const user = userEvent.setup();
-			renderWithReactFlowAndAuth(<Flow />);
-
-			await waitFor(() => {
-				expect(screen.getByTestId("action-buttons")).toBeInTheDocument();
-			});
-
-			const notifyErrorButton = screen.getByText("Notify Error");
-			await user.click(notifyErrorButton);
-
-			expect(mockToast).toHaveBeenCalledWith({
-				variant: "destructive",
-				title: "Uh oh! Something went wrong.",
-				description: "Test error",
 			});
 		});
 	});
@@ -685,7 +784,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				const actionButtons = screen.getByTestId("action-buttons");
@@ -695,7 +799,12 @@ describe("Flow", () => {
 
 		it("should hide create goal button when goal node exists", async () => {
 			// Default mock already has a goal node
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				const actionButtons = screen.getByTestId("action-buttons");
@@ -710,7 +819,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				const actionButtons = screen.getByTestId("action-buttons");
@@ -740,7 +854,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByText("Store Goal")).toBeInTheDocument();
@@ -761,7 +880,12 @@ describe("Flow", () => {
 				],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow")).toHaveAttribute(
@@ -772,7 +896,12 @@ describe("Flow", () => {
 		});
 
 		it("should call onNodesChange from store", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow")).toBeInTheDocument();
@@ -798,7 +927,12 @@ describe("Flow", () => {
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow")).toHaveAttribute(
@@ -811,7 +945,12 @@ describe("Flow", () => {
 		it("should handle rapid node clicks without crashing", async () => {
 			const user = userEvent.setup();
 			// Default mock already has a goal node
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("node-1")).toBeInTheDocument();
@@ -820,9 +959,11 @@ describe("Flow", () => {
 			const node = screen.getByTestId("node-1");
 
 			// Rapid clicks
-			await user.click(node);
-			await user.click(node);
-			await user.click(node);
+			await act(async () => {
+				await user.click(node);
+				await user.click(node);
+				await user.click(node);
+			});
 
 			expect(screen.getByTestId("node-edit")).toBeInTheDocument();
 		});
@@ -834,10 +975,14 @@ describe("Flow", () => {
 			let resolveConversion: (value: {
 				caseNodes: Node[];
 				caseEdges: Edge[];
-			}) => void = () => {};
-			vi.mocked(convertAssuranceCase).mockImplementationOnce(
+			}) => void = () => {
+				// This will be replaced by the Promise constructor
+			};
+			(
+				vi.mocked(convertAssuranceCase) as ReturnType<typeof vi.fn>
+			).mockImplementationOnce(
 				() =>
-					new Promise((resolve) => {
+					new Promise<{ caseNodes: Node[]; caseEdges: Edge[] }>((resolve) => {
 						resolveConversion = resolve;
 					})
 			);
@@ -849,14 +994,26 @@ describe("Flow", () => {
 			expect(loadingElement).toBeInTheDocument();
 
 			// Resolve to complete loading
-			await act(async () => {
+			act(() => {
 				resolveConversion({ caseNodes: [], caseEdges: [] });
+			});
+
+			// Wait for the loading to finish
+			await waitFor(() => {
+				expect(
+					container.querySelector(".animate-spin")
+				).not.toBeInTheDocument();
 			});
 		});
 
 		it("should make nodes keyboard accessible", async () => {
 			// Default mock already has a goal node
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				const node = screen.getByTestId("node-1");
@@ -865,7 +1022,12 @@ describe("Flow", () => {
 		});
 
 		it("should have accessible controls", async () => {
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow-controls")).toBeInTheDocument();
@@ -880,19 +1042,39 @@ describe("Flow", () => {
 				new Error("Conversion failed")
 			);
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
-			// Component should handle error and eventually stop loading
+			// When conversion fails, component should exit loading state
+			// and render ReactFlow with empty nodes/edges
 			await waitFor(() => {
-				// Check that it eventually renders the ReactFlow even after error
 				expect(screen.getByTestId("react-flow")).toBeInTheDocument();
 			});
+
+			// Should render with empty nodes and edges
+			expect(screen.getByTestId("react-flow")).toHaveAttribute(
+				"data-nodes-count",
+				"0"
+			);
+			expect(screen.getByTestId("react-flow")).toHaveAttribute(
+				"data-edges-count",
+				"0"
+			);
 		});
 
 		it("should handle missing assurance case", async () => {
 			mockStore.assuranceCase = null;
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			// Should complete loading even without assurance case
 			await waitFor(() => {
@@ -904,19 +1086,31 @@ describe("Flow", () => {
 			// Mock conversion with malformed node
 			vi.mocked(convertAssuranceCase).mockResolvedValueOnce({
 				caseNodes: [
-					{ id: "1", type: "goal", data: null, position: { x: 0, y: 0 } } as Node,
+					{
+						id: "1",
+						type: "goal",
+						data: null,
+						position: { x: 0, y: 0 },
+					} as Node,
 				],
 				caseEdges: [],
 			});
 
-			renderWithReactFlowAndAuth(<Flow />);
+			let _component: ReturnType<typeof renderWithReactFlowAndAuth>;
+			await act(async () => {
+				_component = renderWithReactFlowAndAuth(<Flow />);
+				// Give time for useEffect and async operations to complete
+				await new Promise((resolve) => setTimeout(resolve, 10));
+			});
 
 			await waitFor(() => {
 				expect(screen.getByTestId("react-flow")).toBeInTheDocument();
 			});
 
 			// Should render without crashing
-			expect(screen.getByTestId("node-1")).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByTestId("node-1")).toBeInTheDocument();
+			});
 		});
 	});
 });

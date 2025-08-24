@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Node } from "reactflow";
+import userEvent from "@testing-library/user-event";
 import type React from "react";
+import type { Node } from "reactflow";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	createMockAssuranceCase,
 	mockAssuranceCase,
@@ -11,9 +12,16 @@ import {
 	screen,
 	waitFor,
 } from "@/src/__tests__/utils/test-utils";
-import userEvent from "@testing-library/user-event";
 import type { AssuranceCase } from "@/types";
 import NewLinkForm from "../new-link-form";
+
+// Regex constants for testing
+const CREATE_NEW_REGEX = /Create new/i;
+const CREATE_NEW_EXACT_REGEX = /Create new/;
+const DESCRIPTION_REGEX = /description/i;
+const ADD_REGEX = /add/i;
+const EVIDENCE_URL_REGEX = /evidence url/i;
+const CANCEL_REGEX = /cancel/i;
 
 // Mock next-auth
 const mockUseSession = vi.fn(() => ({
@@ -52,16 +60,16 @@ vi.mock("@/lib/case-helper", () => ({
 
 // Import the mocked functions
 import {
+	addEvidenceToClaim,
+	addPropertyClaimToNested,
 	createAssuranceCaseNode,
 	findParentNode,
 	findSiblingHiddenState,
-	addPropertyClaimToNested,
-	addEvidenceToClaim,
 } from "@/lib/case-helper";
 
 // Get the mocked functions
 const mockCreateAssuranceCaseNode = vi.mocked(createAssuranceCaseNode);
-const mockFindParentNode = vi.mocked(findParentNode);
+const _mockFindParentNode = vi.mocked(findParentNode);
 const mockFindSiblingHiddenState = vi.mocked(findSiblingHiddenState);
 const mockAddPropertyClaimToNested = vi.mocked(addPropertyClaimToNested);
 const mockAddEvidenceToClaim = vi.mocked(addEvidenceToClaim);
@@ -110,8 +118,12 @@ describe("NewLinkForm", () => {
 			goals: [
 				{
 					id: 1,
+					type: "Goal",
 					name: "G1",
 					short_description: "Test goal",
+					long_description: "",
+					keywords: "",
+					assurance_case_id: 1,
 					context: [],
 					strategies: [],
 					property_claims: [],
@@ -124,6 +136,8 @@ describe("NewLinkForm", () => {
 				id: 1,
 				name: "G1",
 				short_description: "Test description",
+				long_description: "",
+				type: "goal",
 			},
 			error: null,
 		});
@@ -138,17 +152,19 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByText(/Create new/i)).toBeInTheDocument();
-		expect(screen.getByText("context")).toBeInTheDocument();
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: /add/i })).toBeInTheDocument();
+			expect(screen.getByText(CREATE_NEW_REGEX)).toBeInTheDocument();
+			expect(screen.getByText("context")).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: ADD_REGEX })
+			).toBeInTheDocument();
 		});
 
 		it("should render form for strategy creation", () => {
@@ -156,16 +172,16 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="strategy"
 					actions={mockActions}
+					linkType="strategy"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByText(/Create new/i)).toBeInTheDocument();
-		expect(screen.getByText("strategy")).toBeInTheDocument();
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+			expect(screen.getByText(CREATE_NEW_REGEX)).toBeInTheDocument();
+			expect(screen.getByText("strategy")).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
 		});
 
 		it("should render form for claim creation", () => {
@@ -173,16 +189,16 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="claim"
 					actions={mockActions}
+					linkType="claim"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByText(/Create new/i)).toBeInTheDocument();
-		expect(screen.getByText("claim")).toBeInTheDocument();
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+			expect(screen.getByText(CREATE_NEW_REGEX)).toBeInTheDocument();
+			expect(screen.getByText("claim")).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
 		});
 
 		it("should render form for evidence creation with URL field", () => {
@@ -190,17 +206,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByText(/Create new/)).toBeInTheDocument();
+			expect(screen.getByText(CREATE_NEW_EXACT_REGEX)).toBeInTheDocument();
 			expect(screen.getByText("evidence")).toBeInTheDocument();
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-			expect(screen.getByLabelText(/evidence url/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
+			expect(screen.getByLabelText(EVIDENCE_URL_REGEX)).toBeInTheDocument();
 		});
 
 		it("should render cancel button", () => {
@@ -208,14 +224,16 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: CANCEL_REGEX })
+			).toBeInTheDocument();
 		});
 	});
 
@@ -226,17 +244,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "A");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -252,17 +270,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const urlInput = screen.getByLabelText(/evidence url/i);
+			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
 			await user.type(urlInput, "A");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -278,17 +296,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Valid description");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -302,18 +320,18 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Valid evidence description");
 			// Leave URL field empty
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -335,17 +353,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test context description");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -368,17 +386,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test context");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -395,17 +413,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="strategy"
 					actions={mockActions}
+					linkType="strategy"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test strategy description");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -430,17 +448,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="strategy"
 					actions={mockActions}
+					linkType="strategy"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test strategy");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			// Should not proceed without a goal
@@ -457,26 +475,28 @@ describe("NewLinkForm", () => {
 			mockUseSession.mockClear();
 			mockUseSession.mockImplementation(() => ({
 				data: {
-					user: { id: "1", name: "Test User" },
+					user: { id: "1", name: "Test User", email: "test@example.com" },
+					key: "",
+					expires: "2099-01-01",
 					// No key property
-				} as any,
+				},
 				status: "authenticated",
 				update: vi.fn(),
 			}));
 
 			render(
 				<NewLinkForm
-					node={node}
-					linkType="strategy"
 					actions={mockActions}
+					linkType="strategy"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test strategy");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			// Should not proceed without session key
@@ -493,17 +513,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={goalNode}
-					linkType="claim"
 					actions={mockActions}
+					linkType="claim"
+					node={goalNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test claim");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -528,17 +548,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={strategyNode}
-					linkType="claim"
 					actions={mockActions}
+					linkType="claim"
+					node={strategyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test claim");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -561,17 +581,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="claim"
 					actions={mockActions}
+					linkType="claim"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test claim");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -595,6 +615,10 @@ describe("NewLinkForm", () => {
 			mockCreateAssuranceCaseNode.mockResolvedValue({
 				data: {
 					id: 4,
+					name: "Test Property",
+					short_description: "Test description",
+					long_description: "",
+					type: "property",
 					property_claim_id: 3,
 				},
 				error: null,
@@ -602,17 +626,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="claim"
 					actions={mockActions}
+					linkType="claim"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Nested claim");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -635,20 +659,20 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
-			const urlInput = screen.getByLabelText(/evidence url/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
+			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
 
 			await user.type(descriptionInput, "Test evidence");
 			await user.type(urlInput, "https://example.com");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -672,23 +696,23 @@ describe("NewLinkForm", () => {
 			});
 
 			mockCreateAssuranceCaseNode.mockResolvedValue({
-				data: null,
+				data: undefined,
 				error: "Failed to create evidence",
 			});
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test evidence");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -708,23 +732,23 @@ describe("NewLinkForm", () => {
 			});
 
 			mockCreateAssuranceCaseNode.mockResolvedValue({
-				data: null,
+				data: undefined,
 				error: null,
 			});
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test evidence");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -746,6 +770,10 @@ describe("NewLinkForm", () => {
 			mockCreateAssuranceCaseNode.mockResolvedValue({
 				data: {
 					id: 1,
+					name: "Test Evidence",
+					short_description: "Test description",
+					long_description: "",
+					type: "evidence",
 					property_claim_id: [999], // Non-existent parent
 				},
 				error: null,
@@ -756,17 +784,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test evidence");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -786,14 +814,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test");
 
 			await waitFor(() => {
@@ -807,14 +835,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const urlInput = screen.getByLabelText(/evidence url/i);
+			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
 			await user.type(urlInput, "http://test.com");
 
 			await waitFor(() => {
@@ -830,14 +858,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const cancelButton = screen.getByRole("button", { name: /cancel/i });
+			const cancelButton = screen.getByRole("button", { name: CANCEL_REGEX });
 			await user.click(cancelButton);
 
 			expect(mockActions.setSelectedLink).toHaveBeenCalledWith(false);
@@ -853,23 +881,23 @@ describe("NewLinkForm", () => {
 			// Clear the default mock and set up error response
 			mockCreateAssuranceCaseNode.mockReset();
 			mockCreateAssuranceCaseNode.mockResolvedValue({
-				data: null,
+				data: undefined,
 				error: "API Error",
 			});
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test context");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -889,17 +917,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="unknown"
 					actions={mockActions}
+					linkType="unknown"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test description");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			// Should not call any creation functions for unknown type
@@ -917,17 +945,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "Test context");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -948,17 +976,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, longDescription);
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -979,17 +1007,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, specialChars);
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {
@@ -1010,14 +1038,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			expect(descriptionInput).toHaveValue("");
 		});
 
@@ -1026,14 +1054,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={propertyNode}
-					linkType="evidence"
 					actions={mockActions}
+					linkType="evidence"
+					node={propertyNode}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const urlInput = screen.getByLabelText(/evidence url/i);
+			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
 			expect(urlInput).toHaveValue("");
 		});
 	});
@@ -1044,14 +1072,14 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(DESCRIPTION_REGEX)).toBeInTheDocument();
 		});
 
 		it("should have proper button accessibility", () => {
@@ -1059,15 +1087,15 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const addButton = screen.getByRole("button", { name: /add/i });
-			const cancelButton = screen.getByRole("button", { name: /cancel/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
+			const cancelButton = screen.getByRole("button", { name: CANCEL_REGEX });
 
 			expect(addButton).toBeInTheDocument();
 			expect(cancelButton).toBeInTheDocument();
@@ -1079,17 +1107,17 @@ describe("NewLinkForm", () => {
 
 			renderWithAuth(
 				<NewLinkForm
-					node={node}
-					linkType="context"
 					actions={mockActions}
+					linkType="context"
+					node={node}
 					setUnresolvedChanges={mockSetUnresolvedChanges}
 				/>
 			);
 
-			const descriptionInput = screen.getByLabelText(/description/i);
+			const descriptionInput = screen.getByLabelText(DESCRIPTION_REGEX);
 			await user.type(descriptionInput, "A");
 
-			const addButton = screen.getByRole("button", { name: /add/i });
+			const addButton = screen.getByRole("button", { name: ADD_REGEX });
 			await user.click(addButton);
 
 			await waitFor(() => {

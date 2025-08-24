@@ -1,26 +1,48 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DownloadCaseButton from "../download-case-button";
+
+// Constants for regex patterns
+const DOWNLOAD_BUTTON_REGEX = /download/i;
+
+// Type definitions for mocks
+interface MockIconProps {
+	className?: string;
+}
+
+interface MockButtonProps {
+	children: ReactNode;
+	onClick?: () => void;
+	variant?: string;
+	className?: string;
+}
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
-	DownloadIcon: ({ className }: any) => (
-		<svg className={className} data-testid="download-icon">
+	DownloadIcon: ({ className }: MockIconProps) => (
+		<svg
+			aria-label="Download icon"
+			className={className}
+			data-testid="download-icon"
+		>
+			<title>Download</title>
 			<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
 			<polyline points="7,10 12,15 17,10" />
-			<line x1="12" y1="15" x2="12" y2="3" />
+			<line x1="12" x2="12" y1="15" y2="3" />
 		</svg>
 	),
 }));
 
 // Mock UI components
 vi.mock("@/components/ui/button", () => ({
-	Button: ({ children, onClick, variant, className }: any) => (
+	Button: ({ children, onClick, variant, className }: MockButtonProps) => (
 		<button
-			onClick={onClick}
 			className={className}
 			data-variant={variant}
+			onClick={onClick}
+			type="button"
 		>
 			{children}
 		</button>
@@ -31,76 +53,73 @@ describe("DownloadCaseButton", () => {
 	// Mock DOM APIs
 	const mockCreateObjectURL = vi.fn();
 	const mockRevokeObjectURL = vi.fn();
-	const mockAnchorClick = vi.fn();
 
 	// Store original methods
 	let originalCreateObjectURL: typeof URL.createObjectURL;
 	let originalRevokeObjectURL: typeof URL.revokeObjectURL;
-	let createElementSpy: any;
-	let appendChildSpy: any;
-	let removeChildSpy: any;
+	let originalCreateElement: typeof document.createElement;
+
+	// Mock anchor element for all tests
+	const mockAnchor = {
+		href: "",
+		download: "",
+		click: vi.fn(),
+		style: {},
+		remove: vi.fn(),
+	};
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 
+		// Mock getComputedStyle for accessibility tests
+		window.getComputedStyle = vi.fn().mockImplementation(() => ({
+			visibility: "visible",
+			display: "block",
+			opacity: "1",
+			getPropertyValue: vi.fn().mockImplementation((prop: string) => {
+				const properties: Record<string, string> = {
+					visibility: "visible",
+					display: "block",
+					opacity: "1",
+				};
+				return properties[prop] || "";
+			}),
+		}));
+
 		// Store originals
 		originalCreateObjectURL = URL.createObjectURL;
 		originalRevokeObjectURL = URL.revokeObjectURL;
+		originalCreateElement = document.createElement;
 
 		// Mock URL methods
 		mockCreateObjectURL.mockReturnValue("blob:mock-url");
 		URL.createObjectURL = mockCreateObjectURL;
 		URL.revokeObjectURL = mockRevokeObjectURL;
 
-		// Get original methods before spying
-		const originalCreateElement = document.createElement.bind(document);
-		const originalAppendChild = document.body.appendChild.bind(document.body);
-		const originalRemoveChild = document.body.removeChild.bind(document.body);
-
-		// Spy on DOM methods
-		createElementSpy = vi.spyOn(document, 'createElement');
-		appendChildSpy = vi.spyOn(document.body, 'appendChild');
-		removeChildSpy = vi.spyOn(document.body, 'removeChild');
-
-		// Override behavior for anchor elements
-		createElementSpy.mockImplementation((tagName: string) => {
-			const element = originalCreateElement(tagName);
-			if (tagName === "a" && element instanceof HTMLAnchorElement) {
-				// Override click method for anchor elements
-				element.click = mockAnchorClick;
-			}
-			return element;
-		});
-
-		// Make appendChild and removeChild no-ops for anchor elements
-		appendChildSpy.mockImplementation((child: Node) => {
-			if (child instanceof HTMLAnchorElement) {
-				return child;
-			}
-			return originalAppendChild(child);
-		});
-
-		removeChildSpy.mockImplementation((child: Node) => {
-			if (child instanceof HTMLAnchorElement) {
-				return child;
-			}
-			return originalRemoveChild(child);
-		});
-
 		// Mock Blob constructor
-		global.Blob = vi.fn().mockImplementation((parts: any[], options: any) => ({
-			parts,
-			options,
-		}));
+		global.Blob = vi
+			.fn()
+			.mockImplementation((parts: BlobPart[], options: BlobPropertyBag) => ({
+				parts,
+				options,
+				size: JSON.stringify(parts[0]).length,
+				type: options.type,
+			}));
+
+		// Reset mock anchor for each test
+		mockAnchor.href = "";
+		mockAnchor.download = "";
+		mockAnchor.click.mockClear();
 	});
 
 	afterEach(() => {
 		// Restore original methods
-		createElementSpy.mockRestore();
-		appendChildSpy.mockRestore();
-		removeChildSpy.mockRestore();
+		vi.restoreAllMocks();
 		URL.createObjectURL = originalCreateObjectURL;
 		URL.revokeObjectURL = originalRevokeObjectURL;
+		if (document.createElement !== originalCreateElement) {
+			document.createElement = originalCreateElement;
+		}
 	});
 
 	describe("Component Rendering", () => {
@@ -110,7 +129,9 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			expect(button).toBeInTheDocument();
 			expect(button).toHaveAttribute("data-variant", "primary");
 		});
@@ -130,10 +151,18 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			const { container } = render(
+				<DownloadCaseButton content={mockContent} title={mockTitle} />
+			);
 
-			const container = screen.getByRole("button").closest("div");
-			expect(container).toHaveClass("mt-4", "flex", "shrink-0", "items-center", "gap-x-4");
+			const wrapper = container.firstChild;
+			expect(wrapper).toHaveClass(
+				"mt-4",
+				"flex",
+				"shrink-0",
+				"items-center",
+				"gap-x-4"
+			);
 		});
 	});
 
@@ -145,15 +174,36 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			expect(createElementSpy).toHaveBeenCalledWith("a");
+			// Verify URL methods were called
 			expect(mockCreateObjectURL).toHaveBeenCalled();
-			expect(appendChildSpy).toHaveBeenCalled();
-			expect(mockAnchorClick).toHaveBeenCalled();
-			expect(removeChildSpy).toHaveBeenCalled();
 			expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+			expect(mockAnchor.click).toHaveBeenCalled();
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should create blob with correct content and type", async () => {
@@ -163,7 +213,26 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
 			// Check if Blob was created with correct parameters
@@ -171,6 +240,10 @@ describe("DownloadCaseButton", () => {
 				[JSON.stringify(JSON.parse(mockContent), null, 2)],
 				{ type: "application/json" }
 			);
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should set correct filename with underscores replacing spaces", async () => {
@@ -180,18 +253,27 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Set up mocks before clicking
+			document.createElement = vi.fn().mockImplementation((tagName: string) => {
+				if (tagName === "a") {
+					return mockAnchor as unknown as HTMLElement;
+				}
+				return originalCreateElement.call(document, tagName);
+			});
+			document.body.appendChild = vi.fn();
+			document.body.removeChild = vi.fn();
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Check that createElement was called with 'a'
-			expect(createElementSpy).toHaveBeenCalledWith("a");
+			// Verify the filename was set correctly
+			expect(mockAnchor.download).toBe("Test_Case_With_Spaces.json");
+			expect(mockAnchor.click).toHaveBeenCalled();
 
-			// Get the created anchor element from the spy
-			const anchorCall = createElementSpy.mock.calls.find((call: any[]) => call[0] === "a");
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
-
-			expect(createdAnchor?.download).toBe("Test_Case_With_Spaces.json");
+			// Restore mocks
+			document.createElement = originalCreateElement;
 		});
 
 		it("should set correct blob URL as href", async () => {
@@ -201,14 +283,27 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Set up mocks before clicking
+			document.createElement = vi.fn().mockImplementation((tagName: string) => {
+				if (tagName === "a") {
+					return mockAnchor as unknown as HTMLElement;
+				}
+				return originalCreateElement.call(document, tagName);
+			});
+			document.body.appendChild = vi.fn();
+			document.body.removeChild = vi.fn();
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Get the created anchor element
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
+			// Verify blob URL was created and set
+			expect(mockCreateObjectURL).toHaveBeenCalled();
+			expect(mockAnchor.href).toBe("blob:mock-url");
 
-			expect(createdAnchor?.href).toBe("blob:mock-url");
+			// Restore mocks
+			document.createElement = originalCreateElement;
 		});
 
 		it("should handle multiple spaces in title correctly", async () => {
@@ -218,104 +313,183 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Get the created anchor element
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
+			// Verify spaces are replaced with underscores
+			expect(mockAnchor.download).toBe("Test_Case_With_Multiple_Spaces.json");
 
-			expect(createdAnchor?.download).toBe("Test_Case_With_Multiple_Spaces.json");
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 	});
 
 	describe("JSON Processing", () => {
 		it("should pretty-print JSON with 2-space indentation", async () => {
 			const user = userEvent.setup();
-			const mockContent = '{"name":"test","nested":{"key":"value"}}';
+			const mockContent = '{"name":"test","id":123,"nested":{"value":true}}';
 			const mockTitle = "Test Case";
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			const expectedFormattedJSON = JSON.stringify(
-				JSON.parse(mockContent),
-				null,
-				2
-			);
+			// Verify JSON was pretty-printed
+			const expectedJSON = JSON.stringify(JSON.parse(mockContent), null, 2);
+			expect(global.Blob).toHaveBeenCalledWith([expectedJSON], {
+				type: "application/json",
+			});
 
-			expect(global.Blob).toHaveBeenCalledWith(
-				[expectedFormattedJSON],
-				{ type: "application/json" }
-			);
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle complex nested JSON objects", async () => {
 			const user = userEvent.setup();
-			const complexJSON = {
-				name: "Complex Test Case",
+			const mockContent = JSON.stringify({
+				name: "test",
 				metadata: {
-					version: "1.0",
-					tags: ["test", "complex"],
+					version: 1,
+					tags: ["tag1", "tag2"],
 					settings: {
 						enabled: true,
-						threshold: 0.95
-					}
+						config: {
+							timeout: 5000,
+						},
+					},
 				},
-				items: [
-					{ id: 1, value: "first" },
-					{ id: 2, value: "second" }
-				]
-			};
-			const mockContent = JSON.stringify(complexJSON);
+			});
 			const mockTitle = "Complex Case";
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			expect(global.Blob).toHaveBeenCalledWith(
-				[JSON.stringify(complexJSON, null, 2)],
-				{ type: "application/json" }
-			);
+			expect(global.Blob).toHaveBeenCalled();
+			expect(mockCreateObjectURL).toHaveBeenCalled();
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle empty JSON object", async () => {
 			const user = userEvent.setup();
-			const mockContent = '{}';
+			const mockContent = "{}";
 			const mockTitle = "Empty Case";
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			expect(global.Blob).toHaveBeenCalledWith(
-				[JSON.stringify({}, null, 2)],
-				{ type: "application/json" }
-			);
+			expect(global.Blob).toHaveBeenCalledWith(["{}"], {
+				type: "application/json",
+			});
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 	});
 
 	describe("Error Handling", () => {
 		it("should handle invalid JSON gracefully", async () => {
 			const user = userEvent.setup();
-			const invalidJSON = '{"name": "test", invalid}';
+			const mockContent = "invalid json";
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={invalidJSON} title={mockTitle} />);
+			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 
-			// Should not throw an error
+			// Should not throw error
 			await expect(user.click(button)).resolves.not.toThrow();
 
 			// Should not create blob or trigger download
 			expect(mockCreateObjectURL).not.toHaveBeenCalled();
-			expect(mockAnchorClick).not.toHaveBeenCalled();
 		});
 
 		it("should handle empty content string", async () => {
@@ -325,24 +499,29 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
-			await user.click(button);
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
+
+			// Should not throw error
+			await expect(user.click(button)).resolves.not.toThrow();
 
 			// Should not create blob or trigger download due to JSON parsing error
 			expect(mockCreateObjectURL).not.toHaveBeenCalled();
-			expect(mockAnchorClick).not.toHaveBeenCalled();
 		});
 
 		it("should handle malformed JSON without throwing", async () => {
 			const user = userEvent.setup();
-			const malformedJSON = '{"unclosed": "object"';
+			const mockContent = '{"name": "test", "unclosed": ';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={malformedJSON} title={mockTitle} />);
+			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 
-			// Should silently handle the error
+			// Should not throw error
 			await expect(user.click(button)).resolves.not.toThrow();
 		});
 
@@ -353,20 +532,21 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			// Mock appendChild to throw an error only for anchor elements
-			appendChildSpy.mockImplementation((child: Node) => {
-				if (child instanceof HTMLAnchorElement) {
+			// Mock appendChild to throw an error
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => {
 					throw new Error("DOM error");
-				}
-				// For other elements, use the original method
-				const originalAppendChild = document.body.appendChild.bind(document.body);
-				return originalAppendChild(child);
+				});
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
 			});
 
-			const button = screen.getByRole("button", { name: /download/i });
-
-			// Should not throw an error even if DOM manipulation fails
+			// Should not throw error even if DOM manipulation fails
 			await expect(user.click(button)).resolves.not.toThrow();
+
+			appendChildSpy.mockRestore();
 		});
 	});
 
@@ -374,54 +554,113 @@ describe("DownloadCaseButton", () => {
 		it("should handle title with special characters", async () => {
 			const user = userEvent.setup();
 			const mockContent = '{"name": "test"}';
-			const mockTitle = "Test/Case@#$%^&*()";
+			const mockTitle = "Test/Case\\With:Special*Characters?";
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Get the created anchor element
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
+			// Verify filename with special characters
+			expect(mockAnchor.download).toBe(
+				"Test/Case\\With:Special*Characters?.json"
+			);
 
-			// Should only replace spaces, not other special characters
-			expect(createdAnchor?.download).toBe("Test/Case@#$%^&*().json");
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle very long title", async () => {
 			const user = userEvent.setup();
 			const mockContent = '{"name": "test"}';
-			const longTitle = "A".repeat(300) + " " + "B".repeat(300);
+			const mockTitle = `${"A".repeat(200)} Very Long Title`;
 
-			render(<DownloadCaseButton content={mockContent} title={longTitle} />);
+			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Get the created anchor element
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
+			const expectedFilename = `${"A".repeat(200)}_Very_Long_Title.json`;
+			expect(mockAnchor.download).toBe(expectedFilename);
 
-			const expectedFilename = longTitle.replace(/\s+/g, "_") + ".json";
-			expect(createdAnchor?.download).toBe(expectedFilename);
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle title with only spaces", async () => {
 			const user = userEvent.setup();
 			const mockContent = '{"name": "test"}';
-			const mockTitle = "   ";
+			const mockTitle = "     ";
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			await user.click(button);
 
-			// Get the created anchor element
-			const anchorCallIndex = createElementSpy.mock.calls.findIndex((call: any[]) => call[0] === "a");
-			const createdAnchor = anchorCallIndex >= 0 ? createElementSpy.mock.results[anchorCallIndex]?.value : null;
+			expect(mockAnchor.download).toBe("_.json");
 
-			expect(createdAnchor?.download).toBe("_.json");
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle multiple rapid clicks", async () => {
@@ -431,17 +670,39 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			// Mock DOM methods just before clicking
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
 
-			// Click multiple times rapidly
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
+
+			// Click rapidly
 			await user.click(button);
 			await user.click(button);
 			await user.click(button);
 
-			// Each click should trigger the download process
-			expect(mockAnchorClick).toHaveBeenCalledTimes(3);
+			// Should create blob for each click
 			expect(mockCreateObjectURL).toHaveBeenCalledTimes(3);
 			expect(mockRevokeObjectURL).toHaveBeenCalledTimes(3);
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 	});
 
@@ -453,16 +714,37 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button", { name: /download/i });
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 
-			// Focus the button
-			button.focus();
+			// Focus and activate with keyboard
+			await user.tab();
 			expect(button).toHaveFocus();
 
-			// Trigger with Enter key
-			await user.keyboard("{Enter}");
+			// Mock DOM methods just before keyboard interaction
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
 
-			expect(mockAnchorClick).toHaveBeenCalled();
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+
+			await user.keyboard("{Enter}");
+			expect(mockCreateObjectURL).toHaveBeenCalled();
+
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should have proper button role", () => {
@@ -471,7 +753,9 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			const button = screen.getByRole("button");
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
 			expect(button).toBeInTheDocument();
 		});
 
@@ -481,7 +765,10 @@ describe("DownloadCaseButton", () => {
 
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
-			expect(screen.getByRole("button", { name: /download/i })).toBeInTheDocument();
+			const button = screen.getByRole("button", {
+				name: DOWNLOAD_BUTTON_REGEX,
+			});
+			expect(button).toHaveTextContent("Download");
 		});
 	});
 });

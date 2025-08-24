@@ -3,18 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	renderWithoutProviders,
 	screen,
-	waitFor,
 } from "@/src/__tests__/utils/test-utils";
-import {
-	adminMember,
-	corporateMember,
-	createMockTeamMemberArray,
-	hrMember,
-	mockTeamMembers,
-	optimizationMember,
-	projectsMember,
-	regularMember,
-} from "@/src/__tests__/utils/team-mock-data";
 import MemberList from "../member-list";
 
 // Mock the MemberEdit component
@@ -58,7 +47,7 @@ const NAME_COLUMN_REGEX = /^name$/i;
 const TITLE_COLUMN_REGEX = /^title$/i;
 const STATUS_COLUMN_REGEX = /^status$/i;
 const ROLE_COLUMN_REGEX = /^role$/i;
-const EDIT_COLUMN_REGEX = /edit/i;
+const _EDIT_COLUMN_REGEX = /edit/i;
 const ACTIVE_STATUS_REGEX = /active/i;
 const EDIT_BUTTON_REGEX = /^edit$/i;
 
@@ -107,7 +96,9 @@ describe("MemberList", () => {
 			// Check Rich Griffiths details
 			expect(screen.getByText("Rich Griffiths")).toBeInTheDocument();
 			expect(screen.getByText("Full Stack Developer")).toBeInTheDocument();
-			expect(screen.getByText("rich.griffiths89@gmail.com")).toBeInTheDocument();
+			expect(
+				screen.getByText("rich.griffiths89@gmail.com")
+			).toBeInTheDocument();
 			expect(screen.getByText("Admin")).toBeInTheDocument();
 
 			// Check Marlon Dedakis details
@@ -155,9 +146,9 @@ describe("MemberList", () => {
 			expect(allEditTexts.length).toBe(5); // 1 header + 4 buttons
 
 			// Get only the buttons (not the header text)
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			expect(editButtons.length).toBe(4);
 
 			// Click the first edit button (Rich Griffiths)
@@ -176,9 +167,9 @@ describe("MemberList", () => {
 			renderWithoutProviders(<MemberList />);
 
 			// Open modal using button filter approach
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			await user.click(editButtons[0]);
 
 			expect(screen.getByTestId("modal-open")).toBeInTheDocument();
@@ -194,9 +185,9 @@ describe("MemberList", () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
 			// Edit first member (Rich Griffiths)
 			await user.click(editButtons[0]);
@@ -230,9 +221,9 @@ describe("MemberList", () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
 			// Rapid clicks on different buttons
 			await user.click(editButtons[0]);
@@ -308,9 +299,9 @@ describe("MemberList", () => {
 		it("should render Edit buttons for each member", () => {
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			expect(editButtons.length).toBe(4);
 
 			editButtons.forEach((button) => {
@@ -321,9 +312,9 @@ describe("MemberList", () => {
 		it("should have proper accessibility attributes for edit buttons", () => {
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
 			// Each edit button should have a screen reader text with member name
 			const firstEditButton = editButtons[0];
@@ -394,9 +385,9 @@ describe("MemberList", () => {
 			expect(screen.queryByTestId("modal-open")).not.toBeInTheDocument();
 
 			// Open modal
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			await user.click(editButtons[0]);
 			expect(screen.getByTestId("modal-open")).toBeInTheDocument();
 
@@ -409,9 +400,9 @@ describe("MemberList", () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
 			// Select first member
 			await user.click(editButtons[0]);
@@ -443,11 +434,11 @@ describe("MemberList", () => {
 			renderWithoutProviders(<MemberList />);
 
 			// Get only the edit buttons (not the header text)
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
-			editButtons.forEach((button, index) => {
+			editButtons.forEach((button, _index) => {
 				const srText = button.querySelector(".sr-only");
 				expect(srText).toBeInTheDocument();
 				expect(srText?.textContent).toContain(","); // Should contain member name
@@ -467,13 +458,15 @@ describe("MemberList", () => {
 
 			// Tab to the add user button
 			await user.tab();
-			expect(screen.getByRole("button", { name: ADD_USER_BUTTON_REGEX })).toHaveFocus();
+			expect(
+				screen.getByRole("button", { name: ADD_USER_BUTTON_REGEX })
+			).toHaveFocus();
 
 			// Tab to first edit button
 			await user.tab();
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			expect(editButtons[0]).toHaveFocus();
 
 			// Use Enter to activate the button
@@ -497,9 +490,9 @@ describe("MemberList", () => {
 			renderWithoutProviders(<MemberList />);
 
 			// This tests the current implementation with valid data
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 			await user.click(editButtons[0]);
 
 			expect(screen.getByTestId("modal-open")).toBeInTheDocument();
@@ -509,9 +502,9 @@ describe("MemberList", () => {
 			const user = userEvent.setup();
 			renderWithoutProviders(<MemberList />);
 
-			const editButtons = screen.getAllByRole("button").filter(button =>
-				button.textContent?.includes("Edit")
-			);
+			const editButtons = screen
+				.getAllByRole("button")
+				.filter((button) => button.textContent?.includes("Edit"));
 
 			// Rapid open/close/open
 			await user.click(editButtons[0]);
@@ -542,10 +535,14 @@ describe("MemberList", () => {
 		it("should render header section with proper layout", () => {
 			renderWithoutProviders(<MemberList />);
 
-			const headerSection = screen.getByText(USERS_HEADING_REGEX).closest(".sm\\:flex");
+			const headerSection = screen
+				.getByText(USERS_HEADING_REGEX)
+				.closest(".sm\\:flex");
 			expect(headerSection).toBeInTheDocument();
 
-			const addButton = screen.getByRole("button", { name: ADD_USER_BUTTON_REGEX });
+			const addButton = screen.getByRole("button", {
+				name: ADD_USER_BUTTON_REGEX,
+			});
 			expect(addButton.closest(".sm\\:flex-none")).toBeInTheDocument();
 		});
 

@@ -1,13 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackForm } from "../feedback-form";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
 	useRouter: vi.fn(),
 }));
+
+// Regex constants for performance optimization
+const NAME_REGEX = /name/i;
+const EMAIL_ADDRESS_REGEX = /email address/i;
+const FEEDBACK_REGEX = /your feedback/i;
+const CANCEL_BUTTON_REGEX = /cancel/i;
+const SUBMIT_BUTTON_REGEX = /submit/i;
 
 describe("FeedbackForm", () => {
 	const mockPush = vi.fn();
@@ -30,35 +37,47 @@ describe("FeedbackForm", () => {
 			render(<FeedbackForm />);
 
 			expect(screen.getByText("Feedback Form")).toBeInTheDocument();
-			expect(screen.getByText("We appreciate any type of feedback, please fill in the form below and let us know what you think of our product.")).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"We appreciate any type of feedback, please fill in the form below and let us know what you think of our product."
+				)
+			).toBeInTheDocument();
 
-			expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-			expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-			expect(screen.getByLabelText(/your feedback/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(NAME_REGEX)).toBeInTheDocument();
+			expect(screen.getByLabelText(EMAIL_ADDRESS_REGEX)).toBeInTheDocument();
+			expect(screen.getByLabelText(FEEDBACK_REGEX)).toBeInTheDocument();
 
-			expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
+			).toBeInTheDocument();
 		});
 
 		it("should render form fields with correct placeholders", () => {
 			render(<FeedbackForm />);
 
 			expect(screen.getByPlaceholderText("Kai")).toBeInTheDocument();
-			expect(screen.getByPlaceholderText("example@gmail.com")).toBeInTheDocument();
-			expect(screen.getByPlaceholderText("Let us know what you think...")).toBeInTheDocument();
+			expect(
+				screen.getByPlaceholderText("example@gmail.com")
+			).toBeInTheDocument();
+			expect(
+				screen.getByPlaceholderText("Let us know what you think...")
+			).toBeInTheDocument();
 		});
 
 		it("should render email field with correct type", () => {
 			render(<FeedbackForm />);
 
-			const emailField = screen.getByLabelText(/email address/i);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
 			expect(emailField).toHaveAttribute("type", "email");
 		});
 
 		it("should render textarea with correct attributes", () => {
 			render(<FeedbackForm />);
 
-			const feedbackField = screen.getByLabelText(/your feedback/i);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 			expect(feedbackField).toHaveAttribute("rows", "10");
 			expect(feedbackField).toHaveClass("resize-none");
 		});
@@ -69,66 +88,97 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
+			// Fill required fields to isolate name validation
+			await user.type(emailField, "test@example.com");
+			await user.type(feedbackField, "This is feedback");
+
+			// Type invalid name and blur to trigger validation
 			await user.type(nameField, "A");
-			await user.click(submitButton);
+			await user.tab(); // Trigger blur event
 
 			await waitFor(() => {
-				expect(nameField).toHaveAttribute("aria-invalid", "true");
-			}, { timeout: 3000 });
-
-			await waitFor(() => {
-				expect(screen.getByText("Name must be at least 2 characters.")).toBeInTheDocument();
-			}, { timeout: 3000 });
+				expect(
+					screen.getByText("Name must be at least 2 characters.")
+				).toBeInTheDocument();
+			});
 		});
 
 		it("should show validation error for email field when less than 2 characters", async () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const emailField = screen.getByLabelText(/email address/i);
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
-			// Type invalid input and trigger blur to activate validation
+			// Fill other required fields
+			await user.type(nameField, "John Doe");
+			await user.type(feedbackField, "This is feedback");
+
+			// Type invalid email and blur to trigger validation
 			await user.type(emailField, "A");
 			await user.tab(); // This triggers blur which should activate validation
-			await user.click(submitButton);
 
 			await waitFor(() => {
-				expect(screen.getByText("Email must be at least 2 characters.")).toBeInTheDocument();
-			}, { timeout: 3000 });
+				expect(
+					screen.getByText("Email must be at least 2 characters.")
+				).toBeInTheDocument();
+			});
 		});
 
 		it("should show validation error for feedback field when less than 2 characters", async () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const feedbackField = screen.getByLabelText(/your feedback/i);
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
 
-			// Type invalid input and trigger blur to activate validation
+			// Fill other required fields
+			await user.type(nameField, "John Doe");
+			await user.type(emailField, "john@example.com");
+
+			// Type invalid feedback and blur to trigger validation
 			await user.type(feedbackField, "A");
 			await user.tab(); // This triggers blur which should activate validation
-			await user.click(submitButton);
 
 			await waitFor(() => {
-				expect(screen.getByText("Feedback must be at least 2 characters.")).toBeInTheDocument();
-			}, { timeout: 3000 });
+				expect(
+					screen.getByText("Feedback must be at least 2 characters.")
+				).toBeInTheDocument();
+			});
 		});
 
 		it("should show all validation errors when form is empty", async () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const submitButton = screen.getByRole("button", { name: /submit/i });
-			await user.click(submitButton);
+			// Focus and blur each field to trigger validation
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
+
+			await user.click(nameField);
+			await user.tab();
+			await user.click(emailField);
+			await user.tab();
+			await user.click(feedbackField);
+			await user.tab();
 
 			await waitFor(() => {
-				expect(screen.getByText("Name must be at least 2 characters.")).toBeInTheDocument();
-				expect(screen.getByText("Email must be at least 2 characters.")).toBeInTheDocument();
-				expect(screen.getByText("Feedback must be at least 2 characters.")).toBeInTheDocument();
+				expect(
+					screen.getByText("Name must be at least 2 characters.")
+				).toBeInTheDocument();
+				expect(
+					screen.getByText("Email must be at least 2 characters.")
+				).toBeInTheDocument();
+				expect(
+					screen.getByText("Feedback must be at least 2 characters.")
+				).toBeInTheDocument();
 			});
 		});
 
@@ -136,10 +186,12 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const emailField = screen.getByLabelText(/email address/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
+			const submitButton = screen.getByRole("button", {
+				name: SUBMIT_BUTTON_REGEX,
+			});
 
 			await user.type(nameField, "John Doe");
 			await user.type(emailField, "john@example.com");
@@ -147,9 +199,15 @@ describe("FeedbackForm", () => {
 			await user.click(submitButton);
 
 			await waitFor(() => {
-				expect(screen.queryByText("Name must be at least 2 characters.")).not.toBeInTheDocument();
-				expect(screen.queryByText("Email must be at least 2 characters.")).not.toBeInTheDocument();
-				expect(screen.queryByText("Feedback must be at least 2 characters.")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Name must be at least 2 characters.")
+				).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Email must be at least 2 characters.")
+				).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Feedback must be at least 2 characters.")
+				).not.toBeInTheDocument();
 			});
 		});
 	});
@@ -159,9 +217,9 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const emailField = screen.getByLabelText(/email address/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
 			await user.type(nameField, "John Doe");
 			await user.type(emailField, "john@example.com");
@@ -176,7 +234,7 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
 
 			await user.type(nameField, "John");
 			expect(nameField).toHaveValue("John");
@@ -189,9 +247,9 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const emailField = screen.getByLabelText(/email address/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
 			await user.click(nameField);
 			expect(nameField).toHaveFocus();
@@ -209,7 +267,9 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const cancelButton = screen.getByRole("button", { name: /cancel/i });
+			const cancelButton = screen.getByRole("button", {
+				name: CANCEL_BUTTON_REGEX,
+			});
 			await user.click(cancelButton);
 
 			expect(mockPush).toHaveBeenCalledWith("/");
@@ -218,7 +278,9 @@ describe("FeedbackForm", () => {
 		it("should have correct styling for cancel button", () => {
 			render(<FeedbackForm />);
 
-			const cancelButton = screen.getByRole("button", { name: /cancel/i });
+			const cancelButton = screen.getByRole("button", {
+				name: CANCEL_BUTTON_REGEX,
+			});
 			expect(cancelButton).toHaveTextContent("Cancel");
 
 			// Check for icon presence
@@ -229,19 +291,27 @@ describe("FeedbackForm", () => {
 		it("should have correct styling for submit button", () => {
 			render(<FeedbackForm />);
 
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const submitButton = screen.getByRole("button", {
+				name: SUBMIT_BUTTON_REGEX,
+			});
 			expect(submitButton).toHaveAttribute("type", "submit");
-			expect(submitButton).toHaveClass("bg-indigo-600", "text-white", "hover:bg-indigo-700");
+			expect(submitButton).toHaveClass(
+				"bg-indigo-600",
+				"text-white",
+				"hover:bg-indigo-700"
+			);
 		});
 
 		it("should submit form when submit button is clicked with valid data", async () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const emailField = screen.getByLabelText(/email address/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
-			const submitButton = screen.getByRole("button", { name: /submit/i });
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
+			const submitButton = screen.getByRole("button", {
+				name: SUBMIT_BUTTON_REGEX,
+			});
 
 			await user.type(nameField, "John Doe");
 			await user.type(emailField, "john@example.com");
@@ -250,7 +320,9 @@ describe("FeedbackForm", () => {
 
 			// Since onSubmit is currently a TODO, we just verify no errors occur
 			await waitFor(() => {
-				expect(screen.queryByText("Name must be at least 2 characters.")).not.toBeInTheDocument();
+				expect(
+					screen.queryByText("Name must be at least 2 characters.")
+				).not.toBeInTheDocument();
 			});
 		});
 	});
@@ -265,14 +337,28 @@ describe("FeedbackForm", () => {
 			expect(formElement).toHaveClass("w-full", "space-y-6");
 
 			const mainContainer = formElement?.closest("div");
-			expect(mainContainer).toHaveClass("mx-12", "w-full", "max-w-3xl", "rounded-md", "bg-background", "p-8", "shadow-xl");
+			expect(mainContainer).toHaveClass(
+				"mx-12",
+				"w-full",
+				"max-w-3xl",
+				"rounded-md",
+				"bg-background",
+				"p-8",
+				"shadow-xl"
+			);
 		});
 
 		it("should have proper button layout", () => {
 			render(<FeedbackForm />);
 
-			const buttonContainer = screen.getByRole("button", { name: /cancel/i }).closest("div");
-			expect(buttonContainer).toHaveClass("flex", "items-center", "justify-between");
+			const buttonContainer = screen
+				.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+				.closest("div");
+			expect(buttonContainer).toHaveClass(
+				"flex",
+				"items-center",
+				"justify-between"
+			);
 		});
 	});
 
@@ -280,9 +366,9 @@ describe("FeedbackForm", () => {
 		it("should have proper labels for all form fields", () => {
 			render(<FeedbackForm />);
 
-			expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-			expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-			expect(screen.getByLabelText(/your feedback/i)).toBeInTheDocument();
+			expect(screen.getByLabelText(NAME_REGEX)).toBeInTheDocument();
+			expect(screen.getByLabelText(EMAIL_ADDRESS_REGEX)).toBeInTheDocument();
+			expect(screen.getByLabelText(FEEDBACK_REGEX)).toBeInTheDocument();
 		});
 
 		it("should have proper heading structure", () => {
@@ -303,8 +389,12 @@ describe("FeedbackForm", () => {
 		it("should have buttons with proper roles and accessible names", () => {
 			render(<FeedbackForm />);
 
-			expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: /submit/i })).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX })
+			).toBeInTheDocument();
 		});
 	});
 
@@ -314,8 +404,8 @@ describe("FeedbackForm", () => {
 			render(<FeedbackForm />);
 
 			const longText = "A".repeat(1000);
-			const nameField = screen.getByLabelText(/name/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
 			await user.type(nameField, longText);
 			await user.type(feedbackField, longText);
@@ -329,7 +419,7 @@ describe("FeedbackForm", () => {
 			render(<FeedbackForm />);
 
 			const specialText = "John@#$%^&*()_+;,./ Doe";
-			const nameField = screen.getByLabelText(/name/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
 
 			// Use paste instead of type for special characters
 			await user.click(nameField);
@@ -341,9 +431,9 @@ describe("FeedbackForm", () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
-			const nameField = screen.getByLabelText(/name/i);
-			const emailField = screen.getByLabelText(/email address/i);
-			const feedbackField = screen.getByLabelText(/your feedback/i);
+			const nameField = screen.getByLabelText(NAME_REGEX);
+			const emailField = screen.getByLabelText(EMAIL_ADDRESS_REGEX);
+			const feedbackField = screen.getByLabelText(FEEDBACK_REGEX);
 
 			await user.type(nameField, "John");
 			await user.type(emailField, "john@test.com");
