@@ -468,6 +468,9 @@ const OrphanElements = ({
 					{filteredOrphanElements.map((el) => (
 						<div key={el.id}>
 							<button
+								aria-label={
+									el.short_description || el.name || `${el.type} element`
+								}
 								className="flex w-full items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-indigo-500"
 								onClick={() => handleOrphanSelection(el)}
 								type="button"

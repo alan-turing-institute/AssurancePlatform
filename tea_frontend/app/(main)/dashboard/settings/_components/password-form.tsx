@@ -55,7 +55,7 @@ type PasswordFormProps = {
 
 export function PasswordForm({ data }: PasswordFormProps) {
 	const [error, setError] = useState<string>("");
-	const [_loading, setLoading] = useState<boolean>(false);
+	const [loading, setLoading] = useState<boolean>(false);
 	const { toast } = useToast();
 	const { data: session } = useSession();
 
@@ -180,9 +180,10 @@ export function PasswordForm({ data }: PasswordFormProps) {
 							</div>
 							<Button
 								className="bg-indigo-600 text-white hover:bg-indigo-700"
+								disabled={loading}
 								type="submit"
 							>
-								Update
+								{loading ? "Updating" : "Update"}
 							</Button>
 						</form>
 					</Form>

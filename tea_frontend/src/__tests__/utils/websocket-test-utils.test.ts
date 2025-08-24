@@ -54,10 +54,10 @@ describe("WebSocket Testing Utilities", () => {
 		});
 
 		it("should handle message receiving", () => {
-			let receivedMessage: any;
+			let receivedMessage: unknown;
 
-			mockWS.addEventListener("message", (event: any) => {
-				receivedMessage = JSON.parse(event.data);
+			mockWS.addEventListener("message", (event: Event) => {
+				receivedMessage = JSON.parse((event as MessageEvent).data as string);
 			});
 
 			const message = { type: "test", content: "hello" };
@@ -103,14 +103,18 @@ describe("WebSocket Testing Utilities", () => {
 			ws1.simulateOpen();
 			ws2.simulateOpen();
 
-			const receivedMessages: any[] = [];
+			const receivedMessages: unknown[] = [];
 
-			ws1.addEventListener("message", (event: any) => {
-				receivedMessages.push(JSON.parse(event.data));
+			ws1.addEventListener("message", (event: Event) => {
+				receivedMessages.push(
+					JSON.parse((event as MessageEvent).data as string)
+				);
 			});
 
-			ws2.addEventListener("message", (event: any) => {
-				receivedMessages.push(JSON.parse(event.data));
+			ws2.addEventListener("message", (event: Event) => {
+				receivedMessages.push(
+					JSON.parse((event as MessageEvent).data as string)
+				);
 			});
 
 			const message = { type: "broadcast", content: "hello all" };
@@ -126,15 +130,15 @@ describe("WebSocket Testing Utilities", () => {
 			ws1.simulateOpen();
 			ws2.simulateOpen();
 
-			let user1Received: any;
-			let user2Received: any;
+			let user1Received: unknown;
+			let user2Received: unknown;
 
-			ws1.addEventListener("message", (event: any) => {
-				user1Received = JSON.parse(event.data);
+			ws1.addEventListener("message", (event: Event) => {
+				user1Received = JSON.parse((event as MessageEvent).data as string);
 			});
 
-			ws2.addEventListener("message", (event: any) => {
-				user2Received = JSON.parse(event.data);
+			ws2.addEventListener("message", (event: Event) => {
+				user2Received = JSON.parse((event as MessageEvent).data as string);
 			});
 
 			const message = { type: "private", content: "hello user1" };
@@ -199,7 +203,10 @@ describe("WebSocket Testing Utilities", () => {
 			const message = createAssuranceCaseUpdate(assuranceCase, "user1");
 
 			expect(message.type).toBe(MessageType.CASE_MESSAGE);
-			expect((message.content as any).assuranceCase).toEqual(assuranceCase);
+			expect(
+				(message.content as { assuranceCase: typeof assuranceCase })
+					.assuranceCase
+			).toEqual(assuranceCase);
 			expect(message.userId).toBe("user1");
 			expect(message.timestamp).toBeDefined();
 		});
@@ -223,7 +230,10 @@ describe("WebSocket Testing Utilities", () => {
 			const message = createPresenceUpdate(users);
 
 			expect(message.type).toBe(MessageType.PRESENCE_UPDATE);
-			expect((message.content as any).current_connections).toEqual(users);
+			expect(
+				(message.content as { current_connections: typeof users })
+					.current_connections
+			).toEqual(users);
 			expect(message.timestamp).toBeDefined();
 		});
 
@@ -232,9 +242,10 @@ describe("WebSocket Testing Utilities", () => {
 
 			await simulateWebSocketLifecycle(
 				() => new MockWebSocket("ws://localhost:8000/ws"),
-				async (ws) => {
+				(ws) => {
 					expect(ws.readyState).toBe(WS_READY_STATE.OPEN);
 					testExecuted = true;
+					return Promise.resolve();
 				}
 			);
 
@@ -294,11 +305,11 @@ describe("WebSocket Testing Utilities", () => {
 			simulator.simulateCursorMovements();
 
 			const activeUsers = simulator.getActiveUsers();
-			activeUsers.forEach((user) => {
+			for (const user of activeUsers) {
 				expect(user.cursor).toBeDefined();
 				expect(typeof user.cursor?.x).toBe("number");
 				expect(typeof user.cursor?.y).toBe("number");
-			});
+			}
 		});
 	});
 
@@ -351,7 +362,7 @@ describe("WebSocket Testing Utilities", () => {
 				content: "test",
 				timestamp: Date.now(),
 			};
-			const invalidMessage = { type: "", content: null, timestamp: 0 } as any;
+			const invalidMessage = { type: "", content: null, timestamp: 0 };
 
 			tester.logMessage(validMessage, "user1");
 			tester.logMessage(invalidMessage, "user2");

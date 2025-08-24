@@ -94,7 +94,12 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 
 	// Fetch current user
 	useEffect(() => {
-		fetchCurrentUser().then((result) => setUser(result));
+		fetchCurrentUser()
+			.then((result) => setUser(result))
+			.catch(() => {
+				// Handle error silently
+				setUser(undefined);
+			});
 	}, [fetchCurrentUser]);
 
 	return (

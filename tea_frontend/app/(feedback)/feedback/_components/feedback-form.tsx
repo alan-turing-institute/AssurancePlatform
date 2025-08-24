@@ -34,6 +34,8 @@ export function FeedbackForm() {
 
 	const form = useForm<z.infer<typeof FormSchema>>({
 		resolver: zodResolver(FormSchema),
+		mode: "onBlur",
+		reValidateMode: "onChange",
 		defaultValues: {
 			name: "",
 			email: "",

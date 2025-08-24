@@ -3,6 +3,12 @@ import type { ReactElement } from "react";
 import { vi } from "vitest";
 import { renderWithAuth } from "./test-utils";
 
+type ModalStore = {
+	isOpen: boolean;
+	onOpen: () => void;
+	onClose: () => void;
+};
+
 // Mock modal stores
 export const mockModalStores = {
 	permissions: {
@@ -38,16 +44,16 @@ export const mockModalStores = {
 };
 
 // Helper to open a modal in tests
-export const openModal = async (modalStore: any) => {
-	await act(async () => {
+export const openModal = (modalStore: ModalStore) => {
+	act(() => {
 		modalStore.isOpen = true;
 		modalStore.onOpen();
 	});
 };
 
 // Helper to close a modal in tests
-export const closeModal = async (modalStore: any) => {
-	await act(async () => {
+export const closeModal = (modalStore: ModalStore) => {
+	act(() => {
 		modalStore.isOpen = false;
 		modalStore.onClose();
 	});
@@ -56,7 +62,7 @@ export const closeModal = async (modalStore: any) => {
 // Helper to render with modal provider
 export const renderWithModal = (
 	ui: ReactElement,
-	_modalStore: any = mockModalStores.permissions
+	_modalStore: ModalStore = mockModalStores.permissions
 ) => {
 	// Mock the specific modal hook
 	vi.mock("@/hooks/use-permissions-modal", () => ({
@@ -73,11 +79,11 @@ export const waitForModal = async (testId: string) => {
 
 // Reset all modal mocks
 export const resetModalMocks = () => {
-	Object.values(mockModalStores).forEach((store) => {
+	for (const store of Object.values(mockModalStores)) {
 		store.isOpen = false;
 		store.onOpen.mockClear();
 		store.onClose.mockClear();
-	});
+	}
 };
 
 // Export from testing library for convenience

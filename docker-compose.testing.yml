@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: tea_user
       POSTGRES_PASSWORD: tea_password
     tmpfs:
-      - /var/lib/postgresql/data  # Use tmpfs for faster performance
+      - /var/lib/postgresql/data # Use tmpfs for faster performance
     networks:
       - tea_test_network
     healthcheck:
@@ -23,33 +23,19 @@ services:
     container_name: tea_backend_test
     hostname: tea-backend-test
     ports:
-      - '8001:8000'  # Different port to avoid conflicts
+      - '8001:8000' # Different port to avoid conflicts
     depends_on:
       postgres_test:
         condition: service_healthy
-    environment:
-      # Django Configuration
-      - DEBUG=on
-      - SECRET_KEY=test-secret-key-for-testing-only
-      - TESTING=true
-      # Database Configuration
-      - DBHOST=postgres_test
-      - DBNAME=tea_test
-      - DBUSER=tea_user
-      - DBPASSWORD=tea_password
-      # CORS Configuration
-      - CORS_ORIGIN_WHITELIST=http://localhost:3000,http://tea_frontend_test:3000
-      # Django ALLOWED_HOSTS
-      - ALLOWED_HOSTS=localhost,127.0.0.1,tea_backend_test,tea-backend-test
-      # GitHub OAuth (dummy values for testing)
-      - GITHUB_CLIENT_ID=test_github_client_id
-      - GITHUB_CLIENT_SECRET=test_github_client_secret
+    env_file:
+      - ./tea_backend/.env.local
     volumes:
       - ./tea_backend:/app
+      - ./tea_backend/mediafiles:/app/mediafiles
     networks:
       - tea_test_network
     # Use the same entrypoint script as development
-    entrypoint: ["/app/docker-entrypoint-dev.sh"]
+    entrypoint: ['/app/docker-entrypoint-dev.sh']
 
   tea_frontend_test:
     build:
@@ -58,20 +44,18 @@ services:
     container_name: tea_frontend_test
     depends_on:
       - tea_backend_test
-    environment:
-      - NEXT_PUBLIC_API_URL=http://tea_backend_test:8000
-      - NODE_ENV=test
-      - CI=true  # Disable interactive mode
-      - NEXTAUTH_URL=http://localhost:3000  # For authentication in tests
+    env_file:
+      - ./tea_frontend/.env.local
     volumes:
       - ./tea_frontend:/app
-      - frontend_test_modules:/app/node_modules  # Separate node_modules
-      - frontend_test_next:/app/.next  # Separate .next build
-      - frontend_test_coverage:/app/coverage  # Separate coverage directory
+      - frontend_test_modules:/app/node_modules # Separate node_modules
+      - frontend_test_next:/app/.next # Separate .next build
+      - frontend_test_coverage:/app/coverage # Separate coverage directory
     networks:
       - tea_test_network
     # Default: keep container running for interactive testing
-    command: sh -c "corepack enable pnpm && pnpm install && sleep infinity"
+    command:
+      sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
 
 networks:
   tea_test_network:

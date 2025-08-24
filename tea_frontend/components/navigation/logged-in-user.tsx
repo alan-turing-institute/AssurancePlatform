@@ -16,10 +16,19 @@ const LoggedInUser = () => {
 	const [loading, setLoading] = useState<boolean>(true);
 
 	useEffect(() => {
-		fetchCurrentUser(data?.key ?? "").then((result) => {
-			setCurrentUser(result);
-			setLoading(false);
-		});
+		const loadUser = async () => {
+			try {
+				const result = await fetchCurrentUser(data?.key ?? "");
+				setCurrentUser(result);
+				setLoading(false);
+			} catch {
+				// Handle error silently - user will see loading state
+				setCurrentUser(null);
+				setLoading(false);
+			}
+		};
+
+		loadUser();
 	}, [data?.key]);
 
 	return (

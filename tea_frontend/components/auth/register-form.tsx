@@ -134,7 +134,7 @@ const RegisterForm = () => {
 		};
 
 		return fetch(
-			`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/register/`,
+			`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/register/`,
 			requestOptions
 		);
 	}
@@ -155,7 +155,7 @@ const RegisterForm = () => {
 				return;
 			}
 
-			await handleSuccessfulRegistration(response, values);
+			handleSuccessfulRegistration(response, values);
 		} catch (_error) {
 			setLoading(false);
 			setErrors(["Registration failed. Please try again."]);

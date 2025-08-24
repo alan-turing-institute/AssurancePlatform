@@ -77,8 +77,8 @@ export interface CaseTemplate {
 }
 
 // Advanced User Factory
-export class UserFactory {
-	static create(overrides: Partial<User> = {}): User {
+export const UserFactory = {
+	create(overrides: Partial<User> = {}): User {
 		const id = overrides.id ?? getNextId();
 		const firstName = overrides.first_name ?? `User${id}`;
 		const lastName = overrides.last_name ?? `Last${id}`;
@@ -93,27 +93,27 @@ export class UserFactory {
 			auth_provider: overrides.auth_provider ?? "github",
 			auth_username: overrides.auth_username ?? username,
 		};
-	}
+	},
 
-	static createBatch(count: number, overrides: Partial<User> = {}): User[] {
+	createBatch(count: number, overrides: Partial<User> = {}): User[] {
 		return Array.from({ length: count }, (_, _i) =>
-			UserFactory.create({ ...overrides, id: getNextId() })
+			this.create({ ...overrides, id: getNextId() })
 		);
-	}
+	},
 
-	static createWithRole(role: string): User {
-		return UserFactory.create({
+	createWithRole(role: string): User {
+		return this.create({
 			username: `${role.toLowerCase()}_user`,
 			email: `${role.toLowerCase()}@example.com`,
 			first_name: role,
 			last_name: "User",
 		});
-	}
-}
+	},
+};
 
 // Advanced Team Factory
-export class TeamFactory {
-	static create(overrides: Partial<Team> = {}): Team {
+export const TeamFactory = {
+	create(overrides: Partial<Team> = {}): Team {
 		const id = overrides.id ?? getNextId();
 		const owner = overrides.owner ?? UserFactory.create().id;
 
@@ -125,71 +125,86 @@ export class TeamFactory {
 			members: overrides.members ?? [owner],
 			created_date: overrides.created_date ?? new Date().toISOString(),
 		};
-	}
+	},
 
-	static createWithMembers(memberCount = 5): {
+	createWithMembers(memberCount = 5): {
 		team: Team;
 		members: TeamMember[];
 		users: User[];
 	} {
 		const owner = UserFactory.createWithRole("Owner");
 		const users = [owner, ...UserFactory.createBatch(memberCount - 1)];
-		const team = TeamFactory.create({
+		const team = this.create({
 			owner: owner.id,
 			members: users.map((u) => u.id),
 		});
 
-		const members: TeamMember[] = users.map((user, index) => ({
-			id: getNextId(),
-			user: user.id,
-			team: team.id,
-			role: index === 0 ? "owner" : index === 1 ? "admin" : "member",
-			joined_date: new Date(
-				Date.now() - index * 24 * 60 * 60 * 1000
-			).toISOString(),
-		}));
+		const members: TeamMember[] = users.map((user, index) => {
+			let role: "owner" | "admin" | "member";
+			if (index === 0) {
+				role = "owner";
+			} else if (index === 1) {
+				role = "admin";
+			} else {
+				role = "member";
+			}
+
+			return {
+				id: getNextId(),
+				user: user.id,
+				team: team.id,
+				role,
+				joined_date: new Date(
+					Date.now() - index * 24 * 60 * 60 * 1000
+				).toISOString(),
+			};
+		});
 
 		return { team, members, users };
-	}
-}
+	},
+};
 
 // Advanced AssuranceCase Factory
-export class AssuranceCaseFactory {
-	static create(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
+export const AssuranceCaseFactory = {
+	create(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
 		const id = overrides.id ?? getNextId();
 		const owner = overrides.owner ?? UserFactory.create().id;
+		const currentDate = new Date().toISOString();
+
+		const defaults = {
+			type: "AssuranceCase" as const,
+			name: `Assurance Case ${id}`,
+			description: `Comprehensive assurance case ${id} for testing`,
+			created_date: currentDate,
+			lock_uuid: null,
+			view_groups: [],
+			edit_groups: [],
+			review_groups: [],
+			color_profile: "default",
+			published: false,
+			published_date: null,
+			permissions: "manage" as const,
+			comments: [],
+			goals: [],
+			property_claims: [],
+			evidence: [],
+			contexts: [],
+			strategies: [],
+			images: [],
+			viewMembers: [],
+			editMembers: [],
+			reviewMembers: [],
+		};
 
 		return {
 			id,
-			type: "AssuranceCase",
-			name: overrides.name ?? `Assurance Case ${id}`,
-			description:
-				overrides.description ??
-				`Comprehensive assurance case ${id} for testing`,
-			created_date: overrides.created_date ?? new Date().toISOString(),
-			lock_uuid: overrides.lock_uuid ?? null,
 			owner,
-			view_groups: overrides.view_groups ?? [],
-			edit_groups: overrides.edit_groups ?? [],
-			review_groups: overrides.review_groups ?? [],
-			color_profile: overrides.color_profile ?? "default",
-			published: overrides.published ?? false,
-			published_date: overrides.published_date ?? null,
-			permissions: overrides.permissions ?? "manage",
-			comments: overrides.comments ?? [],
-			goals: overrides.goals ?? [],
-			property_claims: overrides.property_claims ?? [],
-			evidence: overrides.evidence ?? [],
-			contexts: overrides.contexts ?? [],
-			strategies: overrides.strategies ?? [],
-			images: overrides.images ?? [],
-			viewMembers: overrides.viewMembers ?? [],
-			editMembers: overrides.editMembers ?? [],
-			reviewMembers: overrides.reviewMembers ?? [],
+			...defaults,
+			...overrides,
 		};
-	}
+	},
 
-	static createWithFullStructure(): {
+	createWithFullStructure(): {
 		assuranceCase: AssuranceCase;
 		goals: Goal[];
 		strategies: Strategy[];
@@ -197,7 +212,7 @@ export class AssuranceCaseFactory {
 		evidence: Evidence[];
 		contexts: Context[];
 	} {
-		const assuranceCase = AssuranceCaseFactory.create();
+		const assuranceCase = this.create();
 		const caseId = assuranceCase.id;
 
 		// Create hierarchical structure
@@ -278,19 +293,17 @@ export class AssuranceCaseFactory {
 			evidence,
 			contexts,
 		};
-	}
+	},
 
-	static createPublished(
-		overrides: Partial<AssuranceCase> = {}
-	): AssuranceCase {
-		return AssuranceCaseFactory.create({
+	createPublished(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
+		return this.create({
 			...overrides,
 			published: true,
 			published_date: new Date().toISOString(),
 		});
-	}
+	},
 
-	static createWithPermissions(
+	createWithPermissions(
 		permissions: Array<{
 			userId?: number;
 			teamId?: number;
@@ -302,7 +315,7 @@ export class AssuranceCaseFactory {
 		users: User[];
 		teams: Team[];
 	} {
-		const assuranceCase = AssuranceCaseFactory.create();
+		const assuranceCase = this.create();
 		const users: User[] = [];
 		const teams: Team[] = [];
 		const casePermissions: CasePermission[] = [];
@@ -346,6 +359,12 @@ export class AssuranceCaseFactory {
 					case "review":
 						assuranceCase.reviewMembers?.push(member);
 						break;
+					case "manage":
+						// Handle manage case if needed
+						break;
+					default:
+						// Handle unknown permission type
+						break;
 				}
 			}
 		});
@@ -356,12 +375,12 @@ export class AssuranceCaseFactory {
 			users,
 			teams,
 		};
-	}
-}
+	},
+};
 
 // Goal Factory
-export class GoalFactory {
-	static create(overrides: Partial<Goal> = {}): Goal {
+export const GoalFactory = {
+	create(overrides: Partial<Goal> = {}): Goal {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -378,9 +397,9 @@ export class GoalFactory {
 			property_claims: overrides.property_claims ?? [],
 			strategies: overrides.strategies ?? [],
 		};
-	}
+	},
 
-	static createHierarchy(depth = 3, breadth = 2): Goal[] {
+	createHierarchy(depth = 3, breadth = 2): Goal[] {
 		const goals: Goal[] = [];
 
 		const createLevel = (parentId: number | null, currentDepth: number) => {
@@ -389,7 +408,7 @@ export class GoalFactory {
 			}
 
 			for (let i = 0; i < breadth; i++) {
-				const goal = GoalFactory.create({
+				const goal = this.create({
 					name: parentId ? `Sub-Goal ${parentId}-${i}` : `Top Goal ${i}`,
 				});
 				goals.push(goal);
@@ -399,12 +418,12 @@ export class GoalFactory {
 
 		createLevel(null, 0);
 		return goals;
-	}
-}
+	},
+};
 
 // Strategy Factory
-export class StrategyFactory {
-	static create(overrides: Partial<Strategy> = {}): Strategy {
+export const StrategyFactory = {
+	create(overrides: Partial<Strategy> = {}): Strategy {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -419,12 +438,12 @@ export class StrategyFactory {
 			goal_id: overrides.goal_id ?? 1,
 			property_claims: overrides.property_claims ?? [],
 		};
-	}
-}
+	},
+};
 
 // PropertyClaim Factory
-export class PropertyClaimFactory {
-	static create(overrides: Partial<PropertyClaim> = {}): PropertyClaim {
+export const PropertyClaimFactory = {
+	create(overrides: Partial<PropertyClaim> = {}): PropertyClaim {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -443,14 +462,14 @@ export class PropertyClaimFactory {
 			evidence: overrides.evidence ?? [],
 			strategy_id: overrides.strategy_id ?? null,
 		};
-	}
+	},
 
-	static createNested(levels = 3): PropertyClaim[] {
+	createNested(levels = 3): PropertyClaim[] {
 		const claims: PropertyClaim[] = [];
 		let parentId: number | null = null;
 
 		for (let level = 1; level <= levels; level++) {
-			const claim = PropertyClaimFactory.create({
+			const claim = this.create({
 				name: `Level ${level} Claim`,
 				level,
 				property_claim_id: parentId,
@@ -460,12 +479,12 @@ export class PropertyClaimFactory {
 		}
 
 		return claims;
-	}
-}
+	},
+};
 
 // Evidence Factory
-export class EvidenceFactory {
-	static create(overrides: Partial<Evidence> = {}): Evidence {
+export const EvidenceFactory = {
+	create(overrides: Partial<Evidence> = {}): Evidence {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -480,21 +499,21 @@ export class EvidenceFactory {
 			URL: overrides.URL ?? `https://example.com/evidence/${id}`,
 			property_claim_id: overrides.property_claim_id ?? [],
 		};
-	}
+	},
 
-	static createForClaim(claimId: number, count = 3): Evidence[] {
+	createForClaim(claimId: number, count = 3): Evidence[] {
 		return Array.from({ length: count }, (_, i) =>
-			EvidenceFactory.create({
+			this.create({
 				name: `Evidence ${i + 1} for Claim ${claimId}`,
 				property_claim_id: [claimId],
 			})
 		);
-	}
-}
+	},
+};
 
 // Context Factory
-export class ContextFactory {
-	static create(overrides: Partial<Context> = {}): Context {
+export const ContextFactory = {
+	create(overrides: Partial<Context> = {}): Context {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -507,12 +526,12 @@ export class ContextFactory {
 			created_date: overrides.created_date ?? new Date().toISOString(),
 			goal_id: overrides.goal_id ?? 1,
 		};
-	}
-}
+	},
+};
 
 // Comment Factory
-export class CommentFactory {
-	static create(overrides: Partial<Comment> = {}): Comment {
+export const CommentFactory = {
+	create(overrides: Partial<Comment> = {}): Comment {
 		const id = overrides.id ?? getNextId();
 		const author = overrides.author ?? `user${id}`;
 
@@ -522,14 +541,14 @@ export class CommentFactory {
 			content: overrides.content ?? `This is comment ${id}`,
 			created_at: overrides.created_at ?? new Date().toISOString(),
 		};
-	}
+	},
 
-	static createThread(count = 5): Comment[] {
+	createThread(count = 5): Comment[] {
 		const users = UserFactory.createBatch(3);
 
 		return Array.from({ length: count }, (_, i) => {
 			const user = users[i % users.length];
-			return CommentFactory.create({
+			return this.create({
 				author: `${user.first_name} ${user.last_name}`,
 				content: `Thread comment ${i + 1} from ${user.username}`,
 				created_at: new Date(
@@ -537,12 +556,12 @@ export class CommentFactory {
 				).toISOString(),
 			});
 		});
-	}
-}
+	},
+};
 
 // CaseStudy Factory
-export class CaseStudyFactory {
-	static create(overrides: Partial<CaseStudy> = {}): CaseStudy {
+export const CaseStudyFactory = {
+	create(overrides: Partial<CaseStudy> = {}): CaseStudy {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -558,9 +577,9 @@ export class CaseStudyFactory {
 			assurance_cases: overrides.assurance_cases ?? [],
 			...overrides, // Include any other override properties
 		};
-	}
+	},
 
-	static createPublishedWithCases(caseCount = 3): {
+	createPublishedWithCases(caseCount = 3): {
 		caseStudy: CaseStudy;
 		assuranceCases: AssuranceCase[];
 	} {
@@ -568,7 +587,7 @@ export class CaseStudyFactory {
 			AssuranceCaseFactory.createPublished()
 		);
 
-		const caseStudy = CaseStudyFactory.create({
+		const caseStudy = this.create({
 			published: true,
 			publishedDate: new Date().toISOString(),
 			assurance_cases: assuranceCases.map((ac) => ac.id),
@@ -576,12 +595,12 @@ export class CaseStudyFactory {
 		});
 
 		return { caseStudy, assuranceCases };
-	}
-}
+	},
+};
 
 // Template Factory
-export class TemplateFactory {
-	static create(overrides: Partial<CaseTemplate> = {}): CaseTemplate {
+export const TemplateFactory = {
+	create(overrides: Partial<CaseTemplate> = {}): CaseTemplate {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -599,10 +618,10 @@ export class TemplateFactory {
 			category: overrides.category ?? "General",
 			tags: overrides.tags ?? ["template", "starter"],
 		};
-	}
+	},
 
-	static createSafetyTemplate(): CaseTemplate {
-		return TemplateFactory.create({
+	createSafetyTemplate(): CaseTemplate {
+		return this.create({
 			name: "Safety Case Template",
 			description: "Standard template for safety-critical systems",
 			category: "Safety",
@@ -645,12 +664,12 @@ export class TemplateFactory {
 				],
 			},
 		});
-	}
-}
+	},
+};
 
 // Batch creation utilities
-export class BatchFactory {
-	static createCompleteScenario(): {
+export const BatchFactory = {
+	createCompleteScenario(): {
 		users: User[];
 		teams: Team[];
 		assuranceCases: AssuranceCase[];
@@ -692,9 +711,9 @@ export class BatchFactory {
 			caseStudies,
 			permissions,
 		};
-	}
+	},
 
-	static createTestDataForFeature(
+	createTestDataForFeature(
 		feature: "collaboration" | "hierarchy" | "permissions"
 	) {
 		switch (feature) {
@@ -743,9 +762,12 @@ export class BatchFactory {
 
 				return { users, teams, assuranceCase, permissions };
 			}
+
+			default:
+				throw new Error(`Unknown feature: ${feature}`);
 		}
-	}
-}
+	},
+};
 
 // Export convenience functions for quick access
 export const createUser = (overrides?: Partial<User>) =>

@@ -391,8 +391,8 @@ export const ShareModal = () => {
 											<FormControl>
 												<RadioGroup
 													className="flex items-center justify-start space-x-2"
-													defaultValue={field.value}
 													onValueChange={field.onChange}
+													value={field.value}
 												>
 													<FormItem
 														className="flex items-center space-x-3 space-y-0"

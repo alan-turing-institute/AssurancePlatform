@@ -13,6 +13,9 @@ import type {
 	PropertyClaim,
 } from "../../../types/domain";
 
+// Constants
+const SEARCH_REGEX = /search/i;
+
 // ============================================================================
 // Types and Interfaces
 // ============================================================================
@@ -261,7 +264,10 @@ export class MemoryMonitor {
 		// In a real browser environment, we could use performance.memory
 		// For testing, we'll provide a mock implementation
 		if (typeof performance !== "undefined" && "memory" in performance) {
-			return (performance as any).memory.usedJSHeapSize || 0;
+			return (
+				(performance as { memory?: { usedJSHeapSize?: number } }).memory
+					?.usedJSHeapSize || 0
+			);
 		}
 
 		// Mock memory usage for testing environment
@@ -335,6 +341,7 @@ export async function measureComponentRenderPerformance(
 		const { container, unmount } = render(component);
 
 		// Wait for any async rendering to complete
+		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await waitFor(() => {
 			// Component should be in the document
 			expect(container.firstChild).toBeTruthy();
@@ -395,6 +402,7 @@ export async function measureInteractionPerformance(
 	// Warm-up runs
 	for (let i = 0; i < warmupRuns; i++) {
 		const { container, unmount } = render(component);
+		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await interaction(container);
 		unmount();
 	}
@@ -410,6 +418,7 @@ export async function measureInteractionPerformance(
 		// Measure render time
 		timer.start();
 		const { container, unmount } = render(component);
+		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await waitFor(() => {
 			expect(container.firstChild).toBeTruthy();
 		});
@@ -567,6 +576,7 @@ export async function measureApiPerformance(
 		const startTime = performance.now();
 
 		try {
+			// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 			const response = await apiCall();
 			const endTime = performance.now();
 
@@ -645,7 +655,7 @@ export class MockWebSocket {
 	private connectionTime = 0;
 	private messagesSent = 0;
 	private messagesReceived = 0;
-	public readyState: number = WebSocket.CONNECTING;
+	readyState: number = WebSocket.CONNECTING;
 
 	constructor() {
 		// Simulate connection time
@@ -684,7 +694,9 @@ export class MockWebSocket {
 			() => {
 				const response = this.generateMockResponse(data);
 				const event = new MessageEvent("message", { data: response });
-				this.messageHandlers.forEach((handler) => handler(event));
+				for (const handler of this.messageHandlers) {
+					handler(event);
+				}
 				this.messagesReceived++;
 			},
 			Math.random() * 50 + 10
@@ -765,11 +777,12 @@ export async function measureCollaborationPerformance(
 	await Promise.all(connectionPromises);
 
 	// Send messages and measure round-trip times
-	const messagePromises = connections.map(async (ws) => {
+	const messagePromises = connections.map((ws) => {
+		const promises: Promise<void>[] = [];
 		for (let i = 0; i < messageCount; i++) {
 			const messageStart = performance.now();
 
-			return new Promise<void>((resolve) => {
+			const promise = new Promise<void>((resolve) => {
 				ws.addEventListener("message", () => {
 					const messageEnd = performance.now();
 					roundTripTimes.push(messageEnd - messageStart);
@@ -788,7 +801,9 @@ export async function measureCollaborationPerformance(
 					})
 				);
 			});
+			promises.push(promise);
 		}
+		return Promise.all(promises);
 	});
 
 	await Promise.all(messagePromises);
@@ -806,7 +821,9 @@ export async function measureCollaborationPerformance(
 	const memoryMetrics = memoryMonitor.stopMonitoring();
 
 	// Clean up connections
-	connections.forEach((ws) => ws.close());
+	for (const ws of connections) {
+		ws.close();
+	}
 
 	return {
 		connectionTime: averageConnectionTime,
@@ -885,6 +902,9 @@ export function generateLargeDataset(
 					property_claim_id: [Math.floor(Math.random() * 100) + 1],
 				} as Partial<Evidence>);
 				break;
+			default:
+				// Unknown data type, skip
+				break;
 		}
 	}
 
@@ -928,7 +948,7 @@ export async function measureLargeDatasetPerformance(
 		timer.start();
 
 		// Simulate search operation
-		const searchInput = screen.queryByRole("textbox", { name: /search/i });
+		const searchInput = screen.queryByRole("textbox", { name: SEARCH_REGEX });
 		if (searchInput) {
 			fireEvent.change(searchInput, { target: { value: options.searchTerm } });
 

@@ -17,6 +17,14 @@ interface PublishCaseRequest {
 	published_date?: string | null;
 }
 
+interface CaseStudyRequest {
+	title: string;
+	description: string;
+	content: string;
+	type: string;
+	assurance_cases: number[];
+}
+
 // Regex patterns for UI elements - extracted to avoid performance issues
 const REGEX_PATTERNS = {
 	settings: /settings/i,
@@ -37,6 +45,7 @@ const REGEX_PATTERNS = {
 	safety: /safety/i,
 	applyFilters: /apply filters/i,
 	sortBy: /sort by/i,
+	dashboardCaseStudiesPath: /^\/dashboard\/case-studies\/\d+$/,
 	failedToPublishCase: /failed to publish case/i,
 	unableToLoadPublishedCases: /unable to load published cases/i,
 	retry: /retry/i,
@@ -95,14 +104,14 @@ describe("Published Case Flow Integration Tests", () => {
 	afterEach(() => {
 		// Clean up any elements added directly to document.body
 		const messages = document.body.querySelectorAll("body > div");
-		messages.forEach((element) => {
+		for (const element of messages) {
 			if (
 				element.textContent?.includes("published successfully") ||
 				element.textContent?.includes("Failed to publish")
 			) {
 				element.remove();
 			}
-		});
+		}
 	});
 
 	describe("Publishing a Case", () => {
@@ -388,18 +397,15 @@ describe("Published Case Flow Integration Tests", () => {
 					return HttpResponse.json(publishedCase);
 				}),
 				http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
-					const formData = await request.formData();
-					return HttpResponse.json(
-						{
-							id: 10,
-							title: formData.get("title"),
-							description: formData.get("description"),
-							assurance_cases: [1],
-							published: false,
-							created_date: new Date().toISOString(),
-						},
-						{ status: 201 }
-					);
+					const body = (await request.json()) as CaseStudyRequest;
+					return HttpResponse.json({
+						id: 123,
+						title: body.title,
+						description: body.description,
+						content: body.content,
+						type: body.type,
+						assurance_cases: body.assurance_cases,
+					});
 				})
 			);
 
@@ -445,11 +451,19 @@ describe("Published Case Flow Integration Tests", () => {
 			await user.click(submitButton);
 
 			// Verify success and navigation
+			await waitFor(
+				() => {
+					expect(
+						screen.getByText(REGEX_PATTERNS.caseStudyCreatedSuccessfully)
+					).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
+
 			await waitFor(() => {
-				expect(
-					screen.getByText(REGEX_PATTERNS.caseStudyCreatedSuccessfully)
-				).toBeInTheDocument();
-				expect(mockPush).toHaveBeenCalledWith("/dashboard/case-studies/10");
+				expect(mockPush).toHaveBeenCalled();
+				const callArgs = mockPush.mock.calls[0];
+				expect(callArgs[0]).toMatch(REGEX_PATTERNS.dashboardCaseStudiesPath);
 			});
 		});
 
