@@ -30,7 +30,7 @@ export async function userEventWithAct(
 /**
  * Enhanced waitFor that handles React 18 better
  */
-export async function waitForWithRetry<T>(
+export function waitForWithRetry<T>(
 	callback: () => T | Promise<T>,
 	options?: {
 		timeout?: number;
@@ -74,14 +74,18 @@ export async function flushPromises(): Promise<void> {
 /**
  * Render helper that waits for initial render to complete
  */
-export async function renderAndWait(renderFn: () => any): Promise<any> {
-	let result: any;
+export async function renderAndWait<T>(renderFn: () => T): Promise<T> {
+	let result: T | undefined;
 
-	await act(async () => {
+	await act(() => {
 		result = renderFn();
 	});
 
 	await waitForComponentToLoad();
+
+	if (result === undefined) {
+		throw new Error("renderFn did not return a value");
+	}
 
 	return result;
 }
@@ -101,7 +105,7 @@ export async function waitForTooltip(delayMs = 700): Promise<void> {
 export async function unmountComponentWithAct(
 	unmountFn: () => void
 ): Promise<void> {
-	await act(async () => {
+	await act(() => {
 		unmountFn();
 	});
 }

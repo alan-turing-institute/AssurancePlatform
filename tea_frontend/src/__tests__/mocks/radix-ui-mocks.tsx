@@ -336,3 +336,466 @@ export const MockPopoverClose = MockDialogClose;
 export const MockPopoverAnchor = ({ children }: { children: ReactNode }) => (
 	<>{children}</>
 );
+
+// RadioGroup Mock with state management
+interface RadioGroupContextValue {
+	value: string;
+	setValue: (value: string) => void;
+}
+
+const RadioGroupContext = React.createContext<RadioGroupContextValue | null>(
+	null
+);
+
+export const MockRadioGroupRoot = ({
+	children,
+	defaultValue,
+	value: controlledValue,
+	onValueChange,
+	...props
+}: any) => {
+	// For controlled component, use controlledValue directly
+	// For uncontrolled, use internal state
+	const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+	const isControlled = controlledValue !== undefined;
+	const currentValue = isControlled ? controlledValue : internalValue;
+
+	const handleValueChange = (newValue: string) => {
+		if (!isControlled) {
+			setInternalValue(newValue);
+		}
+		// Always call onValueChange if provided
+		onValueChange?.(newValue);
+	};
+
+	return (
+		<RadioGroupContext.Provider
+			value={{ value: currentValue, setValue: handleValueChange }}
+		>
+			<div aria-required={props.required} role="radiogroup" {...props}>
+				{children}
+			</div>
+		</RadioGroupContext.Provider>
+	);
+};
+
+export const MockRadioGroupItem = ({
+	children,
+	value: itemValue,
+	disabled,
+	...props
+}: any) => {
+	const context = React.useContext(RadioGroupContext);
+
+	if (!context) {
+		throw new Error("RadioGroupItem must be used within a RadioGroup");
+	}
+
+	const isChecked = context.value === itemValue;
+
+	const handleClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!disabled) {
+			// Call setValue which will trigger onValueChange in the parent
+			context.setValue(itemValue);
+		}
+	};
+
+	// Render to match Radix UI's actual behavior
+	return (
+		<button
+			aria-checked={isChecked}
+			data-state={isChecked ? "checked" : "unchecked"}
+			data-value={itemValue}
+			disabled={disabled}
+			onClick={handleClick}
+			onMouseDown={(e) => e.preventDefault()}
+			role="radio"
+			type="button" // Prevent focus issues
+			value={itemValue}
+			{...props}
+		>
+			{children}
+		</button>
+	);
+};
+
+// Add the Indicator mock
+export const MockRadioGroupIndicator = ({
+	children,
+}: {
+	children: React.ReactNode;
+}) => {
+	return <>{children}</>;
+};
+
+// DropdownMenu Mock with state management
+interface DropdownMenuContextValue {
+	open: boolean;
+	setOpen: (open: boolean) => void;
+}
+
+const DropdownMenuContext =
+	React.createContext<DropdownMenuContextValue | null>(null);
+
+export const MockDropdownMenuRoot = ({
+	children,
+	defaultOpen = false,
+	open: controlledOpen,
+	onOpenChange,
+}: any) => {
+	const [open, setOpen] = useState(controlledOpen ?? defaultOpen);
+
+	useEffect(() => {
+		if (controlledOpen !== undefined) {
+			setOpen(controlledOpen);
+		}
+	}, [controlledOpen]);
+
+	const handleOpenChange = (newOpen: boolean) => {
+		if (controlledOpen === undefined) {
+			setOpen(newOpen);
+		}
+		onOpenChange?.(newOpen);
+	};
+
+	return (
+		<DropdownMenuContext.Provider value={{ open, setOpen: handleOpenChange }}>
+			{children}
+		</DropdownMenuContext.Provider>
+	);
+};
+
+export const MockDropdownMenuTrigger = ({
+	children,
+	asChild,
+	...props
+}: any) => {
+	const context = React.useContext(DropdownMenuContext);
+
+	const handleClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		context?.setOpen(!context.open);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			context?.setOpen(!context.open);
+		} else if (e.key === "ArrowDown") {
+			e.preventDefault();
+			context?.setOpen(true);
+		}
+	};
+
+	const triggerProps = {
+		onClick: handleClick,
+		onKeyDown: handleKeyDown,
+		"aria-haspopup": "menu",
+		"aria-expanded": context?.open,
+		"data-state": context?.open ? "open" : "closed",
+		...props,
+	};
+
+	if (asChild && React.isValidElement(children)) {
+		return cloneElement(children as ReactElement, triggerProps);
+	}
+
+	return (
+		<button type="button" {...triggerProps}>
+			{children}
+		</button>
+	);
+};
+
+export const MockDropdownMenuPortal = ({
+	children,
+}: {
+	children: ReactNode;
+}) => {
+	const context = React.useContext(DropdownMenuContext);
+
+	if (!context?.open) {
+		return null;
+	}
+
+	return <>{children}</>;
+};
+
+export const MockDropdownMenuContent = ({ children, ...props }: any) => {
+	const context = React.useContext(DropdownMenuContext);
+	const contentRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!context?.open) {
+			return;
+		}
+
+		// Focus first menu item when opened
+		setTimeout(() => {
+			const firstMenuItem = contentRef.current?.querySelector(
+				'[role="menuitem"]:not([aria-disabled="true"])'
+			) as HTMLElement;
+			if (firstMenuItem) {
+				firstMenuItem.focus();
+			}
+		}, 0);
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				context?.setOpen(false);
+			} else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+				event.preventDefault();
+				const menuItems = contentRef.current?.querySelectorAll(
+					'[role="menuitem"]:not([aria-disabled="true"])'
+				) as NodeListOf<HTMLElement>;
+				if (!menuItems || menuItems.length === 0) {
+					return;
+				}
+
+				const currentIndex = Array.from(menuItems).indexOf(
+					document.activeElement as HTMLElement
+				);
+				let nextIndex: number;
+
+				if (event.key === "ArrowDown") {
+					nextIndex =
+						currentIndex < menuItems.length - 1 ? currentIndex + 1 : 0;
+				} else {
+					nextIndex =
+						currentIndex > 0 ? currentIndex - 1 : menuItems.length - 1;
+				}
+
+				menuItems[nextIndex]?.focus();
+			}
+		};
+
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as Element;
+			if (!target.closest('[data-testid="dropdown-content"]')) {
+				context?.setOpen(false);
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		document.addEventListener("click", handleClickOutside);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			document.removeEventListener("click", handleClickOutside);
+		};
+	}, [context]);
+
+	if (!context?.open) {
+		return null;
+	}
+
+	// Filter out Radix-specific props that shouldn't be on DOM elements
+	const { side, align, sideOffset, alignOffset, ...domProps } = props;
+
+	return (
+		<div
+			data-testid="dropdown-content"
+			ref={contentRef}
+			role="menu"
+			{...domProps}
+		>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuItem = ({
+	children,
+	onSelect,
+	disabled,
+	asChild,
+	...props
+}: any) => {
+	const context = React.useContext(DropdownMenuContext);
+	const ref = useRef<HTMLDivElement>(null);
+
+	const handleClick = (e: React.MouseEvent) => {
+		if (disabled) {
+			return;
+		}
+
+		e.preventDefault();
+		onSelect?.(e);
+		context?.setOpen(false);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (disabled) {
+			return;
+		}
+
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			onSelect?.(e);
+			context?.setOpen(false);
+		}
+	};
+
+	// Filter out Radix-specific props that shouldn't be on DOM elements
+	const {
+		asChild: _asChild,
+		onSelect: _onSelect,
+		textValue,
+		...domProps
+	} = props;
+
+	if (asChild && React.isValidElement(children)) {
+		return cloneElement(children as ReactElement, {
+			role: "menuitem",
+			tabIndex: disabled ? -1 : 0,
+			"aria-disabled": disabled,
+			"data-disabled": disabled ? "" : undefined,
+			onClick: handleClick,
+			onKeyDown: handleKeyDown,
+			...domProps,
+		});
+	}
+
+	return (
+		<div
+			aria-disabled={disabled}
+			data-disabled={disabled ? "" : undefined}
+			onClick={handleClick}
+			onKeyDown={handleKeyDown}
+			ref={ref}
+			role="menuitem"
+			tabIndex={disabled ? -1 : 0}
+			{...domProps}
+		>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuSeparator = ({ ...props }: any) => {
+	return <div aria-orientation="horizontal" role="separator" {...props} />;
+};
+
+export const MockDropdownMenuLabel = ({ children, ...props }: any) => {
+	return (
+		<div role="none" {...props}>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuGroup = ({ children, ...props }: any) => {
+	return (
+		<div role="group" {...props}>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => {
+	return <>{children}</>;
+};
+
+export const MockDropdownMenuSubTrigger = ({ children, ...props }: any) => {
+	return (
+		<div aria-haspopup="menu" role="menuitem" {...props}>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuSubContent = ({ children, ...props }: any) => {
+	return (
+		<div role="menu" {...props}>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuRadioGroup = ({ children, ...props }: any) => {
+	return (
+		<div role="group" {...props}>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuRadioItem = ({
+	children,
+	value,
+	onSelect,
+	disabled,
+	...props
+}: any) => {
+	const handleClick = (e: React.MouseEvent) => {
+		if (disabled) {
+			return;
+		}
+		e.preventDefault();
+		onSelect?.(value);
+	};
+
+	return (
+		<div
+			aria-disabled={disabled}
+			data-disabled={disabled ? "" : undefined}
+			onClick={handleClick}
+			role="menuitemradio"
+			tabIndex={disabled ? -1 : 0}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuCheckboxItem = ({
+	children,
+	checked,
+	onCheckedChange,
+	disabled,
+	...props
+}: any) => {
+	const handleClick = (e: React.MouseEvent) => {
+		if (disabled) {
+			return;
+		}
+		e.preventDefault();
+		onCheckedChange?.(!checked);
+	};
+
+	return (
+		<div
+			aria-checked={checked}
+			aria-disabled={disabled}
+			data-disabled={disabled ? "" : undefined}
+			onClick={handleClick}
+			role="menuitemcheckbox"
+			tabIndex={disabled ? -1 : 0}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+};
+
+export const MockDropdownMenuItemIndicator = ({
+	children,
+}: {
+	children: React.ReactNode;
+}) => {
+	return <>{children}</>;
+};
+
+// Menu Mock (alias for DropdownMenu components)
+export const MockMenuRoot = MockDropdownMenuRoot;
+export const MockMenuTrigger = MockDropdownMenuTrigger;
+export const MockMenuPortal = MockDropdownMenuPortal;
+export const MockMenuContent = MockDropdownMenuContent;
+export const MockMenuItem = MockDropdownMenuItem;
+export const MockMenuSeparator = MockDropdownMenuSeparator;
+export const MockMenuLabel = MockDropdownMenuLabel;
+export const MockMenuGroup = MockDropdownMenuGroup;
+export const MockMenuSub = MockDropdownMenuSub;
+export const MockMenuSubTrigger = MockDropdownMenuSubTrigger;
+export const MockMenuSubContent = MockDropdownMenuSubContent;

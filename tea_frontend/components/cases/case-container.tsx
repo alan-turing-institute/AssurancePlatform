@@ -41,23 +41,27 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				},
 			};
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
-				requestOptions
-			);
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
+					requestOptions
+				);
 
-			if (response.status === 404 || response.status === 403) {
-				return;
+				if (response.status === 404 || response.status === 403) {
+					return;
+				}
+
+				if (response.status === 401) {
+					return unauthorized();
+				}
+
+				const result = await response.json();
+
+				const formattedAssuranceCase = await addHiddenProp(result);
+				return formattedAssuranceCase;
+			} catch (_error) {
+				return null;
 			}
-
-			if (response.status === 401) {
-				return unauthorized();
-			}
-
-			const result = await response.json();
-
-			const formattedAssuranceCase = await addHiddenProp(result);
-			return formattedAssuranceCase;
 		},
 		[session?.key]
 	);
@@ -70,46 +74,66 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				},
 			};
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
-				requestOptions
-			);
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
+					requestOptions
+				);
 
-			if (response.status === 404 || response.status === 403) {
-				return;
+				if (response.status === 404 || response.status === 403) {
+					return;
+				}
+
+				if (response.status === 401) {
+					return unauthorized();
+				}
+
+				const result = await response.json();
+				return result;
+			} catch (_error) {
+				return [];
 			}
-
-			if (response.status === 401) {
-				return unauthorized();
-			}
-
-			const result = await response.json();
-			return result;
 		},
 		[session?.key]
 	);
 
 	useEffect(() => {
-		const id = caseId || paramsCaseId;
-		if (id) {
-			fetchSingleCase(Number(id)).then((result) => {
-				setAssuranceCase((result as AssuranceCase) || null);
-				setLoading(false);
-			});
-		}
+		const loadCase = async () => {
+			const id = caseId || paramsCaseId;
+			if (id) {
+				try {
+					const result = await fetchSingleCase(Number(id));
+					setAssuranceCase((result as AssuranceCase) || null);
+					setLoading(false);
+				} catch {
+					// Handle error silently
+					setLoading(false);
+				}
+			}
+		};
+
+		loadCase();
 	}, [caseId, paramsCaseId, fetchSingleCase, setAssuranceCase]);
 
-	useEffect(() => {
+	const loadOrphanedElementsData = useCallback(async () => {
 		const id = caseId || paramsCaseId;
-		if (id) {
-			const idValue = Array.isArray(id) ? id[0] : id;
-			fetchOrphanedElements(idValue).then((result) => {
-				if (result) {
-					setOrphanedElements(result);
-				}
-			});
+		if (!id) {
+			return;
+		}
+
+		const idValue = Array.isArray(id) ? id[0] : id;
+		try {
+			const result = await fetchOrphanedElements(idValue);
+			setOrphanedElements(result || []);
+		} catch {
+			// Handle error silently
+			setOrphanedElements([]);
 		}
 	}, [caseId, paramsCaseId, fetchOrphanedElements, setOrphanedElements]);
+
+	useEffect(() => {
+		loadOrphanedElementsData();
+	}, [loadOrphanedElementsData]);
 
 	return (
 		<>

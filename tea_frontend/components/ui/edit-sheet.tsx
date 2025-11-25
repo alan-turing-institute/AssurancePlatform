@@ -15,6 +15,7 @@ interface EditSheetProps {
 	onClose: () => void;
 	onChange: (open: boolean) => void;
 	children?: React.ReactNode;
+	nodeId?: string | number;
 }
 
 const EditSheet = ({
@@ -23,10 +24,15 @@ const EditSheet = ({
 	isOpen,
 	onChange,
 	children,
+	nodeId,
 }: EditSheetProps) => {
 	return (
 		<Sheet onOpenChange={onChange} open={isOpen}>
-			<SheetContent className="overflow-y-scroll">
+			<SheetContent
+				className="overflow-y-scroll"
+				data-node-id={nodeId}
+				data-testid="node-edit"
+			>
 				<SheetHeader>
 					<SheetTitle>{title}</SheetTitle>
 					{typeof description === "string" ? (

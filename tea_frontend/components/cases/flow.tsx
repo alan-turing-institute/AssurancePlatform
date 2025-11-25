@@ -55,17 +55,23 @@ function Flow() {
 	};
 
 	const convert = useCallback(async () => {
-		if (assuranceCase) {
-			const result = await convertAssuranceCase({
-				...assuranceCase,
-				goals: assuranceCase.goals || [],
-			});
-			const { caseNodes, caseEdges } = result;
+		try {
+			if (assuranceCase) {
+				const result = await convertAssuranceCase({
+					...assuranceCase,
+					goals: assuranceCase.goals || [],
+				});
+				const { caseNodes, caseEdges } = result;
 
-			// Send new nodes & edges to layout function
-			layoutNodes(caseNodes, caseEdges);
-			setLoading(false);
-		} else {
+				// Send new nodes & edges to layout function
+				layoutNodes(caseNodes, caseEdges);
+				setLoading(false);
+			} else {
+				setLoading(false);
+			}
+		} catch (_error) {
+			// Error is caught to prevent unhandled rejection
+			// Component will remain in loading state if conversion fails
 			setLoading(false);
 		}
 	}, [assuranceCase, layoutNodes]);

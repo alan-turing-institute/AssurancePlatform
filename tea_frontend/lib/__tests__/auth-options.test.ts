@@ -125,6 +125,7 @@ describe("authOptions", () => {
 			expect(result).toEqual({
 				key: "user-token",
 				provider: "github",
+				keyExpires: expect.any(Number),
 			});
 		});
 
@@ -326,6 +327,7 @@ describe("authOptions", () => {
 			expect(initialJWT).toEqual({
 				key: "new-key",
 				provider: "new-provider",
+				keyExpires: expect.any(Number),
 			});
 
 			// Test JWT persistence

@@ -50,7 +50,11 @@ vi.mock("@/components/feedback-banner", () => ({
 
 // Mock the LogoutButton to avoid router issues
 vi.mock("@/components/auth/logout-button", () => ({
-	default: () => <button data-testid="logout-button">Logout</button>,
+	default: () => (
+		<button data-testid="logout-button" type="button">
+			Logout
+		</button>
+	),
 }));
 
 // Mock next/navigation with different pathname scenarios

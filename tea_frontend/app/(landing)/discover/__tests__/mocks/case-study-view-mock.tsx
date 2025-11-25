@@ -15,9 +15,11 @@ export const CaseStudyViewMock = ({ caseStudyId }: CaseStudyViewMockProps) => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
+				const apiUrl =
+					process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 				// Fetch case study
 				const studyResponse = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL}/api/public/case-studies/${caseStudyId}/`
+					`${apiUrl}/api/public/case-studies/${caseStudyId}/`
 				);
 				const studyData = await studyResponse.json();
 				setCaseStudy(studyData);
@@ -25,9 +27,9 @@ export const CaseStudyViewMock = ({ caseStudyId }: CaseStudyViewMockProps) => {
 				// Fetch linked cases
 				if (studyData.assurance_cases && studyData.assurance_cases.length > 0) {
 					const casePromises = studyData.assurance_cases.map((caseId: number) =>
-						fetch(
-							`${process.env.NEXT_PUBLIC_API_URL}/api/public/assurance-case/${caseId}/`
-						).then((res) => res.json())
+						fetch(`${apiUrl}/api/public/assurance-case/${caseId}/`).then(
+							(res) => res.json()
+						)
 					);
 
 					const cases = await Promise.all(casePromises);

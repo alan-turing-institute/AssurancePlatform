@@ -143,9 +143,11 @@ export const PermissionsModal = () => {
 	useEffect(() => {
 		if (assuranceCase && assuranceCase.permissions === "manage") {
 			fetchCaseMembers().then((result) => {
-				setViewMembers(result.view);
-				setEditMembers(result.edit);
-				setReviewMembers(result.review);
+				if (result) {
+					setViewMembers(result.view);
+					setEditMembers(result.edit);
+					setReviewMembers(result.review);
+				}
 			});
 		}
 	}, [

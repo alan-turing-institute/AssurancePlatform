@@ -6,7 +6,7 @@
  */
 
 import type { Mock } from "vitest";
-import { expect, vi } from "vitest";
+import { vi } from "vitest";
 import type { AssuranceCase } from "@/types/domain";
 
 /**
@@ -433,7 +433,7 @@ export class CollaborationTestUtils {
 /**
  * Optimistic update testing utilities
  */
-export class OptimisticUpdateTestUtils<T = any> {
+export class OptimisticUpdateTestUtils<T = unknown> {
 	private pendingUpdates: Map<string, T> = new Map();
 	private confirmedState: T;
 	private rollbackState: T;
@@ -502,71 +502,75 @@ export class OptimisticUpdateTestUtils<T = any> {
 
 /**
  * WebSocket connection state assertions
+ * These functions return assertions that should be called within test functions
  */
 export const assertConnectionState = {
 	/**
 	 * Assert WebSocket is open
 	 */
-	isOpen(ws: MockWebSocket): void {
-		expect(ws.readyState).toBe(WS_READY_STATE.OPEN);
+	isOpen(ws: MockWebSocket): boolean {
+		return ws.readyState === WS_READY_STATE.OPEN;
 	},
 
 	/**
 	 * Assert WebSocket is closed
 	 */
-	isClosed(ws: MockWebSocket): void {
-		expect(ws.readyState).toBe(WS_READY_STATE.CLOSED);
+	isClosed(ws: MockWebSocket): boolean {
+		return ws.readyState === WS_READY_STATE.CLOSED;
 	},
 
 	/**
 	 * Assert WebSocket is connecting
 	 */
-	isConnecting(ws: MockWebSocket): void {
-		expect(ws.readyState).toBe(WS_READY_STATE.CONNECTING);
+	isConnecting(ws: MockWebSocket): boolean {
+		return ws.readyState === WS_READY_STATE.CONNECTING;
 	},
 
 	/**
-	 * Assert message was sent
+	 * Check if message was sent
 	 */
 	hasSentMessage(
 		ws: MockWebSocket,
 		expectedMessage: Partial<WebSocketMessage>
-	): void {
+	): boolean {
 		const sentMessages = ws.getSentMessages();
-		expect(sentMessages).toContainEqual(
-			expect.objectContaining(expectedMessage)
+		return sentMessages.some((msg) =>
+			Object.entries(expectedMessage).every(([key, value]) => {
+				const msgObj = msg as unknown as Record<string, unknown>;
+				return msgObj[key] === value;
+			})
 		);
 	},
 
 	/**
-	 * Assert message count
+	 * Check message count
 	 */
-	sentMessageCount(ws: MockWebSocket, count: number): void {
-		expect(ws.getSentMessages()).toHaveLength(count);
+	sentMessageCount(ws: MockWebSocket, count: number): boolean {
+		return ws.getSentMessages().length === count;
 	},
 
 	/**
-	 * Assert specific message type was sent
+	 * Check if specific message type was sent
 	 */
-	hasSentMessageType(ws: MockWebSocket, messageType: string): void {
+	hasSentMessageType(ws: MockWebSocket, messageType: string): boolean {
 		const sentMessages = ws.getSentMessages();
-		expect(sentMessages.some((msg) => msg.type === messageType)).toBe(true);
+		return sentMessages.some((msg) => msg.type === messageType);
 	},
 
 	/**
-	 * Assert no messages were sent
+	 * Check if no messages were sent
 	 */
-	hasNoSentMessages(ws: MockWebSocket): void {
-		expect(ws.getSentMessages()).toHaveLength(0);
+	hasNoSentMessages(ws: MockWebSocket): boolean {
+		return ws.getSentMessages().length === 0;
 	},
 
 	/**
-	 * Assert message was sent in specific order
+	 * Check if messages were sent in specific order
 	 */
-	hasSentMessagesInOrder(ws: MockWebSocket, expectedTypes: string[]): void {
+	hasSentMessagesInOrder(ws: MockWebSocket, expectedTypes: string[]): boolean {
 		const sentMessages = ws.getSentMessages();
 		const sentTypes = sentMessages.map((msg) => msg.type);
-		expect(sentTypes).toEqual(expectedTypes);
+		return JSON.stringify(sentTypes) === JSON.stringify(expectedTypes);
 	},
 };
 
@@ -733,7 +737,7 @@ export class ConcurrentUserSimulator {
 	 * Simulate cursor movements from all users
 	 */
 	simulateCursorMovements(): void {
-		this.users.forEach(({ ws, presence }, userId) => {
+		for (const [userId, { presence }] of this.users) {
 			const x = Math.random() * 1000;
 			const y = Math.random() * 800;
 
@@ -752,7 +756,7 @@ export class ConcurrentUserSimulator {
 			};
 
 			this.server.broadcast(cursorMessage, userId);
-		});
+		}
 	}
 
 	/**
@@ -993,6 +997,8 @@ export class ReconnectionTester {
 
 		while (attempt < this.maxRetries) {
 			const delay = this.baseDelay * 2 ** attempt;
+			// Exponential backoff requires sequential delays
+			// biome-ignore lint/nursery/noAwaitInLoop: exponential backoff requires sequential timing
 			await new Promise((resolve) => setTimeout(resolve, delay));
 
 			try {
@@ -1179,9 +1185,9 @@ export async function createCollaborationTestScenario(options: {
 	// Simulate network issues if requested
 	if (simulateNetworkIssues) {
 		const networkSim = new NetworkConditionSimulator(
-			(server as any).connections
+			new Map<string, MockWebSocket>()
 		);
-		await networkSim.simulateNetworkInstability(0.1, 2000);
+		networkSim.simulateNetworkInstability(0.1, 2000);
 	}
 
 	// Test reconnection if requested

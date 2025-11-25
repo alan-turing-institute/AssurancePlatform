@@ -163,8 +163,26 @@ describe("OrphanElements", () => {
 		setAction: mockSetAction,
 	};
 
+	// Store original getComputedStyle
+	const originalGetComputedStyle = window.getComputedStyle;
+
 	beforeEach(() => {
 		vi.clearAllMocks();
+
+		// Mock getComputedStyle to fix accessibility issues in jsdom
+		window.getComputedStyle = vi.fn().mockImplementation(() => ({
+			visibility: "visible",
+			display: "block",
+			opacity: "1",
+			getPropertyValue: vi.fn().mockImplementation((prop: string) => {
+				const properties: Record<string, string> = {
+					visibility: "visible",
+					display: "block",
+					opacity: "1",
+				};
+				return properties[prop] || "";
+			}),
+		}));
 
 		// Mock useSession
 		vi.mocked(useSession).mockReturnValue({
@@ -191,6 +209,8 @@ describe("OrphanElements", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+		// Restore original getComputedStyle
+		window.getComputedStyle = originalGetComputedStyle;
 	});
 
 	describe("Rendering", () => {

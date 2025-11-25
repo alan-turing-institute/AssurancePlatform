@@ -336,8 +336,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 				redirect: "follow",
 			};
 
+			const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudy?.id}/image/`,
+				`${apiUrl}/api/case-studies/${caseStudy?.id}/image/`,
 				requestOptions
 			);
 
@@ -348,9 +349,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
 			const result = await response.json();
 			// The API returns the image URL, not the full URL with domain
-			const imageUrl = result.image
-				? `${process.env.NEXT_PUBLIC_API_URL}${result.image}`
-				: "";
+			const imageUrl = result.image ? `${apiUrl}${result.image}` : "";
 			const normalizedUrl = normalizeImageUrl(imageUrl);
 			setFeaturedImage(normalizedUrl || "");
 		} catch (_error) {
@@ -852,12 +851,12 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 							<div className="flex w-full items-center justify-between gap-4">
 								<div className="flex items-center justify-start gap-2">
 									{caseStudy && (
-										<Button type="submit" variant="default">
+										<Button disabled={loading} type="submit" variant="default">
 											Save Changes
 										</Button>
 									)}
 									{!caseStudy && (
-										<Button type="submit" variant="default">
+										<Button disabled={loading} type="submit" variant="default">
 											Save
 										</Button>
 									)}

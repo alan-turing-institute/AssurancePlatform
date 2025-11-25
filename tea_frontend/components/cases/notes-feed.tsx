@@ -60,7 +60,12 @@ export default function NotesFeed() {
 			return comments;
 		};
 
-		fetchSingleCase().then((comments) => setCaseNotes(comments || []));
+		fetchSingleCase()
+			.then((comments) => setCaseNotes(comments || []))
+			.catch(() => {
+				// Handle error silently
+				setCaseNotes([]);
+			});
 	}, [assuranceCase, session?.key, setCaseNotes]);
 
 	// Fetch current user
@@ -92,7 +97,12 @@ export default function NotesFeed() {
 			return result;
 		};
 
-		fetchCurrentUser().then((result) => setUser(result));
+		fetchCurrentUser()
+			.then((result) => setUser(result))
+			.catch(() => {
+				// Handle error silently
+				setUser(undefined);
+			});
 	}, [session?.key]);
 
 	const handleNoteDelete = async (id: number) => {
@@ -183,6 +193,7 @@ export default function NotesFeed() {
 									user?.username === note.author && (
 										<div className="hidden items-center justify-center gap-2 group-hover:flex">
 											<Button
+												aria-label="Edit note"
 												className="bg-background text-foreground hover:bg-background/50"
 												onClick={() => {
 													setEdit(!edit);
@@ -193,6 +204,7 @@ export default function NotesFeed() {
 												<PencilLine className="h-4 w-4" />
 											</Button>
 											<Button
+												aria-label="Delete note"
 												onClick={() => handleNoteDelete(note.id)}
 												size={"icon"}
 												variant={"destructive"}

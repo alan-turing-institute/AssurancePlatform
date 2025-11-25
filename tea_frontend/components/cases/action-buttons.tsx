@@ -101,8 +101,8 @@ const ActionButtons = ({
 			myHeaders.append("Content-Type", "application/json");
 
 			const newImage = JSON.stringify({
-				id: assuranceCase.id,
-				base64image,
+				caseId: assuranceCase.id.toString(),
+				image: base64image,
 				token,
 			});
 
@@ -114,10 +114,17 @@ const ActionButtons = ({
 			};
 
 			const response = await fetch("/api/screenshot", requestOptions);
-			const { error, message } = await response.json();
 
-			if (error) {
-				notifyError(message);
+			if (!response.ok) {
+				notifyError("Failed to save screenshot");
+				return;
+			}
+
+			const result = await response.json();
+
+			if (result.error) {
+				notifyError(result.message || "Failed to save screenshot");
+				return;
 			}
 
 			notify("Screenshot Saved!");
@@ -154,7 +161,11 @@ const ActionButtons = ({
 
 	return (
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
-			<div className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20">
+			<div
+				className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20"
+				data-show-create-goal={showCreateGoal}
+				data-testid="action-buttons"
+			>
 				<div className="flex items-center justify-center gap-2 border-r-2 border-r-indigo-200 pr-2 dark:border-r-indigo-800/60">
 					{showCreateGoal &&
 						assuranceCase &&
