@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -24,8 +24,10 @@
       "*.json",
       "*.mjs",
       "!**/*.min.js",
-      "!**/node_modules/**",
-      "!**/.next/**"
+      "!**/node_modules",
+      "!**/.next",
+      "!**/src/generated",
+      "!**/public/documentation"
     ]
   },
   "formatter": {
@@ -36,8 +38,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "nursery": {
-        "noUnknownAtRule": "off"
+      "nursery": {},
+      "suspicious": {
+        "noUnknownAtRules": "off"
       }
     }
   },
@@ -59,5 +62,17 @@
       }
     }
   },
-  "extends": ["ultracite"]
+  "extends": ["ultracite/core", "ultracite/react", "ultracite/next"],
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }
