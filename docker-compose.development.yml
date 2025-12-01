@@ -34,6 +34,7 @@ services:
     volumes:
       - ./tea_backend:/app
       - ./tea_backend/mediafiles:/app/mediafiles
+      - backend_venv:/app/.venv
     networks:
       - tea_dev_network
     entrypoint: ['/app/docker-entrypoint-dev.sh']
@@ -46,7 +47,10 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      - tea_backend
+      postgres:
+        condition: service_healthy
+      tea_backend:
+        condition: service_started
     env_file:
       - ./tea_frontend/.env.local
     volumes:
@@ -64,3 +68,4 @@ networks:
 volumes:
   postgres_data:
   frontend_next:
+  backend_venv:

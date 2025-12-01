@@ -3,10 +3,16 @@ set -e
 
 echo "Starting TEA Backend (Development)..."
 
-# Activate the virtual environment if it exists
-if [ -f "/app/.venv/bin/activate" ]; then
-    . /app/.venv/bin/activate
+# Create and activate the virtual environment
+if [ ! -f "/app/.venv/bin/activate" ]; then
+    echo "Creating virtual environment..."
+    uv venv /app/.venv
+    echo "Installing dependencies..."
+    uv pip install -e ".[dev]"
 fi
+
+echo "Activating virtual environment..."
+. /app/.venv/bin/activate
 
 # First, ensure database tables have correct names
 echo "Ensuring database tables have correct names..."
