@@ -94,14 +94,14 @@ vi.mock("@/data/store", () => ({
 }));
 
 // Define types for ActionButtons props
-interface ActionButtonsProps {
+type ActionButtonsProps = {
 	showCreateGoal: boolean;
 	actions: {
 		onLayout: (direction: string) => void;
 	};
 	notify: (message: string) => void;
 	notifyError: (message: string) => void;
-}
+};
 
 // Mock child components
 vi.mock("../action-buttons", () => ({
@@ -126,11 +126,11 @@ vi.mock("../action-buttons", () => ({
 }));
 
 // Define types for NodeEdit props
-interface NodeEditProps {
+type NodeEditProps = {
 	node: Node | null;
 	isOpen: boolean;
 	setEditOpen: (open: boolean) => void;
-}
+};
 
 vi.mock("@/components/common/node-edit", () => ({
 	default: ({ node, isOpen, setEditOpen }: NodeEditProps) =>

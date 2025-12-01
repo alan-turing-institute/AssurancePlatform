@@ -2,9 +2,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AssuranceCase, CaseStudy } from "@/types/domain";
 
-interface CaseStudyViewMockProps {
+type CaseStudyViewMockProps = {
 	caseStudyId: number;
-}
+};
 
 export const CaseStudyViewMock = ({ caseStudyId }: CaseStudyViewMockProps) => {
 	const router = useRouter();

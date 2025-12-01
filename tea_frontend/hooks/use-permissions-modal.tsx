@@ -4,7 +4,7 @@ import { create } from "zustand";
  * Defines the shape of the state for the Permissions modal store.
  * @interface usePermissionsModalStore
  */
-interface usePermissionsModalStore {
+type usePermissionsModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -22,7 +22,7 @@ interface usePermissionsModalStore {
 	 * @function
 	 */
 	onClose: () => void;
-}
+};
 
 /**
  * Creates a Zustand store for managing the state of the Permissions modal.

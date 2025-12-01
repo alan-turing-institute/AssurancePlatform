@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock } from "lucide-react";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -19,8 +18,7 @@ import { Input } from "@/components/ui/input";
 import useStore from "@/data/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-// import { useLoginToken } from '.*/use-auth'
+import { useToast } from "../ui/use-toast";
 
 const formSchema = z.object({
 	name: z
@@ -34,19 +32,18 @@ const formSchema = z.object({
 	}),
 });
 
-interface CaseEditFormProps {
+type CaseEditFormProps = {
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const CaseEditForm: React.FC<CaseEditFormProps> = ({
 	onClose,
 	setUnresolvedChanges,
 }) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 	const [loading, setLoading] = useState(false);
+	const { toast } = useToast();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -62,32 +59,45 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 		}
 
 		setLoading(true);
-		const updateItem = {
-			name: values.name,
-			description: values.description,
-		};
 
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`;
-		const requestOptions: RequestInit = {
-			method: "PUT",
-			headers: {
-				Authorization: `Token ${session?.key}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(updateItem),
-		};
-		const response = await fetch(url, requestOptions);
-		if (!response.ok) {
-			// TODO: Handle error response
+		try {
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/cases/${assuranceCase.id}`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					name: values.name,
+					description: values.description,
+				}),
+			});
+
+			if (!response.ok) {
+				toast({
+					variant: "destructive",
+					title: "Failed to update case",
+					description: "Something went wrong trying to update the case.",
+				});
+				setLoading(false);
+				return;
+			}
+
+			setAssuranceCase({
+				...assuranceCase,
+				name: values.name ?? assuranceCase.name,
+				description: values.description,
+			});
+			onClose();
+		} catch (_error) {
+			toast({
+				variant: "destructive",
+				title: "Failed to update case",
+				description: "Something went wrong trying to update the case.",
+			});
+		} finally {
+			setLoading(false);
 		}
-
-		setLoading(false);
-		setAssuranceCase({
-			...assuranceCase,
-			name: values.name ?? assuranceCase.name,
-			description: updateItem.description,
-		});
-		onClose();
 	}
 
 	useEffect(() => {

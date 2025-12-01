@@ -1,22 +1,25 @@
-interface Group {
+// TODO: Phase 2 - Consolidate short_description/long_description to single description field
+// See: TASKS/Phase2-DescriptionFieldConsolidation.md
+
+type Group = {
 	id: number;
 	name: string;
-}
+};
 
-interface Comment {
+type Comment = {
 	id: number;
 	author: string;
 	content: string;
 	created_at: string;
-}
+};
 
-interface GitHubRepository {
+type GitHubRepository = {
 	id: number;
 	name: string;
 	url: string;
-}
+};
 
-export interface Evidence {
+export type Evidence = {
 	id: number;
 	type: string;
 	name: string;
@@ -25,9 +28,9 @@ export interface Evidence {
 	URL: string;
 	property_claim_id: number[];
 	hidden?: boolean;
-}
+};
 
-export interface PropertyClaim {
+export type PropertyClaim = {
 	id: number;
 	type: string;
 	name: string;
@@ -41,38 +44,45 @@ export interface PropertyClaim {
 	evidence: Evidence[];
 	strategy_id: number | null;
 	hidden?: boolean;
-}
+};
 
-export interface Evidence {
+export type EvidenceWithMeta = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	URL: string;
 	property_claim_id: number[];
+	comments?: Comment[];
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface PropertyClaim {
+export type PropertyClaimWithMeta = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	goal_id: number | null;
 	property_claim_id: number | null;
 	level: number;
 	claim_type: string;
-	property_claims: PropertyClaim[];
-	evidence: Evidence[];
+	property_claims: PropertyClaimWithMeta[];
+	evidence: EvidenceWithMeta[];
 	strategy_id: number | null;
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Context {
+export type Context = {
 	id: number;
 	type: string;
 	name: string;
@@ -80,37 +90,50 @@ export interface Context {
 	long_description: string;
 	created_date: string;
 	goal_id: number;
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Strategy {
+export type Strategy = {
 	id: number;
+	type?: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	goal_id: number;
-	property_claims: PropertyClaim[];
+	property_claims: PropertyClaimWithMeta[];
+	comments?: Comment[];
+	assumption?: string;
+	justification?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Goal {
+export type Goal = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	keywords: string;
 	assurance_case_id: number;
 	context: Context[];
-	property_claims: PropertyClaim[];
+	property_claims: PropertyClaimWithMeta[];
 	strategies: Strategy[];
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface AssuranceCase {
+export type AssuranceCase = {
 	id: number;
 	type: string;
 	name: string;
@@ -126,7 +149,7 @@ export interface AssuranceCase {
 	permissions: string;
 	published: boolean;
 	published_date: string | null;
-}
+};
 
 export type User = {
 	id: number;

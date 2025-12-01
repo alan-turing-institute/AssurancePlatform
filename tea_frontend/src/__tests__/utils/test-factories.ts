@@ -25,7 +25,7 @@ export const resetIdCounter = () => {
 };
 
 // Type definitions for our factory structures
-export interface User {
+export type User = {
 	id: number;
 	username: string;
 	email: string;
@@ -33,35 +33,35 @@ export interface User {
 	last_name: string;
 	auth_provider: string;
 	auth_username: string;
-}
+};
 
-export interface Team {
+export type Team = {
 	id: number;
 	name: string;
 	description: string;
 	owner: number;
 	members: number[];
 	created_date: string;
-}
+};
 
-export interface TeamMember {
+export type TeamMember = {
 	id: number;
 	user: number;
 	team: number;
 	role: "owner" | "admin" | "member";
 	joined_date: string;
-}
+};
 
-export interface CasePermission {
+export type CasePermission = {
 	id: number;
 	case: number;
 	user?: number;
 	team?: number;
 	permission_type: "view" | "edit" | "review" | "manage";
 	created_date: string;
-}
+};
 
-export interface CaseTemplate {
+export type CaseTemplate = {
 	id: number;
 	name: string;
 	description: string;
@@ -74,7 +74,7 @@ export interface CaseTemplate {
 	};
 	category: string;
 	tags: string[];
-}
+};
 
 // Advanced User Factory
 export const UserFactory = {

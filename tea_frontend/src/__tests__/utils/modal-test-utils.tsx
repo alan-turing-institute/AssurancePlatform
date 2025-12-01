@@ -73,9 +73,8 @@ export const renderWithModal = (
 };
 
 // Helper to wait for modal to appear
-export const waitForModal = async (testId: string) => {
-	return await screen.findByTestId(testId);
-};
+export const waitForModal = async (testId: string) =>
+	await screen.findByTestId(testId);
 
 // Reset all modal mocks
 export const resetModalMocks = () => {

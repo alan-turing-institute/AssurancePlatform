@@ -7,7 +7,7 @@ import { type FileRejection, useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface ImageUploadProps {
+type ImageUploadProps = {
 	value?: string | File;
 	onChange: (file: File | string) => void;
 	onRemove?: () => void;
@@ -15,7 +15,7 @@ interface ImageUploadProps {
 	className?: string;
 	maxSize?: number; // in bytes
 	accept?: Record<string, string[]>;
-}
+};
 
 export function ImageUpload({
 	value,

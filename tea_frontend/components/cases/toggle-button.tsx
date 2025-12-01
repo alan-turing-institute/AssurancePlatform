@@ -13,9 +13,9 @@ import {
 import useStore from "@/data/store";
 import { toggleHiddenForChildren } from "@/lib/case-helper";
 
-interface ToggleButtonProps {
+type ToggleButtonProps = {
 	node: Node;
-}
+};
 
 const ToggleButton = ({ node }: ToggleButtonProps) => {
 	const [hidden, setHidden] = useState<boolean>(false);
@@ -43,9 +43,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 	const connectedEdges: Edge[] = [];
 
 	const checkTarget = (edge: Edge[], id: string) => {
-		const filteredEdges = edge.filter((ed: Edge) => {
-			return ed.target !== id;
-		});
+		const filteredEdges = edge.filter((ed: Edge) => ed.target !== id);
 		return filteredEdges;
 	};
 
@@ -75,12 +73,8 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 			}
 		}
 
-		const childNodeID = outgoers.map((n) => {
-			return n.id;
-		});
-		const childEdgeID = connectedEdges.map((edge) => {
-			return edge.id;
-		});
+		const childNodeID = outgoers.map((n) => n.id);
+		const childEdgeID = connectedEdges.map((edge) => edge.id);
 
 		const updatedNodes = nodes.map((n: Node) => {
 			if (childNodeID.includes(n.id)) {

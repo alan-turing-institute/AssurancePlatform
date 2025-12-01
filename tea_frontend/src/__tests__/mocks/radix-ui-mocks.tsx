@@ -7,16 +7,16 @@ import type { ReactElement, ReactNode } from "react";
 import React, { cloneElement, useEffect, useRef, useState } from "react";
 
 // Tooltip Mock with state management
-interface TooltipContextValue {
+type TooltipContextValue = {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-}
+};
 
 const TooltipContext = React.createContext<TooltipContextValue | null>(null);
 
-export const MockTooltipProvider = ({ children }: { children: ReactNode }) => {
-	return <>{children}</>;
-};
+export const MockTooltipProvider = ({ children }: { children: ReactNode }) => (
+	<>{children}</>
+);
 
 export const MockTooltipRoot = ({
 	children,
@@ -138,15 +138,13 @@ export const MockTooltipContent = ({ children, sideOffset, ...props }: any) => {
 	);
 };
 
-export const MockTooltipArrow = () => {
-	return <div data-testid="tooltip-arrow" />;
-};
+export const MockTooltipArrow = () => <div data-testid="tooltip-arrow" />;
 
 // Dialog Mock with state management
-interface DialogContextValue {
+type DialogContextValue = {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-}
+};
 
 const DialogContext = React.createContext<DialogContextValue | null>(null);
 
@@ -213,13 +211,11 @@ export const MockDialogPortal = ({ children }: { children: ReactNode }) => {
 	return <>{children}</>;
 };
 
-export const MockDialogOverlay = ({ children, ...props }: any) => {
-	return (
-		<div data-testid="dialog-overlay" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDialogOverlay = ({ children, ...props }: any) => (
+	<div data-testid="dialog-overlay" {...props}>
+		{children}
+	</div>
+);
 
 export const MockDialogContent = ({ children, ...props }: any) => {
 	const context = React.useContext(DialogContext);
@@ -298,21 +294,17 @@ export const MockDialogClose = ({ children, asChild, ...props }: any) => {
 	return <button {...closeProps}>{children}</button>;
 };
 
-export const MockDialogTitle = ({ children, ...props }: any) => {
-	return (
-		<h2 data-testid="dialog-title" id="dialog-title" {...props}>
-			{children}
-		</h2>
-	);
-};
+export const MockDialogTitle = ({ children, ...props }: any) => (
+	<h2 data-testid="dialog-title" id="dialog-title" {...props}>
+		{children}
+	</h2>
+);
 
-export const MockDialogDescription = ({ children, ...props }: any) => {
-	return (
-		<p data-testid="dialog-description" id="dialog-description" {...props}>
-			{children}
-		</p>
-	);
-};
+export const MockDialogDescription = ({ children, ...props }: any) => (
+	<p data-testid="dialog-description" id="dialog-description" {...props}>
+		{children}
+	</p>
+);
 
 // Popover Mock (similar to Dialog)
 export const MockPopoverRoot = MockDialogRoot;
@@ -338,10 +330,10 @@ export const MockPopoverAnchor = ({ children }: { children: ReactNode }) => (
 );
 
 // RadioGroup Mock with state management
-interface RadioGroupContextValue {
+type RadioGroupContextValue = {
 	value: string;
 	setValue: (value: string) => void;
-}
+};
 
 const RadioGroupContext = React.createContext<RadioGroupContextValue | null>(
 	null
@@ -425,15 +417,13 @@ export const MockRadioGroupIndicator = ({
 	children,
 }: {
 	children: React.ReactNode;
-}) => {
-	return <>{children}</>;
-};
+}) => <>{children}</>;
 
 // DropdownMenu Mock with state management
-interface DropdownMenuContextValue {
+type DropdownMenuContextValue = {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-}
+};
 
 const DropdownMenuContext =
 	React.createContext<DropdownMenuContextValue | null>(null);
@@ -672,53 +662,43 @@ export const MockDropdownMenuItem = ({
 	);
 };
 
-export const MockDropdownMenuSeparator = ({ ...props }: any) => {
-	return <div aria-orientation="horizontal" role="separator" {...props} />;
-};
+export const MockDropdownMenuSeparator = ({ ...props }: any) => (
+	<div aria-orientation="horizontal" role="separator" {...props} />
+);
 
-export const MockDropdownMenuLabel = ({ children, ...props }: any) => {
-	return (
-		<div role="none" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDropdownMenuLabel = ({ children, ...props }: any) => (
+	<div role="none" {...props}>
+		{children}
+	</div>
+);
 
-export const MockDropdownMenuGroup = ({ children, ...props }: any) => {
-	return (
-		<div role="group" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDropdownMenuGroup = ({ children, ...props }: any) => (
+	<div role="group" {...props}>
+		{children}
+	</div>
+);
 
-export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => {
-	return <>{children}</>;
-};
+export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => (
+	<>{children}</>
+);
 
-export const MockDropdownMenuSubTrigger = ({ children, ...props }: any) => {
-	return (
-		<div aria-haspopup="menu" role="menuitem" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDropdownMenuSubTrigger = ({ children, ...props }: any) => (
+	<div aria-haspopup="menu" role="menuitem" {...props}>
+		{children}
+	</div>
+);
 
-export const MockDropdownMenuSubContent = ({ children, ...props }: any) => {
-	return (
-		<div role="menu" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDropdownMenuSubContent = ({ children, ...props }: any) => (
+	<div role="menu" {...props}>
+		{children}
+	</div>
+);
 
-export const MockDropdownMenuRadioGroup = ({ children, ...props }: any) => {
-	return (
-		<div role="group" {...props}>
-			{children}
-		</div>
-	);
-};
+export const MockDropdownMenuRadioGroup = ({ children, ...props }: any) => (
+	<div role="group" {...props}>
+		{children}
+	</div>
+);
 
 export const MockDropdownMenuRadioItem = ({
 	children,
@@ -783,9 +763,7 @@ export const MockDropdownMenuItemIndicator = ({
 	children,
 }: {
 	children: React.ReactNode;
-}) => {
-	return <>{children}</>;
-};
+}) => <>{children}</>;
 
 // Menu Mock (alias for DropdownMenu components)
 export const MockMenuRoot = MockDropdownMenuRoot;

@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,7 +12,6 @@ import {
 	FormItem,
 	FormMessage,
 } from "@/components/ui/form";
-// import { useLoginToken } from '.*/use-auth'
 import useStore from "@/data/store";
 import type { Comment } from "@/types";
 import { Textarea } from "../ui/textarea";
@@ -29,8 +27,6 @@ const formSchema = z.object({
 });
 
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 	const { caseNotes, setCaseNotes } = useStore();
 	const [loading, setLoading] = useState<boolean>(false);
 	const { toast } = useToast();
@@ -47,22 +43,15 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setLoading(true);
 
-		const newComment = {
-			content: values.comment,
-		};
-
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
-
-			const requestOptions: RequestInit = {
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/comments/${id}`, {
 				method: "PUT",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(newComment),
-			};
-			const response = await fetch(url, requestOptions);
+				body: JSON.stringify({ content: values.comment }),
+			});
 
 			if (!response.ok) {
 				toast({

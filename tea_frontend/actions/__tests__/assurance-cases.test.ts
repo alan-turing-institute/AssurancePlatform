@@ -81,9 +81,10 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when authentication fails (401)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${mockApiUrl}/api/cases`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			const result = await fetchAssuranceCases(mockToken);
@@ -93,9 +94,7 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when network error occurs", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return HttpResponse.error();
-				})
+				http.get(`${mockApiUrl}/api/cases`, () => HttpResponse.error())
 			);
 
 			const result = await fetchAssuranceCases(mockToken);
@@ -115,9 +114,9 @@ describe("Assurance Cases Actions", () => {
 			const mockCases = [{ id: 1, name: "Staging Case" }];
 
 			server.use(
-				http.get("http://staging.localhost:8000/api/cases", () => {
-					return HttpResponse.json(mockCases);
-				})
+				http.get("http://staging.localhost:8000/api/cases", () =>
+					HttpResponse.json(mockCases)
+				)
 			);
 
 			const result = await fetchAssuranceCases(mockToken);
@@ -130,9 +129,7 @@ describe("Assurance Cases Actions", () => {
 
 		it("should handle empty response", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return HttpResponse.json([]);
-				})
+				http.get(`${mockApiUrl}/api/cases`, () => HttpResponse.json([]))
 			);
 
 			const result = await fetchAssuranceCases(mockToken);
@@ -192,9 +189,10 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when authentication fails (401)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${mockApiUrl}/api/cases`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			const result = await fetchSharedAssuranceCases(mockToken);
@@ -204,9 +202,7 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when network error occurs", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return HttpResponse.error();
-				})
+				http.get(`${mockApiUrl}/api/cases`, () => HttpResponse.error())
 			);
 
 			const result = await fetchSharedAssuranceCases(mockToken);
@@ -216,9 +212,10 @@ describe("Assurance Cases Actions", () => {
 
 		it("should handle non-401 HTTP errors gracefully", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.get(
+					`${mockApiUrl}/api/cases`,
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			const result = await fetchSharedAssuranceCases(mockToken);
@@ -239,9 +236,9 @@ describe("Assurance Cases Actions", () => {
 			const mockCases = [{ id: 1, name: "Staging Shared Case" }];
 
 			server.use(
-				http.get("http://staging.localhost:8000/api/cases", () => {
-					return HttpResponse.json(mockCases);
-				})
+				http.get("http://staging.localhost:8000/api/cases", () =>
+					HttpResponse.json(mockCases)
+				)
 			);
 
 			const result = await fetchSharedAssuranceCases(mockToken);
@@ -275,9 +272,9 @@ describe("Assurance Cases Actions", () => {
 			];
 
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return HttpResponse.json(mockPublishedCases);
-				})
+				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () =>
+					HttpResponse.json(mockPublishedCases)
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -287,9 +284,10 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when authentication fails (401)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${mockApiUrl}/api/published-assurance-cases/`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -299,9 +297,9 @@ describe("Assurance Cases Actions", () => {
 
 		it("should return null when network error occurs", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return HttpResponse.error();
-				})
+				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () =>
+					HttpResponse.error()
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -311,9 +309,9 @@ describe("Assurance Cases Actions", () => {
 
 		it("should handle empty published cases list", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return HttpResponse.json([]);
-				})
+				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () =>
+					HttpResponse.json([])
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -341,9 +339,7 @@ describe("Assurance Cases Actions", () => {
 			server.use(
 				http.get(
 					"http://staging.localhost:8000/api/published-assurance-cases/",
-					() => {
-						return HttpResponse.json(mockCases);
-					}
+					() => HttpResponse.json(mockCases)
 				)
 			);
 
@@ -357,11 +353,13 @@ describe("Assurance Cases Actions", () => {
 
 		it("should handle malformed JSON response", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return new HttpResponse("invalid json", {
-						headers: { "Content-Type": "application/json" },
-					});
-				})
+				http.get(
+					`${mockApiUrl}/api/published-assurance-cases/`,
+					() =>
+						new HttpResponse("invalid json", {
+							headers: { "Content-Type": "application/json" },
+						})
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -437,9 +435,9 @@ describe("Assurance Cases Actions", () => {
 			const notFoundResponse = { error: "Not found" };
 
 			server.use(
-				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () => {
-					return HttpResponse.json(notFoundResponse, { status: 404 });
-				})
+				http.get(`${mockApiUrl}/api/published-assurance-cases/`, () =>
+					HttpResponse.json(notFoundResponse, { status: 404 })
+				)
 			);
 
 			const result = await fetchPublishedAssuranceCases(mockToken);
@@ -454,9 +452,9 @@ describe("Assurance Cases Actions", () => {
 			];
 
 			server.use(
-				http.get(`${mockApiUrl}/api/cases`, () => {
-					return HttpResponse.json(incompleteCases);
-				})
+				http.get(`${mockApiUrl}/api/cases`, () =>
+					HttpResponse.json(incompleteCases)
+				)
 			);
 
 			const result = await fetchAssuranceCases(mockToken);

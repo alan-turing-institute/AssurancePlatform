@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-interface RedirectButtonProps {
+type RedirectButtonProps = {
 	label: string;
 	url: string;
-}
+};
 
 const RedirectButton = ({ label, url }: RedirectButtonProps) => {
 	const _router = useRouter();

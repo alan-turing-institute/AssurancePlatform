@@ -241,9 +241,7 @@ export const createMockCasePermission = (
 export const createMockArray = <T>(
 	factory: (index: number) => T,
 	count: number
-): T[] => {
-	return Array.from({ length: count }, (_, index) => factory(index));
-};
+): T[] => Array.from({ length: count }, (_, index) => factory(index));
 
 // Mock session data for NextAuth
 export const mockSession = {

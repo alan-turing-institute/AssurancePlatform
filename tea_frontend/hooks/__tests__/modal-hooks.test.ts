@@ -17,11 +17,11 @@ import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { useShareModal } from "@/hooks/use-share-modal";
 
 // Type for modal hook return value
-interface ModalHookReturn {
+type ModalHookReturn = {
 	isOpen: boolean;
 	onOpen: () => void;
 	onClose: () => void;
-}
+};
 
 // Helper function to test modal hook behavior
 const testModalHook = (hookName: string, useHook: () => ModalHookReturn) => {

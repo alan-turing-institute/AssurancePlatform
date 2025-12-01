@@ -14,35 +14,33 @@ import type { TableActionsProps } from "@/types/domain";
 import DeleteCaseButton from "./delete-button";
 import UnpublishCaseButton from "./unpublish-button";
 
-const TableActions = ({ caseStudy }: TableActionsProps) => {
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger>
-				<EllipsisVerticalIcon className="size-4" />
-			</DropdownMenuTrigger>
-			<DropdownMenuContent>
-				<DropdownMenuLabel>Actions</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem>
-					<Link
-						className="flex items-center"
-						href={`case-studies/${caseStudy.id}`}
-					>
-						<EyeIcon className="mr-2 size-4" />
-						View
-					</Link>
-				</DropdownMenuItem>
-				{caseStudy.published && (
-					<DropdownMenuItem asChild>
-						<UnpublishCaseButton caseStudyId={caseStudy.id} />
-					</DropdownMenuItem>
-				)}
+const TableActions = ({ caseStudy }: TableActionsProps) => (
+	<DropdownMenu>
+		<DropdownMenuTrigger>
+			<EllipsisVerticalIcon className="size-4" />
+		</DropdownMenuTrigger>
+		<DropdownMenuContent>
+			<DropdownMenuLabel>Actions</DropdownMenuLabel>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem>
+				<Link
+					className="flex items-center"
+					href={`case-studies/${caseStudy.id}`}
+				>
+					<EyeIcon className="mr-2 size-4" />
+					View
+				</Link>
+			</DropdownMenuItem>
+			{caseStudy.published && (
 				<DropdownMenuItem asChild>
-					<DeleteCaseButton caseStudyId={caseStudy.id} variant="link" />
+					<UnpublishCaseButton caseStudyId={caseStudy.id} />
 				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-};
+			)}
+			<DropdownMenuItem asChild>
+				<DeleteCaseButton caseStudyId={caseStudy.id} variant="link" />
+			</DropdownMenuItem>
+		</DropdownMenuContent>
+	</DropdownMenu>
+);
 
 export default TableActions;

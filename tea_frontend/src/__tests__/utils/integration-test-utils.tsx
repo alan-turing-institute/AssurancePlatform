@@ -79,7 +79,7 @@ export class NavigationFlow {
 // Helper for complete auth flows
 export class AuthFlow {
 	private session: Session | null = null;
-	private user = userEvent.setup();
+	private readonly user = userEvent.setup();
 
 	async login(email: string, password: string, component: React.ReactElement) {
 		const { getByLabelText, getByRole } = render(component);
@@ -114,9 +114,7 @@ export class AuthFlow {
 	logout() {
 		// Simulate logout API call
 		server.use(
-			http.post("/api/auth/logout", () => {
-				return new Response(null, { status: 200 });
-			})
+			http.post("/api/auth/logout", () => new Response(null, { status: 200 }))
 		);
 
 		this.session = null;
@@ -173,18 +171,14 @@ export class AuthFlow {
 
 // Helper for API state management in tests
 export class ApiStateManager {
-	private apiResponses: Map<string, unknown> = new Map();
-	private apiErrors: Map<string, Error> = new Map();
+	private readonly apiResponses: Map<string, unknown> = new Map();
+	private readonly apiErrors: Map<string, Error> = new Map();
 
 	setResponse(endpoint: string, response: unknown) {
 		this.apiResponses.set(endpoint, response);
 
 		// Setup MSW handler
-		server.use(
-			http.get(endpoint, () => {
-				return Response.json(response);
-			})
-		);
+		server.use(http.get(endpoint, () => Response.json(response)));
 	}
 
 	setError(
@@ -251,10 +245,10 @@ export async function waitForAsync(
 
 // Helper for simulating user interactions across pages
 export class UserJourney {
-	private user = userEvent.setup();
-	private navigation: NavigationFlow;
-	private auth: AuthFlow;
-	private apiState: ApiStateManager;
+	private readonly user = userEvent.setup();
+	private readonly navigation: NavigationFlow;
+	private readonly auth: AuthFlow;
+	private readonly apiState: ApiStateManager;
 	private currentRender: RenderResult | null = null;
 
 	constructor() {
@@ -374,14 +368,14 @@ export class UserJourney {
 
 // Helper for testing WebSocket connections
 export class WebSocketTestHelper {
-	private mockSocket: Partial<WebSocket> & {
+	private readonly mockSocket: Partial<WebSocket> & {
 		send: ReturnType<typeof vi.fn>;
 		close: ReturnType<typeof vi.fn>;
 		addEventListener: ReturnType<typeof vi.fn>;
 		removeEventListener: ReturnType<typeof vi.fn>;
 		dispatchEvent: ReturnType<typeof vi.fn>;
 	};
-	private handlers: Map<
+	private readonly handlers: Map<
 		string,
 		(event: Event | MessageEvent | CloseEvent) => void
 	> = new Map();

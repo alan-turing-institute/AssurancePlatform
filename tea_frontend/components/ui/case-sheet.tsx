@@ -8,14 +8,14 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 
-interface CaseSheetProps {
+type CaseSheetProps = {
 	title: string;
 	description: string;
 	isOpen: boolean;
 	onChange: (open: boolean) => void;
 	onClose?: () => void;
 	children?: React.ReactNode;
-}
+};
 
 const CaseSheet = ({
 	title,
@@ -23,18 +23,16 @@ const CaseSheet = ({
 	isOpen,
 	onChange,
 	children,
-}: CaseSheetProps) => {
-	return (
-		<Sheet onOpenChange={onChange} open={isOpen}>
-			<SheetContent className="overflow-y-scroll">
-				<SheetHeader>
-					<SheetTitle>{title}</SheetTitle>
-					<SheetDescription>{description}</SheetDescription>
-				</SheetHeader>
-				{children}
-			</SheetContent>
-		</Sheet>
-	);
-};
+}: CaseSheetProps) => (
+	<Sheet onOpenChange={onChange} open={isOpen}>
+		<SheetContent className="overflow-y-scroll">
+			<SheetHeader>
+				<SheetTitle>{title}</SheetTitle>
+				<SheetDescription>{description}</SheetDescription>
+			</SheetHeader>
+			{children}
+		</SheetContent>
+	</Sheet>
+);
 
 export default CaseSheet;

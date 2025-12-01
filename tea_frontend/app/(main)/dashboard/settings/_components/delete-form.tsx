@@ -5,7 +5,15 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { useToast } from "@/components/ui/use-toast";
-import type { DeleteFormProps } from "@/types/domain";
+
+// Minimal user data needed for this form
+type UserData = {
+	id: number | string;
+};
+
+type DeleteFormProps = {
+	user: UserData | null | undefined;
+};
 
 export const DeleteForm = ({ user }: DeleteFormProps) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -23,6 +31,9 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 	};
 
 	const handleDeleteUser = async () => {
+		if (!user) {
+			return;
+		}
 		try {
 			const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/users/${user.id}/`;
 

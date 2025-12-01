@@ -57,9 +57,10 @@ describe("Users Actions", () => {
 
 		it("should return undefined when user is not found (404)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${mockApiUrl}/api/user/`,
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -69,9 +70,10 @@ describe("Users Actions", () => {
 
 		it("should return undefined when user is forbidden (403)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					`${mockApiUrl}/api/user/`,
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -81,9 +83,10 @@ describe("Users Actions", () => {
 
 		it("should return null when authentication fails (401)", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${mockApiUrl}/api/user/`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -95,9 +98,9 @@ describe("Users Actions", () => {
 			const mockErrorResponse = { error: "Internal server error" };
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(mockErrorResponse, { status: 500 });
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(mockErrorResponse, { status: 500 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -108,9 +111,7 @@ describe("Users Actions", () => {
 
 		it("should handle network errors gracefully", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.error();
-				})
+				http.get(`${mockApiUrl}/api/user/`, () => HttpResponse.error())
 			);
 
 			// Since the function doesn't have a try-catch, network errors will be thrown
@@ -186,9 +187,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(minimalUser);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(minimalUser)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -221,9 +222,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(extendedUser);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(extendedUser)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -233,11 +234,13 @@ describe("Users Actions", () => {
 
 		it("should handle malformed JSON response", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return new HttpResponse("invalid json", {
-						headers: { "Content-Type": "application/json" },
-					});
-				})
+				http.get(
+					`${mockApiUrl}/api/user/`,
+					() =>
+						new HttpResponse("invalid json", {
+							headers: { "Content-Type": "application/json" },
+						})
+				)
 			);
 
 			await expect(fetchCurrentUser(mockToken)).rejects.toThrow();
@@ -255,9 +258,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(userWithNulls);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(userWithNulls)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -330,9 +333,9 @@ describe("Users Actions", () => {
 			const mockUser = { id: 1, username: "success" };
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(mockUser, { status: 200 });
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(mockUser, { status: 200 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -342,9 +345,10 @@ describe("Users Actions", () => {
 
 		it("should handle 204 No Content status", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return new HttpResponse("", { status: 204 });
-				})
+				http.get(
+					`${mockApiUrl}/api/user/`,
+					() => new HttpResponse("", { status: 204 })
+				)
 			);
 
 			// 204 with empty body will cause JSON parsing error
@@ -355,9 +359,9 @@ describe("Users Actions", () => {
 			const errorResponse = { error: "Bad request" };
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(errorResponse, { status: 400 });
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(errorResponse, { status: 400 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -373,9 +377,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(validationError, { status: 422 });
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(validationError, { status: 422 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -388,9 +392,9 @@ describe("Users Actions", () => {
 			const gatewayError = { error: "Bad gateway" };
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(gatewayError, { status: 502 });
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(gatewayError, { status: 502 })
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -411,9 +415,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(userWithDifferentFields);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(userWithDifferentFields)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -441,9 +445,9 @@ describe("Users Actions", () => {
 			};
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(nestedUserData);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(nestedUserData)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -458,9 +462,9 @@ describe("Users Actions", () => {
 			];
 
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json(arrayResponse);
-				})
+				http.get(`${mockApiUrl}/api/user/`, () =>
+					HttpResponse.json(arrayResponse)
+				)
 			);
 
 			const result = await fetchCurrentUser(mockToken);
@@ -470,9 +474,7 @@ describe("Users Actions", () => {
 
 		it("should handle empty object response", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/user/`, () => {
-					return HttpResponse.json({});
-				})
+				http.get(`${mockApiUrl}/api/user/`, () => HttpResponse.json({}))
 			);
 
 			const result = await fetchCurrentUser(mockToken);

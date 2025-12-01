@@ -15,11 +15,11 @@ type TeamMember = {
 	image: string;
 };
 
-interface MemberEditProps {
+type MemberEditProps = {
 	member: TeamMember | null;
 	isOpen: boolean;
 	onClose: () => void;
-}
+};
 
 const MemberEdit = ({ member, isOpen, onClose }: MemberEditProps) => {
 	const [isMounted, setIsMounted] = useState(false);

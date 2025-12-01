@@ -490,9 +490,10 @@ describe("RegisterForm", () => {
 
 			// Mock successful registration
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			await user.click(
@@ -514,9 +515,10 @@ describe("RegisterForm", () => {
 
 			// Mock successful registration with 204 response
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			// Fill form with valid data
@@ -550,9 +552,9 @@ describe("RegisterForm", () => {
 
 			// Mock successful registration with JSON response
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json({ key: "auth-token-123" });
-				})
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json({ key: "auth-token-123" })
+				)
 			);
 
 			// Fill form with valid data
@@ -601,16 +603,16 @@ describe("RegisterForm", () => {
 
 			// Mock 400 error with field-specific errors
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json(
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json(
 						{
 							username: ["A user with that username already exists."],
 							email: ["Enter a valid email address."],
 							password1: ["This password is too common."],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			// Fill and submit form
@@ -647,14 +649,14 @@ describe("RegisterForm", () => {
 
 			// Mock 400 error with non_field_errors
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json(
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json(
 						{
 							non_field_errors: ["Unable to create account at this time."],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			// Fill and submit form
@@ -689,9 +691,9 @@ describe("RegisterForm", () => {
 
 			// Mock network error
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.error();
-				})
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.error()
+				)
 			);
 
 			// Fill and submit form
@@ -724,9 +726,10 @@ describe("RegisterForm", () => {
 
 			// Mock server error
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			// Fill and submit form
@@ -759,9 +762,10 @@ describe("RegisterForm", () => {
 
 			// Mock successful registration
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			// Fill and submit form
@@ -796,9 +800,9 @@ describe("RegisterForm", () => {
 			// Mock unexpected response format - this is still a successful 200 response
 			// so it should redirect to login page
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json({ unexpected: "format" });
-				})
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json({ unexpected: "format" })
+				)
 			);
 
 			// Fill and submit form
@@ -832,12 +836,14 @@ describe("RegisterForm", () => {
 
 			// Mock invalid JSON response with 200 status - this is treated as success
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse("Invalid JSON", {
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					});
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() =>
+						new HttpResponse("Invalid JSON", {
+							status: 200,
+							headers: { "Content-Type": "application/json" },
+						})
+				)
 			);
 
 			// Fill and submit form
@@ -1056,14 +1062,14 @@ describe("RegisterForm", () => {
 
 			// Mock 400 error
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json(
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json(
 						{
 							username: ["Username already taken"],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			// Fill and submit form
@@ -1190,14 +1196,14 @@ describe("RegisterForm", () => {
 
 			// First submission - trigger error
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json(
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json(
 						{
 							username: ["Username already exists"],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			// Fill and submit form
@@ -1227,9 +1233,10 @@ describe("RegisterForm", () => {
 
 			// Update mock for successful response
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			// Change username and resubmit

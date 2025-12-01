@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import {
 	type Dispatch,
 	type SetStateAction,
@@ -45,9 +44,6 @@ const NodeComment = ({
 	>([]);
 	const [_deleteOpen, _setDeleteOpen] = useState(false);
 
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
-
 	useEffect(() => {
 		// Initialize component state on mount
 	}, []);
@@ -55,45 +51,32 @@ const NodeComment = ({
 	// Fetch Element Comments
 	const fetchComments = useCallback(async () => {
 		setLoading(true);
-		let entity: string;
-		switch (node.type) {
-			case "context":
-				entity = "contexts";
-				break;
-			case "strategy":
-				entity = "strategies";
-				break;
-			case "property":
-				entity = "propertyclaims";
-				break;
-			case "evidence":
-				entity = "evidence";
-				break;
-			default:
-				entity = "goals";
-				break;
-		}
 
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
+			// Use the new unified comments API endpoint
+			const url = `/api/elements/${node.data.id}/comments`;
 
-			const requestOptions: RequestInit = {
+			const response = await fetch(url, {
 				method: "GET",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
-			};
-			const response = await fetch(url, requestOptions);
+			});
+
+			if (!response.ok) {
+				console.error("Failed to fetch comments:", response.status);
+				return [];
+			}
+
 			const result = await response.json();
-			return result;
-		} catch (_error) {
-			// Error is handled by setting loading state to false in finally block
-			// Comments will remain as previous state if fetch fails
+			return Array.isArray(result) ? result : [];
+		} catch (error) {
+			console.error("Error fetching comments:", error);
+			return [];
 		} finally {
 			setLoading(false);
 		}
-	}, [node.type, node.data.id, session?.key, setLoading]);
+	}, [node.data.id, setLoading]);
 
 	useEffect(() => {
 		fetchComments().then((result) => setNodeComments(result));

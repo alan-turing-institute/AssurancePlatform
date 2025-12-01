@@ -196,9 +196,7 @@ describe("Modal", () => {
 		const user = userEvent.setup();
 		const onClose = vi.fn();
 
-		const TestWrapper = () => {
-			return <Modal {...defaultProps} onClose={onClose} />;
-		};
+		const TestWrapper = () => <Modal {...defaultProps} onClose={onClose} />;
 
 		renderWithoutProviders(<TestWrapper />);
 

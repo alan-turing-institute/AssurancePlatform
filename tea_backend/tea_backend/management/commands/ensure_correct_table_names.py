@@ -53,7 +53,11 @@ class Command(BaseCommand):
 
             if not self.tables_to_rename:
                 self.stdout.write(self.style.SUCCESS("✓ All tables already have correct names"))
-                self.ensure_migration_marked_applied()
+                # Only mark migration if there are actual api tables (not a fresh DB)
+                if any(t.startswith("api_") for t in current_tables):
+                    self.ensure_migration_marked_applied()
+                else:
+                    self.stdout.write("Fresh database detected, skipping migration marking")
                 return
 
             # Show what will be renamed

@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
-interface Template {
+type Template = {
 	name: string;
 	[key: string]: unknown;
-}
+};
 
 export function GET() {
 	try {

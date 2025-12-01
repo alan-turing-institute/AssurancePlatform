@@ -452,9 +452,10 @@ describe("CaseCard", () => {
 	it("should be accessible via keyboard navigation", async () => {
 		// Mock 404 response for image
 		server.use(
-			http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/image`, () => {
-				return new HttpResponse(null, { status: 404 });
-			})
+			http.get(
+				`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/image`,
+				() => new HttpResponse(null, { status: 404 })
+			)
 		);
 
 		const user = userEvent.setup();

@@ -486,15 +486,13 @@ describe("Providers Integration", () => {
 
 	describe("Context and State Management", () => {
 		it("should maintain independent provider states", async () => {
-			const TestComponent = () => {
-				return (
-					<div data-testid="test-component">
-						<div data-testid="session-context">Session Active</div>
-						<div data-testid="theme-context">Theme Active</div>
-						<div data-testid="modals-context">Modals Active</div>
-					</div>
-				);
-			};
+			const TestComponent = () => (
+				<div data-testid="test-component">
+					<div data-testid="session-context">Session Active</div>
+					<div data-testid="theme-context">Theme Active</div>
+					<div data-testid="modals-context">Modals Active</div>
+				</div>
+			);
 
 			const App = () => (
 				<SessionProvider

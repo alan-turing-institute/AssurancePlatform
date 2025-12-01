@@ -8,12 +8,12 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 
-interface CreateSheetProps {
+type CreateSheetProps = {
 	isOpen: boolean;
 	onClose: () => void;
 	onChange: (open: boolean) => void;
 	children?: React.ReactNode;
-}
+};
 
 const CreateSheet = ({ isOpen, onChange, children }: CreateSheetProps) => {
 	// const onChange = (open: boolean) => {

@@ -1,0 +1,647 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model account_emailaddress {
+  id                        Int                         @id @default(autoincrement())
+  email                     String                      @db.VarChar(254)
+  verified                  Boolean
+  primary                   Boolean
+  user_id                   BigInt
+  api_eapuser               api_eapuser                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "account_emailaddress_user_id_2c513194_fk_eap_api_eapuser_id")
+  account_emailconfirmation account_emailconfirmation[]
+
+  @@unique([user_id, email], map: "account_emailaddress_user_id_email_987c8728_uniq")
+  @@index([user_id], map: "account_emailaddress_user_id_2c513194")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model account_emailconfirmation {
+  id                   Int                  @id @default(autoincrement())
+  created              DateTime             @db.Timestamptz(6)
+  sent                 DateTime?            @db.Timestamptz(6)
+  key                  String               @unique @db.VarChar(64)
+  email_address_id     Int
+  account_emailaddress account_emailaddress @relation(fields: [email_address_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "account_emailconfirm_email_address_id_5b7f8c58_fk_account_e")
+
+  @@index([email_address_id], map: "account_emailconfirmation_email_address_id_5b7f8c58")
+  @@index([key], map: "account_emailconfirmation_key_f43612bd_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_assurancecase {
+  id                              BigInt                            @id(map: "eap_api_assurancecase_pkey") @default(autoincrement())
+  name                            String                            @db.VarChar(200)
+  description                     String                            @db.VarChar(1000)
+  created_date                    DateTime                          @db.Timestamptz(6)
+  lock_uuid                       String?                           @db.VarChar(50)
+  owner_id                        BigInt?
+  color_profile                   String                            @db.VarChar(200)
+  published                       Boolean
+  published_date                  DateTime?                         @db.Timestamptz(6)
+  api_eapuser                     api_eapuser?                      @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecase_owner_id_f745634d_fk_eap_api_eapuser_id")
+  api_assurancecase_edit_groups   api_assurancecase_edit_groups[]
+  api_assurancecase_review_groups api_assurancecase_review_groups[]
+  api_assurancecase_view_groups   api_assurancecase_view_groups[]
+  api_assurancecaseimage          api_assurancecaseimage?
+  api_comment                     api_comment[]
+  api_context                     api_context[]
+  api_evidence                    api_evidence[]
+  api_propertyclaim               api_propertyclaim[]
+  api_publishedassurancecase      api_publishedassurancecase[]
+  api_strategy                    api_strategy[]
+  api_toplevelnormativegoal       api_toplevelnormativegoal[]
+
+  @@index([owner_id], map: "eap_api_assurancecase_owner_id_f745634d")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_assurancecase_edit_groups {
+  id                BigInt            @id(map: "eap_api_assurancecase_edit_groups_pkey") @default(autoincrement())
+  assurancecase_id  BigInt
+  eapgroup_id       BigInt
+  api_assurancecase api_assurancecase @relation(fields: [assurancecase_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_assurancecase_id_7a37e307_fk_eap_api_a")
+  api_eapgroup      api_eapgroup      @relation(fields: [eapgroup_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_eapgroup_id_6ab256f9_fk_eap_api_e")
+
+  @@unique([assurancecase_id, eapgroup_id], map: "eap_api_assurancecase_ed_assurancecase_id_eapgrou_dc7e20a2_uniq")
+  @@index([assurancecase_id], map: "eap_api_assurancecase_edit_groups_assurancecase_id_7a37e307")
+  @@index([eapgroup_id], map: "eap_api_assurancecase_edit_groups_eapgroup_id_6ab256f9")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_assurancecase_review_groups {
+  id                BigInt            @id(map: "eap_api_assurancecase_review_groups_pkey") @default(autoincrement())
+  assurancecase_id  BigInt
+  eapgroup_id       BigInt
+  api_assurancecase api_assurancecase @relation(fields: [assurancecase_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_assurancecase_id_7a77a231_fk_eap_api_a")
+  api_eapgroup      api_eapgroup      @relation(fields: [eapgroup_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_eapgroup_id_3d150eb5_fk_eap_api_e")
+
+  @@unique([assurancecase_id, eapgroup_id], map: "eap_api_assurancecase_re_assurancecase_id_eapgrou_0a0e35fa_uniq")
+  @@index([assurancecase_id], map: "eap_api_assurancecase_review_groups_assurancecase_id_7a77a231")
+  @@index([eapgroup_id], map: "eap_api_assurancecase_review_groups_eapgroup_id_3d150eb5")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_assurancecase_view_groups {
+  id                BigInt            @id(map: "eap_api_assurancecase_view_groups_pkey") @default(autoincrement())
+  assurancecase_id  BigInt
+  eapgroup_id       BigInt
+  api_assurancecase api_assurancecase @relation(fields: [assurancecase_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_assurancecase_id_fd5e5256_fk_eap_api_a")
+  api_eapgroup      api_eapgroup      @relation(fields: [eapgroup_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_eapgroup_id_92d7fbfa_fk_eap_api_e")
+
+  @@unique([assurancecase_id, eapgroup_id], map: "eap_api_assurancecase_vi_assurancecase_id_eapgrou_ed5f621b_uniq")
+  @@index([assurancecase_id], map: "eap_api_assurancecase_view_groups_assurancecase_id_fd5e5256")
+  @@index([eapgroup_id], map: "eap_api_assurancecase_view_groups_eapgroup_id_92d7fbfa")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_assurancecaseimage {
+  id                BigInt            @id(map: "eap_api_assurancecaseimage_pkey") @default(autoincrement())
+  image             String            @db.VarChar(100)
+  assurance_case_id BigInt            @unique(map: "eap_api_assurancecaseimage_assurance_case_id_842cff79_uniq")
+  api_assurancecase api_assurancecase @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_assurancecas_assurance_case_id_842cff79_fk_eap_api_a")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_casestudy {
+  id                            Int                             @id(map: "eap_api_casestudy_pkey") @default(autoincrement())
+  title                         String                          @db.VarChar(255)
+  description                   String?
+  authors                       String?                         @db.VarChar(255)
+  category                      String?                         @db.VarChar(100)
+  published_date                DateTime?                       @db.Timestamptz(6)
+  last_modified_on              DateTime                        @db.Timestamptz(6)
+  created_on                    DateTime                        @db.Timestamptz(6)
+  sector                        String?                         @db.VarChar(100)
+  contact                       String?                         @db.VarChar(254)
+  image                         String?                         @db.VarChar(200)
+  published                     Boolean
+  owner_id                      BigInt?
+  type                          String?                         @db.VarChar(100)
+  api_eapuser                   api_eapuser?                    @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_casestudy_owner_id_32cc0f00_fk_eap_api_eapuser_id")
+  api_casestudy_assurance_cases api_casestudy_assurance_cases[]
+  api_casestudyfeatureimage     api_casestudyfeatureimage?
+
+  @@index([owner_id], map: "eap_api_casestudy_owner_id_32cc0f00")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_casestudy_assurance_cases {
+  id                         BigInt                     @id(map: "eap_api_casestudy_published_assurance_cases_pkey") @default(autoincrement())
+  casestudy_id               Int
+  publishedassurancecase_id  String                     @db.Uuid
+  api_casestudy              api_casestudy              @relation(fields: [casestudy_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_casestudy_pu_casestudy_id_a7e4f836_fk_eap_api_c")
+  api_publishedassurancecase api_publishedassurancecase @relation(fields: [publishedassurancecase_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_casestudy_pu_publishedassuranceca_922f4694_fk_eap_api_p")
+
+  @@unique([casestudy_id, publishedassurancecase_id], map: "eap_api_casestudy_publis_casestudy_id_publishedas_2b4d76e9_uniq")
+  @@index([casestudy_id], map: "eap_api_casestudy_publishe_casestudy_id_a7e4f836")
+  @@index([publishedassurancecase_id], map: "eap_api_casestudy_publishe_publishedassurancecase_id_922f4694")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_casestudyfeatureimage {
+  id            BigInt        @id(map: "eap_api_casestudyfeatureimage_pkey") @default(autoincrement())
+  image         String        @db.VarChar(100)
+  uploaded_at   DateTime      @db.Timestamptz(6)
+  case_study_id Int           @unique(map: "eap_api_casestudyfeatureimage_case_study_id_key")
+  api_casestudy api_casestudy @relation(fields: [case_study_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_casestudyfea_case_study_id_caae00bc_fk_eap_api_c")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_comment {
+  id                        BigInt                     @id(map: "eap_api_comment_pkey") @default(autoincrement())
+  content                   String
+  created_at                DateTime                   @db.Timestamptz(6)
+  assurance_case_id         BigInt?
+  author_id                 BigInt
+  context_id                BigInt?
+  evidence_id               BigInt?
+  goal_id                   BigInt?
+  property_claim_id         BigInt?
+  strategy_id               BigInt?
+  api_assurancecase         api_assurancecase?         @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_assurance_case_id_3c7d9139_fk_eap_api_a")
+  api_eapuser               api_eapuser                @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_author_id_f9cb9631_fk_eap_api_eapuser_id")
+  api_context               api_context?               @relation(fields: [context_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_context_id_204a6327_fk_eap_api_context_id")
+  api_evidence              api_evidence?              @relation(fields: [evidence_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_evidence_id_de87ee57_fk_eap_api_evidence_id")
+  api_toplevelnormativegoal api_toplevelnormativegoal? @relation(fields: [goal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_goal_id_d43a8eee_fk_eap_api_t")
+  api_propertyclaim         api_propertyclaim?         @relation(fields: [property_claim_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_property_claim_id_c1161ca4_fk_eap_api_p")
+  api_strategy              api_strategy?              @relation(fields: [strategy_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_comment_strategy_id_445fabb5_fk_eap_api_strategy_id")
+
+  @@index([assurance_case_id], map: "eap_api_comment_assurance_case_id_3c7d9139")
+  @@index([author_id], map: "eap_api_comment_author_id_f9cb9631")
+  @@index([context_id], map: "eap_api_comment_context_id_204a6327")
+  @@index([evidence_id], map: "eap_api_comment_evidence_id_de87ee57")
+  @@index([goal_id], map: "eap_api_comment_goal_id_d43a8eee")
+  @@index([property_claim_id], map: "eap_api_comment_property_claim_id_c1161ca4")
+  @@index([strategy_id], map: "eap_api_comment_strategy_id_445fabb5")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_context {
+  id                        BigInt                     @id(map: "eap_api_context_pkey") @default(autoincrement())
+  name                      String                     @db.VarChar(200)
+  short_description         String                     @db.VarChar(1000)
+  long_description          String                     @db.VarChar(3000)
+  created_date              DateTime                   @db.Timestamptz(6)
+  goal_id                   BigInt?
+  assurance_case_id         BigInt?
+  in_sandbox                Boolean
+  api_comment               api_comment[]
+  api_assurancecase         api_assurancecase?         @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_context_assurance_case_id_4fdda83a_fk_eap_api_a")
+  api_toplevelnormativegoal api_toplevelnormativegoal? @relation(fields: [goal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_context_goal_id_a4a23427_fk_eap_api_t")
+
+  @@index([assurance_case_id], map: "eap_api_context_assurance_case_id_4fdda83a")
+  @@index([goal_id], map: "eap_api_context_goal_id_a4a23427")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_eapgroup {
+  id                              BigInt                            @id(map: "eap_api_eapgroup_pkey") @default(autoincrement())
+  name                            String                            @db.VarChar(200)
+  created_date                    DateTime                          @db.Timestamptz(6)
+  owner_id                        BigInt
+  api_assurancecase_edit_groups   api_assurancecase_edit_groups[]
+  api_assurancecase_review_groups api_assurancecase_review_groups[]
+  api_assurancecase_view_groups   api_assurancecase_view_groups[]
+  api_eapuser                     api_eapuser                       @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapgroup_owner_id_54e46ed8_fk_eap_api_eapuser_id")
+  api_eapgroup_member             api_eapgroup_member[]
+
+  @@index([owner_id], map: "eap_api_eapgroup_owner_id_54e46ed8")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_eapgroup_member {
+  id           BigInt       @id(map: "eap_api_eapgroup_member_pkey") @default(autoincrement())
+  eapgroup_id  BigInt
+  eapuser_id   BigInt
+  api_eapgroup api_eapgroup @relation(fields: [eapgroup_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapgroup_mem_eapgroup_id_744e75bd_fk_eap_api_e")
+  api_eapuser  api_eapuser  @relation(fields: [eapuser_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapgroup_mem_eapuser_id_73c93116_fk_eap_api_e")
+
+  @@unique([eapgroup_id, eapuser_id], map: "eap_api_eapgroup_member_eapgroup_id_eapuser_id_fdaba2a6_uniq")
+  @@index([eapgroup_id], map: "eap_api_eapgroup_member_eapgroup_id_744e75bd")
+  @@index([eapuser_id], map: "eap_api_eapgroup_member_eapuser_id_73c93116")
+}
+
+model api_eapuser {
+  id                                 BigInt                               @id(map: "eap_api_eapuser_pkey") @default(autoincrement())
+  password                           String                               @db.VarChar(128)
+  last_login                         DateTime?                            @db.Timestamptz(6)
+  is_superuser                       Boolean
+  username                           String                               @unique(map: "eap_api_eapuser_username_key") @db.VarChar(150)
+  first_name                         String                               @db.VarChar(150)
+  last_name                          String                               @db.VarChar(150)
+  email                              String                               @db.VarChar(254)
+  is_staff                           Boolean
+  is_active                          Boolean
+  date_joined                        DateTime                             @db.Timestamptz(6)
+  auth_provider                      String                               @db.VarChar(200)
+  auth_username                      String                               @db.VarChar(200)
+  account_emailaddress               account_emailaddress[]
+  api_assurancecase                  api_assurancecase[]
+  api_casestudy                      api_casestudy[]
+  api_comment                        api_comment[]
+  api_eapgroup                       api_eapgroup[]
+  api_eapgroup_member                api_eapgroup_member[]
+  api_eapuser_groups                 api_eapuser_groups[]
+  api_eapuser_user_permissions       api_eapuser_user_permissions[]
+  api_githubrepository               api_githubrepository[]
+  authtoken_token                    authtoken_token?
+  django_admin_log                   django_admin_log[]
+  social_auth_usersocialauth         social_auth_usersocialauth[]
+  socialaccount_socialaccount        socialaccount_socialaccount[]
+  websockets_assurancecaseconnection websockets_assurancecaseconnection[]
+
+  @@index([username], map: "eap_api_eapuser_username_5cca4b1c_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_eapuser_groups {
+  id          BigInt      @id(map: "eap_api_eapuser_groups_pkey") @default(autoincrement())
+  eapuser_id  BigInt
+  group_id    Int
+  api_eapuser api_eapuser @relation(fields: [eapuser_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapuser_grou_eapuser_id_984fa37c_fk_eap_api_e")
+  auth_group  auth_group  @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapuser_groups_group_id_bfcaae5e_fk_auth_group_id")
+
+  @@unique([eapuser_id, group_id], map: "eap_api_eapuser_groups_eapuser_id_group_id_942f5813_uniq")
+  @@index([eapuser_id], map: "eap_api_eapuser_groups_eapuser_id_984fa37c")
+  @@index([group_id], map: "eap_api_eapuser_groups_group_id_bfcaae5e")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_eapuser_user_permissions {
+  id              BigInt          @id(map: "eap_api_eapuser_user_permissions_pkey") @default(autoincrement())
+  eapuser_id      BigInt
+  permission_id   Int
+  api_eapuser     api_eapuser     @relation(fields: [eapuser_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapuser_user_eapuser_id_2ba418a4_fk_eap_api_e")
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_eapuser_user_permission_id_b13cbaf1_fk_auth_perm")
+
+  @@unique([eapuser_id, permission_id], map: "eap_api_eapuser_user_per_eapuser_id_permission_id_efa39408_uniq")
+  @@index([eapuser_id], map: "eap_api_eapuser_user_permissions_eapuser_id_2ba418a4")
+  @@index([permission_id], map: "eap_api_eapuser_user_permissions_permission_id_b13cbaf1")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_evidence {
+  id                          BigInt                        @id(map: "eap_api_evidence_pkey") @default(autoincrement())
+  name                        String                        @db.VarChar(200)
+  short_description           String                        @db.VarChar(1000)
+  long_description            String                        @db.VarChar(3000)
+  created_date                DateTime                      @db.Timestamptz(6)
+  URL                         String?                       @db.VarChar(3000)
+  assurance_case_id           BigInt?
+  in_sandbox                  Boolean
+  api_comment                 api_comment[]
+  api_assurancecase           api_assurancecase?            @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_evidence_assurance_case_id_ff3b70ad_fk_eap_api_a")
+  api_evidence_property_claim api_evidence_property_claim[]
+
+  @@index([assurance_case_id], map: "eap_api_evidence_assurance_case_id_ff3b70ad")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_evidence_property_claim {
+  id                BigInt            @id(map: "eap_api_evidence_property_claim_pkey") @default(autoincrement())
+  evidence_id       BigInt
+  propertyclaim_id  BigInt
+  api_evidence      api_evidence      @relation(fields: [evidence_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_evidence_pro_evidence_id_118b59c8_fk_eap_api_e")
+  api_propertyclaim api_propertyclaim @relation(fields: [propertyclaim_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_evidence_pro_propertyclaim_id_e30f5add_fk_eap_api_p")
+
+  @@unique([evidence_id, propertyclaim_id], map: "eap_api_evidence_propert_evidence_id_propertyclai_b648670e_uniq")
+  @@index([evidence_id], map: "eap_api_evidence_property_claim_evidence_id_118b59c8")
+  @@index([propertyclaim_id], map: "eap_api_evidence_property_claim_propertyclaim_id_e30f5add")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_githubrepository {
+  id           BigInt      @id(map: "eap_api_githubrepository_pkey") @default(autoincrement())
+  name         String      @db.VarChar(200)
+  url          String      @db.VarChar(200)
+  description  String?
+  created_date DateTime    @db.Timestamptz(6)
+  owner_id     BigInt
+  api_eapuser  api_eapuser @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_githubreposi_owner_id_f1232e12_fk_eap_api_e")
+
+  @@index([owner_id], map: "eap_api_githubrepository_owner_id_f1232e12")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_propertyclaim {
+  id                          BigInt                        @id(map: "eap_api_propertyclaim_pkey") @default(autoincrement())
+  name                        String                        @db.VarChar(200)
+  short_description           String                        @db.VarChar(1000)
+  long_description            String                        @db.VarChar(3000)
+  created_date                DateTime                      @db.Timestamptz(6)
+  claim_type                  String                        @db.VarChar(32)
+  level                       Int
+  goal_id                     BigInt?
+  property_claim_id           BigInt?
+  strategy_id                 BigInt?
+  assurance_case_id           BigInt?
+  in_sandbox                  Boolean
+  assumption                  String
+  api_comment                 api_comment[]
+  api_evidence_property_claim api_evidence_property_claim[]
+  api_assurancecase           api_assurancecase?            @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_propertyclai_assurance_case_id_aba29e08_fk_eap_api_a")
+  api_toplevelnormativegoal   api_toplevelnormativegoal?    @relation(fields: [goal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_propertyclai_goal_id_72745768_fk_eap_api_t")
+  api_propertyclaim           api_propertyclaim?            @relation("api_propertyclaimToapi_propertyclaim", fields: [property_claim_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_propertyclai_property_claim_id_92709559_fk_eap_api_p")
+  other_api_propertyclaim     api_propertyclaim[]           @relation("api_propertyclaimToapi_propertyclaim")
+  api_strategy                api_strategy?                 @relation(fields: [strategy_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_propertyclai_strategy_id_66d5f437_fk_eap_api_s")
+
+  @@index([assurance_case_id], map: "eap_api_propertyclaim_assurance_case_id_aba29e08")
+  @@index([goal_id], map: "eap_api_propertyclaim_goal_id_72745768")
+  @@index([property_claim_id], map: "eap_api_propertyclaim_property_claim_id_92709559")
+  @@index([strategy_id], map: "eap_api_propertyclaim_strategy_id_66d5f437")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_publishedassurancecase {
+  id                            String                          @id(map: "eap_api_publishedassurancecase_pkey") @db.Uuid
+  title                         String                          @db.VarChar(255)
+  content                       Json
+  created_at                    DateTime                        @db.Timestamptz(6)
+  assurance_case_id             BigInt
+  description                   String?                         @db.VarChar(1000)
+  api_casestudy_assurance_cases api_casestudy_assurance_cases[]
+  api_assurancecase             api_assurancecase               @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_publishedass_assurance_case_id_92434322_fk_eap_api_a")
+
+  @@index([assurance_case_id], map: "eap_api_publishedassurancecase_assurance_case_id_92434322")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_strategy {
+  id                        BigInt                     @id(map: "eap_api_strategy_pkey") @default(autoincrement())
+  name                      String                     @db.VarChar(200)
+  created_date              DateTime                   @db.Timestamptz(6)
+  short_description         String                     @db.VarChar(1000)
+  long_description          String                     @db.VarChar(3000)
+  goal_id                   BigInt?
+  assurance_case_id         BigInt?
+  in_sandbox                Boolean
+  assumption                String
+  justification             String
+  api_comment               api_comment[]
+  api_propertyclaim         api_propertyclaim[]
+  api_assurancecase         api_assurancecase?         @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_strategy_assurance_case_id_4b3e0b80_fk_eap_api_a")
+  api_toplevelnormativegoal api_toplevelnormativegoal? @relation(fields: [goal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_strategy_goal_id_e4c0af76_fk_eap_api_t")
+
+  @@index([assurance_case_id], map: "eap_api_strategy_assurance_case_id_4b3e0b80")
+  @@index([goal_id], map: "eap_api_strategy_goal_id_e4c0af76")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model api_toplevelnormativegoal {
+  id                BigInt              @id(map: "eap_api_toplevelnormativegoal_pkey") @default(autoincrement())
+  name              String              @db.VarChar(200)
+  short_description String              @db.VarChar(1000)
+  long_description  String              @db.VarChar(3000)
+  created_date      DateTime            @db.Timestamptz(6)
+  keywords          String              @db.VarChar(3000)
+  assurance_case_id BigInt
+  in_sandbox        Boolean
+  assumption        String
+  api_comment       api_comment[]
+  api_context       api_context[]
+  api_propertyclaim api_propertyclaim[]
+  api_strategy      api_strategy[]
+  api_assurancecase api_assurancecase   @relation(fields: [assurance_case_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_toplevelnorm_assurance_case_id_e1de704c_fk_eap_api_a")
+
+  @@index([assurance_case_id], map: "eap_api_toplevelnormativegoal_assurance_case_id_e1de704c")
+}
+
+model auth_group {
+  id                     Int                      @id @default(autoincrement())
+  name                   String                   @unique @db.VarChar(150)
+  api_eapuser_groups     api_eapuser_groups[]
+  auth_group_permissions auth_group_permissions[]
+
+  @@index([name], map: "auth_group_name_a6ea08ec_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model auth_group_permissions {
+  id              BigInt          @id @default(autoincrement())
+  group_id        Int
+  permission_id   Int
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm")
+  auth_group      auth_group      @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id")
+
+  @@unique([group_id, permission_id], map: "auth_group_permissions_group_id_permission_id_0cd325b0_uniq")
+  @@index([group_id], map: "auth_group_permissions_group_id_b120cbf9")
+  @@index([permission_id], map: "auth_group_permissions_permission_id_84c5c92e")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model auth_permission {
+  id                           Int                            @id @default(autoincrement())
+  name                         String                         @db.VarChar(255)
+  content_type_id              Int
+  codename                     String                         @db.VarChar(100)
+  api_eapuser_user_permissions api_eapuser_user_permissions[]
+  auth_group_permissions       auth_group_permissions[]
+  django_content_type          django_content_type            @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_permission_content_type_id_2f476e4b_fk_django_co")
+
+  @@unique([content_type_id, codename], map: "auth_permission_content_type_id_codename_01ab375a_uniq")
+  @@index([content_type_id], map: "auth_permission_content_type_id_2f476e4b")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model authtoken_token {
+  key         String      @id @db.VarChar(40)
+  created     DateTime    @db.Timestamptz(6)
+  user_id     BigInt      @unique
+  api_eapuser api_eapuser @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "authtoken_token_user_id_35299eff_fk_eap_api_eapuser_id")
+
+  @@index([key], map: "authtoken_token_key_10f0b77e_like")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model django_admin_log {
+  id                  Int                  @id @default(autoincrement())
+  action_time         DateTime             @db.Timestamptz(6)
+  object_id           String?
+  object_repr         String               @db.VarChar(200)
+  action_flag         Int                  @db.SmallInt
+  change_message      String
+  content_type_id     Int?
+  user_id             BigInt
+  django_content_type django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_content_type_id_c4bce8eb_fk_django_co")
+  api_eapuser         api_eapuser          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_user_id_c564eba6_fk_eap_api_eapuser_id")
+
+  @@index([content_type_id], map: "django_admin_log_content_type_id_c4bce8eb")
+  @@index([user_id], map: "django_admin_log_user_id_c564eba6")
+}
+
+model django_content_type {
+  id               Int                @id @default(autoincrement())
+  app_label        String             @db.VarChar(100)
+  model            String             @db.VarChar(100)
+  auth_permission  auth_permission[]
+  django_admin_log django_admin_log[]
+
+  @@unique([app_label, model], map: "django_content_type_app_label_model_76bd3d3b_uniq")
+}
+
+model django_migrations {
+  id      BigInt   @id @default(autoincrement())
+  app     String   @db.VarChar(255)
+  name    String   @db.VarChar(255)
+  applied DateTime @db.Timestamptz(6)
+}
+
+model django_session {
+  session_key  String   @id @db.VarChar(40)
+  session_data String
+  expire_date  DateTime @db.Timestamptz(6)
+
+  @@index([expire_date], map: "django_session_expire_date_a5c62663")
+  @@index([session_key], map: "django_session_session_key_c0390e0f_like")
+}
+
+model django_site {
+  id                            Int                             @id @default(autoincrement())
+  domain                        String                          @unique(map: "django_site_domain_a2e37b91_uniq") @db.VarChar(100)
+  name                          String                          @db.VarChar(50)
+  socialaccount_socialapp_sites socialaccount_socialapp_sites[]
+
+  @@index([domain], map: "django_site_domain_a2e37b91_like")
+}
+
+model social_auth_association {
+  id         BigInt @id @default(autoincrement())
+  server_url String @db.VarChar(255)
+  handle     String @db.VarChar(255)
+  secret     String @db.VarChar(255)
+  issued     Int
+  lifetime   Int
+  assoc_type String @db.VarChar(64)
+
+  @@unique([server_url, handle], map: "social_auth_association_server_url_handle_078befa2_uniq")
+}
+
+model social_auth_code {
+  id        BigInt   @id @default(autoincrement())
+  email     String   @db.VarChar(254)
+  code      String   @db.VarChar(32)
+  verified  Boolean
+  timestamp DateTime @db.Timestamptz(6)
+
+  @@unique([email, code], map: "social_auth_code_email_code_801b2d02_uniq")
+  @@index([code], map: "social_auth_code_code_a2393167")
+  @@index([code], map: "social_auth_code_code_a2393167_like")
+  @@index([timestamp], map: "social_auth_code_timestamp_176b341f")
+}
+
+model social_auth_nonce {
+  id         BigInt @id @default(autoincrement())
+  server_url String @db.VarChar(255)
+  timestamp  Int
+  salt       String @db.VarChar(65)
+
+  @@unique([server_url, timestamp, salt], map: "social_auth_nonce_server_url_timestamp_salt_f6284463_uniq")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model social_auth_partial {
+  id        BigInt   @id @default(autoincrement())
+  token     String   @db.VarChar(32)
+  next_step Int      @db.SmallInt
+  backend   String   @db.VarChar(32)
+  timestamp DateTime @db.Timestamptz(6)
+  data      Json
+
+  @@index([timestamp], map: "social_auth_partial_timestamp_50f2119f")
+  @@index([token], map: "social_auth_partial_token_3017fea3")
+  @@index([token], map: "social_auth_partial_token_3017fea3_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model social_auth_usersocialauth {
+  id          BigInt      @id @default(autoincrement())
+  provider    String      @db.VarChar(32)
+  uid         String      @db.VarChar(255)
+  user_id     BigInt
+  created     DateTime    @db.Timestamptz(6)
+  modified    DateTime    @db.Timestamptz(6)
+  extra_data  Json
+  api_eapuser api_eapuser @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "social_auth_usersoci_user_id_17d28448_fk_eap_api_e")
+
+  @@unique([provider, uid], map: "social_auth_usersocialauth_provider_uid_e6b5e668_uniq")
+  @@index([uid], map: "social_auth_usersocialauth_uid_796e51dc")
+  @@index([uid], map: "social_auth_usersocialauth_uid_796e51dc_like")
+  @@index([user_id], map: "social_auth_usersocialauth_user_id_17d28448")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model socialaccount_socialaccount {
+  id                        Int                         @id @default(autoincrement())
+  provider                  String                      @db.VarChar(30)
+  uid                       String                      @db.VarChar(191)
+  last_login                DateTime                    @db.Timestamptz(6)
+  date_joined               DateTime                    @db.Timestamptz(6)
+  extra_data                String
+  user_id                   BigInt
+  api_eapuser               api_eapuser                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "socialaccount_social_user_id_8146e70c_fk_eap_api_e")
+  socialaccount_socialtoken socialaccount_socialtoken[]
+
+  @@unique([provider, uid], map: "socialaccount_socialaccount_provider_uid_fc810c6e_uniq")
+  @@index([user_id], map: "socialaccount_socialaccount_user_id_8146e70c")
+}
+
+model socialaccount_socialapp {
+  id                            Int                             @id @default(autoincrement())
+  provider                      String                          @db.VarChar(30)
+  name                          String                          @db.VarChar(40)
+  client_id                     String                          @db.VarChar(191)
+  secret                        String                          @db.VarChar(191)
+  key                           String                          @db.VarChar(191)
+  socialaccount_socialapp_sites socialaccount_socialapp_sites[]
+  socialaccount_socialtoken     socialaccount_socialtoken[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model socialaccount_socialapp_sites {
+  id                      BigInt                  @id @default(autoincrement())
+  socialapp_id            Int
+  site_id                 Int
+  django_site             django_site             @relation(fields: [site_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "socialaccount_social_site_id_2579dee5_fk_django_si")
+  socialaccount_socialapp socialaccount_socialapp @relation(fields: [socialapp_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "socialaccount_social_socialapp_id_97fb6e7d_fk_socialacc")
+
+  @@unique([socialapp_id, site_id], map: "socialaccount_socialapp__socialapp_id_site_id_71a9a768_uniq")
+  @@index([site_id], map: "socialaccount_socialapp_sites_site_id_2579dee5")
+  @@index([socialapp_id], map: "socialaccount_socialapp_sites_socialapp_id_97fb6e7d")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model socialaccount_socialtoken {
+  id                          Int                         @id @default(autoincrement())
+  token                       String
+  token_secret                String
+  expires_at                  DateTime?                   @db.Timestamptz(6)
+  account_id                  Int
+  app_id                      Int
+  socialaccount_socialaccount socialaccount_socialaccount @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "socialaccount_social_account_id_951f210e_fk_socialacc")
+  socialaccount_socialapp     socialaccount_socialapp     @relation(fields: [app_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "socialaccount_social_app_id_636a42d7_fk_socialacc")
+
+  @@unique([app_id, account_id], map: "socialaccount_socialtoken_app_id_account_id_fca4e0ac_uniq")
+  @@index([account_id], map: "socialaccount_socialtoken_account_id_951f210e")
+  @@index([app_id], map: "socialaccount_socialtoken_app_id_636a42d7")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model websockets_assurancecaseconnection {
+  id              BigInt      @id(map: "eap_websockets_assurancecaseconnection_pkey") @default(autoincrement())
+  case_group_name String      @db.VarChar(100)
+  channel_name    String      @db.VarChar(100)
+  connection_date DateTime    @db.Timestamptz(6)
+  user_id         BigInt
+  api_eapuser     api_eapuser @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_websockets_assur_user_id_f75aedc9_fk_eap_api_e")
+
+  @@index([user_id], map: "eap_websockets_assurancecaseconnection_user_id_f75aedc9")
+}

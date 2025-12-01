@@ -75,8 +75,8 @@ const caseStudyFormSchema = z.object({
 });
 
 // Helper function to get default values for the form
-const getDefaultFormValues = (caseStudy?: CaseStudyFormProps["caseStudy"]) => {
-	return caseStudy
+const getDefaultFormValues = (caseStudy?: CaseStudyFormProps["caseStudy"]) =>
+	caseStudy
 		? {
 				id: caseStudy.id,
 				title: caseStudy.title,
@@ -108,7 +108,6 @@ const getDefaultFormValues = (caseStudy?: CaseStudyFormProps["caseStudy"]) => {
 				image: undefined,
 				published: false,
 			};
-};
 
 // Helper function for author management
 const useAuthorManagement = (
@@ -648,64 +647,62 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 								<FormField
 									control={form.control}
 									name="authors"
-									render={() => {
-										return (
-											<FormItem>
-												<FormLabel>Authors</FormLabel>
-												<FormDescription>
-													List all authors who contributed to this case study
-												</FormDescription>
+									render={() => (
+										<FormItem>
+											<FormLabel>Authors</FormLabel>
+											<FormDescription>
+												List all authors who contributed to this case study
+											</FormDescription>
 
-												<div className="mb-2 flex items-center gap-2">
-													<Input
-														onChange={(e) => setInputValue(e.target.value)}
-														onKeyDown={(e) => {
-															if (e.key === "Enter") {
-																e.preventDefault();
-																addAuthor();
-															}
-														}}
-														placeholder="Enter author name"
-														value={inputValue}
-													/>
-													<Button
-														onClick={addAuthor}
-														type="button"
-														variant="secondary"
+											<div className="mb-2 flex items-center gap-2">
+												<Input
+													onChange={(e) => setInputValue(e.target.value)}
+													onKeyDown={(e) => {
+														if (e.key === "Enter") {
+															e.preventDefault();
+															addAuthor();
+														}
+													}}
+													placeholder="Enter author name"
+													value={inputValue}
+												/>
+												<Button
+													onClick={addAuthor}
+													type="button"
+													variant="secondary"
+												>
+													Add Author
+												</Button>
+											</div>
+
+											<div className="flex flex-wrap gap-2">
+												{authors.map((author) => (
+													<span
+														className="flex items-center rounded-full bg-muted px-3 py-1.5 text-sm"
+														key={author}
 													>
-														Add Author
-													</Button>
-												</div>
+														{author}
+														{!caseStudy?.published && (
+															<button
+																className="ml-2 text-muted-foreground hover:text-destructive"
+																onClick={() => removeAuthor(author)}
+																type="button"
+															>
+																<X className="h-3 w-3" />
+															</button>
+														)}
+													</span>
+												))}
+												{authors.length === 0 && (
+													<span className="text-muted-foreground text-sm italic">
+														No authors added yet
+													</span>
+												)}
+											</div>
 
-												<div className="flex flex-wrap gap-2">
-													{authors.map((author) => (
-														<span
-															className="flex items-center rounded-full bg-muted px-3 py-1.5 text-sm"
-															key={author}
-														>
-															{author}
-															{!caseStudy?.published && (
-																<button
-																	className="ml-2 text-muted-foreground hover:text-destructive"
-																	onClick={() => removeAuthor(author)}
-																	type="button"
-																>
-																	<X className="h-3 w-3" />
-																</button>
-															)}
-														</span>
-													))}
-													{authors.length === 0 && (
-														<span className="text-muted-foreground text-sm italic">
-															No authors added yet
-														</span>
-													)}
-												</div>
-
-												<FormMessage />
-											</FormItem>
-										);
-									}}
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
 
 								<FormField

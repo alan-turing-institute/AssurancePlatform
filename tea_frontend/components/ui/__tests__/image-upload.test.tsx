@@ -11,13 +11,13 @@ const FILE_TOO_LARGE_5MB_REGEX = /File is too large. Maximum size is 5MB/;
 const REMOVE_IMAGE_REGEX = /Remove Image/i;
 
 // Mock Next.js Image component
-interface MockImageProps {
+type MockImageProps = {
 	src: string;
 	alt: string;
 	className?: string;
 	fill?: boolean;
 	[key: string]: unknown;
-}
+};
 
 vi.mock("next/image", () => ({
 	default: ({ src, alt, className, fill, ...props }: MockImageProps) => (

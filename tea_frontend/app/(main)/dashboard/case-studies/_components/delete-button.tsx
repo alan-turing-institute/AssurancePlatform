@@ -9,11 +9,11 @@ import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
-interface DeleteCaseButtonProps {
+type DeleteCaseButtonProps = {
 	caseStudyId: number;
 	variant: "link" | "destructive";
 	redirect?: boolean;
-}
+};
 
 const DeleteCaseButton = ({
 	caseStudyId,

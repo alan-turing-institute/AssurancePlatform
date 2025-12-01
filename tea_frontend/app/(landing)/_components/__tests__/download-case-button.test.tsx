@@ -8,16 +8,16 @@ import DownloadCaseButton from "../download-case-button";
 const DOWNLOAD_BUTTON_REGEX = /download/i;
 
 // Type definitions for mocks
-interface MockIconProps {
+type MockIconProps = {
 	className?: string;
-}
+};
 
-interface MockButtonProps {
+type MockButtonProps = {
 	children: ReactNode;
 	onClick?: () => void;
 	variant?: string;
 	className?: string;
-}
+};
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({

@@ -15,9 +15,9 @@ import Header from "../header";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
 
-interface CaseContainerProps {
+type CaseContainerProps = {
 	caseId?: string;
-}
+};
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	// const [assuranceCase, setAssuranceCase] = useState<any>()
@@ -33,76 +33,55 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	// const [token] = useLoginToken();
 	// useEnforceLogin()
 
-	const fetchSingleCase = useCallback(
-		async (id: number) => {
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
-			};
+	const fetchSingleCase = useCallback(async (id: number | string) => {
+		try {
+			// Use internal API route which handles both Django and Prisma auth
+			const response = await fetch(`/api/cases/${id}`);
 
-			try {
-				const response = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/`,
-					requestOptions
-				);
-
-				if (response.status === 404 || response.status === 403) {
-					return;
-				}
-
-				if (response.status === 401) {
-					return unauthorized();
-				}
-
-				const result = await response.json();
-
-				const formattedAssuranceCase = await addHiddenProp(result);
-				return formattedAssuranceCase;
-			} catch (_error) {
-				return null;
+			if (response.status === 404 || response.status === 403) {
+				return;
 			}
-		},
-		[session?.key]
-	);
 
-	const fetchOrphanedElements = useCallback(
-		async (id: string | number) => {
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
-			};
-
-			try {
-				const response = await fetch(
-					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${id}/sandbox`,
-					requestOptions
-				);
-
-				if (response.status === 404 || response.status === 403) {
-					return;
-				}
-
-				if (response.status === 401) {
-					return unauthorized();
-				}
-
-				const result = await response.json();
-				return result;
-			} catch (_error) {
-				return [];
+			if (response.status === 401) {
+				return unauthorized();
 			}
-		},
-		[session?.key]
-	);
+
+			const result = await response.json();
+
+			const formattedAssuranceCase = await addHiddenProp(result);
+			return formattedAssuranceCase;
+		} catch (_error) {
+			return null;
+		}
+	}, []);
+
+	const fetchOrphanedElements = useCallback(async (id: string | number) => {
+		try {
+			// Use internal API route which handles Django/Prisma switching
+			const response = await fetch(`/api/cases/${id}/sandbox`);
+
+			if (response.status === 404 || response.status === 403) {
+				return;
+			}
+
+			if (response.status === 401) {
+				return unauthorized();
+			}
+
+			const result = await response.json();
+			return result;
+		} catch (_error) {
+			return [];
+		}
+	}, []);
 
 	useEffect(() => {
 		const loadCase = async () => {
 			const id = caseId || paramsCaseId;
 			if (id) {
 				try {
-					const result = await fetchSingleCase(Number(id));
+					const idValue = Array.isArray(id) ? id[0] : id;
+					const result = await fetchSingleCase(idValue);
 					setAssuranceCase((result as AssuranceCase) || null);
 					setLoading(false);
 				} catch {
@@ -165,20 +144,18 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 };
 
-const FeedbackButton = () => {
-	return (
-		<Link
-			href={
-				"https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
-			}
-			target="_blank"
-		>
-			<div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
-				<MessagesSquare className="h-6 w-6 text-white" />
-				<div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />
-			</div>
-		</Link>
-	);
-};
+const FeedbackButton = () => (
+	<Link
+		href={
+			"https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
+		}
+		target="_blank"
+	>
+		<div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
+			<MessagesSquare className="h-6 w-6 text-white" />
+			<div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />
+		</div>
+	</Link>
+);
 
 export default CaseContainer;

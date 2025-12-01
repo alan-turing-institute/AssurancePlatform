@@ -20,7 +20,7 @@ const SEARCH_REGEX = /search/i;
 // Types and Interfaces
 // ============================================================================
 
-export interface PerformanceMetrics {
+export type PerformanceMetrics = {
 	/** Time taken for component to render (milliseconds) */
 	renderTime: number;
 	/** Time taken for interaction to complete (milliseconds) */
@@ -35,9 +35,9 @@ export interface PerformanceMetrics {
 	bundleSize?: BundleSizeMetrics;
 	/** Custom timing measurements */
 	customTimings: Record<string, number>;
-}
+};
 
-export interface BundleSizeMetrics {
+export type BundleSizeMetrics = {
 	/** Total bundle size in bytes */
 	totalSize: number;
 	/** JavaScript bundle size in bytes */
@@ -48,9 +48,9 @@ export interface BundleSizeMetrics {
 	assetSize: number;
 	/** Gzipped size in bytes */
 	gzippedSize?: number;
-}
+};
 
-export interface ApiPerformanceMetrics {
+export type ApiPerformanceMetrics = {
 	/** Response time in milliseconds */
 	responseTime: number;
 	/** Request start timestamp */
@@ -63,9 +63,9 @@ export interface ApiPerformanceMetrics {
 	statusCode: number;
 	/** Whether request was cached */
 	cached: boolean;
-}
+};
 
-export interface CollaborationPerformanceMetrics {
+export type CollaborationPerformanceMetrics = {
 	/** Time to establish WebSocket connection (milliseconds) */
 	connectionTime: number;
 	/** Message round-trip time (milliseconds) */
@@ -76,9 +76,9 @@ export interface CollaborationPerformanceMetrics {
 	messagesPerSecond: number;
 	/** Memory usage with multiple connections */
 	memoryWithConnections: number;
-}
+};
 
-export interface LargeDatasetMetrics {
+export type LargeDatasetMetrics = {
 	/** Time to render large dataset (milliseconds) */
 	renderTime: number;
 	/** Number of items rendered */
@@ -89,9 +89,9 @@ export interface LargeDatasetMetrics {
 	searchTime?: number;
 	/** Memory usage for large dataset */
 	memoryUsage: number;
-}
+};
 
-export interface BenchmarkComparison {
+export type BenchmarkComparison = {
 	/** Current test results */
 	current: PerformanceMetrics;
 	/** Baseline/previous results for comparison */
@@ -102,9 +102,9 @@ export interface BenchmarkComparison {
 	hasRegression: boolean;
 	/** Percentage change from baseline */
 	percentageChange: number;
-}
+};
 
-export interface PerformanceTestOptions {
+export type PerformanceTestOptions = {
 	/** Number of iterations to run for averaging */
 	iterations?: number;
 	/** Warm-up runs before measurement */
@@ -119,7 +119,7 @@ export interface PerformanceTestOptions {
 	includeGC?: boolean;
 	/** Custom performance markers */
 	customMarkers?: string[];
-}
+};
 
 // ============================================================================
 // Core Performance Measurement Utilities
@@ -131,7 +131,7 @@ export interface PerformanceTestOptions {
 export class PerformanceTimer {
 	private startTime = 0;
 	private endTime = 0;
-	private customMarkers: Map<string, number> = new Map();
+	private readonly customMarkers: Map<string, number> = new Map();
 
 	/**
 	 * Start the timer
@@ -468,7 +468,7 @@ export async function measureInteractionPerformance(
  * In a real implementation, this would integrate with webpack-bundle-analyzer or similar
  */
 export class BundleSizeAnalyzer {
-	private mockBundles: Map<string, BundleSizeMetrics> = new Map();
+	private readonly mockBundles: Map<string, BundleSizeMetrics> = new Map();
 
 	/**
 	 * Set mock bundle size data for testing
@@ -651,7 +651,7 @@ export function createMockApiCall(
  * Mock WebSocket for testing collaboration features
  */
 export class MockWebSocket {
-	private messageHandlers: ((event: MessageEvent) => void)[] = [];
+	private readonly messageHandlers: ((event: MessageEvent) => void)[] = [];
 	private connectionTime = 0;
 	private messagesSent = 0;
 	private messagesReceived = 0;
@@ -761,18 +761,20 @@ export async function measureCollaborationPerformance(
 	memoryMonitor.startMonitoring(100);
 
 	// Create concurrent connections
-	const connectionPromises = Array.from({ length: concurrentUsers }, () => {
-		return new Promise<MockWebSocket>((resolve) => {
-			const ws = new MockWebSocket();
-			connections.push(ws);
+	const connectionPromises = Array.from(
+		{ length: concurrentUsers },
+		() =>
+			new Promise<MockWebSocket>((resolve) => {
+				const ws = new MockWebSocket();
+				connections.push(ws);
 
-			ws.addEventListener("open", () => {
-				const stats = ws.getStats();
-				connectionTimes.push(stats.connectionTime);
-				resolve(ws);
-			});
-		});
-	});
+				ws.addEventListener("open", () => {
+					const stats = ws.getStats();
+					connectionTimes.push(stats.connectionTime);
+					resolve(ws);
+				});
+			})
+	);
 
 	await Promise.all(connectionPromises);
 
@@ -996,7 +998,7 @@ export async function measureLargeDatasetPerformance(
  * Storage for performance baselines
  */
 class PerformanceBaseline {
-	private baselines: Map<string, PerformanceMetrics> = new Map();
+	private readonly baselines: Map<string, PerformanceMetrics> = new Map();
 
 	/**
 	 * Set baseline metrics for a test

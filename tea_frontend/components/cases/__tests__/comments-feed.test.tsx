@@ -13,10 +13,10 @@ import CommentsFeed from "../comments-feed";
 const DATE_REGEX = /01\/01\/2024/;
 
 // Types
-interface MockComment {
+type MockComment = {
 	id: string;
 	content: string;
-}
+};
 
 type MockSetEdit = (edit: boolean) => void;
 
@@ -215,9 +215,9 @@ describe("CommentsFeed", () => {
 	describe("User Interactions", () => {
 		it("should show edit and delete buttons on hover for own comments", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -230,12 +230,12 @@ describe("CommentsFeed", () => {
 
 		it("should not show edit/delete buttons for other users' comments", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json({
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json({
 						...mockUser,
 						username: "differentuser",
-					});
-				})
+					})
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -251,9 +251,9 @@ describe("CommentsFeed", () => {
 
 		it("should enter edit mode when edit button is clicked", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -277,9 +277,9 @@ describe("CommentsFeed", () => {
 
 		it("should exit edit mode when save button is clicked", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -312,14 +312,12 @@ describe("CommentsFeed", () => {
 
 		it("should handle delete button click", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 204 });
-					}
+					() => new HttpResponse(null, { status: 204 })
 				)
 			);
 
@@ -351,9 +349,9 @@ describe("CommentsFeed", () => {
 	describe("API Integration", () => {
 		it("should fetch current user on mount", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -369,9 +367,10 @@ describe("CommentsFeed", () => {
 
 		it("should handle 404 error when fetching user", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -386,9 +385,10 @@ describe("CommentsFeed", () => {
 
 		it("should handle 403 error when fetching user", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -407,9 +407,10 @@ describe("CommentsFeed", () => {
 			}));
 
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -423,14 +424,12 @@ describe("CommentsFeed", () => {
 
 		it("should handle successful comment deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 204 });
-					}
+					() => new HttpResponse(null, { status: 204 })
 				)
 			);
 
@@ -459,14 +458,12 @@ describe("CommentsFeed", () => {
 
 		it("should handle failed comment deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
+					() => new HttpResponse(null, { status: 500 })
 				)
 			);
 
@@ -493,9 +490,9 @@ describe("CommentsFeed", () => {
 
 		it("should handle network errors during deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
 					() => {
@@ -537,9 +534,9 @@ describe("CommentsFeed", () => {
 			});
 
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -555,9 +552,9 @@ describe("CommentsFeed", () => {
 
 		it("should only show edit/delete buttons for user's own comments", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);
@@ -732,9 +729,9 @@ describe("CommentsFeed", () => {
 
 		it("should support keyboard navigation for buttons", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<CommentsFeed node={mockNode} />);

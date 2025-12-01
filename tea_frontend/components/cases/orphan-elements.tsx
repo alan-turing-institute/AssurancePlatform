@@ -28,7 +28,6 @@ import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 import { AlertModal } from "../modals/alert-modal";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
-import { Separator } from "../ui/separator";
 
 type OrphanElement = Context | Evidence | PropertyClaim | Strategy;
 
@@ -153,7 +152,7 @@ const OrphanElements = ({
 		}
 		orphan.goal_id = node.data.id;
 		const newPropertyClaim = [
-			...assuranceCase.goals[0].property_claims,
+			...(assuranceCase.goals[0].property_claims ?? []),
 			orphan,
 		];
 		const updatedAssuranceCase = {
@@ -211,7 +210,7 @@ const OrphanElements = ({
 					if (strategy.id === node.data.id) {
 						return {
 							...strategy,
-							property_claims: [...strategy.property_claims, orphan],
+							property_claims: [...(strategy.property_claims ?? []), orphan],
 						};
 					}
 					return strategy;
@@ -415,11 +414,6 @@ const OrphanElements = ({
 					session?.key ?? ""
 				);
 
-				// if (deleted) {
-				//     const updatedAssuranceCase = await removeAssuranceCaseNode(assuranceCase, orphan.id);
-				//     return updatedAssuranceCase;
-				// }
-
 				return { deleted, orphanId: orphan.id };
 			});
 
@@ -448,6 +442,35 @@ const OrphanElements = ({
 		}
 	};
 
+	const handleDeleteSingle = async (orphan: OrphanElement) => {
+		setLoading(true);
+
+		try {
+			const deleted = await deleteAssuranceCaseNode(
+				orphan.type ?? "",
+				orphan.id,
+				session?.key ?? ""
+			);
+
+			if (deleted) {
+				// Remove this orphan from the list
+				const updatedOrphanedElements = orphanedElements.filter(
+					(item) => item.id !== orphan.id
+				);
+				setOrphanedElements(updatedOrphanedElements);
+
+				// Update filtered list
+				setFilteredOrphanElements((prev) =>
+					prev.filter((item) => item.id !== orphan.id)
+				);
+			}
+		} catch (_error) {
+			// Handle error silently
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	useEffect(() => {
 		const result = filterOrphanElements(node.type || "");
 		setFilteredOrphanElements(result);
@@ -466,50 +489,61 @@ const OrphanElements = ({
 						</div>
 					)}
 					{filteredOrphanElements.map((el) => (
-						<div key={el.id}>
+						<div className="group flex items-center gap-1" key={el.id}>
 							<button
 								aria-label={
 									el.short_description || el.name || `${el.type} element`
 								}
-								className="flex w-full items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-indigo-500"
+								className="flex flex-1 items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-indigo-500"
 								onClick={() => handleOrphanSelection(el)}
 								type="button"
 							>
-								{/* <span className="font-medium">{el.name}</span> */}
-								{el.type === "Evidence" && <Database className="h-6 w-6" />}
-								{el.type === "Strategy" && <Route className="h-6 w-6" />}
-								{el.type === "PropertyClaim" && (
-									<FolderOpenDot className="h-6 w-6" />
+								{el.type === "Evidence" && (
+									<Database className="h-5 w-5 shrink-0" />
 								)}
-								{el.type === "Context" && <BookOpenText className="h-6 w-6" />}
+								{el.type === "Strategy" && (
+									<Route className="h-5 w-5 shrink-0" />
+								)}
+								{el.type === "PropertyClaim" && (
+									<FolderOpenDot className="h-5 w-5 shrink-0" />
+								)}
+								{el.type === "Context" && (
+									<BookOpenText className="h-5 w-5 shrink-0" />
+								)}
+								{/* Show identifier (name) */}
+								{el.name && (
+									<span className="ml-2 font-semibold text-indigo-400">
+										{el.name}
+									</span>
+								)}
+								{/* Separator dot */}
 								<svg
 									aria-hidden="true"
-									className="mx-2 inline h-0.5 w-0.5 fill-current"
+									className="mx-2 inline h-0.5 w-0.5 shrink-0 fill-current"
 									viewBox="0 0 2 2"
 								>
 									<circle cx={1} cy={1} r={1} />
 								</svg>
-								<span className="w-full truncate">
-									{(() => {
-										if (
-											"short_description" in el &&
-											typeof el.short_description === "string" &&
-											el.short_description
-										) {
-											return el.short_description;
-										}
-										if (
-											"name" in el &&
-											typeof el.name === "string" &&
-											el.name
-										) {
-											return el.name;
-										}
-										return "";
-									})()}
+								{/* Show description */}
+								<span className="truncate text-left">
+									{"short_description" in el && el.short_description
+										? el.short_description
+										: "No description"}
 								</span>
 							</button>
-							<Separator className="my-2" />
+							{/* Individual delete button */}
+							<button
+								aria-label={`Delete ${el.name || el.type}`}
+								className="rounded-md p-2 text-rose-500 opacity-0 transition-opacity hover:bg-rose-500/10 group-hover:opacity-100"
+								disabled={loading}
+								onClick={(e) => {
+									e.stopPropagation();
+									handleDeleteSingle(el);
+								}}
+								type="button"
+							>
+								<Trash2 className="h-4 w-4" />
+							</button>
 						</div>
 					))}
 				</div>

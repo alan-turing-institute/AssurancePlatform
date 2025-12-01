@@ -9,57 +9,57 @@ import {
 import { mockTeamMembers } from "../utils/team-mock-data";
 
 // Type interfaces for request bodies
-interface CreateCaseRequest {
+type CreateCaseRequest = {
 	name: string;
 	description: string;
-}
+};
 
-interface UpdateCaseRequest {
+type UpdateCaseRequest = {
 	name?: string;
 	description?: string;
 	view_groups?: number[];
 	edit_groups?: number[];
 	review_groups?: number[];
-}
+};
 
-interface GoalRequest {
+type GoalRequest = {
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	keywords?: string;
 	assurance_case: number;
 	assumption?: boolean;
-}
+};
 
-interface StrategyRequest {
+type StrategyRequest = {
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	keywords?: string;
 	goal: number;
 	assurance_case: number;
-}
+};
 
-interface EvidenceRequest {
+type EvidenceRequest = {
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	keywords?: string;
 	URL?: string;
 	assurance_case: number;
-}
+};
 
-interface PermissionRequest {
+type PermissionRequest = {
 	user_id: number;
 	user_name: string;
 	permission_type: string;
-}
+};
 
-interface InviteRequest {
+type InviteRequest = {
 	email: string;
-}
+};
 
-interface PropertyClaimRequest {
+type PropertyClaimRequest = {
 	name: string;
 	short_description?: string;
 	long_description?: string;
@@ -70,44 +70,44 @@ interface PropertyClaimRequest {
 	goal?: number;
 	strategy?: number;
 	assurance_case: number;
-}
+};
 
-interface ContextRequest {
+type ContextRequest = {
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	keywords?: string;
 	goal: number;
 	assurance_case: number;
-}
+};
 
-interface TeamRequest {
+type TeamRequest = {
 	name: string;
 	description?: string;
-}
+};
 
-interface TeamMemberUpdateRequest {
+type TeamMemberUpdateRequest = {
 	name: string;
 	title: string;
 	department: string;
 	isAdmin?: boolean;
-}
+};
 
-interface TeamMemberCreateRequest {
+type TeamMemberCreateRequest = {
 	name: string;
 	title: string;
 	department: string;
 	email: string;
 	isAdmin?: boolean;
-}
+};
 
 // Mock API base URL (should match your backend)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const handlers = [
 	// NextAuth endpoints (these are frontend endpoints, not backend)
-	http.get("/api/auth/session", () => {
-		return HttpResponse.json({
+	http.get("/api/auth/session", () =>
+		HttpResponse.json({
 			user: {
 				id: 1,
 				name: "Test User",
@@ -115,15 +115,15 @@ export const handlers = [
 				key: "mock-jwt-token",
 			},
 			expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-		});
-	}),
+		})
+	),
 
-	http.get("/api/auth/csrf", () => {
-		return HttpResponse.json({ csrfToken: "mock-csrf-token" });
-	}),
+	http.get("/api/auth/csrf", () =>
+		HttpResponse.json({ csrfToken: "mock-csrf-token" })
+	),
 
-	http.get("/api/auth/providers", () => {
-		return HttpResponse.json({
+	http.get("/api/auth/providers", () =>
+		HttpResponse.json({
 			github: {
 				id: "github",
 				name: "GitHub",
@@ -140,8 +140,8 @@ export const handlers = [
 					password: { label: "Password", type: "password" },
 				},
 			},
-		});
-	}),
+		})
+	),
 
 	http.post("/api/auth/signin/credentials", async ({ request }) => {
 		const body = await request.formData();
@@ -158,19 +158,19 @@ export const handlers = [
 		return HttpResponse.json({ error: "Invalid credentials" }, { status: 401 });
 	}),
 
-	http.post("/api/auth/signout", () => {
-		return HttpResponse.json({
+	http.post("/api/auth/signout", () =>
+		HttpResponse.json({
 			url: "/",
 			ok: true,
-		});
-	}),
+		})
+	),
 
-	http.post("/api/auth/callback/credentials", () => {
-		return HttpResponse.json({
+	http.post("/api/auth/callback/credentials", () =>
+		HttpResponse.json({
 			url: "/dashboard",
 			ok: true,
-		});
-	}),
+		})
+	),
 
 	// Backend authentication endpoints
 	http.post(`${API_BASE_URL}/api/auth/login/`, async ({ request }) => {
@@ -192,19 +192,20 @@ export const handlers = [
 		return new HttpResponse(null, { status: 401 });
 	}),
 
-	http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-		return new HttpResponse(null, { status: 204 });
-	}),
+	http.post(
+		`${API_BASE_URL}/api/auth/register/`,
+		() => new HttpResponse(null, { status: 204 })
+	),
 
-	http.get(`${API_BASE_URL}/api/auth/user/`, () => {
-		return HttpResponse.json({
+	http.get(`${API_BASE_URL}/api/auth/user/`, () =>
+		HttpResponse.json({
 			id: 1,
 			username: "testuser",
 			email: "test@example.com",
 			first_name: "Test",
 			last_name: "User",
-		});
-	}),
+		})
+	),
 
 	http.post(
 		`${API_BASE_URL}/api/auth/github/register-by-token/`,
@@ -471,12 +472,10 @@ export const handlers = [
 	}),
 
 	// Comments endpoints
-	http.get(`${API_BASE_URL}/api/comments/`, () => {
-		return HttpResponse.json([]);
-	}),
+	http.get(`${API_BASE_URL}/api/comments/`, () => HttpResponse.json([])),
 
-	http.post(`${API_BASE_URL}/api/comments/`, () => {
-		return HttpResponse.json(
+	http.post(`${API_BASE_URL}/api/comments/`, () =>
+		HttpResponse.json(
 			{
 				id: 1,
 				content: "Test comment",
@@ -484,12 +483,12 @@ export const handlers = [
 				created_date: new Date().toISOString(),
 			},
 			{ status: 201 }
-		);
-	}),
+		)
+	),
 
 	// Users endpoints
-	http.get(`${API_BASE_URL}/api/users/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/users/`, () =>
+		HttpResponse.json([
 			{
 				id: 1,
 				username: "testuser",
@@ -497,12 +496,12 @@ export const handlers = [
 				first_name: "Test",
 				last_name: "User",
 			},
-		]);
-	}),
+		])
+	),
 
 	// Current user endpoint
-	http.get(`${API_BASE_URL}/api/user/`, () => {
-		return HttpResponse.json({
+	http.get(`${API_BASE_URL}/api/user/`, () =>
+		HttpResponse.json({
 			id: 1,
 			username: "testuser",
 			email: "test@example.com",
@@ -511,19 +510,19 @@ export const handlers = [
 			auth_provider: "github",
 			auth_username: "testuser",
 			created_date: "2024-01-01T00:00:00Z",
-		});
-	}),
+		})
+	),
 
 	// Templates endpoint
-	http.get("/api/templates", () => {
-		return HttpResponse.json([
+	http.get("/api/templates", () =>
+		HttpResponse.json([
 			{
 				id: "minimal",
 				name: "Minimal Template",
 				description: "A minimal assurance case template",
 			},
-		]);
-	}),
+		])
+	),
 
 	// Screenshot endpoint - Next.js API route
 	http.post("/api/screenshot", async ({ request }) => {
@@ -566,12 +565,12 @@ export const handlers = [
 	}),
 
 	// Public API endpoints
-	http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-		return HttpResponse.json([]);
-	}),
+	http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+		HttpResponse.json([])
+	),
 
-	http.get(`${API_BASE_URL}/api/published-assurance-cases/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/published-assurance-cases/`, () =>
+		HttpResponse.json([
 			{
 				id: 1,
 				name: "Published Safety Case",
@@ -580,8 +579,8 @@ export const handlers = [
 				owner: 1,
 				owner_name: "Test User",
 			},
-		]);
-	}),
+		])
+	),
 
 	// Public assurance case by ID
 	http.get(`${API_BASE_URL}/api/public/assurance-case/:id/`, ({ params }) => {
@@ -596,9 +595,9 @@ export const handlers = [
 	}),
 
 	// GitHub integration
-	http.get(`${API_BASE_URL}/api/github/repositories/`, () => {
-		return HttpResponse.json([]);
-	}),
+	http.get(`${API_BASE_URL}/api/github/repositories/`, () =>
+		HttpResponse.json([])
+	),
 
 	// Case image upload endpoint
 	http.post(`${API_BASE_URL}/api/cases/:id/image`, ({ params }) => {
@@ -615,8 +614,8 @@ export const handlers = [
 	}),
 
 	// Case sharing/permissions endpoints
-	http.get(`${API_BASE_URL}/api/cases/:id/sharedwith`, () => {
-		return HttpResponse.json({
+	http.get(`${API_BASE_URL}/api/cases/:id/sharedwith`, () =>
+		HttpResponse.json({
 			view: [
 				{
 					id: 2,
@@ -644,21 +643,21 @@ export const handlers = [
 					last_name: "User",
 				},
 			],
-		});
-	}),
+		})
+	),
 
-	http.post(`${API_BASE_URL}/api/cases/:id/sharedwith`, () => {
-		return HttpResponse.json({ success: true });
-	}),
+	http.post(`${API_BASE_URL}/api/cases/:id/sharedwith`, () =>
+		HttpResponse.json({ success: true })
+	),
 
 	// Sandbox/orphaned elements endpoint
-	http.get(`${API_BASE_URL}/api/cases/:id/sandbox`, () => {
-		return HttpResponse.json([]);
-	}),
+	http.get(`${API_BASE_URL}/api/cases/:id/sandbox`, () =>
+		HttpResponse.json([])
+	),
 
 	// Team management endpoints
-	http.get(`${API_BASE_URL}/api/teams/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/teams/`, () =>
+		HttpResponse.json([
 			mockTeam,
 			{
 				id: 2,
@@ -668,8 +667,8 @@ export const handlers = [
 				members: [2, 3],
 				created_date: "2024-01-02T00:00:00Z",
 			},
-		]);
-	}),
+		])
+	),
 
 	http.post(`${API_BASE_URL}/api/teams/`, async ({ request }) => {
 		const body = (await request.json()) as TeamRequest;
@@ -704,9 +703,10 @@ export const handlers = [
 		});
 	}),
 
-	http.delete(`${API_BASE_URL}/api/teams/:id/`, () => {
-		return new HttpResponse(null, { status: 204 });
-	}),
+	http.delete(
+		`${API_BASE_URL}/api/teams/:id/`,
+		() => new HttpResponse(null, { status: 204 })
+	),
 
 	// Invitation endpoints
 	http.post(
@@ -727,8 +727,8 @@ export const handlers = [
 		}
 	),
 
-	http.get(`${API_BASE_URL}/api/invitations/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/invitations/`, () =>
+		HttpResponse.json([
 			mockInvitation,
 			{
 				...mockInvitation,
@@ -736,8 +736,8 @@ export const handlers = [
 				status: "accepted",
 				invitee_email: "accepted@example.com",
 			},
-		]);
-	}),
+		])
+	),
 
 	http.post(`${API_BASE_URL}/api/invitations/:id/accept/`, ({ params }) => {
 		const invitationId = Number.parseInt(params.id as string, 10);
@@ -810,13 +810,14 @@ export const handlers = [
 		}
 	),
 
-	http.delete(`${API_BASE_URL}/api/cases/:id/permissions/:permId/`, () => {
-		return new HttpResponse(null, { status: 204 });
-	}),
+	http.delete(
+		`${API_BASE_URL}/api/cases/:id/permissions/:permId/`,
+		() => new HttpResponse(null, { status: 204 })
+	),
 
 	// Case study endpoints
-	http.get(`${API_BASE_URL}/api/case-studies/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/case-studies/`, () =>
+		HttpResponse.json([
 			mockCaseStudy,
 			{
 				id: 2,
@@ -828,8 +829,8 @@ export const handlers = [
 				created_date: "2024-01-02T00:00:00Z",
 				image: "/images/case-study-2.jpg",
 			},
-		]);
-	}),
+		])
+	),
 
 	http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
 		const body = await request.formData();
@@ -888,8 +889,8 @@ export const handlers = [
 		});
 	}),
 
-	http.get(`${API_BASE_URL}/api/public/case-studies/`, () => {
-		return HttpResponse.json([
+	http.get(`${API_BASE_URL}/api/public/case-studies/`, () =>
+		HttpResponse.json([
 			{
 				...mockCaseStudy,
 				published: true,
@@ -907,8 +908,8 @@ export const handlers = [
 				published_date: "2024-01-04T00:00:00Z",
 				image: "/images/public-case-study.jpg",
 			},
-		]);
-	}),
+		])
+	),
 
 	// Public case study by ID
 	http.get(`${API_BASE_URL}/api/public/case-studies/:id`, ({ params }) => {
@@ -925,9 +926,9 @@ export const handlers = [
 	}),
 
 	// Team Member Management endpoints
-	http.get(`${API_BASE_URL}/api/team-members/`, () => {
-		return HttpResponse.json(mockTeamMembers);
-	}),
+	http.get(`${API_BASE_URL}/api/team-members/`, () =>
+		HttpResponse.json(mockTeamMembers)
+	),
 
 	http.get(`${API_BASE_URL}/api/team-members/:id/`, ({ params }) => {
 		const memberId = Number.parseInt(params.id as string, 10);
@@ -1125,26 +1126,24 @@ export const handlers = [
 	}),
 
 	// Error scenarios for testing
-	http.post(`${API_BASE_URL}/api/team-members/error-test/`, () => {
-		return HttpResponse.json(
+	http.post(`${API_BASE_URL}/api/team-members/error-test/`, () =>
+		HttpResponse.json(
 			{ error: "Simulated server error for testing" },
 			{ status: 500 }
-		);
-	}),
+		)
+	),
 
-	http.put(`${API_BASE_URL}/api/team-members/validation-error/`, () => {
-		return HttpResponse.json(
+	http.put(`${API_BASE_URL}/api/team-members/validation-error/`, () =>
+		HttpResponse.json(
 			{
 				name: ["Name is required"],
 				title: ["Title must be at least 2 characters"],
 				email: ["Email is already in use"],
 			},
 			{ status: 400 }
-		);
-	}),
+		)
+	),
 
 	// Fallback for unhandled requests
-	http.all("*", () => {
-		return new HttpResponse(null, { status: 404 });
-	}),
+	http.all("*", () => new HttpResponse(null, { status: 404 })),
 ];

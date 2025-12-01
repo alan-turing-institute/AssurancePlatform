@@ -8,14 +8,14 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ModalProps {
+type ModalProps = {
 	title: string;
 	description: string;
 	isOpen: boolean;
 	onClose: () => void;
 	children?: React.ReactNode;
 	classNames?: string;
-}
+};
 
 export const Modal: React.FC<ModalProps> = ({
 	title,

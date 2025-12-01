@@ -89,25 +89,23 @@ export const ResourcesModal = () => {
 const ListItem = React.forwardRef<
 	React.ElementRef<"a">,
 	React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => {
-	return (
-		<li>
-			<a
-				className={cn(
-					"group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none hover:bg-indigo-500 hover:text-accent-foreground dark:hover:bg-indigo-700",
-					className
-				)}
-				ref={ref}
-				{...props}
-			>
-				<div className="font-medium text-sm leading-none group-hover:text-white">
-					{title}
-				</div>
-				<p className="text-muted-foreground text-sm leading-snug group-hover:text-white">
-					{children}
-				</p>
-			</a>
-		</li>
-	);
-});
+>(({ className, title, children, ...props }, ref) => (
+	<li>
+		<a
+			className={cn(
+				"group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none hover:bg-indigo-500 hover:text-accent-foreground dark:hover:bg-indigo-700",
+				className
+			)}
+			ref={ref}
+			{...props}
+		>
+			<div className="font-medium text-sm leading-none group-hover:text-white">
+				{title}
+			</div>
+			<p className="text-muted-foreground text-sm leading-snug group-hover:text-white">
+				{children}
+			</p>
+		</a>
+	</li>
+));
 ListItem.displayName = "ListItem";

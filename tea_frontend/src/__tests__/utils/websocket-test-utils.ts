@@ -38,18 +38,18 @@ export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 /**
  * Mock WebSocket server configuration options
  */
-export interface MockWebSocketServerOptions {
+export type MockWebSocketServerOptions = {
 	url?: string;
 	autoConnect?: boolean;
 	connectionDelay?: number;
 	reconnectAttempts?: number;
 	reconnectDelay?: number;
-}
+};
 
 /**
  * User presence information for collaboration features
  */
-export interface UserPresence {
+export type UserPresence = {
 	id: string;
 	username: string;
 	cursor?: {
@@ -59,17 +59,17 @@ export interface UserPresence {
 	};
 	lastActivity: Date;
 	status: "active" | "idle" | "away";
-}
+};
 
 /**
  * WebSocket message structure
  */
-export interface WebSocketMessage<T = unknown> {
+export type WebSocketMessage<T = unknown> = {
 	type: string;
 	content: T;
 	timestamp?: number;
 	userId?: string;
-}
+};
 
 /**
  * Mock WebSocket instance with enhanced testing capabilities
@@ -78,7 +78,7 @@ export class MockWebSocket implements Partial<WebSocket> {
 	url: string;
 	readyState: number = WS_READY_STATE.CONNECTING;
 
-	private eventListeners: Map<string, Set<EventListener>> = new Map();
+	private readonly eventListeners: Map<string, Set<EventListener>> = new Map();
 	private sentMessages: WebSocketMessage[] = [];
 
 	// Mock functions
@@ -184,9 +184,9 @@ export class MockWebSocket implements Partial<WebSocket> {
  * Mock WebSocket server for simulating server-side behavior
  */
 export class MockWebSocketServer {
-	private connections: Map<string, MockWebSocket> = new Map();
-	private options: Required<MockWebSocketServerOptions>;
-	private reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
+	private readonly connections: Map<string, MockWebSocket> = new Map();
+	private readonly options: Required<MockWebSocketServerOptions>;
+	private readonly reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
 	constructor(options: MockWebSocketServerOptions = {}) {
 		this.options = {
@@ -295,7 +295,7 @@ export class MockWebSocketServer {
 export class MessageQueue<T = unknown> {
 	private queue: WebSocketMessage<T>[] = [];
 	private processing = false;
-	private processor?: (message: WebSocketMessage<T>) => Promise<void>;
+	private readonly processor?: (message: WebSocketMessage<T>) => Promise<void>;
 
 	constructor(processor?: (message: WebSocketMessage<T>) => Promise<void>) {
 		this.processor = processor;
@@ -358,8 +358,9 @@ export class MessageQueue<T = unknown> {
  * Collaboration testing utilities
  */
 export class CollaborationTestUtils {
-	private presenceMap: Map<string, UserPresence> = new Map();
-	private cursorPositions: Map<string, { x: number; y: number }> = new Map();
+	private readonly presenceMap: Map<string, UserPresence> = new Map();
+	private readonly cursorPositions: Map<string, { x: number; y: number }> =
+		new Map();
 
 	/**
 	 * Simulate user joining the session
@@ -434,7 +435,7 @@ export class CollaborationTestUtils {
  * Optimistic update testing utilities
  */
 export class OptimisticUpdateTestUtils<T = unknown> {
-	private pendingUpdates: Map<string, T> = new Map();
+	private readonly pendingUpdates: Map<string, T> = new Map();
 	private confirmedState: T;
 	private rollbackState: T;
 
@@ -654,9 +655,11 @@ export async function simulateWebSocketLifecycle(
  * Enhanced concurrent user simulation utilities
  */
 export class ConcurrentUserSimulator {
-	private users: Map<string, { ws: MockWebSocket; presence: UserPresence }> =
-		new Map();
-	private server: MockWebSocketServer;
+	private readonly users: Map<
+		string,
+		{ ws: MockWebSocket; presence: UserPresence }
+	> = new Map();
+	private readonly server: MockWebSocketServer;
 
 	constructor(server: MockWebSocketServer) {
 		this.server = server;
@@ -792,7 +795,7 @@ export class ConcurrentUserSimulator {
  * Network condition simulation utilities
  */
 export class NetworkConditionSimulator {
-	private connections: Map<string, MockWebSocket> = new Map();
+	private readonly connections: Map<string, MockWebSocket> = new Map();
 
 	constructor(connections: Map<string, MockWebSocket>) {
 		this.connections = connections;
@@ -978,8 +981,8 @@ export class ReconnectionTester {
 		success: boolean;
 		error?: Error;
 	}> = [];
-	private maxRetries: number;
-	private baseDelay: number;
+	private readonly maxRetries: number;
+	private readonly baseDelay: number;
 
 	constructor(maxRetries = 5, baseDelay = 1000) {
 		this.maxRetries = maxRetries;

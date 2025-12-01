@@ -4,9 +4,9 @@ import { ArrowLeftIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "./button";
 
-interface BackButtonProps {
+type BackButtonProps = {
 	url?: string;
-}
+};
 
 export default function BackButton({ url }: BackButtonProps) {
 	const router = useRouter();

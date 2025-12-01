@@ -6,10 +6,10 @@ import useStore from "@/data/store";
 import CaseSheet from "../ui/case-sheet";
 import CaseEditForm from "./case-edit-form";
 
-interface CaseDetailsProps {
+type CaseDetailsProps = {
 	isOpen: boolean;
 	setOpen: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 	const [isMounted, setIsMounted] = useState(false);

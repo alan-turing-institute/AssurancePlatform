@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
-interface LinkedCaseModalProps {
+type LinkedCaseModalProps = {
 	isOpen: boolean;
 	onClose: () => void;
 	linkedCaseStudies: { id: number; title: string }[];
 	loading: boolean;
-}
+};
 
 export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
 	isOpen,

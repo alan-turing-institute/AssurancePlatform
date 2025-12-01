@@ -108,9 +108,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			];
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json(mockData);
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.json(mockData)
+				)
 			);
 
 			const response = await GET(request);
@@ -131,9 +131,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.json([])
+				)
 			);
 
 			const response = await GET(request);
@@ -166,9 +166,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			};
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json(complexResponse);
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.json(complexResponse)
+				)
 			);
 
 			const response = await GET(request);
@@ -194,9 +194,10 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					"http://localhost:8000/api/published-assurance-cases/",
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			const response = await GET(request);
@@ -215,9 +216,10 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					"http://localhost:8000/api/published-assurance-cases/",
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			const response = await GET(request);
@@ -236,9 +238,10 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.get(
+					"http://localhost:8000/api/published-assurance-cases/",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			const response = await GET(request);
@@ -257,9 +260,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.error();
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.error()
+				)
 			);
 
 			const response = await GET(request);
@@ -360,11 +363,7 @@ describe("/api/published-assurance-cases API Route", () => {
 				}
 			);
 
-			server.use(
-				http.get("*", () => {
-					return HttpResponse.json([]);
-				})
-			);
+			server.use(http.get("*", () => HttpResponse.json([])));
 
 			const response = await GET(request);
 			const responseData = await response.json();
@@ -419,9 +418,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			);
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.json([])
+				)
 			);
 
 			const response = await GET(request);
@@ -456,9 +455,9 @@ describe("/api/published-assurance-cases API Route", () => {
 			];
 
 			server.use(
-				http.get("http://localhost:8000/api/published-assurance-cases/", () => {
-					return HttpResponse.json(typedResponse);
-				})
+				http.get("http://localhost:8000/api/published-assurance-cases/", () =>
+					HttpResponse.json(typedResponse)
+				)
 			);
 
 			const response = await GET(request);

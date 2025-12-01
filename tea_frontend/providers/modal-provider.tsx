@@ -7,6 +7,8 @@ import { ImportModal } from "@/components/modals/import-modal";
 import { PermissionsModal } from "@/components/modals/permissions-modal";
 import { ResourcesModal } from "@/components/modals/resources-modal";
 import { ShareModal } from "@/components/modals/share-modal";
+import { CaseSharingDialog } from "@/components/sharing";
+import { CreateTeamDialog, InviteMemberDialog } from "@/components/teams";
 
 /**
  * ModalProvider component that renders several modals for different functionalities.
@@ -38,6 +40,9 @@ export const ModalProvider = (): JSX.Element | null => {
 			<PermissionsModal />
 			<EmailModal />
 			<ResourcesModal />
+			<CreateTeamDialog />
+			<InviteMemberDialog />
+			<CaseSharingDialog />
 		</>
 	);
 };

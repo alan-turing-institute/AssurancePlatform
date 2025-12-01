@@ -76,9 +76,10 @@ describe("Authentication Flow Integration Tests", () => {
 
 			// Mock successful registration response
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/auth/register/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			// Registration redirects to login page, not dashboard
@@ -118,15 +119,15 @@ describe("Authentication Flow Integration Tests", () => {
 
 			// Mock registration error response
 			server.use(
-				http.post(`${API_BASE_URL}/api/auth/register/`, () => {
-					return HttpResponse.json(
+				http.post(`${API_BASE_URL}/api/auth/register/`, () =>
+					HttpResponse.json(
 						{
 							username: ["A user with that username already exists."],
 							email: ["Enter a valid email address."],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			renderWithAuth(<RegisterPage />);

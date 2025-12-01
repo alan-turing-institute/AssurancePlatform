@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-// import { useLoginToken } from ".*/use-auth";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useState } from "react";
@@ -19,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { useImportModal } from "@/hooks/use-import-modal";
 
-const ACCEPTED_FILE_TYPES = ["application/json"]; // Correct MIME type for JSON files
+const USE_PRISMA_AUTH = process.env.NEXT_PUBLIC_USE_PRISMA_AUTH === "true";
+const ACCEPTED_FILE_TYPES = ["application/json"];
 
 const formSchema = z.object({
 	file: z.any().refine((files) => {
@@ -33,17 +33,26 @@ const formSchema = z.object({
 		if (!filesArray.every((file) => ACCEPTED_FILE_TYPES.includes(file.type))) {
 			return "Only JSON files are allowed.";
 		}
-		return true; // Validation passed
+		return true;
 	}),
 });
 
+type ImportResponse = {
+	id?: string | number;
+	name?: string;
+	elementCount?: number;
+	warnings?: string[];
+	error?: string;
+	validationErrors?: string[];
+};
+
 export const ImportModal = () => {
 	const importModal = useImportModal();
-	// const [token] = useLoginToken();
 	const { data: session } = useSession();
 
-	const [_loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string>("");
+	const [warnings, setWarnings] = useState<string[]>([]);
 
 	const router = useRouter();
 
@@ -51,41 +60,98 @@ export const ImportModal = () => {
 		resolver: zodResolver(formSchema),
 	});
 
-	const ImportCreateCase = useCallback(
-		(json: unknown) => {
-			const requestOptions = {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Token ${session?.key}`,
-				},
-				body: JSON.stringify(json),
-			};
-
+	/**
+	 * Import using new Prisma-based API (v1 and v2 format support).
+	 */
+	const importWithPrisma = useCallback(
+		async (json: unknown) => {
 			setLoading(true);
+			setError("");
+			setWarnings([]);
 
-			fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/`,
-				requestOptions
-			)
-				.then((response) => response.json())
-				.then((responseData) => {
-					const responseJson = responseData;
-					if ((responseJson as { id?: number }).id) {
-						// navigate("/case/" + json.id);
-						importModal.onClose();
-						router.push(`/case/${(responseJson as { id: number }).id}`);
-					} else {
-						setLoading(false);
-						setError("An error occurred, please try again later");
-					}
-				})
-				.catch((_ex) => {
-					setLoading(false);
-					setError("An error occurred, please try again later");
+			try {
+				const response = await fetch("/api/cases/import", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(json),
 				});
+
+				const data: ImportResponse = await response.json();
+
+				if (!response.ok) {
+					if (data.validationErrors && data.validationErrors.length > 0) {
+						setError(`Validation failed: ${data.validationErrors.join(", ")}`);
+					} else {
+						setError(data.error ?? "Failed to import case");
+					}
+					setLoading(false);
+					return;
+				}
+
+				if (data.warnings && data.warnings.length > 0) {
+					setWarnings(data.warnings);
+				}
+
+				if (data.id) {
+					importModal.onClose();
+					router.push(`/case/${data.id}`);
+				}
+			} catch {
+				setError("An error occurred, please try again later");
+			} finally {
+				setLoading(false);
+			}
+		},
+		[importModal, router]
+	);
+
+	/**
+	 * Import using legacy Django API.
+	 */
+	const importWithDjango = useCallback(
+		async (json: unknown) => {
+			setLoading(true);
+			setError("");
+
+			try {
+				const response = await fetch(
+					`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Token ${session?.key}`,
+						},
+						body: JSON.stringify(json),
+					}
+				);
+
+				const data: ImportResponse = await response.json();
+
+				if (data.id) {
+					importModal.onClose();
+					router.push(`/case/${data.id}`);
+				} else {
+					setError("An error occurred, please try again later");
+				}
+			} catch {
+				setError("An error occurred, please try again later");
+			} finally {
+				setLoading(false);
+			}
 		},
 		[session, importModal, router]
+	);
+
+	const importCase = useCallback(
+		(json: unknown) => {
+			if (USE_PRISMA_AUTH) {
+				importWithPrisma(json);
+			} else {
+				importWithDjango(json);
+			}
+		},
+		[importWithPrisma, importWithDjango]
 	);
 
 	const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -98,7 +164,7 @@ export const ImportModal = () => {
 				fileReader.onload = async (event: ProgressEvent<FileReader>) => {
 					try {
 						const json = JSON.parse(event.target?.result as string);
-						await ImportCreateCase(json);
+						await importCase(json);
 					} catch (_error) {
 						setError("Error parsing JSON file, bad format.");
 					}
@@ -113,6 +179,7 @@ export const ImportModal = () => {
 
 	const handleModalClose = () => {
 		setError("");
+		setWarnings([]);
 		importModal.onClose();
 	};
 
@@ -126,6 +193,16 @@ export const ImportModal = () => {
 			{error && (
 				<div className="pb-2 font-semibold text-rose-500 text-sm">{error}</div>
 			)}
+			{warnings.length > 0 && (
+				<div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-800 text-sm">
+					<p className="font-semibold">Import warnings:</p>
+					<ul className="list-inside list-disc">
+						{warnings.map((w) => (
+							<li key={w}>{w}</li>
+						))}
+					</ul>
+				</div>
+			)}
 			<Form {...form}>
 				<form
 					className="w-full space-y-6"
@@ -134,12 +211,12 @@ export const ImportModal = () => {
 					<FormField
 						control={form.control}
 						name="file"
-						render={({ field: { value, onChange, ...fieldProps } }) => (
+						render={({ field: { onChange, value: _value, ...fieldProps } }) => (
 							<FormItem>
-								{/* <FormLabel>File</FormLabel> */}
 								<FormControl>
 									<Input
 										{...fieldProps}
+										disabled={loading}
 										onChange={(event) => onChange(event.target.files?.[0])}
 										type="file"
 									/>
@@ -148,7 +225,9 @@ export const ImportModal = () => {
 							</FormItem>
 						)}
 					/>
-					<Button type="submit">Submit</Button>
+					<Button disabled={loading} type="submit">
+						{loading ? "Importing..." : "Submit"}
+					</Button>
 				</form>
 			</Form>
 		</Modal>

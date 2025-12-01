@@ -78,13 +78,13 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/456/upload_image/", () => {
-					return HttpResponse.json({
+				http.post("http://localhost:8000/api/cases/456/upload_image/", () =>
+					HttpResponse.json({
 						id: 2,
 						case_id: 456,
 						image_url: "/media/screenshots/large.png",
-					});
-				})
+					})
+				)
 			);
 
 			const response = await POST(request);
@@ -215,9 +215,10 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return new HttpResponse(null, { status: 400 });
-				})
+				http.post(
+					"http://localhost:8000/api/cases/123/upload_image/",
+					() => new HttpResponse(null, { status: 400 })
+				)
 			);
 
 			const response = await POST(request);
@@ -243,9 +244,10 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/999/upload_image/", () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.post(
+					"http://localhost:8000/api/cases/999/upload_image/",
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			const response = await POST(request);
@@ -269,9 +271,10 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return new HttpResponse(null, { status: 413 });
-				})
+				http.post(
+					"http://localhost:8000/api/cases/123/upload_image/",
+					() => new HttpResponse(null, { status: 413 })
+				)
 			);
 
 			const response = await POST(request);
@@ -295,9 +298,10 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.post(
+					"http://localhost:8000/api/cases/123/upload_image/",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			const response = await POST(request);
@@ -321,9 +325,9 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return HttpResponse.error();
-				})
+				http.post("http://localhost:8000/api/cases/123/upload_image/", () =>
+					HttpResponse.error()
+				)
 			);
 
 			const response = await POST(request);
@@ -389,9 +393,9 @@ describe("/api/screenshot API Route", () => {
 			};
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return HttpResponse.json(backendResponse);
-				})
+				http.post("http://localhost:8000/api/cases/123/upload_image/", () =>
+					HttpResponse.json(backendResponse)
+				)
 			);
 
 			const response = await POST(request);
@@ -514,9 +518,9 @@ describe("/api/screenshot API Route", () => {
 			});
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("http://localhost:8000/api/cases/123/upload_image/", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			const response = await POST(request);
@@ -554,9 +558,9 @@ describe("/api/screenshot API Route", () => {
 			};
 
 			server.use(
-				http.post("http://localhost:8000/api/cases/123/upload_image/", () => {
-					return HttpResponse.json(complexResponse);
-				})
+				http.post("http://localhost:8000/api/cases/123/upload_image/", () =>
+					HttpResponse.json(complexResponse)
+				)
 			);
 
 			const response = await POST(request);

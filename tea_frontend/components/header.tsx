@@ -20,9 +20,9 @@ import {
 	TooltipTrigger,
 } from "./ui/tooltip";
 
-interface HeaderProps {
+type HeaderProps = {
 	setOpen: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const Header = ({ setOpen }: HeaderProps) => {
 	const { nodes, assuranceCase, setAssuranceCase } = useStore();
@@ -93,7 +93,11 @@ const Header = ({ setOpen }: HeaderProps) => {
 	};
 
 	const focusNode = (value: string) => {
-		const nodeId = nodes.filter((n) => n.id === value)[0].id;
+		const foundNode = nodes.find((n) => n.id === value);
+		if (!foundNode) {
+			return;
+		}
+		const nodeId = foundNode.id;
 
 		unhideParents(nodeId);
 
@@ -132,9 +136,11 @@ const Header = ({ setOpen }: HeaderProps) => {
 			<div className="container flex items-center justify-between py-3">
 				<div className="flex items-center justify-start gap-2">
 					<Button
+						aria-label="Back to dashboard"
 						className="hover:bg-indigo-900/20 hover:text-white hover:dark:bg-gray-100/10"
-						onClick={() => router.back()}
+						onClick={() => router.push("/dashboard")}
 						size={"icon"}
+						title="Back to dashboard"
 						variant={"ghost"}
 					>
 						<ArrowLeft className="h-4 w-4" />

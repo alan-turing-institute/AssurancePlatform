@@ -7,9 +7,9 @@ import { updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { useToast } from "@/components/ui/use-toast";
 
-interface UnpublishCaseButtonProps {
+type UnpublishCaseButtonProps = {
 	caseStudyId: number;
-}
+};
 
 const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 	const { data } = useSession();

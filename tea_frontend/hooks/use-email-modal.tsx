@@ -4,7 +4,7 @@ import { create } from "zustand";
  * Defines the shape of the state for the Email modal store.
  * @interface useEmailModalStore
  */
-interface useEmailModalStore {
+type useEmailModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -22,7 +22,7 @@ interface useEmailModalStore {
 	 * @function
 	 */
 	onClose: () => void;
-}
+};
 
 /**
  * Creates a Zustand store for managing the state of the Email modal.

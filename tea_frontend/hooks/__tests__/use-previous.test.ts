@@ -467,10 +467,10 @@ describe("usePrevious", () => {
 
 	describe("TypeScript compatibility", () => {
 		it("should maintain type safety with typed values", () => {
-			interface User {
+			type User = {
 				name: string;
 				age: number;
-			}
+			};
 
 			const user1: User = { name: "John", age: 30 };
 			const user2: User = { name: "Jane", age: 25 };

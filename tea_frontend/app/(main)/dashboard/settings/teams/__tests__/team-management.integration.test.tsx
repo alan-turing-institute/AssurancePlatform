@@ -590,12 +590,11 @@ describe("Team Management Integration Tests", () => {
 			server.use(
 				http.post(
 					"http://localhost:8000/api/invitations/:id/accept/",
-					({ params }) => {
-						return HttpResponse.json({
+					({ params }) =>
+						HttpResponse.json({
 							id: Number.parseInt(params.id as string, 10),
 							status: "accepted",
-						});
-					}
+						})
 				)
 			);
 
@@ -701,12 +700,12 @@ describe("Team Management Integration Tests", () => {
 
 			// Mock API error
 			server.use(
-				http.post("http://localhost:8000/api/teams/", () => {
-					return HttpResponse.json(
+				http.post("http://localhost:8000/api/teams/", () =>
+					HttpResponse.json(
 						{ error: "Team name already exists" },
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			// Try to create a team
@@ -736,9 +735,9 @@ describe("Team Management Integration Tests", () => {
 
 			// Mock network error
 			server.use(
-				http.post("http://localhost:8000/api/invitations/:id/accept/", () => {
-					return HttpResponse.error();
-				})
+				http.post("http://localhost:8000/api/invitations/:id/accept/", () =>
+					HttpResponse.error()
+				)
 			);
 
 			// Find the first pending invitation

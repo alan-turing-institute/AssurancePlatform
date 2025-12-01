@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -16,6 +17,8 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
+
+const USE_PRISMA_AUTH = process.env.NEXT_PUBLIC_USE_PRISMA_AUTH === "true";
 
 const formSchema = z.object({
 	username: z
@@ -43,6 +46,8 @@ const formSchema = z.object({
 const RegisterForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [errors, setErrors] = useState<string[]>([]);
+	const [showPassword1, setShowPassword1] = useState(false);
+	const [showPassword2, setShowPassword2] = useState(false);
 	const { data: session } = useSession();
 
 	const router = useRouter();
@@ -133,10 +138,12 @@ const RegisterForm = () => {
 			body: JSON.stringify(user),
 		};
 
-		return fetch(
-			`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/register/`,
-			requestOptions
-		);
+		// Use Prisma API when enabled, otherwise fall back to Django
+		const apiUrl = USE_PRISMA_AUTH
+			? "/api/users/register"
+			: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/auth/register/`;
+
+		return fetch(apiUrl, requestOptions);
 	}
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -182,7 +189,11 @@ const RegisterForm = () => {
 				))}
 
 				<Form {...form}>
-					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
+					<form
+						className="space-y-8"
+						method="post"
+						onSubmit={form.handleSubmit(onSubmit)}
+					>
 						<FormField
 							control={form.control}
 							name="username"
@@ -220,7 +231,26 @@ const RegisterForm = () => {
 								<FormItem>
 									<FormLabel>Password</FormLabel>
 									<FormControl>
-										<Input type="password" {...field} />
+										<div className="relative">
+											<Input
+												type={showPassword1 ? "text" : "password"}
+												{...field}
+											/>
+											<button
+												aria-label={
+													showPassword1 ? "Hide password" : "Show password"
+												}
+												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												onClick={() => setShowPassword1(!showPassword1)}
+												type="button"
+											>
+												{showPassword1 ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</button>
+										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -233,7 +263,26 @@ const RegisterForm = () => {
 								<FormItem>
 									<FormLabel>Confirm Password</FormLabel>
 									<FormControl>
-										<Input type="password" {...field} />
+										<div className="relative">
+											<Input
+												type={showPassword2 ? "text" : "password"}
+												{...field}
+											/>
+											<button
+												aria-label={
+													showPassword2 ? "Hide password" : "Show password"
+												}
+												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												onClick={() => setShowPassword2(!showPassword2)}
+												type="button"
+											>
+												{showPassword2 ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</button>
+										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>

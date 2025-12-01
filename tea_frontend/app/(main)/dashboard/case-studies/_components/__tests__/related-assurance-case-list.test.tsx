@@ -166,9 +166,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 		it("should render list of published assurance cases", async () => {
 			// Mock API response - Note: using relative URL as the component uses relative URL
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 
 			renderWithAuth(
@@ -199,9 +199,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 		it("should render checkboxes for each assurance case", async () => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 
 			renderWithAuth(
@@ -231,9 +231,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 		it("should show selected state for pre-selected cases", async () => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 
 			renderWithAuth(
@@ -260,9 +260,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 		it("should sort selected cases to the top", async () => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 
 			renderWithAuth(
@@ -310,9 +310,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 		it("should show empty state when no published cases exist", async () => {
 			// Mock empty response
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("/api/published-assurance-cases", () => HttpResponse.json([]))
 			);
 
 			renderWithAuth(
@@ -343,9 +341,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 	describe("Case Selection Functionality", () => {
 		beforeEach(() => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 		});
 
@@ -503,9 +501,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 			}));
 
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(manyCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(manyCases)
+				)
 			);
 
 			renderWithAuth(
@@ -529,9 +527,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 		it("should show auto height when 4 or fewer cases", async () => {
 			// Use original 3 cases
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 
 			renderWithAuth(
@@ -583,12 +581,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 		it("should handle API errors gracefully", async () => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(
-						{ error: "Internal server error" },
-						{ status: 500 }
-					);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json({ error: "Internal server error" }, { status: 500 })
+				)
 			);
 
 			renderWithAuth(
@@ -735,9 +730,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 			}));
 
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(largeCaseList);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(largeCaseList)
+				)
 			);
 
 			renderWithAuth(
@@ -787,9 +782,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 			];
 
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(edgeCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(edgeCases)
+				)
 			);
 
 			renderWithAuth(
@@ -822,9 +817,9 @@ describe("RelatedAssuranceCaseList Component", () => {
 	describe("Accessibility", () => {
 		beforeEach(() => {
 			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					return HttpResponse.json(mockAssuranceCases);
-				})
+				http.get("/api/published-assurance-cases", () =>
+					HttpResponse.json(mockAssuranceCases)
+				)
 			);
 		});
 

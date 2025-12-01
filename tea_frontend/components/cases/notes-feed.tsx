@@ -2,7 +2,6 @@
 
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
 import moment from "moment";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import useStore from "@/data/store";
 import { unauthorized } from "@/hooks/use-auth";
@@ -13,8 +12,6 @@ import NotesEditForm from "./notes-edit-form";
 
 export default function NotesFeed() {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 	const [edit, setEdit] = useState<boolean>();
 	const [editId, setEditId] = useState<number>();
 	const [user, setUser] = useState<User | undefined>();
@@ -29,21 +26,13 @@ export default function NotesFeed() {
 
 	// Fetch case notes/comments
 	useEffect(() => {
-		const fetchSingleCase = async () => {
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
-			};
-
+		const fetchCaseNotes = async () => {
 			if (!assuranceCase) {
 				return [];
 			}
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${assuranceCase.id}/`,
-				requestOptions
-			);
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/cases/${assuranceCase.id}/comments`);
 
 			if (response.status === 404 || response.status === 403) {
 				// Return empty array if case not found or forbidden
@@ -56,31 +45,23 @@ export default function NotesFeed() {
 				return [];
 			}
 
-			const { comments } = await response.json();
+			const comments = await response.json();
 			return comments;
 		};
 
-		fetchSingleCase()
+		fetchCaseNotes()
 			.then((comments) => setCaseNotes(comments || []))
 			.catch(() => {
 				// Handle error silently
 				setCaseNotes([]);
 			});
-	}, [assuranceCase, session?.key, setCaseNotes]);
+	}, [assuranceCase, setCaseNotes]);
 
 	// Fetch current user
 	useEffect(() => {
 		const fetchCurrentUser = async () => {
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
-			};
-
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
-				requestOptions
-			);
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch("/api/users/me");
 
 			if (response.status === 404 || response.status === 403) {
 				// Return undefined if user not found or forbidden
@@ -103,20 +84,14 @@ export default function NotesFeed() {
 				// Handle error silently
 				setUser(undefined);
 			});
-	}, [session?.key]);
+	}, []);
 
-	const handleNoteDelete = async (id: number) => {
+	const handleNoteDelete = async (id: number | string) => {
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
-
-			const requestOptions: RequestInit = {
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/comments/${id}`, {
 				method: "DELETE",
-				headers: {
-					Authorization: `Token ${session?.key}`,
-					"Content-Type": "application/json",
-				},
-			};
-			const response = await fetch(url, requestOptions);
+			});
 
 			if (!response.ok) {
 				toast({
@@ -200,6 +175,7 @@ export default function NotesFeed() {
 													setEditId(note.id);
 												}}
 												size={"icon"}
+												title="Edit note"
 											>
 												<PencilLine className="h-4 w-4" />
 											</Button>
@@ -207,6 +183,7 @@ export default function NotesFeed() {
 												aria-label="Delete note"
 												onClick={() => handleNoteDelete(note.id)}
 												size={"icon"}
+												title="Delete note"
 												variant={"destructive"}
 											>
 												<Trash2 className="h-4 w-4" />

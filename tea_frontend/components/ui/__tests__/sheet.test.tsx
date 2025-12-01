@@ -217,19 +217,19 @@ vi.mock("@radix-ui/react-dialog", () => {
 
 // Mock class-variance-authority
 vi.mock("class-variance-authority", () => ({
-	cva: (
-		base: string,
-		config?: {
-			defaultVariants?: { side?: string };
-			variants?: { side?: Record<string, string> };
-		}
-	) => {
-		return (props?: { side?: string }) => {
+	cva:
+		(
+			base: string,
+			config?: {
+				defaultVariants?: { side?: string };
+				variants?: { side?: Record<string, string> };
+			}
+		) =>
+		(props?: { side?: string }) => {
 			const variant = props?.side || config?.defaultVariants?.side || "right";
 			const variantClasses = config?.variants?.side?.[variant] || "";
 			return `${base} ${variantClasses}`.trim();
-		};
-	},
+		},
 }));
 
 describe("Sheet", () => {

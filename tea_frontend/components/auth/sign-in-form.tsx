@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 // import { useLoginToken } from '.*/use-auth';
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
@@ -20,7 +20,7 @@ import {
 import { Input } from "../ui/input";
 
 const formSchema = z.object({
-	username: z.string().min(2).max(50),
+	email: z.string().min(2).email("Please enter a valid email address"),
 	password: z.string().min(8),
 });
 
@@ -32,6 +32,7 @@ const SignInForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [loadingProvider, setLoadingProvider] = useState(false);
 	const [successMessage, setSuccessMessage] = useState<string>("");
+	const [showPassword, setShowPassword] = useState(false);
 
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -42,7 +43,7 @@ const SignInForm = () => {
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			username: "",
+			email: "",
 			password: "",
 		},
 	});
@@ -81,13 +82,14 @@ const SignInForm = () => {
 		setLoading(true);
 		setErrors([]); // Clear any previous errors
 
-		const { username, password } = values;
+		const { email, password } = values;
 
 		try {
 			// Use next-auth's signIn method with "credentials" provider
+			// Note: We pass email as "username" since that's what the credentials provider expects
 			const result = await signIn("credentials", {
 				redirect: false, // Prevent automatic navigation
-				username,
+				username: email,
 				password,
 			});
 
@@ -100,7 +102,7 @@ const SignInForm = () => {
 				// Provide user-friendly error messages
 				const errorMessage =
 					result?.error === "CredentialsSignin"
-						? "Invalid credentials. Please check your username and password."
+						? "Invalid credentials. Please check your email and password."
 						: result?.error || "Unable to log in. Please try again.";
 				setErrors([errorMessage]);
 			}
@@ -171,15 +173,23 @@ const SignInForm = () => {
 
 			<div className="mt-10">
 				<Form {...form}>
-					<form className="space-y-8" onSubmit={form.handleSubmit(onSubmit)}>
+					<form
+						className="space-y-8"
+						method="post"
+						onSubmit={form.handleSubmit(onSubmit)}
+					>
 						<FormField
 							control={form.control}
-							name="username"
+							name="email"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Username</FormLabel>
+									<FormLabel>Email</FormLabel>
 									<FormControl>
-										<Input placeholder="Alan Turing" {...field} />
+										<Input
+											placeholder="alan.turing@example.com"
+											type="email"
+											{...field}
+										/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -192,7 +202,26 @@ const SignInForm = () => {
 								<FormItem>
 									<FormLabel>Password</FormLabel>
 									<FormControl>
-										<Input type="password" {...field} />
+										<div className="relative">
+											<Input
+												type={showPassword ? "text" : "password"}
+												{...field}
+											/>
+											<button
+												aria-label={
+													showPassword ? "Hide password" : "Show password"
+												}
+												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												onClick={() => setShowPassword(!showPassword)}
+												type="button"
+											>
+												{showPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</button>
+										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>

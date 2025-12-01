@@ -7,8 +7,7 @@ import {
 	Trash2,
 	User2,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import useStore from "@/data/store";
@@ -16,7 +15,7 @@ import { unauthorized } from "@/hooks/use-auth";
 import { usePermissionsModal } from "@/hooks/use-permissions-modal";
 import type { User } from "@/types";
 
-type Member = User;
+type Member = User & { permissionId?: string };
 
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -34,71 +33,48 @@ export const PermissionsModal = () => {
 	} = useStore();
 	const permissionModal = usePermissionsModal();
 
+	const [adminMembers, setAdminMembers] = useState<Member[]>([]);
 	const [_loading, setLoading] = useState(false);
-	const [_isDisabled, _setIsDisabled] = useState(false);
-	const [_error, _setError] = useState<string>("");
-	const [_successMessage, _setSuccessMessage] = useState<string>("");
-	// const [viewMembers, setViewMembers] = useState<any[]>([])
-	// const [editMembers, setEditMembers] = useState<any[]>([])
 
 	const params = useParams();
 	const { caseId } = params;
 
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
-	const _router = useRouter();
 	const { toast } = useToast();
 
 	const fetchCaseMembers = useCallback(async () => {
-		const requestOptions: RequestInit = {
-			headers: {
-				Authorization: `Token ${session?.key}`,
-			},
-		};
-
-		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`,
-			requestOptions
-		);
+		// Use Next.js API route which handles Prisma auth
+		const response = await fetch(`/api/cases/${caseId}/permissions`);
 
 		if (response.status === 401) {
 			return unauthorized();
 		}
 
+		if (!response.ok) {
+			return null;
+		}
+
 		const result = await response.json();
 		return result;
-	}, [caseId, session?.key]);
+	}, [caseId]);
 
 	const handleRemovePermissions = async (member: Member, level: string) => {
+		if (!member.permissionId) {
+			toast({
+				variant: "destructive",
+				title: "Error",
+				description: "Cannot remove permission - no permission ID",
+			});
+			return;
+		}
+
 		try {
 			setLoading(true);
-			const payload: {
-				email: string;
-				edit: boolean;
-				view: boolean;
-				review: boolean;
-			}[] = [];
 
-			const payloadItem = {
-				email: member.email,
-				edit: false,
-				view: false,
-				review: false,
-			};
-
-			payload.push(payloadItem);
-
-			const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${caseId}/sharedwith`;
-
-			const requestOptions: RequestInit = {
-				method: "POST",
-				headers: {
-					Authorization: `Token ${session?.key}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(payload),
-			};
-			const response = await fetch(url, requestOptions);
+			// Use Next.js API route for revoking permissions
+			const response = await fetch(
+				`/api/cases/${caseId}/permissions/${member.permissionId}?type=user`,
+				{ method: "DELETE" }
+			);
 
 			if (!response.ok) {
 				toast({
@@ -106,30 +82,19 @@ export const PermissionsModal = () => {
 					title: "Error",
 					description: "Something went wrong",
 				});
-
 				setLoading(false);
 				return;
 			}
 
-			if (level === "read") {
-				const removedMembers = viewMembers.filter(
-					(memberItem) => memberItem.email !== member.email
-				);
-				setViewMembers(removedMembers);
-			}
-
-			if (level === "edit") {
-				const removedMembers = editMembers.filter(
-					(memberItem) => memberItem.email !== member.email
-				);
-				setEditMembers(removedMembers);
-			}
-
-			if (level === "review") {
-				const removedMembers = reviewMembers.filter(
-					(memberItem) => memberItem.email !== member.email
-				);
-				setReviewMembers(removedMembers);
+			// Update local state based on permission level
+			if (level === "VIEW") {
+				setViewMembers(viewMembers.filter((m) => m.email !== member.email));
+			} else if (level === "EDIT") {
+				setEditMembers(editMembers.filter((m) => m.email !== member.email));
+			} else if (level === "COMMENT") {
+				setReviewMembers(reviewMembers.filter((m) => m.email !== member.email));
+			} else if (level === "ADMIN") {
+				setAdminMembers(adminMembers.filter((m) => m.email !== member.email));
 			}
 		} catch (_err) {
 			toast({
@@ -137,16 +102,51 @@ export const PermissionsModal = () => {
 				title: "Error",
 				description: "Something went wrong",
 			});
+		} finally {
+			setLoading(false);
 		}
 	};
 
 	useEffect(() => {
 		if (assuranceCase && assuranceCase.permissions === "manage") {
 			fetchCaseMembers().then((result) => {
-				if (result) {
-					setViewMembers(result.view);
-					setEditMembers(result.edit);
-					setReviewMembers(result.review);
+				if (result?.user_permissions) {
+					// Map Prisma permission levels to UI categories
+					const view: Member[] = [];
+					const edit: Member[] = [];
+					const comment: Member[] = [];
+					const admin: Member[] = [];
+
+					for (const perm of result.user_permissions) {
+						const member: Member = {
+							id: perm.user.id,
+							email: perm.user.email,
+							username: perm.user.username,
+							permissionId: perm.id,
+						};
+
+						switch (perm.permission) {
+							case "VIEW":
+								view.push(member);
+								break;
+							case "EDIT":
+								edit.push(member);
+								break;
+							case "COMMENT":
+								comment.push(member);
+								break;
+							case "ADMIN":
+								admin.push(member);
+								break;
+							default:
+								break;
+						}
+					}
+
+					setViewMembers(view);
+					setEditMembers(edit);
+					setReviewMembers(comment);
+					setAdminMembers(admin);
 				}
 			});
 		}
@@ -184,8 +184,9 @@ export const PermissionsModal = () => {
 							</div>
 							<Button
 								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
-								onClick={() => handleRemovePermissions(member, "edit")}
+								onClick={() => handleRemovePermissions(member, "EDIT")}
 								size={"icon"}
+								title="Remove edit access"
 								variant={"ghost"}
 							>
 								<Trash2 className="h-4 w-4" />
@@ -216,8 +217,9 @@ export const PermissionsModal = () => {
 							</div>
 							<Button
 								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
-								onClick={() => handleRemovePermissions(member, "review")}
+								onClick={() => handleRemovePermissions(member, "COMMENT")}
 								size={"icon"}
+								title="Remove review access"
 								variant={"ghost"}
 							>
 								<Trash2 className="h-4 w-4" />
@@ -248,8 +250,9 @@ export const PermissionsModal = () => {
 							</div>
 							<Button
 								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
-								onClick={() => handleRemovePermissions(member, "read")}
+								onClick={() => handleRemovePermissions(member, "VIEW")}
 								size={"icon"}
+								title="Remove view access"
 								variant={"ghost"}
 							>
 								<Trash2 className="h-4 w-4" />

@@ -10,7 +10,7 @@ import type {
 import type { NestedArrayItem, ReactFlowNode } from "../case-helper";
 
 // Import CaseNode interface to use in tests
-interface CaseNode {
+type CaseNode = {
 	hidden: boolean;
 	id: number;
 	type: string;
@@ -23,7 +23,7 @@ interface CaseNode {
 	childrenHidden?: boolean;
 	originalHidden?: boolean;
 	[key: string]: unknown;
-}
+};
 
 import {
 	addElementComment,
@@ -58,8 +58,8 @@ import {
 } from "../case-helper";
 
 // Helper to create mock fetch response
-const createMockResponse = (data: unknown, options: Partial<Response> = {}) => {
-	return {
+const createMockResponse = (data: unknown, options: Partial<Response> = {}) =>
+	({
 		ok: true,
 		json: vi.fn().mockResolvedValue(data),
 		headers: new Headers(),
@@ -76,8 +76,7 @@ const createMockResponse = (data: unknown, options: Partial<Response> = {}) => {
 		formData: vi.fn(),
 		text: vi.fn(),
 		...options,
-	} as unknown as Response;
-};
+	}) as unknown as Response;
 
 describe("case-helper utilities", () => {
 	beforeEach(() => {

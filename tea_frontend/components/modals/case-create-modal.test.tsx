@@ -281,11 +281,7 @@ describe("CaseCreateModal", () => {
 		it("should accept valid form data", async () => {
 			const user = userEvent.setup();
 
-			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.json({ id: 1 });
-				})
-			);
+			server.use(http.post("*/api/cases/", () => HttpResponse.json({ id: 1 })));
 
 			renderWithAuth(<CaseCreateModal />);
 
@@ -384,9 +380,7 @@ describe("CaseCreateModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.json({ id: 456 });
-				})
+				http.post("*/api/cases/", () => HttpResponse.json({ id: 456 }))
 			);
 
 			renderWithAuth(<CaseCreateModal />);
@@ -413,9 +407,7 @@ describe("CaseCreateModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.json({ id: 789 });
-				})
+				http.post("*/api/cases/", () => HttpResponse.json({ id: 789 }))
 			);
 
 			renderWithAuth(<CaseCreateModal />);
@@ -448,9 +440,7 @@ describe("CaseCreateModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.post("*/api/cases/", () => new HttpResponse(null, { status: 500 }))
 			);
 
 			renderWithAuth(<CaseCreateModal />);
@@ -480,11 +470,7 @@ describe("CaseCreateModal", () => {
 		it("should handle network errors", async () => {
 			const user = userEvent.setup();
 
-			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.error();
-				})
-			);
+			server.use(http.post("*/api/cases/", () => HttpResponse.error()));
 
 			renderWithAuth(<CaseCreateModal />);
 
@@ -514,9 +500,9 @@ describe("CaseCreateModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.json({ error: "Case creation failed" });
-				})
+				http.post("*/api/cases/", () =>
+					HttpResponse.json({ error: "Case creation failed" })
+				)
 			);
 
 			renderWithAuth(<CaseCreateModal />);
@@ -773,9 +759,7 @@ describe("CaseCreateModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/", () => {
-					return HttpResponse.json({ id: 123 });
-				})
+				http.post("*/api/cases/", () => HttpResponse.json({ id: 123 }))
 			);
 
 			renderWithAuth(<CaseCreateModal />);

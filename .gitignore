@@ -178,6 +178,7 @@ tea_frontend/next-env.d.ts
 
 # Prisma (frontend)
 tea_frontend/src/generated/prisma/
+tea_frontend/src/generated/prisma-new/
 tea_frontend/prisma/scripts/duplicate-user-notifications.json
 
 # npm/yarn/pnpm

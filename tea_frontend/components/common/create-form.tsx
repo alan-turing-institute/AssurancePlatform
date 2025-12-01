@@ -36,10 +36,10 @@ const formSchema = z.object({
 	}),
 });
 
-interface CreateFormProps {
+type CreateFormProps = {
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const CreateForm: React.FC<CreateFormProps> = ({
 	onClose,

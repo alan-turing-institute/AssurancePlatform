@@ -2,7 +2,7 @@ import type { Edge, Node } from "reactflow";
 import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 
 // Define the structure of items that can be converted to nodes
-export interface ConvertibleItem {
+export type ConvertibleItem = {
 	id: number;
 	name: string;
 	type: string;
@@ -13,13 +13,13 @@ export interface ConvertibleItem {
 	property_claims?: PropertyClaim[];
 	evidence?: Evidence[];
 	[key: string]: unknown;
-}
+};
 
 // Define the structure of the assurance case
-export interface AssuranceCaseWithGoals {
+export type AssuranceCaseWithGoals = {
 	goals: Goal[];
 	[key: string]: unknown;
-}
+};
 
 /**
  * Convert Assurance Case

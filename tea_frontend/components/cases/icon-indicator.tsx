@@ -4,12 +4,11 @@ import {
 	ChatBubbleBottomCenterTextIcon,
 	InformationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import type { Context } from "@/types";
 
 type NodeData = {
-	id: number;
+	id: number | string;
 	type: string;
 	name: string;
 	short_description: string;
@@ -20,15 +19,14 @@ type NodeData = {
 	parentId?: string;
 };
 
-interface IconIndicatorProps {
+type IconIndicatorProps = {
 	data: NodeData;
-}
+};
 
 const IconIndicator = ({ data }: IconIndicatorProps) => {
 	const [comments, setComments] = useState([]);
 
 	const { assumption, justification, type } = data;
-	const { data: session } = useSession();
 
 	const hasAssumptionOrJustificationOrContext =
 		(typeof assumption === "string" && assumption.trim() !== "") ||
@@ -36,46 +34,26 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
 		(Array.isArray(data.context) && data.context.length > 0);
 
 	const fetchNodeComments = useCallback(async () => {
-		let entity: string;
-
-		switch (type) {
-			case "Strategy":
-				entity = "strategies";
-				break;
-			case "PropertyClaim":
-				entity = "propertyclaims";
-				break;
-			case "Evidence":
-				entity = "evidence";
-				break;
-			default:
-				entity = "goals";
-				break;
-		}
-
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${data.id}/comments/`;
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/elements/${data.id}/comments`);
 
-			const requestOptions: RequestInit = {
-				method: "GET",
-				headers: {
-					Authorization: `Token ${session?.key}`,
-					"Content-Type": "application/json",
-				},
-			};
+			if (!response.ok) {
+				// Silently fail - element may not exist or user may not have access
+				return [];
+			}
 
-			const response = await fetch(url, requestOptions);
 			const result = await response.json();
-			// console.log('comments result', result)
 			return result;
 		} catch (_error) {
-			// TODO: Handle error fetching comments
+			// Silently fail - element may not exist or user may not have access
+			return [];
 		}
-	}, [data, session?.key, type]);
+	}, [data.id]);
 
 	useEffect(() => {
 		fetchNodeComments().then((result) => {
-			setComments(result);
+			setComments(result ?? []);
 		});
 	}, [fetchNodeComments]);
 

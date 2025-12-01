@@ -5,11 +5,11 @@ import { AlertModal } from "../modals/alert-modal";
 import CreateSheet from "../ui/create-sheet";
 import CreateForm from "./create-form";
 
-interface NodeCreateProps {
+type NodeCreateProps = {
 	isOpen: boolean;
 	setOpen: Dispatch<SetStateAction<boolean>>;
 	// onClose: () => void
-}
+};
 
 const NodeCreate = ({ isOpen, setOpen }: NodeCreateProps) => {
 	const [isMounted, setIsMounted] = useState(false);

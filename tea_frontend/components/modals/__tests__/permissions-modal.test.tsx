@@ -125,13 +125,12 @@ describe("PermissionsModal", () => {
 		server.use(
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-				() => {
-					return HttpResponse.json({
+				() =>
+					HttpResponse.json({
 						view: mockStoreState.viewMembers,
 						edit: mockStoreState.editMembers,
 						review: mockStoreState.reviewMembers,
-					});
-				}
+					})
 			)
 		);
 	});
@@ -215,9 +214,7 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json(mockResponse);
-					}
+					() => HttpResponse.json(mockResponse)
 				)
 			);
 
@@ -243,9 +240,7 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return new HttpResponse(null, { status: 401 });
-					}
+					() => new HttpResponse(null, { status: 401 })
 				)
 			);
 
@@ -305,19 +300,16 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json({
+					() =>
+						HttpResponse.json({
 							view: [mockMembers[2]],
 							edit: [mockMembers[0]],
 							review: [mockMembers[1]],
-						});
-					}
+						})
 				),
 				http.post(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return new HttpResponse(null, { status: 200 });
-					}
+					() => new HttpResponse(null, { status: 200 })
 				)
 			);
 
@@ -347,19 +339,16 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json({
+					() =>
+						HttpResponse.json({
 							view: [mockMembers[2]],
 							edit: [mockMembers[0]],
 							review: [mockMembers[1]],
-						});
-					}
+						})
 				),
 				http.post(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return new HttpResponse(null, { status: 200 });
-					}
+					() => new HttpResponse(null, { status: 200 })
 				)
 			);
 
@@ -389,19 +378,16 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json({
+					() =>
+						HttpResponse.json({
 							view: [mockMembers[2]],
 							edit: [mockMembers[0]],
 							review: [mockMembers[1]],
-						});
-					}
+						})
 				),
 				http.post(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return new HttpResponse(null, { status: 200 });
-					}
+					() => new HttpResponse(null, { status: 200 })
 				)
 			);
 
@@ -431,19 +417,16 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json({
+					() =>
+						HttpResponse.json({
 							view: [mockMembers[2]],
 							edit: [mockMembers[0]],
 							review: [mockMembers[1]],
-						});
-					}
+						})
 				),
 				http.post(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
+					() => new HttpResponse(null, { status: 500 })
 				)
 			);
 
@@ -474,13 +457,12 @@ describe("PermissionsModal", () => {
 			server.use(
 				http.get(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,
-					() => {
-						return HttpResponse.json({
+					() =>
+						HttpResponse.json({
 							view: [mockMembers[2]],
 							edit: [mockMembers[0]],
 							review: [mockMembers[1]],
-						});
-					}
+						})
 				),
 				http.post(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/sharedwith`,

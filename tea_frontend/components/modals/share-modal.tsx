@@ -46,8 +46,6 @@ type ShareItem = {
 	review?: boolean;
 };
 
-type ShareItemArray = ShareItem[];
-
 const FormSchema = z.object({
 	email: z
 		.string()
@@ -79,6 +77,7 @@ export const ShareModal = () => {
 
 	const [isLinkedCaseModalOpen, setIsLinkedCaseModalOpen] = useState(false);
 	const [linkedCaseStudies, setLinkedCaseStudies] = useState<unknown[]>([]);
+	const [exportWithComments, setExportWithComments] = useState(true);
 
 	// const [token] = useLoginToken();
 	const { data: session } = useSession();
@@ -93,81 +92,132 @@ export const ShareModal = () => {
 		},
 	});
 
-	const onSubmit = async (data: z.infer<typeof FormSchema>) => {
-		setLoading(true);
-		const payload: ShareItemArray = [];
+	const mapAccessLevelToPermission = (accessLevel: string): string => {
+		const permissionMap: Record<string, string> = {
+			Read: "VIEW",
+			Edit: "EDIT",
+			Reviewer: "REVIEW",
+		};
+		return permissionMap[accessLevel] || "VIEW";
+	};
 
-		const newShareItem: ShareItem = { email: data.email };
+	const updateMemberState = (accessLevel: string, email: string) => {
+		const newShareItem: ShareItem = { email };
+		if (accessLevel === "Read") {
+			newShareItem.view = true;
+			setViewMembers([...viewMembers, newShareItem as unknown as User]);
+		} else if (accessLevel === "Edit") {
+			newShareItem.edit = true;
+			setEditMembers([...editMembers, newShareItem as unknown as User]);
+		} else if (accessLevel === "Reviewer") {
+			newShareItem.review = true;
+			setReviewMembers([...reviewMembers, newShareItem as unknown as User]);
+		}
+	};
 
-		switch (data.accessLevel) {
-			case "Read":
-				newShareItem.view = true;
-				break;
-			case "Edit":
-				newShareItem.edit = true;
-				break;
-			case "Reviewer":
-				newShareItem.review = true;
-				break;
-			default:
-				// Default to view access
-				newShareItem.view = true;
-				break;
+	const handlePrismaShare = async (data: z.infer<typeof FormSchema>) => {
+		const permission = mapAccessLevelToPermission(data.accessLevel);
+
+		const response = await fetch(
+			`/api/cases/${assuranceCase?.id}/permissions`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ type: "user", email: data.email, permission }),
+			}
+		);
+
+		const result = await response.json();
+
+		if (!response.ok) {
+			toast({
+				variant: "destructive",
+				title: "Unable to share case",
+				description:
+					result.error ||
+					"The email is not registered to an active user of the TEA platform.",
+			});
+			return false;
 		}
 
-		// if(data.accessLevel === 'Edit') {
-		//   newShareItem.edit = true
-		// } else {
-		//   newShareItem.view = true
-		// }
-
-		payload.push(newShareItem);
-
-		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/sharedwith`;
-
-			const requestOptions: RequestInit = {
-				method: "POST",
-				headers: {
-					Authorization: `Token ${session?.key}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(payload),
-			};
-			const response = await fetch(url, requestOptions);
-
-			if (!response.ok) {
-				toast({
-					variant: "destructive",
-					title: "Unable to share case",
-					description:
-						"The email is not registered to an active user of the TEA platform.",
-				});
-
-				setLoading(false);
-				return;
-			}
-
-			// const result = await response.json();
-			// console.log("Shared Result", result);
-
+		if (result.invite_url) {
+			toast({
+				variant: "success",
+				title: "Invite sent",
+				description: `An invite has been created for ${data.email}`,
+			});
+		} else if (result.message === "User already has access to this case") {
+			toast({
+				variant: "default",
+				title: "Already shared",
+				description: `${data.email} already has access to this case`,
+			});
+		} else {
 			toast({
 				variant: "success",
 				title: "Shared Case with:",
 				description: `${data.email}`,
 			});
+		}
 
-			if (newShareItem.view) {
-				setViewMembers([...viewMembers, newShareItem as unknown as User]);
-			}
-			if (newShareItem.edit) {
-				setEditMembers([...editMembers, newShareItem as unknown as User]);
-			}
-			if (newShareItem.review) {
-				setReviewMembers([...reviewMembers, newShareItem as unknown as User]);
-			}
+		updateMemberState(data.accessLevel, data.email);
+		return true;
+	};
 
-			form.reset();
+	const handleDjangoShare = async (data: z.infer<typeof FormSchema>) => {
+		const newShareItem: ShareItem = { email: data.email };
+
+		if (data.accessLevel === "Edit") {
+			newShareItem.edit = true;
+		} else if (data.accessLevel === "Reviewer") {
+			newShareItem.review = true;
+		} else {
+			newShareItem.view = true;
+		}
+
+		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/sharedwith`;
+		const response = await fetch(url, {
+			method: "POST",
+			headers: {
+				Authorization: `Token ${session?.key}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify([newShareItem]),
+		});
+
+		if (!response.ok) {
+			toast({
+				variant: "destructive",
+				title: "Unable to share case",
+				description:
+					"The email is not registered to an active user of the TEA platform.",
+			});
+			return false;
+		}
+
+		toast({
+			variant: "success",
+			title: "Shared Case with:",
+			description: `${data.email}`,
+		});
+
+		updateMemberState(data.accessLevel, data.email);
+		return true;
+	};
+
+	const onSubmit = async (data: z.infer<typeof FormSchema>) => {
+		setLoading(true);
+
+		try {
+			const USE_PRISMA_AUTH =
+				process.env.NEXT_PUBLIC_USE_PRISMA_AUTH === "true";
+			const success = USE_PRISMA_AUTH
+				? await handlePrismaShare(data)
+				: await handleDjangoShare(data);
+
+			if (success) {
+				form.reset();
+			}
 		} catch (_error) {
 			toast({
 				variant: "destructive",
@@ -179,9 +229,50 @@ export const ShareModal = () => {
 		setLoading(false);
 	};
 
-	const handleExport = () => {
+	const handleExport = async (includeComments = true) => {
 		setLoading(true);
 
+		const USE_PRISMA_AUTH = process.env.NEXT_PUBLIC_USE_PRISMA_AUTH === "true";
+
+		if (USE_PRISMA_AUTH && assuranceCase?.id) {
+			// Use new v2 export API
+			try {
+				const params = new URLSearchParams({
+					id: assuranceCase.id,
+					includeComments: String(includeComments),
+				});
+				const response = await fetch(`/api/cases/export?${params}`);
+
+				if (!response.ok) {
+					toast({
+						variant: "destructive",
+						title: "Export failed",
+						description: "Unable to export case",
+					});
+					setLoading(false);
+					return;
+				}
+
+				// Get the blob and download
+				const blob = await response.blob();
+				const name = assuranceCase.name || "assurance-case";
+				const now = new Date();
+				const datestr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}T${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+				const filename = `${name}-${datestr}.json`;
+				saveAs(blob, filename);
+			} catch {
+				toast({
+					variant: "destructive",
+					title: "Export failed",
+					description: "An error occurred while exporting",
+				});
+			} finally {
+				setLoading(false);
+			}
+			return;
+		}
+
+		// Legacy Django export (client-side)
 		let json = neatJSON(assuranceCase || {}, {});
 		// Remove the `id` fields, since they are only meaningful to the backend, and might
 		// confuse it when importing the JSON exported here.
@@ -446,7 +537,22 @@ export const ShareModal = () => {
 					<p className="text-muted-foreground text-sm">
 						Select the button below to download a JSON file.
 					</p>
-					<Button className="my-2" onClick={handleExport}>
+					<div className="my-2 flex items-center space-x-2">
+						<input
+							checked={exportWithComments}
+							className="h-4 w-4 rounded border-gray-300"
+							id="export-comments"
+							onChange={(e) => setExportWithComments(e.target.checked)}
+							type="checkbox"
+						/>
+						<label className="text-sm" htmlFor="export-comments">
+							Include comments
+						</label>
+					</div>
+					<Button
+						className="my-2"
+						onClick={() => handleExport(exportWithComments)}
+					>
 						<Download className="mr-2 h-4 w-4" />
 						Download File
 					</Button>

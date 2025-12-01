@@ -21,19 +21,19 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-interface TiptapEditorProps {
+type TiptapEditorProps = {
 	value?: string;
 	onChange?: (content: string) => void;
 	className?: string;
 	placeholder?: string;
-}
+};
 
-interface ToolbarButtonProps {
+type ToolbarButtonProps = {
 	onClick: () => void;
 	isActive?: boolean;
 	children: React.ReactNode;
 	title: string;
-}
+};
 
 const ToolbarButton = ({
 	onClick,

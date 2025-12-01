@@ -3,12 +3,13 @@
 import html2canvas from "html2canvas";
 import {
 	Camera,
-	ExternalLink,
+	Download,
 	Group,
 	Info,
 	Notebook,
 	Plus,
 	RotateCw,
+	Share2,
 	Trash2,
 	Users2,
 } from "lucide-react";
@@ -21,18 +22,19 @@ import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./case-notes";
 import "react-toastify/dist/ReactToastify.css";
 import { useSession } from "next-auth/react";
+import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { usePermissionsModal } from "@/hooks/use-permissions-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { useShareModal } from "@/hooks/use-share-modal";
 
-interface ActionButtonProps {
+type ActionButtonProps = {
 	showCreateGoal: boolean;
 	actions: {
 		onLayout: (direction: "LR" | "TB" | "RL" | "BT") => void;
 	};
 	notify: (message: string) => void;
 	notifyError: (message: string) => void;
-}
+};
 
 const ActionButtons = ({
 	showCreateGoal,
@@ -52,6 +54,7 @@ const ActionButtons = ({
 
 	const { onLayout } = actions;
 
+	const caseSharingModal = useCaseSharingModal();
 	const shareModal = useShareModal();
 	const permissionModal = usePermissionsModal();
 	const resourcesModal = useResourcesModal();
@@ -138,24 +141,20 @@ const ActionButtons = ({
 
 		try {
 			setLoading(true);
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
-				method: "POST",
-			};
-
 			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/update-ids`,
-				requestOptions
+				`/api/cases/${assuranceCase.id}/update-ids`,
+				{ method: "POST" }
 			);
 			if (response.ok) {
 				window.location.reload();
+			} else {
+				notifyError("Failed to reset identifiers");
 			}
 		} catch (_error) {
-			// Error handling is done through the response status check above
+			notifyError("Failed to reset identifiers");
 		} finally {
 			setLoading(false);
+			setAlertOpen(false);
 		}
 	};
 
@@ -219,15 +218,29 @@ const ActionButtons = ({
 					</ActionTooltip>
 				</div>
 				<div className="flex items-center justify-center gap-2">
+					{assuranceCase && assuranceCase.permissions === "manage" && (
+						<ActionTooltip label="Share">
+							<button
+								className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								onClick={() =>
+									caseSharingModal.onOpen(assuranceCase?.id?.toString() ?? "")
+								}
+								type="button"
+							>
+								<Share2 className="h-5 w-5" />
+								<span className="sr-only">Share</span>
+							</button>
+						</ActionTooltip>
+					)}
 					{assuranceCase && assuranceCase.permissions !== "view" && (
-						<ActionTooltip label="Share & Export">
+						<ActionTooltip label="Export">
 							<button
 								className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 								onClick={() => shareModal.onOpen()}
 								type="button"
 							>
-								<ExternalLink className="h-5 w-5" />
-								<span className="sr-only">Share & Export</span>
+								<Download className="h-5 w-5" />
+								<span className="sr-only">Export</span>
 							</button>
 						</ActionTooltip>
 					)}

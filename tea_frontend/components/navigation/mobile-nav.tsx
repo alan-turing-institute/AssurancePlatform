@@ -2,29 +2,67 @@
 
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, PlusCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type Dispatch, Fragment, type SetStateAction } from "react";
-import { externalNavigation, navigation, teams } from "@/config";
+import {
+	type Dispatch,
+	Fragment,
+	type SetStateAction,
+	useEffect,
+	useState,
+} from "react";
+import { externalNavigation, navigation } from "@/config";
+import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
 import { Separator } from "../ui/separator";
 import LoggedInUser from "./logged-in-user";
 
-interface MobileNavProps {
+type Team = {
+	id: string;
+	name: string;
+	slug: string;
+};
+
+type MobileNavProps = {
 	sidebarOpen: boolean;
 	setSidebarOpen: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
+const USE_PRISMA_AUTH = process.env.NEXT_PUBLIC_USE_PRISMA_AUTH === "true";
+
 export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 	const pathname = usePathname();
+	const createTeamModal = useCreateTeamModal();
+	const [teams, setTeams] = useState<Team[]>([]);
+
 	// Page name determined from pathname
 	const _pageName =
 		pathname === "/" ? "assurance cases" : pathname.split("/")[1];
+
+	useEffect(() => {
+		if (!USE_PRISMA_AUTH) {
+			return;
+		}
+
+		const fetchTeams = async () => {
+			try {
+				const response = await fetch("/api/teams");
+				if (response.ok) {
+					const data = await response.json();
+					setTeams(data);
+				}
+			} catch (error) {
+				console.error("Failed to fetch teams:", error);
+			}
+		};
+
+		fetchTeams();
+	}, []);
 
 	return (
 		<Transition.Root as={Fragment} show={sidebarOpen}>
@@ -138,8 +176,23 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 											</ul>
 										</li>
 										<li>
-											<div className="font-semibold text-indigo-200 text-xs leading-6">
-												Your teams
+											<div className="flex items-center justify-between">
+												<div className="font-semibold text-indigo-200 text-xs leading-6">
+													Your teams
+												</div>
+												{USE_PRISMA_AUTH && (
+													<button
+														className="rounded p-1 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+														onClick={() => {
+															setSidebarOpen(false);
+															createTeamModal.onOpen();
+														}}
+														title="Create team"
+														type="button"
+													>
+														<PlusCircle className="h-4 w-4" />
+													</button>
+												)}
 											</div>
 											<ul className="-mx-2 mt-2 space-y-1">
 												{teams.length === 0 && (
@@ -148,31 +201,25 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 													</p>
 												)}
 												{teams.length > 0 &&
-													teams.map(
-														(team: {
-															name: string;
-															href: string;
-															initial: string;
-															current: boolean;
-														}) => (
-															<li key={team.name}>
-																<a
-																	className={classNames(
-																		team.current
-																			? "bg-indigo-700 text-white"
-																			: "text-indigo-200 hover:bg-indigo-700 hover:text-white",
-																		"group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
-																	)}
-																	href={team.href}
-																>
-																	<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-[0.625rem] text-white">
-																		{team.initial}
-																	</span>
-																	<span className="truncate">{team.name}</span>
-																</a>
-															</li>
-														)
-													)}
+													teams.map((team) => (
+														<li key={team.id}>
+															<Link
+																className={classNames(
+																	pathname === `/dashboard/teams/${team.id}`
+																		? "bg-indigo-700 text-white"
+																		: "text-indigo-200 hover:bg-indigo-700 hover:text-white",
+																	"group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
+																)}
+																href={`/dashboard/teams/${team.id}`}
+																onClick={() => setSidebarOpen(false)}
+															>
+																<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-[0.625rem] text-white">
+																	{team.name.charAt(0).toUpperCase()}
+																</span>
+																<span className="truncate">{team.name}</span>
+															</Link>
+														</li>
+													))}
 											</ul>
 										</li>
 										<li className="mt-auto">

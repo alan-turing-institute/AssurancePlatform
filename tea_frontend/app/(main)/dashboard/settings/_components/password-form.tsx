@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import type { User } from "@/types/domain";
+
+// Minimal user data needed for this form
+type UserData = {
+	id: number | string;
+};
 
 const _ACCEPTED_FILE_TYPES = ["jpg"];
 
@@ -50,7 +54,7 @@ const FormSchema = z
 	});
 
 type PasswordFormProps = {
-	data: User;
+	data: UserData | null | undefined;
 };
 
 export function PasswordForm({ data }: PasswordFormProps) {
@@ -75,6 +79,9 @@ export function PasswordForm({ data }: PasswordFormProps) {
 	});
 
 	async function onSubmit(values: z.infer<typeof FormSchema>) {
+		if (!data) {
+			return;
+		}
 		setError("");
 		setLoading(true);
 

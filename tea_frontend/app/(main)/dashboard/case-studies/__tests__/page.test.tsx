@@ -6,12 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseStudy } from "@/types/domain";
 import CaseStudiesPage from "../page";
 
-interface PageHeadingProps {
+type PageHeadingProps = {
 	title: string;
 	description: string;
 	createButton?: boolean;
 	redirectUrl?: string;
-}
+};
 
 // Mock dependencies
 vi.mock("next/navigation", () => ({

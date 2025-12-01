@@ -5,6 +5,208 @@ import GithubProvider from "next-auth/providers/github";
 
 dotenv.config(); // Explicitly load environment variables
 
+// Feature flag for Prisma-based authentication
+const USE_PRISMA_AUTH = process.env.USE_PRISMA_AUTH === "true";
+
+/**
+ * Authenticates a user using Prisma (new implementation).
+ * Verifies password against stored hash and upgrades to argon2id if needed.
+ */
+async function authenticateWithPrisma(
+	username: string,
+	password: string
+): Promise<{
+	id: string;
+	name: string;
+	email: string;
+	key: string;
+} | null> {
+	// Dynamic imports to avoid loading Prisma when not using this auth method
+	const { prismaNew } = await import("@/lib/prisma-new");
+	const { verifyPassword, hashPassword } = await import(
+		"@/lib/auth/password-service"
+	);
+	const { createRefreshToken } = await import(
+		"@/lib/auth/refresh-token-service"
+	);
+	type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
+
+	const user = await prismaNew.user.findFirst({
+		where: {
+			OR: [{ username }, { email: username }],
+		},
+		select: {
+			id: true,
+			username: true,
+			email: true,
+			passwordHash: true,
+			passwordAlgorithm: true,
+		},
+	});
+
+	if (!user?.passwordHash) {
+		return null;
+	}
+
+	const { valid, needsUpgrade } = await verifyPassword(
+		password,
+		user.passwordHash,
+		user.passwordAlgorithm as PasswordAlgorithm
+	);
+
+	if (!valid) {
+		return null;
+	}
+
+	// Upgrade password hash to argon2id if using legacy algorithm
+	if (needsUpgrade) {
+		const newHash = await hashPassword(password);
+		await prismaNew.user.update({
+			where: { id: user.id },
+			data: {
+				passwordHash: newHash,
+				passwordAlgorithm: "argon2id",
+			},
+		});
+	}
+
+	// Create a refresh token for the session
+	const { token } = await createRefreshToken(user.id);
+
+	return {
+		id: user.id,
+		name: user.username,
+		email: user.email,
+		key: token, // Use refresh token as the session key
+	};
+}
+
+/**
+ * Authenticates a GitHub user using Prisma.
+ * Creates or updates user record and returns session credentials.
+ */
+async function authenticateGitHubWithPrisma(profile: {
+	id?: string | number;
+	login?: string;
+	email?: string | null;
+}): Promise<{ id: string; key: string } | null> {
+	const { prismaNew } = await import("@/lib/prisma-new");
+	const { createRefreshToken } = await import(
+		"@/lib/auth/refresh-token-service"
+	);
+
+	const githubId = String(profile?.id ?? "");
+	const githubUsername = profile?.login ?? "";
+	const email = profile?.email;
+
+	if (!email) {
+		console.error("GitHub OAuth: No email provided");
+		return null;
+	}
+
+	// Find existing user by GitHub ID or email
+	const existingUser = await prismaNew.user.findFirst({
+		where: {
+			OR: [{ githubId }, { email }],
+		},
+	});
+
+	let userId: string;
+	if (existingUser) {
+		userId = existingUser.id;
+		await prismaNew.user.update({
+			where: { id: userId },
+			data: {
+				githubId,
+				githubUsername,
+				authProvider: "GITHUB",
+			},
+		});
+	} else {
+		const newUser = await prismaNew.user.create({
+			data: {
+				email,
+				username: githubUsername || email,
+				githubId,
+				githubUsername,
+				authProvider: "GITHUB",
+			},
+		});
+		userId = newUser.id;
+	}
+
+	const { token } = await createRefreshToken(userId);
+	return { id: userId, key: token };
+}
+
+/**
+ * Authenticates a GitHub user using Django API.
+ */
+async function authenticateGitHubWithDjango(
+	accessToken: string,
+	email: string | null | undefined
+): Promise<{ key: string } | null> {
+	const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+	if (!apiUrl) {
+		console.error(
+			"API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication"
+		);
+		return null;
+	}
+
+	const response = await fetch(`${apiUrl}/api/auth/github/register-by-token/`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ access_token: accessToken, email }),
+	});
+
+	if (response.ok) {
+		return await response.json();
+	}
+	return null;
+}
+
+/**
+ * Authenticates a user using Django API (legacy implementation).
+ */
+async function authenticateWithDjango(
+	username: string,
+	password: string
+): Promise<{
+	id: string;
+	name: string;
+	email: string;
+	key: string;
+} | null> {
+	const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+	if (!apiUrl) {
+		throw new Error("API_URL or NEXT_PUBLIC_API_URL must be configured");
+	}
+
+	const response = await fetch(`${apiUrl}/api/auth/login/`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ username, password }),
+	});
+
+	if (!response.ok) {
+		return null;
+	}
+
+	const user = await response.json();
+
+	if (user) {
+		return {
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			key: user.key,
+		};
+	}
+
+	return null;
+}
+
 /**
  * Configuration options for NextAuth authentication.
  *
@@ -49,38 +251,15 @@ export const authOptions: NextAuthOptions = {
 			async authorize(credentials, _req) {
 				const { username, password } = credentials ?? {};
 
-				try {
-					// Send credentials to your API for verification
-					const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-					if (!apiUrl) {
-						throw new Error(
-							"API_URL or NEXT_PUBLIC_API_URL must be configured"
-						);
-					}
-
-					const response = await fetch(`${apiUrl}/api/auth/login/`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ username, password }),
-					});
-
-					if (!response.ok) {
-						const _errorText = await response.text();
-						throw new Error("Invalid credentials");
-					}
-
-					const user = await response.json();
-
-					if (user) {
-						// Include key (access token) in the user object
-						return {
-							id: user.id,
-							name: user.name,
-							email: user.email,
-							key: user.key,
-						};
-					}
+				if (!(username && password)) {
 					return null;
+				}
+
+				try {
+					if (USE_PRISMA_AUTH) {
+						return await authenticateWithPrisma(username, password);
+					}
+					return await authenticateWithDjango(username, password);
 				} catch (_error) {
 					return null;
 				}
@@ -101,53 +280,38 @@ export const authOptions: NextAuthOptions = {
 		 */
 		async signIn({ user, account, profile }) {
 			if (account?.provider === "github") {
-				// Handle GitHub-specific behavior
-				const payload = {
-					access_token: account?.access_token,
+				const gitHubProfile = profile as { id?: number; login?: string };
+				const githubProfile = {
+					id: gitHubProfile?.id,
+					login: gitHubProfile?.login,
 					email: profile?.email,
 				};
 
-				const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
-				if (!apiUrl) {
-					// biome-ignore lint/suspicious/noConsole: Required for error logging in production
-					console.error(
-						"API_URL or NEXT_PUBLIC_API_URL must be configured for GitHub authentication"
-					);
+				if (USE_PRISMA_AUTH) {
+					const result = await authenticateGitHubWithPrisma(githubProfile);
+					if (result) {
+						user.id = result.id;
+						user.key = result.key;
+						user.provider = "github";
+						return true;
+					}
 					return false;
 				}
-				const response = await fetch(
-					`${apiUrl}/api/auth/github/register-by-token/`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(payload),
-					}
+
+				// Django auth
+				const result = await authenticateGitHubWithDjango(
+					account.access_token ?? "",
+					profile?.email
 				);
-
-				// if (response.ok) {
-				//   const result = await response.json();
-				//   user.accessToken = result.key;
-				//   user.provider = account?.provider;
-				//   return true;
-				// }
-
-				if (response.ok) {
-					const result = await response.json();
-					user.key = result.key; // Include the key for GitHub users
+				if (result) {
+					user.key = result.key;
 					user.provider = account.provider;
 					return true;
 				}
-				try {
-					const _errorData = await response.json();
-				} catch (_e) {
-					// Intentionally empty: we don't need to handle the error data
-				}
-
 				return false;
 			}
 
 			// For credentials, allow default processing
-			// Check if user exists and has a valid id
 			return !!user?.id;
 		},
 
@@ -183,10 +347,12 @@ export const authOptions: NextAuthOptions = {
 		 * @returns {Object} The modified session object with an access token and provider information.
 		 */
 		session({ session, token }) {
-			// session.accessToken = token.accessToken;
-			// session.provider = token.provider;
 			session.key = token.key; // Add the key to the session object
 			session.provider = token.provider;
+			// Add user ID to session for Prisma auth
+			if (token.id && session.user) {
+				session.user.id = token.id as string;
+			}
 			return session;
 		},
 
@@ -202,11 +368,8 @@ export const authOptions: NextAuthOptions = {
 		 * @returns {Object} The updated token with access token and provider information.
 		 */
 		jwt({ token, user }) {
-			// if (account && user) {
-			//   token.accessToken = user.accessToken;
-			//   token.provider = user.provider;
-			// }
 			if (user) {
+				token.id = user.id; // Store the user ID for Prisma auth
 				token.key = user.key; // Store the key from the user object
 				token.provider = user.provider || "credentials";
 				// Track token expiry (24 hours from login)

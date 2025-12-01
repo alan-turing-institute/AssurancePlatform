@@ -3,10 +3,8 @@
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
 import moment from "moment";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import useStore from "@/data/store";
-import { unauthorized } from "@/hooks/use-auth";
-import type { User } from "@/types";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 import CommentsEditForm from "./comments-edit-form";
@@ -22,25 +20,25 @@ type CommentsFeedProps = {
 
 export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const { assuranceCase, nodeComments, setNodeComments } = useStore();
-	// const [token] = useLoginToken();
 	const { data: session } = useSession();
 	const [edit, setEdit] = useState<boolean>(false);
 	const [editId, setEditId] = useState<number>();
-	const [user, setUser] = useState<User | undefined>();
 	const { toast } = useToast();
 
-	const handleNoteDelete = async (id: number) => {
-		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/comments/${id}/`;
+	// Get current username from session
+	const currentUsername = session?.user?.name || session?.user?.email;
 
-			const requestOptions: RequestInit = {
+	const handleNoteDelete = async (id: number | string) => {
+		try {
+			// Use the new unified comments API endpoint
+			const url = `/api/comments/${id}`;
+
+			const response = await fetch(url, {
 				method: "DELETE",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
-			};
-			const response = await fetch(url, requestOptions);
+			});
 
 			if (!response.ok) {
 				toast({
@@ -63,44 +61,6 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 			});
 		}
 	};
-
-	useEffect(() => {
-		// TODO: Add any initialization logic if needed
-	}, []);
-
-	const fetchCurrentUser = useCallback(async () => {
-		const requestOptions: RequestInit = {
-			headers: {
-				Authorization: `Token ${session?.key}`,
-			},
-		};
-
-		const response = await fetch(
-			`${process.env.NEXT_PUBLIC_API_URL}/api/user/`,
-			requestOptions
-		);
-
-		if (response.status === 404 || response.status === 403) {
-			return;
-		}
-
-		if (response.status === 401) {
-			return unauthorized();
-		}
-
-		const result = await response.json();
-		return result;
-	}, [session?.key]);
-
-	// Fetch current user
-	useEffect(() => {
-		fetchCurrentUser()
-			.then((result) => setUser(result))
-			.catch(() => {
-				// Handle error silently
-				setUser(undefined);
-			});
-	}, [fetchCurrentUser]);
 
 	return (
 		<div className="mt-4 w-full py-2">
@@ -143,7 +103,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 						)}
 						{!edit &&
 							assuranceCase?.permissions !== "view" &&
-							user?.username === comment.author && (
+							currentUsername === comment.author && (
 								<div className="absolute right-2 bottom-2 hidden group-hover:block">
 									<div className="flex items-center justify-start gap-2">
 										<Button
@@ -160,6 +120,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 										<Button
 											onClick={() => handleNoteDelete(comment.id)}
 											size={"icon"}
+											title="Delete comment"
 											variant={"destructive"}
 										>
 											<Trash2 className="h-4 w-4" />

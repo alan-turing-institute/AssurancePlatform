@@ -14,38 +14,38 @@ const DISCOVER_REGEX = /discover/i;
 const CLOSE_MENU_REGEX = /close menu/i;
 
 // Type definitions for mock components
-interface MockImageProps {
+type MockImageProps = {
 	src: string;
 	alt: string;
 	className?: string;
 	width?: string | number;
 	height?: string | number;
-}
+};
 
-interface MockLinkProps {
+type MockLinkProps = {
 	href: string;
 	children: React.ReactNode;
 	className?: string;
-}
+};
 
-interface MockIconProps {
+type MockIconProps = {
 	className?: string;
 	[key: string]: unknown;
-}
+};
 
-interface MockDialogProps {
+type MockDialogProps = {
 	children:
 		| React.ReactNode
 		| ((props: Record<string, unknown>) => React.ReactNode);
 	open: boolean;
 	onClose: () => void;
 	className?: string;
-}
+};
 
-interface MockPanelProps {
+type MockPanelProps = {
 	children: React.ReactNode;
 	className?: string;
-}
+};
 
 // Mock next-auth
 vi.mock("next-auth/react", () => ({

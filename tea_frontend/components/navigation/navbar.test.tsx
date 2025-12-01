@@ -79,9 +79,8 @@ vi.mock("next/navigation", async (importOriginal) => {
 });
 
 describe("Navbar", () => {
-	const renderNavbar = (children = <div>Test Content</div>) => {
-		return render(<Navbar>{children}</Navbar>);
-	};
+	const renderNavbar = (children = <div>Test Content</div>) =>
+		render(<Navbar>{children}</Navbar>);
 
 	beforeEach(() => {
 		mockUsePathname.mockReturnValue("/");

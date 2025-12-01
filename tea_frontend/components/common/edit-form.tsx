@@ -39,11 +39,11 @@ const formSchema = z.object({
 	}),
 });
 
-interface EditFormProps {
+type EditFormProps = {
 	node: Node;
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const EditForm: React.FC<EditFormProps> = ({
 	node,

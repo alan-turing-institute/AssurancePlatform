@@ -10,12 +10,12 @@ import type {
 // Regular expressions
 const NUMERIC_ID_PATTERN = /^\d+$/;
 
-interface Map {
+type Map = {
 	[key: string]: string | undefined;
-}
+};
 
 // Extended CaseNode interface with proper typing
-interface CaseNode {
+type CaseNode = {
 	hidden: boolean;
 	id: number;
 	type: string;
@@ -28,10 +28,10 @@ interface CaseNode {
 	childrenHidden?: boolean;
 	originalHidden?: boolean;
 	[key: string]: unknown;
-}
+};
 
 // Node type for React Flow integration
-export interface ReactFlowNode {
+export type ReactFlowNode = {
 	id: string;
 	type: string;
 	data: {
@@ -48,30 +48,30 @@ export interface ReactFlowNode {
 		[key: string]: unknown;
 	};
 	position: { x: number; y: number };
-}
+};
 
 // API Response types
-interface ApiNodeResponse {
+type ApiNodeResponse = {
 	id: number;
 	name: string;
 	short_description: string;
 	long_description: string;
 	type: string;
 	[key: string]: unknown;
-}
+};
 
 // Payload types for API requests
-interface DetachPayload {
+type DetachPayload = {
 	goal_id: number | null;
 	strategy_id: number | null;
 	property_claim_id: number | null;
-}
+};
 
 // Comment type for API operations
-interface CommentPayload {
+type CommentPayload = {
 	content: string;
 	[key: string]: unknown;
-}
+};
 
 // Type for node creation payloads
 type CreateNodePayload =
@@ -259,9 +259,8 @@ const searchAndUpdateInNestedClaims = (
 	propertyClaims: PropertyClaim[],
 	id: number,
 	newPropertyClaim: Partial<PropertyClaim>
-): PropertyClaim[] => {
-	return updatePropertyClaimNested(propertyClaims, id, newPropertyClaim);
-};
+): PropertyClaim[] =>
+	updatePropertyClaimNested(propertyClaims, id, newPropertyClaim);
 
 // Helper function to search and update in strategies
 const searchAndUpdateInStrategiesClaims = (
@@ -418,8 +417,8 @@ const addPropertyClaimToLocation = (
 	array: PropertyClaim[],
 	property_claim: PropertyClaim,
 	newParentId: number
-): PropertyClaim[] => {
-	return array.map((item) => {
+): PropertyClaim[] =>
+	array.map((item) => {
 		if (item.id === newParentId) {
 			if (!item.property_claims) {
 				item.property_claims = [];
@@ -457,7 +456,6 @@ const addPropertyClaimToLocation = (
 
 		return item;
 	});
-};
 
 /**
  * Updates a property claim's location and properties in a nested array structure.
@@ -838,9 +836,8 @@ const searchAndUpdateInNestedClaimsEvidence = (
 	propertyClaims: PropertyClaim[],
 	id: number,
 	newEvidence: Partial<Evidence>
-): PropertyClaim[] | null => {
-	return updateEvidenceNested(propertyClaims, id, newEvidence);
-};
+): PropertyClaim[] | null =>
+	updateEvidenceNested(propertyClaims, id, newEvidence);
 
 // Helper function to search and update in strategies for evidence
 const searchAndUpdateInStrategiesEvidence = (
@@ -951,8 +948,8 @@ export const updateEvidenceNested = (
 const removeEvidenceFromOldLocation = (
 	array: PropertyClaim[],
 	id: number
-): PropertyClaim[] => {
-	return array.map((item) => {
+): PropertyClaim[] =>
+	array.map((item) => {
 		if (item.evidence) {
 			item.evidence = item.evidence.filter((evidence) => evidence.id !== id);
 		}
@@ -978,7 +975,6 @@ const removeEvidenceFromOldLocation = (
 
 		return item;
 	});
-};
 
 /**
  * Adds evidence to a specified property claim by ID in a nested structure.
@@ -996,8 +992,8 @@ const addEvidenceToNewLocation = (
 	array: PropertyClaim[],
 	evidence: Evidence,
 	newClaimId: number
-): PropertyClaim[] => {
-	return array.map((item) => {
+): PropertyClaim[] =>
+	array.map((item) => {
 		if (item.id === newClaimId) {
 			if (!item.evidence) {
 				item.evidence = [];
@@ -1028,7 +1024,6 @@ const addEvidenceToNewLocation = (
 
 		return item;
 	});
-};
 
 /**
  * Updates and moves evidence to a new location within a nested structure.
@@ -1168,21 +1163,44 @@ export const createAssuranceCaseNode = async (
 		return { error: "No token" };
 	}
 
+	// Get case ID from the payload
+	const caseId = (newItem as { assurance_case_id?: number | string })
+		.assurance_case_id;
+	if (!caseId) {
+		return { error: "Case ID is required" };
+	}
+
+	// Map entity to element type for unified API
+	const elementTypeMap: Record<string, string> = {
+		goals: "goal",
+		contexts: "context",
+		strategies: "strategy",
+		propertyclaims: "property_claim",
+		evidence: "evidence",
+	};
+
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/cases/${caseId}/elements`;
 
 		const requestOptions: RequestInit = {
 			method: "POST",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(newItem),
+			body: JSON.stringify({
+				...newItem,
+				elementType: elementTypeMap[entity] || entity,
+				type: elementTypeMap[entity] || entity,
+			}),
 		};
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			return { error: `Something went wrong ${response.status}` };
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error: errorData.error || `Something went wrong ${response.status}`,
+			};
 		}
 
 		const result = await response.json();
@@ -1207,40 +1225,21 @@ export const createAssuranceCaseNode = async (
  * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful, otherwise false.
  */
 export const deleteAssuranceCaseNode = async (
-	type: string,
-	id: number,
+	_type: string,
+	id: number | string,
 	token: string | null
 ): Promise<boolean | { error: string }> => {
 	if (!token) {
 		return { error: "No token" };
 	}
 
-	let entity: string | null = null;
-	switch (type.toLowerCase()) {
-		case "context":
-			entity = "contexts";
-			break;
-		case "strategy":
-			entity = "strategies";
-			break;
-		case "property":
-			entity = "propertyclaims";
-			break;
-		case "evidence":
-			entity = "evidence";
-			break;
-		default:
-			entity = "goals";
-			break;
-	}
-
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/elements/${id}`;
 
 		const requestOptions: RequestInit = {
 			method: "DELETE",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
 		};
@@ -1249,7 +1248,8 @@ export const deleteAssuranceCaseNode = async (
 		if (response.ok) {
 			return true;
 		}
-		return { error: "Failed to delete node" };
+		const errorData = await response.json().catch(() => ({}));
+		return { error: errorData.error || "Failed to delete node" };
 	} catch (_error) {
 		return { error: "An error occurred" };
 	}
@@ -1265,8 +1265,8 @@ export const deleteAssuranceCaseNode = async (
  * @returns A promise that resolves to true if the update was successful, otherwise false.
  */
 export const updateAssuranceCaseNode = async (
-	type: string,
-	id: number,
+	_type: string,
+	id: number | string,
 	token: string | null,
 	updateItem: unknown
 ): Promise<boolean | { error: string }> => {
@@ -1274,32 +1274,13 @@ export const updateAssuranceCaseNode = async (
 		return { error: "No token" };
 	}
 
-	let entity: string | null = null;
-	switch (type) {
-		case "context":
-			entity = "contexts";
-			break;
-		case "strategy":
-			entity = "strategies";
-			break;
-		case "property":
-			entity = "propertyclaims";
-			break;
-		case "evidence":
-			entity = "evidence";
-			break;
-		default:
-			entity = "goals";
-			break;
-	}
-
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/elements/${id}`;
 
 		const requestOptions: RequestInit = {
 			method: "PUT",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(updateItem),
@@ -1309,54 +1290,37 @@ export const updateAssuranceCaseNode = async (
 		if (response.ok) {
 			return true;
 		}
-		return false;
+		const errorData = await response.json().catch(() => ({}));
+		return { error: errorData.error || "Failed to update node" };
 	} catch (_error) {
-		return false;
+		return { error: "An error occurred" };
 	}
 };
 
 export const getAssuranceCaseNode = async (
-	type: string,
-	id: number,
+	_type: string,
+	id: number | string,
 	token: string | null
 ): Promise<ApiNodeResponse | { error: string } | false> => {
 	if (!token) {
 		return { error: "No token" };
 	}
 
-	let entity: string | null = null;
-	switch (type) {
-		case "context":
-			entity = "contexts";
-			break;
-		case "strategy":
-			entity = "strategies";
-			break;
-		case "property":
-			entity = "propertyclaims";
-			break;
-		case "evidence":
-			entity = "evidence";
-			break;
-		default:
-			entity = "goals";
-			break;
-	}
-
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/elements/${id}`;
 
 		const requestOptions: RequestInit = {
 			method: "GET",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
 		};
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			// Handle non-ok response
+			const errorData = await response.json().catch(() => ({}));
+			return { error: errorData.error || "Failed to fetch node" };
 		}
 
 		const result = await response.json();
@@ -2563,7 +2527,7 @@ export const findParentNode = (
  * @returns {Promise<any>} A promise that resolves with the result of the detach operation.
  */
 // Helper to build detach payload for property claims
-const buildPropertyClaimDetachPayload = (
+const _buildPropertyClaimDetachPayload = (
 	node: ReactFlowNode
 ): DetachPayload => {
 	const payload: DetachPayload = {
@@ -2594,7 +2558,7 @@ const buildPropertyClaimDetachPayload = (
 };
 
 // Helper to get entity name from type
-const getEntityName = (type: string): string => {
+const _getEntityName = (type: string): string => {
 	switch (type) {
 		case "context":
 			return "contexts";
@@ -2610,50 +2574,33 @@ const getEntityName = (type: string): string => {
 };
 
 export const detachCaseElement = async (
-	node: ReactFlowNode,
+	_node: ReactFlowNode,
 	type: string,
-	id: number,
+	id: number | string,
 	token: string | null
 ): Promise<{ detached: boolean } | { error: string | unknown }> => {
 	if (!token) {
 		return { error: "No token" };
 	}
 
-	let payload: DetachPayload;
-	const entity = getEntityName(type);
-
-	if (type === "property") {
-		payload = buildPropertyClaimDetachPayload(node);
-	} else if (type === "evidence") {
-		payload = {
-			goal_id: null,
-			strategy_id: null,
-			property_claim_id: (node.data.property_claim_id as number[])[0],
-		};
-	} else {
-		payload = {
-			goal_id: null,
-			strategy_id: null,
-			property_claim_id: null,
-		};
-	}
-
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/detach`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/elements/${id}/detach?element_type=${type}`;
 
 		const requestOptions: RequestInit = {
 			method: "POST",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(payload),
 		};
 
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			return { error: `Something went wrong ${response.status}` };
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error: errorData.error || `Something went wrong ${response.status}`,
+			};
 		}
 
 		return { detached: true };
@@ -2673,7 +2620,7 @@ export const detachCaseElement = async (
  */
 export const attachCaseElement = async (
 	orphan: ReactFlowNode,
-	id: number,
+	id: number | string,
 	token: string | null,
 	parent: ReactFlowNode
 ): Promise<{ attached: boolean } | { error: string | unknown }> => {
@@ -2681,25 +2628,25 @@ export const attachCaseElement = async (
 		return { error: "No token" };
 	}
 
-	const payload: DetachPayload = {
-		goal_id: null,
-		strategy_id: null,
-		property_claim_id: null,
+	// Build payload for attach operation
+	const payload: {
+		parentId?: string | number;
+		element_type?: string;
+		goal_id?: number | null;
+		strategy_id?: number | null;
+		property_claim_id?: number | null;
+	} = {
+		parentId: parent.data.id,
+		element_type: orphan.type.toLowerCase(),
 	};
 
-	let entity: string | null = null;
+	// Also include Django-style parent references for fallback
 	switch (orphan.type.toLowerCase()) {
 		case "context":
-			entity = "contexts";
-			payload.goal_id = parent.data.id;
-			break;
 		case "strategy":
-			entity = "strategies";
 			payload.goal_id = parent.data.id;
 			break;
 		case "propertyclaim":
-			entity = "propertyclaims";
-
 			if (parent.type === "property") {
 				payload.property_claim_id = parent.data.id;
 			}
@@ -2711,21 +2658,19 @@ export const attachCaseElement = async (
 			}
 			break;
 		case "evidence":
-			entity = "evidence";
 			payload.property_claim_id = parent.data.id;
 			break;
 		default:
-			// Handle other types
 			break;
 	}
 
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/${entity}/${id}/attach`;
+		// Use internal API route which handles Django/Prisma switching
+		const url = `/api/elements/${id}/attach`;
 
 		const requestOptions: RequestInit = {
 			method: "POST",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(payload),
@@ -2733,7 +2678,10 @@ export const attachCaseElement = async (
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			return { error: `Something went wrong ${response.status}` };
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error: errorData.error || `Something went wrong ${response.status}`,
+			};
 		}
 
 		return { attached: true };

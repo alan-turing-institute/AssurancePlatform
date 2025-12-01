@@ -8,7 +8,7 @@ interface CaseStudyWithAssuranceCases extends CaseStudy {
 	assurance_cases?: number[];
 }
 
-interface PageHeadingProps {
+type PageHeadingProps = {
 	title: string;
 	description?: string;
 	createButton?: boolean;
@@ -22,7 +22,7 @@ interface PageHeadingProps {
 	redirect?: boolean;
 	redirectUrl?: string;
 	caseStudy?: CaseStudyWithAssuranceCases;
-}
+};
 
 export default function PageHeading({
 	title,

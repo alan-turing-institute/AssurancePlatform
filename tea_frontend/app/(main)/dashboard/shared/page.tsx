@@ -15,12 +15,15 @@ const SharedWithMePage = async () => {
 
 	const sharedAssuranceCases = await fetchSharedAssuranceCases(session.key);
 
+	// Handle null or empty array
+	const cases = sharedAssuranceCases ?? [];
+
 	return (
 		<>
-			{sharedAssuranceCases.length === 0 ? (
+			{cases.length === 0 ? (
 				<NoCasesFound message={"No cases shared with you yet."} shared />
 			) : (
-				<CaseList assuranceCases={sharedAssuranceCases} />
+				<CaseList assuranceCases={cases} />
 			)}
 		</>
 	);

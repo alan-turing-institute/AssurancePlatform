@@ -46,9 +46,9 @@ const formSchema = z.object({
 	isAdmin: z.boolean().default(false).optional(),
 });
 
-interface MemberEditFormProps {
+type MemberEditFormProps = {
 	member: TeamMember;
-}
+};
 
 const MemberEditForm: React.FC<MemberEditFormProps> = ({ member }) => {
 	const departments = [

@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,18 +15,14 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useToast } from "../ui/use-toast";
 
-// import { useLoginToken } from '.*/use-auth'
-
 const formSchema = z.object({
 	note: z.string().min(2, {
-		message: "Note must be atleast 2 characters",
+		message: "Note must be at least 2 characters",
 	}),
 });
 
 const NotesForm: React.FC = () => {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 	const { toast } = useToast();
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -48,23 +43,18 @@ const NotesForm: React.FC = () => {
 		}
 
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/comments/`;
-
-			const requestOptions: RequestInit = {
+			// Use Next.js API route which handles both Prisma and Django auth
+			const response = await fetch(`/api/cases/${assuranceCase.id}/comments`, {
 				method: "POST",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
 					content: values.note,
-					assurance_case: assuranceCase.id,
 				}),
-			};
-			const response = await fetch(url, requestOptions);
+			});
 
 			if (!response.ok) {
-				// Handle error - response not ok
 				throw new Error("Failed to create note");
 			}
 
@@ -73,17 +63,8 @@ const NotesForm: React.FC = () => {
 			const newCaseNotes = [...caseNotes, result];
 			setCaseNotes(newCaseNotes);
 
-			// const updatedComments = [ ...assuranceCase.comments, result ]
-			// const updatedAssuranceCase = {
-			//   ...assuranceCase,
-			//   comments: updatedComments
-			// }
-
-			// setAssuranceCase(updatedAssuranceCase)
-
 			form.setValue("note", "");
 		} catch (_error) {
-			// Handle error - show toast notification
 			toast({
 				variant: "destructive",
 				title: "Failed to create note",

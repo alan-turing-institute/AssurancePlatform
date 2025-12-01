@@ -11,19 +11,19 @@ import {
 } from "@/src/__tests__/utils/mock-data";
 import type { AssuranceCase, Group } from "@/types/domain";
 
-interface PublishCaseRequest {
+type PublishCaseRequest = {
 	published: boolean;
 	public_description?: string;
 	published_date?: string | null;
-}
+};
 
-interface CaseStudyRequest {
+type CaseStudyRequest = {
 	title: string;
 	description: string;
 	content: string;
 	type: string;
 	assurance_cases: number[];
-}
+};
 
 // Regex patterns for UI elements - extracted to avoid performance issues
 const REGEX_PATTERNS = {
@@ -127,9 +127,9 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock case detail endpoint
 			server.use(
-				http.get(`${API_BASE_URL}/api/cases/1/`, () => {
-					return HttpResponse.json(unpublishedCase);
-				})
+				http.get(`${API_BASE_URL}/api/cases/1/`, () =>
+					HttpResponse.json(unpublishedCase)
+				)
 			);
 
 			const { CaseEditorMock } = await import("./mocks/case-editor-mock");
@@ -191,16 +191,16 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Verify case is now public
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-					return HttpResponse.json([
+				http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+					HttpResponse.json([
 						{
 							id: 1,
 							name: "Test Safety Case",
 							description: "This is a public description for the safety case",
 							published_date: new Date().toISOString(),
 						},
-					]);
-				})
+					])
+				)
 			);
 		});
 	});
@@ -226,9 +226,9 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock public cases endpoint
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-					return HttpResponse.json(publishedCases);
-				})
+				http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+					HttpResponse.json(publishedCases)
+				)
 			);
 
 			const { DiscoverPageMock } = await import("./mocks/discover-page-mock");
@@ -323,9 +323,9 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock case detail endpoint
 			server.use(
-				http.get(`${API_BASE_URL}/api/cases/1/`, () => {
-					return HttpResponse.json(publishedCase);
-				})
+				http.get(`${API_BASE_URL}/api/cases/1/`, () =>
+					HttpResponse.json(publishedCase)
+				)
 			);
 
 			const { CaseEditorMock } = await import("./mocks/case-editor-mock");
@@ -375,9 +375,9 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Verify case is removed from public list
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-					return HttpResponse.json([]);
-				})
+				http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+					HttpResponse.json([])
+				)
 			);
 		});
 	});
@@ -393,9 +393,9 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock endpoints
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/assurance-case/1/`, () => {
-					return HttpResponse.json(publishedCase);
-				}),
+				http.get(`${API_BASE_URL}/api/public/assurance-case/1/`, () =>
+					HttpResponse.json(publishedCase)
+				),
 				http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
 					const body = (await request.json()) as CaseStudyRequest;
 					return HttpResponse.json({
@@ -490,21 +490,21 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock endpoints
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/case-studies/1/`, () => {
-					return HttpResponse.json(caseStudy);
-				}),
-				http.get(`${API_BASE_URL}/api/public/assurance-case/1/`, () => {
-					return HttpResponse.json({
+				http.get(`${API_BASE_URL}/api/public/case-studies/1/`, () =>
+					HttpResponse.json(caseStudy)
+				),
+				http.get(`${API_BASE_URL}/api/public/assurance-case/1/`, () =>
+					HttpResponse.json({
 						...linkedCase1,
 						case_studies: [caseStudy.id],
-					});
-				}),
-				http.get(`${API_BASE_URL}/api/public/assurance-case/2/`, () => {
-					return HttpResponse.json({
+					})
+				),
+				http.get(`${API_BASE_URL}/api/public/assurance-case/2/`, () =>
+					HttpResponse.json({
 						...linkedCase2,
 						case_studies: [caseStudy.id],
-					});
-				})
+					})
+				)
 			);
 
 			const { CaseStudyViewMock } = await import(
@@ -785,15 +785,15 @@ describe("Published Case Flow Integration Tests", () => {
 			});
 
 			server.use(
-				http.get(`${API_BASE_URL}/api/cases/1/`, () => {
-					return HttpResponse.json(unpublishedCase);
-				}),
-				http.put(`${API_BASE_URL}/api/cases/1/`, () => {
-					return HttpResponse.json(
+				http.get(`${API_BASE_URL}/api/cases/1/`, () =>
+					HttpResponse.json(unpublishedCase)
+				),
+				http.put(`${API_BASE_URL}/api/cases/1/`, () =>
+					HttpResponse.json(
 						{ error: "Failed to publish case" },
 						{ status: 500 }
-					);
-				})
+					)
+				)
 			);
 
 			const { CaseEditorMock } = await import("./mocks/case-editor-mock");
@@ -829,12 +829,12 @@ describe("Published Case Flow Integration Tests", () => {
 
 		it("should handle search errors gracefully", async () => {
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-					return HttpResponse.json(
+				http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+					HttpResponse.json(
 						{ error: "Search service unavailable" },
 						{ status: 503 }
-					);
-				})
+					)
+				)
 			);
 
 			const { DiscoverPageMock } = await import("./mocks/discover-page-mock");
@@ -855,15 +855,15 @@ describe("Published Case Flow Integration Tests", () => {
 
 			// Mock successful response for retry
 			server.use(
-				http.get(`${API_BASE_URL}/api/public/published-cases/`, () => {
-					return HttpResponse.json([
+				http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
+					HttpResponse.json([
 						createMockAssuranceCase({
 							id: 1,
 							name: "Recovered Case",
 							published: true,
 						}),
-					]);
-				})
+					])
+				)
 			);
 
 			// Click retry

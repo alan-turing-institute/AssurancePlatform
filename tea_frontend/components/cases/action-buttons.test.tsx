@@ -354,9 +354,8 @@ const TestProviders = ({ children }: { children: React.ReactNode }) => {
 	);
 };
 
-const _renderWithWorkingProviders = (ui: React.ReactElement) => {
-	return render(<TestProviders>{ui}</TestProviders>);
-};
+const _renderWithWorkingProviders = (ui: React.ReactElement) =>
+	render(<TestProviders>{ui}</TestProviders>);
 
 describe("ActionButtons", () => {
 	const mockNotify = vi.fn();
@@ -640,9 +639,10 @@ describe("ActionButtons", () => {
 
 			// Mock successful deletion
 			server.use(
-				http.delete("http://localhost:8000/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.delete(
+					"http://localhost:8000/api/cases/1/",
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -674,9 +674,10 @@ describe("ActionButtons", () => {
 
 			// Mock failed deletion
 			server.use(
-				http.delete("http://localhost:8000/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.delete(
+					"http://localhost:8000/api/cases/1/",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -724,12 +725,12 @@ describe("ActionButtons", () => {
 
 			// Mock successful screenshot API
 			server.use(
-				http.post("/api/screenshot", () => {
-					return HttpResponse.json({
+				http.post("/api/screenshot", () =>
+					HttpResponse.json({
 						error: false,
 						message: "Screenshot saved successfully",
-					});
-				})
+					})
+				)
 			);
 
 			// Create mock ReactFlow element
@@ -755,12 +756,12 @@ describe("ActionButtons", () => {
 
 			// Mock failed screenshot API
 			server.use(
-				http.post("/api/screenshot", () => {
-					return HttpResponse.json({
+				http.post("/api/screenshot", () =>
+					HttpResponse.json({
 						error: true,
 						message: "Failed to save screenshot",
-					});
-				})
+					})
+				)
 			);
 
 			// Create mock ReactFlow element
@@ -965,9 +966,10 @@ describe("ActionButtons", () => {
 
 			// Mock failed reset
 			server.use(
-				http.post("http://localhost:8000/api/cases/1/update-ids", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.post(
+					"http://localhost:8000/api/cases/1/update-ids",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			render(<ActionButtons {...defaultProps} />);
@@ -1162,12 +1164,12 @@ describe("ActionButtons", () => {
 
 			// Mock successful screenshot
 			server.use(
-				http.post("/api/screenshot", () => {
-					return HttpResponse.json({
+				http.post("/api/screenshot", () =>
+					HttpResponse.json({
 						error: false,
 						message: "Success",
-					});
-				})
+					})
+				)
 			);
 
 			// Create mock ReactFlow element

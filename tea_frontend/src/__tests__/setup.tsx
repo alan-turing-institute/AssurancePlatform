@@ -175,13 +175,12 @@ vi.mock("reactflow", () => {
 				children: providerChildren,
 			}: {
 				children: React.ReactNode;
-			}) => {
-				return ReactLib.createElement(
+			}) =>
+				ReactLib.createElement(
 					"div",
 					{ "data-testid": "react-flow-provider" },
 					providerChildren
 				);
-			};
 			return ReactLib.createElement(
 				MockReactFlowProvider,
 				{},
@@ -192,28 +191,24 @@ vi.mock("reactflow", () => {
 				)
 			);
 		},
-		ReactFlowProvider: ({ children }: { children: React.ReactNode }) => {
-			return ReactLib.createElement(
+		ReactFlowProvider: ({ children }: { children: React.ReactNode }) =>
+			ReactLib.createElement(
 				"div",
 				{ "data-testid": "react-flow-provider" },
 				children
-			);
-		},
-		MiniMap: () => {
-			return ReactLib.createElement("div", {
+			),
+		MiniMap: () =>
+			ReactLib.createElement("div", {
 				"data-testid": "react-flow-minimap",
-			});
-		},
-		Controls: () => {
-			return ReactLib.createElement("div", {
+			}),
+		Controls: () =>
+			ReactLib.createElement("div", {
 				"data-testid": "react-flow-controls",
-			});
-		},
-		Background: () => {
-			return ReactLib.createElement("div", {
+			}),
+		Background: () =>
+			ReactLib.createElement("div", {
 				"data-testid": "react-flow-background",
-			});
-		},
+			}),
 		useReactFlow: () => ({
 			fitView: vi.fn(),
 			getNode: vi.fn(),
@@ -244,12 +239,11 @@ vi.mock("reactflow", () => {
 			type: string;
 			position: string;
 			id?: string;
-		}) => {
-			return ReactLib.createElement("div", {
+		}) =>
+			ReactLib.createElement("div", {
 				"data-testid": `handle-${type}-${position}`,
 				"data-id": id,
-			});
-		},
+			}),
 		Position: {
 			Top: "top",
 			Right: "right",

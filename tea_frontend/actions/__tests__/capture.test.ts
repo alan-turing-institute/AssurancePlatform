@@ -4,21 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { capture, existingImage, test } from "../capture";
 
 // Mock types for Azure Blob Storage
-interface MockBlockBlobClient {
+type MockBlockBlobClient = {
 	uploadData: ReturnType<typeof vi.fn>;
-}
+};
 
-interface MockContainerClient {
+type MockContainerClient = {
 	getBlockBlobClient: ReturnType<typeof vi.fn>;
-}
+};
 
-interface MockBlobServiceClient {
+type MockBlobServiceClient = {
 	getContainerClient: ReturnType<typeof vi.fn>;
-}
+};
 
-interface MockStats {
+type MockStats = {
 	isFile: ReturnType<typeof vi.fn>;
-}
+};
 
 interface ErrorWithCode extends Error {
 	code: string;

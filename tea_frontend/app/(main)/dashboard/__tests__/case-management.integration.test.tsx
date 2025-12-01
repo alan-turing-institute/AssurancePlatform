@@ -11,48 +11,48 @@ import {
 import Dashboard from "../page";
 
 // Types
-interface MockGoal {
+type MockGoal = {
 	id: number;
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	assurance_case: number;
-}
+};
 
-interface MockStrategy {
+type MockStrategy = {
 	id: number;
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	goal: number;
 	assurance_case: number;
-}
+};
 
-interface MockEvidence {
+type MockEvidence = {
 	id: number;
 	name: string;
 	short_description?: string;
 	long_description?: string;
 	URL?: string;
 	assurance_case: number;
-}
+};
 
-interface MockContext {
+type MockContext = {
 	id: number;
 	name: string;
 	short_description?: string;
 	long_description?: string;
-}
+};
 
-interface MockCaseData {
+type MockCaseData = {
 	goals?: MockGoal[];
 	strategies?: MockStrategy[];
 	evidence?: MockEvidence[];
 	goal: number;
 	assurance_case: number;
-}
+};
 
-interface MockPropertyClaim {
+type MockPropertyClaim = {
 	id: number;
 	name: string;
 	short_description?: string;
@@ -63,9 +63,9 @@ interface MockPropertyClaim {
 	goal?: number;
 	strategy?: number;
 	assurance_case: number;
-}
+};
 
-interface MockAssuranceCase {
+type MockAssuranceCase = {
 	id: number;
 	name: string;
 	description: string;
@@ -77,12 +77,12 @@ interface MockAssuranceCase {
 	evidence?: MockEvidence[];
 	contexts?: MockContext[];
 	property_claims?: MockPropertyClaim[];
-}
+};
 
-interface CaseListProps {
+type CaseListProps = {
 	assuranceCases: MockAssuranceCase[];
 	showCreate?: boolean;
-}
+};
 
 // Mock the server-side modules
 vi.mock("next/navigation", async () => {
@@ -467,8 +467,8 @@ describe("Case Management Integration Tests", () => {
 
 		// Add a specific handler for case management tests to override any conflicts
 		server.use(
-			http.get("http://localhost:8000/api/cases/:id/", ({ params }) => {
-				return HttpResponse.json({
+			http.get("http://localhost:8000/api/cases/:id/", ({ params }) =>
+				HttpResponse.json({
 					id: Number.parseInt(params.id as string, 10),
 					name: "Test Assurance Case",
 					description: "A test case for testing",
@@ -482,8 +482,8 @@ describe("Case Management Integration Tests", () => {
 					evidence: [],
 					contexts: [],
 					strategies: [],
-				});
-			}),
+				})
+			),
 			// Add handlers for POST operations
 			http.post("http://localhost:8000/api/goals/", async ({ request }) => {
 				const body = (await request.json()) as {

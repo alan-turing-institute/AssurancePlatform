@@ -159,9 +159,7 @@ export const mockTeam = {
 export const createMockTeamMemberArray = (
 	factory: (index: number) => TeamMember,
 	count: number
-): TeamMember[] => {
-	return Array.from({ length: count }, (_, index) => factory(index));
-};
+): TeamMember[] => Array.from({ length: count }, (_, index) => factory(index));
 
 // Edge case data for testing
 export const memberWithLongName: TeamMember = createMockTeamMember({

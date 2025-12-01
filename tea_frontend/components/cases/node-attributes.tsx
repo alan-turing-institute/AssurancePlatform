@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MinusIcon, PlusIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useState } from "react";
@@ -40,17 +40,17 @@ type NodeWithData = Node & {
 };
 
 // Define the structure of actions prop
-interface NodeActions {
+type NodeActions = {
 	setSelectedLink: (value: boolean) => void;
 	setAction: (value: string) => void;
-}
+};
 
-interface NodeAttributesProps {
+type NodeAttributesProps = {
 	node: NodeWithData;
 	actions: NodeActions;
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const NodeAttributes: React.FC<NodeAttributesProps> = ({
 	node,
@@ -178,7 +178,22 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 							name="assumption"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Assumption</FormLabel>
+									<div className="flex items-center justify-between">
+										<FormLabel>Assumption</FormLabel>
+										{!readOnly && (
+											<button
+												className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
+												onClick={() => {
+													form.setValue("assumption", "");
+													setNewAssumption(false);
+												}}
+												title="Remove assumption"
+												type="button"
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
+										)}
+									</div>
 									<FormControl>
 										<Textarea
 											placeholder="Type your assumption here."
@@ -199,7 +214,22 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 								name="justification"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Justification</FormLabel>
+										<div className="flex items-center justify-between">
+											<FormLabel>Justification</FormLabel>
+											{!readOnly && (
+												<button
+													className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
+													onClick={() => {
+														form.setValue("justification", "");
+														setNewJustification(false);
+													}}
+													title="Remove justification"
+													type="button"
+												>
+													<Trash2 className="h-4 w-4" />
+												</button>
+											)}
+										</div>
 										<FormControl>
 											<Textarea
 												placeholder="Type your justification here."

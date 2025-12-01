@@ -42,9 +42,7 @@ export function waitForWithRetry<T>(
 	return waitFor(callback, {
 		timeout,
 		interval,
-		onTimeout: (error) => {
-			return error;
-		},
+		onTimeout: (error) => error,
 	});
 }
 

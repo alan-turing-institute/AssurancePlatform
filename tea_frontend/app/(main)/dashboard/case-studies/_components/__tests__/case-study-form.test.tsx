@@ -28,10 +28,10 @@ const UPDATE_ANYWAY_REGEX = /update anyway/i;
 const REMOVE_REGEX = /remove/i;
 
 // Type definitions for mocks
-interface MockIconProps {
+type MockIconProps = {
 	className?: string;
 	[key: string]: unknown;
-}
+};
 
 // Mock Next.js navigation
 const mockPush = vi.fn();
@@ -599,12 +599,12 @@ describe("CaseStudyForm Component", () => {
 		it("should upload image successfully", async () => {
 			// Mock successful image upload
 			server.use(
-				http.post(`${API_BASE_URL}/api/case-studies/1/image/`, () => {
-					return HttpResponse.json({
+				http.post(`${API_BASE_URL}/api/case-studies/1/image/`, () =>
+					HttpResponse.json({
 						message: "Image uploaded successfully",
 						image: "/media/case-studies/1/image.jpg",
-					});
-				})
+					})
+				)
 			);
 
 			renderWithAuth(<CaseStudyForm caseStudy={mockCaseStudy} />);
@@ -630,14 +630,15 @@ describe("CaseStudyForm Component", () => {
 
 			// Mock successful image fetch - return object with image property
 			server.use(
-				http.get(`${API_BASE_URL}/api/case-studies/1/image/`, () => {
-					return HttpResponse.json({
+				http.get(`${API_BASE_URL}/api/case-studies/1/image/`, () =>
+					HttpResponse.json({
 						image: "/media/case-studies/1/existing.jpg",
-					});
-				}),
-				http.delete(`${API_BASE_URL}/api/case-studies/1/image/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+					})
+				),
+				http.delete(
+					`${API_BASE_URL}/api/case-studies/1/image/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			renderWithAuth(<CaseStudyForm caseStudy={caseStudyWithImage} />);

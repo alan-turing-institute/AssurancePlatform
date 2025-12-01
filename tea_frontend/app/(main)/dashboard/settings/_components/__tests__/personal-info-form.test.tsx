@@ -237,26 +237,26 @@ describe("PersonalInfoForm", () => {
 		// Set up MSW handlers for each test
 		server.use(
 			// Handle the specific test environment URL
-			http.put("https://api.example.com/api/users/:id/", () => {
-				return HttpResponse.json(
+			http.put("https://api.example.com/api/users/:id/", () =>
+				HttpResponse.json(
 					{ message: "User updated successfully" },
 					{ status: 200 }
-				);
-			}),
+				)
+			),
 			// Handle the staging URL
-			http.put("https://staging.example.com/api/users/:id/", () => {
-				return HttpResponse.json(
+			http.put("https://staging.example.com/api/users/:id/", () =>
+				HttpResponse.json(
 					{ message: "User updated successfully" },
 					{ status: 200 }
-				);
-			}),
+				)
+			),
 			// Catch-all pattern for any other user update requests
-			http.put(USER_UPDATE_REGEX, () => {
-				return HttpResponse.json(
+			http.put(USER_UPDATE_REGEX, () =>
+				HttpResponse.json(
 					{ message: "User updated successfully" },
 					{ status: 200 }
-				);
-			})
+				)
+			)
 		);
 	});
 
@@ -556,12 +556,9 @@ describe("PersonalInfoForm", () => {
 		it("should show error toast when API request fails", async () => {
 			// Override MSW handler to return error response
 			server.use(
-				http.put("https://api.example.com/api/users/:id/", () => {
-					return HttpResponse.json(
-						{ error: "Internal server error" },
-						{ status: 500 }
-					);
-				})
+				http.put("https://api.example.com/api/users/:id/", () =>
+					HttpResponse.json({ error: "Internal server error" }, { status: 500 })
+				)
 			);
 
 			const { container } = render(
@@ -601,9 +598,9 @@ describe("PersonalInfoForm", () => {
 		it("should handle different HTTP error statuses", async () => {
 			// Override MSW handler to return 400 error
 			server.use(
-				http.put("https://api.example.com/api/users/:id/", () => {
-					return HttpResponse.json({ error: "Bad request" }, { status: 400 });
-				})
+				http.put("https://api.example.com/api/users/:id/", () =>
+					HttpResponse.json({ error: "Bad request" }, { status: 400 })
+				)
 			);
 
 			const { container } = render(
@@ -678,11 +675,12 @@ describe("PersonalInfoForm", () => {
 		it("should disable button during loading", async () => {
 			let resolvePromise: ((value: unknown) => void) | undefined;
 
-			mockFetch.mockImplementation(() => {
-				return new Promise((resolve) => {
-					resolvePromise = resolve;
-				});
-			});
+			mockFetch.mockImplementation(
+				() =>
+					new Promise((resolve) => {
+						resolvePromise = resolve;
+					})
+			);
 
 			// Set the form values
 			mockFormValues = {

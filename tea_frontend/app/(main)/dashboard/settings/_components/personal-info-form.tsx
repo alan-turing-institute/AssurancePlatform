@@ -20,9 +20,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import type { User } from "@/types/domain";
 
 const _ACCEPTED_FILE_TYPES = ["jpg"];
+
+// Minimal user data needed for this form
+type UserData = {
+	id: number | string;
+	email?: string;
+};
 
 const FormSchema = z.object({
 	// firstname: z.string().min(2, {
@@ -54,7 +59,7 @@ const FormSchema = z.object({
 });
 
 type PersonalInfoFormProps = {
-	data: User;
+	data: UserData | null | undefined;
 };
 
 export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
@@ -81,10 +86,13 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 
 	const form = useForm<z.infer<typeof FormSchema>>({
 		resolver: zodResolver(FormSchema),
-		defaultValues: data,
+		defaultValues: data ?? undefined,
 	});
 
 	async function onSubmit(values: z.infer<typeof FormSchema>) {
+		if (!data) {
+			return;
+		}
 		setLoading(true);
 		const userId = data.id;
 
@@ -227,23 +235,23 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 												placeholder="example@gmail.com"
 												type="email"
 												{...field}
-												readOnly={data.email !== ""}
+												readOnly={!!data?.email}
 											/>
 										</FormControl>
-										{data.email === "" ? (
-											false
-										) : (
+										{data?.email ? (
 											<FormDescription className="flex items-center justify-start text-xs">
 												<Lock className="mr-2 h-3 w-3" />
 												Read only
 											</FormDescription>
+										) : (
+											false
 										)}
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
 						</div>
-						{!data.email && (
+						{!data?.email && (
 							<Button
 								className="bg-indigo-600 text-white hover:bg-indigo-700"
 								disabled={loading}

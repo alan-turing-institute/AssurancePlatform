@@ -24,9 +24,9 @@ afterAll(() => {
 });
 
 // First override WebSocket from global setup - must be done before any imports that might use it
-interface GlobalWithWebSocket {
+type GlobalWithWebSocket = {
 	WebSocket: typeof WebSocket;
-}
+};
 
 const _originalWebSocket = (global as unknown as GlobalWithWebSocket).WebSocket;
 const mockWebSocket = vi.fn() as unknown as {
@@ -84,11 +84,7 @@ describe("WebSocket Integration Tests", () => {
 	const renderWithAuth = (
 		component: React.ReactElement,
 		session = mockSession
-	) => {
-		return render(
-			<SessionProvider session={session}>{component}</SessionProvider>
-		);
-	};
+	) => render(<SessionProvider session={session}>{component}</SessionProvider>);
 
 	beforeEach(() => {
 		vi.clearAllMocks();

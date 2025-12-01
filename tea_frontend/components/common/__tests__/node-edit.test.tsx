@@ -256,33 +256,23 @@ describe("NodeEdit", () => {
 		server.use(
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/goals/:id/comments/`,
-				() => {
-					return HttpResponse.json([]);
-				}
+				() => HttpResponse.json([])
 			),
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/:id/comments/`,
-				() => {
-					return HttpResponse.json([]);
-				}
+				() => HttpResponse.json([])
 			),
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/propertyclaims/:id/comments/`,
-				() => {
-					return HttpResponse.json([]);
-				}
+				() => HttpResponse.json([])
 			),
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/evidence/:id/comments/`,
-				() => {
-					return HttpResponse.json([]);
-				}
+				() => HttpResponse.json([])
 			),
 			http.get(
 				`${process.env.NEXT_PUBLIC_API_URL}/api/contexts/:id/comments/`,
-				() => {
-					return HttpResponse.json([]);
-				}
+				() => HttpResponse.json([])
 			)
 		);
 	});
@@ -1929,9 +1919,9 @@ describe("NodeEdit", () => {
 			const node = createMockNode();
 
 			// Make delete operation slow
-			mockDeleteAssuranceCaseNode.mockImplementation(() => {
-				return new Promise((resolve) => setTimeout(() => resolve(true), 100));
-			});
+			mockDeleteAssuranceCaseNode.mockImplementation(
+				() => new Promise((resolve) => setTimeout(() => resolve(true), 100))
+			);
 
 			renderWithAuth(
 				<NodeEdit isOpen={true} node={node} setEditOpen={mockSetEditOpen} />
@@ -1969,9 +1959,9 @@ describe("NodeEdit", () => {
 			});
 
 			// Make move operation slow
-			mockUpdateAssuranceCaseNode.mockImplementation(() => {
-				return new Promise((resolve) => setTimeout(() => resolve(true), 100));
-			});
+			mockUpdateAssuranceCaseNode.mockImplementation(
+				() => new Promise((resolve) => setTimeout(() => resolve(true), 100))
+			);
 
 			renderWithAuth(
 				<NodeEdit

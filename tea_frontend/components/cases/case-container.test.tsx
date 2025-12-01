@@ -137,12 +137,8 @@ describe("CaseContainer", () => {
 			const testCase = createMockAssuranceCase({ id: 1, name: "Test Case" });
 
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(testCase);
-				}),
-				http.get("*/api/cases/1/sandbox", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("*/api/cases/1/", () => HttpResponse.json(testCase)),
+				http.get("*/api/cases/1/sandbox", () => HttpResponse.json([]))
 			);
 
 			await act(() => {
@@ -160,12 +156,8 @@ describe("CaseContainer", () => {
 			const testCase = createMockAssuranceCase({ id: 1, name: "Params Case" });
 
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(testCase);
-				}),
-				http.get("*/api/cases/1/sandbox", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("*/api/cases/1/", () => HttpResponse.json(testCase)),
+				http.get("*/api/cases/1/sandbox", () => HttpResponse.json([]))
 			);
 
 			await act(() => {
@@ -186,12 +178,10 @@ describe("CaseContainer", () => {
 			];
 
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(testCase);
-				}),
-				http.get("*/api/cases/1/sandbox", () => {
-					return HttpResponse.json(orphanedElements);
-				})
+				http.get("*/api/cases/1/", () => HttpResponse.json(testCase)),
+				http.get("*/api/cases/1/sandbox", () =>
+					HttpResponse.json(orphanedElements)
+				)
 			);
 
 			await act(() => {
@@ -209,9 +199,10 @@ describe("CaseContainer", () => {
 	describe("Error Handling", () => {
 		it("should handle 404 errors gracefully", async () => {
 			server.use(
-				http.get("*/api/cases/999/", () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					"*/api/cases/999/",
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="999" />);
@@ -223,9 +214,10 @@ describe("CaseContainer", () => {
 
 		it("should handle 403 forbidden errors", async () => {
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					"*/api/cases/1/",
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
@@ -239,9 +231,10 @@ describe("CaseContainer", () => {
 			mockUnauthorized.mockClear();
 
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					"*/api/cases/1/",
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
@@ -259,11 +252,7 @@ describe("CaseContainer", () => {
 					// Intentionally empty - suppressing console errors for this test
 				});
 
-			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.error();
-				})
-			);
+			server.use(http.get("*/api/cases/1/", () => HttpResponse.error()));
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
 
@@ -283,12 +272,8 @@ describe("CaseContainer", () => {
 			mockStore.assuranceCase = testCase;
 
 			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(testCase);
-				}),
-				http.get("*/api/cases/1/sandbox", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("*/api/cases/1/", () => HttpResponse.json(testCase)),
+				http.get("*/api/cases/1/sandbox", () => HttpResponse.json([]))
 			);
 		});
 
@@ -339,11 +324,7 @@ describe("CaseContainer", () => {
 		it('should display "No Case Found" when case is null', async () => {
 			mockStore.assuranceCase = null;
 
-			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(null);
-				})
-			);
+			server.use(http.get("*/api/cases/1/", () => HttpResponse.json(null)));
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
 
@@ -355,11 +336,7 @@ describe("CaseContainer", () => {
 		it("should not render ReactFlow components when no case found", async () => {
 			mockStore.assuranceCase = null;
 
-			server.use(
-				http.get("*/api/cases/1/", () => {
-					return HttpResponse.json(null);
-				})
-			);
+			server.use(http.get("*/api/cases/1/", () => HttpResponse.json(null)));
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);
 
@@ -409,9 +386,7 @@ describe("CaseContainer", () => {
 					capturedHeaders = Object.fromEntries(request.headers.entries());
 					return HttpResponse.json(testCase);
 				}),
-				http.get("*/api/cases/1/sandbox", () => {
-					return HttpResponse.json([]);
-				})
+				http.get("*/api/cases/1/sandbox", () => HttpResponse.json([]))
 			);
 
 			renderWithReactFlowAndAuth(<CaseContainer caseId="1" />);

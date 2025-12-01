@@ -6,14 +6,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
 import { useImportModal } from "@/hooks/use-import-modal";
-import type { AssuranceCase } from "@/types";
 import { Input } from "../ui/input";
-import CaseCard from "./case-card";
+import CaseCard, { type CaseCardData } from "./case-card";
 
-interface CaseListProps {
-	assuranceCases: AssuranceCase[];
+type CaseListProps = {
+	assuranceCases: CaseCardData[];
 	showCreate?: boolean;
-}
+};
 
 const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 	const createCaseModal = useCreateCaseModal();
@@ -25,7 +24,8 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 	// Set cases with the last created on first
 	filteredCases.sort(
 		(a, b) =>
-			new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+			new Date(b.created_date ?? 0).getTime() -
+			new Date(a.created_date ?? 0).getTime()
 	);
 
 	useEffect(() => {

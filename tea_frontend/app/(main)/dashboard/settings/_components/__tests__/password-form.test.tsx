@@ -494,14 +494,11 @@ describe("PasswordForm", () => {
 		it("should display server error from 400 response", async () => {
 			// Override MSW handler to return error response
 			server.use(
-				http.put(
-					"https://api.example.com/api/users/:id/change-password",
-					() => {
-						return HttpResponse.json(
-							{ error: "Current password is incorrect" },
-							{ status: 400 }
-						);
-					}
+				http.put("https://api.example.com/api/users/:id/change-password", () =>
+					HttpResponse.json(
+						{ error: "Current password is incorrect" },
+						{ status: 400 }
+					)
 				)
 			);
 
@@ -524,11 +521,8 @@ describe("PasswordForm", () => {
 		it("should handle 400 response without error field", async () => {
 			// Override MSW handler to return 400 without error field
 			server.use(
-				http.put(
-					"https://api.example.com/api/users/:id/change-password",
-					() => {
-						return HttpResponse.json({}, { status: 400 });
-					}
+				http.put("https://api.example.com/api/users/:id/change-password", () =>
+					HttpResponse.json({}, { status: 400 })
 				)
 			);
 
@@ -550,11 +544,8 @@ describe("PasswordForm", () => {
 		it("should handle network errors gracefully", async () => {
 			// Override MSW handler to simulate network error
 			server.use(
-				http.put(
-					"https://api.example.com/api/users/:id/change-password",
-					() => {
-						return HttpResponse.error();
-					}
+				http.put("https://api.example.com/api/users/:id/change-password", () =>
+					HttpResponse.error()
 				)
 			);
 
@@ -576,14 +567,11 @@ describe("PasswordForm", () => {
 		it("should clear error state when form is resubmitted", async () => {
 			// First submission with error
 			server.use(
-				http.put(
-					"https://api.example.com/api/users/:id/change-password",
-					() => {
-						return HttpResponse.json(
-							{ error: "Current password is incorrect" },
-							{ status: 400 }
-						);
-					}
+				http.put("https://api.example.com/api/users/:id/change-password", () =>
+					HttpResponse.json(
+						{ error: "Current password is incorrect" },
+						{ status: 400 }
+					)
 				)
 			);
 
@@ -608,14 +596,11 @@ describe("PasswordForm", () => {
 
 			// Second submission successful - override MSW handler
 			server.use(
-				http.put(
-					"https://api.example.com/api/users/:id/change-password",
-					() => {
-						return HttpResponse.json(
-							{ message: "Password updated successfully" },
-							{ status: 200 }
-						);
-					}
+				http.put("https://api.example.com/api/users/:id/change-password", () =>
+					HttpResponse.json(
+						{ message: "Password updated successfully" },
+						{ status: 200 }
+					)
 				)
 			);
 

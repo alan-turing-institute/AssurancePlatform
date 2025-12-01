@@ -320,12 +320,9 @@ describe("UnpublishCaseButton Component", () => {
 		it("should handle server errors (500) gracefully", async () => {
 			// Mock server error
 			server.use(
-				http.put(`${API_BASE_URL}/api/case-studies/1/`, () => {
-					return HttpResponse.json(
-						{ error: "Internal server error" },
-						{ status: 500 }
-					);
-				})
+				http.put(`${API_BASE_URL}/api/case-studies/1/`, () =>
+					HttpResponse.json({ error: "Internal server error" }, { status: 500 })
+				)
 			);
 
 			// updateCaseStudy action should handle this and return false

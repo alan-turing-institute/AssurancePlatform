@@ -1,37 +1,44 @@
 /**
  * Domain types for the TEA Platform
- * These interfaces represent the core business entities
+ * These types represent the core business entities
+ *
+ * TODO: Phase 2 - Consolidate short_description/long_description to single description field
+ * See: TASKS/Phase2-DescriptionFieldConsolidation.md
  */
 
 // Supporting types for AssuranceCase
-export interface Group {
+export type Group = {
 	id: number;
 	name: string;
-}
+};
 
-export interface Comment {
+export type Comment = {
 	id: number;
 	author: string;
 	content: string;
 	created_at: string;
-}
+};
 
-export interface Goal {
+export type Goal = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	keywords: string;
 	assurance_case_id: number;
 	context: Context[];
 	property_claims: PropertyClaim[];
 	strategies: Strategy[];
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Context {
+export type Context = {
 	id: number;
 	type: string;
 	name: string;
@@ -39,28 +46,37 @@ export interface Context {
 	long_description: string;
 	created_date: string;
 	goal_id: number;
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Strategy {
+export type Strategy = {
 	id: number;
-	type?: string; // Strategy type identifier
+	type?: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	goal_id: number;
 	property_claims: PropertyClaim[];
+	comments?: Comment[];
+	assumption?: string;
+	justification?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface PropertyClaim {
+export type PropertyClaim = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	goal_id: number | null;
 	property_claim_id: number | null;
 	level: number;
@@ -68,24 +84,30 @@ export interface PropertyClaim {
 	property_claims: PropertyClaim[];
 	evidence: Evidence[];
 	strategy_id: number | null;
-	strategies?: Strategy[]; // PropertyClaim can have strategies in certain contexts
+	strategies?: Strategy[];
+	comments?: Comment[];
+	assumption?: string;
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface Evidence {
+export type Evidence = {
 	id: number;
 	type: string;
 	name: string;
 	short_description: string;
 	long_description: string;
+	created_date?: string;
 	URL: string;
 	property_claim_id: number[];
+	comments?: Comment[];
+	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
-}
+};
 
-export interface CaseStudy {
+export type CaseStudy = {
 	id: number;
 	title: string;
 	description: string;
@@ -98,45 +120,44 @@ export interface CaseStudy {
 	authors: string;
 	image?: string;
 	featuredImage?: string;
-	feature_image_url?: string; // URL from backend API
-	assurance_cases?: number[]; // Array of AssuranceCase IDs
-	assuranceCases?: AssuranceCase[]; // Full AssuranceCase objects
-}
+	feature_image_url?: string;
+	assurance_cases?: number[];
+	assuranceCases?: AssuranceCase[];
+};
 
 // Supporting type for images
-export interface CaseImage {
+export type CaseImage = {
 	id: number;
 	url: string;
 	caption?: string;
-}
+};
 
 // Supporting type for members
-export interface Member {
+export type Member = {
 	id: number;
 	username: string;
 	email?: string;
-}
+};
 
-export interface AssuranceCase {
+export type AssuranceCase = {
 	id: number;
 	name: string;
-	title?: string; // Some components use title instead of name
+	title?: string;
 	description?: string;
 	published?: boolean;
 	createdOn?: string;
 	updatedOn?: string;
-	type: string; // Required - typically 'AssuranceCase'
-	lock_uuid: string | null; // Required - null when not locked
-	comments: Comment[]; // Required - empty array if no comments
-	permissions: string | string[]; // Required - can be string ('manage', 'edit', 'view') or array
-	created_date: string; // Required - ISO date string from backend
+	type: string;
+	lock_uuid: string | null;
+	comments: Comment[];
+	permissions: string | string[];
+	created_date: string;
 	goals?: Goal[];
 	owner?: number;
 	edit_groups?: Group[];
 	view_groups?: Group[];
 	color_profile?: string;
 	published_date?: string | null;
-	// Additional properties from backend
 	review_groups?: Group[];
 	property_claims?: PropertyClaim[];
 	evidence?: Evidence[];
@@ -146,9 +167,9 @@ export interface AssuranceCase {
 	viewMembers?: Member[];
 	editMembers?: Member[];
 	reviewMembers?: Member[];
-}
+};
 
-export interface User {
+export type User = {
 	id: number;
 	username: string;
 	email: string;
@@ -156,22 +177,22 @@ export interface User {
 	lastName?: string;
 	createdAt: string;
 	updatedAt?: string;
-}
+};
 
-export interface FormFile {
+export type FormFile = {
 	file: File;
 	preview: string;
-}
+};
 
-export interface ApiResponse<T = unknown> {
+export type ApiResponse<T = unknown> = {
 	success: boolean;
 	data?: T;
 	error?: string;
 	message?: string;
-}
+};
 
 // Form-related types
-export interface CaseStudyFormData {
+export type CaseStudyFormData = {
 	title: string;
 	description: string;
 	sector: string;
@@ -180,45 +201,45 @@ export interface CaseStudyFormData {
 	publishedDate?: string;
 	image?: File;
 	selectedAssuranceCases: number[];
-}
+};
 
-export interface FileUploadEvent extends Event {
+export type FileUploadEvent = Event & {
 	target: HTMLInputElement & {
 		files: FileList;
 	};
-}
+};
 
 // Component prop types
-export interface TableActionsProps {
+export type TableActionsProps = {
 	caseStudy: CaseStudy;
-}
+};
 
-export interface RelatedAssuranceCaseListProps {
+export type RelatedAssuranceCaseListProps = {
 	published: boolean;
 	selectedAssuranceCases: number[];
 	setSelectedAssuranceCases: React.Dispatch<React.SetStateAction<number[]>>;
-}
+};
 
-export interface CaseStudyFormProps {
+export type CaseStudyFormProps = {
 	caseStudy?: CaseStudy;
-}
+};
 
-export interface PublishedBannerProps {
+export type PublishedBannerProps = {
 	caseStudy: CaseStudy;
-}
+};
 
-export interface DeleteFormProps {
+export type DeleteFormProps = {
 	user: User;
-}
+};
 
-export interface PasswordFormProps {
+export type PasswordFormProps = {
 	data: User;
-}
+};
 
-export interface PersonalInfoFormProps {
+export type PersonalInfoFormProps = {
 	data: User;
-}
+};
 
-export interface CaseStudiesProps {
+export type CaseStudiesProps = {
 	caseStudies: CaseStudy[];
-}
+};

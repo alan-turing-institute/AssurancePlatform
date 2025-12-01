@@ -8,13 +8,13 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 
-interface NotesSheetProps {
+type NotesSheetProps = {
 	isOpen: boolean;
 	onClose: () => void;
 	children?: React.ReactNode;
 	title: string;
 	description: string;
-}
+};
 
 const NotesSheet = ({
 	isOpen,

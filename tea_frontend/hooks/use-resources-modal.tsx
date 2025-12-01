@@ -1,10 +1,10 @@
 import { create } from "zustand";
 
-interface useResourcesModalStore {
+type useResourcesModalStore = {
 	isOpen: boolean;
 	onOpen: () => void;
 	onClose: () => void;
-}
+};
 
 /**
  * Zustand store hook to manage the state of a resources modal.

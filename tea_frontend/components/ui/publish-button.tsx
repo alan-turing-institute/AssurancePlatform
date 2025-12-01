@@ -11,11 +11,11 @@ interface CaseStudyWithAssuranceCases extends CaseStudy {
 	assurance_cases?: number[];
 }
 
-interface PublishButtonProps {
+type PublishButtonProps = {
 	label: string;
 	published: boolean;
 	caseStudy: CaseStudyWithAssuranceCases;
-}
+};
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 	const { data } = useSession();

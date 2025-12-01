@@ -17,7 +17,7 @@ repos:
       - id: check-symlinks
       - id: check-added-large-files
         args: ['--maxkb=2000', '--enforce-all']
-        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf
+        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf|src/generated/prisma-new/
 
   # - repo: https://github.com/Yelp/detect-secrets
   #   rev: v1.4.0

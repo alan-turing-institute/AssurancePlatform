@@ -50,18 +50,18 @@ const formSchema = z.object({
 		.optional(),
 });
 
-interface NodeActions {
+type NodeActions = {
 	setSelectedLink: (value: boolean) => void;
 	setLinkToCreate: (value: string) => void;
 	handleClose: () => void;
-}
+};
 
-interface NewLinkFormProps {
+type NewLinkFormProps = {
 	node: Node;
 	linkType: string;
 	actions: NodeActions;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	node,
@@ -95,6 +95,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			short_description: description,
 			long_description: description,
 			goal_id: assuranceCase?.goals?.[0]?.id || 0,
+			assurance_case_id: assuranceCase?.id,
 			type: "Context",
 		};
 
@@ -158,6 +159,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			short_description: description,
 			long_description: description,
 			goal_id: assuranceCase.goals[0].id,
+			assurance_case_id: assuranceCase.id,
 		};
 
 		const result = await createAssuranceCaseNode(
@@ -213,6 +215,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			property_claims: [],
 			evidence: [],
 			type: "PropertyClaim",
+			assurance_case_id: assuranceCase?.id,
 		};
 
 		switch (node.type) {
@@ -248,7 +251,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 				if (strategy.id === result.data.strategy_id) {
 					return {
 						...strategy,
-						property_claims: [...strategy.property_claims, result.data],
+						property_claims: [...(strategy.property_claims || []), result.data],
 					};
 				}
 				return strategy;
@@ -314,29 +317,53 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		}
 	};
 
+	/** Helper to search for parent claim in strategies */
+	const findAndAddClaimInStrategies = (
+		strategies: Strategy[],
+		parentId: number,
+		newClaim: PropertyClaim
+	): boolean => {
+		for (const strategy of strategies) {
+			const strategyPropertyClaims = strategy.property_claims || [];
+			const found = addPropertyClaimToNested(
+				strategyPropertyClaims,
+				parentId,
+				newClaim
+			);
+			if (found) {
+				return true;
+			}
+		}
+		return false;
+	};
+
 	/** Helper function to handle property claim updates */
 	const handlePropertyClaim = (result: {
 		data?: unknown;
 		error?: unknown;
 	}): void => {
-		// Extract property claims from goals for the nested function
-		const allPropertyClaims = assuranceCase?.goals?.[0]?.property_claims || [];
-		const added = addPropertyClaimToNested(
-			allPropertyClaims,
-			(result.data as PropertyClaim)?.property_claim_id || 0,
-			(result.data as PropertyClaim) || ({} as PropertyClaim)
-		);
+		if (!assuranceCase?.goals) {
+			return;
+		}
+
+		// Deep clone the entire goals structure to ensure React detects the state change
+		const goalsClone: Goal[] = JSON.parse(JSON.stringify(assuranceCase.goals));
+		const parentId = (result.data as PropertyClaim)?.property_claim_id || 0;
+		const newClaim = (result.data as PropertyClaim) || ({} as PropertyClaim);
+
+		// First try goal's direct property claims, then strategies' property claims
+		const goalPropertyClaims = goalsClone[0]?.property_claims || [];
+		const strategies = goalsClone[0]?.strategies || [];
+
+		const added =
+			addPropertyClaimToNested(goalPropertyClaims, parentId, newClaim) ||
+			findAndAddClaimInStrategies(strategies, parentId, newClaim);
+
 		if (!added) {
 			return;
 		}
 
-		if (assuranceCase) {
-			const updatedAssuranceCase = {
-				...assuranceCase,
-				goals: [{ ...(assuranceCase.goals?.[0] || {}) } as Goal],
-			};
-			setAssuranceCase(updatedAssuranceCase as AssuranceCase);
-		}
+		setAssuranceCase({ ...assuranceCase, goals: goalsClone });
 	};
 
 	/** Function used to create a property claim, whether its parent is a goal, strategy or another propery claim */
@@ -383,6 +410,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		URL: url || "",
 		property_claim_id: [node.data.id],
 		type: "Evidence",
+		assurance_case_id: assuranceCase?.id,
 	});
 
 	/** Helper function to check property claims in strategies */

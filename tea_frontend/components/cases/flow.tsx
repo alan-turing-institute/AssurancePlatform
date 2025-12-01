@@ -152,6 +152,7 @@ function Flow() {
 										className="hover:bg-gray-400/10 dark:hover:bg-slate-900/10"
 										onClick={() => setShowOrphanMessage(false)}
 										size={"icon"}
+										title="Dismiss"
 										variant={"ghost"}
 									>
 										<X className="h-4 w-4" />

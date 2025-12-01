@@ -173,9 +173,9 @@ describe("NotesFeed", () => {
 		it("should show edit and delete buttons on hover for own comments", async () => {
 			// Mock user data fetch
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -191,12 +191,12 @@ describe("NotesFeed", () => {
 		it("should not show edit/delete buttons for other users' comments", async () => {
 			// Mock different user
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json({
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json({
 						...mockUser,
 						username: "differentuser",
-					});
-				})
+					})
+				)
 			);
 
 			render(<NotesFeed />);
@@ -210,9 +210,9 @@ describe("NotesFeed", () => {
 
 		it("should enter edit mode when edit button is clicked", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -236,9 +236,9 @@ describe("NotesFeed", () => {
 
 		it("should exit edit mode when save button is clicked", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -271,14 +271,12 @@ describe("NotesFeed", () => {
 
 		it("should handle delete button click", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 204 });
-					}
+					() => new HttpResponse(null, { status: 204 })
 				)
 			);
 
@@ -314,9 +312,9 @@ describe("NotesFeed", () => {
 			};
 
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`, () => {
-					return HttpResponse.json(mockResponse);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`, () =>
+					HttpResponse.json(mockResponse)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -328,9 +326,9 @@ describe("NotesFeed", () => {
 
 		it("should fetch current user on mount", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -344,9 +342,10 @@ describe("NotesFeed", () => {
 
 		it("should handle 404 error when fetching case", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`,
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			render(<NotesFeed />);
@@ -358,9 +357,10 @@ describe("NotesFeed", () => {
 
 		it("should handle 403 error when fetching case", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`, () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`,
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			render(<NotesFeed />);
@@ -377,9 +377,10 @@ describe("NotesFeed", () => {
 			}));
 
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${process.env.NEXT_PUBLIC_API_URL}/api/cases/1/`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			render(<NotesFeed />);
@@ -391,14 +392,12 @@ describe("NotesFeed", () => {
 
 		it("should handle successful comment deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 204 });
-					}
+					() => new HttpResponse(null, { status: 204 })
 				)
 			);
 
@@ -427,14 +426,12 @@ describe("NotesFeed", () => {
 
 		it("should handle failed comment deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
+					() => new HttpResponse(null, { status: 500 })
 				)
 			);
 
@@ -469,9 +466,9 @@ describe("NotesFeed", () => {
 			});
 
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -487,9 +484,9 @@ describe("NotesFeed", () => {
 
 		it("should only show edit/delete buttons for user's own comments", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);
@@ -658,9 +655,9 @@ describe("NotesFeed", () => {
 
 		it("should handle network errors during deletion", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				}),
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				),
 				http.delete(
 					`${process.env.NEXT_PUBLIC_API_URL}/api/comments/1/`,
 					() => {
@@ -714,9 +711,9 @@ describe("NotesFeed", () => {
 
 		it("should support keyboard navigation for buttons", async () => {
 			server.use(
-				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () => {
-					return HttpResponse.json(mockUser);
-				})
+				http.get(`${process.env.NEXT_PUBLIC_API_URL}/api/user/`, () =>
+					HttpResponse.json(mockUser)
+				)
 			);
 
 			render(<NotesFeed />);

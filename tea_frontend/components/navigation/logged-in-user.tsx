@@ -6,20 +6,26 @@ import { useEffect, useState } from "react";
 import { fetchCurrentUser } from "@/actions/users";
 import { Skeleton } from "../ui/skeleton";
 
+type UserData = {
+	username: string;
+	email: string;
+};
+
 const LoggedInUser = () => {
 	const { data } = useSession();
 
-	const [currentUser, setCurrentUser] = useState<{
-		username: string;
-		email: string;
-	} | null>(null);
+	const [currentUser, setCurrentUser] = useState<UserData | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
 
 	useEffect(() => {
 		const loadUser = async () => {
 			try {
 				const result = await fetchCurrentUser(data?.key ?? "");
-				setCurrentUser(result);
+				if (result) {
+					setCurrentUser({ username: result.username, email: result.email });
+				} else {
+					setCurrentUser(null);
+				}
 				setLoading(false);
 			} catch {
 				// Handle error silently - user will see loading state

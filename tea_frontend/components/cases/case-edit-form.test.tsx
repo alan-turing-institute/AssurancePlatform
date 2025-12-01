@@ -210,9 +210,7 @@ describe("CaseEditForm", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put("*/api/cases/1/", () => HttpResponse.json({ success: true }))
 			);
 
 			renderWithAuth(
@@ -359,9 +357,10 @@ describe("CaseEditForm", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.put(
+					"*/api/cases/1/",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			renderWithAuth(
@@ -450,9 +449,7 @@ describe("CaseEditForm", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put("*/api/cases/1/", () => HttpResponse.json({ success: true }))
 			);
 
 			renderWithAuth(
@@ -486,9 +483,7 @@ describe("CaseEditForm", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put("*/api/cases/1/", () => HttpResponse.json({ success: true }))
 			);
 
 			renderWithAuth(

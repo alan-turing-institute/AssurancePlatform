@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FolderXIcon, Trash2 } from "lucide-react";
+import { FolderXIcon, Pencil, Trash2 } from "lucide-react";
 import moment from "moment";
 import { useSession } from "next-auth/react";
 import type React from "react";
@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/form";
 import { toast } from "@/components/ui/use-toast";
 import useStore from "@/data/store";
-// import { useLoginToken } from '.*/use-auth'
 import {
 	createAssuranceCaseNode,
 	deleteAssuranceCaseNode,
 	getAssuranceCaseNode,
 	removeAssuranceCaseNode,
+	updateAssuranceCaseNode,
 } from "@/lib/case-helper";
 import type { AssuranceCase, Context, Goal } from "@/types";
 import { Button } from "../ui/button";
@@ -46,18 +46,18 @@ const formSchema = z.object({
 		.optional(),
 });
 
-interface NodeActions {
+type NodeActions = {
 	setSelectedLink: (value: boolean) => void;
 	setLinkToCreate?: (value: string) => void;
 	handleClose: () => void;
 	setAction: (value: string) => void;
-}
+};
 
-interface NodeContextProps {
+type NodeContextProps = {
 	node: Node;
 	actions: NodeActions;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-}
+};
 
 const NodeContext: React.FC<NodeContextProps> = ({
 	node,
@@ -68,6 +68,8 @@ const NodeContext: React.FC<NodeContextProps> = ({
 	const { data: session } = useSession();
 	const [contexts, setContexts] = useState<Context[]>([]);
 	const [loading, setLoading] = useState<boolean>(false);
+	const [editingContextId, setEditingContextId] = useState<number | null>(null);
+	const [editDescription, setEditDescription] = useState<string>("");
 
 	// Helper function to find the current goal in the assurance case
 	const getCurrentGoal = useCallback(() => {
@@ -100,6 +102,7 @@ const NodeContext: React.FC<NodeContextProps> = ({
 			long_description: description,
 			goal_id: node.data.id,
 			type: "Context",
+			assurance_case_id: assuranceCase?.id,
 		};
 
 		const result = await createAssuranceCaseNode(
@@ -109,7 +112,15 @@ const NodeContext: React.FC<NodeContextProps> = ({
 		);
 
 		if (result.error) {
-			// TODO: Rendering error
+			toast({
+				title: "Error creating context",
+				description:
+					typeof result.error === "string"
+						? result.error
+						: "Failed to create context. Please try again.",
+				variant: "destructive",
+			});
+			return;
 		}
 
 		// Create a new context array by adding the new context item
@@ -136,6 +147,87 @@ const NodeContext: React.FC<NodeContextProps> = ({
 		}
 		form.reset();
 		setUnresolvedChanges(false);
+	};
+
+	/** Function used to handle editing of a context node */
+	const handleContextEdit = async (id: number, newDescription: string) => {
+		if (!newDescription.trim() || newDescription.length < 2) {
+			toast({
+				title: "Invalid description",
+				description: "Description must be at least 2 characters.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		setLoading(true);
+		const result = await updateAssuranceCaseNode(
+			"Context",
+			id,
+			session?.key ?? "",
+			{
+				short_description: newDescription,
+				long_description: newDescription,
+			}
+		);
+
+		if (result === true) {
+			// Update local state immediately
+			setContexts((prevContexts) =>
+				prevContexts.map((ctx) =>
+					ctx.id === id
+						? {
+								...ctx,
+								short_description: newDescription,
+								long_description: newDescription,
+							}
+						: ctx
+				)
+			);
+
+			// Update assuranceCase state
+			if (assuranceCase) {
+				const updatedGoals = assuranceCase.goals?.map((goal) => {
+					if (goal.id === node.data.id && goal.context) {
+						return {
+							...goal,
+							context: goal.context.map((ctx) =>
+								ctx.id === id
+									? {
+											...ctx,
+											short_description: newDescription,
+											long_description: newDescription,
+										}
+									: ctx
+							),
+						} as Goal;
+					}
+					return goal;
+				});
+
+				setAssuranceCase({
+					...assuranceCase,
+					goals: updatedGoals,
+				} as AssuranceCase);
+			}
+
+			toast({
+				title: "Context updated",
+				description: "The context has been successfully updated.",
+			});
+			setEditingContextId(null);
+			setEditDescription("");
+		} else {
+			toast({
+				title: "Error",
+				description:
+					typeof result === "object" && result.error
+						? result.error
+						: "Failed to update the context. Please try again.",
+				variant: "destructive",
+			});
+		}
+		setLoading(false);
 	};
 
 	/** Function used to handle deletion of a context node linked to a goal */
@@ -241,6 +333,18 @@ const NodeContext: React.FC<NodeContextProps> = ({
 		return () => subscription.unsubscribe();
 	}, [form, setUnresolvedChanges]);
 
+	const startEditing = (context: Context) => {
+		setEditingContextId(context.id);
+		setEditDescription(
+			context.long_description || context.short_description || ""
+		);
+	};
+
+	const cancelEditing = () => {
+		setEditingContextId(null);
+		setEditDescription("");
+	};
+
 	return (
 		<div className="my-4 border-t">
 			<div className="mt-4 font-medium text-muted-foreground text-sm">
@@ -299,33 +403,78 @@ const NodeContext: React.FC<NodeContextProps> = ({
 				<div className="mb-16 flex w-full flex-col items-start justify-start gap-3">
 					{contexts.map((item: Context) => (
 						<div
-							className="group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer hover:bg-indigo-500 hover:pb-6 hover:text-white"
+							className={`group relative w-full rounded-md p-3 text-foreground transition-all duration-300 ${
+								editingContextId === item.id
+									? "bg-muted"
+									: "hover:cursor-pointer hover:bg-indigo-500 hover:pb-6 hover:text-white"
+							}`}
 							key={item.id}
 						>
-							<p className="w-full whitespace-normal">
-								{item.long_description}
-							</p>
-							<div className="mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 group-hover:text-white">
-								<div className="flex-1">
-									{moment(item.created_date).format("DD/MM/YYYY")}
-									<svg
-										aria-hidden="true"
-										className="mx-2 inline h-0.5 w-0.5 fill-current"
-										viewBox="0 0 2 2"
-									>
-										<circle cx={1} cy={1} r={1} />
-									</svg>
-									{item.name}
+							{editingContextId === item.id ? (
+								<div className="space-y-3">
+									<Textarea
+										className="w-full border border-input bg-background text-foreground"
+										onChange={(e) => setEditDescription(e.target.value)}
+										rows={4}
+										value={editDescription}
+									/>
+									<div className="flex items-center gap-2">
+										<Button
+											className="bg-green-600 text-white hover:bg-green-700"
+											disabled={loading}
+											onClick={() =>
+												handleContextEdit(item.id, editDescription)
+											}
+											size="sm"
+										>
+											Save
+										</Button>
+										<Button
+											disabled={loading}
+											onClick={cancelEditing}
+											size="sm"
+											variant="outline"
+										>
+											Cancel
+										</Button>
+									</div>
 								</div>
-								<Button
-									className="hidden items-center justify-center hover:bg-white/90 group-hover:flex [&:hover>svg]:text-red-600"
-									onClick={() => handleContextDelete(item.id)}
-									size={"sm"}
-									variant={"ghost"}
-								>
-									<Trash2 className="h-4 w-4 text-white" />
-								</Button>
-							</div>
+							) : (
+								<>
+									<p className="w-full whitespace-normal">
+										{item.long_description}
+									</p>
+									<div className="mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 group-hover:text-white">
+										<div className="flex-1">
+											{moment(item.created_date).format("DD/MM/YYYY")}
+											<svg
+												aria-hidden="true"
+												className="mx-2 inline h-0.5 w-0.5 fill-current"
+												viewBox="0 0 2 2"
+											>
+												<circle cx={1} cy={1} r={1} />
+											</svg>
+											{item.name}
+										</div>
+										<Button
+											className="hidden items-center justify-center hover:bg-white/90 group-hover:flex [&:hover>svg]:text-indigo-600"
+											onClick={() => startEditing(item)}
+											size={"sm"}
+											variant={"ghost"}
+										>
+											<Pencil className="h-4 w-4 text-white" />
+										</Button>
+										<Button
+											className="hidden items-center justify-center hover:bg-white/90 group-hover:flex [&:hover>svg]:text-red-600"
+											onClick={() => handleContextDelete(item.id)}
+											size={"sm"}
+											variant={"ghost"}
+										>
+											<Trash2 className="h-4 w-4 text-white" />
+										</Button>
+									</div>
+								</>
+							)}
 						</div>
 					))}
 					{contexts.length === 0 && (

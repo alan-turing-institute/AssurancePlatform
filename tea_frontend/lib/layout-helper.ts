@@ -3,9 +3,9 @@ import type { Edge, Node } from "reactflow";
 
 const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
-interface LayoutOptions {
+type LayoutOptions = {
 	direction: "LR" | "TB" | "RL" | "BT";
-}
+};
 
 /**
  * Generates a layout for the given nodes and edges using Dagre's graph layout algorithm.

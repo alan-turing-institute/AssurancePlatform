@@ -92,6 +92,4 @@ const saveToStorage = async (
  *
  * @returns {boolean} Always returns `true`.
  */
-export const test = (): boolean => {
-	return true;
-};
+export const test = (): boolean => true;

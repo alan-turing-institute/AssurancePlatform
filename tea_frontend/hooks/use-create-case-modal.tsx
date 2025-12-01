@@ -4,7 +4,7 @@ import { create } from "zustand";
  * Defines the shape of the state for the create case modal store.
  * @interface useCreateCaseModalStore
  */
-interface useCreateCaseModalStore {
+type useCreateCaseModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -22,7 +22,7 @@ interface useCreateCaseModalStore {
 	 * @function
 	 */
 	onClose: () => void;
-}
+};
 
 /**
  * Creates a Zustand store for managing the state of the create case modal.

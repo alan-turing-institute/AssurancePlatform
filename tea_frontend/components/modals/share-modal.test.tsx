@@ -266,9 +266,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -410,9 +410,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -438,9 +438,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -460,9 +460,10 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return new HttpResponse(null, { status: 400 });
-				})
+				http.post(
+					"*/api/cases/*/sharedwith",
+					() => new HttpResponse(null, { status: 400 })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -621,9 +622,7 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put("*/api/cases/1/", () => HttpResponse.json({ success: true }))
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -639,9 +638,10 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.put(
+					"*/api/cases/1/",
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -664,9 +664,7 @@ describe("ShareModal", () => {
 			});
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put("*/api/cases/1/", () => HttpResponse.json({ success: true }))
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -687,15 +685,15 @@ describe("ShareModal", () => {
 			});
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json(
+				http.put("*/api/cases/1/", () =>
+					HttpResponse.json(
 						{
 							error: "Cannot unpublish case with linked case studies",
 							linked_case_studies: [{ id: 1, title: "Test Case Study" }],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -726,15 +724,15 @@ describe("ShareModal", () => {
 			});
 
 			server.use(
-				http.put("*/api/cases/1/", () => {
-					return HttpResponse.json(
+				http.put("*/api/cases/1/", () =>
+					HttpResponse.json(
 						{
 							error: "Cannot unpublish",
 							linked_case_studies: [{ id: 1, title: "Test Case Study" }],
 						},
 						{ status: 400 }
-					);
-				})
+					)
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -762,9 +760,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -788,9 +786,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -819,9 +817,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -905,9 +903,9 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.post("*/api/cases/*/sharedwith", () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			renderWithAuth(<ShareModal />);
@@ -933,9 +931,7 @@ describe("ShareModal", () => {
 			const user = userEvent.setup();
 
 			server.use(
-				http.post("*/api/cases/*/sharedwith", () => {
-					return HttpResponse.error();
-				})
+				http.post("*/api/cases/*/sharedwith", () => HttpResponse.error())
 			);
 
 			renderWithAuth(<ShareModal />);

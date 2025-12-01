@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	Form,
 	FormControl,
@@ -20,8 +21,6 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
 import { Button } from "../ui/button";
-
-// import { useLoginToken } from ".*/use-auth";
 
 const formSchema = z.object({
 	name: z.string().min(1),
@@ -51,38 +50,34 @@ export const CaseCreateModal = () => {
 	});
 
 	const CreateCase = useCallback(
-		(json_str: string) => {
-			const requestOptions: RequestInit = {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Token ${session?.key}`,
-				},
-				body: json_str,
-			};
+		async (name: string, description: string) => {
+			if (!session?.key) {
+				setErrors(["You must be logged in to create a case"]);
+				return;
+			}
 
 			setLoading(true);
 
-			fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/`,
-				requestOptions
-			)
-				.then((response) => response.json())
-				.then((json) => {
-					if (json.id) {
-						// navigate("/case/" + json.id);
-						setLoading(false);
-						createCaseModal.onClose();
-						router.push(`/case/${json.id}`);
-					} else {
-						setLoading(false);
-						setErrors(["An error occurred, please try again later"]);
-					}
-				})
-				.catch((_ex) => {
-					setLoading(false);
-					setErrors(["An error occurred, please try again later"]);
+			try {
+				const result = await createAssuranceCase(session.key, {
+					name,
+					description,
 				});
+
+				if (result.success && result.id) {
+					setLoading(false);
+					createCaseModal.onClose();
+					router.push(`/case/${result.id}`);
+				} else {
+					setLoading(false);
+					setErrors([
+						result.error ?? "An error occurred, please try again later",
+					]);
+				}
+			} catch (_ex) {
+				setLoading(false);
+				setErrors(["An error occurred, please try again later"]);
+			}
 		},
 		[session, createCaseModal, router]
 	);
@@ -94,21 +89,7 @@ export const CaseCreateModal = () => {
 	};
 
 	const onSubmit = (values: z.infer<typeof formSchema>) => {
-		try {
-			// const newCase = templates[parseInt(values.template)]
-			// newCase.name = values.name
-			// newCase.description = values.description
-			const newCase = {
-				name: values.name,
-				description: values.description,
-				lock_uuid: null,
-				goals: [],
-				color_profile: "default",
-			};
-			CreateCase(JSON.stringify(newCase));
-		} catch (_error) {
-			// Error handling for JSON.stringify or CreateCase call
-		}
+		CreateCase(values.name, values.description);
 	};
 
 	// const fetchTemplates = async () => {

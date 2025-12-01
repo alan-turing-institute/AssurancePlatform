@@ -11,12 +11,10 @@ import {
 } from "@/src/__tests__/utils/test-utils";
 import LogoutButton from "./logout-button";
 
-const { mockPush, mockSignOut } = vi.hoisted(() => {
-	return {
-		mockPush: vi.fn(),
-		mockSignOut: vi.fn().mockResolvedValue(undefined),
-	};
-});
+const { mockPush, mockSignOut } = vi.hoisted(() => ({
+	mockPush: vi.fn(),
+	mockSignOut: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Mock the ActionTooltip component to focus on LogoutButton logic
 vi.mock("../ui/action-tooltip", () => ({
@@ -122,9 +120,10 @@ describe("LogoutButton", () => {
 
 		// Mock successful logout API response
 		server.use(
-			http.post("http://localhost:8000/api/auth/logout/", () => {
-				return new HttpResponse(null, { status: 200 });
-			})
+			http.post(
+				"http://localhost:8000/api/auth/logout/",
+				() => new HttpResponse(null, { status: 200 })
+			)
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -144,9 +143,10 @@ describe("LogoutButton", () => {
 
 		// Mock failed logout API response
 		server.use(
-			http.post("http://localhost:8000/api/auth/logout/", () => {
-				return new HttpResponse(null, { status: 500 });
-			})
+			http.post(
+				"http://localhost:8000/api/auth/logout/",
+				() => new HttpResponse(null, { status: 500 })
+			)
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -194,9 +194,10 @@ describe("LogoutButton", () => {
 		const user = userEvent.setup();
 
 		server.use(
-			http.post("http://localhost:8000/api/auth/logout/", () => {
-				return new HttpResponse(null, { status: 200 });
-			})
+			http.post(
+				"http://localhost:8000/api/auth/logout/",
+				() => new HttpResponse(null, { status: 200 })
+			)
 		);
 
 		renderWithoutProviders(<LogoutButton />);
@@ -258,9 +259,10 @@ describe("LogoutButton", () => {
 		const user = userEvent.setup();
 
 		server.use(
-			http.post("http://localhost:8000/api/auth/logout/", () => {
-				return new HttpResponse(null, { status: 200 });
-			})
+			http.post(
+				"http://localhost:8000/api/auth/logout/",
+				() => new HttpResponse(null, { status: 200 })
+			)
 		);
 
 		renderWithoutProviders(<LogoutButton />);

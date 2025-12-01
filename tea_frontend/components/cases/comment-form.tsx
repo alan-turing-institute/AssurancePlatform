@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,24 +17,23 @@ import { Textarea } from "../ui/textarea";
 
 const formSchema = z.object({
 	comment: z.string().min(2, {
-		message: "Comment must be atleast 2 characters",
+		message: "Comment must be at least 2 characters",
 	}),
 });
 
-interface CommentsFormProps {
+type CommentsFormProps = {
 	node: {
 		type: string;
 		data: {
 			id: number;
 		};
 	};
-}
+};
 
 const CommentsForm: React.FC<CommentsFormProps> = ({
 	node,
 }: CommentsFormProps) => {
 	const { nodeComments, setNodeComments } = useStore();
-	const { data: session } = useSession();
 	const [loading, setLoading] = useState(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -48,65 +46,33 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setLoading(true);
 
-		const newComment: {
-			content: string;
-			context?: number;
-			strategy?: number;
-			property_claim?: number;
-			evidence?: number;
-			goal?: number;
-		} = {
-			content: values.comment,
-		};
-
-		let entity: string;
-		switch (node.type) {
-			case "context":
-				entity = "contexts";
-				newComment.context = node.data.id;
-				break;
-			case "strategy":
-				entity = "strategies";
-				newComment.strategy = node.data.id;
-				break;
-			case "property":
-				entity = "propertyclaims";
-				newComment.property_claim = node.data.id;
-				break;
-			case "evidence":
-				entity = "evidence";
-				newComment.evidence = node.data.id;
-				break;
-			default:
-				entity = "goals";
-				newComment.goal = node.data.id;
-				break;
-		}
-
 		try {
-			const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${node.data.id}/comments/`;
+			// Use the new unified comments API endpoint
+			const url = `/api/elements/${node.data.id}/comments`;
 
-			const requestOptions: RequestInit = {
+			const response = await fetch(url, {
 				method: "POST",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(newComment),
-			};
+				body: JSON.stringify({ content: values.comment }),
+			});
 
-			const response = await fetch(url, requestOptions);
+			if (!response.ok) {
+				console.error("Failed to create comment:", response.status);
+				return;
+			}
+
 			const result = await response.json();
 
-			// **Update the comments as an array**
+			// Update the comments as an array
 			const newCommentsList = [...nodeComments, result];
-
 			setNodeComments(newCommentsList);
 
 			// Clear form input
 			form.setValue("comment", "");
-		} catch (_error) {
-			// TODO: Handle error posting comment
+		} catch (error) {
+			console.error("Error creating comment:", error);
 		} finally {
 			setLoading(false);
 		}

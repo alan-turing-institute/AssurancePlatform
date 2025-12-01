@@ -4,7 +4,7 @@ import { create } from "zustand";
  * Defines the shape of the state for the Import modal store.
  * @interface useImportModalStore
  */
-interface useImportModalStore {
+type useImportModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -22,7 +22,7 @@ interface useImportModalStore {
 	 * @function
 	 */
 	onClose: () => void;
-}
+};
 
 /**
  * Creates a Zustand store for managing the state of the Import modal.

@@ -70,18 +70,18 @@ export const FILE_SIZES = {
 /**
  * Configuration options for creating mock files
  */
-export interface MockFileOptions {
+export type MockFileOptions = {
 	name?: string;
 	type?: string;
 	size?: number;
 	lastModified?: number;
 	content?: string | ArrayBuffer | ArrayBufferView;
-}
+};
 
 /**
  * Options for drag and drop event simulation
  */
-export interface DragDropOptions {
+export type DragDropOptions = {
 	clientX?: number;
 	clientY?: number;
 	screenX?: number;
@@ -90,7 +90,7 @@ export interface DragDropOptions {
 	shiftKey?: boolean;
 	altKey?: boolean;
 	metaKey?: boolean;
-}
+};
 
 /**
  * File validation error types

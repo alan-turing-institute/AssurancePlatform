@@ -4,7 +4,7 @@ import { create } from "zustand";
  * Defines the shape of the state for the Share modal store.
  * @interface useShareModalStore
  */
-interface useShareModalStore {
+type useShareModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -22,7 +22,7 @@ interface useShareModalStore {
 	 * @function
 	 */
 	onClose: () => void;
-}
+};
 
 /**
  * Creates a Zustand store for managing the state of the Share modal.

@@ -21,26 +21,24 @@ const mockSession = {
 } as Session & { key: string };
 
 // Provider wrapper for tests
-interface ProvidersProps {
+type ProvidersProps = {
 	children: React.ReactNode;
 	session?: Session | null;
-}
-
-const Providers = ({ children, session = null }: ProvidersProps) => {
-	return (
-		<SessionProvider session={session}>
-			<ThemeProvider
-				attribute="class"
-				defaultTheme="system"
-				disableTransitionOnChange
-				enableSystem
-			>
-				{children}
-				<ModalProvider />
-			</ThemeProvider>
-		</SessionProvider>
-	);
 };
+
+const Providers = ({ children, session = null }: ProvidersProps) => (
+	<SessionProvider session={session}>
+		<ThemeProvider
+			attribute="class"
+			defaultTheme="system"
+			disableTransitionOnChange
+			enableSystem
+		>
+			{children}
+			<ModalProvider />
+		</ThemeProvider>
+	</SessionProvider>
+);
 
 // Custom render function
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
@@ -64,20 +62,15 @@ const customRender = (ui: ReactElement, options: CustomRenderOptions = {}) => {
 };
 
 // Custom render with authenticated session
-const renderWithAuth = (
-	ui: ReactElement,
-	options: CustomRenderOptions = {}
-) => {
-	return customRender(ui, {
+const renderWithAuth = (ui: ReactElement, options: CustomRenderOptions = {}) =>
+	customRender(ui, {
 		...options,
 		session: mockSession,
 	});
-};
 
 // Custom render without any providers (for testing components in isolation)
-const renderWithoutProviders = (ui: ReactElement, options?: RenderOptions) => {
-	return render(ui, options);
-};
+const renderWithoutProviders = (ui: ReactElement, options?: RenderOptions) =>
+	render(ui, options);
 
 // Custom render with ReactFlow provider
 const renderWithReactFlow = (
@@ -100,12 +93,11 @@ const renderWithReactFlow = (
 const renderWithReactFlowAndAuth = (
 	ui: ReactElement,
 	options: CustomRenderOptions = {}
-) => {
-	return renderWithReactFlow(ui, {
+) =>
+	renderWithReactFlow(ui, {
 		...options,
 		session: mockSession,
 	});
-};
 
 // Helper to create mock form event
 export const createMockFormEvent = (value: string) => ({
@@ -126,11 +118,8 @@ export const createMockFile = (
 };
 
 // Helper to wait for async operations
-export const waitFor = (
-	callback: () => void | Promise<void>,
-	timeout = 1000
-) => {
-	return new Promise((resolve, reject) => {
+export const waitFor = (callback: () => void | Promise<void>, timeout = 1000) =>
+	new Promise((resolve, reject) => {
 		const startTime = Date.now();
 		const check = async () => {
 			try {
@@ -146,7 +135,6 @@ export const waitFor = (
 		};
 		check();
 	});
-};
 
 // Re-export everything from React Testing Library
 export * from "@testing-library/react";

@@ -517,13 +517,12 @@ describe("LoggedInUser", () => {
 			});
 
 			// Empty email renders as an empty <p> tag
-			const emailElement = screen.getAllByText((content, element) => {
-				return (
+			const emailElement = screen.getAllByText(
+				(content, element) =>
 					element?.tagName.toLowerCase() === "p" &&
 					element?.className.includes("text-gray-300") &&
 					content === ""
-				);
-			});
+			);
 			expect(emailElement.length).toBeGreaterThan(0);
 		});
 	});

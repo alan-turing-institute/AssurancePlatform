@@ -220,9 +220,9 @@ describe("ImportModal", () => {
 			const mockResponse = { id: 123 };
 
 			server.use(
-				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () => {
-					return HttpResponse.json(mockResponse);
-				})
+				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () =>
+					HttpResponse.json(mockResponse)
+				)
 			);
 
 			render(<ImportModal />);
@@ -297,9 +297,9 @@ describe("ImportModal", () => {
 
 		it("should handle API error response", async () => {
 			server.use(
-				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () => {
-					return HttpResponse.json({ error: "Invalid data" }, { status: 400 });
-				})
+				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () =>
+					HttpResponse.json({ error: "Invalid data" }, { status: 400 })
+				)
 			);
 
 			render(<ImportModal />);
@@ -648,9 +648,9 @@ describe("ImportModal", () => {
 			const mockResponse = { id: 123 };
 
 			server.use(
-				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () => {
-					return HttpResponse.json(mockResponse);
-				})
+				http.post(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/`, () =>
+					HttpResponse.json(mockResponse)
+				)
 			);
 
 			render(<ImportModal />);

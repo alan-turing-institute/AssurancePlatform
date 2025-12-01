@@ -14,12 +14,20 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import type { AssuranceCase } from "@/types";
 import { Skeleton } from "../ui/skeleton";
 
-interface CaseCardProps {
-	assuranceCase: AssuranceCase;
-}
+// Flexible type for case data - compatible with both actions and domain types
+export type CaseCardData = {
+	id: number | string;
+	name: string;
+	description?: string;
+	created_date?: string;
+	permissions?: string | string[];
+};
+
+type CaseCardProps = {
+	assuranceCase: CaseCardData;
+};
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	const { id, name, description, created_date } = assuranceCase;
@@ -31,25 +39,26 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	const [imageLoading, setImageLoading] = useState<boolean>(true);
 
 	// Normalize permissions to always be an array
-	const permissions = Array.isArray(assuranceCase.permissions)
-		? assuranceCase.permissions
-		: [assuranceCase.permissions];
+	const normalizePermissions = (): string[] => {
+		if (Array.isArray(assuranceCase.permissions)) {
+			return assuranceCase.permissions;
+		}
+		if (assuranceCase.permissions) {
+			return [assuranceCase.permissions];
+		}
+		return [];
+	};
+	const permissions = normalizePermissions();
 
 	const onDelete = useCallback(async () => {
 		try {
 			setLoading(true);
 
-			const requestOptions: RequestInit = {
-				headers: {
-					Authorization: `Token ${session?.key}`,
-				},
+			// Use Next.js API route for Prisma auth compatibility
+			const response = await fetch(`/api/cases/${assuranceCase.id}`, {
 				method: "DELETE",
-			};
+			});
 
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase.id}/`,
-				requestOptions
-			);
 			if (response.ok) {
 				window.location.reload();
 			}
@@ -59,7 +68,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			setLoading(false);
 			setOpen(false);
 		}
-	}, [session?.key, assuranceCase.id]);
+	}, [assuranceCase.id]);
 
 	const fetchScreenshot = useCallback(async () => {
 		try {
@@ -133,7 +142,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 					</CardFooter>
 				</Card>
 			</Link>
-			{(permissions.includes("owner") || permissions.includes("editor")) && (
+			{(permissions.includes("manage") || permissions.includes("owner")) && (
 				<button
 					className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
 					disabled={loading}

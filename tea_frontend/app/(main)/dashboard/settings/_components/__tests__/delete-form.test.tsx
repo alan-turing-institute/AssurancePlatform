@@ -9,7 +9,7 @@ const DELETE_BUTTON_REGEX = /yes, delete my account/i;
 const NO_LONGER_WANT_REGEX = /No longer want to use our service/;
 
 // Type definitions
-interface AlertModalProps {
+type AlertModalProps = {
 	isOpen: boolean;
 	loading: boolean;
 	message: string;
@@ -17,7 +17,7 @@ interface AlertModalProps {
 	confirmButtonText: string;
 	onClose: () => void;
 	onConfirm: () => Promise<void> | void;
-}
+};
 
 // Mock next/navigation
 const mockPush = vi.fn();

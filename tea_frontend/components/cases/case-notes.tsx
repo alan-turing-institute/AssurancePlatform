@@ -6,10 +6,10 @@ import NotesSheet from "../ui/notes-sheet";
 import NotesFeed from "./notes-feed";
 import NotesForm from "./notes-form";
 
-interface CaseNotesProps {
+type CaseNotesProps = {
 	isOpen: boolean;
 	onClose: () => void;
-}
+};
 
 const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
 	const { assuranceCase } = useStore();

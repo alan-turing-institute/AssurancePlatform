@@ -84,9 +84,10 @@ describe("Case Studies Actions", () => {
 
 		it("should throw error when HTTP request fails", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.get(
+					`${mockApiUrl}/api/case-studies/`,
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			await expect(fetchCaseStudies(mockToken)).rejects.toThrow(
@@ -96,9 +97,7 @@ describe("Case Studies Actions", () => {
 
 		it("should throw error when network fails", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/`, () => {
-					return HttpResponse.error();
-				})
+				http.get(`${mockApiUrl}/api/case-studies/`, () => HttpResponse.error())
 			);
 
 			await expect(fetchCaseStudies(mockToken)).rejects.toThrow();
@@ -106,9 +105,7 @@ describe("Case Studies Actions", () => {
 
 		it("should handle empty case studies list", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/`, () => {
-					return HttpResponse.json([]);
-				})
+				http.get(`${mockApiUrl}/api/case-studies/`, () => HttpResponse.json([]))
 			);
 
 			const result = await fetchCaseStudies(mockToken);
@@ -131,9 +128,9 @@ describe("Case Studies Actions", () => {
 			];
 
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/`, () => {
-					return HttpResponse.json(mockPublishedCaseStudies);
-				})
+				http.get(`${mockApiUrl}/api/public/case-studies/`, () =>
+					HttpResponse.json(mockPublishedCaseStudies)
+				)
 			);
 
 			const result = await fetchPublishedCaseStudies();
@@ -143,9 +140,10 @@ describe("Case Studies Actions", () => {
 
 		it("should throw error when HTTP request fails", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/`, () => {
-					return new HttpResponse(null, { status: 404 });
-				})
+				http.get(
+					`${mockApiUrl}/api/public/case-studies/`,
+					() => new HttpResponse(null, { status: 404 })
+				)
 			);
 
 			await expect(fetchPublishedCaseStudies()).rejects.toThrow(
@@ -155,9 +153,9 @@ describe("Case Studies Actions", () => {
 
 		it("should handle empty published case studies list", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/public/case-studies/`, () => {
-					return HttpResponse.json([]);
-				})
+				http.get(`${mockApiUrl}/api/public/case-studies/`, () =>
+					HttpResponse.json([])
+				)
 			);
 
 			const result = await fetchPublishedCaseStudies();
@@ -182,9 +180,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
-					() => {
-						return HttpResponse.json(mockCaseStudy);
-					}
+					() => HttpResponse.json(mockCaseStudy)
 				)
 			);
 
@@ -197,9 +193,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
-					() => {
-						return new HttpResponse(null, { status: 404 });
-					}
+					() => new HttpResponse(null, { status: 404 })
 				)
 			);
 
@@ -214,9 +208,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/case-studies/${mockCaseStudyId}`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
+					() => new HttpResponse(null, { status: 500 })
 				)
 			);
 
@@ -258,9 +250,10 @@ describe("Case Studies Actions", () => {
 
 		it("should throw error when HTTP request fails", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, () => {
-					return new HttpResponse(null, { status: 403 });
-				})
+				http.get(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					() => new HttpResponse(null, { status: 403 })
+				)
 			);
 
 			await expect(
@@ -316,9 +309,10 @@ describe("Case Studies Actions", () => {
 			const mockFormData = new FormData();
 
 			server.use(
-				http.post(`${mockApiUrl}/api/case-studies/`, () => {
-					return new HttpResponse("Bad Request", { status: 400 });
-				})
+				http.post(
+					`${mockApiUrl}/api/case-studies/`,
+					() => new HttpResponse("Bad Request", { status: 400 })
+				)
 			);
 
 			const result = await createCaseStudy(mockToken, mockFormData);
@@ -407,9 +401,10 @@ describe("Case Studies Actions", () => {
 			mockFormData.append("id", mockCaseStudyId.toString());
 
 			server.use(
-				http.put(`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`, () => {
-					return new HttpResponse(null, { status: 500 });
-				})
+				http.put(
+					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
+					() => new HttpResponse(null, { status: 500 })
+				)
 			);
 
 			const result = await updateCaseStudy(mockToken, mockFormData);
@@ -473,9 +468,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.delete(
 					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
-					() => {
-						return new HttpResponse(null, { status: 500 });
-					}
+					() => new HttpResponse(null, { status: 500 })
 				)
 			);
 
@@ -488,9 +481,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.delete(
 					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
-					() => {
-						return new HttpResponse(null, { status: 404 });
-					}
+					() => new HttpResponse(null, { status: 404 })
 				)
 			);
 
@@ -503,9 +494,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.delete(
 					`${mockApiUrl}/api/case-studies/${mockCaseStudyId}/`,
-					() => {
-						return new HttpResponse(null, { status: 403 });
-					}
+					() => new HttpResponse(null, { status: 403 })
 				)
 			);
 
@@ -530,9 +519,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
-					() => {
-						return HttpResponse.json(mockAssuranceCase);
-					}
+					() => HttpResponse.json(mockAssuranceCase)
 				)
 			);
 
@@ -545,9 +532,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
-					() => {
-						return new HttpResponse(null, { status: 404 });
-					}
+					() => new HttpResponse(null, { status: 404 })
 				)
 			);
 
@@ -560,9 +545,7 @@ describe("Case Studies Actions", () => {
 			server.use(
 				http.get(
 					`${mockApiUrl}/api/public/assurance-case/${mockAssuranceCaseId}/`,
-					() => {
-						return HttpResponse.error();
-					}
+					() => HttpResponse.error()
 				)
 			);
 
@@ -625,11 +608,13 @@ describe("Case Studies Actions", () => {
 	describe("Error handling edge cases", () => {
 		it("should handle malformed JSON response", async () => {
 			server.use(
-				http.get(`${mockApiUrl}/api/case-studies/`, () => {
-					return new HttpResponse("malformed json", {
-						headers: { "Content-Type": "application/json" },
-					});
-				})
+				http.get(
+					`${mockApiUrl}/api/case-studies/`,
+					() =>
+						new HttpResponse("malformed json", {
+							headers: { "Content-Type": "application/json" },
+						})
+				)
 			);
 
 			await expect(fetchCaseStudies(mockToken)).rejects.toThrow();
@@ -654,9 +639,10 @@ describe("Case Studies Actions", () => {
 			mockFormData.append("id", "123");
 
 			server.use(
-				http.put(`${mockApiUrl}/api/case-studies/123/`, () => {
-					return new HttpResponse("Internal Server Error", { status: 500 });
-				})
+				http.put(
+					`${mockApiUrl}/api/case-studies/123/`,
+					() => new HttpResponse("Internal Server Error", { status: 500 })
+				)
 			);
 
 			const result = await updateCaseStudy(mockToken, mockFormData);
@@ -671,9 +657,9 @@ describe("Case Studies Actions", () => {
 			mockFormData.append("title", "Test Case Study");
 
 			server.use(
-				http.post(`${mockApiUrl}/api/case-studies/`, () => {
-					return HttpResponse.json({ id: 123 }, { status: 201 });
-				})
+				http.post(`${mockApiUrl}/api/case-studies/`, () =>
+					HttpResponse.json({ id: 123 }, { status: 201 })
+				)
 			);
 
 			await createCaseStudy(mockToken, mockFormData);
@@ -687,9 +673,9 @@ describe("Case Studies Actions", () => {
 			mockFormData.append("id", "456");
 
 			server.use(
-				http.put(`${mockApiUrl}/api/case-studies/456/`, () => {
-					return HttpResponse.json({ success: true });
-				})
+				http.put(`${mockApiUrl}/api/case-studies/456/`, () =>
+					HttpResponse.json({ success: true })
+				)
 			);
 
 			await updateCaseStudy(mockToken, mockFormData);
@@ -704,9 +690,10 @@ describe("Case Studies Actions", () => {
 
 		it("should revalidate correct path after case study deletion", async () => {
 			server.use(
-				http.delete(`${mockApiUrl}/api/case-studies/789/`, () => {
-					return new HttpResponse(null, { status: 204 });
-				})
+				http.delete(
+					`${mockApiUrl}/api/case-studies/789/`,
+					() => new HttpResponse(null, { status: 204 })
+				)
 			);
 
 			await deleteCaseStudy(mockToken, 789);

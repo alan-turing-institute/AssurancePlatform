@@ -11,12 +11,12 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Define permission payload type
-interface PermissionPayload {
+type PermissionPayload = {
 	email: string;
 	view?: boolean;
 	edit?: boolean;
 	review?: boolean;
-}
+};
 
 describe("Permission Management Integration Tests", () => {
 	// Mock users for testing
@@ -197,9 +197,10 @@ describe("Permission Management Integration Tests", () => {
 
 		it("should handle permission errors", async () => {
 			server.use(
-				http.post(`${API_BASE_URL}/api/cases/:id/sharedwith`, () => {
-					return new HttpResponse(null, { status: 400 });
-				})
+				http.post(
+					`${API_BASE_URL}/api/cases/:id/sharedwith`,
+					() => new HttpResponse(null, { status: 400 })
+				)
 			);
 
 			const response = await fetch(`${API_BASE_URL}/api/cases/1/sharedwith`, {
@@ -222,9 +223,10 @@ describe("Permission Management Integration Tests", () => {
 
 		it("should handle unauthorized access", async () => {
 			server.use(
-				http.get(`${API_BASE_URL}/api/cases/:id/sharedwith`, () => {
-					return new HttpResponse(null, { status: 401 });
-				})
+				http.get(
+					`${API_BASE_URL}/api/cases/:id/sharedwith`,
+					() => new HttpResponse(null, { status: 401 })
+				)
 			);
 
 			const response = await fetch(`${API_BASE_URL}/api/cases/1/sharedwith`, {

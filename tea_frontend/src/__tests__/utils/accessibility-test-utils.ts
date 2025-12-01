@@ -42,7 +42,7 @@ async function loadAxe() {
 /**
  * Configuration for accessibility testing
  */
-export interface AccessibilityTestConfig {
+export type AccessibilityTestConfig = {
 	/** Skip axe-core accessibility checks */
 	skipAxe?: boolean;
 	/** Custom axe-core rules configuration */
@@ -58,12 +58,12 @@ export interface AccessibilityTestConfig {
 		/** Element that should receive focus when component unmounts */
 		restoreFocus?: boolean;
 	};
-}
+};
 
 /**
  * Result of keyboard navigation test
  */
-export interface KeyboardNavigationResult {
+export type KeyboardNavigationResult = {
 	/** Elements that received focus in order */
 	focusedElements: HTMLElement[];
 	/** Whether tab order is logical */
@@ -72,12 +72,12 @@ export interface KeyboardNavigationResult {
 	missingFocusableElements: HTMLElement[];
 	/** Elements that are focusable but shouldn't be */
 	unexpectedFocusableElements: HTMLElement[];
-}
+};
 
 /**
  * Screen reader testing result
  */
-export interface ScreenReaderResult {
+export type ScreenReaderResult = {
 	/** Elements missing accessible names */
 	missingAccessibleNames: HTMLElement[];
 	/** Elements with insufficient descriptions */
@@ -86,12 +86,12 @@ export interface ScreenReaderResult {
 	incorrectRoles: HTMLElement[];
 	/** Overall accessibility score (0-100) */
 	accessibilityScore: number;
-}
+};
 
 /**
  * Focus management test result
  */
-export interface FocusManagementResult {
+export type FocusManagementResult = {
 	/** Whether focus is properly trapped */
 	isFocusTrapped: boolean;
 	/** Whether focus is restored correctly */
@@ -100,12 +100,12 @@ export interface FocusManagementResult {
 	initialFocusElement: HTMLElement | null;
 	/** Focus restoration element */
 	restorationElement: HTMLElement | null;
-}
+};
 
 /**
  * Color contrast test result
  */
-export interface ColorContrastResult {
+export type ColorContrastResult = {
 	/** Elements with insufficient contrast */
 	lowContrastElements: Array<{
 		element: HTMLElement;
@@ -116,12 +116,12 @@ export interface ColorContrastResult {
 	isCompliant: boolean;
 	/** Minimum contrast ratio found */
 	minimumContrast: number;
-}
+};
 
 /**
  * Accessibility preferences for testing
  */
-export interface AccessibilityPreferences {
+export type AccessibilityPreferences = {
 	/** Reduced motion preference */
 	prefersReducedMotion?: boolean;
 	/** High contrast preference */
@@ -132,7 +132,7 @@ export interface AccessibilityPreferences {
 	fontSizeMultiplier?: number;
 	/** Screen reader simulation */
 	simulateScreenReader?: boolean;
-}
+};
 
 // =============================================================================
 // Core Accessibility Testing

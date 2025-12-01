@@ -2,6 +2,7 @@ import {
 	DocumentDuplicateIcon,
 	FolderIcon,
 	GlobeAltIcon,
+	UserGroupIcon,
 	UsersIcon,
 } from "@heroicons/react/24/outline";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -34,6 +35,13 @@ export const navigation = [
 		name: "Case Studies",
 		href: "/dashboard/case-studies",
 		icon: Blocks,
+		current: false,
+		externalLink: false,
+	},
+	{
+		name: "Teams",
+		href: "/dashboard/teams",
+		icon: UserGroupIcon,
 		current: false,
 		externalLink: false,
 	},
