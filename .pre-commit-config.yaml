@@ -8,7 +8,7 @@ exclude: (?x)^.*logs\/.*$
 repos:
   # Fast syntax and security checks first
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 'v5.0.0'
+    rev: 'v6.0.0'
     hooks:
       - id: check-json
       - id: check-yaml
@@ -27,7 +27,7 @@ repos:
 
   # Language-specific formatting and linting (fast)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
+    rev: v0.14.7
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -71,7 +71,7 @@ repos:
 
   # File cleanup (last, so it doesn't interfere with other tools)
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 'v5.0.0'
+    rev: 'v6.0.0'
     hooks:
       - id: debug-statements
         files: \.(py|js|jsx|ts|tsx)$
