@@ -198,8 +198,9 @@ tea_frontend/public/documentation/
 tea_frontend/tea-docs/build/
 tea_frontend/tea-docs/.docusaurus/
 
-# dev tasks
+# dev tools
 TASKS/
+.mcp.json
 
 # IDE and editor files
 .idea/
