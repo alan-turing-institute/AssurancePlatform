@@ -93,6 +93,7 @@ jobs:
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_MAIN }}
+            DATABASE_URL=postgresql://build:build@localhost:5432/build
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -111,6 +112,7 @@ jobs:
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
+            DATABASE_URL=postgresql://build:build@localhost:5432/build
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -129,6 +131,7 @@ jobs:
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
+            DATABASE_URL=postgresql://build:build@localhost:5432/build
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
