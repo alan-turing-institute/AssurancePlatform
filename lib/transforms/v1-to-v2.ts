@@ -148,44 +148,6 @@ function transformComments(
 }
 
 /**
- * Processes a context element from v1 format.
- */
-function processContext(
-	context: ContextV1,
-	parentId: string,
-	ctx: TransformContext
-): void {
-	const contextId = getOrCreateUuid(
-		context.id ?? `ctx-${context.name}`,
-		ctx.idMap
-	);
-
-	const element: ElementV2 = {
-		id: contextId,
-		elementType: "CONTEXT",
-		role: null,
-		parentId,
-		name: context.name,
-		description: mergeDescriptions(
-			context.short_description,
-			context.long_description
-		),
-		assumption: context.assumption ?? null,
-		justification: null,
-		url: null,
-		level: null,
-		inSandbox: context.in_sandbox ?? false,
-	};
-
-	const comments = transformComments(context.comments);
-	if (comments) {
-		element.comments = comments;
-	}
-
-	ctx.elements.push(element);
-}
-
-/**
  * Processes an evidence element from v1 format.
  * Returns the evidence element ID for linking.
  */
@@ -370,10 +332,26 @@ function processStrategy(
 }
 
 /**
+ * Converts V1 contexts to a context string array.
+ */
+function convertContextsToArray(contexts: ContextV1[] | undefined): string[] {
+	if (!contexts || contexts.length === 0) {
+		return [];
+	}
+
+	return contexts.map((context) =>
+		mergeDescriptions(context.short_description, context.long_description)
+	);
+}
+
+/**
  * Processes a goal element from v1 format.
  */
 function processGoal(goal: GoalV1, ctx: TransformContext): void {
 	const goalId = getOrCreateUuid(goal.id ?? `goal-${goal.name}`, ctx.idMap);
+
+	// Convert contexts to string array instead of separate elements
+	const contextArray = convertContextsToArray(goal.context);
 
 	const element: ElementV2 = {
 		id: goalId,
@@ -387,6 +365,7 @@ function processGoal(goal: GoalV1, ctx: TransformContext): void {
 		),
 		assumption: goal.assumption ?? null,
 		justification: null,
+		context: contextArray.length > 0 ? contextArray : undefined,
 		url: null,
 		level: null,
 		inSandbox: goal.in_sandbox ?? false,
@@ -398,13 +377,6 @@ function processGoal(goal: GoalV1, ctx: TransformContext): void {
 	}
 
 	ctx.elements.push(element);
-
-	// Process contexts under goal
-	if (goal.context) {
-		for (const context of goal.context) {
-			processContext(context, goalId, ctx);
-		}
-	}
 
 	// Process strategies under goal
 	if (goal.strategies) {

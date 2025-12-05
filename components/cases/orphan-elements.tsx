@@ -271,8 +271,10 @@ const OrphanElements = ({
 			return;
 		}
 		orphan.property_claim_id = node.data.id;
+		// Deep clone goals to ensure React detects the state change
+		const clonedGoals = JSON.parse(JSON.stringify(assuranceCase.goals));
 		const added = addPropertyClaimToNested(
-			assuranceCase.goals as unknown as PropertyClaim[],
+			clonedGoals as unknown as PropertyClaim[],
 			node.data.id,
 			orphan
 		);
@@ -282,7 +284,7 @@ const OrphanElements = ({
 		}
 		const updatedAssuranceCase = {
 			...assuranceCase,
-			goals: assuranceCase.goals,
+			goals: clonedGoals,
 		};
 		setAssuranceCase(updatedAssuranceCase);
 		setLoading(false);
@@ -412,8 +414,11 @@ const OrphanElements = ({
 
 		orphan.property_claim_id = [node.data.id];
 
+		// Deep clone goals to ensure React detects the state change
+		const clonedGoals = JSON.parse(JSON.stringify(assuranceCase.goals));
+
 		// Try to find the property claim in the goals and their nested structures
-		const added = assuranceCase.goals.some((goal) =>
+		const added = clonedGoals.some((goal: Goal) =>
 			searchPropertyClaimInGoal(goal, node.data.id, orphan)
 		);
 
@@ -424,7 +429,7 @@ const OrphanElements = ({
 
 		const updatedAssuranceCase = {
 			...assuranceCase,
-			goals: assuranceCase.goals,
+			goals: clonedGoals,
 		};
 
 		setAssuranceCase(updatedAssuranceCase);

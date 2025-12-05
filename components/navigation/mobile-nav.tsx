@@ -129,6 +129,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 												height={64}
 												priority
 												src="/images/tea-logo2.png"
+												style={{ height: "auto" }}
 												unoptimized
 												width={64}
 											/>

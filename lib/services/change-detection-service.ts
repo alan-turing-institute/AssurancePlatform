@@ -82,8 +82,13 @@ export async function detectChanges(
 		};
 	}
 
-	// Quick check: if updatedAt <= publishedAt, no changes
-	if (assuranceCase.updatedAt <= latestPublished.createdAt) {
+	// Always do content comparison (timestamps are unreliable for detecting real changes)
+	const exportResult = await exportCase(userId, caseId, {
+		includeComments: false,
+	});
+
+	if (!exportResult.success) {
+		// If export fails, we can't detect changes - assume no changes
 		return {
 			hasChanges: false,
 			publishedAt: latestPublished.createdAt,
@@ -91,34 +96,21 @@ export async function detectChanges(
 		};
 	}
 
-	// For detailed comparison, export current case and compare with published version
+	// Parse the published content (stored as JSON)
+	const publishedContent = latestPublished.content as CaseExportNested;
+
+	const changeSummary = compareTreeStructures(
+		exportResult.data.tree,
+		publishedContent.tree
+	);
+
+	const hasChanges =
+		changeSummary.addedElements > 0 ||
+		changeSummary.removedElements > 0 ||
+		changeSummary.modifiedElements > 0;
+
+	// Include change summary only when requested
 	if (includeDetails) {
-		const exportResult = await exportCase(userId, caseId, {
-			includeComments: false,
-		});
-
-		if (!exportResult.success) {
-			// Fall back to timestamp-based detection
-			return {
-				hasChanges: true,
-				publishedAt: latestPublished.createdAt,
-				publishedId: latestPublished.id,
-			};
-		}
-
-		// Parse the published content (stored as JSON)
-		const publishedContent = latestPublished.content as CaseExportNested;
-
-		const changeSummary = compareTreeStructures(
-			exportResult.data.tree,
-			publishedContent.tree
-		);
-
-		const hasChanges =
-			changeSummary.addedElements > 0 ||
-			changeSummary.removedElements > 0 ||
-			changeSummary.modifiedElements > 0;
-
 		return {
 			hasChanges,
 			publishedAt: latestPublished.createdAt,
@@ -127,17 +119,16 @@ export async function detectChanges(
 		};
 	}
 
-	// Timestamp-based detection (updatedAt > publishedAt)
 	return {
-		hasChanges: true,
+		hasChanges,
 		publishedAt: latestPublished.createdAt,
 		publishedId: latestPublished.id,
 	};
 }
 
 /**
- * Quickly checks if a case has changes since last publish.
- * Uses timestamp comparison for performance.
+ * Checks if a case has changes since last publish.
+ * Uses content comparison to detect actual differences.
  *
  * @param userId - User ID for permission checking
  * @param caseId - The assurance case ID
@@ -159,16 +150,32 @@ export async function hasChangesSincePublish(
 // ============================================
 
 /**
+ * Normalises a tree input to an array of TreeNodes.
+ */
+function normaliseTreeInput(
+	tree: TreeNode | TreeNode[] | null | undefined
+): TreeNode[] {
+	if (!tree) {
+		return [];
+	}
+	return Array.isArray(tree) ? tree : [tree];
+}
+
+/**
  * Compares two tree structures and returns a summary of differences.
  * Compares by element ID to detect additions, removals, and modifications.
+ * Accepts either a single root TreeNode or an array of TreeNodes.
  */
 function compareTreeStructures(
-	currentTree: TreeNode[],
-	publishedTree: TreeNode[]
+	currentTree: TreeNode | TreeNode[] | null | undefined,
+	publishedTree: TreeNode | TreeNode[] | null | undefined
 ): ChangeSummary {
+	const currentNodes = normaliseTreeInput(currentTree);
+	const publishedNodes = normaliseTreeInput(publishedTree);
+
 	// Build maps of element ID -> element data for both trees
-	const currentElements = flattenTree(currentTree);
-	const publishedElements = flattenTree(publishedTree);
+	const currentElements = flattenTree(currentNodes);
+	const publishedElements = flattenTree(publishedNodes);
 
 	const currentIds = new Set(currentElements.keys());
 	const publishedIds = new Set(publishedElements.keys());
@@ -216,7 +223,7 @@ function compareTreeStructures(
 
 /**
  * Flattens a tree structure into a map of ID -> element data.
- * Recursively processes all children.
+ * Recursively processes all children (including evidence nodes).
  */
 function flattenTree(nodes: TreeNode[]): Map<string, TreeNodeCompareData> {
 	const result = new Map<string, TreeNodeCompareData>();
@@ -224,17 +231,10 @@ function flattenTree(nodes: TreeNode[]): Map<string, TreeNodeCompareData> {
 	function processNode(node: TreeNode) {
 		result.set(node.id, extractCompareData(node));
 
-		// Process children
+		// Process children (includes evidence nodes)
 		if (node.children) {
 			for (const child of node.children) {
 				processNode(child);
-			}
-		}
-
-		// Process evidence
-		if (node.evidence) {
-			for (const ev of node.evidence) {
-				result.set(ev.id, extractCompareData(ev));
 			}
 		}
 	}
@@ -251,13 +251,12 @@ function flattenTree(nodes: TreeNode[]): Map<string, TreeNodeCompareData> {
  */
 type TreeNodeCompareData = {
 	id: string;
-	elementType: string;
-	name: string;
+	type: string;
+	name: string | null;
 	description: string;
-	parentId: string | null;
 	role: string | null;
 	url: string | null;
-	level: string | null;
+	level: number | null;
 	isDefeater: boolean | null;
 	defeatsElementId: string | null;
 };
@@ -266,28 +265,12 @@ type TreeNodeCompareData = {
  * Extracts comparison-relevant data from a tree node.
  * Excludes volatile fields like comments and timestamps.
  */
-function extractCompareData(
-	node:
-		| TreeNode
-		| {
-				id: string;
-				elementType: string;
-				name: string;
-				description: string;
-				parentId?: string | null;
-				role?: string | null;
-				url?: string | null;
-				level?: string | null;
-				isDefeater?: boolean | null;
-				defeatsElementId?: string | null;
-		  }
-): TreeNodeCompareData {
+function extractCompareData(node: TreeNode): TreeNodeCompareData {
 	return {
 		id: node.id,
-		elementType: node.elementType,
+		type: node.type,
 		name: node.name,
 		description: node.description,
-		parentId: node.parentId ?? null,
 		role: node.role ?? null,
 		url: node.url ?? null,
 		level: node.level ?? null,
@@ -304,10 +287,9 @@ function elementsAreEqual(
 	b: TreeNodeCompareData
 ): boolean {
 	return (
-		a.elementType === b.elementType &&
+		a.type === b.type &&
 		a.name === b.name &&
 		a.description === b.description &&
-		a.parentId === b.parentId &&
 		a.role === b.role &&
 		a.url === b.url &&
 		a.level === b.level &&

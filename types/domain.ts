@@ -35,16 +35,22 @@ export type Goal = {
 	created_date?: string;
 	keywords: string;
 	assurance_case_id: number;
-	context: Context[];
+	context?: string[];
 	property_claims: PropertyClaim[];
 	strategies: Strategy[];
 	comments?: Comment[];
 	assumption?: string;
+	justification?: string;
 	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
 };
 
+/**
+ * @deprecated Context is no longer a separate element type.
+ * Context is now stored as a string[] on Goal, Strategy, and PropertyClaim.
+ * This type is kept for backwards compatibility with legacy imports.
+ */
 export type Context = {
 	id: number;
 	type: string;
@@ -72,6 +78,7 @@ export type Strategy = {
 	comments?: Comment[];
 	assumption?: string;
 	justification?: string;
+	context?: string[];
 	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
@@ -94,6 +101,8 @@ export type PropertyClaim = {
 	strategies?: Strategy[];
 	comments?: Comment[];
 	assumption?: string;
+	justification?: string;
+	context?: string[];
 	in_sandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
@@ -190,6 +199,10 @@ export type AssuranceCase = {
 	markedReadyAt?: string | null;
 	/** Whether the case has changes since last publish */
 	hasChanges?: boolean;
+	/** Whether any linked case study is public */
+	hasPublicCaseStudy?: boolean;
+	/** Number of linked case studies */
+	linkedCaseStudyCount?: number;
 };
 
 export type User = {

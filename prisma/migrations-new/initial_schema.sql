@@ -29,12 +29,16 @@ CREATE TYPE "CommentStatus" AS ENUM ('VISIBLE', 'HIDDEN', 'DELETED');
 -- CreateEnum
 CREATE TYPE "CaseTypeCategory" AS ENUM ('DOMAIN', 'TECHNIQUE', 'STANDARD');
 
+-- CreateEnum
+CREATE TYPE "AuthProvider" AS ENUM ('LOCAL', 'GITHUB', 'SYSTEM');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password_hash" TEXT,
+    "password_algorithm" TEXT NOT NULL DEFAULT 'django_pbkdf2',
     "first_name" TEXT,
     "last_name" TEXT,
     "avatar_url" TEXT,
@@ -46,6 +50,7 @@ CREATE TABLE "users" (
     "password_reset_expires" TIMESTAMP(3),
     "default_case_mode" "CaseMode" NOT NULL DEFAULT 'STANDARD',
     "is_system_user" BOOLEAN NOT NULL DEFAULT false,
+    "has_seen_migration_notice" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "last_login_at" TIMESTAMP(3),

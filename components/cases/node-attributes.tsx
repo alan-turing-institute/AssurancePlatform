@@ -1,21 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MinusIcon, PlusIcon, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import useStore from "@/data/store";
 import {
 	type ReactFlowNode,
@@ -23,23 +15,25 @@ import {
 	updateAssuranceCaseNode,
 } from "@/lib/case";
 import { Button } from "../ui/button";
-import { Textarea } from "../ui/textarea";
+import AddAttributeButtons from "./add-attribute-buttons";
+import AttributeTextField from "./attribute-text-field";
+import ContextEditor from "./context-editor";
 
 const formSchema = z.object({
 	assumption: z.string().optional(),
 	justification: z.string().optional(),
+	context: z.array(z.string()).optional(),
 });
 
-// Define the structure of node.data
 type NodeWithData = Node & {
 	data: {
 		id: number;
 		assumption?: string;
 		justification?: string;
+		context?: string[];
 	};
 };
 
-// Define the structure of actions prop
 type NodeActions = {
 	setSelectedLink: (value: boolean) => void;
 	setAction: (value: string) => void;
@@ -51,6 +45,14 @@ type NodeAttributesProps = {
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
 };
+
+// Helper to check if element type supports context
+const supportsContext = (type: string | undefined): boolean =>
+	["goal", "strategy", "property"].includes(type || "");
+
+// Helper to check if element type supports justification
+const supportsJustification = (type: string | undefined): boolean =>
+	["goal", "strategy", "property"].includes(type || "");
 
 const NodeAttributes: React.FC<NodeAttributesProps> = ({
 	node,
@@ -66,23 +68,20 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 
 	const { setSelectedLink, setAction } = actions;
 
-	const reset = () => {
+	const form = useForm<z.infer<typeof formSchema>>({
+		resolver: zodResolver(formSchema),
+		defaultValues: {
+			assumption: node.data?.assumption || "",
+			justification: node.data?.justification || "",
+			context: node.data?.context || [],
+		},
+	});
+
+	const handleCancel = () => {
+		form.reset();
 		setSelectedLink(false);
 		setAction("");
 	};
-
-	const handleCancel = () => {
-		form.reset(); // Reset the form state
-		reset(); // Perform additional reset actions
-	};
-
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
-		defaultValues: node.data || {
-			assumption: "",
-			justification: "",
-		},
-	});
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		if (!(assuranceCase && session?.key && node.type)) {
@@ -90,10 +89,10 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 		}
 
 		setLoading(true);
-		// Update item via api
 		const updateItem = {
 			assumption: values.assumption || "",
 			justification: values.justification || "",
+			context: values.context || [],
 		};
 
 		const updated = await updateAssuranceCaseNode(
@@ -104,11 +103,10 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 		);
 
 		if (updated) {
-			// Assurance Case Update
 			const updatedAssuranceCase = await updateAssuranceCase(
 				node.type || "",
 				assuranceCase,
-				updateItem as Record<string, string>,
+				updateItem as Record<string, string | string[]>,
 				node.data.id,
 				node as unknown as ReactFlowNode
 			);
@@ -125,13 +123,10 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 		assuranceCase?.permissions === "comment"
 	);
 
-	// useEffect(() => {
-	//   form.watch((values, { name }) => {
-	//     if (name === 'assumption') {
-	//       setUnresolvedChanges(true);
-	//     }
-	//   });
-	// }, [form.watch, setUnresolvedChanges]);
+	const showAssumption = node.data.assumption || newAssumption;
+	const showJustification =
+		supportsJustification(node.type) &&
+		(node.data.justification || newJustification);
 
 	return (
 		<div className="my-4 border-t">
@@ -140,111 +135,51 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 			</div>
 
 			{!readOnly && (
-				<div className="mt-4 flex items-center justify-start gap-2">
-					{!node.data.assumption && (
-						<Button
-							onClick={() => setNewAssumption(!newAssumption)}
-							size={"sm"}
-							variant={"outline"}
-						>
-							{newAssumption ? (
-								<MinusIcon className="mr-2 size-3" />
-							) : (
-								<PlusIcon className="mr-2 size-3" />
-							)}
-							Assumption
-						</Button>
-					)}
-					{!node.data.justification && node.type === "strategy" && (
-						<Button
-							onClick={() => setNewJustification(!newJustification)}
-							size={"sm"}
-							variant={"outline"}
-						>
-							{newJustification ? (
-								<MinusIcon className="mr-2 size-3" />
-							) : (
-								<PlusIcon className="mr-2 size-3" />
-							)}
-							Justification
-						</Button>
-					)}
-				</div>
+				<AddAttributeButtons
+					hasAssumption={!!node.data.assumption}
+					hasJustification={!!node.data.justification}
+					newAssumption={newAssumption}
+					newJustification={newJustification}
+					onToggleAssumption={() => setNewAssumption(!newAssumption)}
+					onToggleJustification={() => setNewJustification(!newJustification)}
+					supportsJustification={supportsJustification(node.type)}
+				/>
 			)}
 
 			<Form {...form}>
 				<form className="my-4 space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-					{(node.data.assumption || newAssumption) && (
-						<FormField
-							control={form.control}
+					{showAssumption && (
+						<AttributeTextField
+							form={form}
+							label="Assumption"
 							name="assumption"
-							render={({ field }) => (
-								<FormItem>
-									<div className="flex items-center justify-between">
-										<FormLabel>Assumption</FormLabel>
-										{!readOnly && (
-											<button
-												className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
-												onClick={() => {
-													form.setValue("assumption", "");
-													setNewAssumption(false);
-												}}
-												title="Remove assumption"
-												type="button"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										)}
-									</div>
-									<FormControl>
-										<Textarea
-											placeholder="Type your assumption here."
-											rows={5}
-											{...field}
-											readOnly={readOnly}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
+							onClear={() => {
+								form.setValue("assumption", "");
+								setNewAssumption(false);
+							}}
+							placeholder="Type your assumption here."
+							readOnly={readOnly}
 						/>
 					)}
-					{node.type === "strategy" &&
-						(node.data.justification || newJustification) && (
-							<FormField
-								control={form.control}
-								name="justification"
-								render={({ field }) => (
-									<FormItem>
-										<div className="flex items-center justify-between">
-											<FormLabel>Justification</FormLabel>
-											{!readOnly && (
-												<button
-													className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
-													onClick={() => {
-														form.setValue("justification", "");
-														setNewJustification(false);
-													}}
-													title="Remove justification"
-													type="button"
-												>
-													<Trash2 className="h-4 w-4" />
-												</button>
-											)}
-										</div>
-										<FormControl>
-											<Textarea
-												placeholder="Type your justification here."
-												rows={5}
-												{...field}
-												readOnly={readOnly}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						)}
+					{showJustification && (
+						<AttributeTextField
+							form={form}
+							label="Justification"
+							name="justification"
+							onClear={() => {
+								form.setValue("justification", "");
+								setNewJustification(false);
+							}}
+							placeholder="Type your justification here."
+							readOnly={readOnly}
+						/>
+					)}
+
+					{/* Context Section */}
+					{supportsContext(node.type) && (
+						<ContextEditor form={form} readOnly={readOnly} />
+					)}
+
 					<div className="flex items-center justify-start gap-3 pt-4">
 						<Button onClick={handleCancel} variant={"outline"}>
 							Cancel

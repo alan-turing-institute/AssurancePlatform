@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import {
+	deleteCaseStudyImage,
 	getCaseStudyById,
 	updateCaseStudyImage,
 } from "@/lib/services/case-study-service";
@@ -10,6 +11,56 @@ import { deleteFile, saveFile } from "@/lib/services/file-storage-service";
 type RouteParams = {
 	params: Promise<{ id: string }>;
 };
+
+/**
+ * GET /api/case-studies/[id]/image
+ * Fetch the feature image for a case study
+ */
+export async function GET(
+	_request: NextRequest,
+	{ params }: RouteParams
+): Promise<NextResponse> {
+	const session = await getServerSession(authOptions);
+
+	if (!session?.user?.id) {
+		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+	}
+
+	try {
+		const { id } = await params;
+		const caseStudyId = Number.parseInt(id, 10);
+
+		if (Number.isNaN(caseStudyId)) {
+			return NextResponse.json(
+				{ error: "Invalid case study ID" },
+				{ status: 400 }
+			);
+		}
+
+		const caseStudy = await getCaseStudyById(caseStudyId);
+
+		if (!caseStudy) {
+			return NextResponse.json(
+				{ error: "Case study not found" },
+				{ status: 404 }
+			);
+		}
+
+		if (!caseStudy.featureImage?.image) {
+			return NextResponse.json({ error: "No image" }, { status: 404 });
+		}
+
+		return NextResponse.json({
+			image: caseStudy.featureImage.image,
+		});
+	} catch (error) {
+		console.error("Error fetching case study image:", error);
+		return NextResponse.json(
+			{ error: "Failed to fetch image" },
+			{ status: 500 }
+		);
+	}
+}
 
 /**
  * POST /api/case-studies/[id]/image
@@ -46,7 +97,7 @@ export async function POST(
 			);
 		}
 
-		if (caseStudy.ownerId !== BigInt(session.user.id)) {
+		if (caseStudy.ownerId !== session.user.id) {
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 
@@ -61,8 +112,8 @@ export async function POST(
 		}
 
 		// Delete old image if it exists
-		if (caseStudy.image) {
-			await deleteFile(caseStudy.image);
+		if (caseStudy.featureImage?.image) {
+			await deleteFile(caseStudy.featureImage.image);
 		}
 
 		// Save the new image to local storage
@@ -135,17 +186,17 @@ export async function DELETE(
 			);
 		}
 
-		if (caseStudy.ownerId !== BigInt(session.user.id)) {
+		if (caseStudy.ownerId !== session.user.id) {
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 
 		// Delete the image file if it exists
-		if (caseStudy.image) {
-			await deleteFile(caseStudy.image);
+		if (caseStudy.featureImage?.image) {
+			await deleteFile(caseStudy.featureImage.image);
 		}
 
-		// Update the database to remove the image reference
-		const success = await updateCaseStudyImage(caseStudyId, null);
+		// Delete the database record
+		const success = await deleteCaseStudyImage(caseStudyId);
 
 		if (!success) {
 			return NextResponse.json(

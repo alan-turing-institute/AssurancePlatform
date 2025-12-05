@@ -43,7 +43,6 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { sectors } from "@/config/index";
 import { useImportModal } from "@/hooks/use-import-modal";
-import { normalizeImageUrl } from "@/lib/utils";
 import type { CaseStudyFormProps } from "@/types/domain";
 import DeleteCaseButton from "./delete-button";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";
@@ -262,26 +261,20 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		imageFile: File
 	) {
 		const formData = new FormData();
-		formData.append("media", imageFile); // Ensure it matches request.FILES.get("media")
+		formData.append("image", imageFile);
 
 		try {
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
-				{
-					method: "POST",
-					body: formData,
-					headers: {
-						Authorization: `Token ${data?.key ?? ""}`, // Replace with actual auth token
-					},
-				}
-			);
+			// Use internal API route - auth handled via NextAuth session cookies
+			const response = await fetch(`/api/case-studies/${caseStudyId}/image`, {
+				method: "POST",
+				body: formData,
+			});
 
 			if (!response.ok) {
 				throw new Error("Failed to upload feature image");
 			}
 
 			const _result = await response.json();
-			// console.log('Feature image uploaded:', result);
 			toast({
 				title: "Feature Image Uploaded",
 				description: "Feature image successfully uploaded!",
@@ -297,49 +290,23 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
 	async function deleteCaseStudyFeatureImage(caseStudyId: number) {
 		try {
-			const response = await fetch(
-				`${process.env.NEXT_PUBLIC_API_URL}/api/case-studies/${caseStudyId}/image/`,
-				{
-					method: "DELETE",
-					headers: {
-						Authorization: `Token ${data?.key ?? ""}`, // Replace with actual auth token
-					},
-				}
-			);
+			// Use internal API route - auth handled via NextAuth session cookies
+			const response = await fetch(`/api/case-studies/${caseStudyId}/image`, {
+				method: "DELETE",
+			});
 
 			if (!response.ok) {
 				throw new Error("Failed to delete feature image");
 			}
-
-			// console.log('Feature image deleted');
-			// toast({
-			//   title: 'Feature Image Removed',
-			//   description: 'Feature image successfully uploaded!',
-			// });
 		} catch (_error) {
-			// toast({
-			//   variant: "destructive",
-			//   title: 'Image Upload Failed',
-			//   description: 'Could not upload feature image!',
-			// });
+			// Silently handle error
 		}
 	}
 
 	const fetchFeaturedImage = useCallback(async () => {
 		try {
-			const requestOptions: RequestInit = {
-				method: "GET",
-				headers: {
-					Authorization: `Token ${data?.key}`,
-				},
-				redirect: "follow",
-			};
-
-			const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-			const response = await fetch(
-				`${apiUrl}/api/case-studies/${caseStudy?.id}/image/`,
-				requestOptions
-			);
+			// Use internal API route - auth handled via NextAuth session cookies
+			const response = await fetch(`/api/case-studies/${caseStudy?.id}/image`);
 
 			if (response.status === 404) {
 				setFeaturedImage("");
@@ -347,16 +314,14 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			}
 
 			const result = await response.json();
-			// The API returns the image URL, not the full URL with domain
-			const imageUrl = result.image ? `${apiUrl}${result.image}` : "";
-			const normalizedUrl = normalizeImageUrl(imageUrl);
-			setFeaturedImage(normalizedUrl || "");
+			// Internal API returns the image path directly
+			setFeaturedImage(result.image || "");
 		} catch (_error) {
 			// Silently handle error
 		} finally {
 			setImageLoading(false);
 		}
-	}, [data?.key, caseStudy?.id]);
+	}, [caseStudy?.id]);
 
 	useEffect(() => {
 		if (caseStudy) {
@@ -827,7 +792,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 								</div>
 
 								<ImageUpload
-									disabled={caseStudy?.published}
+									disabled={false}
 									onChange={(file) => {
 										if (typeof file === "string") {
 											// Handle string case (when removing)

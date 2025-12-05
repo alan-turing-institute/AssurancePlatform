@@ -1,6 +1,5 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
@@ -35,12 +34,30 @@ const Header = ({ setOpen }: HeaderProps) => {
 
 	const { setCenter } = useReactFlow();
 
-	const { data: session } = useSession();
+	// Get the display status based on case study public status
+	// Show "Published" only when linked to a PUBLIC case study
+	const getDisplayStatus = (): PublishStatusType => {
+		if (!assuranceCase) {
+			return "DRAFT";
+		}
 
-	// Get the current publish status
-	const currentStatus: PublishStatusType =
-		assuranceCase?.publishStatus ??
-		(assuranceCase?.published ? "PUBLISHED" : "DRAFT");
+		// Check if any linked case study is actually public
+		if (assuranceCase.hasPublicCaseStudy) {
+			return "PUBLISHED";
+		}
+
+		// If marked ready or "published" but no public case study, show as ready
+		if (
+			assuranceCase.publishStatus === "PUBLISHED" ||
+			assuranceCase.publishStatus === "READY_TO_PUBLISH"
+		) {
+			return "READY_TO_PUBLISH";
+		}
+
+		return "DRAFT";
+	};
+
+	const currentStatus: PublishStatusType = getDisplayStatus();
 
 	// Use change detection for published cases
 	const { hasChanges } = useChangeDetection({
@@ -61,11 +78,11 @@ const Header = ({ setOpen }: HeaderProps) => {
 			const newData = {
 				name: newCaseName,
 			};
-			const url = `${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/cases/${assuranceCase?.id}/`;
+			// Use internal API route - auth handled via NextAuth session cookies
+			const url = `/api/cases/${assuranceCase?.id}`;
 			const requestOptions: RequestInit = {
 				method: "PUT",
 				headers: {
-					Authorization: `Token ${session?.key}`,
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify(newData),

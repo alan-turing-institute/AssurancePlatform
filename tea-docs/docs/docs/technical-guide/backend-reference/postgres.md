@@ -1,9 +1,9 @@
 ---
 sidebar_position: 3
-sidebar_label: 'Postgres Database'
+sidebar_label: 'PostgreSQL Database'
 ---
 
-# Postgres
+# PostgreSQL Database
 
 ## Resetting the Database
 
@@ -11,64 +11,73 @@ Resetting the database of the Trustworthy and Ethical Assurance (TEA) Platform m
 
 :::warning
 
-    Resetting the database is a powerful action that can help maintain the cleanliness and integrity of your installation. However, it should be approached with caution to avoid accidental data loss.
+Resetting the database is a powerful action that can help maintain the cleanliness and integrity of your installation. However, it should be approached with caution to avoid accidental data loss.
 
 :::
 
 :::info "Reasons for Resetting"
 
-    1. Post-Demo Cleanup: After demonstrating the TEA Platform, you might want to remove all test data, including users and cases, to ensure a clean slate for actual use.
-    2. Schema Changes: Implementing changes in the database schema that cannot be migrated using Django's standard migration tools may require a fresh start.
+1. Post-Demo Cleanup: After demonstrating the TEA Platform, you might want to remove all test data, including users and cases, to ensure a clean slate for actual use.
+2. Schema Changes: Implementing significant changes in the database schema may require a fresh start.
 
 :::
 
 The process for resetting the TEA Platform database differs depending on the environment in which it is deployed:
 
-### Local Deployment
+### Local Development (Docker)
 
-For local deployments, the use of SQLite simplifies the process of resetting your database. After deleting the `db.sqlite3` file and running the migration commands, your backend will operate with a new, empty database.
+For local development using Docker Compose, you can reset the database using Prisma commands:
 
-This process effectively removes all existing data, allowing you to start anew with your development or testing activities on the TEA Platform.
-
-!!! warning
-
-    This process will remove all existing data in the database. It is highly recommended to back up any important data before proceeding with the reset.
-
-#### 1. Identify the Database File
-
-The local database for the TEA Platform is stored in an SQLite file typically located at **`eap_backend/db.sqlite3`** within your project directory.
-
-#### 2. Delete the Database File
-
-To reset your database, you need to delete the existing SQLite file. Navigate to the **`eap_backend`** directory and remove the **`db.sqlite3`** file.
+#### 1. Stop the Development Environment
 
 ```shell
-rm eap_backend/db.sqlite3
+docker-compose -f docker-compose.development.yml down
 ```
 
-#### 3. Recreate the Database
+#### 2. Remove the Database Volume (Optional - Full Reset)
 
-After deleting the old database file, you'll need to recreate the database structure to continue working with a clean state.
-
-Ensure your backend environment is correctly set up, then execute the following Django management commands:
+To completely remove all data:
 
 ```shell
-python manage.py makemigrations && \
-python manage.py migrate
+docker volume rm assuranceplatform_postgres_data
 ```
-These commands will generate a **new `db.sqlite3` file** with a fresh database schema based on your Django models.
+
+#### 3. Restart and Run Migrations
+
+```shell
+docker-compose -f docker-compose.development.yml up -d --build
+docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
+```
+
+#### Alternative: Reset Without Removing Volume
+
+If you want to reset the database without removing the Docker volume:
+
+```shell
+docker exec tea_app_dev npx prisma migrate reset --schema=prisma/schema.new.prisma
+```
+
+:::warning
+
+This command will drop all data and re-run all migrations. Use with caution.
+
+:::
 
 ### Azure Deployment
 
-Resetting your database on Azure involves a few crucial steps to ensure that the process is completed smoothly without hindering the accessibility of your TEA Platform. This guide will walk you through the necessary steps to reset your database deployed on Microsoft Azure.
+Resetting your database on Azure involves a few crucial steps to ensure that the process is completed smoothly without hindering the accessibility of your TEA Platform.
 
-!!! warning
+:::warning
 
-    This process will remove all existing data in the database. It is highly recommended to back up any important data before proceeding with the reset.
+This process will remove all existing data in the database. It is highly recommended to back up any important data before proceeding with the reset.
 
-!!! info "Prerequisities"
+:::
 
-    The PostgreSQL command-line tool, `psql`, is required for directly interacting with your Azure database. Mac users with Homebrew can install it using `brew install postgresql`. Windows and Linux users should refer to their respective package managers or download it from the PostgreSQL official website.
+:::info "Prerequisites"
+
+The PostgreSQL command-line tool, `psql`, is required for directly interacting with your Azure database. Mac users with Homebrew can install it using `brew install postgresql`. Windows and Linux users should refer to their respective package managers or download it from the PostgreSQL official website.
+
+:::
 
 #### 1. Allow IP Connection
 
@@ -91,20 +100,24 @@ psql --host=SERVER_NAME.postgres.database.azure.com --port=5432 --username=ADMIN
 Once connected, run:
 
 ```sql
-postgres=> DROP DATABASE eap;
-postgres=> CREATE DATABASE eap;
-postgres=> \c eap;
+postgres=> DROP DATABASE tea;
+postgres=> CREATE DATABASE tea;
+postgres=> \c tea;
 postgres=> \q
 ```
 
-Replace SERVER_NAME and ADMIN_USERNAME with the actual server name and admin username provided in the Azure portal. Ensure you have the admin password at hand, as it might be required during connection.
+Replace SERVER_NAME and ADMIN_USERNAME with the actual server name and admin username provided in the Azure portal.
 
-#### 3. Restart the Backend Web App
+#### 3. Run Prisma Migrations
 
-To apply the changes and ensure your application connects to the refreshed database, you need to restart your backend web application.
+After recreating the database, run Prisma migrations to set up the schema:
 
-- Go back to the **Azure portal**.
-- Find your **backend web app** service.
-- Use the **"Restart"** option to reboot the application.
+```shell
+npx prisma migrate deploy --schema=prisma/schema.new.prisma
+```
+
+#### 4. Restart the Web App
+
+To apply the changes and ensure your application connects to the refreshed database, restart your web application service in the Azure portal.
 
 After a brief wait, your TEA Platform application should be operational with a clean database, ready for new data.

@@ -134,7 +134,7 @@ describe("useStore", () => {
 			expect(result.current.assuranceCase).toEqual(mockCase);
 		});
 
-		it("should trigger layoutNodes when setting assurance case", () => {
+		it("should not trigger layoutNodes when setting assurance case (conversion handled by Flow useEffect)", () => {
 			const { result } = renderHook(() => useStore());
 			const layoutNodesSpy = vi.spyOn(result.current, "layoutNodes");
 			const mockCase: AssuranceCase = {
@@ -151,7 +151,9 @@ describe("useStore", () => {
 				result.current.setAssuranceCase(mockCase);
 			});
 
-			expect(layoutNodesSpy).toHaveBeenCalled();
+			// layoutNodes is NOT called directly by setAssuranceCase
+			// The Flow component's useEffect handles case-to-nodes conversion
+			expect(layoutNodesSpy).not.toHaveBeenCalled();
 		});
 
 		it("should handle null assurance case", () => {

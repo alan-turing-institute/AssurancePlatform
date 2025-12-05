@@ -28,6 +28,7 @@ export type ElementWithLinks = {
 	role: ElementRole | null;
 	assumption: string | null;
 	justification: string | null;
+	context: string[];
 	url: string | null;
 	level: number | null;
 	// Module fields
@@ -56,6 +57,7 @@ const TYPE_SPECIFIC_FIELDS = [
 	"role",
 	"assumption",
 	"justification",
+	"context",
 	"url",
 	"level",
 	"moduleReferenceId",
@@ -76,7 +78,7 @@ type TreeNodeWritable = {
 };
 
 /**
- * Adds type-specific fields to the node if applicable and non-null.
+ * Adds type-specific fields to the node if applicable and non-null/non-empty.
  */
 function addTypeSpecificFields(
 	node: TreeNode,
@@ -85,7 +87,15 @@ function addTypeSpecificFields(
 ): void {
 	for (const field of TYPE_SPECIFIC_FIELDS) {
 		const value = element[field];
-		if (fieldAppliesTo(field, elementType) && value != null) {
+		if (!fieldAppliesTo(field, elementType)) {
+			continue;
+		}
+		// For array fields, only include if non-empty
+		if (Array.isArray(value)) {
+			if (value.length > 0) {
+				(node as TreeNodeWritable)[field] = value;
+			}
+		} else if (value != null) {
 			(node as TreeNodeWritable)[field] = value;
 		}
 	}
@@ -112,6 +122,7 @@ function addMetadataFields(node: TreeNode, element: ElementWithLinks): void {
 /**
  * Builds a clean TreeNode with only applicable fields for the element type.
  * Fields that don't apply to the element type are omitted entirely.
+ * Children are added last for better readability in JSON exports.
  */
 function buildCleanNode(
 	element: ElementWithLinks,
@@ -119,15 +130,19 @@ function buildCleanNode(
 ): TreeNode {
 	const elementType = element.elementType;
 
-	// Required fields for all types
-	const node: TreeNode = {
+	// Build node WITHOUT children first (to control key ordering)
+	const nodeWithoutChildren: Omit<TreeNode, "children"> & {
+		children?: TreeNode[];
+	} = {
 		id: element.id,
 		type: elementType,
 		name: element.name,
 		description: element.description,
 		inSandbox: element.inSandbox,
-		children,
 	};
+
+	// Cast to allow dynamic field assignment
+	const node = nodeWithoutChildren as TreeNode;
 
 	addTypeSpecificFields(node, element, elementType);
 	addMetadataFields(node, element);
@@ -136,6 +151,9 @@ function buildCleanNode(
 	if (element.comments && element.comments.length > 0) {
 		node.comments = element.comments;
 	}
+
+	// Add children LAST for better readability in JSON exports
+	node.children = children;
 
 	return node;
 }

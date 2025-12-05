@@ -13,7 +13,6 @@ import { z } from "zod";
 
 export const ELEMENT_TYPES = [
 	"GOAL",
-	"CONTEXT",
 	"STRATEGY",
 	"PROPERTY_CLAIM",
 	"EVIDENCE",
@@ -36,7 +35,12 @@ export type ElementType = (typeof ELEMENT_TYPES)[number];
  */
 export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 	url: new Set(["EVIDENCE"]),
-	justification: new Set(["STRATEGY", "JUSTIFICATION"]),
+	justification: new Set([
+		"GOAL",
+		"STRATEGY",
+		"PROPERTY_CLAIM",
+		"JUSTIFICATION",
+	]),
 	assumption: new Set([
 		"GOAL",
 		"STRATEGY",
@@ -44,6 +48,7 @@ export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 		"ASSUMPTION",
 		"AWAY_GOAL",
 	]),
+	context: new Set(["GOAL", "STRATEGY", "PROPERTY_CLAIM"]),
 	level: new Set(["PROPERTY_CLAIM"]),
 	role: new Set(["GOAL"]),
 	moduleReferenceId: new Set(["MODULE", "AWAY_GOAL"]),
@@ -55,11 +60,7 @@ export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
  * Element types that are "attribute-like" - they attach to other elements
  * but cannot have children of their own.
  */
-export const ATTRIBUTE_ELEMENT_TYPES = new Set([
-	"CONTEXT",
-	"JUSTIFICATION",
-	"ASSUMPTION",
-]);
+export const ATTRIBUTE_ELEMENT_TYPES = new Set(["JUSTIFICATION", "ASSUMPTION"]);
 
 /**
  * Fields that require non-null values for specific element types.
@@ -154,22 +155,23 @@ const GoalSchema = BaseElementSchema.extend({
 	elementType: z.literal("GOAL"),
 	role: ElementRoleSchema.nullable().optional(),
 	assumption: z.string().nullable().optional(),
-});
-
-const ContextSchema = BaseElementSchema.extend({
-	elementType: z.literal("CONTEXT"),
+	justification: z.string().nullable().optional(),
+	context: z.array(z.string()).optional(),
 });
 
 const StrategySchema = BaseElementSchema.extend({
 	elementType: z.literal("STRATEGY"),
 	assumption: z.string().nullable().optional(),
 	justification: z.string().nullable().optional(),
+	context: z.array(z.string()).optional(),
 });
 
 const PropertyClaimSchema = BaseElementSchema.extend({
 	elementType: z.literal("PROPERTY_CLAIM"),
 	assumption: z.string().nullable().optional(),
+	justification: z.string().nullable().optional(),
 	level: z.number().int().min(1).nullable().optional(),
+	context: z.array(z.string()).optional(),
 });
 
 const EvidenceSchema = BaseElementSchema.extend({
@@ -209,7 +211,6 @@ const ContractSchema = BaseElementSchema.extend({
  */
 export const ElementValidationSchema = z.discriminatedUnion("elementType", [
 	GoalSchema,
-	ContextSchema,
 	StrategySchema,
 	PropertyClaimSchema,
 	EvidenceSchema,
@@ -269,6 +270,7 @@ export function cleanElementDataForType(
 		"url",
 		"justification",
 		"assumption",
+		"context",
 		"level",
 		"role",
 		"moduleReferenceId",

@@ -66,8 +66,16 @@ function getEvidenceDedupKey(node: TreeNode): string {
 
 /**
  * Converts a tree node to a flat element.
+ * @param contextStrings - Optional context strings extracted from CONTEXT children
  */
-function nodeToElement(node: TreeNode, parentId: string | null): ElementV2 {
+function nodeToElement(
+	node: TreeNode,
+	parentId: string | null,
+	contextStrings?: string[]
+): ElementV2 {
+	// Combine node's own context with extracted context strings
+	const mergedContext = [...(node.context ?? []), ...(contextStrings ?? [])];
+
 	const element: ElementV2 = {
 		id: node.id,
 		elementType: node.type,
@@ -77,6 +85,7 @@ function nodeToElement(node: TreeNode, parentId: string | null): ElementV2 {
 		description: node.description,
 		assumption: node.assumption,
 		justification: node.justification,
+		context: mergedContext.length > 0 ? mergedContext : undefined,
 		url: node.url,
 		level: node.level,
 		inSandbox: node.inSandbox,
@@ -90,6 +99,29 @@ function nodeToElement(node: TreeNode, parentId: string | null): ElementV2 {
 	}
 
 	return element;
+}
+
+/**
+ * Extracts context strings from CONTEXT children (legacy format migration).
+ * Returns the context strings and the remaining non-CONTEXT children.
+ */
+function extractContextFromChildren(children: TreeNode[]): {
+	contextStrings: string[];
+	remainingChildren: TreeNode[];
+} {
+	const contextStrings: string[] = [];
+	const remainingChildren: TreeNode[] = [];
+
+	for (const child of children) {
+		// Handle legacy CONTEXT element type - convert to context string
+		if ((child.type as string) === "CONTEXT") {
+			contextStrings.push(child.description);
+		} else {
+			remainingChildren.push(child);
+		}
+	}
+
+	return { contextStrings, remainingChildren };
 }
 
 /**
@@ -127,11 +159,16 @@ function flattenNode(
 		return;
 	}
 
-	// Add non-evidence element with parentId
-	ctx.elements.push(nodeToElement(node, parentId));
+	// Extract CONTEXT children and convert to context strings (legacy migration)
+	const { contextStrings, remainingChildren } = extractContextFromChildren(
+		node.children
+	);
 
-	// Process children recursively
-	for (const child of node.children) {
+	// Add non-evidence element with parentId and extracted context strings
+	ctx.elements.push(nodeToElement(node, parentId, contextStrings));
+
+	// Process remaining (non-CONTEXT) children recursively
+	for (const child of remainingChildren) {
 		flattenNode(child, node.id, ctx);
 	}
 }

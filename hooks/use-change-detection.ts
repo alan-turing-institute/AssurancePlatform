@@ -76,13 +76,25 @@ async function fetchChangeDetection(
 ): Promise<ChangeDetectionResult> {
 	const url = buildUrl(caseId, includeDetails);
 	const response = await fetch(url);
+	const text = await response.text();
+
+	// Handle empty response
+	if (!text) {
+		throw new Error("Empty response from server");
+	}
+
+	let data: ChangeDetectionResult & { error?: string };
+	try {
+		data = JSON.parse(text);
+	} catch {
+		throw new Error("Invalid JSON response from server");
+	}
 
 	if (!response.ok) {
-		const data = await response.json();
 		throw new Error(data.error || "Failed to fetch changes");
 	}
 
-	return response.json();
+	return data;
 }
 
 /**

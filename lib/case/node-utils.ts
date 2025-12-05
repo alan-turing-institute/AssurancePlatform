@@ -5,7 +5,6 @@
 
 import type {
 	AssuranceCase,
-	Context,
 	Evidence,
 	Goal,
 	PropertyClaim,
@@ -43,19 +42,8 @@ export const caseItemDescription = (
 	return DESCRIPTION_FROM_TYPE[caseItemName] || "Unknown case item type.";
 };
 
-// Helper function to search in context items
-const searchInContextItems = (
-	context: Context[],
-	id: number
-): NestedArrayItem | null => {
-	for (const contextItem of context) {
-		const found = findItemById(contextItem, id);
-		if (found) {
-			return found;
-		}
-	}
-	return null;
-};
+// Note: Context is now a string[] attribute, not an array of elements
+// This function is kept for backwards compatibility but always returns null
 
 // Helper function to search in property claims
 const searchInPropertyClaims = (
@@ -118,13 +106,13 @@ const searchInStrategyItems = (
 };
 
 // Helper function to search context if exists
+// Note: Context is now a string[] attribute, not an array of elements
+// This function always returns null but is kept for structural consistency
 const searchContextIfExists = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	_item: NestedArrayItem | AssuranceCase,
+	_id: number
 ): NestedArrayItem | null => {
-	if ("context" in item && (item as Goal).context) {
-		return searchInContextItems((item as Goal).context, id);
-	}
+	// Context is now a string[] attribute, not searchable elements
 	return null;
 };
 
@@ -203,9 +191,9 @@ export const findItemById = (
 	id: number
 ): NestedArrayItem | null => {
 	// Check if it's an AssuranceCase (which doesn't match NestedArrayItem structure)
-	if ("goals" in item && item.id === id) {
-		// AssuranceCase cannot be returned as NestedArrayItem
-		return null;
+	// AssuranceCase cannot be returned as NestedArrayItem, so skip to nested search
+	if ("goals" in item) {
+		return searchInAllNestedStructures(item, id);
 	}
 
 	// For NestedArrayItem types
@@ -217,13 +205,12 @@ export const findItemById = (
 };
 
 // Helper function to get the array based on node type
+// Note: Context is now a string[] attribute, not an element array
 const getNodeArray = (
 	parentNode: ReactFlowNode,
 	nodeType: string
-): (Context | Strategy | PropertyClaim | Evidence)[] => {
+): (Strategy | PropertyClaim | Evidence)[] => {
 	switch (nodeType.toLowerCase()) {
-		case "context":
-			return [...(parentNode.data.context || [])];
 		case "strategy":
 			return [...(parentNode.data.strategies || [])];
 		case "property":
@@ -237,7 +224,7 @@ const getNodeArray = (
 
 // Helper function to calculate identifier from last item
 const calculateIdentifierFromLastItem = (
-	lastItem: Context | Strategy | PropertyClaim | Evidence | undefined,
+	lastItem: Strategy | PropertyClaim | Evidence | undefined,
 	newNodeType: string,
 	parentNode: ReactFlowNode,
 	arrayLength: number
@@ -298,8 +285,6 @@ export const setNodeIdentifier = (
 
 	// For specific node types, return prefixed identifiers
 	switch (newNodeType.toLowerCase()) {
-		case "context":
-			return `C${identifier}`;
 		case "strategy":
 			return `S${identifier}`;
 		case "evidence":
@@ -358,17 +343,7 @@ const removeItemFromNestedStructure = (
 					);
 			}
 
-			// Remove from contexts
-			if ("context" in item && item.context) {
-				(item as Goal).context = (item as Goal).context.filter(
-					(context: Context) => !(context.id === id && context.type === type)
-				);
-				(item as Goal).context = removeItemFromNestedStructure(
-					(item as Goal).context as unknown as NestedArrayItem[],
-					id,
-					type
-				) as unknown as Context[];
-			}
+			// Note: context is now a string[] attribute, not an array of elements to remove
 
 			// Remove from evidence
 			if ("evidence" in item && item.evidence) {
@@ -463,9 +438,7 @@ const traverseNestedStructures = (
 	if ("strategies" in item && item.strategies) {
 		traverse(item.strategies as NestedArrayItem[]);
 	}
-	if ("context" in item && item.context) {
-		traverse(item.context as NestedArrayItem[]);
-	}
+	// Note: context is now a string[] attribute, not an array of elements to traverse
 	if ("evidence" in item && item.evidence) {
 		traverse(item.evidence as NestedArrayItem[]);
 	}

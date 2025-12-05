@@ -7,8 +7,6 @@ import {
 } from "@/lib/services/publish-service";
 import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma-new";
 
-const USE_PRISMA_AUTH = process.env.USE_PRISMA_AUTH === "true";
-
 /**
  * GET /api/cases/[id]/status
  *
@@ -25,13 +23,6 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id } = await params;
-
-	if (!USE_PRISMA_AUTH) {
-		return NextResponse.json(
-			{ error: "Prisma auth not enabled" },
-			{ status: 501 }
-		);
-	}
 
 	const session = await getServerSession(authOptions);
 
@@ -71,13 +62,6 @@ export async function PATCH(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id } = await params;
-
-	if (!USE_PRISMA_AUTH) {
-		return NextResponse.json(
-			{ error: "Prisma auth not enabled" },
-			{ status: 501 }
-		);
-	}
 
 	const session = await getServerSession(authOptions);
 

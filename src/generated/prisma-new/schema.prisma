@@ -338,6 +338,7 @@ model AssuranceElement {
   // GSN-specific fields
   assumption    String? // For goals, strategies, claims
   justification String? // For strategies
+  context       String[] @default([]) // For goals, strategies, claims
 
   // Evidence-specific
   url String?
@@ -474,6 +475,7 @@ model PatternElement {
   // GSN-specific fields (same as AssuranceElement)
   assumption    String?
   justification String?
+  context       String[] @default([]) // For goals, strategies, claims
 
   // Evidence-specific
   url String?

@@ -110,18 +110,6 @@ export function StatusModalWrapper() {
 		await handleStatusTransition("READY_TO_PUBLISH");
 	};
 
-	const handlePublish = async () => {
-		await handleStatusTransition("PUBLISHED");
-	};
-
-	const handleReturnToDraft = async () => {
-		await handleStatusTransition("DRAFT");
-	};
-
-	const handleUnpublish = async () => {
-		await handleStatusTransition("DRAFT");
-	};
-
 	const handleUpdatePublished = async () => {
 		await handleStatusTransition("PUBLISHED");
 	};
@@ -136,9 +124,6 @@ export function StatusModalWrapper() {
 					statusModal.onClose();
 				}
 			}}
-			onPublish={loading ? undefined : handlePublish}
-			onReturnToDraft={loading ? undefined : handleReturnToDraft}
-			onUnpublish={loading ? undefined : handleUnpublish}
 			onUpdatePublished={loading ? undefined : handleUpdatePublished}
 			open={statusModal.isOpen}
 			publishedAt={statusModal.publishedAt}

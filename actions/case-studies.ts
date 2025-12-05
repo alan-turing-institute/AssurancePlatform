@@ -9,7 +9,7 @@ import {
 	deleteCaseStudy as deleteCaseStudyService,
 	getCaseStudiesByOwner,
 	getCaseStudyById,
-	getPublishedAssuranceCaseById,
+	getPublishedAssuranceCaseByCaseId,
 	getPublishedCaseStudies,
 	getPublishedCaseStudyById,
 	updateCaseStudyWithLinks,
@@ -276,12 +276,13 @@ export const deleteCaseStudy = async (_token: string, caseStudyId: number) => {
 };
 
 /**
- * Fetch a published assurance case by ID (public access)
+ * Fetch a published assurance case by the source assurance case ID (public access)
  */
 export const fetchPublishedAssuranceCaseId = async (
 	assuranceCaseId: string
 ) => {
-	const publishedCase = await getPublishedAssuranceCaseById(assuranceCaseId);
+	const publishedCase =
+		await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
 
 	if (!publishedCase) {
 		throw new Error("Published assurance case not found");

@@ -3,6 +3,7 @@
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prismaNew } from "@/lib/prisma-new";
 import { exportCase } from "@/lib/services/case-export-service";
+import { detectChanges } from "@/lib/services/change-detection-service";
 import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma-new";
 
 // ============================================
@@ -384,11 +385,9 @@ export async function getFullPublishStatus(
 			publishedAt: true,
 			publishStatus: true,
 			markedReadyAt: true,
-			updatedAt: true,
 			publishedVersions: {
 				select: {
 					id: true,
-					createdAt: true,
 					caseStudyLinks: {
 						select: {
 							caseStudyId: true,
@@ -418,11 +417,12 @@ export async function getFullPublishStatus(
 		}
 	}
 
-	// Detect changes by comparing updatedAt with last publish date
-	const hasChanges =
-		assuranceCase.published &&
-		latestPublished != null &&
-		assuranceCase.updatedAt > latestPublished.createdAt;
+	// Detect changes using content-based comparison
+	let hasChanges = false;
+	if (assuranceCase.published && latestPublished) {
+		const changeResult = await detectChanges(userId, caseId, false);
+		hasChanges = changeResult?.hasChanges ?? false;
+	}
 
 	return {
 		data: {
@@ -818,11 +818,15 @@ function executeStatusTransition(
 		case "PUBLISHED->DRAFT":
 			return handleUnpublish(userId, caseId);
 
+		case "PUBLISHED->PUBLISHED":
+			// Update published case (create new snapshot)
+			return handleUpdatePublished(userId, caseId, description);
+
 		default:
-			return {
+			return Promise.resolve({
 				success: false,
 				error: `Invalid status transition: ${transitionKey.replace("->", " to ")}`,
-			};
+			});
 	}
 }
 
@@ -878,4 +882,21 @@ async function handleUnpublish(
 		};
 	}
 	return { success: true, newStatus: "DRAFT" };
+}
+
+async function handleUpdatePublished(
+	userId: string,
+	caseId: string,
+	description?: string
+): Promise<StatusTransitionResult> {
+	const result = await updatePublishedCase(userId, caseId, description);
+	if (!result.success) {
+		return { success: false, error: result.error };
+	}
+	return {
+		success: true,
+		newStatus: "PUBLISHED",
+		publishedId: result.publishedId,
+		publishedAt: result.publishedAt,
+	};
 }

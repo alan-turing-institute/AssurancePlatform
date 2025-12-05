@@ -143,6 +143,7 @@ async function createElements(
 				description: el.description,
 				assumption: el.assumption,
 				justification: el.justification,
+				context: el.context ?? [],
 				url: el.url,
 				level: el.level,
 				inSandbox: el.inSandbox,

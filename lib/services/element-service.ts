@@ -9,7 +9,6 @@ import type {
 // Element types mapping from frontend to Prisma enum
 const ELEMENT_TYPE_MAP: Record<string, string> = {
 	goal: "GOAL",
-	context: "CONTEXT",
 	strategy: "STRATEGY",
 	property: "PROPERTY_CLAIM",
 	property_claim: "PROPERTY_CLAIM",
@@ -20,7 +19,6 @@ const ELEMENT_TYPE_MAP: Record<string, string> = {
 // Reverse mapping for API responses
 const ELEMENT_TYPE_REVERSE_MAP: Record<string, string> = {
 	GOAL: "TopLevelNormativeGoal",
-	CONTEXT: "Context",
 	STRATEGY: "Strategy",
 	PROPERTY_CLAIM: "PropertyClaim",
 	EVIDENCE: "Evidence",
@@ -32,7 +30,6 @@ const TYPE_PREFIXES: Record<string, string> = {
 	STRATEGY: "S",
 	PROPERTY_CLAIM: "P",
 	EVIDENCE: "E",
-	CONTEXT: "C",
 };
 
 export type CreateElementInput = {
@@ -54,6 +51,7 @@ export type CreateElementInput = {
 	// GSN-specific
 	assumption?: string;
 	justification?: string;
+	context?: string[];
 };
 
 export type UpdateElementInput = {
@@ -66,6 +64,7 @@ export type UpdateElementInput = {
 	URL?: string;
 	assumption?: string;
 	justification?: string;
+	context?: string[];
 	inSandbox?: boolean;
 	// For compatibility with Django format
 	goal_id?: string | number | null;
@@ -88,6 +87,7 @@ export type ElementResponse = {
 	URL?: string;
 	assumption?: string;
 	justification?: string;
+	context?: string[];
 	level?: number;
 	comments?: unknown[];
 };
@@ -184,6 +184,7 @@ function transformToResponse(element: {
 	description: string;
 	assumption: string | null;
 	justification: string | null;
+	context: string[];
 	url: string | null;
 	inSandbox: boolean;
 	level: number | null;
@@ -221,6 +222,9 @@ function transformToResponse(element: {
 	}
 	if (element.justification) {
 		response.justification = element.justification;
+	}
+	if (element.context && element.context.length > 0) {
+		response.context = element.context;
 	}
 	if (element.level !== null) {
 		response.level = element.level;
@@ -380,7 +384,6 @@ export async function createElement(
 				caseId,
 				elementType: elementType as
 					| "GOAL"
-					| "CONTEXT"
 					| "STRATEGY"
 					| "PROPERTY_CLAIM"
 					| "EVIDENCE",
@@ -394,6 +397,7 @@ export async function createElement(
 				url: input.url || input.URL,
 				assumption: input.assumption,
 				justification: input.justification,
+				context: input.context ?? [],
 				level,
 				createdById: userId,
 			},
@@ -474,6 +478,9 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	}
 	if (input.justification !== undefined) {
 		updateData.justification = input.justification;
+	}
+	if (input.context !== undefined) {
+		updateData.context = input.context;
 	}
 	if (input.inSandbox !== undefined) {
 		updateData.inSandbox = input.inSandbox;

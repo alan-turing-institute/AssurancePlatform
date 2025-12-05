@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	BookOpenText,
 	Eye,
 	EyeOff,
 	HelpCircle,
@@ -40,7 +39,6 @@ import {
 import type { AssuranceCase, Goal, PropertyClaim, Strategy } from "@/types";
 import NodeAttributes from "../cases/node-attributes";
 import NodeComment from "../cases/node-comments";
-import NodeContext from "../cases/node-context";
 import OrphanElements from "../cases/orphan-elements";
 import { AlertModal } from "../modals/alert-modal";
 import EditSheet from "../ui/edit-sheet";
@@ -265,7 +263,7 @@ const handleEvidenceMove = async (
 			assuranceCase,
 			selectedEvidenceMove.id
 		);
-		const updatedAssuranceCase = await updateAssuranceCase(
+		const updatedAssuranceCase = updateAssuranceCase(
 			"evidence",
 			assuranceCase,
 			updateItem,
@@ -294,16 +292,6 @@ const ActionButtons = ({
 	<div className="">
 		<h3 className="mb-2 font-semibold text-lg">Actions</h3>
 		<div className="flex flex-col items-center justify-around gap-2">
-			{node.type === "goal" && (
-				<Button
-					className="w-full"
-					onClick={() => setAction("context")}
-					variant={"outline"}
-				>
-					<BookOpenText className="mr-2 h-4 w-4" />
-					{readOnly ? "View Context" : "Manage Context"}
-				</Button>
-			)}
 			{node.type !== "evidence" && (
 				<Button
 					className="w-full"
@@ -314,7 +302,7 @@ const ActionButtons = ({
 					{readOnly ? "View Attributes" : "Manage Attributes"}
 				</Button>
 			)}
-			{node.type !== "context" && node.type !== "evidence" && !readOnly && (
+			{node.type !== "evidence" && !readOnly && (
 				<Button
 					className="w-full"
 					onClick={() => setAction("new")}
@@ -324,7 +312,7 @@ const ActionButtons = ({
 					Add New Element
 				</Button>
 			)}
-			{node.type !== "context" && node.type !== "evidence" && !readOnly && (
+			{node.type !== "evidence" && !readOnly && (
 				<Button
 					className="w-full"
 					onClick={() => setAction("existing")}
@@ -334,19 +322,16 @@ const ActionButtons = ({
 					Reattach Element(s)
 				</Button>
 			)}
-			{node.type !== "context" &&
-				node.type !== "goal" &&
-				node.type !== "strategy" &&
-				!readOnly && (
-					<Button
-						className="w-full"
-						onClick={() => setAction("move")}
-						variant={"outline"}
-					>
-						<Move className="mr-2 h-4 w-4" />
-						Move Item
-					</Button>
-				)}
+			{node.type !== "goal" && node.type !== "strategy" && !readOnly && (
+				<Button
+					className="w-full"
+					onClick={() => setAction("move")}
+					variant={"outline"}
+				>
+					<Move className="mr-2 h-4 w-4" />
+					Move Item
+				</Button>
+			)}
 			<Button
 				className="w-full"
 				onClick={() => setAction("comment")}
@@ -781,13 +766,6 @@ const ActionContent = ({
 				node={node}
 				readOnly={assuranceCase?.permissions === "view"}
 				setAction={setAction}
-			/>
-		)}
-		{action === "context" && (
-			<NodeContext
-				actions={{ setSelectedLink, handleClose, setAction }}
-				node={node}
-				setUnresolvedChanges={setUnresolvedChanges}
 			/>
 		)}
 		{action === "attributes" && (

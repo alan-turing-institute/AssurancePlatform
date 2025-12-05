@@ -63,6 +63,7 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		url: (body.url || body.URL) as string | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
+		context: body.context as string[] | undefined,
 		inSandbox: body.in_sandbox as boolean | undefined,
 		// Django-style parent references
 		goal_id: body.goal_id as string | undefined,

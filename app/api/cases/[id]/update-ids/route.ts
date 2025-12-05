@@ -10,7 +10,6 @@ const TYPE_PREFIXES: Record<string, string> = {
 	STRATEGY: "S",
 	PROPERTY_CLAIM: "P",
 	EVIDENCE: "E",
-	CONTEXT: "C",
 };
 
 type ElementWithChildren = {

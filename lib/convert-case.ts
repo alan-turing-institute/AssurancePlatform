@@ -247,9 +247,8 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 				source: node.data.parentId as string,
 				target: currentNodeId,
 				type: "default", // Add the required type property
-				animated: node.type === "context",
+				animated: false,
 				sourceHandle: "c",
-				// sourceHandle: node.type === 'context' ? 'a' : 'c',
 				hidden: false,
 			};
 

@@ -1,19 +1,9 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -34,9 +24,6 @@ type StatusModalProps = {
 	publishedAt?: Date | string | null;
 	linkedCaseStudyCount?: number;
 	onMarkAsReady?: () => Promise<void>;
-	onPublish?: () => Promise<void>;
-	onReturnToDraft?: () => Promise<void>;
-	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
 };
 
@@ -46,7 +33,7 @@ type StatusModalProps = {
  * Shows different content based on current status:
  * - Draft: Option to mark as ready
  * - Ready to Publish: Link to create case study
- * - Published: Options to unpublish or update (if hasChanges)
+ * - Published: Info about linked case studies and option to update (if hasChanges)
  */
 export function StatusModal({
 	open,
@@ -56,13 +43,9 @@ export function StatusModal({
 	publishedAt,
 	linkedCaseStudyCount = 0,
 	onMarkAsReady,
-	onPublish,
-	onReturnToDraft,
-	onUnpublish,
 	onUpdatePublished,
 }: StatusModalProps) {
 	const [loading, setLoading] = useState(false);
-	const [showUnpublishConfirm, setShowUnpublishConfirm] = useState(false);
 
 	const handleAction = async (action: (() => Promise<void>) | undefined) => {
 		if (!action) {
@@ -78,14 +61,6 @@ export function StatusModal({
 		}
 	};
 
-	const handleUnpublishClick = () => {
-		if (linkedCaseStudyCount > 0) {
-			setShowUnpublishConfirm(true);
-		} else {
-			handleAction(onUnpublish);
-		}
-	};
-
 	const formattedDate = publishedAt
 		? new Date(publishedAt).toLocaleDateString("en-GB", {
 				day: "2-digit",
@@ -97,93 +72,56 @@ export function StatusModal({
 		: null;
 
 	return (
-		<>
-			<Dialog onOpenChange={onOpenChange} open={open}>
-				<DialogContent className="sm:max-w-md">
-					<DialogHeader>
-						<DialogTitle>
-							Case Status: {getStatusLabel(status)}
-							{hasChanges && status === "PUBLISHED" && (
-								<span className="ml-2 font-normal text-amber-500 text-sm">
-									(Changes pending)
-								</span>
-							)}
-						</DialogTitle>
-						<DialogDescription>
-							{getStatusDescription(status)}
-						</DialogDescription>
-					</DialogHeader>
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>
+						Case Status: {getStatusLabel(status)}
+						{hasChanges && status === "PUBLISHED" && (
+							<span className="ml-2 font-normal text-amber-500 text-sm">
+								(Changes pending)
+							</span>
+						)}
+					</DialogTitle>
+					<DialogDescription>{getStatusDescription(status)}</DialogDescription>
+				</DialogHeader>
 
-					<Separator />
+				<Separator />
 
-					{status === "DRAFT" && (
-						<DraftContent loading={loading} onMarkAsReady={onMarkAsReady} />
-					)}
+				{status === "DRAFT" && (
+					<DraftContent
+						handleAction={handleAction}
+						loading={loading}
+						onMarkAsReady={onMarkAsReady}
+					/>
+				)}
 
-					{status === "READY_TO_PUBLISH" && (
-						<ReadyContent
-							handleAction={handleAction}
-							loading={loading}
-							onOpenChange={onOpenChange}
-							onPublish={onPublish}
-							onReturnToDraft={onReturnToDraft}
-						/>
-					)}
+				{status === "READY_TO_PUBLISH" && (
+					<ReadyContent onOpenChange={onOpenChange} />
+				)}
 
-					{status === "PUBLISHED" && (
-						<PublishedContent
-							formattedDate={formattedDate}
-							handleAction={handleAction}
-							handleUnpublishClick={handleUnpublishClick}
-							hasChanges={hasChanges}
-							linkedCaseStudyCount={linkedCaseStudyCount}
-							loading={loading}
-							onUpdatePublished={onUpdatePublished}
-						/>
-					)}
+				{status === "PUBLISHED" && (
+					<PublishedContent
+						formattedDate={formattedDate}
+						handleAction={handleAction}
+						hasChanges={hasChanges}
+						linkedCaseStudyCount={linkedCaseStudyCount}
+						loading={loading}
+						onUpdatePublished={onUpdatePublished}
+					/>
+				)}
 
-					<DialogFooter>
-						<Button
-							disabled={loading}
-							onClick={() => onOpenChange(false)}
-							variant="outline"
-						>
-							Close
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-
-			<AlertDialog
-				onOpenChange={setShowUnpublishConfirm}
-				open={showUnpublishConfirm}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Unpublish Case?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This case is linked to {linkedCaseStudyCount} case{" "}
-							{linkedCaseStudyCount === 1 ? "study" : "studies"}. Unpublishing
-							will remove these links.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-							disabled={loading}
-							onClick={() => {
-								setShowUnpublishConfirm(false);
-								handleAction(onUnpublish);
-							}}
-						>
-							{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							Unpublish Anyway
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</>
+				<DialogFooter>
+					<Button
+						disabled={loading}
+						onClick={() => onOpenChange(false)}
+						variant="outline"
+					>
+						Close
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
@@ -205,7 +143,7 @@ function getStatusDescription(status: PublishStatusType): string {
 		case "DRAFT":
 			return "This case is private and not available for case study linking.";
 		case "READY_TO_PUBLISH":
-			return "This case is ready to be published or linked to case studies.";
+			return "This case is linked to a case study. It will show as 'Published' once the case study is made public.";
 		case "PUBLISHED":
 			return "This case is published and visible in case studies.";
 		default:
@@ -216,9 +154,14 @@ function getStatusDescription(status: PublishStatusType): string {
 type DraftContentProps = {
 	loading: boolean;
 	onMarkAsReady?: () => Promise<void>;
+	handleAction: (action: (() => Promise<void>) | undefined) => void;
 };
 
-function DraftContent({ loading, onMarkAsReady }: DraftContentProps) {
+function DraftContent({
+	loading,
+	onMarkAsReady,
+	handleAction,
+}: DraftContentProps) {
 	return (
 		<div className="space-y-4">
 			<Alert>
@@ -233,7 +176,7 @@ function DraftContent({ loading, onMarkAsReady }: DraftContentProps) {
 				<Button
 					className="w-full bg-amber-500 text-white hover:bg-amber-600"
 					disabled={loading}
-					onClick={() => onMarkAsReady()}
+					onClick={() => handleAction(onMarkAsReady)}
 				>
 					{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 					Mark as Ready to Publish
@@ -245,66 +188,16 @@ function DraftContent({ loading, onMarkAsReady }: DraftContentProps) {
 
 type ReadyContentProps = {
 	onOpenChange: (open: boolean) => void;
-	onPublish?: () => Promise<void>;
-	onReturnToDraft?: () => Promise<void>;
-	loading: boolean;
-	handleAction: (action: (() => Promise<void>) | undefined) => void;
 };
 
-function ReadyContent({
-	onOpenChange,
-	onPublish,
-	onReturnToDraft,
-	loading,
-	handleAction,
-}: ReadyContentProps) {
+function ReadyContent({ onOpenChange }: ReadyContentProps) {
 	return (
-		<div className="space-y-4">
-			<Alert>
-				<AlertDescription>
-					Ready cases can be linked to case studies, or you can publish directly
-					to make this case publicly available.
-				</AlertDescription>
-			</Alert>
-
-			<div className="flex gap-2">
-				{onReturnToDraft && (
-					<Button
-						className="flex-1"
-						disabled={loading}
-						onClick={() => handleAction(onReturnToDraft)}
-						variant="outline"
-					>
-						{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						Return to Draft
-					</Button>
-				)}
-				{onPublish && (
-					<Button
-						className="flex-1 bg-green-500 text-white hover:bg-green-600"
-						disabled={loading}
-						onClick={() => handleAction(onPublish)}
-					>
-						{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						Publish Now
-					</Button>
-				)}
-			</div>
-
-			<Separator />
-
-			<Button
-				asChild
-				className="w-full"
-				onClick={() => onOpenChange(false)}
-				variant="outline"
-			>
-				<Link href="/dashboard/case-studies/create">
-					<ExternalLink className="mr-2 h-4 w-4" />
-					Create Case Study Instead
-				</Link>
-			</Button>
-		</div>
+		<Button asChild className="w-full" onClick={() => onOpenChange(false)}>
+			<Link href="/dashboard/case-studies/create">
+				<ExternalLink className="mr-2 h-4 w-4" />
+				Create a Case Study
+			</Link>
+		</Button>
 	);
 }
 
@@ -314,7 +207,6 @@ type PublishedContentProps = {
 	linkedCaseStudyCount: number;
 	loading: boolean;
 	onUpdatePublished?: () => Promise<void>;
-	handleUnpublishClick: () => void;
 	handleAction: (action: (() => Promise<void>) | undefined) => void;
 };
 
@@ -324,7 +216,7 @@ function PublishedContent({
 	linkedCaseStudyCount,
 	loading,
 	onUpdatePublished,
-	handleUnpublishClick,
+	handleAction,
 }: PublishedContentProps) {
 	return (
 		<div className="space-y-4">
@@ -335,12 +227,12 @@ function PublishedContent({
 			)}
 
 			{linkedCaseStudyCount > 0 && (
-				<Alert variant="destructive">
-					<AlertTriangle className="h-4 w-4" />
+				<Alert>
+					<Info className="h-4 w-4" />
 					<AlertDescription>
 						This case is linked to {linkedCaseStudyCount} case{" "}
-						{linkedCaseStudyCount === 1 ? "study" : "studies"}. Unpublishing
-						will remove these links.
+						{linkedCaseStudyCount === 1 ? "study" : "studies"}. To unpublish,
+						remove this case from the linked case studies first.
 					</AlertDescription>
 				</Alert>
 			)}
@@ -354,26 +246,16 @@ function PublishedContent({
 				</Alert>
 			)}
 
-			<div className="flex gap-2">
+			{hasChanges && onUpdatePublished && (
 				<Button
-					className="flex-1"
+					className="w-full bg-green-500 text-white hover:bg-green-600"
 					disabled={loading}
-					onClick={handleUnpublishClick}
-					variant="outline"
+					onClick={() => handleAction(onUpdatePublished)}
 				>
-					Unpublish
+					{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					Update Published
 				</Button>
-				{hasChanges && onUpdatePublished && (
-					<Button
-						className="flex-1 bg-green-500 text-white hover:bg-green-600"
-						disabled={loading}
-						onClick={() => onUpdatePublished()}
-					>
-						{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						Update Published
-					</Button>
-				)}
-			</div>
+			)}
 		</div>
 	);
 }

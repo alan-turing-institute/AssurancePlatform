@@ -130,13 +130,9 @@ const useStore = create<Store>((set, get) => ({
 	},
 	setAssuranceCase: (assuranceCase: AssuranceCase | null) => {
 		// Update the assurance case in the state
+		// Note: The Flow component's useEffect handles converting the case to nodes/edges
+		// via the convert() function, so we don't need to call layoutNodes here
 		set({ assuranceCase });
-
-		// Get the current nodes and edges from the state
-		const { nodes, edges } = get();
-
-		// Layout the nodes and edges
-		get().layoutNodes(nodes, edges);
 	},
 	setOrphanedElements: (
 		orphanedElements:

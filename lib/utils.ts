@@ -25,30 +25,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Converts internal Docker hostname URLs to localhost for development environment.
- * In production, URLs from Azure Blob Storage are returned unchanged.
+ * Normalizes image URLs.
+ *
+ * @deprecated Images are now served through Next.js internal routes.
+ * This function is kept for backward compatibility but simply returns the URL unchanged.
  *
  * @param {string | null | undefined} url - The URL to normalize
- * @returns {string | null | undefined} The normalized URL
- *
- * @example
- * normalizeImageUrl('http://tea-backend:8000/media/image.jpg')
- * // In development: 'http://localhost:8000/media/image.jpg'
- * // In production: unchanged
+ * @returns {string | null | undefined} The URL unchanged
  */
 export function normalizeImageUrl(
 	url: string | null | undefined
 ): string | null | undefined {
-	if (!url) {
-		return url;
-	}
-
-	// Only transform URLs in development environment
-	if (process.env.NODE_ENV === "development") {
-		// Replace tea-backend:8000 with localhost:8000 for local development
-		return url.replace("http://tea-backend:8000", "http://localhost:8000");
-	}
-
 	return url;
 }
 

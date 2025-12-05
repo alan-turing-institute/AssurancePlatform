@@ -18,11 +18,11 @@ services:
       timeout: 5s
       retries: 5
 
-  tea_frontend:
+  tea_app:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: tea_frontend_dev
+    container_name: tea_app_dev
     ports:
       - '3000:3000'
     depends_on:
@@ -32,7 +32,7 @@ services:
       - ./.env.local
     volumes:
       - .:/app
-      - frontend_next:/app/.next
+      - app_next:/app/.next
       - /app/node_modules
     networks:
       - tea_dev_network
@@ -45,4 +45,4 @@ networks:
 
 volumes:
   postgres_data:
-  frontend_next:
+  app_next:

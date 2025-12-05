@@ -16,11 +16,11 @@ services:
       timeout: 3s
       retries: 3
 
-  tea_frontend_test:
+  tea_app_test:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: tea_frontend_test
+    container_name: tea_app_test
     depends_on:
       postgres_test:
         condition: service_healthy
@@ -28,9 +28,9 @@ services:
       - ./.env.local
     volumes:
       - .:/app
-      - frontend_test_modules:/app/node_modules # Separate node_modules
-      - frontend_test_next:/app/.next # Separate .next build
-      - frontend_test_coverage:/app/coverage # Separate coverage directory
+      - app_test_modules:/app/node_modules # Separate node_modules
+      - app_test_next:/app/.next # Separate .next build
+      - app_test_coverage:/app/coverage # Separate coverage directory
     networks:
       - tea_test_network
     # Default: keep container running for interactive testing
@@ -42,6 +42,6 @@ networks:
     driver: bridge
 
 volumes:
-  frontend_test_modules:
-  frontend_test_next:
-  frontend_test_coverage:
+  app_test_modules:
+  app_test_next:
+  app_test_coverage:

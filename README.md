@@ -1,106 +1,114 @@
-Trustworthy & Ethical Assurance Platform
-==================
+# Trustworthy & Ethical Assurance Platform
 
-TEA (Trustworthy & Ethical Assurance) Platform is a web application developed using Next.js, React, and TypeScript. It provides a platform for managing and monitoring assurance cases in various domains.
+TEA (Trustworthy & Ethical Assurance) Platform is a full-stack web application for creating and sharing structured assurance cases. Built with Next.js, React, TypeScript, and Prisma ORM.
 
-Getting Started
----------------
+## Getting Started
 
-Demo: [Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
-
-To get started with Assurance Platform, follow these steps:
+**Demo:** [Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
 
 ### Prerequisites
 
--   Node.js and npm (or Yarn) installed on your machine.
+- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- [Node.js](https://nodejs.org/) (v20+) and [pnpm](https://pnpm.io/) (for local development without Docker)
 
-### Installation
+### Quick Start (Docker)
 
-1.  Clone the repository:
+1. Clone the repository:
 
-    ```
-    git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-    ```
+   ```bash
+   git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+   cd AssurancePlatform
+   ```
 
-2.  Navigate to the project directory:
+2. Copy the environment file and configure:
 
-    ```
-    cd next-frontend
-    ```
+   ```bash
+   cp .env.example .env.local
+   ```
 
-3.  Install dependencies using npm:
+3. Start the development environment:
 
-    ```
-    npm install
-    ```
+   ```bash
+   docker-compose -f docker-compose.development.yml up -d --build
+   ```
+
+4. Access the application at [http://localhost:3000](http://localhost:3000)
 
 ### Environment Variables
 
-Ensure that you have added the following to your `.env.local` file in the root of this project.
-
-```
-NEXT_PUBLIC_STORAGESASTOKEN={token-value}
-NEXT_PUBLIC_STORAGESOURCENAME={storage-name-value}
-
-GITHUB_APP_CLIENT_ID={gh-clientid-value}
-GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
-NEXTAUTH_SECRET={unique-string}
-NEXT_PUBLIC_API_URL={api-url-value}
-API_URL={api-url-value}
-NEXTAUTH_URL={frontend-url-value}
-```
-
-To generate a unique string for the `NEXTAUTH_SECRET` you can run:
+Create a `.env.local` file with the following variables:
 
 ```bash
-openssl rand -base64 32
+# Database
+DATABASE_URL="postgresql://tea_user:tea_password@postgres:5432/tea_dev"
+
+# Authentication
+NEXTAUTH_SECRET="your-secret-key"  # Generate with: openssl rand -base64 32
+NEXTAUTH_URL="http://localhost:3000"
+
+# GitHub OAuth (optional)
+GITHUB_APP_CLIENT_ID="your-github-client-id"
+GITHUB_APP_CLIENT_SECRET="your-github-client-secret"
 ```
 
-### Development
+### Development Commands
 
-To run the application in development mode, navigate to this directory and use the following command.
+```bash
+# Start all services
+docker-compose -f docker-compose.development.yml up -d
 
+# View logs
+docker-compose -f docker-compose.development.yml logs -f
+
+# Stop all services
+docker-compose -f docker-compose.development.yml down
+
+# Run database migrations
+docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
+
+# Run tests
+docker exec tea_app_dev pnpm run test
 ```
-npm run dev
+
+### Local Development (without Docker)
+
+If you prefer to run without Docker:
+
+```bash
+# Install dependencies
+pnpm install
+
+# Generate Prisma client
+npx prisma generate --schema=prisma/schema.new.prisma
+
+# Run development server
+pnpm run dev
 ```
 
-This command starts the development server and opens the application in your default web browser. The application will automatically reload if you make any changes to the source code.
+Note: You'll need a PostgreSQL database running locally and update `DATABASE_URL` accordingly.
 
 ### Production
 
-To build and run the application in production mode, use the following command
+For production deployment, use the production Docker Compose configuration:
 
-```
-npm run build
-npm start
-```
-
-This will build the application for production and start a server to serve the built files.
-
-### Configuration
-
-The application uses environment variables for configuration. Create a `.env.local` file in the root directory and specify the required environment variables. You can use the `.env.example` file as a template.
-
-### Deployment
-
-You can deploy using Docker without Gitub actions. For example to build and `Staging` image you can navigate to `./docker/staging/` and run the following command.
-
-```
-docker compose build
+```bash
+docker-compose up -d --build
 ```
 
-This will build your image based on the values in the Docker compose file. To run your new image use
+## Documentation
 
-```
-docker compose up
+Full documentation is available in the `tea-docs/` directory. To run the documentation site locally:
+
+```bash
+cd tea-docs
+pnpm install
+pnpm start
 ```
 
-Contributing
-------------
+## Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
 
-License
--------
+## Licence
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT Licence. See the LICENCE file for details.

@@ -524,46 +524,6 @@ export const handlers = [
 		])
 	),
 
-	// Screenshot endpoint - Next.js API route
-	http.post("/api/screenshot", async ({ request }) => {
-		const body = (await request.json()) as {
-			caseId: string;
-			image: string;
-			token: string;
-		};
-
-		// Mock successful response from Next.js API route
-		return HttpResponse.json({
-			message: "Screenshot saved successfully",
-			data: {
-				id: Date.now(),
-				case: Number.parseInt(body.caseId, 10),
-				image_url: `/media/cases/${body.caseId}/screenshot.png`,
-				created_date: new Date().toISOString(),
-			},
-		});
-	}),
-
-	// Screenshot endpoint with absolute URL - fallback
-	http.post("http://localhost:3000/api/screenshot", async ({ request }) => {
-		const body = (await request.json()) as {
-			caseId: string;
-			image: string;
-			token: string;
-		};
-
-		// Mock successful response from Next.js API route
-		return HttpResponse.json({
-			message: "Screenshot saved successfully",
-			data: {
-				id: Date.now(),
-				case: Number.parseInt(body.caseId, 10),
-				image_url: `/media/cases/${body.caseId}/screenshot.png`,
-				created_date: new Date().toISOString(),
-			},
-		});
-	}),
-
 	// Public API endpoints
 	http.get(`${API_BASE_URL}/api/public/published-cases/`, () =>
 		HttpResponse.json([])

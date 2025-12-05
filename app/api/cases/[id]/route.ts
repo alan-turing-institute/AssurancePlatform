@@ -11,6 +11,7 @@ type PrismaElement = {
 	description: string;
 	assumption: string | null;
 	justification: string | null;
+	context: string[];
 	url: string | null;
 	level: number | null;
 	claimType: string | null;
@@ -100,6 +101,21 @@ async function fetchCaseFromPrisma(
 					username: true,
 				},
 			},
+			// Include published versions with linked case study status
+			publishedVersions: {
+				include: {
+					caseStudyLinks: {
+						include: {
+							caseStudy: {
+								select: {
+									id: true,
+									published: true,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	});
 
@@ -119,6 +135,18 @@ async function fetchCaseFromPrisma(
 		permissionResult.isOwner
 	);
 
+	// Check if any linked case study is public
+	const hasPublicCaseStudy = caseData.publishedVersions.some((pv) =>
+		pv.caseStudyLinks.some((link) => link.caseStudy.published)
+	);
+
+	// Count total linked case studies
+	const linkedCaseStudyCount = new Set(
+		caseData.publishedVersions.flatMap((pv) =>
+			pv.caseStudyLinks.map((link) => link.caseStudy.id)
+		)
+	).size;
+
 	return {
 		data: {
 			id: caseData.id,
@@ -135,6 +163,9 @@ async function fetchCaseFromPrisma(
 			publishStatus: caseData.publishStatus,
 			publishedAt: caseData.publishedAt?.toISOString() ?? null,
 			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
+			// Case study integration
+			hasPublicCaseStudy,
+			linkedCaseStudyCount,
 		},
 		status: 200,
 	};
@@ -145,21 +176,6 @@ function buildGoalStructure(
 	allElements: PrismaElement[]
 ): Record<string, unknown> {
 	const children = allElements.filter((el) => el.parentId === goal.id);
-
-	const contexts = children
-		.filter((el) => el.elementType === "CONTEXT")
-		.map((ctx) => ({
-			id: ctx.id,
-			type: "context",
-			name: ctx.name,
-			short_description: ctx.description || "",
-			long_description: ctx.description || "",
-			created_date: ctx.createdAt.toISOString(),
-			goal_id: goal.id,
-			comments: ctx.comments || [],
-			assumption: ctx.assumption || "",
-			in_sandbox: ctx.inSandbox,
-		}));
 
 	const strategies = children
 		.filter((el) => el.elementType === "STRATEGY")
@@ -180,11 +196,12 @@ function buildGoalStructure(
 		keywords: goal.keywords || "",
 		created_date: goal.createdAt.toISOString(),
 		assurance_case_id: goal.caseId,
-		context: contexts,
+		context: goal.context || [],
 		strategies,
 		property_claims: propertyClaims,
 		comments: goal.comments || [],
 		assumption: goal.assumption || "",
+		justification: goal.justification || "",
 		in_sandbox: goal.inSandbox,
 	};
 }
@@ -214,6 +231,7 @@ function buildStrategyStructure(
 		comments: strategy.comments || [],
 		assumption: strategy.assumption || "",
 		justification: strategy.justification || "",
+		context: strategy.context || [],
 		in_sandbox: strategy.inSandbox,
 	};
 }
@@ -279,6 +297,8 @@ function buildPropertyClaimStructure(
 		evidence,
 		comments: claim.comments || [],
 		assumption: claim.assumption || "",
+		justification: claim.justification || "",
+		context: claim.context || [],
 		in_sandbox: claim.inSandbox,
 	};
 }

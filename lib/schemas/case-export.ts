@@ -18,7 +18,6 @@ import { z } from "zod";
 
 export const ElementTypeSchema = z.enum([
 	"GOAL",
-	"CONTEXT",
 	"STRATEGY",
 	"PROPERTY_CLAIM",
 	"EVIDENCE",
@@ -53,6 +52,7 @@ export const ElementV2Schema = z.object({
 	description: z.string(),
 	assumption: z.string().nullable().optional(),
 	justification: z.string().nullable().optional(),
+	context: z.array(z.string()).optional(),
 	url: z.string().nullable().optional(),
 	level: z.number().int().nullable().optional(),
 	inSandbox: z.boolean().default(false),
@@ -120,7 +120,8 @@ export type ExportComment = {
  * Field availability depends on element type:
  * - role: GOAL only
  * - assumption: GOAL, STRATEGY, PROPERTY_CLAIM, ASSUMPTION, AWAY_GOAL
- * - justification: STRATEGY, JUSTIFICATION
+ * - justification: GOAL, STRATEGY, PROPERTY_CLAIM, JUSTIFICATION
+ * - context: GOAL, STRATEGY, PROPERTY_CLAIM (array of strings)
  * - url: EVIDENCE only
  * - level: PROPERTY_CLAIM only
  * - moduleReferenceId: MODULE (required), AWAY_GOAL (required)
@@ -140,6 +141,7 @@ export type TreeNode = {
 	role?: ElementRole | null;
 	assumption?: string | null;
 	justification?: string | null;
+	context?: string[];
 	url?: string | null;
 	level?: number | null;
 	// Module fields
@@ -176,6 +178,7 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		role: ElementRoleSchema.nullable().optional(),
 		assumption: z.string().nullable().optional(),
 		justification: z.string().nullable().optional(),
+		context: z.array(z.string()).optional(),
 		url: z.string().nullable().optional(),
 		level: z.number().int().nullable().optional(),
 		// Module fields

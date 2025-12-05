@@ -16224,6 +16224,7 @@ export namespace Prisma {
     description: number
     assumption: number
     justification: number
+    context: number
     url: number
     moduleReferenceId: number
     moduleEmbedType: number
@@ -16309,6 +16310,7 @@ export namespace Prisma {
     description?: true
     assumption?: true
     justification?: true
+    context?: true
     url?: true
     moduleReferenceId?: true
     moduleEmbedType?: true
@@ -16421,6 +16423,7 @@ export namespace Prisma {
     description: string
     assumption: string | null
     justification: string | null
+    context: string[]
     url: string | null
     moduleReferenceId: string | null
     moduleEmbedType: $Enums.ModuleEmbedType | null
@@ -16465,6 +16468,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     moduleReferenceId?: boolean
     moduleEmbedType?: boolean
@@ -16502,6 +16506,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     moduleReferenceId?: boolean
     moduleEmbedType?: boolean
@@ -16532,6 +16537,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     moduleReferenceId?: boolean
     moduleEmbedType?: boolean
@@ -16562,6 +16568,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     moduleReferenceId?: boolean
     moduleEmbedType?: boolean
@@ -16577,7 +16584,7 @@ export namespace Prisma {
     createdById?: boolean
   }
 
-  export type AssuranceElementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "caseId" | "elementType" | "role" | "parentId" | "name" | "description" | "assumption" | "justification" | "url" | "moduleReferenceId" | "moduleEmbedType" | "modulePublicSummary" | "fromPattern" | "modifiedFromPattern" | "inSandbox" | "isDefeater" | "defeatsElementId" | "level" | "createdAt" | "updatedAt" | "createdById", ExtArgs["result"]["assuranceElement"]>
+  export type AssuranceElementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "caseId" | "elementType" | "role" | "parentId" | "name" | "description" | "assumption" | "justification" | "context" | "url" | "moduleReferenceId" | "moduleEmbedType" | "modulePublicSummary" | "fromPattern" | "modifiedFromPattern" | "inSandbox" | "isDefeater" | "defeatsElementId" | "level" | "createdAt" | "updatedAt" | "createdById", ExtArgs["result"]["assuranceElement"]>
   export type AssuranceElementInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     case?: boolean | AssuranceCaseDefaultArgs<ExtArgs>
     createdBy?: boolean | UserDefaultArgs<ExtArgs>
@@ -16632,6 +16639,7 @@ export namespace Prisma {
       description: string
       assumption: string | null
       justification: string | null
+      context: string[]
       url: string | null
       moduleReferenceId: string | null
       moduleEmbedType: $Enums.ModuleEmbedType | null
@@ -17088,6 +17096,7 @@ export namespace Prisma {
     readonly description: FieldRef<"AssuranceElement", 'String'>
     readonly assumption: FieldRef<"AssuranceElement", 'String'>
     readonly justification: FieldRef<"AssuranceElement", 'String'>
+    readonly context: FieldRef<"AssuranceElement", 'String[]'>
     readonly url: FieldRef<"AssuranceElement", 'String'>
     readonly moduleReferenceId: FieldRef<"AssuranceElement", 'String'>
     readonly moduleEmbedType: FieldRef<"AssuranceElement", 'ModuleEmbedType'>
@@ -20063,6 +20072,7 @@ export namespace Prisma {
     description: number
     assumption: number
     justification: number
+    context: number
     url: number
     isPlaceholder: number
     placeholderHint: number
@@ -20127,6 +20137,7 @@ export namespace Prisma {
     description?: true
     assumption?: true
     justification?: true
+    context?: true
     url?: true
     isPlaceholder?: true
     placeholderHint?: true
@@ -20232,6 +20243,7 @@ export namespace Prisma {
     description: string
     assumption: string | null
     justification: string | null
+    context: string[]
     url: string | null
     isPlaceholder: boolean
     placeholderHint: string | null
@@ -20269,6 +20281,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     isPlaceholder?: boolean
     placeholderHint?: boolean
@@ -20291,6 +20304,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     isPlaceholder?: boolean
     placeholderHint?: boolean
@@ -20311,6 +20325,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     isPlaceholder?: boolean
     placeholderHint?: boolean
@@ -20331,6 +20346,7 @@ export namespace Prisma {
     description?: boolean
     assumption?: boolean
     justification?: boolean
+    context?: boolean
     url?: boolean
     isPlaceholder?: boolean
     placeholderHint?: boolean
@@ -20339,7 +20355,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type PatternElementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "patternId" | "elementType" | "role" | "parentId" | "name" | "description" | "assumption" | "justification" | "url" | "isPlaceholder" | "placeholderHint" | "displayOrder" | "createdAt" | "updatedAt", ExtArgs["result"]["patternElement"]>
+  export type PatternElementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "patternId" | "elementType" | "role" | "parentId" | "name" | "description" | "assumption" | "justification" | "context" | "url" | "isPlaceholder" | "placeholderHint" | "displayOrder" | "createdAt" | "updatedAt", ExtArgs["result"]["patternElement"]>
   export type PatternElementInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pattern?: boolean | ArgumentPatternDefaultArgs<ExtArgs>
     parent?: boolean | PatternElement$parentArgs<ExtArgs>
@@ -20372,6 +20388,7 @@ export namespace Prisma {
       description: string
       assumption: string | null
       justification: string | null
+      context: string[]
       url: string | null
       isPlaceholder: boolean
       placeholderHint: string | null
@@ -20813,6 +20830,7 @@ export namespace Prisma {
     readonly description: FieldRef<"PatternElement", 'String'>
     readonly assumption: FieldRef<"PatternElement", 'String'>
     readonly justification: FieldRef<"PatternElement", 'String'>
+    readonly context: FieldRef<"PatternElement", 'String[]'>
     readonly url: FieldRef<"PatternElement", 'String'>
     readonly isPlaceholder: FieldRef<"PatternElement", 'Boolean'>
     readonly placeholderHint: FieldRef<"PatternElement", 'String'>
@@ -39579,6 +39597,7 @@ export namespace Prisma {
     description: 'description',
     assumption: 'assumption',
     justification: 'justification',
+    context: 'context',
     url: 'url',
     moduleReferenceId: 'moduleReferenceId',
     moduleEmbedType: 'moduleEmbedType',
@@ -39634,6 +39653,7 @@ export namespace Prisma {
     description: 'description',
     assumption: 'assumption',
     justification: 'justification',
+    context: 'context',
     url: 'url',
     isPlaceholder: 'isPlaceholder',
     placeholderHint: 'placeholderHint',
@@ -41052,6 +41072,7 @@ export namespace Prisma {
     description?: StringFilter<"AssuranceElement"> | string
     assumption?: StringNullableFilter<"AssuranceElement"> | string | null
     justification?: StringNullableFilter<"AssuranceElement"> | string | null
+    context?: StringNullableListFilter<"AssuranceElement">
     url?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleReferenceId?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleEmbedType?: EnumModuleEmbedTypeNullableFilter<"AssuranceElement"> | $Enums.ModuleEmbedType | null
@@ -41088,6 +41109,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrderInput | SortOrder
     justification?: SortOrderInput | SortOrder
+    context?: SortOrder
     url?: SortOrderInput | SortOrder
     moduleReferenceId?: SortOrderInput | SortOrder
     moduleEmbedType?: SortOrderInput | SortOrder
@@ -41127,6 +41149,7 @@ export namespace Prisma {
     description?: StringFilter<"AssuranceElement"> | string
     assumption?: StringNullableFilter<"AssuranceElement"> | string | null
     justification?: StringNullableFilter<"AssuranceElement"> | string | null
+    context?: StringNullableListFilter<"AssuranceElement">
     url?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleReferenceId?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleEmbedType?: EnumModuleEmbedTypeNullableFilter<"AssuranceElement"> | $Enums.ModuleEmbedType | null
@@ -41163,6 +41186,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrderInput | SortOrder
     justification?: SortOrderInput | SortOrder
+    context?: SortOrder
     url?: SortOrderInput | SortOrder
     moduleReferenceId?: SortOrderInput | SortOrder
     moduleEmbedType?: SortOrderInput | SortOrder
@@ -41196,6 +41220,7 @@ export namespace Prisma {
     description?: StringWithAggregatesFilter<"AssuranceElement"> | string
     assumption?: StringNullableWithAggregatesFilter<"AssuranceElement"> | string | null
     justification?: StringNullableWithAggregatesFilter<"AssuranceElement"> | string | null
+    context?: StringNullableListFilter<"AssuranceElement">
     url?: StringNullableWithAggregatesFilter<"AssuranceElement"> | string | null
     moduleReferenceId?: StringNullableWithAggregatesFilter<"AssuranceElement"> | string | null
     moduleEmbedType?: EnumModuleEmbedTypeNullableWithAggregatesFilter<"AssuranceElement"> | $Enums.ModuleEmbedType | null
@@ -41372,6 +41397,7 @@ export namespace Prisma {
     description?: StringFilter<"PatternElement"> | string
     assumption?: StringNullableFilter<"PatternElement"> | string | null
     justification?: StringNullableFilter<"PatternElement"> | string | null
+    context?: StringNullableListFilter<"PatternElement">
     url?: StringNullableFilter<"PatternElement"> | string | null
     isPlaceholder?: BoolFilter<"PatternElement"> | boolean
     placeholderHint?: StringNullableFilter<"PatternElement"> | string | null
@@ -41393,6 +41419,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrderInput | SortOrder
     justification?: SortOrderInput | SortOrder
+    context?: SortOrder
     url?: SortOrderInput | SortOrder
     isPlaceholder?: SortOrder
     placeholderHint?: SortOrderInput | SortOrder
@@ -41417,6 +41444,7 @@ export namespace Prisma {
     description?: StringFilter<"PatternElement"> | string
     assumption?: StringNullableFilter<"PatternElement"> | string | null
     justification?: StringNullableFilter<"PatternElement"> | string | null
+    context?: StringNullableListFilter<"PatternElement">
     url?: StringNullableFilter<"PatternElement"> | string | null
     isPlaceholder?: BoolFilter<"PatternElement"> | boolean
     placeholderHint?: StringNullableFilter<"PatternElement"> | string | null
@@ -41438,6 +41466,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrderInput | SortOrder
     justification?: SortOrderInput | SortOrder
+    context?: SortOrder
     url?: SortOrderInput | SortOrder
     isPlaceholder?: SortOrder
     placeholderHint?: SortOrderInput | SortOrder
@@ -41464,6 +41493,7 @@ export namespace Prisma {
     description?: StringWithAggregatesFilter<"PatternElement"> | string
     assumption?: StringNullableWithAggregatesFilter<"PatternElement"> | string | null
     justification?: StringNullableWithAggregatesFilter<"PatternElement"> | string | null
+    context?: StringNullableListFilter<"PatternElement">
     url?: StringNullableWithAggregatesFilter<"PatternElement"> | string | null
     isPlaceholder?: BoolWithAggregatesFilter<"PatternElement"> | boolean
     placeholderHint?: StringNullableWithAggregatesFilter<"PatternElement"> | string | null
@@ -43612,6 +43642,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -43645,6 +43676,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -43674,6 +43706,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43707,6 +43740,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -43738,6 +43772,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -43761,6 +43796,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43783,6 +43819,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -43967,6 +44004,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -43988,6 +44026,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -44005,6 +44044,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -44026,6 +44066,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -44045,6 +44086,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -44061,6 +44103,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -44079,6 +44122,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -46160,6 +46204,14 @@ export namespace Prisma {
     not?: NestedEnumElementRoleNullableFilter<$PrismaModel> | $Enums.ElementRole | null
   }
 
+  export type StringNullableListFilter<$PrismaModel = never> = {
+    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    has?: string | StringFieldRefInput<$PrismaModel> | null
+    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
+    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
   export type EnumModuleEmbedTypeNullableFilter<$PrismaModel = never> = {
     equals?: $Enums.ModuleEmbedType | EnumModuleEmbedTypeFieldRefInput<$PrismaModel> | null
     in?: $Enums.ModuleEmbedType[] | ListEnumModuleEmbedTypeFieldRefInput<$PrismaModel> | null
@@ -46208,6 +46260,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrder
     justification?: SortOrder
+    context?: SortOrder
     url?: SortOrder
     moduleReferenceId?: SortOrder
     moduleEmbedType?: SortOrder
@@ -46358,14 +46411,6 @@ export namespace Prisma {
     createdAt?: SortOrder
   }
 
-  export type StringNullableListFilter<$PrismaModel = never> = {
-    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    has?: string | StringFieldRefInput<$PrismaModel> | null
-    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
-    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
-    isEmpty?: boolean
-  }
-
   export type PatternElementListRelationFilter = {
     every?: PatternElementWhereInput
     some?: PatternElementWhereInput
@@ -46457,6 +46502,7 @@ export namespace Prisma {
     description?: SortOrder
     assumption?: SortOrder
     justification?: SortOrder
+    context?: SortOrder
     url?: SortOrder
     isPlaceholder?: SortOrder
     placeholderHint?: SortOrder
@@ -48696,6 +48742,10 @@ export namespace Prisma {
     update?: XOR<XOR<AssuranceCaseUpdateToOneWithWhereWithoutInvitesInput, AssuranceCaseUpdateWithoutInvitesInput>, AssuranceCaseUncheckedUpdateWithoutInvitesInput>
   }
 
+  export type AssuranceElementCreatecontextInput = {
+    set: string[]
+  }
+
   export type AssuranceCaseCreateNestedOneWithoutElementsInput = {
     create?: XOR<AssuranceCaseCreateWithoutElementsInput, AssuranceCaseUncheckedCreateWithoutElementsInput>
     connectOrCreate?: AssuranceCaseCreateOrConnectWithoutElementsInput
@@ -48816,6 +48866,11 @@ export namespace Prisma {
 
   export type NullableEnumElementRoleFieldUpdateOperationsInput = {
     set?: $Enums.ElementRole | null
+  }
+
+  export type AssuranceElementUpdatecontextInput = {
+    set?: string[]
+    push?: string | string[]
   }
 
   export type NullableEnumModuleEmbedTypeFieldUpdateOperationsInput = {
@@ -49249,6 +49304,10 @@ export namespace Prisma {
     deleteMany?: AssuranceCaseScalarWhereInput | AssuranceCaseScalarWhereInput[]
   }
 
+  export type PatternElementCreatecontextInput = {
+    set: string[]
+  }
+
   export type ArgumentPatternCreateNestedOneWithoutElementsInput = {
     create?: XOR<ArgumentPatternCreateWithoutElementsInput, ArgumentPatternUncheckedCreateWithoutElementsInput>
     connectOrCreate?: ArgumentPatternCreateOrConnectWithoutElementsInput
@@ -49273,6 +49332,11 @@ export namespace Prisma {
     connectOrCreate?: PatternElementCreateOrConnectWithoutParentInput | PatternElementCreateOrConnectWithoutParentInput[]
     createMany?: PatternElementCreateManyParentInputEnvelope
     connect?: PatternElementWhereUniqueInput | PatternElementWhereUniqueInput[]
+  }
+
+  export type PatternElementUpdatecontextInput = {
+    set?: string[]
+    push?: string | string[]
   }
 
   export type IntFieldUpdateOperationsInput = {
@@ -50781,6 +50845,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -50813,6 +50878,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -51306,6 +51372,7 @@ export namespace Prisma {
     description?: StringFilter<"AssuranceElement"> | string
     assumption?: StringNullableFilter<"AssuranceElement"> | string | null
     justification?: StringNullableFilter<"AssuranceElement"> | string | null
+    context?: StringNullableListFilter<"AssuranceElement">
     url?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleReferenceId?: StringNullableFilter<"AssuranceElement"> | string | null
     moduleEmbedType?: EnumModuleEmbedTypeNullableFilter<"AssuranceElement"> | $Enums.ModuleEmbedType | null
@@ -52400,6 +52467,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -52431,6 +52499,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -52777,6 +52846,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -52809,6 +52879,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -54230,6 +54301,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -54262,6 +54334,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -54295,6 +54368,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -54326,6 +54400,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -54365,6 +54440,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -54397,6 +54473,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -54430,6 +54507,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -54462,6 +54540,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -54850,6 +54929,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54882,6 +54962,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -54937,6 +55018,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54969,6 +55051,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -55158,6 +55241,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -55190,6 +55274,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -55223,6 +55308,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -55255,6 +55341,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -55299,6 +55386,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55331,6 +55419,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -55370,6 +55459,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55402,6 +55492,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -55430,6 +55521,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55449,6 +55541,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55619,6 +55712,7 @@ export namespace Prisma {
     description?: StringFilter<"PatternElement"> | string
     assumption?: StringNullableFilter<"PatternElement"> | string | null
     justification?: StringNullableFilter<"PatternElement"> | string | null
+    context?: StringNullableListFilter<"PatternElement">
     url?: StringNullableFilter<"PatternElement"> | string | null
     isPlaceholder?: BoolFilter<"PatternElement"> | boolean
     placeholderHint?: StringNullableFilter<"PatternElement"> | string | null
@@ -55734,6 +55828,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55754,6 +55849,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55775,6 +55871,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55794,6 +55891,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -55877,6 +55975,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55897,6 +55996,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56763,6 +56863,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -56795,6 +56896,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -57046,6 +57148,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -57078,6 +57181,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -57417,6 +57521,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -57449,6 +57554,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -57785,6 +57891,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -57817,6 +57924,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -59274,6 +59382,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -59579,6 +59688,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -59611,6 +59721,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -59641,6 +59752,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60079,6 +60191,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -60200,6 +60313,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
     modulePublicSummary?: string | null
@@ -60222,6 +60336,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60253,6 +60368,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60283,6 +60399,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60610,6 +60727,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60642,6 +60760,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60672,6 +60791,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60695,6 +60815,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -60720,6 +60841,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: AssuranceElementCreatecontextInput | string[]
     url?: string | null
     moduleReferenceId?: string | null
     moduleEmbedType?: $Enums.ModuleEmbedType | null
@@ -60781,6 +60903,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60812,6 +60935,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60842,6 +60966,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60865,6 +60990,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
     modulePublicSummary?: NullableStringFieldUpdateOperationsInput | string | null
@@ -60897,6 +61023,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -60927,6 +61054,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: AssuranceElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     moduleReferenceId?: NullableStringFieldUpdateOperationsInput | string | null
     moduleEmbedType?: NullableEnumModuleEmbedTypeFieldUpdateOperationsInput | $Enums.ModuleEmbedType | null
@@ -61071,6 +61199,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -61122,6 +61251,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -61141,6 +61271,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -61159,6 +61290,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -61303,6 +61435,7 @@ export namespace Prisma {
     description: string
     assumption?: string | null
     justification?: string | null
+    context?: PatternElementCreatecontextInput | string[]
     url?: string | null
     isPlaceholder?: boolean
     placeholderHint?: string | null
@@ -61319,6 +61452,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -61338,6 +61472,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null
@@ -61356,6 +61491,7 @@ export namespace Prisma {
     description?: StringFieldUpdateOperationsInput | string
     assumption?: NullableStringFieldUpdateOperationsInput | string | null
     justification?: NullableStringFieldUpdateOperationsInput | string | null
+    context?: PatternElementUpdatecontextInput | string[]
     url?: NullableStringFieldUpdateOperationsInput | string | null
     isPlaceholder?: BoolFieldUpdateOperationsInput | boolean
     placeholderHint?: NullableStringFieldUpdateOperationsInput | string | null

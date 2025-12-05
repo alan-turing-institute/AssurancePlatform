@@ -1,4 +1,3 @@
-import ContextNode from "@/components/cases/context-node";
 import EvidenceNode from "@/components/cases/evidence-node";
 import GoalNode from "@/components/cases/goal-node";
 import PropertyNode from "@/components/cases/property-node";
@@ -9,5 +8,4 @@ export const nodeTypes = {
 	property: PropertyNode,
 	strategy: StrategyNode,
 	evidence: EvidenceNode,
-	context: ContextNode,
 };

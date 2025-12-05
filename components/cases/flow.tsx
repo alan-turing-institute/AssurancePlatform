@@ -9,27 +9,37 @@ import ReactFlow, {
 } from "reactflow";
 
 import "reactflow/dist/style.css";
+import "react-toastify/dist/ReactToastify.css";
 import { Loader2, Unplug, X } from "lucide-react";
+import EvidenceNode from "@/components/cases/evidence-node";
+import GoalNode from "@/components/cases/goal-node";
+import PropertyNode from "@/components/cases/property-node";
+import StrategyNode from "@/components/cases/strategy-node";
 import NodeEdit, {
 	type AssuranceCaseNode,
 } from "@/components/common/node-edit";
-
 import useStore from "@/data/store";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { convertAssuranceCase } from "@/lib/convert-case";
 import { getLayoutedElements } from "@/lib/layout-helper";
-import ActionButtons from "./action-buttons";
-
-import "react-toastify/dist/ReactToastify.css";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
+import ActionButtons from "./action-buttons";
+
+// Define nodeTypes at module level to ensure stable reference
+// This prevents React Flow warning about recreated nodeTypes objects
+const nodeTypes = {
+	goal: GoalNode,
+	property: PropertyNode,
+	strategy: StrategyNode,
+	evidence: EvidenceNode,
+};
 
 function Flow() {
 	const { fitView } = useReactFlow();
 	const {
 		nodes,
 		edges,
-		nodeTypes,
 		onNodesChange,
 		setNodes,
 		setEdges,
@@ -37,6 +47,7 @@ function Flow() {
 		assuranceCase,
 		orphanedElements,
 	} = useStore();
+
 	const [editOpen, setEditOpen] = useState(false);
 	const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 	const [loading, setLoading] = useState(true);

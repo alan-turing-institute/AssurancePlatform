@@ -319,22 +319,18 @@ export const attachCaseElement = async (
  * Adds a comment to an element.
  */
 export const addElementComment = async (
-	entity: string,
-	id: number,
+	_entity: string,
+	id: number | string,
 	newComment: CommentPayload,
-	token: string | null
+	_token: string | null
 ): Promise<Comment | { error: string | unknown }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment`;
+		// Use internal API route - auth handled via NextAuth session cookies
+		const url = `/api/elements/${id}/comments`;
 
 		const requestOptions: RequestInit = {
 			method: "POST",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(newComment),
@@ -342,7 +338,8 @@ export const addElementComment = async (
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			// Handle non-ok response
+			const errorData = await response.json().catch(() => ({}));
+			return { error: errorData.error || "Failed to add comment" };
 		}
 
 		const result = await response.json();
@@ -357,7 +354,7 @@ type UpdateCommentOptions = {
 	entity: string;
 	id: number;
 	newComment: CommentPayload;
-	newCommentId: number;
+	newCommentId: number | string;
 	token: string | null;
 };
 
@@ -367,27 +364,24 @@ type UpdateCommentOptions = {
 export const updateElementComment = async (
 	options: UpdateCommentOptions
 ): Promise<Comment | { error: string | unknown }> => {
-	const { entity, id, newComment, newCommentId, token } = options;
-
-	if (!token) {
-		return { error: "No token" };
-	}
+	const { newComment, newCommentId } = options;
 
 	try {
-		const url = `${process.env.NEXT_PUBLIC_API_URL}/api/${entity}/${id}/comment/${newCommentId}`;
+		// Use internal API route - auth handled via NextAuth session cookies
+		const url = `/api/comments/${newCommentId}`;
 
 		const requestOptions: RequestInit = {
 			method: "PUT",
 			headers: {
-				Authorization: `Token ${token}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(newComment),
+			body: JSON.stringify({ content: newComment.content }),
 		};
 		const response = await fetch(url, requestOptions);
 
 		if (!response.ok) {
-			// Handle non-ok response
+			const errorData = await response.json().catch(() => ({}));
+			return { error: errorData.error || "Failed to update comment" };
 		}
 
 		const result = await response.json();

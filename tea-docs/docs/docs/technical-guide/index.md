@@ -15,8 +15,6 @@ This section provides technical documentation for developers or users who wish t
 
 Our technology stack ensures that the TEA platform is not only powerful and reliable but also accessible to users with different levels of technical expertise.
 
-At its core, the platform features a web application built with the [Next.js](https://nextjs.org/) framework, known for its fast and modern approach to building interactive web applications.
+The TEA Platform is a full-stack application built with [Next.js](https://nextjs.org/), a React framework known for its fast and modern approach to building interactive web applications. The platform uses [Prisma ORM](https://www.prisma.io/) for database management, providing type-safe database access and migrations.
 
-On the backend, the TEA platform is powered by [Django](https://www.djangoproject.com/), a high-level Python web framework that offers robust backend capabilities, including a straightforward API for data management. Data can be stored in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/) databases, providing options for lightweight to more scalable storage solutions.
-
-The platform also supports easy installation and deployment through [Docker](https://www.docker.com/), making it straightforward to set up in various environments, including [Azure](https://azure.microsoft.com/en-us).
+Data is stored in [PostgreSQL](https://www.postgresql.org/), providing a robust and scalable storage solution. The platform supports easy installation and deployment through [Docker](https://www.docker.com/), making it straightforward to set up in various environments, including [Azure](https://azure.microsoft.com/en-us).

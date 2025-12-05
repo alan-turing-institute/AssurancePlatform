@@ -128,6 +128,7 @@ export async function exportCase(
 						role: true,
 						assumption: true,
 						justification: true,
+						context: true,
 						url: true,
 						level: true,
 						// Module fields
@@ -155,6 +156,7 @@ export async function exportCase(
 										role: true,
 										assumption: true,
 										justification: true,
+										context: true,
 										url: true,
 										level: true,
 										// Module fields
@@ -210,6 +212,7 @@ export async function exportCase(
 			role: el.role as ElementRole | null,
 			assumption: el.assumption,
 			justification: el.justification,
+			context: el.context,
 			url: el.url,
 			level: el.level,
 			// Module fields
@@ -236,6 +239,7 @@ export async function exportCase(
 					role: link.evidence.role as ElementRole | null,
 					assumption: link.evidence.assumption,
 					justification: link.evidence.justification,
+					context: link.evidence.context,
 					url: link.evidence.url,
 					level: link.evidence.level,
 					// Module fields

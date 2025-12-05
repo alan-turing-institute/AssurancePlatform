@@ -5,7 +5,6 @@
 
 import type {
 	AssuranceCase,
-	Context,
 	Evidence,
 	Goal,
 	PropertyClaim,
@@ -18,31 +17,7 @@ import {
 } from "./property-claims";
 import type { ReactFlowNode } from "./types";
 
-// Helper function to update context
-const updateContext = (
-	assuranceCase: AssuranceCase,
-	id: number,
-	updatedItem: Partial<Context>
-): AssuranceCase => {
-	const newContext = (assuranceCase.goals?.[0]?.context || []).map(
-		(context: Context) => {
-			if (context.id === id && context.type === "Context") {
-				return {
-					...context,
-					...updatedItem,
-				};
-			}
-			return { ...context };
-		}
-	);
-
-	return {
-		...assuranceCase,
-		goals: assuranceCase.goals
-			? [{ ...assuranceCase.goals[0], context: newContext }]
-			: [],
-	};
-};
+// Note: updateContext function removed - context is now a string[] attribute, not an element type
 
 // Helper function to update strategy
 const updateStrategy = (
@@ -106,7 +81,9 @@ const updatePropertyClaim = (
 		: updatePropertyClaimNested(directClaims, id, updatedItem);
 
 	// Check if we found and updated in direct claims
-	if (updatedDirectClaims !== directClaims) {
+	// Only check reference equality if directClaims has content, otherwise
+	// the nested update returns a new empty array and the comparison is always true
+	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
 			goals: [{ ...goal, property_claims: updatedDirectClaims }],
@@ -176,7 +153,9 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 		: updateEvidenceNested(directClaims, id, updatedItem);
 
 	// Check if we found and updated in direct claims
-	if (updatedDirectClaims !== directClaims) {
+	// Only check reference equality if directClaims has content, otherwise
+	// the nested update returns a new empty array and the comparison is always true
+	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
 			goals: [{ ...goal, property_claims: updatedDirectClaims }],
@@ -220,8 +199,10 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 /**
  * Updates an assurance case based on the provided type and item details.
  *
- * This function modifies the assurance case structure, including contexts, strategies,
+ * This function modifies the assurance case structure, including strategies,
  * property claims, and evidence. It returns the updated assurance case.
+ *
+ * Note: Context is now a string[] attribute on elements, not a separate element type.
  */
 // biome-ignore lint/nursery/useMaxParams: Pre-existing function used across codebase, refactoring deferred
 export const updateAssuranceCase = (
@@ -229,7 +210,6 @@ export const updateAssuranceCase = (
 	assuranceCase: AssuranceCase,
 	updatedItem:
 		| Partial<Goal>
-		| Partial<Context>
 		| Partial<Strategy>
 		| Partial<PropertyClaim>
 		| Partial<Evidence>,
@@ -238,9 +218,6 @@ export const updateAssuranceCase = (
 	move = false
 ): AssuranceCase => {
 	switch (type) {
-		case "context":
-			return updateContext(assuranceCase, id, updatedItem as Partial<Context>);
-
 		case "strategy":
 			return updateStrategy(
 				assuranceCase,
