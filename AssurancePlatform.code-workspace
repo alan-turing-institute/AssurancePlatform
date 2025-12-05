@@ -26,10 +26,7 @@
     "terminal.integrated.profiles.osx": {
       "uv (Backend)": {
         "path": "/bin/zsh",
-        "args": [
-          "-c",
-          "cd tea_backend && exec zsh"
-        ],
+        "args": ["-c", "cd tea_backend && exec zsh"],
         "env": {
           "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
         }
@@ -42,10 +39,7 @@
     "terminal.integrated.profiles.linux": {
       "uv (Backend)": {
         "path": "/bin/bash",
-        "args": [
-          "-c",
-          "cd tea_backend && exec bash"
-        ],
+        "args": ["-c", "cd tea_backend && exec bash"],
         "env": {
           "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
         }

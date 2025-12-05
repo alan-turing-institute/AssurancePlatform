@@ -16,38 +16,18 @@ services:
       timeout: 3s
       retries: 3
 
-  tea_backend_test:
+  tea_frontend_test:
     build:
-      context: ./tea_backend
+      context: .
       dockerfile: Dockerfile.dev
-    container_name: tea_backend_test
-    hostname: tea-backend-test
-    ports:
-      - '8001:8000' # Different port to avoid conflicts
+    container_name: tea_frontend_test
     depends_on:
       postgres_test:
         condition: service_healthy
     env_file:
-      - ./tea_backend/.env.local
+      - ./.env.local
     volumes:
-      - ./tea_backend:/app
-      - ./tea_backend/mediafiles:/app/mediafiles
-    networks:
-      - tea_test_network
-    # Use the same entrypoint script as development
-    entrypoint: ['/app/docker-entrypoint-dev.sh']
-
-  tea_frontend_test:
-    build:
-      context: ./tea_frontend
-      dockerfile: Dockerfile.dev
-    container_name: tea_frontend_test
-    depends_on:
-      - tea_backend_test
-    env_file:
-      - ./tea_frontend/.env.local
-    volumes:
-      - ./tea_frontend:/app
+      - .:/app
       - frontend_test_modules:/app/node_modules # Separate node_modules
       - frontend_test_next:/app/.next # Separate .next build
       - frontend_test_coverage:/app/coverage # Separate coverage directory

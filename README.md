@@ -1,99 +1,106 @@
-# Trustworthy and Ethical Assurance Platform
+Trustworthy & Ethical Assurance Platform
+==================
 
-![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](hero.gif)
+TEA (Trustworthy & Ethical Assurance) Platform is a web application developed using Next.js, React, and TypeScript. It provides a platform for managing and monitoring assurance cases in various domains.
 
-[![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
-![Backend Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/chrisdburr/67a1f941be8d33da7c5d7d5dbc2b5970/raw/backend-coverage.json)
-![Frontend Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/chrisdburr/67a1f941be8d33da7c5d7d5dbc2b5970/raw/frontend-coverage.json)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Getting Started
+---------------
 
-## Development Quickstart 💻
+Demo: [Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
 
-Get the TEA Platform running locally with Docker in just a few steps:
+To get started with Assurance Platform, follow these steps:
 
 ### Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
-- [Git](https://git-scm.com/downloads)
-- A [GitHub OAuth App](https://github.com/settings/applications/new) for authentication
+-   Node.js and npm (or Yarn) installed on your machine.
 
-### Quick Setup
+### Installation
 
-1. **Clone the repository**
+1.  Clone the repository:
 
-   ```bash
-   git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-   cd AssurancePlatform
-   ```
+    ```
+    git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+    ```
 
-2. **Set up environment files**
+2.  Navigate to the project directory:
 
-   ```bash
-   # Copy example environment files
-   cp tea_backend/.env.example tea_backend/.env.local
-   cp tea_frontend/.env.example tea_frontend/.env.local
-   ```
+    ```
+    cd next-frontend
+    ```
 
-3. **Configure GitHub OAuth (optional)**
+3.  Install dependencies using npm:
 
-   - Create a [new GitHub OAuth App](https://github.com/settings/applications/new)
-   - Set Homepage URL: `http://localhost:3000`
-   - Set Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
-   - Add your Client ID and Client Secret to both `.env.local` files
+    ```
+    npm install
+    ```
 
-4. **Start the development environment**
+### Environment Variables
 
-   ```bash
-   docker-compose -f docker-compose.development.yml up --build
-   ```
+Ensure that you have added the following to your `.env.local` file in the root of this project.
 
-5. **Access the platform**
-   - 🌐 **Frontend**: http://localhost:3000
-   - 🔧 **Backend API**: http://localhost:8000/api
-   - 🗄️ **Database**: PostgreSQL on localhost:5432
+```
+NEXT_PUBLIC_STORAGESASTOKEN={token-value}
+NEXT_PUBLIC_STORAGESOURCENAME={storage-name-value}
 
-The platform includes user registration, so you can create an account directly or sign in with GitHub (optional). For more detailed setup instructions, see the [technical documentation](https://assuranceplatform.azurewebsites.net/documentation/docs/technical-guide/setup-installation).
+GITHUB_APP_CLIENT_ID={gh-clientid-value}
+GITHUB_APP_CLIENT_SECRET={gh-secret-valie}
+NEXTAUTH_SECRET={unique-string}
+NEXT_PUBLIC_API_URL={api-url-value}
+API_URL={api-url-value}
+NEXTAUTH_URL={frontend-url-value}
+```
 
-## About this Repository 🗂
+To generate a unique string for the `NEXTAUTH_SECRET` you can run:
 
-This repository contains the code and documentation for the Trustworthy and
-Ethical Assurance (TEA) platform—an application for building trustworthy and
-ethical assurance cases, developed by researchers at the
-[Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm)
-and [University of York](https://www.york.ac.uk/assuring-autonomy/).
+```bash
+openssl rand -base64 32
+```
 
-### What is TEA? 🫖
+### Development
 
-The Trustworthy and Ethical Assurance (TEA) Platform is a collaborative tool for developing structured arguments about how ethical principles and trustworthy practices have been upheld throughout the lifecycle of data-driven technologies.
+To run the application in development mode, navigate to this directory and use the following command.
 
-At its core, TEA helps multi-stakeholder project teams create **assurance cases**: structured, graphical representations that demonstrate how goals like fairness, explainability, safety, or sustainability have been achieved over the course of a project's lifecycle.
+```
+npm run dev
+```
 
-The platform addresses a fundamental challenge in responsible technology development: how can project teams provide **justified evidence** that ethical principles have been upheld?
+This command starts the development server and opens the application in your default web browser. The application will automatically reload if you make any changes to the source code.
 
-TEA supports this through three integrated components:
+### Production
 
-1. An interactive tool for building assurance cases
-2. A comprehensive framework of skills and capabilities resources
-3. A collaborative community infrastructure that promotes open practices and shared learning in the trustworthy assurance ecosystem
+To build and run the application in production mode, use the following command
 
-### Documentation 📄
+```
+npm run build
+npm start
+```
 
-Our documentation site can be accessed at [https://assuranceplatform.azurewebsites.net/documentation](https://assuranceplatform.azurewebsites.net/documentation)
+This will build the application for production and start a server to serve the built files.
 
-### Further Resources 📚
+### Configuration
 
-The following resources provide additional information about the Trustworthy and Ethical Assurance framework and methodology:
+The application uses environment variables for configuration. Create a `.env.local` file in the root directory and specify the required environment variables. You can use the `.env.example` file as a template.
 
-- Burr, C., Arana, S., Gould Van Praag, C., Habli, I., Kaas, M., Katell, M., Laher, S., Leslie, D., Niederer, S., Ozturk, B., Polo, N., Porter, Z., Ryan, P., Sharan, M., Solis Lemus, J. A., Strocchi, M., Westerling, K., (2024) Trustworthy and Ethical Assurance of Digital Health and Healthcare. [https://doi.org/10.5281/zenodo.10532573](https://doi.org/10.5281/zenodo.10532573)
-- Porter, Z., Habli, I., McDermid, J. et al. A principles-based ethics assurance argument pattern for AI and autonomous systems. AI Ethics 4, 593–616 (2024). [https://doi.org/10.1007/s43681-023-00297-2](https://doi.org/10.1007/s43681-023-00297-2)
-- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
-- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
+### Deployment
 
-### Funding Statements 💷
+You can deploy using Docker without Gitub actions. For example to build and `Staging` image you can navigate to `./docker/staging/` and run the following command.
 
-From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project.
+```
+docker compose build
+```
 
-Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+This will build your image based on the values in the Docker compose file. To run your new image use
 
-Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
+```
+docker compose up
+```
+
+Contributing
+------------
+
+Contributions are welcome! If you find any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
+
+License
+-------
+
+This project is licensed under the MIT License. See the LICENSE file for details.

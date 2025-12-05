@@ -4,14 +4,30 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "tea_frontend/**"
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+      - "actions/**"
+      - "hooks/**"
+      - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "Dockerfile"
       - ".github/workflows/frontend-build.yaml"
   push:
     branches:
       - main
       - staging
     paths:
-      - "tea_frontend/**"
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+      - "actions/**"
+      - "hooks/**"
+      - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "Dockerfile"
       - ".github/workflows/frontend-build.yaml"
 
 env:
@@ -67,8 +83,8 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v5
         with:
-          context: ./tea_frontend
-          file: ./tea_frontend/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -87,8 +103,8 @@ jobs:
         if: github.ref == 'refs/heads/staging'
         uses: docker/build-push-action@v5
         with:
-          context: ./tea_frontend
-          file: ./tea_frontend/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -107,8 +123,8 @@ jobs:
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
         uses: docker/build-push-action@v5
         with:
-          context: ./tea_frontend
-          file: ./tea_frontend/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
