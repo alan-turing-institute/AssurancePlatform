@@ -1,0 +1,282 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tea-platform.org/schemas/case-export-v1.0.json",
+  "title": "TEA Platform Assurance Case Export Schema v1.0",
+  "description": "Schema for TEA Platform assurance case exports in nested tree format. This is the authoritative specification for version 1.0 exports.",
+  "type": "object",
+  "required": ["version", "exportedAt", "case", "tree"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1.0",
+      "description": "Schema version identifier. Version 1.0 is the first officially versioned export format."
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the export was created"
+    },
+    "case": {
+      "type": "object",
+      "description": "Case metadata",
+      "required": ["name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The case name"
+        },
+        "description": {
+          "type": "string",
+          "description": "The case description"
+        },
+        "colorProfile": {
+          "type": "string",
+          "default": "default",
+          "description": "Visual colour profile for the case diagram"
+        }
+      }
+    },
+    "tree": {
+      "$ref": "#/definitions/TreeNode",
+      "description": "The root node of the assurance case tree (typically a GOAL element)"
+    }
+  },
+  "definitions": {
+    "ElementType": {
+      "type": "string",
+      "enum": [
+        "GOAL",
+        "CONTEXT",
+        "STRATEGY",
+        "PROPERTY_CLAIM",
+        "EVIDENCE",
+        "JUSTIFICATION",
+        "ASSUMPTION",
+        "MODULE",
+        "AWAY_GOAL",
+        "CONTRACT"
+      ],
+      "description": "The type of assurance case element"
+    },
+    "ElementRole": {
+      "type": "string",
+      "enum": ["TOP_LEVEL", "SUPPORTING"],
+      "description": "The role of a GOAL element"
+    },
+    "ModuleEmbedType": {
+      "type": "string",
+      "enum": ["COPY", "REFERENCE"],
+      "description": "How a MODULE element embeds its referenced case"
+    },
+    "TreeNode": {
+      "type": "object",
+      "description": "A node in the assurance case tree. Field availability depends on element type.",
+      "required": ["id", "type", "description", "inSandbox", "children"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the element"
+        },
+        "type": {
+          "$ref": "#/definitions/ElementType",
+          "description": "The element type determines which additional fields are valid"
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Display name (e.g., G1, S1, P1, E1)"
+        },
+        "description": {
+          "type": "string",
+          "description": "The element's content/description"
+        },
+        "inSandbox": {
+          "type": "boolean",
+          "description": "Whether this element is in the sandbox (draft state)"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TreeNode"
+          },
+          "description": "Child elements. Note: CONTEXT, JUSTIFICATION, and ASSUMPTION elements cannot have children."
+        },
+        "fromPattern": {
+          "type": "boolean",
+          "description": "Whether this element was created from a pattern template"
+        },
+        "modifiedFromPattern": {
+          "type": "boolean",
+          "description": "Whether this element has been modified since being created from a pattern"
+        },
+        "isDefeater": {
+          "type": "boolean",
+          "description": "Whether this element is a defeater (dialogical reasoning)"
+        },
+        "defeatsElementId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "ID of the element this defeater targets"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "GOAL" } }
+          },
+          "then": {
+            "properties": {
+              "role": {
+                "$ref": "#/definitions/ElementRole",
+                "description": "Role of the goal (TOP_LEVEL or SUPPORTING)"
+              },
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption text attached to this goal"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "STRATEGY" } }
+          },
+          "then": {
+            "properties": {
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption text attached to this strategy"
+              },
+              "justification": {
+                "type": ["string", "null"],
+                "description": "Justification text for this strategy"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "PROPERTY_CLAIM" } }
+          },
+          "then": {
+            "properties": {
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption text attached to this claim"
+              },
+              "level": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "description": "Hierarchy level of the property claim (1 = direct child of goal/strategy)"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "EVIDENCE" } }
+          },
+          "then": {
+            "properties": {
+              "url": {
+                "type": ["string", "null"],
+                "description": "URL linking to the evidence source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "JUSTIFICATION" } }
+          },
+          "then": {
+            "properties": {
+              "justification": {
+                "type": ["string", "null"],
+                "description": "The justification text content"
+              },
+              "children": {
+                "const": [],
+                "description": "Justification elements cannot have children"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "ASSUMPTION" } }
+          },
+          "then": {
+            "properties": {
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "The assumption text content"
+              },
+              "children": {
+                "const": [],
+                "description": "Assumption elements cannot have children"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "CONTEXT" } }
+          },
+          "then": {
+            "properties": {
+              "children": {
+                "const": [],
+                "description": "Context elements cannot have children"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "MODULE" } }
+          },
+          "then": {
+            "required": ["moduleReferenceId", "moduleEmbedType"],
+            "properties": {
+              "moduleReferenceId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "ID of the case being referenced/embedded"
+              },
+              "moduleEmbedType": {
+                "$ref": "#/definitions/ModuleEmbedType",
+                "description": "How the module embeds its referenced case"
+              },
+              "modulePublicSummary": {
+                "type": ["string", "null"],
+                "description": "Public summary of the module's content"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "AWAY_GOAL" } }
+          },
+          "then": {
+            "required": ["moduleReferenceId"],
+            "properties": {
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption text attached to this away goal"
+              },
+              "moduleReferenceId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "ID of the external goal being referenced"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

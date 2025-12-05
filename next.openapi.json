@@ -1,0 +1,99 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TEA Platform API",
+    "version": "1.0.0",
+    "description": "API documentation for the Trustworthy & Ethical Assurance Platform. This API provides access to assurance cases, elements, teams, comments, and case studies."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local development server"
+    },
+    {
+      "url": "https://assuranceplatform.azurewebsites.net/api",
+      "description": "Production server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "SessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token",
+        "description": "NextAuth.js session cookie"
+      }
+    }
+  },
+  "defaultResponseSet": "auth",
+  "responseSets": {
+    "common": [
+      "400",
+      "500"
+    ],
+    "auth": [
+      "400",
+      "401",
+      "403",
+      "500"
+    ],
+    "public": [
+      "400",
+      "500"
+    ]
+  },
+  "errorConfig": {
+    "template": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string",
+          "example": "{{ERROR_MESSAGE}}"
+        }
+      }
+    },
+    "codes": {
+      "400": {
+        "description": "Bad Request",
+        "variables": {
+          "ERROR_MESSAGE": "Invalid request parameters"
+        }
+      },
+      "401": {
+        "description": "Unauthorised",
+        "variables": {
+          "ERROR_MESSAGE": "Authentication required"
+        }
+      },
+      "403": {
+        "description": "Forbidden",
+        "variables": {
+          "ERROR_MESSAGE": "Access denied"
+        }
+      },
+      "404": {
+        "description": "Not Found",
+        "variables": {
+          "ERROR_MESSAGE": "Resource not found"
+        }
+      },
+      "500": {
+        "description": "Internal Server Error",
+        "variables": {
+          "ERROR_MESSAGE": "An unexpected error occurred"
+        }
+      }
+    }
+  },
+  "apiDir": "./app/api",
+  "schemaDir": "./lib/schemas",
+  "schemaType": "zod",
+  "schemaFiles": [],
+  "docsUrl": "api-docs",
+  "ui": "scalar",
+  "outputFile": "openapi.json",
+  "outputDir": "./public",
+  "includeOpenApiRoutes": false,
+  "ignoreRoutes": [],
+  "debug": false
+}

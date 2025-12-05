@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[5641],{8656:e=>{e.exports=JSON.parse('{"tags":[{"label":"Test","permalink":"/documentation/blog/tags/test","description":"Test tag description","count":1}]}')}}]);

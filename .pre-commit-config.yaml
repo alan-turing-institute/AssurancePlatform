@@ -17,7 +17,7 @@ repos:
       - id: check-symlinks
       - id: check-added-large-files
         args: ['--maxkb=2000', '--enforce-all']
-        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf
+        exclude: hero\.gif|codeveloping-an-assurance-case\.pdf|src/generated/prisma-new/
 
   # - repo: https://github.com/Yelp/detect-secrets
   #   rev: v1.4.0
@@ -25,48 +25,25 @@ repos:
   #     - id: detect-secrets
   #       args: ['--baseline', '.secrets.baseline']
 
-  # Language-specific formatting and linting (fast)
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
-    hooks:
-      - id: ruff-check
-        args: [--fix]
-        files: ^tea_backend/
-        exclude: \.md$
-      - id: ruff-format
-        files: ^tea_backend/
-        exclude: \.md$
-
-  # Frontend formatting and linting with Biome/Ultracite
+  # Frontend formatting and linting with Biome/Ultracite (optional)
   # - repo: local
   #   hooks:
   #     - id: ultracite-format
   #       name: ultracite format (safe fixes only)
-  #       entry: bash -c 'cd tea_frontend && npx ultracite format || true'
+  #       entry: bash -c 'npx ultracite format || true'
   #       language: system
   #       pass_filenames: false
-  #       files: '^tea_frontend/.*\.(jsx?|tsx?|json)$'
-  #       exclude: '^tea_frontend/(node_modules|\.next|public/documentation|logs)/'
+  #       files: '\.(jsx?|tsx?|json)$'
+  #       exclude: '(node_modules|\.next|public/documentation|logs)/'
 
-  # Type checking (slower, after formatting)
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: 'v1.13.0'
-  #   hooks:
-  #     - id: mypy
-  #       files: ^tea_backend/
-  #       exclude: \.md$|migrations/|tests/
-  #       additional_dependencies:
-  #         - django-stubs==5.1.0
-  #         - djangorestframework-stubs==3.15.1
-  #         - types-requests==2.32.0.20241016
-
+  # TypeScript type checking (optional)
   # - repo: local
   #   hooks:
   #     - id: tsc
   #       name: TypeScript Compiler
-  #       entry: bash -c 'cd tea_frontend && npx tsc --noEmit'
+  #       entry: bash -c 'npx tsc --noEmit'
   #       language: system
-  #       files: ^tea_frontend/.*\.(ts|tsx)$
+  #       files: '\.(ts|tsx)$'
   #       pass_filenames: false
 
   # File cleanup (last, so it doesn't interfere with other tools)
@@ -74,12 +51,10 @@ repos:
     rev: 'v5.0.0'
     hooks:
       - id: debug-statements
-        files: \.(py|js|jsx|ts|tsx)$
+        files: \.(js|jsx|ts|tsx)$
       - id: end-of-file-fixer
         exclude: \.(svg|png|jpg|jpeg|gif)$
       - id: mixed-line-ending
         exclude: \.(svg|png|jpg|jpeg|gif)$
-      - id: requirements-txt-fixer
-        files: requirements.*\.txt$
       - id: trailing-whitespace
         exclude: \.(svg|png|jpg|jpeg|gif|md)$

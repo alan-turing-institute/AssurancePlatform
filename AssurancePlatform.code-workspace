@@ -6,72 +6,16 @@
     }
   ],
   "settings": {
-    "python.defaultInterpreterPath": "./tea_backend/.venv/bin/python",
-    "python.terminal.activateEnvironment": false,
-    "python.terminal.activateEnvInCurrentTerminal": false,
-    "python.envFile": "${workspaceFolder}/tea_backend/.env",
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestPath": "./tea_backend/.venv/bin/pytest",
-    "python.testing.cwd": "./tea_backend",
-    "python.testing.pytestArgs": ["-v", "--tb=short"],
     "terminal.integrated.cwd": "${workspaceFolder}",
     "terminal.integrated.defaultProfile.osx": "zsh",
     "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.env.osx": {
-      "UV_PROJECT_ENVIRONMENT": "./tea_backend/.venv"
-    },
-    "terminal.integrated.env.linux": {
-      "UV_PROJECT_ENVIRONMENT": "./tea_backend/.venv"
-    },
-    "terminal.integrated.profiles.osx": {
-      "uv (Backend)": {
-        "path": "/bin/zsh",
-        "args": [
-          "-c",
-          "cd tea_backend && exec zsh"
-        ],
-        "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
-        }
-      },
-      "pnpm (Frontend)": {
-        "path": "/bin/zsh",
-        "args": ["-c", "cd tea_frontend && exec zsh"]
-      }
-    },
-    "terminal.integrated.profiles.linux": {
-      "uv (Backend)": {
-        "path": "/bin/bash",
-        "args": [
-          "-c",
-          "cd tea_backend && exec bash"
-        ],
-        "env": {
-          "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/tea_backend/.venv"
-        }
-      },
-      "pnpm (Frontend)": {
-        "path": "/bin/bash",
-        "args": ["-c", "cd tea_frontend && exec bash"]
-      }
-    },
     "files.associations": {
-      "*.md": "markdown",
-      "uv.lock": "toml",
-      "pyproject.toml": "toml"
+      "*.md": "markdown"
     },
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.organizeImports.biome": "explicit",
       "source.fixAll.biome": "explicit"
-    },
-    "[python]": {
-      "editor.formatOnSave": true,
-      "editor.defaultFormatter": "charliermarsh.ruff",
-      "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit",
-        "source.fixAll.ruff": "explicit"
-      }
     },
     "[typescript]": {
       "editor.defaultFormatter": "biomejs.biome",
@@ -93,19 +37,16 @@
     },
     "typescript.preferences.includePackageJsonAutoImports": "on",
     "typescript.suggest.autoImports": true,
-    "biome.lspBin": "${workspaceFolder}/tea_frontend/node_modules/.bin/biome",
+    "biome.lspBin": "${workspaceFolder}/node_modules/.bin/biome",
     "biome.enabled": true,
     "biome.rename": true
   },
   "extensions": {
     "recommendations": [
-      "ms-python.python",
-      "ms-python.mypy-type-checker",
       "bradlc.vscode-tailwindcss",
       "biomejs.biome",
       "ms-vscode.vscode-typescript-next",
       "ms-vscode.vscode-json",
-      "tamasfe.even-better-toml",
       "redhat.vscode-yaml"
     ]
   },
@@ -113,9 +54,9 @@
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "Backend: Install Dependencies",
+        "label": "Install Dependencies",
         "type": "shell",
-        "command": "cd tea_backend && uv sync --dev",
+        "command": "pnpm install",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -126,48 +67,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Backend: Run Tests",
+        "label": "Start Dev Server",
         "type": "shell",
-        "command": "cd tea_backend && uv run coverage run manage.py test -v 2",
-        "group": "test",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared"
-        },
-        "problemMatcher": []
-      },
-      {
-        "label": "Backend: Lint",
-        "type": "shell",
-        "command": "cd tea_backend && uv run ruff check .",
-        "group": "build",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared"
-        },
-        "problemMatcher": []
-      },
-      {
-        "label": "Backend: Type Check",
-        "type": "shell",
-        "command": "cd tea_backend && uv run mypy .",
-        "group": "build",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared"
-        },
-        "problemMatcher": []
-      },
-      {
-        "label": "Backend: Start Dev Server",
-        "type": "shell",
-        "command": "cd tea_backend && uv run python manage.py runserver",
+        "command": "pnpm run dev",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -179,9 +81,9 @@
         "isBackground": true
       },
       {
-        "label": "Frontend: Install Dependencies",
+        "label": "Build",
         "type": "shell",
-        "command": "cd tea_frontend && pnpm install",
+        "command": "pnpm run build",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -192,23 +94,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Frontend: Start Dev Server",
+        "label": "Lint",
         "type": "shell",
-        "command": "cd tea_frontend && pnpm run dev",
-        "group": "build",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared"
-        },
-        "problemMatcher": [],
-        "isBackground": true
-      },
-      {
-        "label": "Frontend: Build",
-        "type": "shell",
-        "command": "cd tea_frontend && pnpm run build",
+        "command": "pnpm run lint",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -219,9 +107,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Frontend: Lint",
+        "label": "Format",
         "type": "shell",
-        "command": "cd tea_frontend && pnpm run lint",
+        "command": "pnpm run format",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -232,9 +120,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Frontend: Format",
+        "label": "Type Check",
         "type": "shell",
-        "command": "cd tea_frontend && pnpm run format",
+        "command": "npx tsc --noEmit",
         "group": "build",
         "presentation": {
           "echo": true,
@@ -245,22 +133,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Frontend: Type Check",
+        "label": "Run Tests",
         "type": "shell",
-        "command": "cd tea_frontend && npx tsc --noEmit",
-        "group": "build",
-        "presentation": {
-          "echo": true,
-          "reveal": "always",
-          "focus": false,
-          "panel": "shared"
-        },
-        "problemMatcher": []
-      },
-      {
-        "label": "Frontend: Run Tests",
-        "type": "shell",
-        "command": "cd tea_frontend && pnpm test",
+        "command": "pnpm test",
         "group": "test",
         "presentation": {
           "echo": true,
@@ -271,9 +146,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Frontend: Run Tests with Coverage",
+        "label": "Run Tests with Coverage",
         "type": "shell",
-        "command": "cd tea_frontend && pnpm test:coverage",
+        "command": "pnpm test:coverage",
         "group": "test",
         "presentation": {
           "echo": true,
@@ -301,33 +176,6 @@
   },
   "launch": {
     "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Django Debug",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "${workspaceFolder}/tea_backend/manage.py",
-        "args": ["runserver", "8000"],
-        "django": true,
-        "cwd": "${workspaceFolder}/tea_backend",
-        "env": {
-          "DJANGO_SETTINGS_MODULE": "tea_backend.settings"
-        },
-        "python": "${workspaceFolder}/tea_backend/.venv/bin/python"
-      },
-      {
-        "name": "Django Tests",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "${workspaceFolder}/tea_backend/manage.py",
-        "args": ["test", "-v", "2"],
-        "django": true,
-        "cwd": "${workspaceFolder}/tea_backend",
-        "env": {
-          "DJANGO_SETTINGS_MODULE": "tea_backend.settings"
-        },
-        "python": "${workspaceFolder}/tea_backend/.venv/bin/python"
-      }
-    ]
+    "configurations": []
   }
 }

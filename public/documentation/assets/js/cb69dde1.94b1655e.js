@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[4085],{9236:e=>{e.exports=JSON.parse('{"metadata":{"permalink":"/documentation/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

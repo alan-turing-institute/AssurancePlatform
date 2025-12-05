@@ -1,0 +1,861 @@
+// TEA Platform - New Schema
+// This schema defines the target database structure for the migration
+// from Django to Prisma.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-new"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+
+model User {
+  id                   String       @id @default(uuid())
+  email                String       @unique
+  username             String       @unique
+  passwordHash         String?      @map("password_hash")
+  passwordAlgorithm    String       @default("django_pbkdf2") @map("password_algorithm")
+
+  // Profile
+  firstName            String?      @map("first_name")
+  lastName             String?      @map("last_name")
+  avatarUrl            String?      @map("avatar_url")
+
+  // Authentication
+  authProvider         AuthProvider @default(LOCAL) @map("auth_provider")
+  githubId             String?      @unique @map("github_id")
+  githubUsername       String?      @map("github_username")
+  emailVerified        Boolean      @default(false) @map("email_verified")
+
+  // Password reset
+  passwordResetToken   String?      @map("password_reset_token")
+  passwordResetExpires DateTime?    @map("password_reset_expires")
+
+  // Preferences
+  defaultCaseMode      CaseMode     @default(STANDARD) @map("default_case_mode")
+
+  // Migration notice tracking
+  hasSeenMigrationNotice Boolean    @default(false) @map("has_seen_migration_notice")
+
+  // System flag
+  isSystemUser         Boolean      @default(false) @map("is_system_user")
+
+  // Timestamps
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+  lastLoginAt          DateTime?    @map("last_login_at")
+
+  // Relations
+  teamMemberships      TeamMember[]
+  createdTeams         Team[]             @relation("TeamCreator")
+  createdCases         AssuranceCase[]    @relation("CaseCreator")
+  casePermissions      CasePermission[]   @relation("PermissionHolder")
+  grantedPermissions   CasePermission[]   @relation("PermissionGranter")
+  createdElements      AssuranceElement[] @relation("ElementCreator")
+  authoredComments     Comment[]          @relation("CommentAuthor")
+  resolvedComments     Comment[]          @relation("CommentResolver")
+  releaseComments      ReleaseComment[]
+  githubRepositories   GitHubRepository[]
+  refreshTokens        RefreshToken[]
+  caseStudies          CaseStudy[]
+  markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
+
+  @@map("users")
+}
+
+enum AuthProvider {
+  LOCAL
+  GITHUB
+  SYSTEM
+}
+
+// ============================================
+// REFRESH TOKENS (Session Management)
+// ============================================
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+enum CaseMode {
+  STANDARD
+  ADVANCED
+}
+
+enum PublishStatus {
+  DRAFT
+  READY_TO_PUBLISH
+  PUBLISHED
+}
+
+// ============================================
+// PASSWORD RESET & SECURITY AUDIT
+// ============================================
+
+model PasswordResetAttempt {
+  id          String   @id @default(uuid())
+  email       String
+  ipAddress   String   @map("ip_address")
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+  successful  Boolean  @default(false)
+
+  @@index([email, attemptedAt])
+  @@index([ipAddress, attemptedAt])
+  @@map("password_reset_attempts")
+}
+
+model SecurityAuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  eventType String   @map("event_type")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("security_audit_logs")
+}
+
+// ============================================
+// TEAMS
+// ============================================
+
+model Team {
+  id                 String                  @id @default(uuid())
+  name               String
+  slug               String                  @unique
+  description        String?
+
+  // Future: Organisation support
+  organisationId     String?                 @map("organisation_id")
+
+  // Timestamps
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  createdById        String                  @map("created_by_id")
+
+  // Relations
+  createdBy          User                    @relation("TeamCreator", fields: [createdById], references: [id])
+  members            TeamMember[]
+  casePermissions    CaseTeamPermission[]
+  patternPermissions PatternTeamPermission[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id          String   @id @default(uuid())
+  teamId      String   @map("team_id")
+  userId      String   @map("user_id")
+  role        TeamRole @default(MEMBER)
+
+  invitedById String?  @map("invited_by_id")
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================
+// ASSURANCE CASES
+// ============================================
+
+model AssuranceCase {
+  id              String                @id @default(uuid())
+  name            String
+  description     String
+
+  // Creator (for audit, NOT ownership)
+  createdById     String                @map("created_by_id")
+
+  // Mode
+  mode            CaseMode              @default(STANDARD)
+
+  // Visual settings
+  colorProfile    String                @default("default") @map("color_profile")
+
+  // Concurrency control
+  lockUuid        String?               @map("lock_uuid")
+  lockedById      String?               @map("locked_by_id")
+  lockedAt        DateTime?             @map("locked_at")
+
+  // Pattern tracking
+  sourcePatternId String?               @map("source_pattern_id")
+
+  // Timestamps
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  // Publishing (legacy boolean kept for backward compatibility)
+  published       Boolean               @default(false)
+  publishedAt     DateTime?             @map("published_at")
+
+  // Publishing - 3-state workflow
+  publishStatus     PublishStatus         @default(DRAFT) @map("publish_status")
+  markedReadyAt     DateTime?             @map("marked_ready_at")
+  markedReadyById   String?               @map("marked_ready_by_id")
+
+  // Relations
+  createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
+  markedReadyBy   User?                 @relation("CaseMarkedReady", fields: [markedReadyById], references: [id])
+  sourcePattern   ArgumentPattern?      @relation(fields: [sourcePatternId], references: [id])
+  elements        AssuranceElement[]
+  userPermissions CasePermission[]
+  teamPermissions CaseTeamPermission[]
+  invites         CaseInvite[]
+  comments        Comment[]
+  caseImage       CaseImage?
+  caseTypes       CaseTypeAssignment[]
+
+  // Release relations
+  sourceReleases    Release[] @relation("SourceCase")
+  publishedReleases Release[] @relation("PublishedCase")
+
+  // Published versions (legacy model for case study integration)
+  publishedVersions PublishedAssuranceCase[]
+
+  // Module references (cases that embed this one)
+  embeddedIn        AssuranceElement[] @relation("ModuleReference")
+
+  @@index([publishStatus], map: "assurance_cases_publish_status_idx")
+  @@index([createdById, publishStatus], map: "assurance_cases_created_by_status_idx")
+  @@map("assurance_cases")
+}
+
+model CasePermission {
+  id          String          @id @default(uuid())
+  caseId      String          @map("case_id")
+  userId      String          @map("user_id")
+  permission  PermissionLevel
+
+  grantedById String          @map("granted_by_id")
+  grantedAt   DateTime        @default(now()) @map("granted_at")
+
+  // Relations
+  case        AssuranceCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user        User            @relation("PermissionHolder", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy   User            @relation("PermissionGranter", fields: [grantedById], references: [id])
+
+  @@unique([caseId, userId])
+  @@map("case_permissions")
+}
+
+model CaseTeamPermission {
+  id          String          @id @default(uuid())
+  caseId      String          @map("case_id")
+  teamId      String          @map("team_id")
+  permission  PermissionLevel
+
+  grantedById String          @map("granted_by_id")
+  grantedAt   DateTime        @default(now()) @map("granted_at")
+
+  // Relations
+  case        AssuranceCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, teamId])
+  @@map("case_team_permissions")
+}
+
+enum PermissionLevel {
+  VIEW
+  COMMENT
+  EDIT
+  ADMIN
+}
+
+model CaseInvite {
+  id              String    @id @default(uuid())
+  caseId          String    @map("case_id")
+  email           String
+  permission      PermissionLevel
+
+  inviteToken     String    @unique @map("invite_token")
+  inviteExpiresAt DateTime  @map("invite_expires_at")
+  acceptedAt      DateTime? @map("accepted_at")
+  acceptedById    String?   @map("accepted_by_id")
+
+  invitedById     String    @map("invited_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  case            AssuranceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("case_invites")
+}
+
+// ============================================
+// ASSURANCE ELEMENTS (CONSOLIDATED)
+// ============================================
+
+model AssuranceElement {
+  id                  String           @id @default(uuid())
+  caseId              String           @map("case_id")
+
+  // Element classification
+  elementType         ElementType      @map("element_type")
+  role                ElementRole?
+
+  // Hierarchy
+  parentId            String?          @map("parent_id")
+
+  // Common fields
+  name                String?
+  description         String           // Migrated from short_description
+
+  // GSN-specific fields
+  assumption          String?          // For goals, strategies, claims
+  justification       String?          // For strategies
+  context             String[]         @default([]) // For goals, strategies, claims
+
+  // Evidence-specific
+  url                 String?
+
+  // Module-specific
+  moduleReferenceId   String?          @map("module_reference_id")
+  moduleEmbedType     ModuleEmbedType? @map("module_embed_type")
+  modulePublicSummary String?          @map("module_public_summary")
+
+  // Pattern tracking
+  fromPattern         Boolean          @default(false) @map("from_pattern")
+  modifiedFromPattern Boolean          @default(false) @map("modified_from_pattern")
+
+  // Sandbox/draft status
+  inSandbox           Boolean          @default(false) @map("in_sandbox")
+
+  // Dialogical reasoning (defeaters)
+  isDefeater          Boolean          @default(false) @map("is_defeater")
+  defeatsElementId    String?          @map("defeats_element_id")
+
+  // Level (calculated, for property claims)
+  level               Int?
+
+  // Timestamps
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  createdById         String           @map("created_by_id")
+
+  // Relations
+  case                AssuranceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdBy           User             @relation("ElementCreator", fields: [createdById], references: [id])
+  parent              AssuranceElement? @relation("ElementHierarchy", fields: [parentId], references: [id])
+  children            AssuranceElement[] @relation("ElementHierarchy")
+  defeatsElement      AssuranceElement? @relation("Defeater", fields: [defeatsElementId], references: [id])
+  defeatedBy          AssuranceElement[] @relation("Defeater")
+  moduleReference     AssuranceCase?   @relation("ModuleReference", fields: [moduleReferenceId], references: [id])
+
+  // Evidence many-to-many
+  evidenceLinksFrom   EvidenceLink[]   @relation("EvidenceSource")
+  evidenceLinksTo     EvidenceLink[]   @relation("EvidenceTarget")
+
+  comments            Comment[]
+  releaseComments     ReleaseComment[]
+
+  @@index([caseId])
+  @@index([caseId, elementType])
+  @@index([parentId])
+  @@map("assurance_elements")
+}
+
+enum ElementType {
+  GOAL
+  CONTEXT
+  STRATEGY
+  PROPERTY_CLAIM
+  EVIDENCE
+  JUSTIFICATION
+  ASSUMPTION
+  MODULE
+  AWAY_GOAL
+  CONTRACT
+}
+
+enum ElementRole {
+  TOP_LEVEL
+  SUPPORTING
+}
+
+enum ModuleEmbedType {
+  COPY
+  REFERENCE
+}
+
+model EvidenceLink {
+  id         String           @id @default(uuid())
+  evidenceId String           @map("evidence_id")
+  claimId    String           @map("claim_id")
+
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  evidence   AssuranceElement @relation("EvidenceSource", fields: [evidenceId], references: [id], onDelete: Cascade)
+  claim      AssuranceElement @relation("EvidenceTarget", fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceId, claimId])
+  @@map("evidence_links")
+}
+
+// ============================================
+// ARGUMENT PATTERNS
+// ============================================
+
+model ArgumentPattern {
+  id              String                  @id @default(uuid())
+  name            String
+  description     String
+  version         String
+
+  // Categorisation
+  category        String?
+  tags            String[]
+
+  // Publishing
+  published       Boolean                 @default(false)
+  publishedAt     DateTime?               @map("published_at")
+
+  // Creator
+  createdById     String                  @map("created_by_id")
+
+  // Timestamps
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  // Relations
+  elements        PatternElement[]
+  userPermissions PatternPermission[]
+  teamPermissions PatternTeamPermission[]
+  derivedCases    AssuranceCase[]
+
+  @@map("argument_patterns")
+}
+
+model PatternElement {
+  id              String         @id @default(uuid())
+  patternId       String         @map("pattern_id")
+
+  // Same structure as AssuranceElement
+  elementType     ElementType    @map("element_type")
+  role            ElementRole?
+  parentId        String?        @map("parent_id")
+  name            String?
+  description     String
+
+  // GSN-specific fields (same as AssuranceElement)
+  assumption      String?
+  justification   String?
+  context         String[]       @default([]) // For goals, strategies, claims
+
+  // Evidence-specific
+  url             String?
+
+  // Placeholder support (pattern-specific)
+  isPlaceholder   Boolean        @default(false) @map("is_placeholder")
+  placeholderHint String?        @map("placeholder_hint")
+
+  // Ordering
+  displayOrder    Int            @default(0) @map("display_order")
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  pattern         ArgumentPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  parent          PatternElement? @relation("PatternHierarchy", fields: [parentId], references: [id])
+  children        PatternElement[] @relation("PatternHierarchy")
+
+  @@map("pattern_elements")
+}
+
+model PatternPermission {
+  id          String          @id @default(uuid())
+  patternId   String          @map("pattern_id")
+  userId      String          @map("user_id")
+  permission  PermissionLevel
+
+  grantedById String          @map("granted_by_id")
+  grantedAt   DateTime        @default(now()) @map("granted_at")
+
+  pattern     ArgumentPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+
+  @@unique([patternId, userId])
+  @@map("pattern_permissions")
+}
+
+model PatternTeamPermission {
+  id          String          @id @default(uuid())
+  patternId   String          @map("pattern_id")
+  teamId      String          @map("team_id")
+  permission  PermissionLevel
+
+  grantedById String          @map("granted_by_id")
+  grantedAt   DateTime        @default(now()) @map("granted_at")
+
+  pattern     ArgumentPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([patternId, teamId])
+  @@map("pattern_team_permissions")
+}
+
+// ============================================
+// RELEASES (PUBLISHING)
+// ============================================
+
+model Release {
+  id               String        @id @default(uuid())
+
+  // Source case (user's private version)
+  sourceCaseId     String        @map("source_case_id")
+
+  // Published case (community-visible fork)
+  publishedCaseId  String?       @map("published_case_id")
+
+  // Metadata
+  title            String
+  description      String
+  currentVersion   Int           @default(0) @map("current_version")
+
+  // Authors
+  authors          String
+  contactEmail     String?       @map("contact_email")
+
+  // Categorisation
+  category         String?
+  sector           String?
+  tags             String[]
+
+  // Status
+  status           ReleaseStatus @default(DRAFT)
+  firstPublishedAt DateTime?     @map("first_published_at")
+  lastUpdatedAt    DateTime?     @map("last_updated_at")
+
+  // Community settings
+  allowComments    Boolean       @default(true) @map("allow_comments")
+
+  // Creator
+  createdById      String        @map("created_by_id")
+
+  // Timestamps
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  sourceCase       AssuranceCase     @relation("SourceCase", fields: [sourceCaseId], references: [id])
+  publishedCase    AssuranceCase?    @relation("PublishedCase", fields: [publishedCaseId], references: [id])
+  snapshots        ReleaseSnapshot[]
+  comments         ReleaseComment[]
+  image            ReleaseImage?
+
+  @@map("releases")
+}
+
+enum ReleaseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ReleaseSnapshot {
+  id                String         @id @default(uuid())
+  releaseId         String         @map("release_id")
+
+  // Version tracking
+  versionNumber     Int            @map("version_number")
+  versionLabel      String?        @map("version_label")
+
+  // Full case data as JSON
+  content           Json
+
+  // Metadata
+  snapshotTakenAt   DateTime       @map("snapshot_taken_at")
+  snapshotTakenById String         @map("snapshot_taken_by_id")
+  reason            SnapshotReason
+
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  release           Release        @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@map("release_snapshots")
+}
+
+enum SnapshotReason {
+  INITIAL_PUBLISH
+  UPDATE
+  ARCHIVE
+}
+
+model ReleaseComment {
+  id              String           @id @default(uuid())
+  releaseId       String           @map("release_id")
+  elementId       String?          @map("element_id")
+
+  parentCommentId String?          @map("parent_comment_id")
+  content         String
+
+  authorId        String           @map("author_id")
+
+  // Moderation
+  status          CommentStatus    @default(VISIBLE)
+  hiddenById      String?          @map("hidden_by_id")
+  hiddenAt        DateTime?        @map("hidden_at")
+  hiddenReason    String?          @map("hidden_reason")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  release         Release          @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  element         AssuranceElement? @relation(fields: [elementId], references: [id])
+  author          User             @relation(fields: [authorId], references: [id])
+  parentComment   ReleaseComment?  @relation("CommentThread", fields: [parentCommentId], references: [id])
+  replies         ReleaseComment[] @relation("CommentThread")
+
+  @@map("release_comments")
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+model ReleaseImage {
+  id           String   @id @default(uuid())
+  releaseId    String   @unique @map("release_id")
+  imageUrl     String   @map("image_url")
+  altText      String?  @map("alt_text")
+  uploadedAt   DateTime @map("uploaded_at")
+  uploadedById String   @map("uploaded_by_id")
+
+  release      Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@map("release_images")
+}
+
+// ============================================
+// COMMENTS (INTERNAL)
+// ============================================
+
+model Comment {
+  id              String           @id @default(uuid())
+
+  // Polymorphic attachment
+  caseId          String?          @map("case_id")
+  elementId       String?          @map("element_id")
+
+  // Threading
+  parentCommentId String?          @map("parent_comment_id")
+
+  content         String
+  authorId        String           @map("author_id")
+
+  // Status
+  resolved        Boolean          @default(false)
+  resolvedById    String?          @map("resolved_by_id")
+  resolvedAt      DateTime?        @map("resolved_at")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  case            AssuranceCase?   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  element         AssuranceElement? @relation(fields: [elementId], references: [id], onDelete: Cascade)
+  author          User             @relation("CommentAuthor", fields: [authorId], references: [id])
+  resolvedBy      User?            @relation("CommentResolver", fields: [resolvedById], references: [id])
+  parentComment   Comment?         @relation("CommentThread", fields: [parentCommentId], references: [id])
+  replies         Comment[]        @relation("CommentThread")
+
+  @@map("comments")
+}
+
+// ============================================
+// SUPPORTING ENTITIES
+// ============================================
+
+model CaseImage {
+  id           String        @id @default(uuid())
+  caseId       String        @unique @map("case_id")
+  imageUrl     String        @map("image_url")
+  uploadedAt   DateTime      @map("uploaded_at")
+  uploadedById String        @map("uploaded_by_id")
+
+  case         AssuranceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("case_images")
+}
+
+model CaseType {
+  id          String               @id @default(uuid())
+  name        String               @unique
+  description String?
+  category    CaseTypeCategory
+  externalUrl String?              @map("external_url")
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  assignments CaseTypeAssignment[]
+
+  @@map("case_types")
+}
+
+enum CaseTypeCategory {
+  DOMAIN
+  TECHNIQUE
+  STANDARD
+}
+
+model CaseTypeAssignment {
+  id           String        @id @default(uuid())
+  caseId       String        @map("case_id")
+  caseTypeId   String        @map("case_type_id")
+  assignedById String        @map("assigned_by_id")
+  assignedAt   DateTime      @default(now()) @map("assigned_at")
+
+  case         AssuranceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseType     CaseType      @relation(fields: [caseTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, caseTypeId])
+  @@map("case_type_assignments")
+}
+
+model GitHubRepository {
+  id            String   @id @default(uuid())
+  name          String
+  url           String
+  description   String?
+
+  githubId      String?  @map("github_id")
+  defaultBranch String   @default("main") @map("default_branch")
+
+  userId        String   @map("user_id")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("github_repositories")
+}
+
+// ============================================
+// CASE STUDIES (Legacy Django Tables)
+// ============================================
+// These models map to existing Django tables for case study functionality.
+// They use the old table/column names via @@map() for compatibility.
+
+model CaseStudy {
+  id             Int       @id @default(autoincrement()) @map("id")
+  title          String    @db.VarChar(255)
+  description    String?
+  authors        String?   @db.VarChar(255)
+  category       String?   @db.VarChar(100)
+  publishedDate  DateTime? @map("published_date") @db.Timestamptz(6)
+  lastModifiedOn DateTime  @map("last_modified_on") @db.Timestamptz(6)
+  createdOn      DateTime  @map("created_on") @db.Timestamptz(6)
+  sector         String?   @db.VarChar(100)
+  contact        String?   @db.VarChar(254)
+  image          String?   @db.VarChar(200)
+  published      Boolean
+  ownerId        String?   @map("owner_id")
+  type           String?   @db.VarChar(100)
+
+  // Relations
+  owner          User?                    @relation(fields: [ownerId], references: [id])
+  publishedCases CaseStudyPublishedCase[]
+  featureImage   CaseStudyImage?
+
+  @@index([ownerId], map: "eap_api_casestudy_owner_id_32cc0f00")
+  @@map("api_casestudy")
+}
+
+model CaseStudyPublishedCase {
+  id                      BigInt                @id @default(autoincrement())
+  caseStudyId             Int                   @map("casestudy_id")
+  publishedAssuranceCaseId String               @map("publishedassurancecase_id") @db.Uuid
+
+  // Relations
+  caseStudy               CaseStudy             @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  publishedAssuranceCase  PublishedAssuranceCase @relation(fields: [publishedAssuranceCaseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([caseStudyId, publishedAssuranceCaseId], map: "eap_api_casestudy_publis_casestudy_id_publishedas_2b4d76e9_uniq")
+  @@index([caseStudyId], map: "eap_api_casestudy_publishe_casestudy_id_a7e4f836")
+  @@index([publishedAssuranceCaseId], map: "eap_api_casestudy_publishe_publishedassurancecase_id_922f4694")
+  @@map("api_casestudy_assurance_cases")
+}
+
+model CaseStudyImage {
+  id          BigInt    @id @default(autoincrement())
+  image       String    @db.VarChar(100)
+  uploadedAt  DateTime  @map("uploaded_at") @db.Timestamptz(6)
+  caseStudyId Int       @unique @map("case_study_id")
+
+  // Relations
+  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("api_casestudyfeatureimage")
+}
+
+model PublishedAssuranceCase {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String   @db.VarChar(255)
+  content         Json
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  assuranceCaseId String   @map("assurance_case_id")
+  description     String?  @db.VarChar(1000)
+
+  // Relations
+  assuranceCase   AssuranceCase            @relation(fields: [assuranceCaseId], references: [id])
+  caseStudyLinks  CaseStudyPublishedCase[]
+
+  @@index([assuranceCaseId], map: "eap_api_publishedassurancecase_assurance_case_id_92434322")
+  @@map("api_publishedassurancecase")
+}
+
+// ============================================
+// LEGACY MAPPING (for migration tracking)
+// ============================================
+
+model LegacyMapping {
+  id          String   @id @default(uuid())
+  entityType  String   @map("entity_type")  // 'user', 'case', 'element', 'team', etc.
+  legacyId    BigInt   @map("legacy_id")    // Old Django ID
+  newId       String   @map("new_id")       // New UUID
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([entityType, legacyId])
+  @@index([entityType, newId])
+  @@map("legacy_mappings")
+}

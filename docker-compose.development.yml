@@ -18,40 +18,22 @@ services:
       timeout: 5s
       retries: 5
 
-  tea_backend:
+  tea_app:
     build:
-      context: ./tea_backend
+      context: .
       dockerfile: Dockerfile.dev
-    container_name: tea_backend_dev
-    hostname: tea-backend
+    container_name: tea_app_dev
     ports:
-      - '8000:8000'
+      - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
     env_file:
-      - ./tea_backend/.env.local
+      - ./.env.local
     volumes:
-      - ./tea_backend:/app
-      - ./tea_backend/mediafiles:/app/mediafiles
-    networks:
-      - tea_dev_network
-    entrypoint: ['/app/docker-entrypoint-dev.sh']
-
-  tea_frontend:
-    build:
-      context: ./tea_frontend
-      dockerfile: Dockerfile.dev
-    container_name: tea_frontend_dev
-    ports:
-      - '3000:3000'
-    depends_on:
-      - tea_backend
-    env_file:
-      - ./tea_frontend/.env.local
-    volumes:
-      - ./tea_frontend:/app
-      - frontend_next:/app/.next
+      - .:/app
+      - app_next:/app/.next
+      - /app/node_modules
     networks:
       - tea_dev_network
     command:
@@ -63,4 +45,4 @@ networks:
 
 volumes:
   postgres_data:
-  frontend_next:
+  app_next:
