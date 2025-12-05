@@ -31,5 +31,16 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "prisma/scripts"]
+  "exclude": [
+    "node_modules",
+    "prisma/scripts",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "src/__tests__/**",
+    "vitest.config.ts",
+    "vitest.config.performance.ts"
+  ]
 }
