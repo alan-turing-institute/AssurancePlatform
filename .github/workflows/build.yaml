@@ -66,8 +66,8 @@ jobs:
             type=ref,event=branch
             # PR number
             type=ref,event=pr
-            # SHA (short)
-            type=sha,prefix={{branch}}-
+            # SHA (short) - only for branch pushes, not PRs
+            type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
             # For main branch
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
