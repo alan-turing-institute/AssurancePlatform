@@ -47,7 +47,7 @@ export async function GET(
 		}
 
 		// Check ownership
-		if (caseStudy.ownerId !== BigInt(session.user.id)) {
+		if (caseStudy.ownerId !== session.user.id) {
 			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 		}
 
@@ -120,21 +120,17 @@ export async function PUT(
 			data = await request.json();
 		}
 
-		const caseStudy = await updateCaseStudy(
-			caseStudyId,
-			BigInt(session.user.id),
-			{
-				title: data.title as string | undefined,
-				description: data.description as string | undefined,
-				authors: data.authors as string | undefined,
-				category: data.category as string | undefined,
-				sector: data.sector as string | undefined,
-				contact: data.contact as string | undefined,
-				type: data.type as string | undefined,
-				published: data.published as boolean | undefined,
-				image: data.image as string | undefined,
-			}
-		);
+		const caseStudy = await updateCaseStudy(caseStudyId, session.user.id, {
+			title: data.title as string | undefined,
+			description: data.description as string | undefined,
+			authors: data.authors as string | undefined,
+			category: data.category as string | undefined,
+			sector: data.sector as string | undefined,
+			contact: data.contact as string | undefined,
+			type: data.type as string | undefined,
+			published: data.published as boolean | undefined,
+			image: data.image as string | undefined,
+		});
 
 		if (!caseStudy) {
 			return NextResponse.json(
@@ -178,7 +174,7 @@ export async function DELETE(
 			);
 		}
 
-		const deleted = await deleteCaseStudy(caseStudyId, BigInt(session.user.id));
+		const deleted = await deleteCaseStudy(caseStudyId, session.user.id);
 
 		if (!deleted) {
 			return NextResponse.json(

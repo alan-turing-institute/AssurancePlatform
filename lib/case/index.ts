@@ -50,9 +50,4 @@ export {
 	toggleHiddenForParent,
 } from "./tree-utils";
 // Types
-export type {
-	CaseNode,
-	NestedArrayItem,
-	ReactFlowNode,
-	ReactFlowNodeData,
-} from "./types";
+export type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";

@@ -22,7 +22,7 @@ export async function GET(): Promise<NextResponse> {
 	}
 
 	try {
-		const caseStudies = await getCaseStudiesByOwner(BigInt(session.user.id));
+		const caseStudies = await getCaseStudiesByOwner(session.user.id);
 		return NextResponse.json(transformCaseStudiesForApi(caseStudies));
 	} catch (error) {
 		console.error("Error fetching case studies:", error);
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 			return NextResponse.json({ error: "Title is required" }, { status: 400 });
 		}
 
-		const caseStudy = await createCaseStudy(BigInt(session.user.id), {
+		const caseStudy = await createCaseStudy(session.user.id, {
 			title: data.title,
 			description: data.description as string | undefined,
 			authors: data.authors as string | undefined,

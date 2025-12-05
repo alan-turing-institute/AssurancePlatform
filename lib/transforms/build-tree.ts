@@ -71,11 +71,9 @@ const TYPE_SPECIFIC_FIELDS = [
 type TypeSpecificFieldKey = (typeof TYPE_SPECIFIC_FIELDS)[number];
 
 /**
- * TreeNode with writable type-specific fields for dynamic assignment
+ * Writable version of TreeNode for dynamic field assignment
  */
-type TreeNodeWritable = {
-	[K in TypeSpecificFieldKey]?: TreeNode[K];
-};
+type TreeNodeWritable = Record<TypeSpecificFieldKey, unknown>;
 
 /**
  * Adds type-specific fields to the node if applicable and non-null/non-empty.

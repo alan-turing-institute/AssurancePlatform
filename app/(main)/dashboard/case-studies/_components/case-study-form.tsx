@@ -48,8 +48,7 @@ import DeleteCaseButton from "./delete-button";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";
 
 const assuranceCaseSchema = z.object({
-	id: z.number(),
-	// naxme: z.string(),
+	id: z.string(),
 });
 
 const caseStudyFormSchema = z.object({

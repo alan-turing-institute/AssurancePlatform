@@ -24,7 +24,14 @@ import {
 	attachCaseElement,
 	deleteAssuranceCaseNode,
 } from "@/lib/case";
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type {
+	AssuranceCase,
+	Context,
+	Evidence,
+	Goal,
+	PropertyClaim,
+	Strategy,
+} from "@/types";
 import { AlertModal } from "../modals/alert-modal";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
@@ -205,7 +212,7 @@ const OrphanElements = ({
 			return;
 		}
 		orphan.goal_id = node.data.id;
-		const newContext = [...assuranceCase.goals[0].context, orphan];
+		const newContext = [...(assuranceCase.goals[0].context ?? []), orphan];
 		const updatedAssuranceCase = {
 			...assuranceCase,
 			goals: [
@@ -215,7 +222,8 @@ const OrphanElements = ({
 				},
 			],
 		};
-		setAssuranceCase(updatedAssuranceCase);
+		// Type assertion needed for legacy Context object handling
+		setAssuranceCase(updatedAssuranceCase as AssuranceCase);
 		setLoading(false);
 		handleClose();
 	};
