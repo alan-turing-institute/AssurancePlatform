@@ -84,7 +84,7 @@ export default function CookieConsent({
 					<Button
 						className="h-9 w-full rounded-full"
 						onClick={accept}
-						variant={"primary"}
+						variant="default"
 					>
 						Okay
 					</Button>

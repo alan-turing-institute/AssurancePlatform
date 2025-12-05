@@ -24,9 +24,9 @@ describe("Button", () => {
 
 	it("should render with different variants", () => {
 		const { rerender } = renderWithoutProviders(
-			<Button variant="primary">Primary</Button>
+			<Button variant="default">Default</Button>
 		);
-		expect(screen.getByRole("button")).toHaveClass("bg-indigo-500");
+		expect(screen.getByRole("button")).toHaveClass("bg-primary");
 
 		rerender(<Button variant="destructive">Destructive</Button>);
 		expect(screen.getByRole("button")).toHaveClass("bg-rose-500");

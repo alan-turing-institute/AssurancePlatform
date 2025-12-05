@@ -835,7 +835,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 										<Button
 											onClick={handlePublish}
 											type="button"
-											variant="primary"
+											variant="default"
 										>
 											{caseStudy.published ? (
 												<>

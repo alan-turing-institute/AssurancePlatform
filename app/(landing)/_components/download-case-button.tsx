@@ -42,7 +42,7 @@ const DownloadCaseButton = ({
 
 	return (
 		<div className="mt-4 flex shrink-0 items-center gap-x-4">
-			<Button onClick={downloadJSON} variant={"primary"}>
+			<Button onClick={downloadJSON} variant="default">
 				Download
 				<DownloadIcon className="ml-2 size-4" />
 			</Button>
