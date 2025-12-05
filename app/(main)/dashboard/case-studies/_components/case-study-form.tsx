@@ -90,7 +90,8 @@ const getDefaultFormValues = (caseStudy?: CaseStudyFormProps["caseStudy"]) =>
 				sector: caseStudy.sector || "",
 				type: caseStudy.type || "",
 				contact: caseStudy.contact || "",
-				assuranceCases: caseStudy.assuranceCases || [],
+				assuranceCases:
+					caseStudy.assuranceCases?.map((ac) => ({ id: ac.id })) || [],
 				published: caseStudy.published,
 			}
 		: {

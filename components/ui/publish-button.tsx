@@ -6,15 +6,10 @@ import { updateCaseStudy } from "@/actions/case-studies";
 import type { CaseStudy } from "@/types/domain";
 import { useToast } from "./use-toast";
 
-// Extended CaseStudy type for publish functionality
-interface CaseStudyWithAssuranceCases extends CaseStudy {
-	assurance_cases?: number[];
-}
-
 type PublishButtonProps = {
 	label: string;
 	published: boolean;
-	caseStudy: CaseStudyWithAssuranceCases;
+	caseStudy: CaseStudy;
 };
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {

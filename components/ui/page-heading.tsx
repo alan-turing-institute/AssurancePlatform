@@ -3,11 +3,6 @@ import { Button } from "./button";
 import PublishButton from "./publish-button";
 import RedirectButton from "./redirect-button";
 
-// Extended CaseStudy type for publish functionality
-interface CaseStudyWithAssuranceCases extends CaseStudy {
-	assurance_cases?: number[];
-}
-
 type PageHeadingProps = {
 	title: string;
 	description?: string;
@@ -21,7 +16,7 @@ type PageHeadingProps = {
 	};
 	redirect?: boolean;
 	redirectUrl?: string;
-	caseStudy?: CaseStudyWithAssuranceCases;
+	caseStudy?: CaseStudy;
 };
 
 export default function PageHeading({
