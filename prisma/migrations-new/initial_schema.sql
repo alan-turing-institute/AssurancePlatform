@@ -3,6 +3,9 @@
 CREATE TYPE "CaseMode" AS ENUM ('STANDARD', 'ADVANCED');
 
 -- CreateEnum
+CREATE TYPE "PublishStatus" AS ENUM ('DRAFT', 'READY_TO_PUBLISH', 'PUBLISHED');
+
+-- CreateEnum
 CREATE TYPE "TeamRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
 
 -- CreateEnum
@@ -59,6 +62,20 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
+CREATE TABLE "refresh_tokens" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "revoked_at" TIMESTAMP(3),
+    "user_agent" TEXT,
+    "ip_address" TEXT,
+
+    CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "teams" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -96,6 +113,11 @@ CREATE TABLE "assurance_cases" (
     "locked_by_id" TEXT,
     "locked_at" TIMESTAMP(3),
     "source_pattern_id" TEXT,
+    "published" BOOLEAN NOT NULL DEFAULT false,
+    "published_at" TIMESTAMP(3),
+    "publish_status" "PublishStatus" NOT NULL DEFAULT 'DRAFT',
+    "marked_ready_at" TIMESTAMP(3),
+    "marked_ready_by_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -153,6 +175,7 @@ CREATE TABLE "assurance_elements" (
     "description" TEXT NOT NULL,
     "assumption" TEXT,
     "justification" TEXT,
+    "context" TEXT[] NOT NULL DEFAULT '{}',
     "url" TEXT,
     "module_reference_id" TEXT,
     "module_embed_type" "ModuleEmbedType",
@@ -398,6 +421,15 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE UNIQUE INDEX "users_github_id_key" ON "users"("github_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens"("user_id");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_expires_at_idx" ON "refresh_tokens"("expires_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "teams_slug_key" ON "teams"("slug");
 
 -- CreateIndex
@@ -411,6 +443,12 @@ CREATE UNIQUE INDEX "case_team_permissions_case_id_team_id_key" ON "case_team_pe
 
 -- CreateIndex
 CREATE UNIQUE INDEX "case_invites_invite_token_key" ON "case_invites"("invite_token");
+
+-- CreateIndex
+CREATE INDEX "assurance_cases_publish_status_idx" ON "assurance_cases"("publish_status");
+
+-- CreateIndex
+CREATE INDEX "assurance_cases_created_by_status_idx" ON "assurance_cases"("created_by_id", "publish_status");
 
 -- CreateIndex
 CREATE INDEX "assurance_elements_case_id_idx" ON "assurance_elements"("case_id");
@@ -452,6 +490,9 @@ CREATE UNIQUE INDEX "legacy_mappings_entity_type_legacy_id_key" ON "legacy_mappi
 ALTER TABLE "teams" ADD CONSTRAINT "teams_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "team_members" ADD CONSTRAINT "team_members_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -462,6 +503,9 @@ ALTER TABLE "assurance_cases" ADD CONSTRAINT "assurance_cases_created_by_id_fkey
 
 -- AddForeignKey
 ALTER TABLE "assurance_cases" ADD CONSTRAINT "assurance_cases_source_pattern_id_fkey" FOREIGN KEY ("source_pattern_id") REFERENCES "argument_patterns"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assurance_cases" ADD CONSTRAINT "assurance_cases_marked_ready_by_id_fkey" FOREIGN KEY ("marked_ready_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "case_permissions" ADD CONSTRAINT "case_permissions_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "assurance_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -43,28 +43,46 @@ export type CaseStudyUpdateInput = Partial<CaseStudyCreateInput> & {
 
 /**
  * Get all case studies owned by a user
+ *
+ * Note: The legacy CaseStudy table has owner_id as BigInt, but new users have UUID IDs.
+ * We handle this gracefully by catching type mismatch errors and returning empty results.
+ * New case studies created through the new system will work correctly.
  */
 export async function getCaseStudiesByOwner(
 	ownerId: string
 ): Promise<CaseStudyWithRelations[]> {
-	const caseStudies = await prismaNew.caseStudy.findMany({
-		where: {
-			ownerId,
-		},
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
-				},
+	try {
+		const caseStudies = await prismaNew.caseStudy.findMany({
+			where: {
+				ownerId,
 			},
-			featureImage: true,
-		},
-		orderBy: {
-			lastModifiedOn: "desc",
-		},
-	});
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
+				},
+				featureImage: true,
+			},
+			orderBy: {
+				lastModifiedOn: "desc",
+			},
+		});
 
-	return caseStudies as CaseStudyWithRelations[];
+		return caseStudies as CaseStudyWithRelations[];
+	} catch (error) {
+		// Handle legacy table type mismatch (BigInt owner_id vs UUID user ID)
+		if (
+			error instanceof Error &&
+			error.message.includes("invalid input syntax for type bigint")
+		) {
+			console.warn(
+				"getCaseStudiesByOwner: Legacy table type mismatch, returning empty array"
+			);
+			return [];
+		}
+		throw error;
+	}
 }
 
 /**
@@ -373,8 +391,59 @@ export async function deleteCaseStudyImage(
 // ============================================
 
 /**
+ * Gets the latest published version ID for an assurance case.
+ * Handles legacy table issues gracefully by catching errors.
+ */
+async function getLatestPublishedVersionId(
+	caseId: string
+): Promise<string | null> {
+	try {
+		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: caseId },
+			select: { id: true },
+			orderBy: { createdAt: "desc" },
+			take: 1,
+		});
+		return publishedVersions[0]?.id ?? null;
+	} catch (error) {
+		console.warn(
+			`Failed to fetch published versions for case ${caseId}:`,
+			error
+		);
+		return null;
+	}
+}
+
+/**
+ * Attempts to publish a case and returns the published ID if successful.
+ * Handles legacy table issues gracefully by catching errors.
+ */
+async function tryPublishCase(
+	ownerId: string,
+	caseId: string
+): Promise<string | null> {
+	const { publishAssuranceCase } = await import(
+		"@/lib/services/publish-service"
+	);
+
+	try {
+		const result = await publishAssuranceCase(ownerId, caseId);
+		return result.success ? result.publishedId : null;
+	} catch (error) {
+		console.warn(
+			`Failed to publish case ${caseId} (legacy table issue):`,
+			error
+		);
+		return null;
+	}
+}
+
+/**
  * Resolves source AssuranceCase IDs to their latest PublishedAssuranceCase IDs.
  * For cases that are READY_TO_PUBLISH but not yet published, this will publish them first.
+ *
+ * Note: The legacy PublishedAssuranceCase table has type mismatches with the new schema.
+ * We query publishedVersions separately with error handling to avoid crashes.
  *
  * @param sourceCaseIds - Array of source AssuranceCase IDs
  * @param ownerId - The user ID performing the operation (for publishing)
@@ -388,67 +457,64 @@ export async function resolvePublishedCaseIds(
 		return [];
 	}
 
-	// Import publish service dynamically to avoid circular dependencies
-	const { publishAssuranceCase } = await import(
-		"@/lib/services/publish-service"
-	);
-
-	// Get the source cases with their publish status and latest published version
+	// Get the source cases with their publish status
 	const sourceCases = await prismaNew.assuranceCase.findMany({
-		where: {
-			id: { in: sourceCaseIds },
-		},
-		select: {
-			id: true,
-			publishStatus: true,
-			createdById: true,
-			publishedVersions: {
-				select: {
-					id: true,
-				},
-				orderBy: {
-					createdAt: "desc",
-				},
-				take: 1,
-			},
-		},
+		where: { id: { in: sourceCaseIds } },
+		select: { id: true, publishStatus: true, createdById: true },
 	});
 
 	const publishedCaseIds: string[] = [];
 
 	for (const sourceCase of sourceCases) {
-		// If already has a published version, use that and ensure status is synced
-		if (sourceCase.publishedVersions.length > 0) {
-			publishedCaseIds.push(sourceCase.publishedVersions[0].id);
-
-			// Sync publishStatus to PUBLISHED if it's not already
-			// This handles cases where status got out of sync
-			if (sourceCase.publishStatus !== "PUBLISHED") {
-				await prismaNew.assuranceCase.update({
-					where: { id: sourceCase.id },
-					data: {
-						publishStatus: "PUBLISHED",
-						published: true,
-					},
-				});
-			}
-			continue;
-		}
-
-		// If READY_TO_PUBLISH, owner provided, and owner is the case creator, publish it now
-		if (
-			sourceCase.publishStatus === "READY_TO_PUBLISH" &&
-			ownerId &&
-			sourceCase.createdById === ownerId
-		) {
-			const result = await publishAssuranceCase(ownerId, sourceCase.id);
-			if (result.success) {
-				publishedCaseIds.push(result.publishedId);
-			}
+		const publishedId = await resolvePublishedIdForCase(sourceCase, ownerId);
+		if (publishedId) {
+			publishedCaseIds.push(publishedId);
 		}
 	}
 
 	return publishedCaseIds;
+}
+
+/**
+ * Resolves a single case to its published version ID.
+ */
+async function resolvePublishedIdForCase(
+	sourceCase: { id: string; publishStatus: string; createdById: string },
+	ownerId?: string
+): Promise<string | null> {
+	const latestPublishedId = await getLatestPublishedVersionId(sourceCase.id);
+
+	if (latestPublishedId) {
+		await syncPublishStatusIfNeeded(sourceCase);
+		return latestPublishedId;
+	}
+
+	// If READY_TO_PUBLISH, owner provided, and owner is the case creator, publish it now
+	const canPublish =
+		sourceCase.publishStatus === "READY_TO_PUBLISH" &&
+		ownerId &&
+		sourceCase.createdById === ownerId;
+
+	if (canPublish) {
+		return tryPublishCase(ownerId, sourceCase.id);
+	}
+
+	return null;
+}
+
+/**
+ * Syncs the publish status to PUBLISHED if needed.
+ */
+async function syncPublishStatusIfNeeded(sourceCase: {
+	id: string;
+	publishStatus: string;
+}): Promise<void> {
+	if (sourceCase.publishStatus !== "PUBLISHED") {
+		await prismaNew.assuranceCase.update({
+			where: { id: sourceCase.id },
+			data: { publishStatus: "PUBLISHED", published: true },
+		});
+	}
 }
 
 /**

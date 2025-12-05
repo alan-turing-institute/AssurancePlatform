@@ -16,8 +16,9 @@ export const fontSans = FontSans({
 });
 
 export const metadata: Metadata = {
-	title: "Turing Assurance Platform",
-	description: "Platform for generating assurance cases",
+	title: "Trustworthy and Ethical Assurance Platform",
+	description:
+		"An open-source tool designed to facilitate the process of creating, managing and sharing assurance cases.",
 };
 
 export default async function RootLayout({

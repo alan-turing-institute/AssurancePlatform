@@ -1,12 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { access, mkdir, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import {
+	deleteBlob,
+	getExtensionFromMimeType,
+	getMimeTypeFromExtension,
+	isAzureStorageConfigured,
+	uploadToBlob,
+} from "./blob-storage-service";
 
 /**
- * File Storage Service for local development.
+ * File Storage Service
  *
- * Stores files in the public/uploads directory for easy serving.
- * In production, this should be replaced with cloud storage (e.g., Azure Blob Storage).
+ * Provides file upload/delete functionality with automatic backend selection:
+ * - Production: Azure Blob Storage (persistent, scalable)
+ * - Development: Local filesystem (public/uploads directory)
+ *
+ * Environment variables for production:
+ * - AZURE_STORAGE_ACCOUNT_NAME
+ * - AZURE_STORAGE_ACCOUNT_KEY
  */
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
@@ -25,7 +37,7 @@ type SaveFileResult = {
 };
 
 /**
- * Ensures the upload directory exists
+ * Ensures the upload directory exists (for local storage)
  */
 async function ensureDirectory(dirPath: string): Promise<void> {
 	try {
@@ -59,89 +71,129 @@ function validateFile(
 }
 
 /**
- * Gets the file extension from MIME type
+ * Saves a file to local storage (development fallback)
  */
-function getExtensionFromMimeType(mimeType: string): string {
-	const mimeToExt: Record<string, string> = {
-		"image/jpeg": ".jpg",
-		"image/png": ".png",
-		"image/gif": ".gif",
-		"image/webp": ".webp",
-	};
-	return mimeToExt[mimeType] ?? ".bin";
+async function saveFileLocally(
+	buffer: Buffer,
+	subDirectory: string,
+	extension: string
+): Promise<SaveFileResult> {
+	try {
+		const dirPath = join(UPLOAD_DIR, subDirectory);
+		await ensureDirectory(dirPath);
+
+		const uniqueFilename = `${randomUUID()}${extension}`;
+		const filePath = join(dirPath, uniqueFilename);
+
+		await writeFile(filePath, buffer);
+
+		const relativePath = `/uploads/${subDirectory}/${uniqueFilename}`;
+		console.log(`[Dev] File saved locally: ${relativePath}`);
+
+		return { success: true, path: relativePath };
+	} catch (error) {
+		console.error("Error saving file locally:", error);
+		return { success: false, error: "Failed to save file" };
+	}
 }
 
 /**
- * Saves a file to local storage
+ * Saves a file to storage (Azure Blob in production, local in development)
  *
  * @param file - The file to save
- * @param subDirectory - Subdirectory under uploads (e.g., "case-studies/123")
- * @returns Result with the relative URL path to the saved file
+ * @param subDirectory - Subdirectory/prefix for the file (e.g., "case-studies/123")
+ * @returns Result with the URL/path to the saved file
  */
 export async function saveFile(
 	file: File,
 	subDirectory: string
 ): Promise<SaveFileResult> {
 	const validation = validateFile(file);
-	if (!validation.valid) {
+	if (validation.valid === false) {
 		return { success: false, error: validation.error };
 	}
 
-	try {
-		const dirPath = join(UPLOAD_DIR, subDirectory);
-		await ensureDirectory(dirPath);
+	const extension = getExtensionFromMimeType(file.type);
+	const arrayBuffer = await file.arrayBuffer();
+	const buffer = Buffer.from(arrayBuffer);
 
-		// Generate unique filename to avoid collisions
-		const extension = getExtensionFromMimeType(file.type);
+	// Use Azure Blob Storage in production
+	if (isAzureStorageConfigured()) {
 		const uniqueFilename = `${randomUUID()}${extension}`;
-		const filePath = join(dirPath, uniqueFilename);
+		const blobPath = `${subDirectory}/${uniqueFilename}`;
+		const contentType = getMimeTypeFromExtension(extension);
 
-		// Convert File to Buffer and write
-		const arrayBuffer = await file.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
-		await writeFile(filePath, buffer);
+		const result = await uploadToBlob(buffer, blobPath, contentType);
 
-		// Return the relative URL path (for serving from /public)
-		const relativePath = `/uploads/${subDirectory}/${uniqueFilename}`;
-
-		return { success: true, path: relativePath };
-	} catch (error) {
-		console.error("Error saving file:", error);
-		return { success: false, error: "Failed to save file" };
+		if (result.success === false) {
+			return { success: false, error: result.error };
+		}
+		return { success: true, path: result.url };
 	}
+
+	// Fall back to local storage in development
+	if (process.env.NODE_ENV === "development") {
+		return saveFileLocally(buffer, subDirectory, extension);
+	}
+
+	// Production without Azure configured - error
+	console.error("Azure Blob Storage not configured for production");
+	return { success: false, error: "Storage not configured" };
 }
 
 /**
- * Deletes a file from local storage
+ * Deletes a file from storage
  *
- * @param relativePath - The relative path returned from saveFile (e.g., "/uploads/case-studies/123/abc.jpg")
+ * @param filePath - The path/URL returned from saveFile
  * @returns true if deleted successfully, false otherwise
  */
-export async function deleteFile(relativePath: string): Promise<boolean> {
-	if (!relativePath?.startsWith("/uploads/")) {
+export async function deleteFile(filePath: string): Promise<boolean> {
+	if (!filePath) {
 		return false;
 	}
 
-	try {
-		// Convert relative URL to filesystem path
-		const filePath = join(process.cwd(), "public", relativePath.slice(1));
-
-		await unlink(filePath);
-		return true;
-	} catch (error) {
-		// File might not exist, which is fine
-		console.error("Error deleting file:", error);
-		return false;
+	// Azure Blob Storage URL
+	if (filePath.includes("blob.core.windows.net")) {
+		// Extract blob path from URL
+		// URL format: https://account.blob.core.windows.net/container/path/to/file.ext
+		try {
+			const url = new URL(filePath);
+			const pathParts = url.pathname.split("/");
+			// Remove empty string and container name, keep the rest as blob path
+			const blobPath = pathParts.slice(2).join("/");
+			return deleteBlob(blobPath);
+		} catch (error) {
+			console.error("Failed to parse blob URL:", error);
+			return false;
+		}
 	}
+
+	// Local file path (starts with /uploads/)
+	if (filePath.startsWith("/uploads/")) {
+		try {
+			const fullPath = join(process.cwd(), "public", filePath.slice(1));
+			await unlink(fullPath);
+			console.log(`[Dev] File deleted locally: ${filePath}`);
+			return true;
+		} catch (error) {
+			console.error("Error deleting local file:", error);
+			return false;
+		}
+	}
+
+	console.warn("Unknown file path format:", filePath);
+	return false;
 }
 
 /**
- * Deletes all files in a directory
+ * Deletes all files in a directory (local storage only)
  *
  * @param subDirectory - Subdirectory under uploads (e.g., "case-studies/123")
  * @returns true if deleted successfully, false otherwise
  */
 export async function deleteDirectory(subDirectory: string): Promise<boolean> {
+	// This only works for local storage
+	// For Azure, you'd need to list and delete blobs with the prefix
 	try {
 		const dirPath = join(UPLOAD_DIR, subDirectory);
 		await rm(dirPath, { recursive: true, force: true });
@@ -153,14 +205,14 @@ export async function deleteDirectory(subDirectory: string): Promise<boolean> {
 }
 
 /**
- * Gets the full filesystem path for a relative URL
+ * Gets the full filesystem path for a relative URL (local storage only)
  */
 export function getFilesystemPath(relativePath: string): string {
 	return join(process.cwd(), "public", relativePath.slice(1));
 }
 
 /**
- * Checks if a file exists
+ * Checks if a file exists (local storage only)
  */
 export async function fileExists(relativePath: string): Promise<boolean> {
 	if (!relativePath?.startsWith("/uploads/")) {

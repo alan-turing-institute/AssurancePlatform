@@ -8,58 +8,65 @@
  * no longer needed with the new team-based permission system.
  *
  * Usage:
- *   npx ts-node prisma/scripts/legacy-team-cleanup.ts [--execute]
+ *   pnpm exec tsx prisma/scripts/legacy-team-cleanup.ts [--execute]
  *
  * Without --execute, shows a dry run of what would be deleted.
  * With --execute, performs the actual deletion.
  */
 
-import { PrismaClient } from "../../src/generated/prisma-new";
+import dotenv from "dotenv";
+import postgres from "postgres";
 
-const prisma = new PrismaClient();
+dotenv.config({ path: ".env.local" });
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+	throw new Error("DATABASE_URL environment variable is not set");
+}
+
+const sql = postgres(connectionString);
 
 // Pattern: {username}-case-{id}-{view|edit|manage|admin}-group
 const LEGACY_TEAM_PATTERN = /-case-\d+-.*-group$/;
 
-type TeamWithRelations = {
+type LegacyTeam = {
 	id: string;
 	name: string;
-	slug: string;
-	createdAt: Date;
-	members: {
-		user: {
-			username: string;
-		};
-	}[];
-	casePermissions: {
-		permission: string;
-		case: {
-			name: string;
-		};
-	}[];
 };
 
-async function findLegacyTeams(): Promise<TeamWithRelations[]> {
-	const allTeams = await prisma.team.findMany({
-		include: {
-			members: {
-				include: {
-					user: {
-						select: { username: true },
-					},
-				},
-			},
-			casePermissions: {
-				include: {
-					case: {
-						select: { name: true },
-					},
-				},
-			},
-		},
-	});
+type AffectedShare = {
+	user: string;
+	caseName: string;
+	permission: string;
+};
+
+async function findLegacyTeams(): Promise<LegacyTeam[]> {
+	const allTeams = await sql<LegacyTeam[]>`
+		SELECT id, name FROM teams ORDER BY name
+	`;
 
 	return allTeams.filter((team) => LEGACY_TEAM_PATTERN.test(team.name));
+}
+
+async function getAffectedShares(teamIds: string[]): Promise<AffectedShare[]> {
+	if (teamIds.length === 0) {
+		return [];
+	}
+
+	const shares = await sql<AffectedShare[]>`
+		SELECT
+			u.username as user,
+			ac.name as "caseName",
+			ctp.permission
+		FROM case_team_permissions ctp
+		JOIN teams t ON t.id = ctp.team_id
+		JOIN team_members tm ON tm.team_id = t.id
+		JOIN users u ON u.id = tm.user_id
+		JOIN assurance_cases ac ON ac.id = ctp.case_id
+		WHERE t.id = ANY(${teamIds})
+	`;
+
+	return shares;
 }
 
 async function dryRun(): Promise<void> {
@@ -74,26 +81,12 @@ async function dryRun(): Promise<void> {
 
 	console.log(`Found ${legacyTeams.length} legacy teams to delete:\n`);
 
-	// Collect affected shares
-	const affectedShares: {
-		user: string;
-		caseName: string;
-		permission: string;
-	}[] = [];
-
 	for (const team of legacyTeams) {
 		console.log(`  - ${team.name}`);
-
-		for (const permission of team.casePermissions) {
-			for (const member of team.members) {
-				affectedShares.push({
-					user: member.user.username,
-					caseName: permission.case.name,
-					permission: permission.permission,
-				});
-			}
-		}
 	}
+
+	const teamIds = legacyTeams.map((t) => t.id);
+	const affectedShares = await getAffectedShares(teamIds);
 
 	if (affectedShares.length > 0) {
 		console.log("\n=== AFFECTED SHARES ===\n");
@@ -111,7 +104,7 @@ async function dryRun(): Promise<void> {
 				acc[share.user].push(share);
 				return acc;
 			},
-			{} as Record<string, typeof affectedShares>
+			{} as Record<string, AffectedShare[]>
 		);
 
 		for (const [user, shares] of Object.entries(byUser)) {
@@ -127,7 +120,7 @@ async function dryRun(): Promise<void> {
 	console.log("\n=== TO EXECUTE ===");
 	console.log("Run with --execute flag to perform the deletion:\n");
 	console.log(
-		"  npx ts-node prisma/scripts/legacy-team-cleanup.ts --execute\n"
+		"  pnpm exec tsx prisma/scripts/legacy-team-cleanup.ts --execute\n"
 	);
 }
 
@@ -145,14 +138,10 @@ async function execute(): Promise<void> {
 
 	const teamIds = legacyTeams.map((t) => t.id);
 
-	// Delete teams (cascade will handle members and permissions)
-	const result = await prisma.team.deleteMany({
-		where: {
-			id: {
-				in: teamIds,
-			},
-		},
-	});
+	// Delete teams (cascade will handle members and permissions via FK constraints)
+	const result = await sql`
+		DELETE FROM teams WHERE id = ANY(${teamIds})
+	`;
 
 	console.log(`Deleted ${result.count} teams.`);
 	console.log("\nCleanup complete.");
@@ -172,7 +161,7 @@ async function main(): Promise<void> {
 		console.error("Error:", error);
 		process.exit(1);
 	} finally {
-		await prisma.$disconnect();
+		await sql.end();
 	}
 }
 

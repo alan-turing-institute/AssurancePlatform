@@ -31,7 +31,7 @@ const mockUseSession = vi.mocked(useSession);
 // Regex constants for consistent testing
 const TRUSTWORTHY_ASSURANCE_REGEX = /The Trustworthy and Ethical Assurance/;
 const LEARN_MORE_REGEX = /Learn more/;
-const FACILITE_PROCESS_REGEX = /facilite the process/;
+const FACILITATE_PROCESS_REGEX = /facilitate the process/;
 
 describe("Hero", () => {
 	beforeEach(() => {
@@ -636,8 +636,7 @@ describe("Hero", () => {
 
 			render(<Hero />);
 
-			// The text contains "facilite" which appears to be a typo for "facilitate"
-			expect(screen.getByText(FACILITE_PROCESS_REGEX)).toBeInTheDocument();
+			expect(screen.getByText(FACILITATE_PROCESS_REGEX)).toBeInTheDocument();
 		});
 	});
 });

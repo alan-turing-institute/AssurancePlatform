@@ -66,7 +66,7 @@ export default function Hero() {
 									</h1>
 									<p className="mt-6 text-gray-600 text-lg leading-8 sm:max-w-full lg:max-w-none">
 										The Trustworthy and Ethical Assurance (TEA) Platform is an
-										innovative, open-source tool designed to facilite the
+										innovative, open-source tool designed to facilitate the
 										process of creating, managing and sharing assurance cases
 										for data-driven technologies, such as digital twins or AI.
 									</p>

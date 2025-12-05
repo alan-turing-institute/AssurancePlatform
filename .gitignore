@@ -186,6 +186,9 @@ coverage/
 
 # documentation builds - all generated documentation files
 public/documentation/
+
+# local dev uploads (stored in Azure Blob Storage in production)
+public/uploads/
 tea-docs/build/
 tea-docs/.docusaurus/
 

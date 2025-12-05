@@ -76,7 +76,7 @@ export async function POST(
 	);
 	const { prismaNew } = await import("@/lib/prisma-new");
 	const { getCasePermission } = await import("@/lib/permissions");
-	const { uploadToBlob, generateScreenshotFilename } = await import(
+	const { uploadToBlob, generateScreenshotBlobPath } = await import(
 		"@/lib/services/blob-storage-service"
 	);
 
@@ -139,8 +139,8 @@ export async function POST(
 	const buffer = Buffer.from(base64Data, "base64");
 
 	// Upload to Azure Blob Storage
-	const filename = generateScreenshotFilename(caseId);
-	const uploadResult = await uploadToBlob(buffer, filename);
+	const blobPath = generateScreenshotBlobPath(caseId);
+	const uploadResult = await uploadToBlob(buffer, blobPath);
 
 	if (!uploadResult.success) {
 		return NextResponse.json({ error: uploadResult.error }, { status: 500 });

@@ -366,6 +366,10 @@ export async function getPublishedCasesByUser(
 /**
  * Gets the full publish status including 3-state workflow information.
  * Returns publish status, ready status, and change detection.
+ *
+ * Note: The publishedVersions relation uses a legacy Django table that may have
+ * type mismatches with UUID-based case IDs. We handle this gracefully by
+ * separating the queries and catching potential errors.
  */
 export async function getFullPublishStatus(
 	userId: string,
@@ -377,7 +381,7 @@ export async function getFullPublishStatus(
 		return { error: "Permission denied" };
 	}
 
-	// Get the case with its publish status and latest published version
+	// Get the case with its publish status (excluding publishedVersions to avoid legacy table issues)
 	const assuranceCase = await prismaNew.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
@@ -385,20 +389,6 @@ export async function getFullPublishStatus(
 			publishedAt: true,
 			publishStatus: true,
 			markedReadyAt: true,
-			publishedVersions: {
-				select: {
-					id: true,
-					caseStudyLinks: {
-						select: {
-							caseStudyId: true,
-						},
-					},
-				},
-				orderBy: {
-					createdAt: "desc",
-				},
-				take: 1,
-			},
 		},
 	});
 
@@ -406,22 +396,57 @@ export async function getFullPublishStatus(
 		return { error: "Case not found" };
 	}
 
-	// Get the most recent published version
-	const latestPublished = assuranceCase.publishedVersions[0];
+	// Try to get published versions separately to handle legacy table issues gracefully
+	let latestPublished: {
+		id: string;
+		caseStudyLinks: { caseStudyId: number }[];
+	} | null = null;
+	let linkedCaseStudyCount = 0;
 
-	// Count unique linked case studies
-	const linkedCaseStudyIds = new Set<number>();
-	if (latestPublished) {
-		for (const link of latestPublished.caseStudyLinks) {
-			linkedCaseStudyIds.add(link.caseStudyId);
+	try {
+		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: caseId },
+			select: {
+				id: true,
+				caseStudyLinks: {
+					select: {
+						caseStudyId: true,
+					},
+				},
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+			take: 1,
+		});
+
+		latestPublished = publishedVersions[0] ?? null;
+
+		// Count unique linked case studies
+		if (latestPublished) {
+			const linkedCaseStudyIds = new Set<number>();
+			for (const link of latestPublished.caseStudyLinks) {
+				linkedCaseStudyIds.add(link.caseStudyId);
+			}
+			linkedCaseStudyCount = linkedCaseStudyIds.size;
 		}
+	} catch (error) {
+		// Log but don't fail - legacy table may have issues
+		console.warn(
+			"Failed to fetch published versions (legacy table issue):",
+			error
+		);
 	}
 
 	// Detect changes using content-based comparison
 	let hasChanges = false;
 	if (assuranceCase.published && latestPublished) {
-		const changeResult = await detectChanges(userId, caseId, false);
-		hasChanges = changeResult?.hasChanges ?? false;
+		try {
+			const changeResult = await detectChanges(userId, caseId, false);
+			hasChanges = changeResult?.hasChanges ?? false;
+		} catch (error) {
+			console.warn("Failed to detect changes:", error);
+		}
 	}
 
 	return {
@@ -431,7 +456,7 @@ export async function getFullPublishStatus(
 			publishedId: latestPublished?.id ?? null,
 			publishedAt: assuranceCase.publishedAt,
 			markedReadyAt: assuranceCase.markedReadyAt,
-			linkedCaseStudyCount: linkedCaseStudyIds.size,
+			linkedCaseStudyCount,
 			hasChanges,
 		},
 	};
@@ -591,6 +616,9 @@ export async function getReadyToPublishCases(userId: string): Promise<
 /**
  * Gets cases that are ready to publish OR published for a specific user.
  * Used for case study linking - shows cases available for selection.
+ *
+ * Note: The publishedVersions relation uses a legacy Django table that may have
+ * type mismatches with UUID-based case IDs. We query it separately to handle errors.
  */
 export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 	{
@@ -603,6 +631,7 @@ export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 		publishedVersionId: string | null;
 	}[]
 > {
+	// Query cases without publishedVersions to avoid legacy table issues
 	const cases = await prismaNew.assuranceCase.findMany({
 		where: {
 			createdById: userId,
@@ -617,30 +646,47 @@ export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 			publishStatus: true,
 			publishedAt: true,
 			markedReadyAt: true,
-			publishedVersions: {
-				select: {
-					id: true,
-				},
-				orderBy: {
-					createdAt: "desc",
-				},
-				take: 1,
-			},
 		},
 		orderBy: {
 			updatedAt: "desc",
 		},
 	});
 
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description,
-		publishStatus: c.publishStatus,
-		publishedAt: c.publishedAt,
-		markedReadyAt: c.markedReadyAt,
-		publishedVersionId: c.publishedVersions[0]?.id ?? null,
-	}));
+	// For each case, try to get the published version ID separately
+	const results = await Promise.all(
+		cases.map(async (c) => {
+			let publishedVersionId: string | null = null;
+
+			try {
+				const publishedVersions =
+					await prismaNew.publishedAssuranceCase.findMany({
+						where: { assuranceCaseId: c.id },
+						select: { id: true },
+						orderBy: { createdAt: "desc" },
+						take: 1,
+					});
+				publishedVersionId = publishedVersions[0]?.id ?? null;
+			} catch (error) {
+				// Handle legacy table type mismatch gracefully
+				console.warn(
+					`Failed to fetch published version for case ${c.id}:`,
+					error
+				);
+			}
+
+			return {
+				id: c.id,
+				name: c.name,
+				description: c.description,
+				publishStatus: c.publishStatus,
+				publishedAt: c.publishedAt,
+				markedReadyAt: c.markedReadyAt,
+				publishedVersionId,
+			};
+		})
+	);
+
+	return results;
 }
 
 /**

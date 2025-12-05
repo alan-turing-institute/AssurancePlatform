@@ -18,6 +18,7 @@ import { z } from "zod";
 
 export const ElementTypeSchema = z.enum([
 	"GOAL",
+	"CONTEXT",
 	"STRATEGY",
 	"PROPERTY_CLAIM",
 	"EVIDENCE",

@@ -80,6 +80,9 @@ async function fetchCaseFromPrisma(
 	}
 
 	// Fetch the case data
+	// Note: We exclude publishedVersions query because it uses the legacy Django
+	// table with bigint foreign keys that don't match new UUID case IDs.
+	// For case study integration, use the Release model instead.
 	const caseData = await prismaNew.assuranceCase.findUnique({
 		where: { id: caseId },
 		include: {
@@ -101,21 +104,6 @@ async function fetchCaseFromPrisma(
 					username: true,
 				},
 			},
-			// Include published versions with linked case study status
-			publishedVersions: {
-				include: {
-					caseStudyLinks: {
-						include: {
-							caseStudy: {
-								select: {
-									id: true,
-									published: true,
-								},
-							},
-						},
-					},
-				},
-			},
 		},
 	});
 
@@ -135,17 +123,10 @@ async function fetchCaseFromPrisma(
 		permissionResult.isOwner
 	);
 
-	// Check if any linked case study is public
-	const hasPublicCaseStudy = caseData.publishedVersions.some((pv) =>
-		pv.caseStudyLinks.some((link) => link.caseStudy.published)
-	);
-
-	// Count total linked case studies
-	const linkedCaseStudyCount = new Set(
-		caseData.publishedVersions.flatMap((pv) =>
-			pv.caseStudyLinks.map((link) => link.caseStudy.id)
-		)
-	).size;
+	// Case study integration - disabled for now as publishedVersions uses legacy
+	// bigint foreign keys. TODO: Implement using Release model.
+	const hasPublicCaseStudy = false;
+	const linkedCaseStudyCount = 0;
 
 	return {
 		data: {
