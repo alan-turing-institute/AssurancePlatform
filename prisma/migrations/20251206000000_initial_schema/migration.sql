@@ -610,8 +610,15 @@ ALTER TABLE "case_type_assignments" ADD CONSTRAINT "case_type_assignments_case_t
 ALTER TABLE "github_repositories" ADD CONSTRAINT "github_repositories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ============================================
--- CASE STUDIES TABLES (Legacy)
+-- CASE STUDIES TABLES
+-- Drop legacy Django tables first (they have no user data)
 -- ============================================
+
+-- Drop legacy tables if they exist (from Django, empty)
+DROP TABLE IF EXISTS api_casestudy_assurance_cases CASCADE;
+DROP TABLE IF EXISTS api_casestudyfeatureimage CASCADE;
+DROP TABLE IF EXISTS api_casestudy CASCADE;
+DROP TABLE IF EXISTS api_publishedassurancecase CASCADE;
 
 -- CreateTable
 CREATE TABLE "api_publishedassurancecase" (
