@@ -66,9 +66,10 @@ COPY --from=builder --link /app/public ./public
 COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 
-# Copy Prisma schema and migrations for runtime migrations
+# Copy Prisma schema, config and migrations for runtime migrations
 COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.new.prisma ./prisma/schema.prisma
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
+COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
 
 # Copy and set up entrypoint script
 COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
