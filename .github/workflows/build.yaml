@@ -98,6 +98,11 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
+      - name: Deploy to Azure (Production)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_PROD }}" -H "Content-Length: 0"
+
       - name: Build and push Docker image (Staging branch)
         if: github.ref == 'refs/heads/staging'
         uses: docker/build-push-action@v5
@@ -116,6 +121,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Deploy to Azure (Staging)
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          curl -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}" -H "Content-Length: 0"
 
       - name: Build and push Docker image (PR/other branches)
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'

@@ -56,6 +56,9 @@ RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
 
+# Install Prisma CLI for migrations
+RUN corepack enable pnpm && pnpm add -g prisma@7.0.0
+
 COPY --from=builder --link /app/public ./public
 
 # Automatically leverage output traces to reduce image size
@@ -63,9 +66,16 @@ COPY --from=builder --link /app/public ./public
 COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 
+# Copy Prisma schema and migrations for runtime migrations
+COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.new.prisma ./prisma/schema.prisma
+COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
+
+# Copy and set up entrypoint script
+COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["./docker-entrypoint.sh"]
