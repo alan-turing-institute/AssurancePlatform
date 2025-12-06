@@ -664,7 +664,7 @@ CREATE TABLE "api_casestudy_assurance_cases" (
 -- CreateTable
 CREATE TABLE "api_casestudyfeatureimage" (
     "id" BIGSERIAL NOT NULL,
-    "image" VARCHAR(100) NOT NULL,
+    "image" VARCHAR(500) NOT NULL,
     "uploaded_at" TIMESTAMPTZ(6) NOT NULL,
     "case_study_id" INTEGER NOT NULL,
 

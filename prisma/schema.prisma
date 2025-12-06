@@ -147,7 +147,7 @@ model api_casestudy_assurance_cases {
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 model api_casestudyfeatureimage {
   id            BigInt        @id(map: "eap_api_casestudyfeatureimage_pkey") @default(autoincrement())
-  image         String        @db.VarChar(100)
+  image         String        @db.VarChar(500)
   uploaded_at   DateTime      @db.Timestamptz(6)
   case_study_id Int           @unique(map: "eap_api_casestudyfeatureimage_case_study_id_key")
   api_casestudy api_casestudy @relation(fields: [case_study_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "eap_api_casestudyfea_case_study_id_caae00bc_fk_eap_api_c")

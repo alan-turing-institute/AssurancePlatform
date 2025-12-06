@@ -818,7 +818,7 @@ model CaseStudyPublishedCase {
 
 model CaseStudyImage {
   id          BigInt    @id @default(autoincrement())
-  image       String    @db.VarChar(100)
+  image       String    @db.VarChar(500)
   uploadedAt  DateTime  @map("uploaded_at") @db.Timestamptz(6)
   caseStudyId Int       @unique @map("case_study_id")
 
