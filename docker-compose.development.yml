@@ -29,7 +29,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - ./.env.local
+      - ./.env
     volumes:
       - .:/app
       - app_next:/app/.next
