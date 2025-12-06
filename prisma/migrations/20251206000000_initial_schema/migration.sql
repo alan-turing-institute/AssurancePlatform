@@ -608,3 +608,91 @@ ALTER TABLE "case_type_assignments" ADD CONSTRAINT "case_type_assignments_case_t
 
 -- AddForeignKey
 ALTER TABLE "github_repositories" ADD CONSTRAINT "github_repositories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- ============================================
+-- CASE STUDIES TABLES (Legacy)
+-- ============================================
+
+-- CreateTable
+CREATE TABLE "api_publishedassurancecase" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "title" VARCHAR(255) NOT NULL,
+    "content" JSONB NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "assurance_case_id" TEXT NOT NULL,
+    "description" VARCHAR(1000),
+
+    CONSTRAINT "api_publishedassurancecase_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "api_casestudy" (
+    "id" SERIAL NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "authors" VARCHAR(255),
+    "category" VARCHAR(100),
+    "published_date" TIMESTAMPTZ(6),
+    "last_modified_on" TIMESTAMPTZ(6) NOT NULL,
+    "created_on" TIMESTAMPTZ(6) NOT NULL,
+    "sector" VARCHAR(100),
+    "contact" VARCHAR(254),
+    "image" VARCHAR(200),
+    "published" BOOLEAN NOT NULL DEFAULT false,
+    "owner_id" TEXT,
+    "type" VARCHAR(100),
+
+    CONSTRAINT "api_casestudy_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "api_casestudy_assurance_cases" (
+    "id" BIGSERIAL NOT NULL,
+    "casestudy_id" INTEGER NOT NULL,
+    "publishedassurancecase_id" UUID NOT NULL,
+
+    CONSTRAINT "api_casestudy_assurance_cases_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "api_casestudyfeatureimage" (
+    "id" BIGSERIAL NOT NULL,
+    "image" VARCHAR(100) NOT NULL,
+    "uploaded_at" TIMESTAMPTZ(6) NOT NULL,
+    "case_study_id" INTEGER NOT NULL,
+
+    CONSTRAINT "api_casestudyfeatureimage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "eap_api_publishedassurancecase_assurance_case_id_92434322" ON "api_publishedassurancecase"("assurance_case_id");
+
+-- CreateIndex
+CREATE INDEX "eap_api_casestudy_owner_id_32cc0f00" ON "api_casestudy"("owner_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "eap_api_casestudy_publis_casestudy_id_publishedas_2b4d76e9_uniq" ON "api_casestudy_assurance_cases"("casestudy_id", "publishedassurancecase_id");
+
+-- CreateIndex
+CREATE INDEX "eap_api_casestudy_publishe_casestudy_id_a7e4f836" ON "api_casestudy_assurance_cases"("casestudy_id");
+
+-- CreateIndex
+CREATE INDEX "eap_api_casestudy_publishe_publishedassurancecase_id_922f4694" ON "api_casestudy_assurance_cases"("publishedassurancecase_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "api_casestudyfeatureimage_case_study_id_key" ON "api_casestudyfeatureimage"("case_study_id");
+
+-- AddForeignKey
+ALTER TABLE "api_publishedassurancecase" ADD CONSTRAINT "api_publishedassurancecase_assurance_case_id_fkey" FOREIGN KEY ("assurance_case_id") REFERENCES "assurance_cases"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_casestudy" ADD CONSTRAINT "api_casestudy_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "api_casestudy_assurance_cases" ADD CONSTRAINT "api_casestudy_assurance_cases_casestudy_id_fkey" FOREIGN KEY ("casestudy_id") REFERENCES "api_casestudy"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "api_casestudy_assurance_cases" ADD CONSTRAINT "api_casestudy_assurance_cases_publishedassurancecase_id_fkey" FOREIGN KEY ("publishedassurancecase_id") REFERENCES "api_publishedassurancecase"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "api_casestudyfeatureimage" ADD CONSTRAINT "api_casestudyfeatureimage_case_study_id_fkey" FOREIGN KEY ("case_study_id") REFERENCES "api_casestudy"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
