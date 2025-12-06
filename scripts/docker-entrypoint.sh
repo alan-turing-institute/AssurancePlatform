@@ -40,6 +40,33 @@ MIGRATIONS_TABLE
     npx prisma migrate resolve --applied "20251206000000_initial_schema"
 
     echo "Baseline migration completed successfully."
+
+    # Run data migration scripts (only needed after baseline)
+    echo "Running data migration scripts..."
+
+    # Check if data migration is needed (users table empty but api_eapuser has data)
+    NEEDS_DATA_MIGRATION=$(npx prisma db execute --stdin <<'CHECK_MIGRATION' 2>/dev/null | grep -c "t" || echo "0"
+SELECT EXISTS (
+    SELECT 1 FROM api_eapuser WHERE id IS NOT NULL
+) AND NOT EXISTS (
+    SELECT 1 FROM users WHERE id IS NOT NULL
+);
+CHECK_MIGRATION
+)
+
+    if [ "$NEEDS_DATA_MIGRATION" = "1" ] || [ "$NEEDS_DATA_MIGRATION" = "t" ]; then
+        echo "Data migration needed - migrating Django data to Prisma tables..."
+
+        # Run migration scripts in order (--execute flag required for actual migration)
+        npx tsx ./prisma/scripts/01-resolve-duplicate-users.ts --execute
+        npx tsx ./prisma/scripts/02-migrate-data.ts --execute
+        npx tsx ./prisma/scripts/03-validate-migration.ts
+        npx tsx ./prisma/scripts/04-migrate-legacy-tables.ts --execute
+
+        echo "Data migration completed successfully."
+    else
+        echo "Data migration not needed (already migrated or no legacy data)."
+    fi
 else
     echo "$MIGRATE_OUTPUT"
     echo "Migration failed with unexpected error."
