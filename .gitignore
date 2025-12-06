@@ -220,6 +220,7 @@ $RECYCLE.BIN/
 # Docker
 .dockerignore.bak
 docker-compose.override.yml
+docker-compose.prod-test.yml
 
 # Cache directories
 .cache/
@@ -236,3 +237,6 @@ docker-compose.override.yml
 # Build artifacts
 *.tgz
 *.tar.gz
+
+# Database backups
+backups/
