@@ -56,8 +56,8 @@ RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
 
-# Install Prisma CLI for migrations
-RUN npm install -g prisma@7.0.0
+# Install Prisma CLI for migrations (global for CLI, local for prisma/config module)
+RUN npm install -g prisma@7.0.0 && npm install prisma@7.0.0
 
 COPY --from=builder --link /app/public ./public
 
