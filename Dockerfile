@@ -57,7 +57,7 @@ RUN \
   adduser -S nextjs -u 1001
 
 # Install Prisma CLI for migrations
-RUN corepack enable pnpm && pnpm add -g prisma@7.0.0
+RUN npm install -g prisma@7.0.0
 
 COPY --from=builder --link /app/public ./public
 
