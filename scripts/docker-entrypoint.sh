@@ -3,9 +3,11 @@ set -e
 
 echo "Running database migrations..."
 
-# Capture migration output
-MIGRATE_OUTPUT=$(npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1) || true
+# Capture migration output (temporarily disable set -e to capture exit code)
+set +e
+MIGRATE_OUTPUT=$(npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1)
 MIGRATE_EXIT_CODE=$?
+set -e
 
 if [ $MIGRATE_EXIT_CODE -eq 0 ]; then
     echo "$MIGRATE_OUTPUT"
