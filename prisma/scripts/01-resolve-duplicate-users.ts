@@ -32,6 +32,12 @@ if (!connectionString) {
 
 const sql = postgres(connectionString);
 
+// Top-level regex patterns for username validation
+const ALPHANUMERIC_PATTERN = /^[a-zA-Z0-9]+$/;
+const UPPERCASE_PATTERN = /[A-Z]/;
+const LOWERCASE_PATTERN = /[a-z]/;
+const DIGIT_PATTERN = /[0-9]/;
+
 type DuplicateGroup = {
 	email: string;
 	userIds: bigint[];
@@ -109,15 +115,17 @@ async function getUserDataCounts(userId: bigint): Promise<{
 	ownedGroups: number;
 	comments: number;
 }> {
+	// Convert BigInt to Number for SQL compatibility
+	const userIdNum = Number(userId);
 	const [casesResult, groupsResult, commentsResult] = await Promise.all([
 		sql<Array<{ count: string }>>`
-      SELECT COUNT(*) as count FROM api_assurancecase WHERE owner_id = ${userId}
+      SELECT COUNT(*) as count FROM api_assurancecase WHERE owner_id = ${userIdNum}
     `,
 		sql<Array<{ count: string }>>`
-      SELECT COUNT(*) as count FROM api_eapgroup WHERE owner_id = ${userId}
+      SELECT COUNT(*) as count FROM api_eapgroup WHERE owner_id = ${userIdNum}
     `,
 		sql<Array<{ count: string }>>`
-      SELECT COUNT(*) as count FROM api_comment WHERE author_id = ${userId}
+      SELECT COUNT(*) as count FROM api_comment WHERE author_id = ${userIdNum}
     `,
 	]);
 
@@ -131,11 +139,11 @@ async function getUserDataCounts(userId: bigint): Promise<{
 function isRandomUsername(username: string): boolean {
 	// GitHub OAuth often generates random usernames like "QSj0DqJ0MDVysnK"
 	// These are typically 15+ chars of mixed case alphanumeric
-	if (username.length >= 15 && /^[a-zA-Z0-9]+$/.test(username)) {
+	if (username.length >= 15 && ALPHANUMERIC_PATTERN.test(username)) {
 		// Check for mixed case which suggests random generation
-		const hasUpper = /[A-Z]/.test(username);
-		const hasLower = /[a-z]/.test(username);
-		const hasDigit = /[0-9]/.test(username);
+		const hasUpper = UPPERCASE_PATTERN.test(username);
+		const hasLower = LOWERCASE_PATTERN.test(username);
+		const hasDigit = DIGIT_PATTERN.test(username);
 		if (hasUpper && hasLower && hasDigit) {
 			return true;
 		}
@@ -226,40 +234,43 @@ async function executeResolution(
 	db: postgres.Sql = sql
 ): Promise<void> {
 	const { primaryUserId, secondaryUserIds } = plan;
+	// Convert BigInt to Number for SQL compatibility (postgres library serializes BigInt as text)
+	const primaryId = Number(primaryUserId);
 
-	for (const secondaryId of secondaryUserIds) {
+	for (const secondaryUserId of secondaryUserIds) {
+		const secondaryId = Number(secondaryUserId);
 		// Transfer assurance cases
 		await db`
       UPDATE api_assurancecase
-      SET owner_id = ${primaryUserId}
+      SET owner_id = ${primaryId}
       WHERE owner_id = ${secondaryId}
     `;
 
 		// Transfer groups
 		await db`
       UPDATE api_eapgroup
-      SET owner_id = ${primaryUserId}
+      SET owner_id = ${primaryId}
       WHERE owner_id = ${secondaryId}
     `;
 
 		// Transfer comments
 		await db`
       UPDATE api_comment
-      SET author_id = ${primaryUserId}
+      SET author_id = ${primaryId}
       WHERE author_id = ${secondaryId}
     `;
 
 		// Transfer case studies
 		await db`
       UPDATE api_casestudy
-      SET owner_id = ${primaryUserId}
+      SET owner_id = ${primaryId}
       WHERE owner_id = ${secondaryId}
     `;
 
 		// Transfer GitHub repositories
 		await db`
       UPDATE api_githubrepository
-      SET owner_id = ${primaryUserId}
+      SET owner_id = ${primaryId}
       WHERE owner_id = ${secondaryId}
     `;
 
@@ -267,7 +278,7 @@ async function executeResolution(
 		// First, remove any existing membership for primary user in groups where secondary is member
 		await db`
       DELETE FROM api_eapgroup_member
-      WHERE eapuser_id = ${primaryUserId}
+      WHERE eapuser_id = ${primaryId}
       AND eapgroup_id IN (
         SELECT eapgroup_id FROM api_eapgroup_member WHERE eapuser_id = ${secondaryId}
       )
@@ -276,7 +287,7 @@ async function executeResolution(
 		// Then transfer memberships from secondary to primary
 		await db`
       UPDATE api_eapgroup_member
-      SET eapuser_id = ${primaryUserId}
+      SET eapuser_id = ${primaryId}
       WHERE eapuser_id = ${secondaryId}
     `;
 
@@ -344,15 +355,15 @@ async function main() {
 			(acc, p) => acc + p.secondaryUserIds.length,
 			0
 		);
-		const totalCases = plans.reduce(
+		const summaryTotalCases = plans.reduce(
 			(acc, p) => acc + p.dataToTransfer.cases,
 			0
 		);
-		const totalGroups = plans.reduce(
+		const summaryTotalGroups = plans.reduce(
 			(acc, p) => acc + p.dataToTransfer.groups,
 			0
 		);
-		const totalComments = plans.reduce(
+		const summaryTotalComments = plans.reduce(
 			(acc, p) => acc + p.dataToTransfer.comments,
 			0
 		);
@@ -362,15 +373,16 @@ async function main() {
 		console.log("=".repeat(60));
 		console.log(`Duplicate email groups: ${plans.length}`);
 		console.log(`Users to delete: ${totalSecondary}`);
-		console.log(`Cases to transfer: ${totalCases}`);
-		console.log(`Groups to transfer: ${totalGroups}`);
-		console.log(`Comments to transfer: ${totalComments}`);
+		console.log(`Cases to transfer: ${summaryTotalCases}`);
+		console.log(`Groups to transfer: ${summaryTotalGroups}`);
+		console.log(`Comments to transfer: ${summaryTotalComments}`);
 		console.log("");
 
 		// Generate notification list for later email sending
 		const notifications: NotificationRecord[] = await Promise.all(
 			plans.map(async (plan) => {
 				// Get all usernames being merged
+				const primaryIdNum = Number(plan.primaryUserId);
 				const allUsers = await sql`
 					SELECT username FROM api_eapuser
 					WHERE id = ANY(${[plan.primaryUserId, ...plan.secondaryUserIds].map(Number)})
@@ -380,29 +392,29 @@ async function main() {
 					.filter((u) => u !== plan.primaryUsername);
 
 				// Get total data for this user after merge
-				const totalCases =
+				const userTotalCases =
 					plan.dataToTransfer.cases +
 					(
-						await sql`SELECT COUNT(*) as count FROM api_assurancecase WHERE owner_id = ${plan.primaryUserId}`
+						await sql`SELECT COUNT(*) as count FROM api_assurancecase WHERE owner_id = ${primaryIdNum}`
 					)[0].count;
-				const totalGroups =
+				const userTotalGroups =
 					plan.dataToTransfer.groups +
 					(
-						await sql`SELECT COUNT(*) as count FROM api_eapgroup WHERE owner_id = ${plan.primaryUserId}`
+						await sql`SELECT COUNT(*) as count FROM api_eapgroup WHERE owner_id = ${primaryIdNum}`
 					)[0].count;
-				const totalComments =
+				const userTotalComments =
 					plan.dataToTransfer.comments +
 					(
-						await sql`SELECT COUNT(*) as count FROM api_comment WHERE author_id = ${plan.primaryUserId}`
+						await sql`SELECT COUNT(*) as count FROM api_comment WHERE author_id = ${primaryIdNum}`
 					)[0].count;
 
 				return {
 					email: plan.email,
 					primaryUsername: plan.primaryUsername,
 					mergedUsernames,
-					totalCases: Number(totalCases),
-					totalGroups: Number(totalGroups),
-					totalComments: Number(totalComments),
+					totalCases: Number(userTotalCases),
+					totalGroups: Number(userTotalGroups),
+					totalComments: Number(userTotalComments),
 				};
 			})
 		);

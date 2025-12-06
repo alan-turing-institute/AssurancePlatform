@@ -8,11 +8,15 @@
  *
  * Migration order:
  * 1. Users (api_eapuser → users)
- * 2. Teams (api_eapgroup → teams, team_members)
- * 3. Cases (api_assurancecase → assurance_cases, case_permissions)
- * 4. Elements (goals, contexts, strategies, claims, evidence → assurance_elements)
- * 5. Evidence links (api_evidence_property_claim → evidence_links)
- * 6. Comments (api_comment → comments)
+ * 2. Cases (api_assurancecase → assurance_cases, case_permissions)
+ *    - Legacy group permissions are converted to direct user permissions
+ * 3. Elements (goals, contexts, strategies, claims, evidence → assurance_elements)
+ * 4. Evidence links (api_evidence_property_claim → evidence_links)
+ * 5. Comments (api_comment → comments)
+ *
+ * NOTE: Legacy Django groups (api_eapgroup) are NOT migrated to teams.
+ * These were per-case permission workarounds, not real teams. The Teams
+ * feature starts fresh with no legacy data.
  *
  * Usage:
  *   pnpm exec tsx prisma/scripts/02-migrate-data.ts --dry-run
@@ -36,16 +40,8 @@ const sql = postgres(connectionString);
 // TYPES
 // ============================================
 
-type LegacyMapping = {
-	entityType: string;
-	legacyId: bigint;
-	newId: string;
-};
-
 type MigrationStats = {
 	users: { migrated: number; skipped: number };
-	teams: { migrated: number; skipped: number };
-	teamMembers: { migrated: number; skipped: number };
 	cases: { migrated: number; skipped: number };
 	casePermissions: { migrated: number; skipped: number };
 	elements: { migrated: number; skipped: number };
@@ -89,14 +85,6 @@ function mapAuthProvider(
 	return "LOCAL";
 }
 
-function generateSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-|-$/g, "")
-		.substring(0, 50);
-}
-
 // ============================================
 // MIGRATION FUNCTIONS
 // ============================================
@@ -119,7 +107,7 @@ async function migrateUsers(dryRun: boolean): Promise<MigrationStats["users"]> {
 		// Check if already migrated
 		const existing = await getLegacyMapping("user", user.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -139,7 +127,7 @@ async function migrateUsers(dryRun: boolean): Promise<MigrationStats["users"]> {
 				console.log(
 					`  Skipping user ${user.id} (${user.username}): email ${email} already exists`
 				);
-				skipped++;
+				skipped += 1;
 				continue;
 			}
 
@@ -162,7 +150,7 @@ async function migrateUsers(dryRun: boolean): Promise<MigrationStats["users"]> {
 			await storeLegacyMapping("user", user.id, newId);
 		}
 
-		migrated++;
+		migrated += 1;
 		if (migrated % 50 === 0) {
 			console.log(`  Migrated ${migrated} users...`);
 		}
@@ -172,112 +160,7 @@ async function migrateUsers(dryRun: boolean): Promise<MigrationStats["users"]> {
 	return { migrated, skipped };
 }
 
-async function migrateTeams(dryRun: boolean): Promise<{
-	teams: MigrationStats["teams"];
-	teamMembers: MigrationStats["teamMembers"];
-}> {
-	console.log("\n--- Migrating Teams (Groups) ---");
-
-	const oldGroups = await sql`
-    SELECT id, name, owner_id, created_date
-    FROM api_eapgroup
-    ORDER BY id
-  `;
-
-	let teamsMigrated = 0;
-	let teamsSkipped = 0;
-	let membersMigrated = 0;
-	let membersSkipped = 0;
-
-	for (const group of oldGroups) {
-		// Check if already migrated
-		const existing = await getLegacyMapping("team", group.id);
-		if (existing) {
-			teamsSkipped++;
-			continue;
-		}
-
-		// Get owner's new ID
-		const ownerNewId = await getLegacyMapping("user", group.owner_id);
-		if (!ownerNewId) {
-			console.log(
-				`  Skipping group ${group.id} (${group.name}): owner ${group.owner_id} not migrated`
-			);
-			teamsSkipped++;
-			continue;
-		}
-
-		const teamId = randomUUID();
-		const slug = `${generateSlug(group.name)}-${group.id}`;
-
-		if (!dryRun) {
-			await sql`
-        INSERT INTO teams (
-          id, name, slug, description,
-          created_at, updated_at, created_by_id
-        ) VALUES (
-          ${teamId}, ${group.name}, ${slug}, NULL,
-          ${group.created_date || new Date()}, NOW(), ${ownerNewId}
-        )
-      `;
-
-			// Add owner as OWNER role
-			await sql`
-        INSERT INTO team_members (
-          id, team_id, user_id, role, joined_at
-        ) VALUES (
-          ${randomUUID()}, ${teamId}, ${ownerNewId}, 'OWNER', ${group.created_date || new Date()}
-        )
-      `;
-			membersMigrated++;
-
-			await storeLegacyMapping("team", group.id, teamId);
-		}
-
-		teamsMigrated++;
-
-		// Migrate team members
-		const members = await sql`
-      SELECT eapuser_id FROM api_eapgroup_member
-      WHERE eapgroup_id = ${group.id}
-    `;
-
-		for (const member of members) {
-			if (member.eapuser_id === group.owner_id) {
-				continue; // Already added as owner
-			}
-
-			const memberNewId = await getLegacyMapping("user", member.eapuser_id);
-			if (!memberNewId) {
-				membersSkipped++;
-				continue;
-			}
-
-			if (!dryRun) {
-				await sql`
-          INSERT INTO team_members (
-            id, team_id, user_id, role, joined_at
-          ) VALUES (
-            ${randomUUID()}, ${teamId}, ${memberNewId}, 'MEMBER', NOW()
-          )
-          ON CONFLICT (team_id, user_id) DO NOTHING
-        `;
-			}
-			membersMigrated++;
-		}
-	}
-
-	console.log(`  Teams: ${teamsMigrated} migrated, ${teamsSkipped} skipped`);
-	console.log(
-		`  Team Members: ${membersMigrated} migrated, ${membersSkipped} skipped`
-	);
-
-	return {
-		teams: { migrated: teamsMigrated, skipped: teamsSkipped },
-		teamMembers: { migrated: membersMigrated, skipped: membersSkipped },
-	};
-}
-
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Migration script - complexity is acceptable for one-time data migration
 async function migrateCases(dryRun: boolean): Promise<{
 	cases: MigrationStats["cases"];
 	casePermissions: MigrationStats["casePermissions"];
@@ -301,7 +184,7 @@ async function migrateCases(dryRun: boolean): Promise<{
 		// Check if already migrated
 		const existing = await getLegacyMapping("case", oldCase.id);
 		if (existing) {
-			casesSkipped++;
+			casesSkipped += 1;
 			continue;
 		}
 
@@ -311,7 +194,7 @@ async function migrateCases(dryRun: boolean): Promise<{
 			console.log(
 				`  Skipping case ${oldCase.id} (${oldCase.name}): owner ${oldCase.owner_id} not migrated`
 			);
-			casesSkipped++;
+			casesSkipped += 1;
 			continue;
 		}
 
@@ -340,96 +223,109 @@ async function migrateCases(dryRun: boolean): Promise<{
           ${ownerNewId}, ${oldCase.created_date || new Date()}
         )
       `;
-			permissionsMigrated++;
+			permissionsMigrated += 1;
 
 			await storeLegacyMapping("case", oldCase.id, caseId);
 		}
 
-		casesMigrated++;
+		casesMigrated += 1;
 
-		// Migrate group permissions
-		// Edit groups → EDIT permission
-		const editGroups = await sql`
-      SELECT eapgroup_id FROM api_assurancecase_edit_groups
-      WHERE assurancecase_id = ${oldCase.id}
+		// Migrate legacy group permissions to direct user permissions
+		// Edit groups → EDIT permission for each group member
+		const editGroupMembers = await sql`
+      SELECT DISTINCT egm.eapuser_id
+      FROM api_assurancecase_edit_groups aeg
+      JOIN api_eapgroup_member egm ON egm.eapgroup_id = aeg.eapgroup_id
+      WHERE aeg.assurancecase_id = ${oldCase.id}
     `;
 
-		for (const eg of editGroups) {
-			const teamNewId = await getLegacyMapping("team", eg.eapgroup_id);
-			if (!teamNewId) {
-				permissionsSkipped++;
+		for (const member of editGroupMembers) {
+			const userNewId = await getLegacyMapping("user", member.eapuser_id);
+			if (!userNewId || userNewId === ownerNewId) {
+				// Skip if user not migrated or is the owner (already has ADMIN)
+				if (!userNewId) {
+					permissionsSkipped += 1;
+				}
 				continue;
 			}
 
 			if (!dryRun) {
 				await sql`
-          INSERT INTO case_team_permissions (
-            id, case_id, team_id, permission,
+          INSERT INTO case_permissions (
+            id, case_id, user_id, permission,
             granted_by_id, granted_at
           ) VALUES (
-            ${randomUUID()}, ${caseId}, ${teamNewId}, 'EDIT',
+            ${randomUUID()}, ${caseId}, ${userNewId}, 'EDIT',
             ${ownerNewId}, NOW()
           )
-          ON CONFLICT (case_id, team_id) DO UPDATE SET permission = 'EDIT'
+          ON CONFLICT (case_id, user_id) DO UPDATE SET permission = 'EDIT'
         `;
 			}
-			permissionsMigrated++;
+			permissionsMigrated += 1;
 		}
 
-		// View groups → VIEW permission
-		const viewGroups = await sql`
-      SELECT eapgroup_id FROM api_assurancecase_view_groups
-      WHERE assurancecase_id = ${oldCase.id}
+		// View groups → VIEW permission for each group member
+		const viewGroupMembers = await sql`
+      SELECT DISTINCT egm.eapuser_id
+      FROM api_assurancecase_view_groups avg
+      JOIN api_eapgroup_member egm ON egm.eapgroup_id = avg.eapgroup_id
+      WHERE avg.assurancecase_id = ${oldCase.id}
     `;
 
-		for (const vg of viewGroups) {
-			const teamNewId = await getLegacyMapping("team", vg.eapgroup_id);
-			if (!teamNewId) {
-				permissionsSkipped++;
+		for (const member of viewGroupMembers) {
+			const userNewId = await getLegacyMapping("user", member.eapuser_id);
+			if (!userNewId || userNewId === ownerNewId) {
+				if (!userNewId) {
+					permissionsSkipped += 1;
+				}
 				continue;
 			}
 
 			if (!dryRun) {
 				await sql`
-          INSERT INTO case_team_permissions (
-            id, case_id, team_id, permission,
+          INSERT INTO case_permissions (
+            id, case_id, user_id, permission,
             granted_by_id, granted_at
           ) VALUES (
-            ${randomUUID()}, ${caseId}, ${teamNewId}, 'VIEW',
+            ${randomUUID()}, ${caseId}, ${userNewId}, 'VIEW',
             ${ownerNewId}, NOW()
           )
-          ON CONFLICT (case_id, team_id) DO NOTHING
+          ON CONFLICT (case_id, user_id) DO NOTHING
         `;
 			}
-			permissionsMigrated++;
+			permissionsMigrated += 1;
 		}
 
-		// Review groups → COMMENT permission
-		const reviewGroups = await sql`
-      SELECT eapgroup_id FROM api_assurancecase_review_groups
-      WHERE assurancecase_id = ${oldCase.id}
+		// Review groups → COMMENT permission for each group member
+		const reviewGroupMembers = await sql`
+      SELECT DISTINCT egm.eapuser_id
+      FROM api_assurancecase_review_groups arg
+      JOIN api_eapgroup_member egm ON egm.eapgroup_id = arg.eapgroup_id
+      WHERE arg.assurancecase_id = ${oldCase.id}
     `;
 
-		for (const rg of reviewGroups) {
-			const teamNewId = await getLegacyMapping("team", rg.eapgroup_id);
-			if (!teamNewId) {
-				permissionsSkipped++;
+		for (const member of reviewGroupMembers) {
+			const userNewId = await getLegacyMapping("user", member.eapuser_id);
+			if (!userNewId || userNewId === ownerNewId) {
+				if (!userNewId) {
+					permissionsSkipped += 1;
+				}
 				continue;
 			}
 
 			if (!dryRun) {
 				await sql`
-          INSERT INTO case_team_permissions (
-            id, case_id, team_id, permission,
+          INSERT INTO case_permissions (
+            id, case_id, user_id, permission,
             granted_by_id, granted_at
           ) VALUES (
-            ${randomUUID()}, ${caseId}, ${teamNewId}, 'COMMENT',
+            ${randomUUID()}, ${caseId}, ${userNewId}, 'COMMENT',
             ${ownerNewId}, NOW()
           )
-          ON CONFLICT (case_id, team_id) DO NOTHING
+          ON CONFLICT (case_id, user_id) DO NOTHING
         `;
 			}
-			permissionsMigrated++;
+			permissionsMigrated += 1;
 		}
 
 		if (casesMigrated % 50 === 0) {
@@ -451,6 +347,7 @@ async function migrateCases(dryRun: boolean): Promise<{
 	};
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Migration script - complexity is acceptable for one-time data migration
 async function migrateElements(
 	dryRun: boolean
 ): Promise<MigrationStats["elements"]> {
@@ -474,7 +371,7 @@ async function migrateElements(
 	for (const goal of goals) {
 		const existing = await getLegacyMapping("goal", goal.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -482,7 +379,7 @@ async function migrateElements(
 		const creatorNewId = await getLegacyMapping("user", goal.owner_id);
 
 		if (!(caseNewId && creatorNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -508,7 +405,7 @@ async function migrateElements(
 			await storeLegacyMapping("goal", goal.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	// 2. Migrate Contexts
@@ -527,7 +424,7 @@ async function migrateElements(
 	for (const ctx of contexts) {
 		const existing = await getLegacyMapping("context", ctx.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -536,7 +433,7 @@ async function migrateElements(
 		const creatorNewId = await getLegacyMapping("user", ctx.owner_id);
 
 		if (!(caseNewId && parentNewId && creatorNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -562,7 +459,7 @@ async function migrateElements(
 			await storeLegacyMapping("context", ctx.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	// 3. Migrate Strategies
@@ -581,7 +478,7 @@ async function migrateElements(
 	for (const strat of strategies) {
 		const existing = await getLegacyMapping("strategy", strat.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -590,7 +487,7 @@ async function migrateElements(
 		const creatorNewId = await getLegacyMapping("user", strat.owner_id);
 
 		if (!(caseNewId && parentNewId && creatorNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -616,7 +513,7 @@ async function migrateElements(
 			await storeLegacyMapping("strategy", strat.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	// 4. Migrate Property Claims (hierarchical)
@@ -639,7 +536,7 @@ async function migrateElements(
 	for (const claim of level1Claims) {
 		const existing = await getLegacyMapping("claim", claim.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -655,7 +552,7 @@ async function migrateElements(
 		const creatorNewId = await getLegacyMapping("user", claim.owner_id);
 
 		if (!(caseNewId && creatorNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -681,7 +578,7 @@ async function migrateElements(
 			await storeLegacyMapping("claim", claim.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	// Second pass: nested claims (level 2+)
@@ -702,7 +599,7 @@ async function migrateElements(
 	for (const claim of nestedClaims) {
 		const existing = await getLegacyMapping("claim", claim.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -718,7 +615,7 @@ async function migrateElements(
 			: [];
 
 		if (!(parentNewId && creatorNewId) || parentElement.length === 0) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -745,7 +642,7 @@ async function migrateElements(
 			await storeLegacyMapping("claim", claim.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	// 5. Migrate Evidence
@@ -766,7 +663,7 @@ async function migrateElements(
 	for (const ev of evidence) {
 		const existing = await getLegacyMapping("evidence", ev.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -774,7 +671,7 @@ async function migrateElements(
 		const creatorNewId = await getLegacyMapping("user", ev.owner_id);
 
 		if (!(caseNewId && creatorNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -800,7 +697,7 @@ async function migrateElements(
 			await storeLegacyMapping("evidence", ev.id, elementId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	console.log(`  Elements: ${migrated} migrated, ${skipped} skipped`);
@@ -825,7 +722,7 @@ async function migrateEvidenceLinks(
 		const claimNewId = await getLegacyMapping("claim", link.propertyclaim_id);
 
 		if (!(evidenceNewId && claimNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -837,13 +734,14 @@ async function migrateEvidenceLinks(
       `;
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	console.log(`  Evidence Links: ${migrated} migrated, ${skipped} skipped`);
 	return { migrated, skipped };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Migration script - complexity is acceptable for one-time data migration
 async function migrateComments(
 	dryRun: boolean
 ): Promise<MigrationStats["comments"]> {
@@ -864,13 +762,13 @@ async function migrateComments(
 	for (const comment of oldComments) {
 		const existing = await getLegacyMapping("comment", comment.id);
 		if (existing) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
 		const authorNewId = await getLegacyMapping("user", comment.author_id);
 		if (!authorNewId) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -895,7 +793,7 @@ async function migrateComments(
 		}
 
 		if (!(caseNewId || elementNewId)) {
-			skipped++;
+			skipped += 1;
 			continue;
 		}
 
@@ -915,7 +813,7 @@ async function migrateComments(
 			await storeLegacyMapping("comment", comment.id, commentId);
 		}
 
-		migrated++;
+		migrated += 1;
 	}
 
 	console.log(`  Comments: ${migrated} migrated, ${skipped} skipped`);
@@ -954,8 +852,6 @@ async function main() {
 
 		const stats: MigrationStats = {
 			users: { migrated: 0, skipped: 0 },
-			teams: { migrated: 0, skipped: 0 },
-			teamMembers: { migrated: 0, skipped: 0 },
 			cases: { migrated: 0, skipped: 0 },
 			casePermissions: { migrated: 0, skipped: 0 },
 			elements: { migrated: 0, skipped: 0 },
@@ -965,10 +861,6 @@ async function main() {
 
 		// Run migrations in order
 		stats.users = await migrateUsers(isDryRun);
-
-		const teamResults = await migrateTeams(isDryRun);
-		stats.teams = teamResults.teams;
-		stats.teamMembers = teamResults.teamMembers;
 
 		const caseResults = await migrateCases(isDryRun);
 		stats.cases = caseResults.cases;

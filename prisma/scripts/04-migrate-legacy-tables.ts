@@ -73,11 +73,12 @@ async function analyzeDataForMigration(): Promise<MigrationStats> {
 	console.log("\n=== DATA ANALYSIS ===\n");
 
 	// Analyze case studies
+	// Cast legacy_id to text for comparison since owner_id may already be text after initial migration
 	const caseStudies = await sql`
 		SELECT cs.id, cs.title, cs.owner_id,
 			   lm.new_id as new_owner_id
 		FROM api_casestudy cs
-		LEFT JOIN legacy_mappings lm ON lm.legacy_id = cs.owner_id AND lm.entity_type = 'user'
+		LEFT JOIN legacy_mappings lm ON lm.legacy_id::text = cs.owner_id::text AND lm.entity_type = 'user'
 	`;
 
 	const caseStudiesWithMapping = caseStudies.filter((cs) => cs.new_owner_id);
@@ -105,11 +106,12 @@ async function analyzeDataForMigration(): Promise<MigrationStats> {
 	}
 
 	// Analyze published cases
+	// Cast legacy_id to text for comparison since assurance_case_id may already be text
 	const publishedCases = await sql`
 		SELECT pc.id, pc.title, pc.assurance_case_id,
 			   lm.new_id as new_case_id
 		FROM api_publishedassurancecase pc
-		LEFT JOIN legacy_mappings lm ON lm.legacy_id = pc.assurance_case_id AND lm.entity_type = 'case'
+		LEFT JOIN legacy_mappings lm ON lm.legacy_id::text = pc.assurance_case_id::text AND lm.entity_type = 'case'
 	`;
 
 	const publishedCasesWithMapping = publishedCases.filter(
@@ -232,7 +234,7 @@ async function execute(): Promise<void> {
 			UPDATE api_casestudy cs
 			SET owner_id_new = lm.new_id
 			FROM legacy_mappings lm
-			WHERE lm.legacy_id = cs.owner_id AND lm.entity_type = 'user'
+			WHERE lm.legacy_id::text = cs.owner_id::text AND lm.entity_type = 'user'
 		`;
 
 		// Drop old column and rename new
@@ -272,7 +274,7 @@ async function execute(): Promise<void> {
 				DELETE FROM api_casestudy_assurance_cases
 				WHERE publishedassurancecase_id IN (
 					SELECT pc.id FROM api_publishedassurancecase pc
-					LEFT JOIN legacy_mappings lm ON lm.legacy_id = pc.assurance_case_id AND lm.entity_type = 'case'
+					LEFT JOIN legacy_mappings lm ON lm.legacy_id::text = pc.assurance_case_id::text AND lm.entity_type = 'case'
 					WHERE lm.new_id IS NULL
 				)
 			`;
@@ -282,7 +284,7 @@ async function execute(): Promise<void> {
 				DELETE FROM api_publishedassurancecase pc
 				WHERE NOT EXISTS (
 					SELECT 1 FROM legacy_mappings lm
-					WHERE lm.legacy_id = pc.assurance_case_id AND lm.entity_type = 'case'
+					WHERE lm.legacy_id::text = pc.assurance_case_id::text AND lm.entity_type = 'case'
 				)
 			`;
 		}
@@ -308,7 +310,7 @@ async function execute(): Promise<void> {
 			UPDATE api_publishedassurancecase pc
 			SET assurance_case_id_new = lm.new_id
 			FROM legacy_mappings lm
-			WHERE lm.legacy_id = pc.assurance_case_id AND lm.entity_type = 'case'
+			WHERE lm.legacy_id::text = pc.assurance_case_id::text AND lm.entity_type = 'case'
 		`;
 
 		// Drop old column and rename new
