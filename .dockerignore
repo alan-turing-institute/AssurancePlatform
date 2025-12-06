@@ -116,8 +116,8 @@ tsconfig.tsbuildinfo
 # Release configuration
 .releaserc.json
 
-# Public directory assets (already in image)
-public/documentation/
+# Note: public/documentation/ is NOT ignored - it's pre-built by CI
+# and copied into the Docker context for faster builds
 
 # Test artifacts
 coverage/

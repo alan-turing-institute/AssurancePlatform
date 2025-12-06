@@ -5,7 +5,7 @@ echo "Running database migrations..."
 
 # Capture migration output (temporarily disable set -e to capture exit code)
 set +e
-MIGRATE_OUTPUT=$(npx prisma migrate deploy --schema=./prisma/schema.prisma 2>&1)
+MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
 MIGRATE_EXIT_CODE=$?
 set -e
 
@@ -19,7 +19,8 @@ elif echo "$MIGRATE_OUTPUT" | grep -q "P3005"; then
     echo "Creating _prisma_migrations table and running initial migration..."
 
     # Create the Prisma migrations tracking table using Prisma db execute
-    npx prisma db execute --schema=./prisma/schema.prisma --stdin <<'MIGRATIONS_TABLE'
+    # Note: Uses prisma.config.ts for datasource URL (no --schema flag needed)
+    npx prisma db execute --stdin <<'MIGRATIONS_TABLE'
 CREATE TABLE IF NOT EXISTS _prisma_migrations (
     id                      VARCHAR(36) PRIMARY KEY NOT NULL,
     checksum                VARCHAR(64) NOT NULL,
@@ -33,10 +34,10 @@ CREATE TABLE IF NOT EXISTS _prisma_migrations (
 MIGRATIONS_TABLE
 
     # Run the initial migration SQL directly
-    npx prisma db execute --schema=./prisma/schema.prisma --file=./prisma/migrations/20251206000000_initial_schema/migration.sql
+    npx prisma db execute --file=./prisma/migrations/20251206000000_initial_schema/migration.sql
 
     # Mark the migration as applied
-    npx prisma migrate resolve --applied "20251206000000_initial_schema" --schema=./prisma/schema.prisma
+    npx prisma migrate resolve --applied "20251206000000_initial_schema"
 
     echo "Baseline migration completed successfully."
 else

@@ -10,6 +10,8 @@ on:
       - "actions/**"
       - "hooks/**"
       - "prisma/**"
+      - "scripts/**"
+      - "tea-docs/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -25,6 +27,8 @@ on:
       - "actions/**"
       - "hooks/**"
       - "prisma/**"
+      - "scripts/**"
+      - "tea-docs/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -45,6 +49,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Stage A: pnpm caching for faster dependency resolution
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Stage B: Documentation caching based on tea-docs/** hash
+      - name: Restore cached documentation
+        id: cache-docs
+        uses: actions/cache@v4
+        with:
+          path: public/documentation
+          key: docs-${{ hashFiles('tea-docs/**') }}
+
+      - name: Build documentation (if cache miss)
+        if: steps.cache-docs.outputs.cache-hit != 'true'
+        run: |
+          cd tea-docs
+          pnpm install --frozen-lockfile
+          pnpm build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
