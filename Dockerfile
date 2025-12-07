@@ -55,8 +55,11 @@ RUN if [ ! -d "public/documentation" ]; then \
       echo "Documentation already pre-built by CI"; \
     fi
 
-# Build Next.js application
-RUN corepack enable pnpm && pnpm build
+# Generate Prisma client and build Next.js
+# Dummy DATABASE_URL is needed at build time for Prisma config and Next.js static analysis
+# The actual URL is provided at runtime via Azure environment variables
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+RUN npx prisma generate && corepack enable pnpm && pnpm build
 
 # 3. Production image, copy all the files and run next
 FROM base AS runner
