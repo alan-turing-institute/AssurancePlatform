@@ -1,21 +1,10 @@
 version: "3"
+
 services:
-  tea_frontend:
-    image: turingassuranceplatform/tea_frontend:develop
-    depends_on:
-      - tea_backend
+  tea-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tea-frontend
     ports:
-      - "3000:3000"
-    networks:
-      - tea_nw
-
-  tea_backend:
-    image: turingassuranceplatform/tea_backend:develop
-    ports:
-      - "8000:8000"
-    networks:
-      - tea_nw
-
-networks:
-  tea_nw:
-    driver: bridge
+      - "3001:3000"

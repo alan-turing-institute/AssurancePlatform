@@ -18,44 +18,26 @@ services:
       timeout: 5s
       retries: 5
 
-  tea_backend:
+  tea_app:
     build:
-      context: ./tea_backend
+      context: .
       dockerfile: Dockerfile.dev
-    container_name: tea_backend_dev
-    hostname: tea-backend
+    container_name: tea_app_dev
     ports:
-      - '8000:8000'
+      - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
     env_file:
-      - ./tea_backend/.env.local
+      - ./.env
     volumes:
-      - ./tea_backend:/app
-      - ./tea_backend/mediafiles:/app/mediafiles
+      - .:/app
+      - app_next:/app/.next
+      - /app/node_modules
     networks:
       - tea_dev_network
-
-  tea_frontend:
-    build:
-      context: ./tea_frontend
-      dockerfile: Dockerfile.dev
-    container_name: tea_frontend_dev
-    ports:
-      - '3000:3000'
-    depends_on:
-      - tea_backend
-    env_file:
-      - ./tea_frontend/.env.local
-    volumes:
-      - ./tea_frontend:/app
-      - frontend_next:/app/.next
-    networks:
-      - tea_dev_network
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    command: sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
+    command:
+      sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
 
 networks:
   tea_dev_network:
@@ -63,4 +45,4 @@ networks:
 
 volumes:
   postgres_data:
-  frontend_next:
+  app_next:

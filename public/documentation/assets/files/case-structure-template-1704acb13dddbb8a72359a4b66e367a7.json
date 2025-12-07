@@ -1,0 +1,168 @@
+{
+  "name": "Template: Basic Assurance Case Structure",
+  "description": "A simple template showing the basic structure of a TEA assurance case. Replace placeholder text with your own content.",
+  "goals": [
+    {
+      "id": "G1",
+      "name": "Top-Level Goal Claim",
+      "short_description": "[State your primary goal claim here]",
+      "long_description": "[Provide a detailed explanation of what this goal means, why it matters, and any important context]",
+      "keywords": "[goal, top-level, primary-claim]"
+    }
+  ],
+  "property_claims": [
+    {
+      "id": "PC1",
+      "goal_id": "G1",
+      "name": "Property Claim 1",
+      "short_description": "[State a specific property that supports the goal]",
+      "long_description": "[Explain this property in detail, including why it's important for the goal]",
+      "level": 1
+    },
+    {
+      "id": "PC2",
+      "goal_id": "G1",
+      "name": "Property Claim 2",
+      "short_description": "[State another property that supports the goal]",
+      "long_description": "[Explain this property in detail]",
+      "level": 1
+    },
+    {
+      "id": "PC3",
+      "goal_id": "G1",
+      "name": "Property Claim 3",
+      "short_description": "[State a third property]",
+      "long_description": "[Explain this property]",
+      "level": 1
+    },
+    {
+      "id": "PC1.1",
+      "parent_claim_id": "PC1",
+      "name": "Sub-claim under PC1",
+      "short_description": "[Optional: Break down PC1 into more specific claims]",
+      "long_description": "[Detailed explanation]",
+      "level": 2
+    }
+  ],
+  "strategies": [
+    {
+      "id": "S1",
+      "goal_id": "G1",
+      "name": "Top-Level Strategy",
+      "short_description": "[Describe your approach to decomposing the goal]",
+      "long_description": "[Explain the reasoning behind this decomposition strategy. For example: 'Argument by addressing data quality, model performance, and deployment context']"
+    },
+    {
+      "id": "S2",
+      "parent_claim_id": "PC1",
+      "name": "Strategy for Property Claim 1",
+      "short_description": "[Describe how you'll break down this property claim]",
+      "long_description": "[Explain the strategy]"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "claim_id": "PC1.1",
+      "name": "Evidence Item 1",
+      "short_description": "[Brief description of the evidence]",
+      "long_description": "[Detailed description including: What is it? How was it obtained? Why is it relevant?]",
+      "URL": "[Optional: Link to evidence location]",
+      "evidence_type": "[technical/process/stakeholder/standard]"
+    },
+    {
+      "id": "E2",
+      "claim_id": "PC2",
+      "name": "Evidence Item 2",
+      "short_description": "[Brief description]",
+      "long_description": "[Detailed description]",
+      "URL": "",
+      "evidence_type": "technical"
+    },
+    {
+      "id": "E3",
+      "claim_id": "PC3",
+      "name": "Evidence Item 3",
+      "short_description": "[Brief description]",
+      "long_description": "[Detailed description]",
+      "URL": "",
+      "evidence_type": "process"
+    }
+  ],
+  "context": [
+    {
+      "id": "C1",
+      "name": "System Context",
+      "short_description": "[Describe the system, its purpose, and deployment environment]",
+      "long_description": "[Detailed context: What system are you assuring? What is its purpose? Where and how is it deployed? Who are the users?]"
+    },
+    {
+      "id": "C2",
+      "name": "Scope and Boundaries",
+      "short_description": "[Define what is and isn't covered by this assurance case]",
+      "long_description": "[Be explicit about boundaries: What scenarios are included? What's excluded? What assumptions are being made?]"
+    }
+  ],
+  "comments": {
+    "usage_instructions": [
+      "This template provides a basic structure for a TEA assurance case.",
+      "",
+      "TO USE THIS TEMPLATE:",
+      "1. Replace all placeholder text in square brackets [like this]",
+      "2. Add or remove elements as needed for your specific case",
+      "3. Ensure all IDs are unique within each element type",
+      "4. Link elements properly using parent_id, goal_id, claim_id fields",
+      "5. Import this JSON into the TEA Platform",
+      "",
+      "ELEMENT TYPES:",
+      "- Goals: Top-level normative claims (usually just one)",
+      "- Property Claims: Specific claims about system properties",
+      "- Strategies: Explain how goals/claims are decomposed",
+      "- Evidence: Information that supports claims",
+      "- Context: Boundaries and scoping information",
+      "",
+      "LINKING ELEMENTS:",
+      "- Property claims link to goals via 'goal_id' or to other claims via 'parent_claim_id'",
+      "- Strategies link to goals via 'goal_id' or to claims via 'parent_claim_id'",
+      "- Evidence links to claims via 'claim_id'",
+      "- Context can link to goals or claims (specified in the platform UI)",
+      "",
+      "ID CONVENTIONS:",
+      "- Goals: G1, G2, ...",
+      "- Property Claims: PC1, PC2, ... or PC1.1, PC1.2 for sub-claims",
+      "- Strategies: S1, S2, ...",
+      "- Evidence: E1, E2, ...",
+      "- Context: C1, C2, ...",
+      "",
+      "BEST PRACTICES:",
+      "- Keep short_description concise (1 sentence)",
+      "- Use long_description for details, rationale, and context",
+      "- Be specific and testable in your claims",
+      "- Ensure evidence is relevant, reliable, and sufficient",
+      "- Acknowledge limitations and assumptions in context",
+      "",
+      "For more guidance, see:",
+      "- Module 1: Introduction to TEA concepts",
+      "- Module 2: Using the TEA Platform",
+      "- Module 3: Critical thinking and evidence quality",
+      "- Evidence Quality Rubric template",
+      "",
+      "This template can be customized for your specific domain."
+    ],
+    "example_use_cases": [
+      "Fair AI System: Claims about fairness, bias mitigation, and representative data",
+      "Safe Autonomous System: Claims about safety, reliability, and risk management",
+      "Secure Data Platform: Claims about privacy, security, and compliance",
+      "Explainable AI: Claims about transparency, interpretability, and user understanding",
+      "Sustainable System: Claims about environmental impact, resource efficiency, and lifecycle"
+    ]
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2025-11-05",
+    "last_updated": "2025-11-05",
+    "author": "TEA Platform Documentation Team",
+    "license": "MIT License",
+    "schema_version": "TEA Platform v1.0"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[1903],{1912:t=>{t.exports=JSON.parse('{"blogBasePath":"/documentation/blog","blogTitle":"Blog","authorsListPath":"/documentation/blog/authors"}')}}]);

@@ -1,0 +1,382 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import DiscoverCaseStudyPage from "../page";
+
+// Mock dependencies
+vi.mock("@/actions/case-studies", () => ({
+	fetchPublishedCaseStudyById: vi.fn(),
+}));
+
+vi.mock("@/lib/sanitize-html", () => ({
+	extractTextFromHtml: vi.fn((html: string) => html),
+}));
+
+vi.mock("@/lib/utils", () => ({
+	normalizeImageUrl: vi.fn((url: string) => url),
+}));
+
+// Mock child components
+vi.mock("../../_components/case-study-case-item", () => ({
+	default: ({ assuranceCaseId }: { assuranceCaseId: string }) => (
+		<li data-testid={`case-item-${assuranceCaseId}`}>
+			Case Item {assuranceCaseId}
+		</li>
+	),
+}));
+
+vi.mock("../../_components/case-study-cases", () => ({
+	default: ({ assuranceCaseIds }: { assuranceCaseIds: number[] }) => (
+		<div data-testid="case-study-cases" data-case-ids={assuranceCaseIds.join(",")}>
+			<h3>Related Assurance Cases</h3>
+			<p>Assurance Cases: {assuranceCaseIds.length}</p>
+			<ul>
+				{assuranceCaseIds.map((id) => (
+					<li key={id} data-testid={`case-item-${id}`}>
+						Case Item {id}
+					</li>
+				))}
+			</ul>
+		</div>
+	),
+}));
+
+// Mock Next.js components
+vi.mock("next/link", () => ({
+	default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+		<a href={href}>{children}</a>
+	),
+}));
+
+vi.mock("next/image", () => ({
+	default: ({ src, alt, className, width, height }: any) => (
+		<img
+			src={src}
+			alt={alt}
+			className={className}
+			width={width}
+			height={height}
+			data-testid="case-study-image"
+		/>
+	),
+}));
+
+const mockCaseStudy = {
+	id: 1,
+	title: "Published Test Case Study",
+	description: "<p>This is a published case study description with <strong>HTML</strong> content.</p>",
+	sector: "Healthcare",
+	publishedDate: "2024-01-15T00:00:00Z",
+	contact: "contact@example.com",
+	authors: "Dr. Jane Smith, Prof. John Doe",
+	feature_image_url: "https://example.com/image.jpg",
+	assurance_cases: [1, 2, 3],
+	published: true,
+	content: "Full case study content",
+	type: "reference",
+	owner: 1,
+	createdOn: "2024-01-01T00:00:00Z",
+	lastModifiedOn: "2024-01-14T00:00:00Z",
+	image: null,
+};
+
+describe("DiscoverCaseStudyPage", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	describe("Page Rendering", () => {
+		it("should render case study details", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("Published Test Case Study")).toBeInTheDocument();
+		});
+
+		it("should display back button with correct link", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const backLink = screen.getByText("Back").closest("a");
+			expect(backLink).toHaveAttribute("href", "/discover");
+		});
+
+		it("should fetch case study with correct ID", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "123" }),
+			});
+
+			expect(fetchPublishedCaseStudyById).toHaveBeenCalledWith(123);
+		});
+	});
+
+	describe("Case Study Information", () => {
+		it("should display case study title", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const heading = screen.getByRole("heading", { level: 3 });
+			expect(heading).toHaveTextContent("Published Test Case Study");
+		});
+
+		it("should display sector badge", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("Healthcare")).toBeInTheDocument();
+		});
+
+		it("should display published date", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("Published On 15/01/2024")).toBeInTheDocument();
+		});
+
+		it("should display contact information", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("contact@example.com")).toBeInTheDocument();
+		});
+
+		it("should display authors", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("Dr. Jane Smith, Prof. John Doe")).toBeInTheDocument();
+		});
+
+		it("should extract and display description text from HTML", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+			const { extractTextFromHtml } = await import("@/lib/sanitize-html");
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(extractTextFromHtml).toHaveBeenCalledWith(mockCaseStudy.description);
+		});
+	});
+
+	describe("Image Handling", () => {
+		it("should display case study image with correct attributes", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const image = screen.getByTestId("case-study-image");
+			expect(image).toHaveAttribute("src", "https://example.com/image.jpg");
+			expect(image).toHaveAttribute("alt", "Published Test Case Study");
+		});
+
+		it("should normalize image URL", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+			const { normalizeImageUrl } = await import("@/lib/utils");
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(normalizeImageUrl).toHaveBeenCalledWith(mockCaseStudy.feature_image_url);
+		});
+
+		it("should use default image when feature image is null", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			const caseStudyWithoutImage = { ...mockCaseStudy, feature_image_url: null };
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(caseStudyWithoutImage);
+			const { normalizeImageUrl } = await import("@/lib/utils");
+			vi.mocked(normalizeImageUrl).mockReturnValue(null);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const image = screen.getByTestId("case-study-image");
+			expect(image.getAttribute("src")).toContain("unsplash.com");
+		});
+
+		it("should display image caption", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			expect(screen.getByText("Published Test Case Study featured image")).toBeInTheDocument();
+		});
+	});
+
+	describe("Assurance Cases Section", () => {
+		it("should render case study cases component", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const casesComponent = screen.getByTestId("case-study-cases");
+			expect(casesComponent).toBeInTheDocument();
+			expect(casesComponent).toHaveAttribute("data-case-ids", "1,2,3");
+			expect(casesComponent).toHaveTextContent("Assurance Cases: 3");
+		});
+	});
+
+	describe("Layout and Styling", () => {
+		it("should have correct container structure", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			const { container } = render(Component);
+
+			const mainContainer = container.querySelector(".overflow-hidden.bg-white");
+			expect(mainContainer).toBeInTheDocument();
+
+			const contentContainer = container.querySelector(".mx-auto.max-w-7xl");
+			expect(contentContainer).toBeInTheDocument();
+		});
+
+		it("should have grid layout for content", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			const { container } = render(Component);
+
+			const gridContainer = container.querySelector(".lg\\:grid.lg\\:grid-cols-2");
+			expect(gridContainer).toBeInTheDocument();
+		});
+
+		it("should apply correct styling to back button", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			render(Component);
+
+			const backButton = screen.getByText("Back").closest("a");
+			expect(backButton).toHaveClass("inline-flex", "items-center", "justify-start", "gap-2", "rounded-md", "bg-indigo-600");
+		});
+
+		it("should render decorative SVG pattern", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			const { container } = render(Component);
+
+			const svgPattern = container.querySelector("svg[aria-hidden='true']");
+			expect(svgPattern).toBeInTheDocument();
+		});
+	});
+
+	describe("Icons", () => {
+		it("should render mail icon for contact", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			const { container } = render(Component);
+
+			// Look for MailIcon by its adjacent text
+			const contactElement = screen.getByText("contact@example.com");
+			const mailIcon = contactElement.previousElementSibling;
+			expect(mailIcon).toHaveClass("size-4");
+		});
+
+		it("should render users icon for authors", async () => {
+			const { fetchPublishedCaseStudyById } = await import("@/actions/case-studies");
+			vi.mocked(fetchPublishedCaseStudyById).mockResolvedValue(mockCaseStudy);
+
+			const Component = await DiscoverCaseStudyPage({
+				params: Promise.resolve({ id: "1" }),
+			});
+
+			const { container } = render(Component);
+
+			// Look for Users2Icon by its adjacent text
+			const authorsElement = screen.getByText("Dr. Jane Smith, Prof. John Doe");
+			const usersIcon = authorsElement.previousElementSibling;
+			expect(usersIcon).toHaveClass("size-4");
+		});
+	});
+});

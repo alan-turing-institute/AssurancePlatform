@@ -1,0 +1,32 @@
+FROM node:20-alpine
+
+# Install dependencies needed for compatibility and native modules (argon2)
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json yarn.lock* pnpm-lock.yaml* ./
+
+# Install dependencies using preferred package manager
+RUN \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  else npm ci --legacy-peer-deps; \
+  fi
+
+# Copy source code
+COPY . .
+
+# Generate Prisma clients (DATABASE_URL not needed for generate, but config requires it)
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+    npx prisma generate --schema=prisma/schema.prisma
+
+# Build documentation
+RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["sh", "-c", "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"]

@@ -66,17 +66,9 @@ coverage.xml
 *.mo
 *.pot
 
-# Django stuff:
+# Logs
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-tea_backend/logs/
 logs/
-
-# Django media files (user uploads)
-tea_backend/mediafiles/
-mediafiles/
 
 # Flask stuff:
 instance/
@@ -157,9 +149,6 @@ dmypy.json
 
 *.env
 DO_NOT_COMMIT
-tea_frontend/.env
-tea_frontend/.env.local
-tea_frontend/next-env.d.ts
 ENV_Testing_Vars.sh
 .aider*
 
@@ -169,12 +158,13 @@ site/site
 .next
 /.next/
 /out/
-tea_frontend/.next/
-tea_frontend/out/
-tea_frontend/build/
-tea_frontend/.vercel
-tea_frontend/*.tsbuildinfo
-tea_frontend/next-env.d.ts
+build/
+.vercel
+*.tsbuildinfo
+
+# Prisma generated files
+src/generated/prisma/
+prisma/scripts/duplicate-user-notifications.json
 
 # npm/yarn/pnpm
 npm-debug.log*
@@ -194,12 +184,17 @@ pnpm-debug.log*
 coverage/
 
 # documentation builds - all generated documentation files
-tea_frontend/public/documentation/
-tea_frontend/tea-docs/build/
-tea_frontend/tea-docs/.docusaurus/
+public/documentation/
 
-# dev tasks
+# local dev uploads (stored in Azure Blob Storage in production)
+public/uploads/
+tea-docs/build/
+tea-docs/.docusaurus/
+
+# dev tools
 TASKS/
+.mcp.json
+.playwright-mcp/
 
 # IDE and editor files
 .idea/
@@ -224,6 +219,7 @@ $RECYCLE.BIN/
 # Docker
 .dockerignore.bak
 docker-compose.override.yml
+docker-compose.prod-test.yml
 
 # Cache directories
 .cache/
@@ -240,3 +236,6 @@ docker-compose.override.yml
 # Build artifacts
 *.tgz
 *.tar.gz
+
+# Database backups
+backups/
