@@ -1,0 +1,263 @@
+# Evidence Quality Rubric
+
+**Purpose:** This rubric helps you evaluate the quality of evidence used in your assurance case.
+
+**How to use:** For each piece of evidence, assess it against the three main criteria below. Use this to identify where evidence may need strengthening.
+
+---
+## Three Core Criteria
+
+Every piece of evidence should be evaluated on these three dimensions:
+
+### 1. Relevance
+
+**Does the evidence directly support the claim it's linked to?**
+
+| Level            | Description                                     | Indicators                                                                                                                   |
+| ---------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Strong**       | Evidence directly addresses the specific claim  | - Clear logical connection to claim<br />- Addresses the exact property being claimed<br />- No logical leaps required           |
+| **Moderate**     | Evidence is related but requires interpretation | - Connection exists but isn't immediately obvious<br />- Requires some inferential reasoning<br />- May support claim indirectly |
+| **Weak**         | Evidence only tangentially related to claim     | - Unclear how evidence supports claim<br />- Addresses different aspect than claimed<br />- Requires significant interpretation  |
+| **Not Relevant** | Evidence does not support the claim             | - No clear connection<br />- Addresses unrelated concerns<br />- May be evidence for different claim entirely                    |
+
+**Questions to ask:**
+
+  - Does this evidence specifically address what the claim states?
+  - Would someone unfamiliar with the project understand the connection?
+  - Are there logical leaps between the evidence and the claim?
+
+---
+### 2. Reliability
+
+**Can the evidence be trusted? Is it credible?**
+
+| Level          | Description                                   | Indicators                                                                                                                                         |
+| -------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Strong**     | Evidence from trustworthy, verifiable sources | - From established, credible sources<br />- Methodology clearly documented<br />- Reproducible or independently verifiable<br />- Free from obvious bias |
+| **Moderate**   | Generally reliable but with some limitations  | - Source is credible but not authoritative<br />- Some methodology documentation<br />- Limited independent verification<br />- Minor potential for bias |
+| **Weak**       | Reliability concerns exist                    | - Source credibility questionable<br />- Methodology poorly documented<br />- Difficult to verify<br />- Potential for significant bias                  |
+| **Unreliable** | Evidence cannot be trusted                    | - Unverifiable claims<br />- No methodology provided<br />- Known biased or compromised source<br />- Contradicts other reliable evidence                |
+
+**Questions to ask:**
+
+* Where did this evidence come from?
+* Can the evidence be independently verified?
+* What methodology was used to generate this evidence?
+* Are there potential sources of bias?
+* Does the evidence align with other sources?
+
+**Evidence Source Hierarchy** (generally, from most to least reliable):
+
+1. Peer-reviewed research and formal testing
+2. Audits from independent third parties
+3. Certified processes and standardized measurements
+4. Internal testing with documented methodology
+5. Expert opinions from domain specialists
+6. Stakeholder feedback from representative samples
+7. Anecdotal reports and limited observations
+
+---
+### 3. Sufficiency
+
+**Is there enough evidence to support the claim?**
+
+| Level            | Description                                      | Indicators                                                                                                                                                     |
+| ---------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Strong**       | Comprehensive evidence that fully supports claim | - Multiple independent sources<br />- Covers all aspects of the claim<br />- Addresses potential counterarguments<br />- Quantitative and qualitative as appropriate |
+| **Moderate**     | Adequate evidence with some gaps                 | - Primary aspects covered<br />- May rely on single source<br />- Some aspects under-evidenced<br />- Missing some perspectives                                      |
+| **Weak**         | Evidence present but insufficient                | - Partial coverage of claim<br />- Significant gaps in evidence<br />- Over-reliance on single source<br />- Key aspects not addressed                               |
+| **Insufficient** | Far too little evidence to support claim         | - Minimal evidence provided<br />- Claim much broader than evidence<br />- Critical aspects completely missing<br />- Evidence is anecdotal only                     |
+
+**Questions to ask:**
+
+* Does the evidence cover all aspects of the claim?
+* Are there multiple sources of evidence?
+* What gaps exist in the evidence?
+* Are counterarguments addressed?
+* Would an external reviewer find this convincing?
+
+**Indicators of sufficient evidence:**
+
+* Multiple types of evidence (technical, process, stakeholder)
+* Evidence from different sources/perspectives
+* Quantitative data with appropriate sample sizes
+* Qualitative evidence from representative stakeholders
+* Evidence addresses edge cases and limitations
+* Negative evidence or failures are acknowledged
+
+---
+## Evidence Types & Their Strengths
+
+Different types of evidence are appropriate for different claims:
+
+### Technical Evidence
+
+**Examples:** Test results, benchmarks, performance metrics, error rates
+
+**Best for:** Claims about system performance, functionality, technical capabilities
+
+**Evaluation considerations:**
+
+* Test methodology and coverage
+* Sample sizes and representativeness
+* Statistical significance
+* Reproducibility
+
+### Process Evidence
+
+**Examples:** Audit reports, certifications, documented procedures, compliance records
+
+**Best for:** Claims about governance, quality processes, adherence to standards
+
+**Evaluation considerations:**
+
+* Independence of auditor/certifier
+* Comprehensiveness of process
+* Frequency and recency of audits
+* Alignment with recognized standards
+
+### Stakeholder Evidence
+
+**Examples:** User studies, surveys, interviews, workshop outcomes, feedback
+
+**Best for:** Claims about user experience, fairness, values alignment, societal impact
+
+**Evaluation considerations:**
+
+* Representativeness of participants
+* Methodology for gathering input
+* Analysis approach
+* Potential response biases
+
+---
+## Common Evidence Quality Issues
+
+### Over-claiming
+
+**Problem:** Claims are broader than evidence supports
+
+**Example:**
+
+* **Claim:** "The system is fair to all users"
+* **Evidence:** User survey of 20 participants from single demographic
+
+**Fix:** Either narrow the claim or gather additional evidence
+
+### Circular Reasoning
+
+**Problem:** Evidence relies on the assumption that the claim is true
+
+**Example:**
+
+* **Claim:** "The algorithm is unbiased"
+* **Evidence:** "We trained it on our standard dataset" (assumes dataset is unbiased)
+
+**Fix:** Provide independent evidence that validates assumptions
+
+### Outdated Evidence
+
+**Problem:** Evidence is no longer current
+
+**Example:**
+
+* **Claim:** "The system meets security requirements"
+* **Evidence:** Security audit from 3 years ago (system has changed significantly)
+
+**Fix:** Update evidence or add note about scope/limitations
+
+### Single Source Dependency
+
+**Problem:** All evidence comes from one source
+
+**Example:**
+
+* **Claim:** "Users find the system helpful"
+* **Evidence:** All evidence from internal testing team
+
+**Fix:** Seek independent or diverse sources
+
+### Missing Negative Evidence
+
+**Problem:** Only positive evidence presented, failures not acknowledged
+
+**Example:**
+
+* **Claim:** "The model performs accurately"
+* **Evidence:** Best-case test results only
+
+**Fix:** Include edge cases, failure modes, limitations
+
+---
+## Evidence Quality Worksheet
+
+Use this worksheet to evaluate each piece of evidence in your assurance case:
+
+**Evidence ID/Name:** **************___**************
+
+**Linked Claim:** **************___**************
+
+**Evidence Type:** ☐ Technical ☐ Process ☐ Stakeholder ☐ Other: **___**
+
+### Assessment
+
+**Relevance:**
+
+* Score: ☐ Strong ☐ Moderate ☐ Weak ☐ Not Relevant
+* Notes: **************___**************
+
+**Reliability:**
+
+* Score: ☐ Strong ☐ Moderate ☐ Weak ☐ Unreliable
+* Source: **************___**************
+* Methodology: **************___**************
+* Notes: **************___**************
+
+**Sufficiency:**
+
+* Score: ☐ Strong ☐ Moderate ☐ Weak ☐ Insufficient
+* Gaps identified: **************___**************
+* Notes: **************___**************
+
+### Overall Assessment
+
+**Strengths:** **************___**************
+
+**Weaknesses:** **************___**************
+
+**Actions needed:**
+☐ No action - evidence is strong
+☐ Clarify connection to claim
+☐ Verify source/methodology
+☐ Gather additional evidence
+☐ Address identified gaps
+☐ Update outdated evidence
+☐ Other: **************___**************
+
+---
+## Quick Reference Checklist
+
+For each piece of evidence, ask:
+
+* \[ ] **Relevance:** Does it directly support the specific claim?
+* \[ ] **Reliability:** Can the source be trusted?
+* \[ ] **Reliability:** Is the methodology documented?
+* \[ ] **Reliability:** Can it be independently verified?
+* \[ ] **Sufficiency:** Are all aspects of the claim covered?
+* \[ ] **Sufficiency:** Are there multiple sources?
+* \[ ] **Sufficiency:** Are limitations acknowledged?
+* \[ ] **Quality:** Is the evidence current and up-to-date?
+* \[ ] **Quality:** Are potential biases considered?
+* \[ ] **Quality:** Would an external reviewer find this convincing?
+
+---
+## Further Reading
+
+* [TEA Glossary: Evidence](../../shared/glossary.md#evidence)
+* [TEA Glossary: Evidence Quality](../../shared/glossary.md#evidence-quality)
+* [Module 3: Critical Reflection on Evidence](../../tea-trainee/03-steep-tea.md)
+* [Standards and their Role in Assurance](../../standalone/standards.md)
+
+---
+**Version:** 1.0
+**Last Updated:** November 2025
+**License:** This template is part of the TEA Platform documentation (MIT License)

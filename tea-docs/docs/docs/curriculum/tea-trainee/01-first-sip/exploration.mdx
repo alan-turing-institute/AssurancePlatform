@@ -1,0 +1,79 @@
+---
+sidebar_position: 2
+title: "Exploration: Your First TEA Case"
+description: Interact with a Fair Recruitment AI assurance case
+---
+
+import CaseViewerWrapper from "../../../../../components/curriculum/CaseViewerWrapper";
+import ExplorationChecklist from "../../../../../components/curriculum/ExplorationChecklist";
+import { firstSipChecklistItems } from "../../../../../components/curriculum/FirstSipChecklistItems";
+import ConceptCarousel, { exampleConcepts } from "../../../../../components/curriculum/ConceptCarousel";
+import { ModuleProgressProvider } from "../../../../../components/curriculum/ModuleProgressContext";
+import ModuleProgressTracker from "../../../../../components/curriculum/ModuleProgressTracker";
+import { firstSipTasks } from "../../../../../components/curriculum/TaskRegistry";
+import TaskCheckpoint from "../../../../../components/curriculum/TaskCheckpoint";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="exploration"
+    >
+      {children}
+      <ModuleProgressTracker showHints={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Exploration: Your First TEA Case
+
+The best way to learn about assurance cases is to experience one first-hand. Rather than starting with definitions and theory, you'll dive straight into exploring a real example.
+
+Below, you'll interact with a Fair Recruitment AI assurance case. You'll be guided through the structure with specific tasks, helping you discover how structured arguments build trust. This is a simple example of how organisations would demonstrate their AI systems are trustworthy using the TEA platform.
+
+Click on different elements in the case to understand how the argument flows from a high-level claim down to concrete evidence. **Follow the guided tasks that appear in the progress tracker at the bottom-right.**
+
+<CaseViewerWrapper
+  caseFile="fair-recruitment-ai.json"
+  showAllNodes={false}
+  enableExploration={true}
+/>
+
+## Independent Exploration
+
+<TaskCheckpoint
+  id="explore-connections"
+  showHeader={false}
+  showButton={true}
+  buttonPosition="bottom"
+>
+
+Now that you've been guided through the structure, explore freely. Click "Reveal All" to see the complete argument at once.
+
+### Discovery Questions
+
+As you explore, consider:
+
+* What makes this argument convincing (or not)?
+* Are there any claims that seem weak or unsupported?
+* How does breaking down "fairness" into smaller parts help?
+* Would you trust this AI system based on this case?
+
+Take your time to click through the different elements and understand their relationships. When you feel you've explored thoroughly, mark this task as complete below.
+
+</TaskCheckpoint>
+
+### Understanding the Elements
+
+Navigate through each concept to understand what role it plays in the assurance case. Use the arrows or keyboard to move between concepts:
+
+<ConceptCarousel
+  concepts={exampleConcepts}
+  mode="free"
+/>
+
+</PageContent>
