@@ -100,7 +100,7 @@ export async function GET(
 	}
 
 	try {
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
 		// Get the element to find its case
@@ -172,7 +172,7 @@ export async function POST(
 			);
 		}
 
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
 		// Get the element to find its case and name

@@ -61,7 +61,7 @@ async function fetchCaseFromPrisma(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const validation = await validateRefreshToken(refreshToken);
@@ -341,7 +341,7 @@ async function updateCaseWithPrisma(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);
@@ -428,7 +428,7 @@ export async function DELETE(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const validation = await validateRefreshToken(session.key);

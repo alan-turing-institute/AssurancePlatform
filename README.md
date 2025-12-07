@@ -64,7 +64,7 @@ docker-compose -f docker-compose.development.yml logs -f
 docker-compose -f docker-compose.development.yml down
 
 # Run database migrations
-docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
+docker exec tea_app_dev npx prisma migrate dev 
 
 # Run tests
 docker exec tea_app_dev pnpm run test
@@ -79,7 +79,7 @@ If you prefer to run without Docker:
 pnpm install
 
 # Generate Prisma client
-npx prisma generate --schema=prisma/schema.new.prisma
+npx prisma generate 
 
 # Run development server
 pnpm run dev

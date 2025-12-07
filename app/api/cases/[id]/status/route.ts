@@ -5,7 +5,7 @@ import {
 	getFullPublishStatus,
 	transitionStatus,
 } from "@/lib/services/publish-service";
-import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma-new";
+import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
 
 /**
  * GET /api/cases/[id]/status

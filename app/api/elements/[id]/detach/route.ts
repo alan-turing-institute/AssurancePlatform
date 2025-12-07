@@ -33,7 +33,7 @@ export async function POST(
 
 	try {
 		// Get caseId before detaching for SSE event
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		const element = await prismaNew.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true },

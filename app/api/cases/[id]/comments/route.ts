@@ -94,7 +94,7 @@ async function fetchPrismaComments(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const validation = await validateRefreshToken(sessionKey);
@@ -154,7 +154,7 @@ async function createPrismaComment(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);

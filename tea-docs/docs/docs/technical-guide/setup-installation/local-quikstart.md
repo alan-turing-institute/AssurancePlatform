@@ -82,8 +82,8 @@ createdb tea_dev
 Generate the Prisma client and run migrations:
 
 ```shell
-npx prisma generate --schema=prisma/schema.new.prisma
-npx prisma migrate dev --schema=prisma/schema.new.prisma
+npx prisma generate 
+npx prisma migrate dev 
 ```
 
 ### 5. Run the Development Server
@@ -108,16 +108,16 @@ pnpm run test:coverage  # Run tests with coverage report
 
 ```shell
 # Generate Prisma client after schema changes
-npx prisma generate --schema=prisma/schema.new.prisma
+npx prisma generate 
 
 # Create a new migration
-npx prisma migrate dev --schema=prisma/schema.new.prisma
+npx prisma migrate dev 
 
 # Reset database (drops all data)
-npx prisma migrate reset --schema=prisma/schema.new.prisma
+npx prisma migrate reset 
 
 # Open Prisma Studio (database GUI)
-npx prisma studio --schema=prisma/schema.new.prisma
+npx prisma studio 
 ```
 
 ### Code Quality

@@ -46,7 +46,7 @@ docker volume rm assuranceplatform_postgres_data
 
 ```shell
 docker-compose -f docker-compose.development.yml up -d --build
-docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
+docker exec tea_app_dev npx prisma migrate dev 
 ```
 
 #### Alternative: Reset Without Removing Volume
@@ -54,7 +54,7 @@ docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
 If you want to reset the database without removing the Docker volume:
 
 ```shell
-docker exec tea_app_dev npx prisma migrate reset --schema=prisma/schema.new.prisma
+docker exec tea_app_dev npx prisma migrate reset 
 ```
 
 :::warning
@@ -113,7 +113,7 @@ Replace SERVER_NAME and ADMIN_USERNAME with the actual server name and admin use
 After recreating the database, run Prisma migrations to set up the schema:
 
 ```shell
-npx prisma migrate deploy --schema=prisma/schema.new.prisma
+npx prisma migrate deploy 
 ```
 
 #### 4. Restart the Web App

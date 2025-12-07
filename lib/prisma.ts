@@ -4,10 +4,10 @@ import {
 	cleanElementDataForType,
 	validateElementData,
 } from "@/lib/schemas/element-validation";
-import { Prisma, PrismaClient } from "@/src/generated/prisma-new";
+import { Prisma, PrismaClient } from "@/src/generated/prisma";
 
 const globalForPrisma = globalThis as unknown as {
-	prismaNew: ExtendedPrismaClient;
+	prisma: ExtendedPrismaClient;
 	pgPool: Pool;
 };
 
@@ -133,10 +133,13 @@ function createPrismaClient() {
 	return createExtendedPrismaClient();
 }
 
-export const prismaNew = globalForPrisma.prismaNew || createPrismaClient();
+export const prisma = globalForPrisma.prisma || createPrismaClient();
+
+// Legacy alias for backward compatibility during migration
+export const prismaNew = prisma;
 
 if (process.env.NODE_ENV !== "production") {
-	globalForPrisma.prismaNew = prismaNew;
+	globalForPrisma.prisma = prisma;
 }
 
-export default prismaNew;
+export default prisma;

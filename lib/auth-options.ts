@@ -19,7 +19,7 @@ async function authenticateWithPrisma(
 	key: string;
 } | null> {
 	// Dynamic imports to avoid loading Prisma when not using this auth method
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { verifyPassword, hashPassword } = await import(
 		"@/lib/auth/password-service"
 	);
@@ -87,7 +87,7 @@ async function authenticateGitHubWithPrisma(profile: {
 	login?: string;
 	email?: string | null;
 }): Promise<{ id: string; key: string } | null> {
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { createRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);

@@ -4,7 +4,7 @@
  */
 
 import { hashPassword } from "../lib/auth/password-service";
-import { prismaNew } from "../lib/prisma-new";
+import { prismaNew } from "../lib/prisma";
 
 async function main() {
 	const username = "testuser";

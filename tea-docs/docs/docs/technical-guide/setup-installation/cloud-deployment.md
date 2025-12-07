@@ -93,7 +93,7 @@ After the web app is deployed, run Prisma migrations:
 
 ```shell
 # Connect to the web app's console or run via CI/CD
-npx prisma migrate deploy --schema=prisma/schema.new.prisma
+npx prisma migrate deploy 
 ```
 
 ## Final Steps

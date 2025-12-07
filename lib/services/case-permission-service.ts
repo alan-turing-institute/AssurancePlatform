@@ -1,8 +1,8 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { prismaNew } from "@/lib/prisma-new";
-import type { PermissionLevel } from "@/src/generated/prisma-new";
+import { prismaNew } from "@/lib/prisma";
+import type { PermissionLevel } from "@/src/generated/prisma";
 
 // ============================================
 // INPUT INTERFACES

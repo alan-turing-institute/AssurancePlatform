@@ -6,7 +6,7 @@
  * requirement that all exported functions must be async.
  */
 
-import type { PublishedAssuranceCase } from "@/src/generated/prisma-new";
+import type { PublishedAssuranceCase } from "@/src/generated/prisma";
 import type { CaseStudy as CaseStudyApiResponse } from "@/types/domain";
 import type { CaseStudyWithRelations } from "./case-study-service";
 

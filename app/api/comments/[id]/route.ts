@@ -65,7 +65,7 @@ async function getCommentWithPermission(
 	commentId: string,
 	userId: string
 ): Promise<CommentResult> {
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { canAccessCase } = await import("@/lib/permissions");
 
 	const comment = await prismaNew.comment.findUnique({
@@ -139,7 +139,7 @@ export async function DELETE(
 			return commentResult.response;
 		}
 
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		await prismaNew.comment.delete({ where: { id: commentId } });
 
 		// Emit SSE event for real-time updates
@@ -206,7 +206,7 @@ export async function PUT(
 			return commentResult.response;
 		}
 
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		const updatedComment = await prismaNew.comment.update({
 			where: { id: commentId },
 			data: { content: content.trim() },
@@ -282,7 +282,7 @@ export async function PATCH(
 			return commentResult.response;
 		}
 
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 
 		const updateData = resolved
 			? {

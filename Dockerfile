@@ -77,7 +77,7 @@ COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 
 # Copy Prisma schema, config, migrations, and data migration scripts for runtime
-COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.new.prisma ./prisma/schema.prisma
+COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
 COPY --from=builder --link --chown=1001:1001 /app/prisma/scripts ./prisma/scripts
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts

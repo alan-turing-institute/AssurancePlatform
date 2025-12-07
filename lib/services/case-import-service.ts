@@ -1,6 +1,6 @@
 "use server";
 
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { topologicalSort, transformV1ToV2 } from "@/lib/transforms/v1-to-v2";

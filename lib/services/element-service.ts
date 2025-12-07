@@ -1,10 +1,10 @@
 "use server";
 
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
-} from "@/src/generated/prisma-new";
+} from "@/src/generated/prisma";
 
 // Element types mapping from frontend to Prisma enum
 const ELEMENT_TYPE_MAP: Record<string, string> = {

@@ -18,7 +18,7 @@ export async function POST() {
 		const { validateRefreshToken } = await import(
 			"@/lib/auth/refresh-token-service"
 		);
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 
 		const validation = await validateRefreshToken(session.key);
 

@@ -1,4 +1,4 @@
-import type { PermissionLevel, TeamRole } from "@/src/generated/prisma-new";
+import type { PermissionLevel, TeamRole } from "@/src/generated/prisma";
 
 /**
  * Team role hierarchy (higher index = more permissions)
@@ -60,7 +60,7 @@ async function getCasePermissionFromPrisma(
 	userId: string,
 	caseId: string
 ): Promise<CasePermissionResult> {
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 
 	// First, check if user is the case creator (implicit owner)
 	const assuranceCase = await prismaNew.assuranceCase.findUnique({
@@ -185,7 +185,7 @@ export async function getTeamRole(
 	userId: string,
 	teamId: string
 ): Promise<TeamRole | null> {
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 
 	const membership = await prismaNew.teamMember.findUnique({
 		where: {
@@ -256,7 +256,7 @@ export async function isLastTeamAdmin(
 	userId: string,
 	teamId: string
 ): Promise<boolean> {
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 
 	// Check if user is an admin
 	const userRole = await getTeamRole(userId, teamId);

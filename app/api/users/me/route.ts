@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
 import { authOptions } from "@/lib/auth-options";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 
 type UserResponse = {
 	id: string;

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
 import { authOptions } from "@/lib/auth-options";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 
 const TYPE_PREFIXES: Record<string, string> = {
 	GOAL: "G",

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 

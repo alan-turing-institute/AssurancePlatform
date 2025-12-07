@@ -1,17 +1,17 @@
 "use server";
 
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
-import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma-new";
+import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
 
 // ============================================
 // Types
 // ============================================
 
 // Re-export Prisma enum for convenience
-export type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma-new";
+export type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
 
 // Legacy type kept for backward compatibility
 export type PublishStatus = {

@@ -164,7 +164,6 @@ build/
 
 # Prisma generated files
 src/generated/prisma/
-src/generated/prisma-new/
 prisma/scripts/duplicate-user-notifications.json
 
 # npm/yarn/pnpm

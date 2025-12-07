@@ -17,7 +17,7 @@ export const fetchCurrentUser = async (
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 
 	const validation = await validateRefreshToken(token);
 	if (!validation.valid) {

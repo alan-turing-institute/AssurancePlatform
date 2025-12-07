@@ -149,7 +149,7 @@ export async function DELETE(
 	}
 
 	// Get the element's caseId and name before deletion for SSE event
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const element = await prismaNew.assuranceElement.findUnique({
 		where: { id: elementId },
 		select: { caseId: true, name: true, description: true },

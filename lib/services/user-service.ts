@@ -1,6 +1,6 @@
 "use server";
 
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 
 // ============================================
 // VALIDATION REGEX PATTERNS (top-level for performance)

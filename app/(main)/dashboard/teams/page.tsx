@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { TeamList } from "@/components/teams";
 import { authOptions } from "@/lib/auth-options";
-import { prismaNew as prisma } from "@/lib/prisma-new";
+import { prismaNew as prisma } from "@/lib/prisma";
 
 async function getTeamsForUser(userId: string) {
 	const memberships = await prisma.teamMember.findMany({

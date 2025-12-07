@@ -1,7 +1,7 @@
 "use server";
 
 import { canAccessCase } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 

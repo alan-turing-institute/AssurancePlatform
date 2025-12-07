@@ -5,7 +5,7 @@ import {
 	type PasswordAlgorithm,
 	verifyPassword,
 } from "@/lib/auth/password-service";
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 
 // ============================================
 // Types

@@ -1,6 +1,6 @@
 "use server";
 
-import { prismaNew } from "@/lib/prisma-new";
+import { prismaNew } from "@/lib/prisma";
 import {
 	deleteDirectory,
 	deleteFile,
@@ -8,7 +8,7 @@ import {
 import type {
 	CaseStudy as PrismaCaseStudy,
 	PublishedAssuranceCase,
-} from "@/src/generated/prisma-new";
+} from "@/src/generated/prisma";
 
 // ============================================
 // Types

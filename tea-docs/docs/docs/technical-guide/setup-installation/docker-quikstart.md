@@ -75,7 +75,7 @@ docker-compose -f docker-compose.development.yml logs -f
 ### Run Database Migrations
 
 ```shell
-docker exec tea_app_dev npx prisma migrate dev --schema=prisma/schema.new.prisma
+docker exec tea_app_dev npx prisma migrate dev 
 ```
 
 ### Run Tests

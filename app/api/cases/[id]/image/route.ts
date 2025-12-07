@@ -23,7 +23,7 @@ export async function GET(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const validation = await validateRefreshToken(session.key);
@@ -74,7 +74,7 @@ export async function POST(
 	const { validateRefreshToken } = await import(
 		"@/lib/auth/refresh-token-service"
 	);
-	const { prismaNew } = await import("@/lib/prisma-new");
+	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 	const { uploadToBlob, generateScreenshotBlobPath } = await import(
 		"@/lib/services/blob-storage-service"

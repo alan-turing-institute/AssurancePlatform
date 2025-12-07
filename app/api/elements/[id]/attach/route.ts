@@ -65,7 +65,7 @@ export async function POST(
 		}
 
 		// Emit SSE event for real-time updates
-		const { prismaNew } = await import("@/lib/prisma-new");
+		const { prismaNew } = await import("@/lib/prisma");
 		const element = await prismaNew.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true },

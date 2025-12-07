@@ -20,7 +20,7 @@ COPY . .
 
 # Generate Prisma clients (DATABASE_URL not needed for generate, but config requires it)
 RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
-    npx prisma generate --schema=prisma/schema.new.prisma
+    npx prisma generate --schema=prisma/schema.prisma
 
 # Build documentation
 RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build

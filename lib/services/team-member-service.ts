@@ -1,7 +1,7 @@
 "use server";
 
-import { prismaNew } from "@/lib/prisma-new";
-import type { TeamRole } from "@/src/generated/prisma-new";
+import { prismaNew } from "@/lib/prisma";
+import type { TeamRole } from "@/src/generated/prisma";
 
 // ============================================
 // INPUT INTERFACES
