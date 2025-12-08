@@ -60,6 +60,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+
       - name: Run linter
         run: pnpm exec ultracite check
 
