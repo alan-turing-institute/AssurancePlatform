@@ -29,12 +29,12 @@ export async function GET(
 	const result = await listCasePermissions(session.user.id, caseId);
 
 	if (result.error) {
-		const status =
-			result.error === "Permission denied"
-				? 403
-				: result.error === "Case not found"
-					? 404
-					: 400;
+		let status = 400;
+		if (result.error === "Permission denied") {
+			status = 403;
+		} else if (result.error === "Case not found") {
+			status = 404;
+		}
 		return NextResponse.json({ error: result.error }, { status });
 	}
 

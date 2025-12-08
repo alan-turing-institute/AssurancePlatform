@@ -2,7 +2,6 @@ import type { DefaultSession } from "next-auth";
 import "next-auth/jwt";
 
 declare module "next-auth" {
-	// biome-ignore lint/style/useConsistentTypeDefinitions: interface required for module augmentation
 	interface Session extends DefaultSession {
 		key?: string;
 		provider?: string;
@@ -12,7 +11,6 @@ declare module "next-auth" {
 		};
 	}
 
-	// biome-ignore lint/style/useConsistentTypeDefinitions: interface required for module augmentation
 	interface User {
 		id?: string;
 		key?: string;
