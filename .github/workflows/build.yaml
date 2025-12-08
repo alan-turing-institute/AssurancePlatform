@@ -195,8 +195,8 @@ jobs:
           fi
 
           # Wait for deployment to start
-          echo "Waiting 30 seconds for deployment to propagate..."
-          sleep 30
+          echo "Waiting 60 seconds for deployment to propagate..."
+          sleep 60
 
           # Health check with retries
           echo "Checking application health..."
@@ -204,7 +204,7 @@ jobs:
 
           for i in $(seq 1 10); do
             echo "Health check attempt $i of 10..."
-            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            HEALTH_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
               --max-time 10 \
               "${{ env.PROD_APP_URL }}/api/health")
 
@@ -279,8 +279,8 @@ jobs:
           fi
 
           # Wait for deployment to start
-          echo "Waiting 30 seconds for deployment to propagate..."
-          sleep 30
+          echo "Waiting 60 seconds for deployment to propagate..."
+          sleep 60
 
           # Health check with retries
           echo "Checking application health..."
@@ -288,7 +288,7 @@ jobs:
 
           for i in $(seq 1 10); do
             echo "Health check attempt $i of 10..."
-            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            HEALTH_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
               --max-time 10 \
               "${{ env.STAGING_APP_URL }}/api/health")
 
