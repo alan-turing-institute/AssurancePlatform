@@ -32,16 +32,13 @@ type CreateNodePayload =
 
 /**
  * Creates a new assurance case node by sending a POST request to the specified API endpoint.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const createAssuranceCaseNode = async (
 	entity: string,
 	newItem: CreateNodePayload,
-	token: string | null
+	_token: string | null
 ): Promise<{ data?: ApiNodeResponse; error?: string | unknown }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	// Get case ID from the payload
 	const caseId = (newItem as { assurance_case_id?: number | string })
 		.assurance_case_id;
@@ -97,16 +94,13 @@ export const createAssuranceCaseNode = async (
 
 /**
  * Deletes an assurance case node by sending a DELETE request to the specified API endpoint.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const deleteAssuranceCaseNode = async (
 	_type: string,
 	id: number | string,
-	token: string | null
+	_token: string | null
 ): Promise<boolean | { error: string }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/elements/${id}`;
@@ -131,17 +125,14 @@ export const deleteAssuranceCaseNode = async (
 
 /**
  * Updates an existing assurance case node by sending a PUT request to the specified API endpoint.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const updateAssuranceCaseNode = async (
 	_type: string,
 	id: number | string,
-	token: string | null,
+	_token: string | null,
 	updateItem: unknown
 ): Promise<boolean | { error: string }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/elements/${id}`;
@@ -167,16 +158,13 @@ export const updateAssuranceCaseNode = async (
 
 /**
  * Gets an assurance case node by ID.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const getAssuranceCaseNode = async (
 	_type: string,
 	id: number | string,
-	token: string | null
+	_token: string | null
 ): Promise<ApiNodeResponse | { error: string } | false> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/elements/${id}`;
@@ -203,17 +191,14 @@ export const getAssuranceCaseNode = async (
 
 /**
  * Detaches an element from its parent in the assurance case.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const detachCaseElement = async (
 	_node: ReactFlowNode,
 	type: string,
 	id: number | string,
-	token: string | null
+	_token: string | null
 ): Promise<{ detached: boolean } | { error: string | unknown }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/elements/${id}/detach?element_type=${type}`;
@@ -242,17 +227,14 @@ export const detachCaseElement = async (
 
 /**
  * Attaches an orphan node to a specified parent in the assurance case.
+ * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const attachCaseElement = async (
 	orphan: ReactFlowNode,
 	id: number | string,
-	token: string | null,
+	_token: string | null,
 	parent: ReactFlowNode
 ): Promise<{ attached: boolean } | { error: string | unknown }> => {
-	if (!token) {
-		return { error: "No token" };
-	}
-
 	// Build payload for attach operation
 	const payload: {
 		parentId?: string | number;
