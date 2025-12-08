@@ -37,11 +37,44 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/tea-app
+  PROD_APP_URL: https://assuranceplatform.azurewebsites.net
+  STAGING_APP_URL: https://staging-assuranceplatform.azurewebsites.net
 
 jobs:
+  validate:
+    name: Validate Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Run linter
+        run: pnpm exec ultracite check
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: validate
     permissions:
       contents: read
       packages: write
@@ -129,8 +162,68 @@ jobs:
 
       - name: Deploy to Azure (Production)
         if: github.ref == 'refs/heads/main'
+        id: deploy-prod
+        env:
+          WEBHOOK_URL: ${{ secrets.AZURE_WEBAPP_WEBHOOK_PROD }}
         run: |
-          curl -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_PROD }}" -H "Content-Length: 0"
+          echo "Triggering Azure deployment webhook..."
+
+          # Webhook with retry logic
+          MAX_RETRIES=3
+          DEPLOY_SUCCESS=false
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Deployment attempt $i of $MAX_RETRIES..."
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              -X POST "${WEBHOOK_URL}" \
+              -H "Content-Length: 0")
+
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "Webhook triggered successfully (HTTP $HTTP_STATUS)"
+              DEPLOY_SUCCESS=true
+              break
+            fi
+
+            echo "Webhook returned HTTP $HTTP_STATUS"
+            [ $i -lt $MAX_RETRIES ] && sleep 10
+          done
+
+          if [ "$DEPLOY_SUCCESS" = "false" ]; then
+            echo "::error::Deployment webhook failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+          # Wait for deployment to start
+          echo "Waiting 30 seconds for deployment to propagate..."
+          sleep 30
+
+          # Health check with retries
+          echo "Checking application health..."
+          HEALTH_SUCCESS=false
+
+          for i in $(seq 1 10); do
+            echo "Health check attempt $i of 10..."
+            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 \
+              "${{ env.PROD_APP_URL }}/api/health")
+
+            if [ "$HEALTH_STATUS" = "200" ]; then
+              echo "Application is healthy!"
+              HEALTH_SUCCESS=true
+              break
+            fi
+
+            echo "Health check returned HTTP $HEALTH_STATUS"
+            [ $i -lt 10 ] && sleep 15
+          done
+
+          if [ "$HEALTH_SUCCESS" = "false" ]; then
+            echo "::warning::Application health check did not pass after deployment"
+            echo "DEPLOY_HEALTH=failed" >> $GITHUB_OUTPUT
+          else
+            echo "DEPLOY_HEALTH=success" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push Docker image (Staging branch)
         if: github.ref == 'refs/heads/staging'
@@ -153,8 +246,68 @@ jobs:
 
       - name: Deploy to Azure (Staging)
         if: github.ref == 'refs/heads/staging'
+        id: deploy-staging
+        env:
+          WEBHOOK_URL: ${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}
         run: |
-          curl -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}" -H "Content-Length: 0"
+          echo "Triggering Azure deployment webhook..."
+
+          # Webhook with retry logic
+          MAX_RETRIES=3
+          DEPLOY_SUCCESS=false
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Deployment attempt $i of $MAX_RETRIES..."
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              -X POST "${WEBHOOK_URL}" \
+              -H "Content-Length: 0")
+
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "Webhook triggered successfully (HTTP $HTTP_STATUS)"
+              DEPLOY_SUCCESS=true
+              break
+            fi
+
+            echo "Webhook returned HTTP $HTTP_STATUS"
+            [ $i -lt $MAX_RETRIES ] && sleep 10
+          done
+
+          if [ "$DEPLOY_SUCCESS" = "false" ]; then
+            echo "::error::Deployment webhook failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+
+          # Wait for deployment to start
+          echo "Waiting 30 seconds for deployment to propagate..."
+          sleep 30
+
+          # Health check with retries
+          echo "Checking application health..."
+          HEALTH_SUCCESS=false
+
+          for i in $(seq 1 10); do
+            echo "Health check attempt $i of 10..."
+            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 10 \
+              "${{ env.STAGING_APP_URL }}/api/health")
+
+            if [ "$HEALTH_STATUS" = "200" ]; then
+              echo "Application is healthy!"
+              HEALTH_SUCCESS=true
+              break
+            fi
+
+            echo "Health check returned HTTP $HEALTH_STATUS"
+            [ $i -lt 10 ] && sleep 15
+          done
+
+          if [ "$HEALTH_SUCCESS" = "false" ]; then
+            echo "::warning::Application health check did not pass after deployment"
+            echo "DEPLOY_HEALTH=failed" >> $GITHUB_OUTPUT
+          else
+            echo "DEPLOY_HEALTH=success" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push Docker image (PR/other branches)
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
@@ -174,3 +327,53 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      # GitHub Deployment Summary
+      - name: Create Deployment Summary - Success
+        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="Production"
+            HEALTH_STATUS="${{ steps.deploy-prod.outputs.DEPLOY_HEALTH }}"
+            APP_URL="${{ env.PROD_APP_URL }}"
+          else
+            ENV="Staging"
+            HEALTH_STATUS="${{ steps.deploy-staging.outputs.DEPLOY_HEALTH }}"
+            APP_URL="${{ env.STAGING_APP_URL }}"
+          fi
+
+          if [ "$HEALTH_STATUS" = "success" ]; then
+            HEALTH_ICON="✅"
+          else
+            HEALTH_ICON="⚠️"
+          fi
+
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${ENV} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Health Check** | ${HEALTH_ICON} ${HEALTH_STATUS} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Application** | [${APP_URL}](${APP_URL}) |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create Deployment Summary - Failure
+        if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="Production"
+          else
+            ENV="Staging"
+          fi
+
+          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${ENV} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
