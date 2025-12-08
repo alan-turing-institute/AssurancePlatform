@@ -30,12 +30,12 @@ import { Textarea } from "../ui/textarea";
 const formSchema = z.object({
 	URL: z
 		.string()
-		.min(2, {
-			message: "url must be at least 2 characters.",
-		})
-		.optional(),
+		.optional()
+		.refine((val) => !val || val.length >= 2, {
+			message: "URL must be at least 2 characters.",
+		}),
 	description: z.string().min(2, {
-		message: "Description must be atleast 2 characters",
+		message: "Description must be at least 2 characters",
 	}),
 });
 
