@@ -46,12 +46,12 @@ export async function PATCH(
 				);
 
 		if (result.error) {
-			const status =
-				result.error === "Permission denied"
-					? 403
-					: result.error === "Permission not found"
-						? 404
-						: 400;
+			let status = 400;
+			if (result.error === "Permission denied") {
+				status = 403;
+			} else if (result.error === "Permission not found") {
+				status = 404;
+			}
 			return NextResponse.json({ error: result.error }, { status });
 		}
 
@@ -91,12 +91,12 @@ export async function DELETE(
 		: await revokeUserPermission(session.user.id, caseId, permissionId);
 
 	if (result.error) {
-		const status =
-			result.error === "Permission denied"
-				? 403
-				: result.error === "Permission not found"
-					? 404
-					: 400;
+		let status = 400;
+		if (result.error === "Permission denied") {
+			status = 403;
+		} else if (result.error === "Permission not found") {
+			status = 404;
+		}
 		return NextResponse.json({ error: result.error }, { status });
 	}
 

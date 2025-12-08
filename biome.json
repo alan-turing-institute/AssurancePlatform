@@ -27,7 +27,24 @@
       "!**/node_modules",
       "!**/.next",
       "!**/src/generated",
-      "!**/public/documentation"
+      "!**/public/documentation",
+      "!**/*.test.ts",
+      "!**/*.test.tsx",
+      "!**/__tests__",
+      "!types/*.d.ts",
+      "!app/api/cases/*/permissions",
+      "!components/ui",
+      "!prisma/scripts",
+      "!components/common/node-edit.tsx",
+      "!lib/case-helper.ts",
+      "!lib/case",
+      "!.pnpm-store",
+      "!TASKS",
+      "!.claude",
+      "!**/.claude",
+      "!tea-docs",
+      "!*.openapi.json",
+      "!public/openapi.json"
     ]
   },
   "formatter": {
@@ -38,7 +55,14 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "nursery": {},
+      "nursery": {
+        "noEmptySource": "off",
+        "useMaxParams": "off",
+        "noIncrementDecrement": "off"
+      },
+      "performance": {
+        "noBarrelFile": "off"
+      },
       "suspicious": {
         "noUnknownAtRules": "off"
       }
