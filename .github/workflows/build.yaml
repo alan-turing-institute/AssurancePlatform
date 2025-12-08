@@ -62,6 +62,8 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
 
       - name: Run linter
         run: pnpm exec ultracite check
