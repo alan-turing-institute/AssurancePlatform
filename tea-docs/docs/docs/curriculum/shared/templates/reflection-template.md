@@ -1,0 +1,361 @@
+# Reflection Template
+
+**Purpose:** This template guides critical reflection on your assurance case development process and outcomes.
+
+**How to use:** Answer the questions thoughtfully. There are no "right" answers—the goal is to deepen your understanding through reflection.
+
+---
+## Part 1: Initial Reflection
+
+### Understanding the Goal
+
+**1. What is the primary goal of your assurance case?**
+
+*State your top-level goal claim clearly:*
+
+---
+**2. Why is this goal important?**
+
+*Consider:*
+
+* Who cares about this goal?
+* What happens if the goal isn't met?
+* What values or principles does it represent?
+
+---
+**3. What assumptions are you making about the goal?**
+
+*Consider:*
+
+* What are you taking for granted?
+* What needs to be true for this goal to be meaningful?
+* Are there different interpretations of this goal?
+
+---
+---
+## Part 2: Argument Structure Reflection
+
+### Building the Argument
+
+**4. How did you decide to break down the top-level goal?**
+
+*Consider:*
+
+* What strategies did you use?
+* Why did you choose this particular decomposition?
+* What alternatives did you consider?
+
+---
+**5. What are the key property claims in your argument?**
+
+*List 3-5 main property claims and why they matter:*
+
+1. ***
+2. ***
+3. ***
+4. ***
+5. ***
+
+**6. Are there any claims that were difficult to formulate? Why?**
+
+---
+---
+## Part 3: Evidence and Justification
+
+### Evaluating Your Evidence
+
+**7. What types of evidence are you using?**
+
+*Check all that apply and note specific examples:*
+
+* ☐ Technical evidence (testing, metrics, performance data)
+  * Examples: **********************___**********************
+
+* ☐ Process evidence (audits, certifications, documentation)
+  * Examples: **********************___**********************
+
+* ☐ Stakeholder evidence (surveys, interviews, feedback)
+  * Examples: **********************___**********************
+
+* ☐ Standards or guidelines
+  * Examples: **********************___**********************
+
+* ☐ Other:
+  * Examples: **********************___**********************
+
+**8. Which claims have the strongest evidence? Why?**
+
+---
+**9. Which claims have the weakest evidence? What's missing?**
+
+---
+**10. How confident are you in your evidence overall?**
+
+☐ Very confident—evidence is comprehensive and robust
+☐ Moderately confident—evidence is adequate but has some gaps
+☐ Somewhat confident—significant evidence gaps exist
+☐ Not confident—evidence is insufficient
+
+*Explain your rating:*
+
+---
+---
+## Part 4: Gaps and Limitations
+
+### Identifying Weaknesses
+
+**11. What are the main gaps in your assurance case?**
+
+*Consider:*
+
+* Missing evidence
+* Under-supported claims
+* Incomplete strategies
+* Unaddressed counterarguments
+
+---
+**12. What limitations or boundaries apply to your claims?**
+
+*Consider:*
+
+* Specific contexts where claims are valid
+* Conditions that must be met
+* Scenarios not covered
+
+---
+**13. What assumptions might be questionable or controversial?**
+
+---
+**14. What counterarguments or challenges might someone raise?**
+
+---
+---
+## Part 5: Stakeholder Perspectives
+
+### Considering Different Viewpoints
+
+**15. Who are the key stakeholders for this assurance case?**
+
+*List stakeholder groups:*
+
+1. ***
+2. ***
+3. ***
+4. ***
+
+**16. How might different stakeholders view your argument?**
+
+*For each major stakeholder group, consider:*
+
+* What would they find convincing?
+* What concerns might they have?
+* What additional evidence might they want?
+
+---
+**17. Whose voices or perspectives might be missing?**
+
+---
+**18. How have you (or could you) incorporate stakeholder input?**
+
+---
+---
+## Part 6: Ethical Considerations
+
+### Values and Trade-offs
+
+**19. What values are embedded in your assurance case?**
+
+*Consider:*
+
+* Safety, fairness, privacy, transparency, accountability, etc.
+* Which values take priority?
+* Are there value conflicts?
+
+---
+**20. Are there trade-offs between different goals or values?**
+
+*For example:*
+
+* Performance vs. fairness
+* Privacy vs. transparency
+* Innovation vs. safety
+
+---
+**21. How did you navigate these trade-offs?**
+
+---
+**22. Are there ethical concerns that your case doesn't fully address?**
+
+---
+---
+## Part 7: Process Reflection
+
+### Learning and Development
+
+**23. What was most challenging about developing this assurance case?**
+
+---
+**24. What did you learn through this process?**
+
+*Consider:*
+
+* About the system itself
+* About argument structure
+* About evidence quality
+* About your own assumptions
+
+---
+**25. How has your thinking evolved since you started?**
+
+---
+**26. If you were starting over, what would you do differently?**
+
+---
+---
+## Part 8: Looking Forward
+
+### Next Steps and Improvement
+
+**27. What are your priorities for strengthening this assurance case?**
+
+*Rank your top 3-5 priorities:*
+
+1. ***
+2. ***
+3. ***
+4. ***
+5. ***
+
+**28. What evidence do you need to gather?**
+
+---
+**29. Who do you need to consult or engage with?**
+
+---
+**30. What revisions are needed to your argument structure?**
+
+---
+**31. How will you know when the assurance case is "good enough"?**
+
+*Consider:*
+
+* What criteria define sufficiency?
+* Who needs to be convinced?
+* What level of confidence is appropriate?
+
+---
+---
+## Part 9: Meta-Reflection
+
+### Reflecting on Reflection
+
+**32. How has this reflection exercise changed your understanding?**
+
+---
+**33. What questions remain unanswered?**
+
+---
+**34. What do you still feel uncertain about?**
+
+---
+---
+## Summary and Action Plan
+
+### Key Insights
+
+**What are your 3 most important insights from this reflection?**
+
+1. ***
+
+2. ***
+
+3. ***
+
+### Immediate Actions
+
+**What will you do in the next week to improve your assurance case?**
+
+* \[ ] \*\*\*
+* \[ ] \*\*\*
+* \[ ] \*\*\*
+* \[ ] \*\*\*
+
+### Longer-term Actions
+
+**What will you do in the coming months?**
+
+* \[ ] \*\*\*
+* \[ ] \*\*\*
+* \[ ] \*\*\*
+
+---
+## Optional: Peer Feedback
+
+If sharing this reflection with peers or mentors:
+
+**What specific feedback are you seeking?**
+
+---
+**What aspects of your case would you like others to challenge?**
+
+---
+---
+## Reflection Log
+
+Use this space to track your reflections over time:
+
+**Date:** ******___******
+**Key changes since last reflection:**
+
+---
+**Date:** ******___******
+**Key changes since last reflection:**
+
+---
+**Date:** ******___******
+**Key changes since last reflection:**
+
+---
+---
+## Tips for Effective Reflection
+
+**Be honest:**
+
+* There's value in acknowledging uncertainty and weaknesses
+* Reflection is for learning, not performing
+
+**Be specific:**
+
+* Vague reflections lead to vague insights
+* Use concrete examples from your case
+
+**Be critical:**
+
+* Question your own assumptions
+* Consider alternative perspectives
+* Identify genuine weaknesses
+
+**Be constructive:**
+
+* Every weakness is an opportunity for improvement
+* Focus on actionable insights
+
+**Be regular:**
+
+* Reflect at key milestones
+* Revisit reflections as your case evolves
+* Track how your thinking changes
+
+---
+## Further Resources
+
+* [TEA Glossary: Critical Reflection](../../shared/glossary.md#critical-reflection)
+* [TEA Glossary: Deliberation](../../shared/glossary.md#deliberation)
+* [Module 3: Letting the TEA Steep](../../tea-trainee/03-steep-tea.md)
+* [Evidence Quality Rubric](./evidence-quality-rubric.md)
+* [Peer Review Checklist](./peer-review-checklist.md)
+
+---
+**Version:** 1.0
+**Last Updated:** November 2025
+**License:** This template is part of the TEA Platform documentation (MIT License)

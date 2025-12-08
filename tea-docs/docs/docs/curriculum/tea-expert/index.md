@@ -1,0 +1,16 @@
+---
+title: "TEA Expert"
+description: "About the TEA Expert stage - for those who wish to establish best practices"
+level: expert
+sidebar_label: "About this Stage"
+tags:
+  - learning-modules
+
+---
+# About this Stage
+
+:::warning[Coming Soon!]
+This stage is under development. Please check back soon.
+:::
+
+This stage in the TEA curriculum is for those who wish to hone their knowledge and understanding, such that they are able to establish best practices alongside other advanced members of the TEA community and wider assurance ecosystem.

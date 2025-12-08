@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/hooks/*": ["./hooks/*"],
+      "@/styles/*": ["./styles/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "components/**/*",
+    "lib/**/*",
+    "hooks/**/*",
+    "styles/**/*"
+  ],
+  "exclude": ["node_modules", ".docusaurus", "build"]
+}

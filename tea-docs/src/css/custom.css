@@ -10,117 +10,367 @@
 
 /* Base Infima overrides */
 :root {
-	--ifm-color-primary: #4338ca;
-	--ifm-color-primary-dark: #3b31b7;
-	--ifm-color-primary-darker: #382ead;
-	--ifm-color-primary-darkest: #2e268f;
-	--ifm-color-primary-light: #564ccf;
-	--ifm-color-primary-lighter: #6057d2;
-	--ifm-color-primary-lightest: #6f67d6;
-	--ifm-code-font-size: 95%;
-	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-color-primary: #4338ca;
+  --ifm-color-primary-dark: #3b31b7;
+  --ifm-color-primary-darker: #382ead;
+  --ifm-color-primary-darkest: #2e268f;
+  --ifm-color-primary-light: #564ccf;
+  --ifm-color-primary-lighter: #6057d2;
+  --ifm-color-primary-lightest: #6f67d6;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 
-	--ifm-navbar-background-color: #4f46e5;
-	--ifm-navbar-link-color: #fff;
-	--ifm-navbar-link-hover-color: #ffffff;
+  --ifm-navbar-background-color: #4f46e5;
+  --ifm-navbar-link-color: #fff;
+  --ifm-navbar-link-hover-color: #ffffff;
 }
 
 /* DESKTOP NAVBAR: Only apply purple on desktop */
 @media (min-width: 1024px) {
-	:root {
-		--ifm-navbar-background-color: #4f46e5;
-		--ifm-navbar-link-color: #fff;
-		--ifm-navbar-link-hover-color: #ffffff;
-	}
+  :root {
+    --ifm-navbar-background-color: #4f46e5;
+    --ifm-navbar-link-color: #fff;
+    --ifm-navbar-link-hover-color: #ffffff;
+  }
 }
 
 /* LIGHT MODE MOBILE MENU (sidebar) styles */
 .menu {
-	background-color: #ffffff !important;
+  background-color: #ffffff !important;
 }
 
 .menu__link {
-	color: #111827 !important;
+  color: #111827 !important;
 }
 
 .menu__link:hover {
-	color: #1f2937 !important;
+  color: #1f2937 !important;
 }
 
 .menu__link--active {
-	color: #374151 !important;
+  color: #374151 !important;
 }
 
 .menu__list-item .menu__link--sublist {
-	color: #111827 !important;
+  color: #111827 !important;
 }
 
 .menu__link--sublist.menu__link--disabled {
-	color: #6b7280 !important;
+  color: #6b7280 !important;
 }
 
 /* DARK MODE overrides */
 [data-theme="dark"] {
-	--ifm-color-primary: #8b5cf6;
-	--ifm-color-primary-dark: #c9b2fb;
-	--ifm-color-primary-darker: #c9b2fb;
-	--ifm-color-primary-darkest: #c9b2fb;
-	--ifm-color-primary-light: #c9b2fb;
-	--ifm-color-primary-lighter: #c9b2fb;
-	--ifm-color-primary-lightest: #cfbcfb;
-	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #8b5cf6;
+  --ifm-color-primary-dark: #c9b2fb;
+  --ifm-color-primary-darker: #c9b2fb;
+  --ifm-color-primary-darkest: #c9b2fb;
+  --ifm-color-primary-light: #c9b2fb;
+  --ifm-color-primary-lighter: #c9b2fb;
+  --ifm-color-primary-lightest: #cfbcfb;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 
-	--ifm-navbar-background-color: hsl(223, 74%, 7%);
-	--ifm-background-color: hsl(222.2 84% 4.9%) !important;
-	--ifm-navbar-link-hover-color: #8b5cf6;
+  --ifm-navbar-background-color: hsl(223, 74%, 7%);
+  --ifm-background-color: hsl(222.2 84% 4.9%) !important;
+  --ifm-navbar-link-hover-color: #8b5cf6;
 }
 
 /* DARK MODE: match sidebar to background */
 [data-theme="dark"] .menu {
-	background-color: hsl(222.2 84% 4.9%) !important;
+  background-color: hsl(222.2 84% 4.9%) !important;
 }
 
 [data-theme="dark"] .menu__link {
-	color: #f3f4f6 !important; /* Light gray text */
+  color: #f3f4f6 !important; /* Light gray text */
 }
 
 [data-theme="dark"] .menu__link:hover {
-	color: #ffffff !important;
+  color: #ffffff !important;
 }
 
 [data-theme="dark"] .menu__link--active {
-	color: #c4b5fd !important; /* Light violet */
+  color: #c4b5fd !important; /* Light violet */
 }
 
 [data-theme="dark"] .menu__link--sublist {
-	color: #f3f4f6 !important;
+  color: #f3f4f6 !important;
 }
 
 [data-theme="dark"] .menu__link--sublist.menu__link--disabled {
-	color: #9ca3af !important;
+  color: #9ca3af !important;
 }
 
 /* Optional: Font size */
 .menu__list {
-	font-size: 0.96rem;
+  font-size: 0.96rem;
 }
 
 /* Toggle button */
 .toggleButton_gllP {
-	color: white;
-	fill: white;
+  color: white;
+  fill: white;
 }
 
 .toggleButton_gllP:hover {
-	background: #ffffff20 !important;
+  background: #ffffff20 !important;
 }
 
 /* Make mobile menu icon white */
 .navbar__toggle {
-	color: white !important;
-	fill: white !important;
+  color: white !important;
+  fill: white !important;
 }
 
 .footer {
-	display: none;
+  display: none;
+}
+
+/* ========================================================================
+   shadcn/ui Theme Variables
+   ======================================================================== */
+
+@layer base {
+  :root {
+    /* Base radius for rounded corners */
+    --radius: 0.5rem;
+
+    /* Light mode theme colors (shadcn/ui default) */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+  }
+
+  /* Dark mode theme colors (FloraFauna.ai-inspired) */
+  [data-theme="dark"] {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+/* ========================================================================
+   React Flow Custom Styles
+   ======================================================================== */
+
+/* ========================================================================
+   Light Mode - React Flow Styles
+   ======================================================================== */
+:root {
+  /* Light mode React Flow variables */
+  --rf-background: #f5f5f5;
+  --rf-background-pattern: rgba(0, 0, 0, 0.1);
+  --rf-node-bg: rgba(255, 255, 255, 0.95);
+  --rf-node-bg-hover: rgba(255, 255, 255, 1);
+  --rf-node-border: rgba(0, 0, 0, 0.15);
+  --rf-node-border-hover: rgba(0, 0, 0, 0.25);
+  --rf-text: #1a1a1a;
+  --rf-text-secondary: rgba(0, 0, 0, 0.7);
+  --rf-text-tertiary: rgba(0, 0, 0, 0.5);
+  --rf-edge-stroke: rgba(0, 0, 0, 0.3);
+  --rf-edge-stroke-selected: rgba(59, 130, 246, 0.9);
+  --rf-edge-stroke-animated: rgba(139, 92, 246, 0.7);
+  --rf-controls-bg: rgba(255, 255, 255, 0.8);
+  --rf-controls-border: rgba(0, 0, 0, 0.1);
+  --rf-controls-text: rgba(0, 0, 0, 0.7);
+  --rf-controls-text-hover: rgba(0, 0, 0, 0.95);
+  --rf-controls-bg-hover: rgba(0, 0, 0, 0.05);
+  --rf-minimap-bg: rgba(255, 255, 255, 0.8);
+  --rf-minimap-border: rgba(0, 0, 0, 0.1);
+  --rf-glassmorphism-bg: rgba(255, 255, 255, 0.8);
+  --rf-glassmorphism-bg-hover: rgba(255, 255, 255, 0.9);
+  --rf-glassmorphism-border: rgba(0, 0, 0, 0.1);
+  --rf-shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================================================
+   Dark Mode - React Flow Styles
+   ======================================================================== */
+[data-theme="dark"] {
+  /* Dark mode React Flow variables */
+  --rf-background: #0a0a0a;
+  --rf-background-pattern: rgba(255, 255, 255, 0.05);
+  --rf-node-bg: rgba(0, 0, 0, 0.8);
+  --rf-node-bg-hover: rgba(0, 0, 0, 0.9);
+  --rf-node-border: rgba(255, 255, 255, 0.1);
+  --rf-node-border-hover: rgba(255, 255, 255, 0.2);
+  --rf-text: #ffffff;
+  --rf-text-secondary: rgba(255, 255, 255, 0.8);
+  --rf-text-tertiary: rgba(255, 255, 255, 0.6);
+  --rf-edge-stroke: rgba(255, 255, 255, 0.3);
+  --rf-edge-stroke-selected: rgba(59, 130, 246, 0.8);
+  --rf-edge-stroke-animated: rgba(139, 92, 246, 0.6);
+  --rf-controls-bg: rgba(0, 0, 0, 0.6);
+  --rf-controls-border: rgba(255, 255, 255, 0.1);
+  --rf-controls-text: rgba(255, 255, 255, 0.6);
+  --rf-controls-text-hover: rgba(255, 255, 255, 0.95);
+  --rf-controls-bg-hover: rgba(255, 255, 255, 0.05);
+  --rf-minimap-bg: rgba(0, 0, 0, 0.6);
+  --rf-minimap-border: rgba(255, 255, 255, 0.1);
+  --rf-glassmorphism-bg: rgba(0, 0, 0, 0.6);
+  --rf-glassmorphism-bg-hover: rgba(0, 0, 0, 0.75);
+  --rf-glassmorphism-border: rgba(255, 255, 255, 0.1);
+  --rf-shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================================================
+   React Flow Canvas - Theme-aware
+   ======================================================================== */
+.react-flow {
+  background-color: var(--rf-background);
+  transition: background-color 0.3s ease;
+}
+
+.react-flow__background {
+  background-color: var(--rf-background);
+}
+
+.react-flow__background-pattern {
+  stroke: var(--rf-background-pattern);
+}
+
+/* ========================================================================
+   Edge Styling - Theme-aware
+   ======================================================================== */
+.react-flow__edge-path {
+  stroke: var(--rf-edge-stroke);
+  stroke-width: 2;
+  transition: stroke 0.3s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--rf-edge-stroke-selected);
+  stroke-width: 3;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: var(--rf-edge-stroke-animated);
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* ========================================================================
+   Controls - Theme-aware Glassmorphism
+   ======================================================================== */
+.react-flow__controls {
+  background: var(--rf-controls-bg);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--rf-controls-border);
+  border-radius: 0.75rem;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  color: var(--rf-controls-text);
+  border: none;
+  border-bottom: 1px solid var(--rf-controls-border);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--rf-controls-bg-hover);
+  color: var(--rf-controls-text-hover);
+}
+
+/* ========================================================================
+   MiniMap - Theme-aware Glassmorphism
+   ======================================================================== */
+.react-flow__minimap {
+  background: var(--rf-minimap-bg);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid var(--rf-minimap-border);
+  border-radius: 0.75rem;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ========================================================================
+   Glassmorphism Utilities - Theme-aware
+   ======================================================================== */
+
+.glassmorphism {
+  background: var(--rf-glassmorphism-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--rf-glassmorphism-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.glassmorphism:hover {
+  background: var(--rf-glassmorphism-bg-hover);
+}
+
+/* Support for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(40px)) {
+  [data-theme="light"] .f-effect-backdrop-blur-lg {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  [data-theme="light"] .glassmorphism {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  [data-theme="dark"] .f-effect-backdrop-blur-lg {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  [data-theme="dark"] .glassmorphism {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* ========================================================================
+   Animation Utilities
+   ======================================================================== */
+
+.spring-medium {
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .spring-medium,
+  .react-flow__edge.animated .react-flow__edge-path {
+    animation: none;
+    transition: none;
+  }
 }
