@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunktea_docs=self.webpackChunktea_docs||[]).push([[9647],{7407:(e,s,r)=>{r.r(s),r.d(s,{default:()=>l});r(758);var a=r(3526),c=r(3681),t=r(623),u=r(389),d=r(6097),n=r(6070);function l(e){return(0,n.jsx)(c.e3,{className:(0,a.A)(t.G.wrapper.docsPages),children:(0,n.jsx)(d.A,{children:(0,u.v)(e.route.routes)})})}}}]);

@@ -1,109 +1,85 @@
 # Trustworthy & Ethical Assurance Platform
 
+![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](hero.gif)
+
+[![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## About this Repository 🗂
+
+This repository contains the code and documentation for the Trustworthy and Ethical Assurance (TEA) platform—an application for building trustworthy and ethical assurance cases, developed by researchers at the [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm) and [University of York](https://www.york.ac.uk/assuring-autonomy/).
+
+### What is TEA? 🫖
+
+The Trustworthy and Ethical Assurance (TEA) Platform is a collaborative tool for developing structured arguments about how ethical principles and trustworthy practices have been upheld throughout the lifecycle of data-driven technologies.
+
+At its core, TEA helps multi-stakeholder project teams create **assurance cases**: structured, graphical representations that demonstrate how goals like fairness, explainability, safety, or sustainability have been achieved over the course of a project's lifecycle.
+
+The platform addresses a fundamental challenge in responsible technology development: how can project teams provide **justified evidence** that ethical principles have been upheld?
+
+TEA supports this through three integrated components:
+
+1. An interactive tool for building assurance cases
+2. A comprehensive framework of skills and capabilities resources
+3. A collaborative community infrastructure that promotes open practices and shared learning in the trustworthy assurance ecosystem
+
+### How to learn TEA? 🎓
+
+Whether you're new to assurance cases or looking to deepen your expertise, our structured curriculum provides pathways for all skill levels:
+
+- **TEA Trainee** — Start your journey with foundational concepts and hands-on exercises
+- **TEA Specialist** — Develop advanced skills in building and reviewing assurance cases
+- **TEA Expert** — Master the art of facilitating assurance processes across organisations
+
+Explore the [TEA Curriculum](https://assuranceplatform.azurewebsites.net/documentation/docs/curriculum) to begin your learning journey.
+
+### Developer Information 💻
+
+The TEA Platform is a full-stack web application built with modern technologies:
+
+- **Frontend**: Next.js 15, React 18, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: PostgreSQL
+- **Authentication**: NextAuth.js with GitHub OAuth and credentials
+- **Visualisation**: React Flow for interactive assurance case diagrams
+
+#### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+cd AssurancePlatform
+
+# Copy environment file and configure
+cp .env.example .env.local
+
+# Start the development environment
+docker-compose -f docker-compose.development.yml up -d --build
+
+# Access at http://localhost:3000
+```
+
+For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/documentation/docs/technical-guide).
+
+### Further Resources 📚
+
+The following resources provide additional information about the Trustworthy and Ethical Assurance framework and methodology:
+
+- Burr, C., Arana, S., Gould Van Praag, C., Habli, I., Kaas, M., Katell, M., Laher, S., Leslie, D., Niederer, S., Ozturk, B., Polo, N., Porter, Z., Ryan, P., Sharan, M., Solis Lemus, J. A., Strocchi, M., Westerling, K., (2024) Trustworthy and Ethical Assurance of Digital Health and Healthcare. [https://doi.org/10.5281/zenodo.10532573](https://doi.org/10.5281/zenodo.10532573)
+- Porter, Z., Habli, I., McDermid, J. et al. A principles-based ethics assurance argument pattern for AI and autonomous systems. AI Ethics 4, 593–616 (2024). [https://doi.org/10.1007/s43681-023-00297-2](https://doi.org/10.1007/s43681-023-00297-2)
+- Burr, C. and Powell, R., (2022) Trustworthy Assurance of Digital Mental Healthcare. The Alan Turing Institute [https://doi.org/10.5281/zenodo.7107200](https://doi.org/10.5281/zenodo.7107200)
+- Burr, C., & Leslie, D. (2022). Ethical assurance: A practical approach to the responsible design, development, and deployment of data-driven technologies. AI and Ethics. [https://doi.org/10.1007/s43681-022-00178-0](https://doi.org/10.1007/s43681-022-00178-0)
+
+### Funding Statements 💷
+
+From March 2024 until September 2024, the project is funded by UKRI's [BRAID programme](https://braiduk.org/) as part of a scoping research award for the [Trustworthy and Ethical Assurance of Digital Twins](https://www.turing.ac.uk/research/research-projects/trustworthy-and-ethical-assurance-digital-twins-tea-dt) project.
+
+Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
+Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
+
 TEA (Trustworthy & Ethical Assurance) Platform is a full-stack web application for creating and sharing structured assurance cases. Built with Next.js, React, TypeScript, and Prisma ORM.
-
-## Getting Started
-
-**Demo:** [Create Assurance Case with Goals, Claims and Strategies](https://scribehow.com/shared/Create_Assurance_Case_with_Goals_Claims_and_Strategies__vODBFxX_S3WTmdL8Zzd6Nw?referrer=workspace)
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
-- [Node.js](https://nodejs.org/) (v20+) and [pnpm](https://pnpm.io/) (for local development without Docker)
-
-### Quick Start (Docker)
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-   cd AssurancePlatform
-   ```
-
-2. Copy the environment file and configure:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-3. Start the development environment:
-
-   ```bash
-   docker-compose -f docker-compose.development.yml up -d --build
-   ```
-
-4. Access the application at [http://localhost:3000](http://localhost:3000)
-
-### Environment Variables
-
-Create a `.env.local` file with the following variables:
-
-```bash
-# Database
-DATABASE_URL="postgresql://tea_user:tea_password@postgres:5432/tea_dev"
-
-# Authentication
-NEXTAUTH_SECRET="your-secret-key"  # Generate with: openssl rand -base64 32
-NEXTAUTH_URL="http://localhost:3000"
-
-# GitHub OAuth (optional)
-GITHUB_APP_CLIENT_ID="your-github-client-id"
-GITHUB_APP_CLIENT_SECRET="your-github-client-secret"
-```
-
-### Development Commands
-
-```bash
-# Start all services
-docker-compose -f docker-compose.development.yml up -d
-
-# View logs
-docker-compose -f docker-compose.development.yml logs -f
-
-# Stop all services
-docker-compose -f docker-compose.development.yml down
-
-# Run database migrations
-docker exec tea_app_dev npx prisma migrate dev 
-
-# Run tests
-docker exec tea_app_dev pnpm run test
-```
-
-### Local Development (without Docker)
-
-If you prefer to run without Docker:
-
-```bash
-# Install dependencies
-pnpm install
-
-# Generate Prisma client
-npx prisma generate 
-
-# Run development server
-pnpm run dev
-```
-
-Note: You'll need a PostgreSQL database running locally and update `DATABASE_URL` accordingly.
-
-### Production
-
-For production deployment, use the production Docker Compose configuration:
-
-```bash
-docker-compose up -d --build
-```
-
-## Documentation
-
-Full documentation is available in the `tea-docs/` directory. To run the documentation site locally:
-
-```bash
-cd tea-docs
-pnpm install
-pnpm start
-```
 
 ## Contributing
 
