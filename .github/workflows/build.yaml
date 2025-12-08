@@ -163,6 +163,8 @@ jobs:
       - name: Deploy to Azure (Production)
         if: github.ref == 'refs/heads/main'
         id: deploy-prod
+        env:
+          WEBHOOK_URL: ${{ secrets.AZURE_WEBAPP_WEBHOOK_PROD }}
         run: |
           echo "Triggering Azure deployment webhook..."
 
@@ -174,7 +176,7 @@ jobs:
             echo "Deployment attempt $i of $MAX_RETRIES..."
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 30 \
-              -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_PROD }}" \
+              -X POST "${WEBHOOK_URL}" \
               -H "Content-Length: 0")
 
             if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
@@ -245,6 +247,8 @@ jobs:
       - name: Deploy to Azure (Staging)
         if: github.ref == 'refs/heads/staging'
         id: deploy-staging
+        env:
+          WEBHOOK_URL: ${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}
         run: |
           echo "Triggering Azure deployment webhook..."
 
@@ -256,7 +260,7 @@ jobs:
             echo "Deployment attempt $i of $MAX_RETRIES..."
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 30 \
-              -X POST "${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}" \
+              -X POST "${WEBHOOK_URL}" \
               -H "Content-Length: 0")
 
             if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
