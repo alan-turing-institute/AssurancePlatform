@@ -1,5 +1,7 @@
 # Equitable Flood Risk Assessment System
 
+![Flood Risk Assessment Hero Image](/img/case-studies/flood-risk-assessment.jpeg)
+
 | Field | Details |
 |-------|---------|
 | **Domain** | Environmental Science |

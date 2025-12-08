@@ -1,5 +1,7 @@
 # Explainable Diabetic Retinopathy Screening System
 
+![Diabetic Retinopathy Screening Hero Image](/img/case-studies/diabetic-retinopathy-screening.jpeg)
+
 | Field | Details |
 |-------|---------|
 | **Domain** | Healthcare |

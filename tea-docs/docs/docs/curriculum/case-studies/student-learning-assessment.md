@@ -1,5 +1,7 @@
 # Explainable Student Learning Assessment System
 
+![Student Learning Assessment Hero Image](/img/case-studies/student-learning-assessment.jpeg)
+
 | Field | Details |
 |-------|---------|
 | **Domain** | Education |

@@ -1,5 +1,7 @@
 # Fair Crop Damage Assessment System
 
+![Crop Damage Assessment Hero Image](/img/case-studies/crop-damage-assessment.jpeg)
+
 | Field | Details |
 |-------|---------|
 | **Domain** | Agricultural Finance |

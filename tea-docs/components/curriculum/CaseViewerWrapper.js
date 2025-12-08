@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import BrowserOnly from '@docusaurus/BrowserOnly';
 import InteractiveCaseViewer from './InteractiveCaseViewer';
+import EnhancedInteractiveCaseViewer from './EnhancedInteractiveCaseViewer';
 
 /**
  * Wrapper component that loads case data from static folder and renders InteractiveCaseViewer
@@ -11,7 +13,8 @@ const CaseViewerWrapper = ({
   enableExploration = true,
   onNodeClick = null,
   guidedPath = [],
-  highlightedNodes = []
+  highlightedNodes = [],
+  useEnhanced = false  // New prop to choose enhanced viewer
 }) => {
   const [caseData, setCaseData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,16 +79,26 @@ const CaseViewerWrapper = ({
     );
   }
 
-  return (
-    <InteractiveCaseViewer
-      caseData={caseData}
-      showAllNodes={showAllNodes}
-      enableExploration={enableExploration}
-      onNodeClick={onNodeClick}
-      guidedPath={guidedPath}
-      highlightedNodes={highlightedNodes}
-    />
-  );
+  // Choose which viewer to render based on useEnhanced prop
+  const viewerProps = {
+    caseData,
+    showAllNodes,
+    enableExploration,
+    onNodeClick,
+    guidedPath,
+    highlightedNodes,
+  };
+
+  // Wrap EnhancedInteractiveCaseViewer with BrowserOnly since it uses Docusaurus hooks
+  if (useEnhanced) {
+    return (
+      <BrowserOnly fallback={<div>Loading...</div>}>
+        {() => <EnhancedInteractiveCaseViewer {...viewerProps} />}
+      </BrowserOnly>
+    );
+  }
+
+  return <InteractiveCaseViewer {...viewerProps} />;
 };
 
 export default CaseViewerWrapper;

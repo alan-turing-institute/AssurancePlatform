@@ -12,6 +12,7 @@ import ReactFlow, {
   useReactFlow
 } from 'reactflow';
 import { motion } from 'framer-motion';
+import { getLayoutedElements } from '../../lib/layout-helper';
 import {
   ChevronRight,
   Info,
@@ -157,8 +158,22 @@ const nodeTypes = {
 };
 
 // Control buttons component that uses useReactFlow
-const ControlButtons = ({ nodes, setRevealedNodes }) => {
+const ControlButtons = ({ nodes, edges, setNodes, setEdges, setRevealedNodes }) => {
   const { fitView } = useReactFlow();
+
+  const handleAutoLayout = useCallback(() => {
+    // Apply Dagre layout to arrange nodes
+    const layouted = getLayoutedElements(nodes, edges, { direction: 'TB' });
+
+    // Update nodes with new positions
+    setNodes(layouted.nodes);
+    setEdges(layouted.edges);
+
+    // Fit view to show all nodes after layout
+    window.requestAnimationFrame(() => {
+      fitView({ padding: 0.2, duration: 400 });
+    });
+  }, [nodes, edges, setNodes, setEdges, fitView]);
 
   return (
     <div className="absolute top-4 left-4 z-10 flex gap-2">
@@ -177,7 +192,7 @@ const ControlButtons = ({ nodes, setRevealedNodes }) => {
         Reset
       </button>
       <button
-        onClick={() => fitView({ padding: 0.2, duration: 400 })}
+        onClick={handleAutoLayout}
         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition flex items-center gap-1"
       >
         <Maximize2 className="w-4 h-4" />
@@ -454,7 +469,13 @@ const InteractiveCaseViewer = ({
         fitView
         attributionPosition="bottom-left"
       >
-        <ControlButtons nodes={nodes} setRevealedNodes={setRevealedNodes} />
+        <ControlButtons
+          nodes={nodes}
+          edges={edges}
+          setNodes={setNodes}
+          setEdges={setEdges}
+          setRevealedNodes={setRevealedNodes}
+        />
         <Background variant="dots" gap={12} size={1} />
         <Controls />
         <MiniMap />
