@@ -30,6 +30,8 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=2048
     volumes:
       - .:/app
       - app_next:/app/.next

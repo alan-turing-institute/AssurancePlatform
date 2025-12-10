@@ -25,10 +25,6 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-# Install tea-docs dependencies (separate layer for better caching)
-COPY --link tea-docs/package.json tea-docs/pnpm-lock.yaml ./tea-docs/
-RUN cd tea-docs && corepack enable pnpm && pnpm i --frozen-lockfile
-
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
@@ -38,7 +34,6 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
-COPY --from=deps --link /app/tea-docs/node_modules ./tea-docs/node_modules
 COPY --link . .
 
 # Expose the build arguments as environment variables for the build process
@@ -48,12 +43,8 @@ ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 ENV DATABASE_URL=${DATABASE_URL}
 
-# Build documentation (only if not pre-built by CI)
-RUN if [ ! -d "public/documentation" ]; then \
-      cd tea-docs && corepack enable pnpm && pnpm build; \
-    else \
-      echo "Documentation already pre-built by CI"; \
-    fi
+# Note: Documentation is now built as part of Next.js (Nextra integration)
+# No separate tea-docs build step needed
 
 # Generate Prisma client and build Next.js
 # Dummy DATABASE_URL is needed at build time for Prisma config and Next.js static analysis
