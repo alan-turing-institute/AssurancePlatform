@@ -13,7 +13,7 @@ function Header() {
 
 	const navigation = [
 		// { name: 'Showcase', href: '/documentation' },
-		{ name: "Documentation", href: "/documentation", external: true },
+		{ name: "Documentation", href: "/docs", external: false },
 		// { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/' },
 		{
 			name: "GitHub",

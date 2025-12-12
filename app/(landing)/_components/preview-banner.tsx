@@ -17,7 +17,7 @@ export default function PreviewBanner() {
 				<div className="text-sm text-white leading-6">
 					<Link
 						className="flex items-center justify-start gap-2"
-						href="https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
+						href="/docs/community/community-support"
 					>
 						<MessageCircleWarning className="hidden h-4 w-4 md:block" />
 						<div className="flex flex-col items-start justify-start gap-2 md:flex-row md:items-center">

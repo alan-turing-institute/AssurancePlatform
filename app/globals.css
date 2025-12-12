@@ -178,3 +178,465 @@
 	background-color: hsl(var(--accent));
 	color: hsl(var(--accent-foreground));
 }
+
+/* ========================================================================
+   React Flow Custom Styles (Curriculum Documentation)
+   ======================================================================== */
+
+/* ========================================================================
+   Light Mode - React Flow Variables
+   ======================================================================== */
+:root {
+	--rf-background: #f5f5f5;
+	--rf-background-pattern: rgba(0, 0, 0, 0.1);
+	--rf-node-bg: rgba(255, 255, 255, 0.95);
+	--rf-node-bg-hover: rgba(255, 255, 255, 1);
+	--rf-node-border: rgba(0, 0, 0, 0.15);
+	--rf-node-border-hover: rgba(0, 0, 0, 0.25);
+	--rf-text: #1a1a1a;
+	--rf-text-secondary: rgba(0, 0, 0, 0.7);
+	--rf-text-tertiary: rgba(0, 0, 0, 0.5);
+	--rf-edge-stroke: rgba(0, 0, 0, 0.3);
+	--rf-edge-stroke-selected: rgba(59, 130, 246, 0.9);
+	--rf-edge-stroke-animated: rgba(139, 92, 246, 0.7);
+	--rf-controls-bg: rgba(255, 255, 255, 0.8);
+	--rf-controls-border: rgba(0, 0, 0, 0.1);
+	--rf-controls-text: rgba(0, 0, 0, 0.7);
+	--rf-controls-text-hover: rgba(0, 0, 0, 0.95);
+	--rf-controls-bg-hover: rgba(0, 0, 0, 0.05);
+	--rf-minimap-bg: rgba(255, 255, 255, 0.8);
+	--rf-minimap-border: rgba(0, 0, 0, 0.1);
+	--rf-glassmorphism-bg: rgba(255, 255, 255, 0.8);
+	--rf-glassmorphism-bg-hover: rgba(255, 255, 255, 0.9);
+	--rf-glassmorphism-border: rgba(0, 0, 0, 0.1);
+	--rf-shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ========================================================================
+   Dark Mode - React Flow Variables
+   ======================================================================== */
+.dark {
+	--rf-background: #0a0a0a;
+	--rf-background-pattern: rgba(255, 255, 255, 0.05);
+	--rf-node-bg: rgba(0, 0, 0, 0.8);
+	--rf-node-bg-hover: rgba(0, 0, 0, 0.9);
+	--rf-node-border: rgba(255, 255, 255, 0.1);
+	--rf-node-border-hover: rgba(255, 255, 255, 0.2);
+	--rf-text: #ffffff;
+	--rf-text-secondary: rgba(255, 255, 255, 0.8);
+	--rf-text-tertiary: rgba(255, 255, 255, 0.6);
+	--rf-edge-stroke: rgba(255, 255, 255, 0.3);
+	--rf-edge-stroke-selected: rgba(59, 130, 246, 0.8);
+	--rf-edge-stroke-animated: rgba(139, 92, 246, 0.6);
+	--rf-controls-bg: rgba(0, 0, 0, 0.6);
+	--rf-controls-border: rgba(255, 255, 255, 0.1);
+	--rf-controls-text: rgba(255, 255, 255, 0.6);
+	--rf-controls-text-hover: rgba(255, 255, 255, 0.95);
+	--rf-controls-bg-hover: rgba(255, 255, 255, 0.05);
+	--rf-minimap-bg: rgba(0, 0, 0, 0.6);
+	--rf-minimap-border: rgba(255, 255, 255, 0.1);
+	--rf-glassmorphism-bg: rgba(0, 0, 0, 0.6);
+	--rf-glassmorphism-bg-hover: rgba(0, 0, 0, 0.75);
+	--rf-glassmorphism-border: rgba(255, 255, 255, 0.1);
+	--rf-shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================================================
+   React Flow Canvas - Theme-aware
+   ======================================================================== */
+.react-flow {
+	background-color: var(--rf-background);
+	transition: background-color 0.3s ease;
+}
+
+.react-flow__background {
+	background-color: var(--rf-background);
+}
+
+.react-flow__background-pattern {
+	stroke: var(--rf-background-pattern);
+}
+
+/* ========================================================================
+   Edge Styling - Theme-aware
+   ======================================================================== */
+.react-flow__edge-path {
+	stroke: var(--rf-edge-stroke);
+	stroke-width: 2;
+	transition: stroke 0.3s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+	stroke: var(--rf-edge-stroke-selected);
+	stroke-width: 3;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+	stroke: var(--rf-edge-stroke-animated);
+	stroke-dasharray: 5;
+	animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+	to {
+		stroke-dashoffset: -10;
+	}
+}
+
+/* ========================================================================
+   Controls - Theme-aware Glassmorphism
+   ======================================================================== */
+.react-flow__controls {
+	background: var(--rf-controls-bg);
+	backdrop-filter: blur(40px);
+	-webkit-backdrop-filter: blur(40px);
+	border: 1px solid var(--rf-controls-border);
+	border-radius: 0.75rem;
+	transition:
+		background 0.3s ease,
+		border-color 0.3s ease;
+}
+
+.react-flow__controls-button {
+	background: transparent;
+	color: var(--rf-controls-text);
+	border: none;
+	border-bottom: 1px solid var(--rf-controls-border);
+	transition:
+		background 0.2s ease,
+		color 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+	background: var(--rf-controls-bg-hover);
+	color: var(--rf-controls-text-hover);
+}
+
+/* ========================================================================
+   MiniMap - Theme-aware Glassmorphism
+   ======================================================================== */
+.react-flow__minimap {
+	background: var(--rf-minimap-bg);
+	backdrop-filter: blur(40px);
+	-webkit-backdrop-filter: blur(40px);
+	border: 1px solid var(--rf-minimap-border);
+	border-radius: 0.75rem;
+	transition:
+		background 0.3s ease,
+		border-color 0.3s ease;
+}
+
+/* ========================================================================
+   Glassmorphism Utilities - Theme-aware
+   ======================================================================== */
+.glassmorphism {
+	background: var(--rf-glassmorphism-bg);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border: 1px solid var(--rf-glassmorphism-border);
+	transition:
+		background 0.3s ease,
+		border-color 0.3s ease;
+}
+
+.glassmorphism:hover {
+	background: var(--rf-glassmorphism-bg-hover);
+}
+
+/* Support for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(40px)) {
+	.f-effect-backdrop-blur-lg {
+		background: rgba(255, 255, 255, 0.9);
+	}
+
+	.glassmorphism {
+		background: rgba(255, 255, 255, 0.85);
+	}
+
+	.dark .f-effect-backdrop-blur-lg {
+		background: rgba(0, 0, 0, 0.8);
+	}
+
+	.dark .glassmorphism {
+		background: rgba(0, 0, 0, 0.7);
+	}
+}
+
+/* ========================================================================
+   Animation Utilities
+   ======================================================================== */
+.spring-medium {
+	transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+	.spring-medium,
+	.react-flow__edge.animated .react-flow__edge-path {
+		animation: none;
+		transition: none;
+	}
+}
+
+/* ========================================================================
+   Nextra Callout Styles
+   Override Nextra's x: prefixed utilities that require their CSS
+   ======================================================================== */
+.nextra-callout {
+	display: flex;
+	overflow-x: auto;
+	border-radius: 0.5rem;
+	border-width: 1px;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	padding-inline-end: 1em;
+	margin-top: 1.25em;
+}
+
+/* Info/Default callout (blue) */
+.nextra-callout[class*="bg-blue"] {
+	background-color: rgb(219 234 254); /* bg-blue-100 */
+	color: rgb(29 78 216); /* text-blue-700 */
+	border-color: rgb(29 78 216); /* border-blue-700 */
+}
+
+.dark .nextra-callout[class*="bg-blue"] {
+	background-color: rgb(30 58 138 / 0.3); /* dark:bg-blue-900/30 */
+	color: rgb(96 165 250); /* dark:text-blue-400 */
+	border-color: rgb(37 99 235); /* dark:border-blue-600 */
+}
+
+/* Warning callout (yellow/amber) */
+.nextra-callout[class*="bg-yellow"],
+.nextra-callout[class*="bg-amber"] {
+	background-color: rgb(254 249 195); /* bg-yellow-100 */
+	color: rgb(161 98 7); /* text-yellow-700 */
+	border-color: rgb(161 98 7); /* border-yellow-700 */
+}
+
+.dark .nextra-callout[class*="bg-yellow"],
+.dark .nextra-callout[class*="bg-amber"] {
+	background-color: rgb(133 77 14 / 0.3); /* dark:bg-yellow-900/30 */
+	color: rgb(250 204 21); /* dark:text-yellow-400 */
+	border-color: rgb(202 138 4); /* dark:border-yellow-600 */
+}
+
+/* Error callout (red) */
+.nextra-callout[class*="bg-red"] {
+	background-color: rgb(254 226 226); /* bg-red-100 */
+	color: rgb(185 28 28); /* text-red-700 */
+	border-color: rgb(185 28 28); /* border-red-700 */
+}
+
+.dark .nextra-callout[class*="bg-red"] {
+	background-color: rgb(127 29 29 / 0.3); /* dark:bg-red-900/30 */
+	color: rgb(248 113 113); /* dark:text-red-400 */
+	border-color: rgb(220 38 38); /* dark:border-red-600 */
+}
+
+/* Callout icon container */
+.nextra-callout > div:first-child {
+	user-select: none;
+	font-size: 1.25em;
+	padding-inline-start: 0.6em;
+	padding-inline-end: 0.4em;
+}
+
+/* Callout content */
+.nextra-callout > div:last-child {
+	min-width: 0;
+	flex: 1;
+}
+
+/* Fix nested elements in callouts */
+.nextra-callout p {
+	margin: 0.5em 0;
+}
+
+.nextra-callout p:first-child {
+	margin-top: 0;
+}
+
+.nextra-callout p:last-child {
+	margin-bottom: 0;
+}
+
+.nextra-callout ul,
+.nextra-callout ol {
+	margin: 0.5em 0;
+	padding-left: 1.5em;
+}
+
+.nextra-callout li {
+	margin: 0.25em 0;
+}
+
+/* ========================================================================
+   Nextra External Link Icon Styles
+   Fix for x: prefixed utility classes that require Nextra's CSS
+   ======================================================================== */
+
+/* External link icons in anchor tags */
+a > svg[class*="x:inline"],
+a > svg.x\:inline {
+	display: inline;
+	vertical-align: baseline;
+	flex-shrink: 0;
+}
+
+/* Generic fix for any element with x:inline class */
+[class*="x:inline"] {
+	display: inline !important;
+}
+
+[class*="x:align-baseline"] {
+	vertical-align: baseline !important;
+}
+
+[class*="x:shrink-0"] {
+	flex-shrink: 0 !important;
+}
+
+/* ========================================================================
+   Nextra Cards Component Styles
+   Full styling for the Cards component from nextra/components
+   ======================================================================== */
+
+/* Cards container - grid layout */
+.nextra-cards {
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem !important;
+	margin-top: 1rem !important;
+}
+
+/* Ensure cards container is not affected by prose styles */
+.nextra-cards.not-prose {
+	margin-top: 1rem;
+}
+
+/* Individual card styling */
+.nextra-card {
+	display: flex !important;
+	flex-direction: column !important;
+	justify-content: flex-start !important;
+	overflow: hidden !important;
+	border-radius: 0.5rem !important;
+	border: 1px solid rgb(229 231 235) !important; /* border-gray-200 */
+	padding: 1rem !important;
+	text-decoration: none !important;
+	color: currentColor !important;
+	background-color: rgb(249 250 251) !important; /* bg-gray-50 */
+	box-shadow:
+		0 1px 3px 0 rgb(0 0 0 / 0.1),
+		0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+	transition: all 0.2s ease !important;
+}
+
+.nextra-card:hover {
+	border-color: rgb(156 163 175) !important; /* border-gray-400 */
+	box-shadow:
+		0 10px 15px -3px rgb(0 0 0 / 0.1),
+		0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+	transform: translateY(-2px);
+}
+
+/* Dark mode card styling */
+.dark .nextra-card {
+	border-color: rgb(64 64 64) !important; /* dark:border-neutral-700 */
+	background-color: rgb(38 38 38) !important; /* dark:bg-neutral-800 */
+	color: rgb(250 250 250) !important; /* dark:text-gray-50 */
+	box-shadow: none !important;
+}
+
+.dark .nextra-card:hover {
+	border-color: rgb(115 115 115) !important; /* dark:hover:border-neutral-500 */
+	background-color: rgb(64 64 64) !important; /* dark:hover:bg-neutral-700 */
+	box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3) !important;
+}
+
+/* Card title styling - shown at bottom in Nextra style */
+.nextra-card > span:last-child,
+.nextra-card > div[class*="font-semibold"],
+.nextra-card > *:last-child:not(p) {
+	font-weight: 600 !important;
+	font-size: 1rem !important;
+	margin-top: 0.5rem !important;
+	color: inherit !important;
+}
+
+/* Card description/content */
+.nextra-card > p {
+	font-size: 0.875rem !important;
+	color: rgb(107 114 128) !important; /* text-gray-500 */
+	margin: 0 !important;
+	line-height: 1.5 !important;
+}
+
+.dark .nextra-card > p {
+	color: rgb(163 163 163) !important; /* dark:text-neutral-400 */
+}
+
+/* ========================================================================
+   Nextra x: Utility Class Overrides
+   These classes are used by Nextra components but require their CSS
+   ======================================================================== */
+
+/* Flexbox utilities */
+[class*="x:flex"] {
+	display: flex !important;
+}
+
+[class*="x:flex-col"] {
+	flex-direction: column !important;
+}
+
+[class*="x:justify-start"] {
+	justify-content: flex-start !important;
+}
+
+/* Grid utilities */
+[class*="x:grid"] {
+	display: grid !important;
+}
+
+[class*="x:gap-4"] {
+	gap: 1rem !important;
+}
+
+[class*="x:mt-4"] {
+	margin-top: 1rem !important;
+}
+
+/* Border utilities */
+[class*="x:rounded-lg"] {
+	border-radius: 0.5rem !important;
+}
+
+[class*="x:border"] {
+	border-width: 1px !important;
+	border-style: solid !important;
+}
+
+[class*="x:overflow-hidden"] {
+	overflow: hidden !important;
+}
+
+/* Text utilities */
+[class*="x:no-underline"] {
+	text-decoration: none !important;
+}
+
+[class*="x:text-current"] {
+	color: currentColor !important;
+}
+
+/* Transition utilities */
+[class*="x:transition-all"] {
+	transition-property: all !important;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+[class*="x:duration-200"] {
+	transition-duration: 200ms !important;
+}

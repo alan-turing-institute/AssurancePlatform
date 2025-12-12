@@ -58,7 +58,7 @@ export default withAuth(
 					"/login",
 					"/register",
 					"/discover",
-					"/documentation",
+					"/docs",
 					"/auth-error",
 					"/cookie-policy",
 					"/feedback",

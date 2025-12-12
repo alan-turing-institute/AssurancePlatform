@@ -1,0 +1,85 @@
+---
+title: 'Module Introduction'
+description: Experience how structured arguments build trust in AI systems
+---
+
+import { ModuleProgressProvider } from '@/components/docs/curriculum/module-progress-context';
+import ModuleProgressTracker from '@/components/docs/curriculum/module-progress-tracker';
+import { firstSipTasks } from '@/components/docs/curriculum/task-registry';
+import LearningObjectives from '@/components/docs/curriculum/learning-objectives';
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="index"
+    >
+      {children}
+      <ModuleProgressTracker show={false} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Module Introduction
+
+Imagine you're about to use a new AI system that screens job applications at your company. The vendor claims it's "fair and unbiased".
+
+How can you be sure that the vendor's claim is true? What reasoning has been provided to assure you that it won't discriminate against certain groups? What evidence would convince you?
+
+In this module, you'll explore an approach to answering these questions known as **Trustworthy and Ethical Assurance** (or TEA for short). But rather than starting with definitions and theory, let's dive straight into a real example.
+
+<LearningObjectives
+  title="Learning Objectives"
+  variant="card"
+  objectives={[
+    {
+      id: 'obj-1',
+      text: 'Identify the key components of an assurance case',
+      description:
+        'Recognise goals, strategies, property claims, evidence, and context elements in structured arguments',
+    },
+    {
+      id: 'obj-2',
+      text: 'Explain how structured arguments build trustworthiness',
+      description:
+        'Understand the logical flow from high-level claims down to concrete evidence and how decomposition creates clarity',
+    },
+    {
+      id: 'obj-3',
+      text: 'Trace argument chains in real assurance cases',
+      description:
+        'Follow the decomposition from goals through strategies to supporting evidence and understand their relationships',
+    },
+    {
+      id: 'obj-4',
+      text: 'Evaluate the strength and completeness of assurance arguments',
+      description:
+        'Critically assess what makes arguments convincing and identify where they may be weak or incomplete',
+    },
+  ]}
+/>
+
+## Module Structure
+
+This module is split across multiple pages to help you learn progressively:
+
+1. **Exploration** - Interactive case exploration with guided tasks
+2. **Reflection** - Synthesis and understanding
+3. **Assessment** - Knowledge check and quizzes
+4. **Summary** - Module recap, confidence rating, and what's next
+
+## What You'll Need
+
+- **Time**: About 20-30 minutes total
+- **Mindset**: Curiosity and critical thinking
+- **Approach**: Experience before explanation
+
+---
+
+**Ready to begin?** [Start the Exploration →](./exploration)
+
+</PageContent>

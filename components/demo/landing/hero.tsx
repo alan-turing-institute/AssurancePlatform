@@ -83,7 +83,7 @@ export default function Hero() {
 										</Link>
 										<a
 											className="font-semibold text-gray-900 text-sm leading-6"
-											href="https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/"
+											href="/docs/curriculum"
 										>
 											Learn more <span aria-hidden="true">→</span>
 										</a>

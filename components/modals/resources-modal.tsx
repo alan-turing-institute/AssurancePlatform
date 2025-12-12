@@ -24,35 +24,35 @@ export const ResourcesModal = () => {
 		{
 			title: "Top-Level Goal Claim",
 			icon: <Goal />,
-			href: "https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#goal-claims",
+			href: "/docs/curriculum/quick-reference/02-element-types#goal-claims",
 			description:
 				"A statement asserting a desirable property or characteristic of the system or technology under consideration.",
 		},
 		{
 			title: "Property Claim",
 			icon: <FolderOpenDot />,
-			href: "https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#property-claims",
+			href: "/docs/curriculum/quick-reference/02-element-types#property-claims",
 			description:
 				"A statement that helps specify the top-level goal claim and defines a measurable requirement for the project or system under consideration",
 		},
 		{
 			title: "Strategy",
 			icon: <Route />,
-			href: "https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#strategy",
+			href: "/docs/curriculum/quick-reference/02-element-types#strategies",
 			description:
 				"A course of action or approach that can help break the task of assuring a top-level goal claim into a set of related property claims.",
 		},
 		{
 			title: "Evidence",
 			icon: <Database />,
-			href: "https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#evidence",
+			href: "/docs/curriculum/quick-reference/02-element-types#evidence",
 			description:
 				"An artefact that justifies a linked property claim's validity and grounds an assurance case.",
 		},
 		{
 			title: "Context",
 			icon: <BookOpenText />,
-			href: "https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#context",
+			href: "/docs/curriculum/quick-reference/02-element-types#context",
 			description:
 				"Additional information that clarifies the scope or boundary conditions of a top-level goal claim.",
 		},

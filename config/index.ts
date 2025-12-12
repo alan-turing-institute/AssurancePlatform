@@ -65,10 +65,10 @@ export const externalNavigation = [
 	},
 	{
 		name: "Documentation",
-		href: "/documentation",
+		href: "/docs",
 		icon: DocumentDuplicateIcon,
 		current: false,
-		externalLink: true,
+		externalLink: false,
 	},
 ];
 

@@ -1,0 +1,160 @@
+---
+sidebar_position: 5
+sidebar_label: 'API Reference'
+---
+
+import { Callout } from 'nextra/components'
+
+# API Reference
+
+The TEA Platform provides a RESTful API built with Next.js 15 App Router and Prisma ORM.
+
+<Callout type="info">
+**Auto-Generated Documentation**
+
+Our API documentation is automatically generated from the Prisma schema to ensure accuracy and completeness. This page provides an overview and links to the full documentation.
+</Callout>
+
+## Authentication
+
+The TEA Platform uses [NextAuth.js](https://next-auth.js.org/) for authentication. API routes are protected and require a valid session.
+
+### Authentication Flow
+
+1. **Sign in** via the web interface using GitHub OAuth or email/password
+2. **Session cookies** are automatically managed by NextAuth.js
+3. **API requests** include session cookies for authentication
+
+### Making Authenticated Requests
+
+When using tools like `curl` or Postman, you'll need to include the session cookie:
+
+```bash
+curl -X GET http://localhost:3000/api/cases \
+     -H 'Cookie: next-auth.session-token=YOUR_SESSION_TOKEN'
+```
+
+<Callout type="warning">
+**Session Tokens**
+
+Session tokens are managed by NextAuth.js and should not be manually created. Use the web interface to authenticate and obtain a valid session.
+</Callout>
+
+## API Overview
+
+The TEA Platform API is organised around REST principles. All endpoints:
+
+- Accept and return JSON
+- Use standard HTTP methods (GET, POST, PUT, DELETE)
+- Return appropriate HTTP status codes
+- Require authentication (except public endpoints)
+
+### Base URL
+
+| Environment | Base URL |
+|-------------|----------|
+| Local Development | `http://localhost:3000/api` |
+| Production | `https://assuranceplatform.azurewebsites.net/api` |
+
+### Core Resources
+
+| Resource | Description |
+|----------|-------------|
+| **Cases** | Assurance cases - the primary resource |
+| **Elements** | Goals, strategies, property claims, evidence, and context within cases |
+| **Teams** | User groups for collaborative case management |
+| **Users** | User accounts and profiles |
+| **Comments** | Discussions and feedback on case elements |
+
+## API Endpoints
+
+### Cases
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cases` | List all cases accessible to the user |
+| POST | `/api/cases` | Create a new assurance case |
+| GET | `/api/cases/[id]` | Retrieve a specific case |
+| PUT | `/api/cases/[id]` | Update a case |
+| DELETE | `/api/cases/[id]` | Delete a case |
+
+### Elements
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cases/[id]/elements` | List all elements in a case |
+| POST | `/api/cases/[id]/elements` | Add an element to a case |
+| GET | `/api/elements/[id]` | Retrieve a specific element |
+| PUT | `/api/elements/[id]` | Update an element |
+| DELETE | `/api/elements/[id]` | Delete an element |
+
+### Teams
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/teams` | List teams the user belongs to |
+| POST | `/api/teams` | Create a new team |
+| GET | `/api/teams/[id]` | Retrieve team details |
+| PUT | `/api/teams/[id]` | Update team settings |
+| DELETE | `/api/teams/[id]` | Delete a team |
+
+### Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users/me` | Get current user's profile |
+| PUT | `/api/users/me` | Update current user's profile |
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "id": 1,
+  "name": "Example Case",
+  "description": "An example assurance case",
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T14:45:00Z"
+}
+```
+
+### Error Response
+
+```json
+{
+  "error": "Not Found",
+  "message": "Case with ID 999 not found",
+  "statusCode": 404
+}
+```
+
+### HTTP Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request - Invalid input |
+| 401 | Unauthorised - Authentication required |
+| 403 | Forbidden - Insufficient permissions |
+| 404 | Not Found |
+| 500 | Internal Server Error |
+
+## Database Schema
+
+The TEA Platform uses Prisma ORM with PostgreSQL. The schema defines:
+
+- **AssuranceCase** - Top-level container for assurance arguments
+- **Element** - Nodes in the assurance case (goals, strategies, claims, evidence, context)
+- **User** - User accounts
+- **Team** - Groups for collaboration
+- **Comment** - Discussions on elements
+
+For the complete schema, see the [Prisma schema file](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/prisma/schema.prisma).
+
+## Further Resources
+
+- [NextAuth.js Documentation](https://next-auth.js.org/) - Authentication
+- [Prisma Documentation](https://www.prisma.io/docs) - Database ORM
+- [Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) - Route handlers

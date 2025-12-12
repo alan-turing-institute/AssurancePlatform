@@ -256,12 +256,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 };
 
 const FeedbackButton = () => (
-	<Link
-		href={
-			"https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
-		}
-		target="_blank"
-	>
+	<Link href="/docs/community/community-support" target="_blank">
 		<div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
 			<MessagesSquare className="h-6 w-6 text-white" />
 			<div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />

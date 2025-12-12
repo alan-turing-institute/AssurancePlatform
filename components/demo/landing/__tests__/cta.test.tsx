@@ -53,7 +53,7 @@ describe("CTA", () => {
 			});
 			expect(actionButton).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/case-builder/"
+				"/docs/curriculum/quick-reference/01-platform-basics"
 			);
 		});
 

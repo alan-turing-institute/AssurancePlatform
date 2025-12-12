@@ -1,6 +1,13 @@
+import nextra from "nextra";
+
+const withNextra = nextra({
+	contentDirBasePath: "/docs",
+	defaultShowCopyCode: true,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	output: "standalone",
+	output: process.env.NODE_ENV === "development" ? undefined : "standalone",
 	images: {
 		unoptimized: process.env.NODE_ENV === "development",
 		remotePatterns: [
@@ -48,14 +55,21 @@ const nextConfig = {
 			},
 		],
 	},
-	rewrites() {
+	// Redirect old /documentation URLs to new /docs URLs
+	async redirects() {
 		return [
 			{
 				source: "/documentation",
-				destination: "/documentation/index.html",
+				destination: "/docs",
+				permanent: true,
+			},
+			{
+				source: "/documentation/:path*",
+				destination: "/docs/:path*",
+				permanent: true,
 			},
 		];
 	},
 };
 
-export default nextConfig;
+export default withNextra(nextConfig);

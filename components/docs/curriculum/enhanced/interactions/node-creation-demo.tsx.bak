@@ -1,0 +1,429 @@
+"use client";
+/**
+ * Node Creation Demo
+ *
+ * Comprehensive demonstration of the double-click node creation system.
+ * Shows all features including type selection, positioning, and keyboard shortcuts.
+ *
+ * @component
+ */
+
+import { useCallback, useState } from "react";
+import ReactFlow, {
+	addEdge,
+	Background,
+	type Connection,
+	Controls,
+	MiniMap,
+	ReactFlowProvider,
+	useEdgesState,
+	useNodesState,
+} from "reactflow";
+import "reactflow/dist/style.css";
+import { motion } from "framer-motion";
+import { Info, Keyboard, MousePointer2, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { nodeTypes } from "../nodes/node-types";
+import { useNodeCreator } from "./node-creator";
+import NodeTypeSelector from "./node-type-selector";
+
+type Position = {
+	x: number;
+	y: number;
+};
+
+type NodeTemplate = {
+	id: string;
+	name: string;
+	description: string;
+	nodes: Array<{
+		type: string;
+		name: string;
+		offsetX?: number;
+		offsetY?: number;
+	}>;
+};
+
+type InstructionsPanelProps = {
+	isVisible: boolean;
+	onToggle: () => void;
+};
+
+/**
+ * Instructions Panel Component
+ */
+const InstructionsPanel = ({
+	isVisible: _isVisible,
+	onToggle: _onToggle,
+}: InstructionsPanelProps) => (
+	<motion.div
+		animate={{ opacity: 1, x: 0 }}
+		className={cn(
+			"absolute top-4 left-4 z-50",
+			"max-w-sm",
+			"bg-background-transparent-black-secondaryAlt",
+			"backdrop-blur-lg",
+			"border border-transparent",
+			"rounded-xl",
+			"shadow-3d",
+			"p-4"
+		)}
+		initial={{ opacity: 0, x: -20 }}
+	>
+		<div className="mb-3 flex items-center justify-between">
+			<h3 className="flex items-center gap-2 font-semibold text-text-light">
+				<Info className="h-4 w-4" />
+				How to Create Nodes
+			</h3>
+		</div>
+
+		<div className="space-y-3 text-sm text-text-light/80">
+			<div className="flex items-start gap-3">
+				<MousePointer2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-400" />
+				<div>
+					<div className="font-medium text-text-light">Double-Click</div>
+					<div className="text-text-light/60 text-xs">
+						Double-click anywhere on the canvas to open the node type selector
+					</div>
+				</div>
+			</div>
+
+			<div className="flex items-start gap-3">
+				<Keyboard className="mt-0.5 h-4 w-4 flex-shrink-0 text-purple-400" />
+				<div>
+					<div className="font-medium text-text-light">Keyboard Shortcuts</div>
+					<div className="space-y-1 text-text-light/60 text-xs">
+						<div>
+							<kbd className="rounded bg-background-transparent-white-hover px-1 py-0.5 text-xs">
+								G
+							</kbd>{" "}
+							= Goal
+						</div>
+						<div>
+							<kbd className="rounded bg-background-transparent-white-hover px-1 py-0.5 text-xs">
+								S
+							</kbd>{" "}
+							= Strategy
+						</div>
+						<div>
+							<kbd className="rounded bg-background-transparent-white-hover px-1 py-0.5 text-xs">
+								C
+							</kbd>{" "}
+							= Claim
+						</div>
+						<div>
+							<kbd className="rounded bg-background-transparent-white-hover px-1 py-0.5 text-xs">
+								E
+							</kbd>{" "}
+							= Evidence
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div className="flex items-start gap-3">
+				<Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-400" />
+				<div>
+					<div className="font-medium text-text-light">Smart Features</div>
+					<div className="text-text-light/60 text-xs">
+						Grid snapping, overlap avoidance, and alignment guides are enabled
+						automatically
+					</div>
+				</div>
+			</div>
+		</div>
+	</motion.div>
+);
+
+type StatsPanelProps = {
+	creationHistory: string[];
+	recentTypes: string[];
+	canUndo: boolean;
+	canRedo: boolean;
+};
+
+/**
+ * Stats Panel Component
+ */
+const StatsPanel = ({
+	creationHistory,
+	recentTypes,
+	canUndo,
+	canRedo,
+}: StatsPanelProps) => (
+	<motion.div
+		animate={{ opacity: 1, y: 0 }}
+		className={cn(
+			"absolute bottom-4 left-4 z-50",
+			"bg-background-transparent-black-secondaryAlt",
+			"backdrop-blur-lg",
+			"border border-transparent",
+			"rounded-xl",
+			"shadow-3d",
+			"p-4"
+		)}
+		initial={{ opacity: 0, y: 20 }}
+	>
+		<div className="space-y-2 text-sm">
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-text-light/60">Nodes Created:</span>
+				<span className="font-semibold text-text-light">
+					{creationHistory.length}
+				</span>
+			</div>
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-text-light/60">Can Undo:</span>
+				<span className="font-semibold text-text-light">
+					{canUndo ? "✓" : "✗"}
+				</span>
+			</div>
+			<div className="flex items-center justify-between gap-4">
+				<span className="text-text-light/60">Can Redo:</span>
+				<span className="font-semibold text-text-light">
+					{canRedo ? "✓" : "✗"}
+				</span>
+			</div>
+			{recentTypes.length > 0 && (
+				<div className="border-transparent border-t pt-2">
+					<div className="mb-1 text-text-light/60 text-xs">Recent Types:</div>
+					<div className="flex gap-1">
+						{recentTypes.map((type) => (
+							<span
+								className="rounded bg-background-transparent-white-hover px-2 py-0.5 text-text-light text-xs"
+								key={type}
+							>
+								{type}
+							</span>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	</motion.div>
+);
+
+const getNodeColor = (nodeType: string): string => {
+	const colorMap: Record<string, string> = {
+		goal: "#10b981",
+		strategy: "#a855f7",
+		propertyClaim: "#f97316",
+		evidence: "#06b6d4",
+		context: "#6b7280",
+	};
+	return colorMap[nodeType] || "#9ca3af";
+};
+
+/**
+ * Main Demo Component
+ */
+const NodeCreationDemoInner = () => {
+	const [nodes, _setNodes, onNodesChange] = useNodesState([]);
+	const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+	const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false);
+	const [creationPosition, setCreationPosition] = useState<Position | null>(
+		null
+	);
+
+	// Node creator hook
+	const {
+		createNode,
+		createFromTemplate,
+		undo,
+		redo,
+		canUndo,
+		canRedo,
+		creationHistory,
+		recentTypes,
+	} = useNodeCreator({
+		onNodeCreated: (node) => {
+			console.log("Node created:", node);
+		},
+		onCreationError: (error) => {
+			console.error("Creation error:", error);
+		},
+	});
+
+	// Handle double-click
+	const handleDoubleClick = useCallback(
+		(flowPosition: Position, _event: React.MouseEvent) => {
+			setCreationPosition(flowPosition);
+			setIsTypeSelectorOpen(true);
+		},
+		[]
+	);
+
+	// Handle node type selection
+	const handleSelectType = useCallback(
+		(nodeType: string, position: Position | null) => {
+			createNode(nodeType, position || creationPosition || { x: 0, y: 0 });
+			setIsTypeSelectorOpen(false);
+			setCreationPosition(null);
+		},
+		[createNode, creationPosition]
+	);
+
+	// Handle template selection
+	const handleSelectTemplate = useCallback(
+		(template: NodeTemplate, position: Position | null) => {
+			createFromTemplate(
+				template,
+				position || creationPosition || { x: 0, y: 0 }
+			);
+			setIsTypeSelectorOpen(false);
+			setCreationPosition(null);
+		},
+		[createFromTemplate, creationPosition]
+	);
+
+	// Handle edge connections
+	const onConnect = useCallback(
+		(params: Connection) => setEdges((eds) => addEdge(params, eds)),
+		[setEdges]
+	);
+
+	// Keyboard shortcuts for undo/redo
+	useCallback(
+		(event: KeyboardEvent) => {
+			if (event.ctrlKey || event.metaKey) {
+				if (event.key === "z" && !event.shiftKey) {
+					event.preventDefault();
+					undo();
+				} else if (event.key === "z" && event.shiftKey) {
+					event.preventDefault();
+					redo();
+				}
+			}
+		},
+		[undo, redo]
+	);
+
+	return (
+		<div className="relative h-screen w-full bg-gray-950">
+			{/* Instructions */}
+			<InstructionsPanel
+				isVisible={true}
+				onToggle={() => {
+					// Intentionally empty - instructions always visible in demo
+				}}
+			/>
+
+			{/* Stats */}
+			<StatsPanel
+				canRedo={canRedo}
+				canUndo={canUndo}
+				creationHistory={creationHistory}
+				recentTypes={recentTypes}
+			/>
+
+			{/* React Flow */}
+			<ReactFlow
+				className="bg-gray-950"
+				edges={edges}
+				fitView
+				nodes={nodes}
+				nodeTypes={nodeTypes}
+				onConnect={onConnect}
+				onDoubleClick={(event) => {
+					const rect = event.currentTarget.getBoundingClientRect();
+					const position = {
+						x: event.clientX - rect.left,
+						y: event.clientY - rect.top,
+					};
+					handleDoubleClick(position, event);
+				}}
+				onEdgesChange={onEdgesChange}
+				onNodesChange={onNodesChange}
+			>
+				<Background color="rgba(255, 255, 255, 0.05)" gap={20} size={1} />
+				<Controls
+					className={cn(
+						"bg-background-transparent-black",
+						"backdrop-blur-lg",
+						"border border-transparent",
+						"rounded-xl"
+					)}
+				/>
+				<MiniMap
+					className={cn(
+						"bg-background-transparent-black",
+						"backdrop-blur-lg",
+						"border border-transparent",
+						"rounded-xl"
+					)}
+					nodeColor={(node) => getNodeColor(node.type || "default")}
+				/>
+			</ReactFlow>
+
+			{/* Node Type Selector */}
+			<NodeTypeSelector
+				isOpen={isTypeSelectorOpen}
+				onClose={() => {
+					setIsTypeSelectorOpen(false);
+					setCreationPosition(null);
+				}}
+				onSelectTemplate={handleSelectTemplate}
+				onSelectType={handleSelectType}
+				position={creationPosition}
+				recentTypes={recentTypes}
+				showSearch={true}
+				showTemplates={true}
+			/>
+		</div>
+	);
+};
+
+/**
+ * Wrapped Demo Component with Provider
+ */
+const NodeCreationDemo = () => (
+	<ReactFlowProvider>
+		<NodeCreationDemoInner />
+	</ReactFlowProvider>
+);
+
+/**
+ * Simple Demo (minimal setup)
+ */
+export const SimpleNodeCreationDemo = () => {
+	const [nodes, _setNodes, onNodesChange] = useNodesState([]);
+	const [isOpen, setIsOpen] = useState(false);
+	const [position, setPosition] = useState<Position | null>(null);
+
+	const { createNode, recentTypes } = useNodeCreator();
+
+	return (
+		<ReactFlowProvider>
+			<div className="relative h-96 w-full bg-gray-950">
+				<ReactFlow
+					nodes={nodes}
+					nodeTypes={nodeTypes}
+					onDoubleClick={(event) => {
+						const rect = event.currentTarget.getBoundingClientRect();
+						setPosition({
+							x: event.clientX - rect.left,
+							y: event.clientY - rect.top,
+						});
+						setIsOpen(true);
+					}}
+					onNodesChange={onNodesChange}
+				>
+					<Background />
+					<Controls />
+				</ReactFlow>
+
+				<NodeTypeSelector
+					isOpen={isOpen}
+					onClose={() => setIsOpen(false)}
+					onSelectType={(type, pos) => {
+						createNode(type, pos || position || { x: 0, y: 0 });
+						setIsOpen(false);
+					}}
+					position={position}
+					recentTypes={recentTypes}
+				/>
+			</div>
+		</ReactFlowProvider>
+	);
+};
+
+export default NodeCreationDemo;

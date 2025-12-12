@@ -1,0 +1,545 @@
+"use client";
+
+/**
+ * Node Type Selector Component
+ *
+ * Modal/dropdown for selecting node type with visual previews, search,
+ * and keyboard navigation. Inspired by FloraFauna.ai "Add Block" dialog.
+ *
+ * Features:
+ * - Grid layout with node type previews
+ * - Icon and colour coding for each type
+ * - Hover effects showing more info
+ * - Quick create shortcuts (G for Goal, S for Strategy, etc.)
+ * - Recent types at the top
+ * - Search/filter functionality
+ * - Keyboard navigation (arrow keys + enter)
+ * - Template system for common patterns
+ *
+ * @component
+ */
+
+import { motion } from "framer-motion";
+import {
+	AlertCircle,
+	CheckCircle,
+	Clock,
+	FileText,
+	GitBranch,
+	HelpCircle,
+	Layers,
+	Search,
+	Target,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { type NodeTypeId, nodeTypeMetadata } from "../nodes/node-types";
+import { getNodeTemplates } from "./creation-utils";
+
+type Position = {
+	x: number;
+	y: number;
+};
+
+type NodeTemplate = {
+	id: string;
+	name: string;
+	description: string;
+	nodes: Array<{
+		type: string;
+		name: string;
+		offsetX?: number;
+		offsetY?: number;
+	}>;
+};
+
+type NodeTypeMetadata = {
+	name: string;
+	description: string;
+	icon: string;
+	color: string;
+	shortcut: string;
+};
+
+type NodeTypeOptionProps = {
+	nodeType: NodeTypeId;
+	isSelected: boolean;
+	isRecent: boolean;
+	onClick: () => void;
+	onKeyDown: (e: React.KeyboardEvent) => void;
+};
+
+const getIconComponent = (iconName: string) => {
+	const iconMap: Record<string, typeof Target> = {
+		Target,
+		GitBranch,
+		FileText,
+		CheckCircle,
+		AlertCircle,
+	};
+	return iconMap[iconName] || AlertCircle;
+};
+
+/**
+ * Node Type Option Component
+ */
+const NodeTypeOption = ({
+	nodeType,
+	isSelected,
+	isRecent,
+	onClick,
+	onKeyDown,
+}: NodeTypeOptionProps) => {
+	const metadata = nodeTypeMetadata[nodeType] as NodeTypeMetadata;
+	const Icon = getIconComponent(metadata.icon);
+
+	return (
+		<motion.button
+			className={cn(
+				"w-full rounded-lg p-4",
+				"bg-background-transparent-white-hover",
+				"hover:bg-background-transparent-white-secondaryHover",
+				"border border-transparent",
+				"transition-all duration-200",
+				"text-left",
+				"focus:outline-none focus:ring-2 focus:ring-blue-500/50",
+				"group",
+				isSelected &&
+					"bg-background-transparent-white-secondaryHover ring-2 ring-blue-500/50"
+			)}
+			onClick={onClick}
+			onKeyDown={onKeyDown}
+			tabIndex={0}
+			whileHover={{ scale: 1.02 }}
+			whileTap={{ scale: 0.98 }}
+		>
+			<div className="flex items-start gap-3">
+				{/* Icon */}
+				<div
+					className={cn(
+						"flex-shrink-0 rounded-lg p-2",
+						`bg-${metadata.color}-500/10`,
+						"transition-transform duration-200 group-hover:scale-110"
+					)}
+				>
+					<Icon className={cn("h-5 w-5", `text-${metadata.color}-400`)} />
+				</div>
+
+				{/* Content */}
+				<div className="min-w-0 flex-1">
+					<div className="mb-1 flex items-center gap-2">
+						<span className="font-semibold text-sm text-text-light">
+							{metadata.name}
+						</span>
+						{isRecent && (
+							<Badge className="text-xs" variant="secondary">
+								<Clock className="mr-1 h-3 w-3" />
+								Recent
+							</Badge>
+						)}
+					</div>
+					<p className="line-clamp-2 text-text-light/70 text-xs">
+						{metadata.description}
+					</p>
+				</div>
+
+				{/* Shortcut */}
+				<div className="flex-shrink-0">
+					<kbd
+						className={cn(
+							"px-2 py-1 font-mono text-xs",
+							"bg-background-transparent-white-hover",
+							"border border-transparent",
+							"rounded",
+							"text-text-light/60"
+						)}
+					>
+						{metadata.shortcut}
+					</kbd>
+				</div>
+			</div>
+		</motion.button>
+	);
+};
+
+type TemplateOptionProps = {
+	template: NodeTemplate;
+	onClick: () => void;
+};
+
+/**
+ * Template Option Component
+ */
+const TemplateOption = ({ template, onClick }: TemplateOptionProps) => (
+	<motion.button
+		className={cn(
+			"w-full rounded-lg p-3",
+			"bg-background-transparent-white-hover",
+			"hover:bg-background-transparent-white-secondaryHover",
+			"border border-transparent",
+			"transition-all duration-200",
+			"text-left",
+			"focus:outline-none focus:ring-2 focus:ring-purple-500/50",
+			"group"
+		)}
+		onClick={onClick}
+		tabIndex={0}
+		whileHover={{ scale: 1.02 }}
+		whileTap={{ scale: 0.98 }}
+	>
+		<div className="flex items-center gap-3">
+			<div className="rounded-lg bg-purple-500/10 p-2">
+				<Layers className="h-4 w-4 text-purple-400" />
+			</div>
+			<div className="flex-1">
+				<div className="font-semibold text-sm text-text-light">
+					{template.name}
+				</div>
+				<p className="text-text-light/60 text-xs">{template.description}</p>
+			</div>
+		</div>
+	</motion.button>
+);
+
+type NodeTypeSelectorProps = {
+	isOpen: boolean;
+	onClose: () => void;
+	onSelectType?: (nodeType: string, position: Position | null) => void;
+	onSelectTemplate?: (
+		template: NodeTemplate,
+		position: Position | null
+	) => void;
+	position: Position | null;
+	recentTypes?: string[];
+	showTemplates?: boolean;
+	showSearch?: boolean;
+};
+
+/**
+ * NodeTypeSelector Component
+ */
+const NodeTypeSelector = ({
+	isOpen,
+	onClose,
+	onSelectType,
+	onSelectTemplate,
+	position,
+	recentTypes = [],
+	showTemplates = true,
+	showSearch = true,
+}: NodeTypeSelectorProps) => {
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedIndex, setSelectedIndex] = useState(0);
+	const [filteredTypes, setFilteredTypes] = useState<string[]>([]);
+	const searchInputRef = useRef<HTMLInputElement>(null);
+
+	const nodeTypesList = Object.keys(nodeTypeMetadata);
+	const templates = getNodeTemplates();
+
+	// Filter node types based on search
+	useEffect(() => {
+		if (searchQuery) {
+			const query = searchQuery.toLowerCase();
+			const filtered = nodeTypesList.filter((type) => {
+				const metadata = nodeTypeMetadata[type] as NodeTypeMetadata;
+				return (
+					metadata.name.toLowerCase().includes(query) ||
+					metadata.description.toLowerCase().includes(query) ||
+					metadata.shortcut.toLowerCase().includes(query)
+				);
+			});
+			setFilteredTypes(filtered);
+		} else {
+			setFilteredTypes(nodeTypesList);
+		}
+		setSelectedIndex(0);
+	}, [searchQuery, nodeTypesList]);
+
+	// Focus search input when dialog opens
+	useEffect(() => {
+		if (isOpen && searchInputRef.current && showSearch) {
+			setTimeout(() => {
+				searchInputRef.current?.focus();
+			}, 100);
+		}
+	}, [isOpen, showSearch]);
+
+	// Handle type selection
+	const handleSelectType = useCallback(
+		(nodeType: string) => {
+			if (onSelectType) {
+				onSelectType(nodeType, position);
+			}
+			onClose();
+		},
+		[onSelectType, position, onClose]
+	);
+
+	// Handle template selection
+	const handleSelectTemplate = useCallback(
+		(template: NodeTemplate) => {
+			if (onSelectTemplate) {
+				onSelectTemplate(template, position);
+			}
+			onClose();
+		},
+		[onSelectTemplate, position, onClose]
+	);
+
+	// Handle keyboard shortcuts
+	const handleShortcutKey = useCallback(
+		(key: string) => {
+			const shortcut = key.toUpperCase();
+			const typeByShortcut = nodeTypesList.find(
+				(type) =>
+					(nodeTypeMetadata[type] as NodeTypeMetadata).shortcut === shortcut
+			);
+			if (typeByShortcut) {
+				return typeByShortcut;
+			}
+			return null;
+		},
+		[nodeTypesList]
+	);
+
+	// Handle navigation keys
+	const handleNavigationKey = useCallback(
+		(key: string) => {
+			if (key === "ArrowDown") {
+				setSelectedIndex((prev) =>
+					prev < filteredTypes.length - 1 ? prev + 1 : prev
+				);
+				return true;
+			}
+			if (key === "ArrowUp") {
+				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+				return true;
+			}
+			return false;
+		},
+		[filteredTypes.length]
+	);
+
+	// Handle action keys
+	const handleActionKey = useCallback(
+		(key: string) => {
+			if (key === "Enter") {
+				if (filteredTypes[selectedIndex]) {
+					handleSelectType(filteredTypes[selectedIndex]);
+				}
+				return true;
+			}
+			if (key === "Escape") {
+				onClose();
+				return true;
+			}
+			return false;
+		},
+		[filteredTypes, selectedIndex, handleSelectType, onClose]
+	);
+
+	// Keyboard navigation
+	const handleKeyDown = useCallback(
+		(event: React.KeyboardEvent) => {
+			const isNavigationKey = handleNavigationKey(event.key);
+			if (isNavigationKey) {
+				event.preventDefault();
+				return;
+			}
+
+			const isActionKey = handleActionKey(event.key);
+			if (isActionKey) {
+				event.preventDefault();
+				return;
+			}
+
+			// Check for keyboard shortcuts
+			if (!(event.ctrlKey || event.metaKey)) {
+				const typeByShortcut = handleShortcutKey(event.key);
+				if (typeByShortcut) {
+					event.preventDefault();
+					handleSelectType(typeByShortcut);
+				}
+			}
+		},
+		[handleNavigationKey, handleActionKey, handleShortcutKey, handleSelectType]
+	);
+
+	// Sort types: recent first, then alphabetically
+	const sortedTypes = [...filteredTypes].sort((a, b) => {
+		const aRecent = recentTypes.includes(a);
+		const bRecent = recentTypes.includes(b);
+		if (aRecent && !bRecent) {
+			return -1;
+		}
+		if (!aRecent && bRecent) {
+			return 1;
+		}
+		return (nodeTypeMetadata[a] as NodeTypeMetadata).name.localeCompare(
+			(nodeTypeMetadata[b] as NodeTypeMetadata).name
+		);
+	});
+
+	return (
+		<Dialog onOpenChange={onClose} open={isOpen}>
+			<DialogContent
+				className={cn(
+					"sm:max-w-xl",
+					"bg-background-transparent-black-secondaryAlt",
+					"border border-transparent",
+					"backdrop-blur-lg",
+					"text-text-light",
+					"shadow-3d"
+				)}
+				onKeyDown={handleKeyDown}
+			>
+				<DialogHeader>
+					<DialogTitle className="text-lg text-text-light">
+						Add Node
+					</DialogTitle>
+					<DialogDescription className="text-text-light/70">
+						Select a node type or template to add to your assurance case
+					</DialogDescription>
+				</DialogHeader>
+
+				{/* Search */}
+				{showSearch && (
+					<div className="relative">
+						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-text-light/50" />
+						<Input
+							className={cn(
+								"pl-10",
+								"bg-background-transparent-white-hover",
+								"border-transparent",
+								"text-text-light",
+								"placeholder:text-text-light/50",
+								"focus:ring-2 focus:ring-blue-500/50"
+							)}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							placeholder="Search node types..."
+							ref={searchInputRef}
+							type="text"
+							value={searchQuery}
+						/>
+					</div>
+				)}
+
+				{/* Node Types */}
+				<div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
+					<div className="mb-2 font-semibold text-text-light/50 text-xs uppercase tracking-wider">
+						Node Types
+					</div>
+					{sortedTypes.map((nodeType, index) => (
+						<NodeTypeOption
+							isRecent={recentTypes.includes(nodeType)}
+							isSelected={index === selectedIndex}
+							key={nodeType}
+							nodeType={nodeType}
+							onClick={() => handleSelectType(nodeType)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									handleSelectType(nodeType);
+								}
+							}}
+						/>
+					))}
+				</div>
+
+				{/* Templates Section */}
+				{showTemplates && templates.length > 0 && (
+					<>
+						<Separator className="bg-border-transparent" />
+						<div className="space-y-2">
+							<div className="mb-2 font-semibold text-text-light/50 text-xs uppercase tracking-wider">
+								Templates
+							</div>
+							{templates.map((template) => (
+								<TemplateOption
+									key={template.id}
+									onClick={() => handleSelectTemplate(template)}
+									template={template}
+								/>
+							))}
+						</div>
+					</>
+				)}
+
+				{/* Help Footer */}
+				<Separator className="bg-border-transparent" />
+				<button
+					className={cn(
+						"flex w-full items-center justify-center gap-2",
+						"text-sm text-text-light/70",
+						"hover:text-text-light",
+						"transition-colors duration-200",
+						"py-2"
+					)}
+					onClick={() => window.open("/docs/nodes", "_blank")}
+					type="button"
+				>
+					<HelpCircle className="h-4 w-4" />
+					Learn about node types
+				</button>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
+type CompactNodeTypeSelectorProps = {
+	onSelectType: (nodeType: string) => void;
+	recentTypes?: string[];
+	className?: string;
+};
+
+/**
+ * Compact Node Type Selector (inline version)
+ */
+export const CompactNodeTypeSelector = ({
+	onSelectType,
+	recentTypes: _recentTypes = [],
+	className,
+}: CompactNodeTypeSelectorProps) => {
+	const nodeTypesList = Object.keys(nodeTypeMetadata);
+
+	return (
+		<div className={cn("flex flex-wrap gap-2", className)}>
+			{nodeTypesList.map((nodeType) => {
+				const metadata = nodeTypeMetadata[nodeType] as NodeTypeMetadata;
+				const Icon = getIconComponent(metadata.icon);
+
+				return (
+					<motion.button
+						className={cn(
+							"rounded-lg p-3",
+							"bg-background-transparent-white-hover",
+							"hover:bg-background-transparent-white-secondaryHover",
+							"border border-transparent",
+							"transition-all duration-200",
+							"group"
+						)}
+						key={nodeType}
+						onClick={() => onSelectType(nodeType)}
+						title={metadata.name}
+						type="button"
+						whileHover={{ scale: 1.05 }}
+						whileTap={{ scale: 0.95 }}
+					>
+						<Icon className={cn("h-5 w-5", `text-${metadata.color}-400`)} />
+					</motion.button>
+				);
+			})}
+		</div>
+	);
+};
+
+export default NodeTypeSelector;

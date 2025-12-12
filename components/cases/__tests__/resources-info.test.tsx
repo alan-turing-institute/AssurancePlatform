@@ -134,7 +134,7 @@ describe("ResourcesInfo", () => {
 			});
 			expect(goalLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#goal-claims"
+				"/docs/curriculum/quick-reference/02-element-types#goal-claims"
 			);
 
 			const propertyLink = screen.getByRole("link", {
@@ -142,25 +142,25 @@ describe("ResourcesInfo", () => {
 			});
 			expect(propertyLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#property-claims"
+				"/docs/curriculum/quick-reference/02-element-types#property-claims"
 			);
 
 			const strategyLink = screen.getByRole("link", { name: STRATEGY_REGEX });
 			expect(strategyLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#strategy"
+				"/docs/curriculum/quick-reference/02-element-types#strategies"
 			);
 
 			const evidenceLink = screen.getByRole("link", { name: EVIDENCE_REGEX });
 			expect(evidenceLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#evidence"
+				"/docs/curriculum/quick-reference/02-element-types#evidence"
 			);
 
 			const contextLink = screen.getByRole("link", { name: CONTEXT_REGEX });
 			expect(contextLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#context"
+				"/docs/curriculum/quick-reference/02-element-types#context"
 			);
 		});
 
@@ -426,11 +426,11 @@ describe("ResourcesInfo", () => {
 			await user.click(trigger);
 
 			const expectedLinks = [
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#goal-claims",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#property-claims",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#strategy",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#evidence",
-				"https://alan-turing-institute.github.io/AssurancePlatform/guidance/components/#context",
+				"/docs/curriculum/quick-reference/02-element-types#goal-claims",
+				"/docs/curriculum/quick-reference/02-element-types#property-claims",
+				"/docs/curriculum/quick-reference/02-element-types#strategies",
+				"/docs/curriculum/quick-reference/02-element-types#evidence",
+				"/docs/curriculum/quick-reference/02-element-types#context",
 			];
 
 			const links = screen.getAllByRole("link");

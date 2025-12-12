@@ -210,7 +210,7 @@ describe("Hero", () => {
 			});
 			expect(learnMoreLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/"
+				"/docs/curriculum"
 			);
 		});
 
