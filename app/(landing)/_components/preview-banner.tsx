@@ -39,7 +39,7 @@ export default function PreviewBanner() {
 					</Link>
 				</div>
 				{/* <div className="flex flex-1 justify-end">
-          <button type="button" className="-m-3 p-3 focus-visible:outline-offset-[-4px]">
+          <button type="button" className="-m-3 p-3 focus-visible:-outline-offset-4">
             <span className="sr-only">Dismiss</span>
             <XMarkIcon onClick={() => setShowBanner(false)} className="h-5 w-5 text-white" aria-hidden="true" />
           </button>

@@ -127,7 +127,7 @@ const ModuleProgressTracker = ({
 					{/* Header Bar */}
 					<div className="flex items-center justify-between border-gray-200 border-b p-4 dark:border-gray-700">
 						<div className="flex flex-1 items-center gap-3">
-							<Target className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+							<Target className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
 							<div className="min-w-0 flex-1">
 								<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 									<span className="font-medium">
@@ -211,7 +211,7 @@ const ModuleProgressTracker = ({
 												initial={{ height: 0, opacity: 0 }}
 											>
 												<div className="flex gap-2">
-													<Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+													<Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 													<p className="text-blue-800 text-sm dark:text-blue-200">
 														{currentTask.hint}
 													</p>
@@ -239,7 +239,7 @@ const ModuleProgressTracker = ({
 						<div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
 							<motion.div
 								animate={{ width: `${progress.percentage}%` }}
-								className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+								className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
 								initial={{ width: 0 }}
 								transition={{ duration: 0.5, ease: "easeOut" }}
 							/>
@@ -294,7 +294,7 @@ const ModuleProgressTracker = ({
 							<div className="h-3 w-full rounded-full bg-gray-200 dark:bg-gray-700">
 								<motion.div
 									animate={{ width: `${progress.percentage}%` }}
-									className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+									className="h-3 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
 									initial={{ width: 0 }}
 									transition={{ duration: 0.5, ease: "easeOut" }}
 								/>
@@ -377,7 +377,7 @@ const ModuleProgressTracker = ({
 															initial={{ height: 0, opacity: 0 }}
 														>
 															<div className="flex gap-2">
-																<Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+																<Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 																<p className="text-blue-800 text-sm dark:text-blue-200">
 																	{task.hint}
 																</p>

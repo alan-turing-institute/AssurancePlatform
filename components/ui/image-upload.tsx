@@ -115,7 +115,7 @@ export function ImageUpload({
 							? "border-primary bg-primary/5"
 							: "border-muted-foreground/25 hover:border-muted-foreground/50",
 						disabled && "cursor-not-allowed opacity-50",
-						"focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+						"focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
 					)}
 				>
 					<input {...getInputProps()} />

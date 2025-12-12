@@ -135,7 +135,7 @@ describe("PropertyNode", () => {
 			);
 		});
 
-		it("should have proper shadow and border radius", () => {
+		it("should have proper shadow-sm and border radius", () => {
 			const data = {
 				name: "Test Property",
 				description: "Test description",

@@ -195,7 +195,7 @@ describe("ResourcesInfo", () => {
 					"p-3",
 					"leading-none",
 					"no-underline",
-					"outline-none",
+					"outline-hidden",
 					"transition-colors",
 					"hover:bg-accent",
 					"hover:text-accent-foreground",

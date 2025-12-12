@@ -174,7 +174,7 @@ const RegisterForm = () => {
 
 	return (
 		<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-			<div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12 dark:bg-slate-900">
+			<div className="bg-white px-6 py-12 shadow-sm sm:rounded-lg sm:px-12 dark:bg-slate-900">
 				{errors?.map((error: string) => (
 					<div
 						className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"

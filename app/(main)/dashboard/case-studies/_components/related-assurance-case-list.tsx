@@ -79,7 +79,7 @@ const RelatedAssuranceCaseList = ({
 					</p>
 					<div className="mt-6">
 						<Link
-							className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+							className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-2xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 							href="/dashboard"
 						>
 							Go to Dashboard

@@ -332,7 +332,7 @@ const ReflectionPrompts = ({
 						<div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
 							<motion.div
 								animate={{ width: `${progressPercentage}%` }}
-								className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+								className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
 								initial={{ width: 0 }}
 								transition={{ duration: 0.3 }}
 							/>

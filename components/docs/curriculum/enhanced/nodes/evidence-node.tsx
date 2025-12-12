@@ -173,7 +173,7 @@ const EvidenceTypeBadge = ({
 			className={cn(
 				"px-2 py-0.5 text-xs",
 				"border",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				config.className
 			)}
 			title={config.description}

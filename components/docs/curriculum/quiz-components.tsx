@@ -435,7 +435,7 @@ export const MultipleChoiceQuiz = ({
 						animate={{
 							width: `${((currentQuestion + 1) / shuffledQuestions.length) * 100}%`,
 						}}
-						className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+						className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
 						initial={{ width: 0 }}
 						transition={{ duration: 0.3 }}
 					/>

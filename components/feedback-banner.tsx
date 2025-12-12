@@ -36,7 +36,7 @@ export default function FeedbackBanner() {
 			</div>
 			<div className="flex flex-1 justify-end">
 				<button
-					className="-m-3 p-3 focus-visible:outline-offset-[-4px]"
+					className="-m-3 p-3 focus-visible:-outline-offset-4"
 					type="button"
 				>
 					<span className="sr-only">Dismiss</span>

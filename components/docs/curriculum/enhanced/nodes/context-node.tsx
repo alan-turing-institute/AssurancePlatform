@@ -160,7 +160,7 @@ const ContextTypeBadge = ({
 			className={cn(
 				"px-2 py-0.5 text-xs",
 				"border",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				config.className
 			)}
 			title={config.description}
@@ -385,7 +385,7 @@ const ContextNode = ({
 							Validity
 						</div>
 						<div className="flex items-start gap-2 text-xs">
-							<CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-green-400" />
+							<CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
 							<span className="text-text-light/70">{validity}</span>
 						</div>
 					</div>

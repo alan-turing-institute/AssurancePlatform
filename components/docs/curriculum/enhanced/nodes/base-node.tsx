@@ -216,7 +216,7 @@ const BaseNode = ({
 						{/* Expand/Collapse Indicator */}
 						<motion.button
 							aria-label={isExpanded ? "Collapse node" : "Expand node"}
-							className="m-0 cursor-pointer border-none bg-transparent p-0 outline-none transition-opacity hover:opacity-70"
+							className="m-0 cursor-pointer border-none bg-transparent p-0 outline-hidden transition-opacity hover:opacity-70"
 							onClick={handleToggle}
 							onMouseDown={(e) => e.stopPropagation()}
 						>
@@ -226,7 +226,7 @@ const BaseNode = ({
 							>
 								<ChevronDown
 									aria-hidden="true"
-									className="h-4 w-4 flex-shrink-0 text-icon-light-secondary"
+									className="h-4 w-4 shrink-0 text-icon-light-secondary"
 								/>
 							</motion.div>
 						</motion.button>

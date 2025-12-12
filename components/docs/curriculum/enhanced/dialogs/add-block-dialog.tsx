@@ -175,7 +175,7 @@ const NodeTypeCard = ({
 				{/* Icon */}
 				<div
 					className={cn(
-						"flex-shrink-0 rounded-lg p-2.5",
+						"shrink-0 rounded-lg p-2.5",
 						`bg-${metadata.color}-500/10`,
 						"transition-transform duration-200 group-hover:scale-110"
 					)}
@@ -739,7 +739,7 @@ const AddBlockDialog = ({
 											"rounded-lg",
 											"text-sm text-text-light",
 											"placeholder:text-text-light/50",
-											"focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+											"focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
 										)}
 										onChange={(e) => setSearchQuery(e.target.value)}
 										placeholder="Search node types..."

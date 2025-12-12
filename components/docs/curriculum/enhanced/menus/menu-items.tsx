@@ -166,7 +166,7 @@ export const MenuItem = ({
 					{/* Icon */}
 					{Icon && (
 						<Icon
-							className={`h-4 w-4 flex-shrink-0 ${colorClasses || (dangerous ? "text-red-400" : "text-icon-light-secondary")}`}
+							className={`h-4 w-4 shrink-0 ${colorClasses || (dangerous ? "text-red-400" : "text-icon-light-secondary")}`}
 							strokeWidth={2}
 						/>
 					)}
@@ -177,13 +177,13 @@ export const MenuItem = ({
 
 				{/* Shortcut or Submenu Indicator */}
 				{shortcut && !submenu && (
-					<span className="ml-auto flex-shrink-0 font-mono text-gray-500 text-xs">
+					<span className="ml-auto shrink-0 font-mono text-gray-500 text-xs">
 						{shortcut}
 					</span>
 				)}
 
 				{submenu && (
-					<ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-500" />
+					<ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
 				)}
 			</button>
 
@@ -411,7 +411,7 @@ export const SearchableMenu = ({
 				<input
 					autoFocus
 					className={
-						"w-full rounded border border-transparent bg-background-transparent-white-hover px-2 py-1 text-sm text-text-light placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+						"w-full rounded border border-transparent bg-background-transparent-white-hover px-2 py-1 text-sm text-text-light placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
 					}
 					onChange={(e) => setSearchTerm(e.target.value)}
 					placeholder={placeholder}

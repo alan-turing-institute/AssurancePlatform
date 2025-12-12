@@ -198,7 +198,7 @@ const TemplateCard = ({
 			<div className="mb-3 flex items-start justify-between">
 				<div className="flex flex-1 items-start gap-3">
 					{/* Icon */}
-					<div className="flex-shrink-0 rounded-lg bg-purple-500/10 p-2">
+					<div className="shrink-0 rounded-lg bg-purple-500/10 p-2">
 						<Icon className="h-5 w-5 text-purple-400" />
 					</div>
 
@@ -216,7 +216,7 @@ const TemplateCard = ({
 				{/* Favorite Button */}
 				<button
 					className={cn(
-						"flex-shrink-0 rounded p-1.5 transition-colors",
+						"shrink-0 rounded p-1.5 transition-colors",
 						isFavorite
 							? "text-yellow-400 hover:text-yellow-300"
 							: "text-text-light/30 hover:text-text-light/60"
@@ -500,7 +500,7 @@ const BlockTemplates = ({
 				)}
 			>
 				<div className="flex items-start gap-2 text-text-light/70 text-xs">
-					<Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
+					<Info className="mt-0.5 h-4 w-4 shrink-0" />
 					<div>
 						<p className="mb-1 font-medium text-text-light">About Templates</p>
 						<p>

@@ -131,7 +131,7 @@ const NodeTypeCard = ({ metadata, isSelected, onClick }: NodeTypeCardProps) => {
 			whileTap={{ scale: 0.98 }}
 		>
 			<div className="flex items-start gap-3">
-				<Icon className="mt-1 h-5 w-5 flex-shrink-0 text-text-light" />
+				<Icon className="mt-1 h-5 w-5 shrink-0 text-text-light" />
 				<div className="min-w-0 flex-1">
 					<div className="mb-1 font-semibold text-text-light">
 						{metadata.name}
@@ -326,7 +326,7 @@ const CreateNodeDialog = ({
 											"bg-background-transparent-white-hover",
 											"border border-transparent",
 											"text-text-light",
-											"focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+											"focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
 										)}
 										id="node-name"
 										onChange={(e) => setNodeName(e.target.value)}
@@ -349,7 +349,7 @@ const CreateNodeDialog = ({
 											"bg-background-transparent-white-hover",
 											"border border-transparent",
 											"text-text-light",
-											"focus:outline-none focus:ring-2 focus:ring-blue-500/50",
+											"focus:outline-hidden focus:ring-2 focus:ring-blue-500/50",
 											"resize-none"
 										)}
 										id="node-description"

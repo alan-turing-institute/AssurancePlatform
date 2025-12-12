@@ -171,7 +171,7 @@ const GhostNodePreview = ({
 				"rounded-xl",
 				"border-2 border-blue-400 border-dashed",
 				"bg-blue-500/10",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				"flex items-center justify-center"
 			)}
 			exit={{ opacity: 0, scale: 0.8 }}

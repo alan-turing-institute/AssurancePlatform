@@ -92,6 +92,6 @@ export const config = {
 		 * - favicon.ico (favicon file)
 		 * - public folder
 		 */
-		"/((?!api/auth|api/health|api/users/register|_next/static|_next/image|favicon.ico|images|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$).*)",
+		"/((?!api/auth|api/health|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$).*)",
 	],
 };

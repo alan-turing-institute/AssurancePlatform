@@ -114,7 +114,7 @@ export const buildNodeIconClasses = (
 	return cn(
 		"w-5",
 		"h-5",
-		"flex-shrink-0",
+		"shrink-0",
 		"transition-colors",
 		"duration-200",
 		isHovered ? colors.iconHover : colors.icon
@@ -175,7 +175,7 @@ export const getIconSize = (size = "base"): string =>
  */
 export const shadowClasses: Record<string, string> = {
 	none: "shadow-none",
-	sm: "shadow-sm",
+	sm: "shadow-xs",
 	base: "shadow-glassmorphic",
 	md: "shadow-md",
 	lg: "shadow-lg",
@@ -288,7 +288,7 @@ export const buildFocusClasses = (nodeType = "goal"): string => {
 	const colors = getColorSchemeClasses(nodeType);
 
 	return cn(
-		"focus:outline-none",
+		"focus:outline-hidden",
 		"focus:ring-2",
 		`focus:${colors.ring}`,
 		"focus:ring-offset-2",

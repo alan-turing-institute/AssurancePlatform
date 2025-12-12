@@ -247,7 +247,7 @@ const ConceptCarousel = ({
 												className="flex items-start gap-2"
 												key={`${currentConcept.id}-detail-${detail}`}
 											>
-												<ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+												<ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
 												<p className="text-gray-600 text-sm dark:text-gray-400">
 													{detail}
 												</p>

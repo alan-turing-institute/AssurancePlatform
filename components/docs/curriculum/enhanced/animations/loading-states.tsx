@@ -136,7 +136,7 @@ export const Skeleton = ({
 	const shimmerClasses = cn(
 		"absolute",
 		"inset-0",
-		"bg-gradient-to-r",
+		"bg-linear-to-r",
 		"from-transparent",
 		"via-gray-600/20",
 		"to-transparent",
@@ -193,9 +193,9 @@ export const NodeSkeleton = ({
 	return (
 		<div className={containerClasses}>
 			<div className="mb-3 flex items-center gap-2">
-				<Skeleton className="h-5 w-5 flex-shrink-0" variant="circle" />
+				<Skeleton className="h-5 w-5 shrink-0" variant="circle" />
 				<Skeleton className="h-4 flex-1" variant="title" />
-				<Skeleton className="h-4 w-4 flex-shrink-0" variant="circle" />
+				<Skeleton className="h-4 w-4 shrink-0" variant="circle" />
 			</div>
 
 			{expanded ? (
@@ -324,7 +324,7 @@ export const ProgressBar = ({
 
 	const barClasses = cn(
 		"h-full",
-		"bg-gradient-to-r",
+		"bg-linear-to-r",
 		"from-blue-500",
 		"to-purple-500",
 		"rounded-full"
@@ -479,7 +479,7 @@ export const ShimmerContainer = ({
 					className={cn(
 						"absolute",
 						"inset-0",
-						"bg-gradient-to-r",
+						"bg-linear-to-r",
 						"from-transparent",
 						"via-white/10",
 						"to-transparent",
@@ -624,7 +624,7 @@ export const LoadingOverlay = ({
 				"absolute",
 				"inset-0",
 				"bg-black/50",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				"flex",
 				"flex-col",
 				"items-center",

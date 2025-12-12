@@ -235,7 +235,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 			{isOpen && (
 				<motion.div
 					animate={{ opacity: 1, scale: 1, y: 0 }}
-					className={`f-effect-backdrop-blur-lg fixed z-[9999] min-w-[200px] overflow-hidden rounded-lg border border-transparent bg-background-transparent-black-secondary py-1 shadow-3d ${className}
+					className={`f-effect-backdrop-blur-lg fixed z-9999 min-w-[200px] overflow-hidden rounded-lg border border-transparent bg-background-transparent-black-secondary py-1 shadow-3d ${className}
           `}
 					exit={{ opacity: 0, scale: 0.95, y: -10 }}
 					initial={{ opacity: 0, scale: 0.95, y: -10 }}

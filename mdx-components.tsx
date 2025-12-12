@@ -1,21 +1,21 @@
 import type { ImageProps } from "next/image";
 import Image from "next/image";
 import {
-	useMDXComponents as getNextraComponents,
+	useMDXComponents as getThemeComponents,
 	type MDXComponents,
-} from "nextra/mdx-components";
+} from "nextra-theme-docs";
 
 /**
  * Custom image component that renders images without the zoom/expand behaviour.
- * Uses Next.js Image for optimization.
+ * Uses Next.js Image for optimisation.
  */
 function MdxImage({ src, alt, title }: ImageProps) {
 	if (!src) {
 		return null;
 	}
 
-	// Determine if the image should be optimized
-	// Only optimize local images (starting with "/")
+	// Determine if the image should be optimised
+	// Only optimise local images (starting with "/")
 	// src can be a string or a StaticImport object
 	const srcString = typeof src === "string" ? src : "";
 	const isLocalImage = srcString.startsWith("/");
@@ -39,18 +39,17 @@ function MdxImage({ src, alt, title }: ImageProps) {
  * MDX components for the documentation.
  * This file is required by Nextra 4.x for App Router integration.
  *
- * Uses nextra's base MDX components (without nextra-theme-docs which
- * has CSS conflicts with Tailwind). Custom styling is handled by
- * prose classes in the DocsLayout component.
+ * Uses nextra-theme-docs components for full theme support including
+ * callouts, cards, tabs, and other built-in components.
  *
  * Note: Curriculum components with client-side functionality (React hooks, contexts)
  * should be imported directly in MDX files rather than registered here,
  * as they require "use client" directive and can't be used in server components.
  */
 export function useMDXComponents(components?: MDXComponents): MDXComponents {
-	const nextraComponents = getNextraComponents(components ?? {});
+	const themeComponents = getThemeComponents(components ?? {});
 	return {
-		...nextraComponents,
+		...themeComponents,
 		// Override the default img component to disable zoom behaviour
 		img: MdxImage,
 	};

@@ -71,7 +71,7 @@ describe("CTA", () => {
 				"font-semibold",
 				"text-indigo-600",
 				"text-sm",
-				"shadow-sm"
+				"shadow-xs"
 			);
 		});
 
@@ -91,7 +91,7 @@ describe("CTA", () => {
 				name: "See it in action",
 			});
 			expect(actionButton).toHaveClass(
-				"focus-visible:outline",
+				"focus-visible:outline-solid",
 				"focus-visible:outline-2",
 				"focus-visible:outline-white",
 				"focus-visible:outline-offset-2"

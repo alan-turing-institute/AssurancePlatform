@@ -4,12 +4,6 @@ export default {
 	"tea-specialist": "TEA Specialist",
 	"tea-expert": "TEA Expert",
 	"hands-on": "Hands-On Resources",
-	standalone: "Standalone Resources",
+	standalone: "Standalone Guides",
 	"quick-reference": "Quick Reference",
-	STRUCTURE: {
-		display: "hidden",
-	},
-	shared: {
-		display: "hidden",
-	},
 };

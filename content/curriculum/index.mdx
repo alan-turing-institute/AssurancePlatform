@@ -3,72 +3,115 @@ title: TEA Curriculum
 description: Skills and capabilities resources for learning about Trustworthy and Ethical Assurance
 ---
 
+import { Callout } from 'nextra/components';
+import {
+  DescriptionCards,
+  DescriptionCard,
+} from '@/components/docs/description-card';
+import {
+  GraduationCap,
+  Award,
+  Trophy,
+  Users,
+  BookOpen,
+  FileText,
+  HelpCircle,
+  FolderOpen,
+} from 'lucide-react';
+
 # TEA Skills and Capabilities Resources
 
-In this section you will find a series of skills and capabilities resources, designed to help you understand more about TEA and how to use the TEA platform.
-These resources include explanations of the underlying methodology, guides to using the online tool, and more.
+In this section you will find a series of skills and capabilities resources, designed to help you understand more about TEA and how to use the TEA platform. These resources include explanations of the underlying methodology, guides to using the online tool, and more.
 
 Some of the content can be read in any order and independently of each other, but for those who are completely new to Trustworthy and Ethical Assurance, a more structured curriculum has been developed.
+
+<Callout type="info">
+**Resources in Development**
+
+Please note that our skills and capabilities resources are still under development. As such, there may be references to modules or pages that do not currently exist.
+
+- You can visit our [GitHub repository project page](https://github.com/alan-turing-institute/AssurancePlatform/projects) to view a roadmap about ongoing work to get a better idea of when new modules and content will be available
+- You can also get involved with any [open discussions](https://github.com/alan-turing-institute/AssurancePlatform/discussions)
+- Please read our [community guidelines and code of conduct](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/CONTRIBUTING.md) if you plan on contributing to this project
+
+</Callout>
 
 ## The TEA Curriculum
 
 The following training modules are designed for self-directed learning, and can be done at your own pace:
 
-import { Cards } from 'nextra/components'
-
-<Cards>
-  <Cards.Card title="TEA Trainee" href="/docs/curriculum/tea-trainee">
-    Introduction to basic concepts and foundations for getting the most from the TEA platform.
-  </Cards.Card>
-  <Cards.Card title="TEA Specialist" href="/docs/curriculum/tea-specialist">
-    Builds on the foundational resources to equip you with the knowledge to contribute to the TEA community.
-  </Cards.Card>
-  <Cards.Card title="TEA Expert" href="/docs/curriculum/tea-expert">
-    For those who wish to hone their knowledge to establish best practices within the TEA community.
-  </Cards.Card>
-</Cards>
+<DescriptionCards>
+  <DescriptionCard
+    icon={<GraduationCap />}
+    title="TEA Trainee"
+    description="Introduction to basic concepts and foundations for getting the most from the TEA platform."
+    href="/docs/curriculum/tea-trainee"
+  />
+  <DescriptionCard
+    icon={<Award />}
+    title="TEA Specialist"
+    description="Builds on the foundational resources to equip you with the knowledge to contribute to the TEA community."
+    href="/docs/curriculum/tea-specialist"
+  />
+  <DescriptionCard
+    icon={<Trophy />}
+    title="TEA Expert"
+    description="For those who wish to hone their knowledge to establish best practices within the TEA community."
+    href="/docs/curriculum/tea-expert"
+  />
+</DescriptionCards>
 
 ## Hands-On Resources
 
 The following resources are designed for practical skills development, including group workshops and team activities:
 
-<Cards>
-  <Cards.Card title="Co-Developing an Assurance Case" href="/codeveloping-an-assurance-case.pdf">
-    A guide to help new teams get up-to-speed quickly with the TEA platform.
-  </Cards.Card>
-</Cards>
+<DescriptionCards>
+  <DescriptionCard
+    icon={<FolderOpen />}
+    title="Case Studies"
+    description="Real-world examples of assurance cases across different domains."
+    href="/docs/curriculum/hands-on/case-studies"
+  />
+</DescriptionCards>
 
 ## Standalone Guides
 
 The following training resources are not part of a structured curriculum, but can be read as part of your own skills journey:
 
-<Cards>
-  <Cards.Card title="Understanding the Assurance Ecosystem" href="/docs/curriculum/standalone/assurance-ecosystem">
-    An introduction to the broader AI assurance ecosystem.
-  </Cards.Card>
-  <Cards.Card title="Standards and their role in assurance" href="/docs/curriculum/standalone/standards">
-    An introduction to standards, the different types of standards and their role in assurance.
-  </Cards.Card>
-</Cards>
+<DescriptionCards>
+  <DescriptionCard
+    icon={<BookOpen />}
+    title="Understanding the Assurance Ecosystem"
+    description="An introduction to the broader AI assurance ecosystem."
+    href="/docs/curriculum/standalone/assurance-ecosystem"
+  />
+  <DescriptionCard
+    icon={<FileText />}
+    title="Standards and their Role in Assurance"
+    description="An introduction to standards, the different types of standards and their role in assurance."
+    href="/docs/curriculum/standalone/standards"
+  />
+</DescriptionCards>
 
 ## Quick Reference
 
-<Cards>
-  <Cards.Card title="Platform Basics" href="/docs/curriculum/quick-reference/01-platform-basics">
-    Quick reference for using the TEA platform.
-  </Cards.Card>
-  <Cards.Card title="Element Types" href="/docs/curriculum/quick-reference/02-element-types">
-    Reference for the different types of elements in an assurance case.
-  </Cards.Card>
-  <Cards.Card title="Glossary" href="/docs/curriculum/quick-reference/03-glossary-link">
-    Key terms and definitions.
-  </Cards.Card>
-</Cards>
-
-## Case Studies
-
-<Cards>
-  <Cards.Card title="Case Studies" href="/docs/curriculum/case-studies">
-    Real-world examples of assurance cases across different domains.
-  </Cards.Card>
-</Cards>
+<DescriptionCards>
+  <DescriptionCard
+    icon={<HelpCircle />}
+    title="Platform Basics"
+    description="Quick reference for using the TEA platform."
+    href="/docs/curriculum/quick-reference/01-platform-basics"
+  />
+  <DescriptionCard
+    icon={<HelpCircle />}
+    title="Element Types"
+    description="Reference for the different types of elements in an assurance case."
+    href="/docs/curriculum/quick-reference/02-element-types"
+  />
+  <DescriptionCard
+    icon={<HelpCircle />}
+    title="Glossary"
+    description="Key terms and definitions."
+    href="/docs/curriculum/quick-reference/glossary"
+  />
+</DescriptionCards>

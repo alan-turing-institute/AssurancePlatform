@@ -93,7 +93,7 @@ export default function MailingList() {
 										Email address
 									</label>
 									<input
-										className="block w-full rounded-md border border-transparent px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600"
+										className="block w-full rounded-md border border-transparent px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-xs focus:border-transparent focus:outline-hidden focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600"
 										id="cta-email"
 										placeholder="Enter your email"
 										type="email"
@@ -101,7 +101,7 @@ export default function MailingList() {
 								</div>
 								<div className="mt-4 sm:mt-0 sm:ml-3">
 									<button
-										className="block w-full rounded-md border border-transparent bg-indigo-500 px-5 py-3 font-medium text-base text-white shadow hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600 sm:px-10"
+										className="block w-full rounded-md border border-transparent bg-indigo-500 px-5 py-3 font-medium text-base text-white shadow-sm hover:bg-indigo-400 focus:outline-hidden focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600 sm:px-10"
 										type="submit"
 									>
 										Notify me

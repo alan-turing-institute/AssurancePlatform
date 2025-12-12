@@ -567,12 +567,12 @@ export const getHandleShapeClasses = (
  */
 export const getGradientClasses = (type = "default"): string => {
 	const gradientMap: Record<string, string> = {
-		default: "bg-gradient-to-br from-gray-200 to-gray-300",
-		blue: "bg-gradient-to-br from-blue-400 to-blue-600",
-		green: "bg-gradient-to-br from-green-400 to-green-600",
-		purple: "bg-gradient-to-br from-purple-400 to-purple-600",
-		orange: "bg-gradient-to-br from-orange-400 to-orange-600",
-		cyan: "bg-gradient-to-br from-cyan-400 to-cyan-600",
+		default: "bg-linear-to-br from-gray-200 to-gray-300",
+		blue: "bg-linear-to-br from-blue-400 to-blue-600",
+		green: "bg-linear-to-br from-green-400 to-green-600",
+		purple: "bg-linear-to-br from-purple-400 to-purple-600",
+		orange: "bg-linear-to-br from-orange-400 to-orange-600",
+		cyan: "bg-linear-to-br from-cyan-400 to-cyan-600",
 	};
 
 	return gradientMap[type] || gradientMap.default;
@@ -587,7 +587,7 @@ export const getShadowClasses = (
 	intensity: "subtle" | "medium" | "strong" = "medium"
 ): string => {
 	const shadowMap: Record<string, string> = {
-		subtle: "shadow-sm",
+		subtle: "shadow-xs",
 		medium: "shadow-md",
 		strong: "shadow-lg",
 	};

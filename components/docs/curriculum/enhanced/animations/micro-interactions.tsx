@@ -147,7 +147,7 @@ export const InteractiveButton = ({
 		"text-sm",
 		"transition-colors",
 		"duration-200",
-		"focus:outline-none",
+		"focus:outline-hidden",
 		"focus:ring-2",
 		"focus:ring-blue-500/50",
 		variants[variant],

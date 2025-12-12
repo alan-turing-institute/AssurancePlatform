@@ -1,6 +1,96 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "nextra-theme-docs/style.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+	margin-inline: auto;
+	padding-inline: 2rem;
+	@media (width >= --theme(--breakpoint-sm)) {
+		max-width: none;
+	}
+	@media (width >= 1400px) {
+		max-width: 1400px;
+	}
+}
+
+@theme {
+	--font-sans:
+		var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+	--background-image-grid-paper: url("data:image/svg+xml,%3Csvg width=%2752%27 height=%2726%27 viewBox=%270 0 52 26%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fill-rule=%27evenodd%27%3E%3Cg fill=%27%23000000%27 fill-opacity=%270.08%27%3E%3Cpath d=%27M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z%27 /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+	--background-image-grid-paper-dark: url("data:image/svg+xml,%3Csvg width=%2752%27 height=%2726%27 viewBox=%270 0 52 26%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fill-rule=%27evenodd%27%3E%3Cg fill=%27%23ffffff%27 fill-opacity=%270.08%27%3E%3Cpath d=%27M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z%27 /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+
+	--color-border: hsl(var(--border));
+	--color-input: hsl(var(--input));
+	--color-ring: hsl(var(--ring));
+	--color-background: hsl(var(--background));
+	--color-foreground: hsl(var(--foreground));
+
+	--color-primary: hsl(var(--primary));
+	--color-primary-foreground: hsl(var(--primary-foreground));
+
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-foreground: hsl(var(--secondary-foreground));
+
+	--color-destructive: hsl(var(--destructive));
+	--color-destructive-foreground: hsl(var(--destructive-foreground));
+
+	--color-muted: hsl(var(--muted));
+	--color-muted-foreground: hsl(var(--muted-foreground));
+
+	--color-accent: hsl(var(--accent));
+	--color-accent-foreground: hsl(var(--accent-foreground));
+
+	--color-popover: hsl(var(--popover));
+	--color-popover-foreground: hsl(var(--popover-foreground));
+
+	--color-card: hsl(var(--card));
+	--color-card-foreground: hsl(var(--card-foreground));
+
+	--radius-lg: var(--radius);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-sm: calc(var(--radius) - 4px);
+
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
+
+	@keyframes accordion-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-accordion-content-height);
+		}
+	}
+	@keyframes accordion-up {
+		from {
+			height: var(--radix-accordion-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+}
 
 @layer base {
 	:root {
@@ -376,267 +466,4 @@
 		animation: none;
 		transition: none;
 	}
-}
-
-/* ========================================================================
-   Nextra Callout Styles
-   Override Nextra's x: prefixed utilities that require their CSS
-   ======================================================================== */
-.nextra-callout {
-	display: flex;
-	overflow-x: auto;
-	border-radius: 0.5rem;
-	border-width: 1px;
-	padding-top: 0.5em;
-	padding-bottom: 0.5em;
-	padding-inline-end: 1em;
-	margin-top: 1.25em;
-}
-
-/* Info/Default callout (blue) */
-.nextra-callout[class*="bg-blue"] {
-	background-color: rgb(219 234 254); /* bg-blue-100 */
-	color: rgb(29 78 216); /* text-blue-700 */
-	border-color: rgb(29 78 216); /* border-blue-700 */
-}
-
-.dark .nextra-callout[class*="bg-blue"] {
-	background-color: rgb(30 58 138 / 0.3); /* dark:bg-blue-900/30 */
-	color: rgb(96 165 250); /* dark:text-blue-400 */
-	border-color: rgb(37 99 235); /* dark:border-blue-600 */
-}
-
-/* Warning callout (yellow/amber) */
-.nextra-callout[class*="bg-yellow"],
-.nextra-callout[class*="bg-amber"] {
-	background-color: rgb(254 249 195); /* bg-yellow-100 */
-	color: rgb(161 98 7); /* text-yellow-700 */
-	border-color: rgb(161 98 7); /* border-yellow-700 */
-}
-
-.dark .nextra-callout[class*="bg-yellow"],
-.dark .nextra-callout[class*="bg-amber"] {
-	background-color: rgb(133 77 14 / 0.3); /* dark:bg-yellow-900/30 */
-	color: rgb(250 204 21); /* dark:text-yellow-400 */
-	border-color: rgb(202 138 4); /* dark:border-yellow-600 */
-}
-
-/* Error callout (red) */
-.nextra-callout[class*="bg-red"] {
-	background-color: rgb(254 226 226); /* bg-red-100 */
-	color: rgb(185 28 28); /* text-red-700 */
-	border-color: rgb(185 28 28); /* border-red-700 */
-}
-
-.dark .nextra-callout[class*="bg-red"] {
-	background-color: rgb(127 29 29 / 0.3); /* dark:bg-red-900/30 */
-	color: rgb(248 113 113); /* dark:text-red-400 */
-	border-color: rgb(220 38 38); /* dark:border-red-600 */
-}
-
-/* Callout icon container */
-.nextra-callout > div:first-child {
-	user-select: none;
-	font-size: 1.25em;
-	padding-inline-start: 0.6em;
-	padding-inline-end: 0.4em;
-}
-
-/* Callout content */
-.nextra-callout > div:last-child {
-	min-width: 0;
-	flex: 1;
-}
-
-/* Fix nested elements in callouts */
-.nextra-callout p {
-	margin: 0.5em 0;
-}
-
-.nextra-callout p:first-child {
-	margin-top: 0;
-}
-
-.nextra-callout p:last-child {
-	margin-bottom: 0;
-}
-
-.nextra-callout ul,
-.nextra-callout ol {
-	margin: 0.5em 0;
-	padding-left: 1.5em;
-}
-
-.nextra-callout li {
-	margin: 0.25em 0;
-}
-
-/* ========================================================================
-   Nextra External Link Icon Styles
-   Fix for x: prefixed utility classes that require Nextra's CSS
-   ======================================================================== */
-
-/* External link icons in anchor tags */
-a > svg[class*="x:inline"],
-a > svg.x\:inline {
-	display: inline;
-	vertical-align: baseline;
-	flex-shrink: 0;
-}
-
-/* Generic fix for any element with x:inline class */
-[class*="x:inline"] {
-	display: inline !important;
-}
-
-[class*="x:align-baseline"] {
-	vertical-align: baseline !important;
-}
-
-[class*="x:shrink-0"] {
-	flex-shrink: 0 !important;
-}
-
-/* ========================================================================
-   Nextra Cards Component Styles
-   Full styling for the Cards component from nextra/components
-   ======================================================================== */
-
-/* Cards container - grid layout */
-.nextra-cards {
-	display: grid !important;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: 1rem !important;
-	margin-top: 1rem !important;
-}
-
-/* Ensure cards container is not affected by prose styles */
-.nextra-cards.not-prose {
-	margin-top: 1rem;
-}
-
-/* Individual card styling */
-.nextra-card {
-	display: flex !important;
-	flex-direction: column !important;
-	justify-content: flex-start !important;
-	overflow: hidden !important;
-	border-radius: 0.5rem !important;
-	border: 1px solid rgb(229 231 235) !important; /* border-gray-200 */
-	padding: 1rem !important;
-	text-decoration: none !important;
-	color: currentColor !important;
-	background-color: rgb(249 250 251) !important; /* bg-gray-50 */
-	box-shadow:
-		0 1px 3px 0 rgb(0 0 0 / 0.1),
-		0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
-	transition: all 0.2s ease !important;
-}
-
-.nextra-card:hover {
-	border-color: rgb(156 163 175) !important; /* border-gray-400 */
-	box-shadow:
-		0 10px 15px -3px rgb(0 0 0 / 0.1),
-		0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
-	transform: translateY(-2px);
-}
-
-/* Dark mode card styling */
-.dark .nextra-card {
-	border-color: rgb(64 64 64) !important; /* dark:border-neutral-700 */
-	background-color: rgb(38 38 38) !important; /* dark:bg-neutral-800 */
-	color: rgb(250 250 250) !important; /* dark:text-gray-50 */
-	box-shadow: none !important;
-}
-
-.dark .nextra-card:hover {
-	border-color: rgb(115 115 115) !important; /* dark:hover:border-neutral-500 */
-	background-color: rgb(64 64 64) !important; /* dark:hover:bg-neutral-700 */
-	box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3) !important;
-}
-
-/* Card title styling - shown at bottom in Nextra style */
-.nextra-card > span:last-child,
-.nextra-card > div[class*="font-semibold"],
-.nextra-card > *:last-child:not(p) {
-	font-weight: 600 !important;
-	font-size: 1rem !important;
-	margin-top: 0.5rem !important;
-	color: inherit !important;
-}
-
-/* Card description/content */
-.nextra-card > p {
-	font-size: 0.875rem !important;
-	color: rgb(107 114 128) !important; /* text-gray-500 */
-	margin: 0 !important;
-	line-height: 1.5 !important;
-}
-
-.dark .nextra-card > p {
-	color: rgb(163 163 163) !important; /* dark:text-neutral-400 */
-}
-
-/* ========================================================================
-   Nextra x: Utility Class Overrides
-   These classes are used by Nextra components but require their CSS
-   ======================================================================== */
-
-/* Flexbox utilities */
-[class*="x:flex"] {
-	display: flex !important;
-}
-
-[class*="x:flex-col"] {
-	flex-direction: column !important;
-}
-
-[class*="x:justify-start"] {
-	justify-content: flex-start !important;
-}
-
-/* Grid utilities */
-[class*="x:grid"] {
-	display: grid !important;
-}
-
-[class*="x:gap-4"] {
-	gap: 1rem !important;
-}
-
-[class*="x:mt-4"] {
-	margin-top: 1rem !important;
-}
-
-/* Border utilities */
-[class*="x:rounded-lg"] {
-	border-radius: 0.5rem !important;
-}
-
-[class*="x:border"] {
-	border-width: 1px !important;
-	border-style: solid !important;
-}
-
-[class*="x:overflow-hidden"] {
-	overflow: hidden !important;
-}
-
-/* Text utilities */
-[class*="x:no-underline"] {
-	text-decoration: none !important;
-}
-
-[class*="x:text-current"] {
-	color: currentColor !important;
-}
-
-/* Transition utilities */
-[class*="x:transition-all"] {
-	transition-property: all !important;
-	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-[class*="x:duration-200"] {
-	transition-duration: 200ms !important;
 }

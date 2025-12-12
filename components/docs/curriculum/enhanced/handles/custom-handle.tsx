@@ -214,7 +214,7 @@ const ConnectionBadge = ({ count }: ConnectionBadgeProps) => (
 			"border-2 border-white",
 			"flex items-center justify-center",
 			"font-semibold text-white text-xs",
-			"shadow-sm"
+			"shadow-xs"
 		)}
 		exit={{ scale: 0 }}
 		initial={{ scale: 0 }}
@@ -481,8 +481,8 @@ const CustomHandle = ({
 			type={type}
 			{...props}
 			className={cn(
-				"!bg-transparent",
-				"!border-0",
+				"bg-transparent!",
+				"border-0!",
 				sizeClasses.outer,
 				"flex",
 				"items-center",

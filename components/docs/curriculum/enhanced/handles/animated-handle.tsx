@@ -207,8 +207,8 @@ const AnimatedHandle = ({
 			type={type}
 			{...props}
 			className={cn(
-				"!bg-transparent",
-				"!border-0",
+				"bg-transparent!",
+				"border-0!",
 				sizeClasses.outer,
 				"flex items-center justify-center",
 				positionClass,
@@ -236,7 +236,7 @@ const AnimatedHandle = ({
 					className={cn(
 						sizeClasses.inner,
 						"rounded-full",
-						"bg-gradient-to-br",
+						"bg-linear-to-br",
 						colors.base,
 						"border-2",
 						colors.border,

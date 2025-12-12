@@ -60,7 +60,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 						onValueChange={(value) => setSelectedSector(value)}
 						value={selectedSector}
 					>
-						<SelectTrigger className="w-56 rounded-lg border border-gray-100 bg-gray-100 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200">
+						<SelectTrigger className="w-56 rounded-lg border border-gray-100 bg-gray-100 shadow-xs focus:border-indigo-500 focus:ring-3 focus:ring-indigo-200">
 							<SelectValue placeholder="Select a sector" />
 						</SelectTrigger>
 						<SelectContent>
@@ -90,7 +90,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 									<div className="relative w-full">
 										<Image
 											alt={`${caseStudy.title} featured image`}
-											className="aspect-video w-full rounded-2xl bg-gray-100 object-cover sm:aspect-[2/1] lg:aspect-[3/2]"
+											className="aspect-video w-full rounded-2xl bg-gray-100 object-cover sm:aspect-2/1 lg:aspect-3/2"
 											height={400}
 											src={
 												normalizeImageUrl(

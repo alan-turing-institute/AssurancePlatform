@@ -61,7 +61,7 @@ const TaskCheckpoint = ({
 				className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium transition-all ${
 					isComplete
 						? "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-						: "bg-green-600 text-white shadow-sm hover:bg-green-700"
+						: "bg-green-600 text-white shadow-xs hover:bg-green-700"
 				}`}
 				onClick={handleComplete}
 				type="button"

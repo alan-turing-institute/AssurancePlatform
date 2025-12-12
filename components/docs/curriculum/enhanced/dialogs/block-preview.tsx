@@ -98,7 +98,7 @@ const ConnectionHint = ({ hint, index }: ConnectionHintProps): ReactNode => (
 		initial={{ opacity: 0, x: -10 }}
 		transition={{ delay: index * 0.05 }}
 	>
-		<LinkIcon className="h-3 w-3 flex-shrink-0 text-blue-400" />
+		<LinkIcon className="h-3 w-3 shrink-0 text-blue-400" />
 		<div className="min-w-0 flex-1">
 			<div className="truncate font-medium text-text-light">
 				{hint.nodeName}

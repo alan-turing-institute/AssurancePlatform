@@ -107,7 +107,7 @@ const NodeTypeButton = ({ metadata, onClick }: NodeTypeButtonProps) => {
 			onClick={onClick}
 			type="button"
 		>
-			<Icon className="h-4 w-4 flex-shrink-0 text-gray-700 dark:text-gray-200" />
+			<Icon className="h-4 w-4 shrink-0 text-gray-700 dark:text-gray-200" />
 			<div className="min-w-0 flex-1">
 				<div className="font-medium text-gray-900 text-sm dark:text-gray-100">
 					{metadata.name}
@@ -227,7 +227,7 @@ const CreateNodePopover = ({
 	const popoverContent = (
 		<div
 			className={cn(
-				"z-[9999] w-64 p-2",
+				"z-9999 w-64 p-2",
 				"bg-white dark:bg-gray-800",
 				"border border-gray-300 dark:border-gray-600",
 				"rounded-lg shadow-xl",

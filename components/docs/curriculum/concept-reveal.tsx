@@ -321,7 +321,7 @@ const ConceptReveal = ({
 						exit={{ opacity: 0, y: -20 }}
 						initial={{ opacity: 0, y: 20 }}
 					>
-						<div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-6 dark:from-blue-900/20 dark:to-purple-900/20">
+						<div className="rounded-lg bg-linear-to-r from-blue-50 to-purple-50 p-6 dark:from-blue-900/20 dark:to-purple-900/20">
 							<div className="flex items-start gap-4">
 								<div
 									className={`text-${getConceptColors(selectedConcept.type)}-600 dark:text-${getConceptColors(selectedConcept.type)}-400`}
@@ -348,7 +348,7 @@ const ConceptReveal = ({
 													className="flex items-start gap-2"
 													key={`${selectedConcept.id}-detail-${detail}`}
 												>
-													<ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500" />
+													<ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
 													<p className="text-gray-600 text-sm dark:text-gray-400">
 														{detail}
 													</p>

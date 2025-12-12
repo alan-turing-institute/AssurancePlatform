@@ -187,7 +187,7 @@ const ImportanceBadge = ({
 			className={cn(
 				"px-2 py-0.5 text-xs",
 				"border",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				config.className
 			)}
 			variant="outline"
@@ -294,7 +294,7 @@ const GoalNode = ({
 						className={cn(
 							"px-3 py-2",
 							"rounded-lg",
-							"bg-gradient-to-r from-green-500/20 to-emerald-500/20",
+							"bg-linear-to-r from-green-500/20 to-emerald-500/20",
 							"border border-green-400/30",
 							"text-center"
 						)}

@@ -84,7 +84,7 @@ export default function MemberList() {
 					</div>
 					<div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
 						<button
-							className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+							className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 							type="button"
 						>
 							Add user
@@ -134,7 +134,7 @@ export default function MemberList() {
 										<tr key={person.email}>
 											<td className="whitespace-nowrap py-5 pr-3 pl-4 text-sm sm:pl-0">
 												<div className="flex items-center">
-													<div className="h-11 w-11 flex-shrink-0">
+													<div className="h-11 w-11 shrink-0">
 														<Image
 															alt=""
 															className="h-11 w-11 rounded-full object-cover"

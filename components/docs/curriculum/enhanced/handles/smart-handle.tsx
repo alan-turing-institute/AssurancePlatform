@@ -206,8 +206,8 @@ const SmartHandle = ({
 			type={type}
 			{...props}
 			className={cn(
-				"!bg-transparent",
-				"!border-0",
+				"bg-transparent!",
+				"border-0!",
 				sizeClasses.outer,
 				"flex items-center justify-center",
 				positionClass,
@@ -313,7 +313,7 @@ const SmartHandle = ({
 									"text-white",
 									"text-[10px]",
 									"font-bold",
-									"shadow-sm"
+									"shadow-xs"
 								)}
 								initial={{ scale: 0 }}
 							>

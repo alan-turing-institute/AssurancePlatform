@@ -171,7 +171,7 @@ export const ModalTransition = ({
 							"fixed",
 							"inset-0",
 							"bg-black/50",
-							"backdrop-blur-sm",
+							"backdrop-blur-xs",
 							"z-50"
 						)}
 						exit="exit"
@@ -563,7 +563,7 @@ export const DrawerTransition = ({
 				<>
 					<motion.div
 						animate="animate"
-						className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+						className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs"
 						exit="exit"
 						initial="initial"
 						onClick={onClose}

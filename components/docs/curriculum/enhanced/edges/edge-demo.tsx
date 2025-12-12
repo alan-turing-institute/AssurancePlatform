@@ -308,7 +308,7 @@ const EdgeDemo = () => {
 							<span>Animated</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="h-0.5 w-8 bg-gradient-to-r from-blue-500 to-purple-500" />
+							<div className="h-0.5 w-8 bg-linear-to-r from-blue-500 to-purple-500" />
 							<span>Gradient</span>
 						</div>
 						<div className="flex items-center gap-2">

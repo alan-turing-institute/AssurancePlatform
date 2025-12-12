@@ -164,7 +164,7 @@ const VerificationStatusBadge = ({
 			className={cn(
 				"px-2 py-0.5 text-xs",
 				"border",
-				"backdrop-blur-sm",
+				"backdrop-blur-xs",
 				config.className
 			)}
 			variant="outline"
@@ -429,7 +429,7 @@ const PropertyClaimNode = ({
 										className="flex items-start gap-2 text-text-light/70 text-xs"
 										key={`claim-${claimKey}`}
 									>
-										<Link2 className="mt-0.5 h-3 w-3 flex-shrink-0 text-orange-400" />
+										<Link2 className="mt-0.5 h-3 w-3 shrink-0 text-orange-400" />
 										<span>{claimKey}</span>
 									</li>
 								);

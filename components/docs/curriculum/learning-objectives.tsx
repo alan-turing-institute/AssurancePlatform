@@ -122,7 +122,7 @@ const LearningObjectives = ({
 										)}
 									</button>
 								) : (
-									<Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
+									<Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
 								)}
 								<div className="flex-1">
 									<p className={isComplete ? "text-gray-500 line-through" : ""}>
@@ -144,7 +144,7 @@ const LearningObjectives = ({
 
 	// Card variant (default) - rich display with optional collapsing
 	return (
-		<div className="my-6 overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 dark:border-blue-800 dark:from-blue-900/20 dark:to-purple-900/20">
+		<div className="my-6 overflow-hidden rounded-xl border border-blue-200 bg-linear-to-br from-blue-50 to-purple-50 dark:border-blue-800 dark:from-blue-900/20 dark:to-purple-900/20">
 			{/* Header */}
 			<div className="p-6">
 				<div className="flex items-start justify-between">
@@ -192,7 +192,7 @@ const LearningObjectives = ({
 						<div className="h-2 w-full rounded-full bg-blue-200 dark:bg-blue-900">
 							<motion.div
 								animate={{ width: `${completionPercentage}%` }}
-								className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+								className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
 								initial={{ width: 0 }}
 								transition={{ duration: 0.5, ease: "easeOut" }}
 							/>
@@ -225,7 +225,7 @@ const LearningObjectives = ({
 								>
 									{showProgress ? (
 										<button
-											className="mt-0.5 flex-shrink-0 transition-colors"
+											className="mt-0.5 shrink-0 transition-colors"
 											onClick={() => toggleComplete(objective.id)}
 											type="button"
 										>
@@ -236,7 +236,7 @@ const LearningObjectives = ({
 											)}
 										</button>
 									) : (
-										<div className="flex-shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+										<div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
 											<Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
 										</div>
 									)}
@@ -264,7 +264,7 @@ const LearningObjectives = ({
 									</div>
 
 									{objective.badge && (
-										<div className="flex-shrink-0">
+										<div className="shrink-0">
 											<Award className="h-5 w-5 text-yellow-500" />
 										</div>
 									)}

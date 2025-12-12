@@ -65,7 +65,7 @@ export default function NoCasesFound({
 				<div className="mt-6 flex items-center justify-center gap-2">
 					{shared ? (
 						<button
-							className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+							className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 							onClick={() => router.push("/dashboard")}
 							type="button"
 						>
@@ -75,7 +75,7 @@ export default function NoCasesFound({
 					) : (
 						<>
 							<button
-								className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+								className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
 								onClick={() => createCaseModal.onOpen()}
 								type="button"
 							>
@@ -86,7 +86,7 @@ export default function NoCasesFound({
 								New Case
 							</button>
 							<button
-								className="rexr-slate-900 inline-flex items-center rounded-md bg-foreground/5 px-3 py-2 font-semibold text-sm shadow-sm hover:bg-foreground/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 dark:bg-foreground/10 dark:text-white dark:hover:bg-foreground/20"
+								className="rexr-slate-900 inline-flex items-center rounded-md bg-foreground/5 px-3 py-2 font-semibold text-sm shadow-xs hover:bg-foreground/10 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2 dark:bg-foreground/10 dark:text-white dark:hover:bg-foreground/20"
 								onClick={() => importModal.onOpen()}
 								type="button"
 							>
