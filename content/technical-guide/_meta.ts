@@ -1,7 +1,9 @@
 export default {
 	index: "Overview",
-	"setup-installation": "Setup & Installation",
-	"frontend-reference": "Frontend Reference",
-	"backend-reference": "Backend Reference",
+	"getting-started": "Getting Started",
+	architecture: "Architecture",
+	contributing: "Contributing",
+	deployment: "Deployment",
 	"ci-cd-pipeline": "CI/CD Pipeline",
+	"api-reference": "API Reference",
 };

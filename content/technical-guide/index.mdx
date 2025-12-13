@@ -1,20 +1,50 @@
 ---
 sidebar_position: 1
-sidebar_label: 'Section Overview'
+sidebar_label: 'Overview'
 ---
 
-import { Callout } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
 
-# Section Overview
+# Technical Documentation
 
-<Callout type="warning">
-**Notice**
+This section provides technical documentation for developers who want to contribute to the TEA Platform or deploy their own instance.
 
-This section provides technical documentation for developers or users who wish to learn more about how the TEA platform was built, or to access instructions on how to install locally or in the cloud.
+## Tech Stack
+
+The TEA Platform is built with modern web technologies. Here's an overview of the key technologies and links to their official documentation:
+
+| Technology | Purpose | Documentation |
+|------------|---------|---------------|
+| **Next.js 15** | React framework with App Router | [nextjs.org/docs](https://nextjs.org/docs) |
+| **React 19** | UI component library | [react.dev](https://react.dev) |
+| **TypeScript** | Type-safe JavaScript | [typescriptlang.org/docs](https://www.typescriptlang.org/docs/) |
+| **Prisma 7** | Database ORM for PostgreSQL | [prisma.io/docs](https://www.prisma.io/docs) |
+| **PostgreSQL** | Relational database | [postgresql.org/docs](https://www.postgresql.org/docs/) |
+| **ReactFlow** | Node-based diagram editor | [reactflow.dev](https://reactflow.dev) |
+| **Tailwind CSS** | Utility-first CSS framework | [tailwindcss.com/docs](https://tailwindcss.com/docs) |
+| **shadcn/ui** | Accessible UI components | [ui.shadcn.com](https://ui.shadcn.com) |
+| **NextAuth.js** | Authentication library | [authjs.dev](https://authjs.dev) |
+| **Biome** | Linting and formatting | [biomejs.dev](https://biomejs.dev) |
+
+## Documentation Sections
+
+<Cards>
+  <Cards.Card title="Getting Started" href="/technical-guide/getting-started/docker-quickstart" />
+  <Cards.Card title="Architecture" href="/technical-guide/architecture/overview" />
+  <Cards.Card title="Contributing" href="/technical-guide/contributing/pull-requests" />
+  <Cards.Card title="Deployment" href="/technical-guide/deployment" />
+  <Cards.Card title="CI/CD Pipeline" href="/technical-guide/ci-cd-pipeline/pipeline-overview" />
+  <Cards.Card title="API Reference" href="/technical-guide/api-reference" />
+</Cards>
+
+## Quick Links
+
+- **Repository**: [github.com/alan-turing-institute/AssurancePlatform](https://github.com/alan-turing-institute/AssurancePlatform)
+- **Issues**: [GitHub Issues](https://github.com/alan-turing-institute/AssurancePlatform/issues)
+- **Live Demo**: [assuranceplatform.azurewebsites.net](https://assuranceplatform.azurewebsites.net/)
+
+<Callout type="info">
+**Looking for user guides?**
+
+If you're looking to learn how to use the TEA Platform rather than develop it, check out the [TEA Curriculum](/curriculum) section.
 </Callout>
-
-Our technology stack ensures that the TEA platform is not only powerful and reliable but also accessible to users with different levels of technical expertise.
-
-The TEA Platform is a full-stack application built with [Next.js](https://nextjs.org/), a React framework known for its fast and modern approach to building interactive web applications. The platform uses [Prisma ORM](https://www.prisma.io/) for database management, providing type-safe database access and migrations.
-
-Data is stored in [PostgreSQL](https://www.postgresql.org/), providing a robust and scalable storage solution. The platform supports easy installation and deployment through [Docker](https://www.docker.com/), making it straightforward to set up in various environments, including [Azure](https://azure.microsoft.com/en-us).

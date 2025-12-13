@@ -1,0 +1,219 @@
+---
+sidebar_position: 2
+sidebar_label: 'Assurance Case Model'
+---
+
+import { Callout } from 'nextra/components'
+
+# Assurance Case Model
+
+This page documents the core data model for assurance cases in the TEA Platform. Understanding this model is essential for developers working with the data layer.
+
+## Overview
+
+An assurance case is a structured argument demonstrating that a system meets specific requirements. In the TEA Platform, this is modelled as a hierarchical structure of elements.
+
+```
+AssuranceCase
+├── AssuranceElement (Goal - Top Level)
+│   ├── AssuranceElement (Strategy)
+│   │   ├── AssuranceElement (PropertyClaim)
+│   │   │   └── AssuranceElement (Evidence)
+│   │   └── AssuranceElement (PropertyClaim)
+│   │       └── AssuranceElement (Evidence)
+│   └── AssuranceElement (Context)
+└── Comments
+```
+
+## Core Entities
+
+### AssuranceCase
+
+The top-level container for an assurance argument.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `name` | String | Case title |
+| `description` | String | Case description |
+| `mode` | Enum | `STANDARD` or `ADVANCED` |
+| `publishStatus` | Enum | `DRAFT`, `READY_TO_PUBLISH`, or `PUBLISHED` |
+| `createdById` | UUID | User who created the case |
+| `colorProfile` | String | Visual theme for the editor |
+
+**Key Relations:**
+- `elements` - All AssuranceElements in the case
+- `userPermissions` - Individual user access
+- `teamPermissions` - Team-based access
+- `comments` - Discussion threads
+
+### AssuranceElement
+
+The building blocks of an assurance case. All element types share a unified model with type-specific fields.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `caseId` | UUID | Parent assurance case |
+| `elementType` | Enum | Type of element (see below) |
+| `parentId` | UUID | Parent element (for hierarchy) |
+| `name` | String | Element label |
+| `description` | String | Main content/claim |
+| `assumption` | String | Optional assumption text |
+| `justification` | String | Optional justification (strategies) |
+| `context` | String[] | Context references |
+| `url` | String | Evidence URL (evidence elements) |
+
+### Element Types
+
+The `elementType` enum defines the available element types:
+
+| Type | Purpose | GSN Notation |
+|------|---------|--------------|
+| `GOAL` | Top-level claim to be demonstrated | Goal (rectangle) |
+| `STRATEGY` | Argument approach for decomposing goals | Strategy (parallelogram) |
+| `PROPERTY_CLAIM` | Specific claim supporting a strategy | Goal (rectangle) |
+| `EVIDENCE` | Artefact supporting a claim | Solution (circle) |
+| `CONTEXT` | Background information | Context (rounded rectangle) |
+| `ASSUMPTION` | Stated assumption | Assumption (ellipse with 'A') |
+| `JUSTIFICATION` | Rationale for argument choices | Justification (ellipse with 'J') |
+| `MODULE` | Reference to another case | Module (rectangle with line) |
+| `AWAY_GOAL` | Reference to goal in another module | Away Goal |
+| `CONTRACT` | Interface between modules | Contract |
+
+### Element Roles
+
+Elements can have a `role` to indicate their position:
+
+- `TOP_LEVEL` - The root goal of the assurance case
+- `SUPPORTING` - Elements that support the argument
+
+## Relationships
+
+### Hierarchical Structure
+
+Elements form a tree through the `parentId` relationship:
+
+```typescript
+// Parent-child relationship
+element.parent   // AssuranceElement | null
+element.children // AssuranceElement[]
+```
+
+### Evidence Links
+
+Evidence can support multiple claims through a many-to-many relationship:
+
+```typescript
+// EvidenceLink model
+{
+  evidenceId: string  // The evidence element
+  claimId: string     // The property claim being supported
+}
+```
+
+### Defeaters (Dialogical Reasoning)
+
+Elements can be marked as defeaters to challenge other elements:
+
+```typescript
+// Defeater relationship
+element.isDefeater       // boolean
+element.defeatsElementId // UUID of challenged element
+element.defeatedBy       // Elements challenging this one
+```
+
+## Permissions Model
+
+### Permission Levels
+
+Access is controlled through four levels:
+
+| Level | Can View | Can Comment | Can Edit | Can Manage |
+|-------|----------|-------------|----------|------------|
+| `VIEW` | Yes | No | No | No |
+| `COMMENT` | Yes | Yes | No | No |
+| `EDIT` | Yes | Yes | Yes | No |
+| `ADMIN` | Yes | Yes | Yes | Yes |
+
+### Permission Sources
+
+Permissions can come from:
+1. **Direct user permission** (`CasePermission`)
+2. **Team membership** (`CaseTeamPermission` + `TeamMember`)
+3. **Case ownership** (creator has implicit ADMIN)
+
+## Publishing Workflow
+
+Cases go through a three-stage publishing workflow:
+
+```
+DRAFT → READY_TO_PUBLISH → PUBLISHED
+```
+
+When published, a `Release` is created with:
+- Snapshot of the case content
+- Version number
+- Community settings (comments enabled/disabled)
+
+## Prisma Schema Reference
+
+The full schema is defined in `prisma/schema.prisma`. Key models:
+
+- `AssuranceCase` - Case container
+- `AssuranceElement` - Elements (unified model)
+- `EvidenceLink` - Evidence-to-claim relationships
+- `CasePermission` - User permissions
+- `CaseTeamPermission` - Team permissions
+- `Comment` - Internal comments
+- `Release` - Published versions
+- `ReleaseSnapshot` - Version snapshots
+
+<Callout type="info">
+**Generating Types**
+
+After schema changes, run `npx prisma generate` to update the TypeScript types. The generated client is output to `src/generated/prisma`.
+</Callout>
+
+## Working with the Model
+
+### Fetching a Case with Elements
+
+```typescript
+import { prisma } from '@/lib/db'
+
+const caseWithElements = await prisma.assuranceCase.findUnique({
+  where: { id: caseId },
+  include: {
+    elements: {
+      include: {
+        children: true,
+        evidenceLinksFrom: true,
+        evidenceLinksTo: true,
+      }
+    },
+    userPermissions: true,
+    teamPermissions: true,
+  }
+})
+```
+
+### Creating an Element
+
+```typescript
+const newElement = await prisma.assuranceElement.create({
+  data: {
+    caseId: caseId,
+    elementType: 'PROPERTY_CLAIM',
+    parentId: parentId,
+    name: 'PC1',
+    description: 'The system performs accurately',
+    createdById: userId,
+  }
+})
+```
+
+## Further Reading
+
+- [Assurance Case Editor](./assurance-case-editor) - How elements are rendered visually
+- [API Reference](/technical-guide/api-reference) - REST API for cases and elements

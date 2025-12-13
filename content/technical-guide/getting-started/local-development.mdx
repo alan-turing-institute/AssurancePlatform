@@ -1,11 +1,11 @@
 ---
-sidebar_position: 1
-sidebar_label: 'Local Install'
+sidebar_position: 2
+sidebar_label: 'Local Development'
 ---
 
 import { Callout } from 'nextra/components'
 
-# Quickstart (Local Install)
+# Local Development
 
 <Callout>
 **Live Demo Version**
@@ -18,7 +18,7 @@ Setting up a local installation of the TEA Platform (e.g. for development) invol
 <Callout type="info">
 **Docker (Recommended)**
 
-A quicker way to get the TEA Platform running on your local machine is to use Docker. If you're familiar with Docker and docker-compose, you can follow the [Docker Quick Start guide](./docker-quickstart) to set up the platform with minimal effort.
+A quicker way to get the TEA Platform running on your local machine is to use Docker. If you're familiar with Docker and docker-compose, you can follow the [Docker Quickstart guide](./docker-quickstart) to set up the platform with minimal effort.
 </Callout>
 
 ## Prerequisites
@@ -46,13 +46,13 @@ pnpm install
 
 ### 3. Set Up Environment Variables
 
-Create a `.env.local` file in the root directory:
+Create a `.env` file in the root directory:
 
 ```shell
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Edit `.env.local` with your configuration:
+Edit `.env` with your configuration:
 
 ```bash
 # Database connection
@@ -161,9 +161,3 @@ node --version
 ```
 
 If you need to manage multiple Node.js versions, consider using [nvm](https://github.com/nvm-sh/nvm).
-
-## Conclusion
-
-By following these steps, you'll have the TEA Platform running locally on your development machine, ready for further development and testing.
-
-You should now be able to visit the platform at [http://localhost:3000](http://localhost:3000)

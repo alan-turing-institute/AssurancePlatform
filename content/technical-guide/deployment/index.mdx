@@ -1,0 +1,111 @@
+---
+sidebar_position: 1
+sidebar_label: 'Overview'
+---
+
+import { Callout } from 'nextra/components'
+
+# Deployment Overview
+
+This section covers deploying the TEA Platform for production use. The recommended approach is Docker Compose for self-hosting.
+
+<Callout>
+**Development vs Production**
+
+For local development setup, see the [Getting Started](/technical-guide/getting-started/docker-quickstart) section. This section is for production deployments.
+</Callout>
+
+## Deployment Options
+
+### Docker Compose (Recommended)
+
+The simplest way to deploy the TEA Platform is using Docker Compose. This bundles the application and database in containers that can run on any Docker-compatible host.
+
+**Suitable for:**
+- Small to medium deployments
+- Single-server hosting
+- Organisations with Docker experience
+
+See [Docker Production](./docker-production) for setup instructions.
+
+### Manual Deployment
+
+For more control, you can deploy the components separately:
+- Next.js application on any Node.js hosting
+- PostgreSQL on a managed database service
+
+This approach requires more configuration but allows integration with existing infrastructure.
+
+## Environment Variables
+
+The TEA Platform is configured through environment variables. Here's a reference of the key variables:
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/tea` |
+| `NEXTAUTH_SECRET` | Secret for session encryption | Generate with `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Public URL of the application | `https://tea.example.com` |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_APP_CLIENT_ID` | GitHub OAuth client ID | (disabled) |
+| `GITHUB_APP_CLIENT_SECRET` | GitHub OAuth client secret | (disabled) |
+| `NODE_ENV` | Environment mode | `production` |
+
+### Database Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | Database user | `tea` |
+| `POSTGRES_PASSWORD` | Database password | (required) |
+| `POSTGRES_DB` | Database name | `tea` |
+
+## Security Considerations
+
+### Secrets Management
+
+- **Never commit secrets** to version control
+- Use environment variables or a secrets manager
+- Rotate `NEXTAUTH_SECRET` periodically
+- Use strong, unique database passwords
+
+### Network Security
+
+- Run behind a reverse proxy (nginx, Traefik)
+- Enable HTTPS with a valid certificate
+- Restrict database access to application only
+- Consider network isolation for database
+
+### Authentication
+
+- Enable GitHub OAuth for easier user onboarding
+- Require email verification for local accounts
+- Implement rate limiting on authentication endpoints
+
+## Backup Strategy
+
+Regular backups are essential for production deployments:
+
+1. **Database backups** - Daily automated backups
+2. **Configuration backups** - Store environment configs securely
+3. **Test restores** - Regularly verify backup integrity
+
+See [Database Management](./database-management) for backup procedures.
+
+## Monitoring
+
+Consider monitoring for production deployments:
+
+- **Application health** - HTTP health checks
+- **Database metrics** - Connection pool, query performance
+- **Error tracking** - Application error monitoring
+- **Uptime monitoring** - External availability checks
+
+## Further Reading
+
+- [Docker Production](./docker-production) - Production Docker Compose setup
+- [Database Management](./database-management) - Backup, restore, and migrations
