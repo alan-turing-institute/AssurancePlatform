@@ -1,13 +1,60 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { Node } from "reactflow";
-import type { CaseData, ReactFlowNodeData } from "@/types/curriculum";
+import type {
+	CaseData,
+	CaseExportNested,
+	ReactFlowNodeData,
+} from "@/types/curriculum";
 import InteractiveCaseViewer from "./interactive-case-viewer";
 
 // Lazy load EnhancedInteractiveCaseViewer to avoid 730+ module import at startup
 const EnhancedInteractiveCaseViewer = lazy(
 	() => import("./enhanced-interactive-case-viewer")
 );
+
+/**
+ * Union type for supported case data formats.
+ * CaseExportNested (v1.0) is the new format with tree structure.
+ * CaseData is the legacy format with goals array (deprecated).
+ */
+type SupportedCaseData = CaseExportNested | CaseData;
+
+/**
+ * Type guard to check if data is the new nested export format (v1.0)
+ */
+function isCaseExportNested(data: unknown): data is CaseExportNested {
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		"version" in data &&
+		data.version === "1.0" &&
+		"tree" in data
+	);
+}
+
+/**
+ * Type guard to check if data is the legacy CaseData format
+ */
+function isLegacyCaseData(data: unknown): data is CaseData {
+	return typeof data === "object" && data !== null && "goals" in data;
+}
+
+/**
+ * Parses and validates raw JSON data into a supported case data format.
+ * Throws an error if the data format is not recognised.
+ */
+function parseCaseData(data: unknown): SupportedCaseData {
+	if (isCaseExportNested(data)) {
+		return data;
+	}
+	if (isLegacyCaseData(data)) {
+		return data;
+	}
+	throw new Error(
+		"Invalid case data format. Expected v1.0 (tree) or legacy (goals) schema."
+	);
+}
 
 type CaseViewerWrapperProps = {
 	caseFile?: string;
@@ -24,7 +71,7 @@ type CaseViewerWrapperProps = {
  * Loads JSON data from /public/data/ folder
  */
 const CaseViewerWrapper = ({
-	caseFile = "fair-recruitment-ai.json",
+	caseFile = "demo-case.json",
 	showAllNodes = false,
 	enableExploration = true,
 	onNodeClick = null,
@@ -32,7 +79,7 @@ const CaseViewerWrapper = ({
 	highlightedNodes = [],
 	useEnhanced = false,
 }: CaseViewerWrapperProps) => {
-	const [caseData, setCaseData] = useState<CaseData | null>(null);
+	const [caseData, setCaseData] = useState<SupportedCaseData | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +90,9 @@ const CaseViewerWrapper = ({
 				if (!response.ok) {
 					throw new Error(`Failed to load case data: ${response.statusText}`);
 				}
-				const data = (await response.json()) as CaseData;
-				setCaseData(data);
+				const rawData: unknown = await response.json();
+				const validatedData = parseCaseData(rawData);
+				setCaseData(validatedData);
 				setError(null);
 			} catch (err) {
 				const errorMessage =
@@ -110,7 +158,11 @@ const CaseViewerWrapper = ({
 		highlightedNodes,
 	};
 
-	if (useEnhanced) {
+	// Use enhanced viewer if explicitly requested OR if using new v1.0 schema
+	// The basic InteractiveCaseViewer only supports legacy CaseData format
+	const shouldUseEnhanced = useEnhanced || isCaseExportNested(caseData);
+
+	if (shouldUseEnhanced) {
 		return (
 			<Suspense
 				fallback={
@@ -131,7 +183,19 @@ const CaseViewerWrapper = ({
 		);
 	}
 
-	return <InteractiveCaseViewer {...viewerProps} />;
+	// Legacy CaseData format only - cast is safe due to isCaseExportNested check above
+	return (
+		<InteractiveCaseViewer
+			{...(viewerProps as {
+				caseData: CaseData;
+				showAllNodes: boolean;
+				enableExploration: boolean;
+				onNodeClick: ((node: Node<ReactFlowNodeData>) => void) | undefined;
+				guidedPath: string[];
+				highlightedNodes: string[];
+			})}
+		/>
+	);
 };
 
 export default CaseViewerWrapper;

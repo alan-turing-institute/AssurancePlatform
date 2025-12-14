@@ -355,6 +355,145 @@ export const MetadataSection = ({
 	);
 };
 
+// ========================================================================
+// Attribute Content Section (Full Text Display)
+// ========================================================================
+
+type AttributeContentItem = { text?: string } | string;
+
+type AttributeContentSectionProps = {
+	attributes?: {
+		context?: AttributeContentItem[];
+		assumptions?: AttributeContentItem[];
+		justifications?: AttributeContentItem[];
+	};
+	className?: string;
+};
+
+/**
+ * Extracts text from an attribute item (handles both {text: string} and plain string)
+ */
+const getAttributeText = (item: unknown): string => {
+	if (typeof item === "string") {
+		return item;
+	}
+	if (item && typeof item === "object" && "text" in item) {
+		return String((item as { text: unknown }).text);
+	}
+	return "";
+};
+
+/**
+ * Single Attribute Display Component
+ * Shows label + text content
+ */
+const AttributeItem = ({
+	icon: Icon,
+	label,
+	text,
+	colorClass,
+}: {
+	icon: LucideIcon;
+	label: string;
+	text: string;
+	colorClass: string;
+}) => (
+	<div className={cn("flex flex-col gap-1", colorClass)}>
+		<div className="flex items-center gap-1.5">
+			<Icon className="h-3 w-3" />
+			<span className="font-medium text-xs uppercase tracking-wider">
+				{label}
+			</span>
+		</div>
+		<p className="pl-4 text-text-light/80 text-xs leading-relaxed">{text}</p>
+	</div>
+);
+
+/**
+ * Renders a list of attribute items with proper keys based on text content
+ */
+const renderAttributeItems = (
+	items: AttributeContentItem[],
+	type: "context" | "assumption" | "justification",
+	icon: LucideIcon,
+	colorClass: string
+) => {
+	// Filter to items with valid text and create stable keys
+	const validItems = items
+		.map((item, index) => ({
+			text: getAttributeText(item),
+			index,
+		}))
+		.filter((item) => item.text.length > 0);
+
+	if (validItems.length === 0) {
+		return null;
+	}
+
+	const labelMap = {
+		context: "Context",
+		assumption: "Assumption",
+		justification: "Justification",
+	};
+
+	return validItems.map((item) => {
+		const label =
+			validItems.length > 1
+				? `${labelMap[type]} ${item.index + 1}`
+				: labelMap[type];
+
+		return (
+			<AttributeItem
+				colorClass={colorClass}
+				icon={icon}
+				key={`${type}-${item.text.slice(0, 20)}-${item.index}`}
+				label={label}
+				text={item.text}
+			/>
+		);
+	});
+};
+
+/**
+ * Attribute Content Section Component
+ * Displays full text content of attributes (context, assumptions, justifications)
+ * Used in expanded node view to show actual attribute text, not just badge counts
+ */
+export const AttributeContentSection = ({
+	attributes,
+	className,
+}: AttributeContentSectionProps) => {
+	if (!attributes) {
+		return null;
+	}
+
+	const { context = [], assumptions = [], justifications = [] } = attributes;
+	const hasAttributes =
+		context.length > 0 || assumptions.length > 0 || justifications.length > 0;
+
+	if (!hasAttributes) {
+		return null;
+	}
+
+	return (
+		<div className={cn("space-y-3", className)}>
+			{renderAttributeItems(context, "context", Info, "text-blue-300")}
+			{renderAttributeItems(
+				assumptions,
+				"assumption",
+				AlertCircle,
+				"text-yellow-300"
+			)}
+			{renderAttributeItems(
+				justifications,
+				"justification",
+				FileText,
+				"text-purple-300"
+			)}
+		</div>
+	);
+};
+
 export default {
 	ContextBadge,
 	AssumptionBadge,
@@ -363,5 +502,6 @@ export default {
 	StatusBadge,
 	PriorityBadge,
 	AttributesSection,
+	AttributeContentSection,
 	MetadataSection,
 };

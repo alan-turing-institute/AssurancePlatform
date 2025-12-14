@@ -1,11 +1,26 @@
 /**
  * Identifier Utilities
  *
- * Functions for formatting and handling node identifiers
+ * Functions for formatting and handling node identifiers.
+ * Supports the new export schema where:
+ * - `name` field contains the identifier (G1, P1.1, etc.)
+ * - `title` field (optional) contains a human-readable display name
+ * - `description` contains the detailed text
  */
 
 // Top-level regex for extracting numbers from IDs
 const ID_NUMBER_REGEX = /(\d+)$/;
+
+/**
+ * Pattern to detect if a string is an identifier (G1, S1, P1.1, E2, C3, etc.)
+ * Matches: G1, S2, P1, P1.1, P1.2.3, E1, C2, etc.
+ */
+const IDENTIFIER_PATTERN = /^[GSPECJ]\d+(\.\d+)*$/i;
+
+/**
+ * Pattern to split text into sentences (at sentence-ending punctuation)
+ */
+const SENTENCE_SPLIT_PATTERN = /[.!?]/;
 
 type NodeType =
 	| "goal"
@@ -16,6 +31,7 @@ type NodeType =
 	| string;
 
 type ContextItem = {
+	text?: string;
 	type?: string;
 	isAssumption?: boolean;
 	[key: string]: unknown;
@@ -24,9 +40,16 @@ type ContextItem = {
 type NodeData = {
 	id?: string;
 	name?: string;
-	context?: ContextItem[];
+	/** Optional display title separate from identifier */
+	title?: string;
+	description?: string;
+	context?: ContextItem[] | string[];
 	assumptions?: unknown[];
 	justifications?: unknown[];
+	/** Single-string assumption from TreeNode export format */
+	assumption?: string;
+	/** Single-string justification from TreeNode export format */
+	justification?: string;
 	strength?: number | string;
 	status?: string;
 	priority?: string;
@@ -37,7 +60,7 @@ type NodeData = {
 type ExtractedAttributes = {
 	context: ContextItem[];
 	assumptions: ContextItem[];
-	justifications: unknown[];
+	justifications: ContextItem[];
 };
 
 type ExtractedMetadata = {
@@ -77,14 +100,55 @@ export const formatIdentifier = (
 };
 
 /**
- * Get display name for node (name or formatted identifier)
+ * Check if a string is an identifier pattern (G1, S2, P1.1, etc.)
+ */
+export const isIdentifier = (value: string | undefined | null): boolean => {
+	if (!value) {
+		return false;
+	}
+	return IDENTIFIER_PATTERN.test(value.trim());
+};
+
+/**
+ * Get display name for node header.
+ * Priority: title field → name (if not an identifier) → first sentence of description → name/identifier
  */
 export const getDisplayName = (data: NodeData, nodeType: NodeType): string => {
-	if (data.name?.trim()) {
+	// 1. Use title field if available
+	if (data.title?.trim()) {
+		return data.title;
+	}
+
+	// 2. Use name if it's NOT an identifier pattern (i.e., it's a meaningful title)
+	if (data.name?.trim() && !isIdentifier(data.name)) {
 		return data.name;
 	}
 
-	// Default to formatted identifier
+	// 3. Use first sentence of description if available and reasonable length
+	if (data.description) {
+		const firstSentence = data.description
+			.split(SENTENCE_SPLIT_PATTERN)[0]
+			.trim();
+		if (firstSentence.length > 0 && firstSentence.length < 80) {
+			return firstSentence;
+		}
+	}
+
+	// 4. Fallback to name (identifier) or formatted ID
+	return data.name || formatIdentifier(data.id, nodeType) || "Unnamed";
+};
+
+/**
+ * Get identifier for node footer display.
+ * Returns the stored identifier (G1, P1.1) or generates one from the ID.
+ */
+export const getIdentifier = (data: NodeData, nodeType: NodeType): string => {
+	// Use stored name if it matches identifier pattern
+	if (data.name && isIdentifier(data.name)) {
+		return data.name;
+	}
+
+	// Fallback to formatted ID
 	return formatIdentifier(data.id, nodeType);
 };
 
@@ -111,7 +175,9 @@ export const truncateText = (
 };
 
 /**
- * Extract attributes from node data
+ * Extract attributes from node data.
+ * Handles both array format (assumptions[], justifications[]) and
+ * single-string format (assumption, justification) from TreeNode export.
  */
 export const extractAttributes = (data: NodeData): ExtractedAttributes => {
 	const attributes: ExtractedAttributes = {
@@ -120,24 +186,37 @@ export const extractAttributes = (data: NodeData): ExtractedAttributes => {
 		justifications: [],
 	};
 
-	// Extract context
+	// Extract context (handles both string[] and ContextItem[])
 	if (data.context && Array.isArray(data.context)) {
-		attributes.context = data.context;
-	}
-
-	// Extract assumptions (can be part of context or separate)
-	if (data.assumptions && Array.isArray(data.assumptions)) {
-		attributes.assumptions = data.assumptions as ContextItem[];
-	} else if (data.context) {
-		// Check if context items have assumption flag
-		attributes.assumptions = data.context.filter(
-			(item) => item.type === "Assumption" || item.isAssumption
+		attributes.context = data.context.map((item) =>
+			typeof item === "string" ? { text: item } : item
 		);
 	}
 
-	// Extract justifications
+	// Extract assumptions (handle both array and single-string formats)
+	if (data.assumptions && Array.isArray(data.assumptions)) {
+		attributes.assumptions = data.assumptions as ContextItem[];
+	} else if (data.assumption && typeof data.assumption === "string") {
+		// Handle single-string assumption from TreeNode export
+		attributes.assumptions = [{ text: data.assumption }];
+	} else if (data.context && Array.isArray(data.context)) {
+		// Fallback: check if context items have assumption flag
+		const contextItems = data.context.filter(
+			(item): item is ContextItem =>
+				typeof item === "object" &&
+				(item.type === "Assumption" || item.isAssumption === true)
+		);
+		if (contextItems.length > 0) {
+			attributes.assumptions = contextItems;
+		}
+	}
+
+	// Extract justifications (handle both array and single-string formats)
 	if (data.justifications && Array.isArray(data.justifications)) {
-		attributes.justifications = data.justifications;
+		attributes.justifications = data.justifications as ContextItem[];
+	} else if (data.justification && typeof data.justification === "string") {
+		// Handle single-string justification from TreeNode export
+		attributes.justifications = [{ text: data.justification }];
 	}
 
 	return attributes;

@@ -70,9 +70,106 @@ export type Goal = BaseElement & {
 
 /**
  * Top-level case data structure containing all goals.
+ * @deprecated Use CaseExportNested for new implementations
  */
 export type CaseData = {
 	goals: Goal[];
+};
+
+// ============================================
+// New Export Schema Types (v1.0)
+// ============================================
+
+/**
+ * Element types in the new export schema.
+ * Uses uppercase to match Prisma enum.
+ */
+export type ElementType =
+	| "GOAL"
+	| "CONTEXT"
+	| "STRATEGY"
+	| "PROPERTY_CLAIM"
+	| "EVIDENCE"
+	| "JUSTIFICATION"
+	| "ASSUMPTION"
+	| "MODULE"
+	| "AWAY_GOAL"
+	| "CONTRACT";
+
+/**
+ * Role for goal elements.
+ */
+export type ElementRole = "TOP_LEVEL" | "SUPPORTING";
+
+/**
+ * Module embed type for module elements.
+ */
+export type ModuleEmbedType = "COPY" | "REFERENCE";
+
+/**
+ * Comment attached to an element in the export.
+ */
+export type ExportComment = {
+	author: string;
+	content: string;
+	createdAt: string;
+};
+
+/**
+ * Recursive tree node structure for the nested export format.
+ * Each node can contain children of various types.
+ *
+ * The `name` field contains the identifier (G1, P1.1, etc.) stored in DB.
+ * The optional `title` field can contain a human-readable display name.
+ */
+export type TreeNode = {
+	id: string;
+	type: ElementType;
+	name: string | null;
+	description: string;
+	inSandbox: boolean;
+	children: TreeNode[];
+	// Optional display title (for future use)
+	title?: string | null;
+	// Type-specific fields (only present when applicable)
+	role?: ElementRole | null;
+	assumption?: string | null;
+	justification?: string | null;
+	context?: string[];
+	url?: string | null;
+	level?: number | null;
+	// Module fields
+	moduleReferenceId?: string;
+	moduleEmbedType?: ModuleEmbedType;
+	modulePublicSummary?: string | null;
+	// Pattern metadata
+	fromPattern?: boolean;
+	modifiedFromPattern?: boolean;
+	// Dialogical reasoning
+	isDefeater?: boolean;
+	defeatsElementId?: string;
+	// Comments (optional)
+	comments?: ExportComment[];
+};
+
+/**
+ * Case metadata in the nested export format.
+ */
+export type CaseMetadata = {
+	name: string;
+	description: string;
+	colorProfile: string;
+};
+
+/**
+ * New nested export format (v1.0).
+ * This is the primary format exported by the TEA Platform.
+ */
+export type CaseExportNested = {
+	version: "1.0";
+	exportedAt: string;
+	case: CaseMetadata;
+	tree: TreeNode;
 };
 
 // ============================================
@@ -336,6 +433,16 @@ export type ReactFlowNodeData = {
 	id?: string;
 	name: string;
 	description: string;
+	/** Optional display title separate from identifier */
+	title?: string;
+	/** URL for evidence nodes */
+	url?: string;
+	/** Context strings from TreeNode export */
+	context?: string[];
+	/** Single-string assumption from TreeNode export */
+	assumption?: string;
+	/** Single-string justification from TreeNode export */
+	justification?: string;
 	element?: BaseElement;
 	importance?: ImportanceLevel;
 	progress?: number;

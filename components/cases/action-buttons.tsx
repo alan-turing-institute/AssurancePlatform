@@ -105,7 +105,7 @@ const ActionButtons = ({
 	return (
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
 			<div
-				className="m-auto flex w-1/8 items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20"
+				className="m-auto flex items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20"
 				data-show-create-goal={showCreateGoal}
 				data-testid="action-buttons"
 			>
@@ -116,7 +116,7 @@ const ActionButtons = ({
 						assuranceCase.permissions !== "review" && (
 							<ActionTooltip label="New Goal">
 								<button
-									className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+									className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 									onClick={() => setOpen(true)}
 									type="button"
 								>
@@ -127,7 +127,7 @@ const ActionButtons = ({
 						)}
 					<ActionTooltip label="Focus">
 						<button
-							className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 							id="FocusBtn"
 							onClick={() => onLayout("TB")}
 							type="button"
@@ -141,7 +141,7 @@ const ActionButtons = ({
 						assuranceCase.permissions !== "review" && (
 							<ActionTooltip label="Reset Identifiers">
 								<button
-									className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+									className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 									onClick={() => setAlertOpen(true)}
 									type="button"
 								>
@@ -152,7 +152,7 @@ const ActionButtons = ({
 						)}
 					<ActionTooltip label="Resources">
 						<button
-							className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 							onClick={() => resourcesModal.onOpen()}
 							type="button"
 						>
@@ -165,7 +165,7 @@ const ActionButtons = ({
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Share">
 							<button
-								className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 								onClick={() =>
 									caseSharingModal.onOpen(assuranceCase?.id?.toString() ?? "")
 								}
@@ -179,7 +179,7 @@ const ActionButtons = ({
 					{assuranceCase && assuranceCase.permissions !== "view" && (
 						<ActionTooltip label="Export">
 							<button
-								className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 								onClick={() => shareModal.onOpen()}
 								type="button"
 							>
@@ -191,7 +191,7 @@ const ActionButtons = ({
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Permissions">
 							<button
-								className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 								onClick={() => permissionModal.onOpen()}
 								type="button"
 							>
@@ -202,7 +202,7 @@ const ActionButtons = ({
 					)}
 					<ActionTooltip label="Notes">
 						<button
-							className="h-50 w-50 rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
 							onClick={() => setNotesOpen(true)}
 							type="button"
 						>
@@ -213,7 +213,7 @@ const ActionButtons = ({
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
 							<button
-								className="h-50 w-50 rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"
+								className="rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"
 								onClick={() => setDeleteOpen(true)}
 								type="button"
 							>

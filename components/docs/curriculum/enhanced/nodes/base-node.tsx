@@ -24,8 +24,8 @@ import {
 import {
 	extractAttributes,
 	extractMetadata,
-	formatIdentifier,
 	getDisplayName,
+	getIdentifier,
 	truncateText,
 } from "../utils/identifier-utils";
 import {
@@ -39,7 +39,7 @@ import {
 	buildSeparatorClasses,
 } from "../utils/node-styles";
 import { getNodeIcon, getNodeTypeConfig } from "../utils/theme-config";
-import { AttributesSection, MetadataSection } from "./attribute-badges";
+import { AttributeContentSection, MetadataSection } from "./attribute-badges";
 
 // ========================================================================
 // Type Definitions
@@ -127,8 +127,8 @@ const BaseNode = ({
 	// Get display name (name or formatted identifier)
 	const displayName = getDisplayName(data, nodeType);
 
-	// Get formatted identifier for footer
-	const formattedId = formatIdentifier(data.id, nodeType);
+	// Get identifier for footer (uses stored name if it's an identifier pattern, else formats from ID)
+	const identifier = getIdentifier(data, nodeType);
 
 	// Extract attributes and metadata
 	const attributes = extractAttributes(data);
@@ -269,7 +269,7 @@ const BaseNode = ({
 									{hasAttributes && (
 										<>
 											<div className={buildSeparatorClasses()} />
-											<AttributesSection attributes={attributes} />
+											<AttributeContentSection attributes={attributes} />
 										</>
 									)}
 
@@ -295,9 +295,9 @@ const BaseNode = ({
 										<span className="font-medium text-text-light/50 text-xs uppercase tracking-wider">
 											{config.name}
 										</span>
-										{formattedId && (
+										{identifier && (
 											<span className="font-mono text-text-light/40 text-xs">
-												{formattedId}
+												{identifier}
 											</span>
 										)}
 									</div>

@@ -55,12 +55,14 @@ const BACKGROUND_DOTS = BackgroundVariant.Dots;
 import { getLayoutedElements } from "@/lib/docs/layout-helper";
 import type {
 	CaseData,
+	CaseExportNested,
 	Context,
 	Evidence,
 	Goal,
 	PropertyClaim,
 	ReactFlowNodeData,
 	Strategy,
+	TreeNode,
 } from "@/types/curriculum";
 import "reactflow/dist/style.css";
 
@@ -115,7 +117,7 @@ type LegendProps = {
 };
 
 type EnhancedInteractiveCaseViewerInnerProps = {
-	caseData: CaseData;
+	caseData: CaseExportNested | CaseData;
 	onNodeClick?: (node: Node<ReactFlowNodeData>) => void;
 	guidedPath?: string[];
 	showAllNodes?: boolean;
@@ -380,6 +382,124 @@ function convertCaseDataToEnhanced(
 	}
 
 	return { nodes: flowNodes, edges: flowEdges };
+}
+
+/**
+ * Map element type from uppercase schema to lowercase React Flow node type
+ */
+const ELEMENT_TYPE_MAP: Record<string, string> = {
+	GOAL: "goal",
+	STRATEGY: "strategy",
+	PROPERTY_CLAIM: "propertyClaim",
+	EVIDENCE: "evidence",
+	CONTEXT: "context",
+	JUSTIFICATION: "context",
+	ASSUMPTION: "context",
+};
+
+/**
+ * Type guard to check if data is the new nested export format (v1.0)
+ */
+function isCaseExportNested(
+	data: CaseExportNested | CaseData
+): data is CaseExportNested {
+	return "version" in data && data.version === "1.0" && "tree" in data;
+}
+
+/**
+ * Convert tree-based case data (v1.0) to enhanced nodes and edges.
+ * Processes the recursive TreeNode structure from CaseExportNested.
+ */
+function convertTreeToEnhanced(
+	caseData: CaseExportNested,
+	guidedPath: string[] = [],
+	enhancedEdges = true
+): { nodes: Node<ReactFlowNodeData>[]; edges: Edge[] } {
+	const flowNodes: Node<ReactFlowNodeData>[] = [];
+	const flowEdges: Edge[] = [];
+	const edgeType = enhancedEdges ? "smart" : "smoothstep";
+	const xSpacing = 300;
+	const ySpacing = 180;
+
+	/**
+	 * Recursively process a TreeNode and its children
+	 */
+	function processNode(
+		node: TreeNode,
+		parentId: string | null,
+		x: number,
+		y: number,
+		_depth: number
+	): void {
+		const nodeType = ELEMENT_TYPE_MAP[node.type] || "goal";
+
+		flowNodes.push({
+			id: node.id,
+			type: nodeType,
+			position: { x, y },
+			data: {
+				id: node.id,
+				name: node.name || "",
+				title: node.title || undefined,
+				description: node.description,
+				url: node.url || undefined,
+				// Attribute fields for display in expanded nodes
+				context: node.context || [],
+				assumption: node.assumption || undefined,
+				justification: node.justification || undefined,
+			},
+		});
+
+		if (parentId) {
+			flowEdges.push({
+				id: `${parentId}-${node.id}`,
+				source: parentId,
+				target: node.id,
+				sourceHandle: `${parentId}-source`,
+				targetHandle: `${node.id}-target`,
+				type: edgeType,
+				animated: guidedPath.includes(node.id),
+				markerEnd: {
+					type: MarkerType.ArrowClosed,
+				},
+			});
+		}
+
+		// Position children horizontally centered under this node
+		const childCount = node.children.length;
+		if (childCount > 0) {
+			const totalWidth = (childCount - 1) * xSpacing;
+			const startX = x - totalWidth / 2;
+
+			for (const [index, child] of node.children.entries()) {
+				const childX = startX + index * xSpacing;
+				processNode(child, node.id, childX, y + ySpacing, _depth + 1);
+			}
+		}
+	}
+
+	processNode(caseData.tree, null, 400, 0, 0);
+	return { nodes: flowNodes, edges: flowEdges };
+}
+
+/**
+ * Union type for supported case data formats
+ */
+type SupportedCaseData = CaseExportNested | CaseData;
+
+/**
+ * Convert case data to enhanced nodes and edges.
+ * Automatically detects schema version and uses appropriate converter.
+ */
+function convertToEnhanced(
+	caseData: SupportedCaseData,
+	guidedPath: string[] = [],
+	enhancedEdges = true
+): { nodes: Node<ReactFlowNodeData>[]; edges: Edge[] } {
+	if (isCaseExportNested(caseData)) {
+		return convertTreeToEnhanced(caseData, guidedPath, enhancedEdges);
+	}
+	return convertCaseDataToEnhanced(caseData, guidedPath, enhancedEdges);
 }
 
 /**
@@ -870,7 +990,7 @@ const EnhancedInteractiveCaseViewerInner = ({
 			return;
 		}
 
-		const { nodes: flowNodes, edges: flowEdges } = convertCaseDataToEnhanced(
+		const { nodes: flowNodes, edges: flowEdges } = convertToEnhanced(
 			caseData,
 			guidedPath,
 			enableEnhancedEdges
