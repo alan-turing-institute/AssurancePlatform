@@ -18,14 +18,11 @@ export default async function Page(props: {
 	params: Promise<{ slug?: string[] }>;
 }) {
 	const params = await props.params;
-	const {
-		default: MDXContent,
-		toc,
-		metadata,
-	} = await importPage(params.slug ?? []);
+	const result = await importPage(params.slug ?? []);
+	const { default: MDXContent, toc, metadata } = result;
 
 	return (
-		<Wrapper metadata={metadata} toc={toc}>
+		<Wrapper metadata={metadata} sourceCode={""} toc={toc}>
 			<MDXContent {...props} params={params} />
 		</Wrapper>
 	);

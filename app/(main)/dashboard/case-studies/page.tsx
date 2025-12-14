@@ -33,7 +33,7 @@ async function CaseStudiesPage() {
 			<Separator />
 
 			<div className="">
-				<div className="-mx-4 sm:mx-0 mt-8">
+				<div className="-mx-4 mt-8 sm:mx-0">
 					<table className="min-w-full divide-y divide-foreground/10">
 						<thead>
 							<tr>

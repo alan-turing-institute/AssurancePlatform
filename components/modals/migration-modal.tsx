@@ -104,7 +104,7 @@ export const MigrationModal = () => {
 					<Button
 						disabled={isSubmitting}
 						onClick={handleClose}
-						variant={migrationModal.isMissingEmail ? "outline-solid" : "default"}
+						variant={migrationModal.isMissingEmail ? "outline" : "default"}
 					>
 						{isSubmitting ? "Saving..." : "Got it"}
 					</Button>

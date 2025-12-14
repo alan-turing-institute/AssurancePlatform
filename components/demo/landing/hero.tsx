@@ -12,7 +12,7 @@ export default function Hero() {
 				<div className="relative isolate">
 					<svg
 						aria-hidden="true"
-						className="-z-10 absolute inset-x-0 top-0 h-256 w-full stroke-gray-200 mask-[radial-gradient(32rem_32rem_at_center,white,transparent)]"
+						className="-z-10 mask-[radial-gradient(32rem_32rem_at_center,white,transparent)] absolute inset-x-0 top-0 h-256 w-full stroke-gray-200"
 					>
 						<defs>
 							<pattern
@@ -72,7 +72,7 @@ export default function Hero() {
 									</p>
 									<div className="mt-10 flex items-center gap-x-6">
 										<Link
-											className="rounded-md bg-indigo-600 px-3.5 py-2.5 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+											className="rounded-md bg-indigo-600 px-3.5 py-2.5 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
 											href={
 												session?.key
 													? "/dashboard"

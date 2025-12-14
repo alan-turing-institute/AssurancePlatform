@@ -1,9 +1,9 @@
 import type { ImageProps } from "next/image";
 import Image from "next/image";
-import {
-	useMDXComponents as getThemeComponents,
-	type MDXComponents,
-} from "nextra-theme-docs";
+import { useMDXComponents as getThemeComponents } from "nextra-theme-docs";
+
+// Use nextra's MDXComponents type for compatibility
+type MDXComponents = ReturnType<typeof getThemeComponents>;
 
 /**
  * Custom image component that renders images without the zoom/expand behaviour.

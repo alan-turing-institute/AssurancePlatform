@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getPageMap } from "nextra/page-map";
 import { Footer, Layout, Navbar } from "nextra-theme-docs";
 import type { ReactNode } from "react";
@@ -17,21 +18,23 @@ type DocsLayoutPageProps = {
 const navbar = (
 	<Navbar
 		logo={
-			<span className="flex items-center gap-2 font-bold">
-				<svg
-					aria-hidden="true"
-					className="h-6 w-6"
-					fill="none"
-					stroke="currentColor"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					viewBox="0 0 24 24"
-				>
-					<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
-				</svg>
-				TEA Docs
-			</span>
+			<div className="flex items-center gap-2">
+				<Image
+					alt="TEA Platform"
+					className="dark:hidden"
+					height={28}
+					src="/images/logos/tea-logo-icon-light.png"
+					width={32}
+				/>
+				<Image
+					alt="TEA Platform"
+					className="hidden dark:block"
+					height={28}
+					src="/images/logos/tea-logo-icon-dark.png"
+					width={32}
+				/>
+				<span className="font-bold text-lg">TEA Docs</span>
+			</div>
 		}
 		projectLink="https://github.com/alan-turing-institute/AssurancePlatform"
 	/>

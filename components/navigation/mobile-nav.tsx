@@ -128,7 +128,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 												className="w-16"
 												height={64}
 												priority
-												src="/images/tea-logo2.png"
+												src="/images/logos/tea-logo-icon-dark.png"
 												style={{ height: "auto" }}
 												unoptimized
 												width={64}

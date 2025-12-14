@@ -128,7 +128,7 @@ describe("Header", () => {
 
 			const logo = screen.getByAltText("TEA Platform Logo");
 			expect(logo).toBeInTheDocument();
-			expect(logo).toHaveAttribute("src", "/images/tea-logo.png");
+			expect(logo).toHaveAttribute("src", "/images/logos/tea-logo-full-light.png");
 			expect(logo).toHaveAttribute("width", "183");
 			expect(logo).toHaveAttribute("height", "48");
 		});

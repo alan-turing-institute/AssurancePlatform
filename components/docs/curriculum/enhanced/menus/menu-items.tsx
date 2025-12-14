@@ -182,9 +182,7 @@ export const MenuItem = ({
 					</span>
 				)}
 
-				{submenu && (
-					<ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />
-				)}
+				{submenu && <ChevronRight className="h-4 w-4 shrink-0 text-gray-500" />}
 			</button>
 
 			{/* Submenu */}

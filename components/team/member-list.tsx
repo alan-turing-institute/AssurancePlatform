@@ -84,7 +84,7 @@ export default function MemberList() {
 					</div>
 					<div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
 						<button
-							className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+							className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
 							type="button"
 						>
 							Add user
