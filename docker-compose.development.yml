@@ -31,6 +31,8 @@ services:
     env_file:
       - ./.env
     environment:
+      # Override DATABASE_URL to use Docker network hostname
+      - DATABASE_URL=postgresql://tea_user:tea_password@postgres:5432/tea_dev
       # Increase Node.js memory limit for Next.js dev server
       - NODE_OPTIONS=--max-old-space-size=4096
     volumes:
