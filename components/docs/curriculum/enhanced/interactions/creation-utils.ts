@@ -390,15 +390,6 @@ export const getNodeTemplates = (): NodeTemplate[] => [
 			{ type: "evidence", name: "Supporting Evidence", offsetY: 150 },
 		],
 	},
-	{
-		id: "context-pattern",
-		name: "Context Pattern",
-		description: "Goal with context",
-		nodes: [
-			{ type: "goal", name: "Goal" },
-			{ type: "context", name: "Context/Assumption", offsetX: 200 },
-		],
-	},
 ];
 
 /**

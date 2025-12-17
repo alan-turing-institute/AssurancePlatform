@@ -367,6 +367,7 @@ type AttributeContentSectionProps = {
 		assumptions?: AttributeContentItem[];
 		justifications?: AttributeContentItem[];
 	};
+	isDarkMode?: boolean;
 	className?: string;
 };
 
@@ -385,29 +386,38 @@ const getAttributeText = (item: unknown): string => {
 
 /**
  * Single Attribute Display Component
- * Shows label + text content
+ * Shows label + text content with consistent readable text colour
  */
 const AttributeItem = ({
 	icon: Icon,
 	label,
 	text,
-	colorClass,
+	iconColorClass,
+	isDarkMode = false,
 }: {
 	icon: LucideIcon;
 	label: string;
 	text: string;
-	colorClass: string;
-}) => (
-	<div className={cn("flex flex-col gap-1", colorClass)}>
-		<div className="flex items-center gap-1.5">
-			<Icon className="h-3 w-3" />
-			<span className="font-medium text-xs uppercase tracking-wider">
-				{label}
-			</span>
+	iconColorClass: string;
+	isDarkMode?: boolean;
+}) => {
+	const labelClass = isDarkMode
+		? "font-medium text-gray-400 text-xs uppercase tracking-wider"
+		: "font-medium text-gray-500 text-xs uppercase tracking-wider";
+	const textClass = isDarkMode
+		? "pl-4 text-gray-300 text-xs leading-relaxed"
+		: "pl-4 text-gray-700 text-xs leading-relaxed";
+
+	return (
+		<div className="flex flex-col gap-1">
+			<div className="flex items-center gap-1.5">
+				<Icon className={cn("h-3 w-3", iconColorClass)} />
+				<span className={labelClass}>{label}</span>
+			</div>
+			<p className={textClass}>{text}</p>
 		</div>
-		<p className="pl-4 text-text-light/80 text-xs leading-relaxed">{text}</p>
-	</div>
-);
+	);
+};
 
 /**
  * Renders a list of attribute items with proper keys based on text content
@@ -416,7 +426,8 @@ const renderAttributeItems = (
 	items: AttributeContentItem[],
 	type: "context" | "assumption" | "justification",
 	icon: LucideIcon,
-	colorClass: string
+	iconColorClass: string,
+	isDarkMode = false
 ) => {
 	// Filter to items with valid text and create stable keys
 	const validItems = items
@@ -444,8 +455,9 @@ const renderAttributeItems = (
 
 		return (
 			<AttributeItem
-				colorClass={colorClass}
 				icon={icon}
+				iconColorClass={iconColorClass}
+				isDarkMode={isDarkMode}
 				key={`${type}-${item.text.slice(0, 20)}-${item.index}`}
 				label={label}
 				text={item.text}
@@ -461,6 +473,7 @@ const renderAttributeItems = (
  */
 export const AttributeContentSection = ({
 	attributes,
+	isDarkMode = false,
 	className,
 }: AttributeContentSectionProps) => {
 	if (!attributes) {
@@ -477,18 +490,26 @@ export const AttributeContentSection = ({
 
 	return (
 		<div className={cn("space-y-3", className)}>
-			{renderAttributeItems(context, "context", Info, "text-blue-300")}
+			{renderAttributeItems(
+				context,
+				"context",
+				Info,
+				"text-blue-300",
+				isDarkMode
+			)}
 			{renderAttributeItems(
 				assumptions,
 				"assumption",
 				AlertCircle,
-				"text-yellow-300"
+				"text-yellow-300",
+				isDarkMode
 			)}
 			{renderAttributeItems(
 				justifications,
 				"justification",
 				FileText,
-				"text-purple-300"
+				"text-purple-300",
+				isDarkMode
 			)}
 		</div>
 	);

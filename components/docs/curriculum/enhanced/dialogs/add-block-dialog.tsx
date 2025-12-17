@@ -236,12 +236,7 @@ type AddBlockDialogProps = {
 /**
  * Valid node type ids
  */
-type NodeTypeId =
-	| "goal"
-	| "strategy"
-	| "propertyClaim"
-	| "evidence"
-	| "context";
+type NodeTypeId = "goal" | "strategy" | "propertyClaim" | "evidence";
 
 /**
  * Helper function to handle keyboard shortcuts for node type selection

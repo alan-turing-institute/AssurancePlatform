@@ -158,6 +158,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
+      elkjs:
+        specifier: ^0.11.0
+        version: 0.11.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -4215,6 +4218,9 @@ packages:
 
   electron-to-chromium@1.5.182:
     resolution: {integrity: sha512-Lv65Btwv9W4J9pyODI6EWpdnhfvrve/us5h1WspW8B2Fb0366REPtY3hX7ounk1CkV/TBjWCEvCBBbYbmV0qCA==}
+
+  elkjs@0.11.0:
+    resolution: {integrity: sha512-u4J8h9mwEDaYMqo0RYJpqNMFDoMK7f+pu4GjcV+N8jIC7TRdORgzkfSjTJemhqONFfH6fBI3wpysgWbhgVWIXw==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -11697,6 +11703,8 @@ snapshots:
       fast-check: 3.23.2
 
   electron-to-chromium@1.5.182: {}
+
+  elkjs@0.11.0: {}
 
   emoji-regex@10.6.0: {}
 

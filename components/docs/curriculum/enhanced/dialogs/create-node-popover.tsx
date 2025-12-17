@@ -49,7 +49,6 @@ const DEFAULT_CHILD_TYPES: NodeTypeId[] = [
 	"strategy",
 	"propertyClaim",
 	"evidence",
-	"context",
 ];
 
 /**

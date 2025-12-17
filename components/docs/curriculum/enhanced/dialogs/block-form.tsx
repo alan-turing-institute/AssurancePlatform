@@ -619,73 +619,6 @@ const BlockForm = forwardRef<BlockFormHandle, BlockFormProps>(
 			</>
 		);
 
-		// Context-specific fields
-		const renderContextFields = () => (
-			<>
-				{!quickMode && (
-					<>
-						<FormField
-							helperText="What kind of context is this?"
-							label="Context Type"
-						>
-							<Select
-								onValueChange={(value) => handleChange("contextType", value)}
-								value={String(formData.contextType || "assumption")}
-							>
-								<SelectTrigger className="border-transparent bg-background-transparent-white-hover text-text-light">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="assumption">Assumption</SelectItem>
-									<SelectItem value="justification">Justification</SelectItem>
-									<SelectItem value="constraint">Constraint</SelectItem>
-									<SelectItem value="definition">Definition</SelectItem>
-									<SelectItem value="scope">Scope</SelectItem>
-								</SelectContent>
-							</Select>
-						</FormField>
-
-						<FormField
-							helperText="How critical is this context?"
-							label="Importance"
-						>
-							<Select
-								onValueChange={(value) => handleChange("importance", value)}
-								value={String(formData.importance || "medium")}
-							>
-								<SelectTrigger className="border-transparent bg-background-transparent-white-hover text-text-light">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="critical">Critical</SelectItem>
-									<SelectItem value="high">High</SelectItem>
-									<SelectItem value="medium">Medium</SelectItem>
-									<SelectItem value="low">Low</SelectItem>
-								</SelectContent>
-							</Select>
-						</FormField>
-
-						<FormField
-							helperText="How long is this context valid?"
-							label="Validity Period"
-						>
-							<Input
-								className={cn(
-									"bg-background-transparent-white-hover",
-									"border-transparent",
-									"text-text-light",
-									"placeholder:text-text-light/50"
-								)}
-								onChange={(e) => handleChange("validityPeriod", e.target.value)}
-								placeholder="e.g., 'Duration of project', 'Until 2025'..."
-								value={String(formData.validityPeriod || "")}
-							/>
-						</FormField>
-					</>
-				)}
-			</>
-		);
-
 		return (
 			<div className="space-y-4">
 				{renderCommonFields()}
@@ -695,7 +628,6 @@ const BlockForm = forwardRef<BlockFormHandle, BlockFormProps>(
 				{nodeType === "strategy" && renderStrategyFields()}
 				{nodeType === "propertyClaim" && renderPropertyClaimFields()}
 				{nodeType === "evidence" && renderEvidenceFields()}
-				{nodeType === "context" && renderContextFields()}
 			</div>
 		);
 	}
@@ -736,13 +668,6 @@ const getDefaultFormData = (nodeType: string): FormData => {
 			confidence: 75,
 			link: "",
 			tags: [],
-		},
-		context: {
-			name: "",
-			description: "",
-			contextType: "assumption",
-			importance: "medium",
-			validityPeriod: "",
 		},
 	};
 

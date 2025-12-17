@@ -398,11 +398,11 @@ export const exampleConcepts: Concept[] = [
 	},
 	{
 		id: "concept-context",
-		type: "context",
+		type: "general",
 		name: "Context",
 		brief: "Scope and assumptions",
 		definition:
-			"Context defines the boundaries, assumptions, and conditions under which the goal is claimed to be satisfied.",
+			"Context defines the boundaries, assumptions, and conditions under which the goal is claimed to be satisfied. Context is stored as an attribute on nodes rather than as a separate element.",
 		details: [
 			"Sets boundaries for the argument",
 			"States assumptions explicitly",

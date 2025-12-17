@@ -14,12 +14,7 @@ import BaseNode from "./base-node";
 // Type Definitions
 // ========================================================================
 
-export type NodeTypeId =
-	| "goal"
-	| "strategy"
-	| "propertyClaim"
-	| "evidence"
-	| "context";
+export type NodeTypeId = "goal" | "strategy" | "propertyClaim" | "evidence";
 
 type NodeCategory = "Primary" | "Supporting";
 
@@ -69,9 +64,6 @@ const PropertyClaimNodeWrapper = (props: NodeProps) => (
 const EvidenceNodeWrapper = (props: NodeProps) => (
 	<BaseNode {...props} nodeType="evidence" />
 );
-const ContextNodeWrapper = (props: NodeProps) => (
-	<BaseNode {...props} nodeType="context" />
-);
 
 // ========================================================================
 // Node Type Mapping
@@ -86,7 +78,6 @@ export const nodeTypes = {
 	strategy: StrategyNodeWrapper,
 	propertyClaim: PropertyClaimNodeWrapper,
 	evidence: EvidenceNodeWrapper,
-	context: ContextNodeWrapper,
 
 	// Aliases for backward compatibility
 	claim: PropertyClaimNodeWrapper,
@@ -94,7 +85,6 @@ export const nodeTypes = {
 	Strategy: StrategyNodeWrapper,
 	PropertyClaim: PropertyClaimNodeWrapper,
 	Evidence: EvidenceNodeWrapper,
-	Context: ContextNodeWrapper,
 };
 
 // ========================================================================
@@ -125,7 +115,6 @@ export const getNodeComponent = (
 		propertyclaim: PropertyClaimNodeWrapper,
 		claim: PropertyClaimNodeWrapper,
 		evidence: EvidenceNodeWrapper,
-		context: ContextNodeWrapper,
 	};
 
 	return typeMap[normalizedType] ?? GoalNodeWrapper;
@@ -139,7 +128,6 @@ export const getAvailableNodeTypes = (): NodeTypeId[] => [
 	"strategy",
 	"propertyClaim",
 	"evidence",
-	"context",
 ];
 
 /**
@@ -147,14 +135,7 @@ export const getAvailableNodeTypes = (): NodeTypeId[] => [
  */
 export const isValidNodeType = (nodeType: string | undefined): boolean => {
 	const normalizedType = normalizeType(nodeType);
-	const validTypes = [
-		"goal",
-		"strategy",
-		"propertyclaim",
-		"claim",
-		"evidence",
-		"context",
-	];
+	const validTypes = ["goal", "strategy", "propertyclaim", "claim", "evidence"];
 	return validTypes.includes(normalizedType);
 };
 
@@ -191,13 +172,6 @@ const nodeDefaults: Record<NodeTypeId, NodeDefaults> = {
 		evidenceType: "document",
 		confidence: 75,
 		quality: "medium",
-	},
-	context: {
-		name: "New Context",
-		description: "Context description",
-		contextType: "assumption",
-		importance: "medium",
-		relatedNodesCount: 0,
 	},
 };
 
@@ -241,11 +215,10 @@ export const createNode = (
  * Valid children mapping for GSN (Goal Structuring Notation)
  */
 export const validChildrenMap: Record<NodeTypeId, NodeTypeId[]> = {
-	goal: ["strategy", "propertyClaim", "context"],
-	strategy: ["propertyClaim", "strategy", "evidence", "context"],
-	propertyClaim: ["propertyClaim", "strategy", "evidence", "context"],
+	goal: ["strategy", "propertyClaim"],
+	strategy: ["propertyClaim", "strategy", "evidence"],
+	propertyClaim: ["propertyClaim", "strategy", "evidence"],
 	evidence: [],
-	context: [],
 };
 
 /**
@@ -289,7 +262,7 @@ export const nodeTypeMetadata: Record<NodeTypeId, NodeTypeMetadataItem> = {
 		color: "green",
 		icon: "Target",
 		shortcut: "G",
-		validChildren: ["strategy", "propertyClaim", "context"],
+		validChildren: ["strategy", "propertyClaim"],
 	},
 	strategy: {
 		id: "strategy",
@@ -299,7 +272,7 @@ export const nodeTypeMetadata: Record<NodeTypeId, NodeTypeMetadataItem> = {
 		color: "purple",
 		icon: "GitBranch",
 		shortcut: "S",
-		validChildren: ["propertyClaim", "strategy", "evidence", "context"],
+		validChildren: ["propertyClaim", "strategy", "evidence"],
 	},
 	propertyClaim: {
 		id: "propertyClaim",
@@ -309,7 +282,7 @@ export const nodeTypeMetadata: Record<NodeTypeId, NodeTypeMetadataItem> = {
 		color: "orange",
 		icon: "FileText",
 		shortcut: "C",
-		validChildren: ["propertyClaim", "strategy", "evidence", "context"],
+		validChildren: ["propertyClaim", "strategy", "evidence"],
 	},
 	evidence: {
 		id: "evidence",
@@ -319,16 +292,6 @@ export const nodeTypeMetadata: Record<NodeTypeId, NodeTypeMetadataItem> = {
 		color: "cyan",
 		icon: "CheckCircle",
 		shortcut: "E",
-		validChildren: [],
-	},
-	context: {
-		id: "context",
-		name: "Context",
-		description: "Contextual information or assumption",
-		category: "Supporting",
-		color: "gray",
-		icon: "AlertCircle",
-		shortcut: "X",
 		validChildren: [],
 	},
 };
@@ -356,7 +319,7 @@ export const getNodeTypesByCategory = (): Record<
 		nodeTypeMetadata.strategy,
 		nodeTypeMetadata.propertyClaim,
 	],
-	Supporting: [nodeTypeMetadata.evidence, nodeTypeMetadata.context],
+	Supporting: [nodeTypeMetadata.evidence],
 });
 
 export default nodeTypes;

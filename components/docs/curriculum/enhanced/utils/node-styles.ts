@@ -23,6 +23,7 @@ type NodeContainerOptions = {
 	isSelected?: boolean;
 	isHovered?: boolean;
 	isCollapsed?: boolean;
+	isDarkMode?: boolean;
 	className?: string;
 };
 
@@ -66,9 +67,15 @@ export const buildNodeContainerClasses = ({
 	isSelected = false,
 	isHovered = false,
 	isCollapsed = false,
+	isDarkMode = false,
 	className = "",
 }: NodeContainerOptions): string => {
-	const baseClasses = buildNodeClasses(nodeType, isSelected, isHovered);
+	const baseClasses = buildNodeClasses(
+		nodeType,
+		isSelected,
+		isHovered,
+		isDarkMode
+	);
 
 	const sizeClasses = isCollapsed ? "max-w-[250px]" : "max-w-[400px]";
 
@@ -92,10 +99,13 @@ export const buildNodeHeaderClasses = (_nodeType = "goal"): string =>
 /**
  * Build node title classes
  */
-export const buildNodeTitleClasses = (_nodeType = "goal"): string =>
+export const buildNodeTitleClasses = (
+	_nodeType = "goal",
+	isDarkMode = false
+): string =>
 	cn(
 		"font-semibold",
-		"text-text-light",
+		isDarkMode ? "text-gray-100" : "text-gray-900",
 		"text-sm",
 		"truncate",
 		"flex-1",
@@ -130,20 +140,29 @@ export const buildNodeContentClasses = (isExpanded = true): string =>
 /**
  * Build preview text classes (collapsed state)
  */
-export const buildPreviewTextClasses = (): string =>
-	cn("text-xs", "text-text-light/70", "line-clamp-2", "leading-relaxed");
+export const buildPreviewTextClasses = (isDarkMode = false): string =>
+	cn(
+		"text-xs",
+		isDarkMode ? "text-gray-400" : "text-gray-600",
+		"line-clamp-2",
+		"leading-relaxed"
+	);
 
 /**
  * Build full description classes (expanded state)
  */
-export const buildDescriptionClasses = (): string =>
-	cn("text-sm", "text-text-light/80", "leading-relaxed");
+export const buildDescriptionClasses = (isDarkMode = false): string =>
+	cn(
+		"text-sm",
+		isDarkMode ? "text-gray-300" : "text-gray-700",
+		"leading-relaxed"
+	);
 
 /**
  * Build separator classes
  */
-export const buildSeparatorClasses = (): string =>
-	cn("h-px", "bg-border-transparent");
+export const buildSeparatorClasses = (isDarkMode = false): string =>
+	cn("h-px", isDarkMode ? "bg-gray-700" : "bg-gray-200");
 
 // ========================================================================
 // Icon Mappers

@@ -356,10 +356,7 @@
 	transition: stroke 0.3s ease;
 }
 
-.react-flow__edge.selected .react-flow__edge-path {
-	stroke: var(--rf-edge-stroke-selected);
-	stroke-width: 3;
-}
+/* Edge selection styling disabled - edges are not selectable in the viewer */
 
 .react-flow__edge.animated .react-flow__edge-path {
 	stroke: var(--rf-edge-stroke-animated);

@@ -21,7 +21,7 @@
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Activity, AlertCircle, CheckCircle, Info } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { EdgeProps, Position } from "reactflow";
 import {
 	EdgeLabelRenderer,
@@ -186,8 +186,8 @@ function calculateEdgeStyle(
 const SmartEdge = (
 	{
 		id,
-		source,
-		target,
+		source: _source,
+		target: _target,
 		sourceX,
 		sourceY,
 		targetX,
@@ -195,11 +195,13 @@ const SmartEdge = (
 		sourcePosition,
 		targetPosition,
 		data = {},
-		selected = false,
+		selected: _selected = false,
 		style = {},
 	}: SmartEdgeProps // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Component handles multiple interaction states and path calculations
 ) => {
-	const [isHovered, setIsHovered] = useState(false);
+	// Hover and selection states disabled - no edge editing functionality currently
+	const isHovered = false;
+	const isSelected = false;
 
 	// Edge configuration
 	const edgeState = data.state || "default";
@@ -207,12 +209,12 @@ const SmartEdge = (
 	const connectionStrength = data.strength || 0.5;
 	const baseStrokeWidth = data.strokeWidth || 2;
 
-	// Calculate styling
+	// Calculate styling (using disabled states)
 	const { strokeWidth, pathOpacity } = calculateEdgeStyle(
 		connectionStrength,
 		baseStrokeWidth,
 		isHovered,
-		selected
+		isSelected
 	);
 
 	// Path type selection based on configuration or auto-detection
@@ -258,27 +260,6 @@ const SmartEdge = (
 	const showStrengthIndicator = data.showStrengthIndicator !== false;
 	const showTypeIndicator = data.showTypeIndicator;
 
-	// Interaction handlers
-	const handleClick = useCallback(
-		(event: React.MouseEvent) => {
-			event.stopPropagation();
-			if (data.onClick) {
-				data.onClick(event, { id, source, target, data });
-			}
-		},
-		[id, source, target, data]
-	);
-
-	const handleContextMenu = useCallback(
-		(event: React.MouseEvent) => {
-			event.preventDefault();
-			if (data.onContextMenu) {
-				data.onContextMenu(event, { id, source, target, data });
-			}
-		},
-		[id, source, target, data]
-	);
-
 	const StateIcon = labelIcon || getStateIcon(edgeState);
 
 	return (
@@ -294,14 +275,7 @@ const SmartEdge = (
 					refY={5}
 					viewBox="0 0 10 10"
 				>
-					<motion.path
-						animate={{
-							scale: selected ? 1.2 : 1,
-						}}
-						d="M 0 0 L 10 5 L 0 10 z"
-						fill={baseColor}
-						transition={{ duration: 0.2 }}
-					/>
+					<path d="M 0 0 L 10 5 L 0 10 z" fill={baseColor} />
 				</marker>
 
 				{/* Strength indicator gradient */}
@@ -341,8 +315,8 @@ const SmartEdge = (
 				</filter>
 			</defs>
 
-			{/* Background glow (when selected or hovered) */}
-			{(selected || isHovered) && (
+			{/* Background glow (when selected or hovered) - disabled as no edge editing */}
+			{(isSelected || isHovered) && (
 				<motion.path
 					animate={{ opacity: 0.2 }}
 					d={edgePath}
@@ -369,26 +343,18 @@ const SmartEdge = (
 				id={id}
 				initial={{ pathLength: 0, opacity: 0 }}
 				markerEnd={`url(#smart-arrow-${id})`}
-				onClick={handleClick}
-				onContextMenu={handleContextMenu}
-				onMouseEnter={() => setIsHovered(true)}
-				onMouseLeave={() => setIsHovered(false)}
 				stroke={
 					showStrengthIndicator ? `url(#strength-gradient-${id})` : baseColor
 				}
 				strokeWidth={strokeWidth}
 				style={{
 					...style,
-					cursor: "pointer",
 					opacity: pathOpacity,
+					pointerEvents: "none",
 				}}
 				transition={{
 					pathLength: { duration: 0.8, ease: "easeInOut" },
 					opacity: { duration: 0.3 },
-				}}
-				whileHover={{
-					opacity: Math.min(pathOpacity + 0.2, 1),
-					strokeWidth: strokeWidth * 1.2,
 				}}
 			/>
 
@@ -407,21 +373,7 @@ const SmartEdge = (
 				/>
 			)}
 
-			{/* Invisible wider path for easier interaction */}
-			{/* biome-ignore lint/a11y/useSemanticElements: SVG path element with interaction handlers for edge selection */}
-			<path
-				d={edgePath}
-				fill="none"
-				onClick={handleClick}
-				onContextMenu={handleContextMenu}
-				onMouseEnter={() => setIsHovered(true)}
-				onMouseLeave={() => setIsHovered(false)}
-				role="button"
-				stroke="transparent"
-				strokeWidth={Math.max(strokeWidth * 3, 20)}
-				style={{ cursor: "pointer" }}
-				tabIndex={0}
-			/>
+			{/* Interaction path removed - edges are not selectable in the viewer */}
 
 			{/* Edge label with glassmorphism */}
 			{showLabel && (

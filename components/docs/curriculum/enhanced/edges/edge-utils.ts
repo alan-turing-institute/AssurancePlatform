@@ -403,7 +403,7 @@ export function getStateColor(state: EdgeState | string): string {
 		error: "#ef4444", // red-500
 		success: "#10b981", // green-500
 		warning: "#f59e0b", // amber-500
-		default: "#8b5cf6", // purple-500
+		default: "#b1b1b7", // React Flow default grey
 	};
 
 	return stateColors[state] ?? stateColors.default;

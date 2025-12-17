@@ -58,7 +58,6 @@ const DEFAULT_CHILD_TYPES: NodeTypeId[] = [
 	"strategy",
 	"propertyClaim",
 	"evidence",
-	"context",
 ];
 
 /**
@@ -235,13 +234,12 @@ const CreateNodeDialog = ({
 		}
 
 		const handleKeyDown = (e: KeyboardEvent) => {
-			// Type selection shortcuts (G, S, C, E, X)
+			// Type selection shortcuts (G, S, C, E)
 			const shortcutMap: Record<string, NodeTypeId> = {
 				g: "goal",
 				s: "strategy",
 				c: "propertyClaim",
 				e: "evidence",
-				x: "context",
 			};
 
 			const key = e.key.toLowerCase();

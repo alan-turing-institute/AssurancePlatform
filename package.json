@@ -64,6 +64,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
     "dotenv": "^16.4.5",
+    "elkjs": "^0.11.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.25",
     "html-to-image": "^1.11.13",

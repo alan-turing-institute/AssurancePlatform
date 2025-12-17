@@ -326,71 +326,6 @@ const initialNodes: Node<NodeData>[] = [
 			tags: ["planning", "formal-methods"],
 		},
 	},
-
-	// Context Nodes
-	{
-		id: "context-1",
-		type: "context",
-		position: { x: 550, y: 100 },
-		data: {
-			id: "context-1",
-			name: "Operating Environment",
-			description: "System operates in controlled urban environment",
-			long_description:
-				"The system is designed and tested for operation in urban environments with defined characteristics.",
-			contextType: "assumption",
-			importance: "high",
-			relatedNodesCount: 2,
-			tooltipContent:
-				"This assumption constrains the operational design domain (ODD) of the system.",
-			validity: "Valid for current deployment phase",
-			scope: "Urban areas with speed limits up to 50 mph",
-			implications: [
-				"Highway operation requires additional validation",
-				"Rural roads may have different safety requirements",
-			],
-			metadata: {
-				validFrom: "2025-01-01",
-				reviewDate: "2025-12-31",
-			},
-		},
-	},
-
-	{
-		id: "context-2",
-		type: "context",
-		position: { x: 550, y: 300 },
-		data: {
-			id: "context-2",
-			name: "Sensor Limitations",
-			description: "LiDAR range limited to 100m",
-			contextType: "constraint",
-			importance: "critical",
-			relatedNodesCount: 1,
-			tooltipContent:
-				"Physical limitation of the sensor hardware that affects detection range.",
-			scope: "All perception-related safety claims",
-			implications: [
-				"Requires complementary sensor modalities",
-				"Speed must be limited to allow safe stopping distance",
-			],
-		},
-	},
-
-	{
-		id: "context-3",
-		type: "context",
-		position: { x: 200, y: 550 },
-		data: {
-			id: "context-3",
-			name: "Testing Methodology",
-			description: "Justification for simulation-based testing",
-			contextType: "justification",
-			importance: "medium",
-			relatedNodesCount: 3,
-			scope: "All test evidence",
-		},
-	},
 ];
 
 /**
@@ -434,27 +369,6 @@ const initialEdges: Edge[] = [
 		target: "evidence-3",
 		style: { stroke: "#06b6d4", strokeWidth: 2 },
 	},
-	{
-		id: "e-context1-goal",
-		source: "context-1",
-		target: "goal-1",
-		type: "step",
-		style: { stroke: "#6b7280", strokeWidth: 1, strokeDasharray: "5,5" },
-	},
-	{
-		id: "e-context2-claim1",
-		source: "context-2",
-		target: "claim-1",
-		type: "step",
-		style: { stroke: "#6b7280", strokeWidth: 1, strokeDasharray: "5,5" },
-	},
-	{
-		id: "e-context3-claim1",
-		source: "context-3",
-		target: "claim-1",
-		type: "step",
-		style: { stroke: "#6b7280", strokeWidth: 1, strokeDasharray: "5,5" },
-	},
 ];
 
 type NodeTypeFilter =
@@ -462,8 +376,7 @@ type NodeTypeFilter =
 	| "goal"
 	| "strategy"
 	| "propertyClaim"
-	| "evidence"
-	| "context";
+	| "evidence";
 
 /**
  * Main demo component
@@ -509,7 +422,6 @@ const AllNodeTypesDemo = () => {
 						{ id: "strategy", label: "Strategies", color: "purple" },
 						{ id: "propertyClaim", label: "Claims", color: "orange" },
 						{ id: "evidence", label: "Evidence", color: "cyan" },
-						{ id: "context", label: "Context", color: "gray" },
 					].map((type) => (
 						<button
 							className={`rounded-lg px-3 py-2 text-left text-sm transition-all ${
@@ -595,7 +507,6 @@ const AllNodeTypesDemo = () => {
 								strategy: "#a855f7",
 								propertyClaim: "#f97316",
 								evidence: "#06b6d4",
-								context: "#6b7280",
 							};
 							return colors[node.type || ""] || "#6b7280";
 						}}

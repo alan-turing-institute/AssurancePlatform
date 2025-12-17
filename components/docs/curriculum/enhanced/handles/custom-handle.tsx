@@ -21,7 +21,6 @@ import {
 	getHandleColors,
 	getHandleShapeClasses,
 	getHandleSizeClasses,
-	getPositionClasses,
 	isHandleConnected,
 } from "./handle-utils";
 
@@ -56,6 +55,8 @@ type CustomHandleProps = Omit<HandleProps, "id"> & {
 	size?: "small" | "medium" | "large";
 	shape?: "circle" | "square" | "diamond";
 	variant?: "default" | "gradient";
+	/** Control visibility of the handle decorator (+ button). When false, only the invisible React Flow handle remains for connections. */
+	visible?: boolean;
 	className?: string;
 	onConnect?: (nodeId: string, handleId: string | undefined) => void;
 	onHandleClick?: (
@@ -64,7 +65,11 @@ type CustomHandleProps = Omit<HandleProps, "id"> & {
 		position: { x: number; y: number },
 		nodeData?: Node["data"]
 	) => void;
+	/** Called when handle hover state changes - used to keep parent node hover state in sync */
+	onHoverChange?: (isHovered: boolean) => void;
 	nodeData?: Node["data"];
+	/** CSS class to offset the visual decorator (+ button) without moving the connection point. Use for positioning the decorator outside the node boundary. */
+	visualOffset?: string;
 };
 
 // ========================================================================
@@ -79,6 +84,16 @@ const getConnectionLimitColor = (percentage: number): string => {
 		return "bg-orange-500";
 	}
 	return "bg-blue-500";
+};
+
+const getSizePixels = (size: "small" | "medium" | "large"): number => {
+	if (size === "small") {
+		return 32;
+	}
+	if (size === "large") {
+		return 64;
+	}
+	return 48;
 };
 
 const getPulseRingColor = (isValid: boolean | undefined): string => {
@@ -175,6 +190,40 @@ const detectClick = (
 	const distanceY = Math.abs(endY - startPosition.y);
 	const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
 	return timeDiff < 200 && distance < 5;
+};
+
+/**
+ * Compute derived handle state from props
+ */
+const computeHandleState = (
+	connectionCount: number,
+	maxConnections: number,
+	validation: { valid: boolean; message?: string } | null,
+	showPulse: boolean,
+	isConnected: boolean,
+	isConnectable: boolean,
+	showBadge: boolean
+) => {
+	const actualConnectionCount = connectionCount || 0;
+	const isAtLimit = actualConnectionCount >= maxConnections;
+	const hasValidation = validation !== null;
+	const isValid = validation?.valid;
+	const shouldPulse = showPulse && !isConnected && isConnectable && !isAtLimit;
+	const shouldShowBadge = showBadge && actualConnectionCount > 0;
+	const percentage = getConnectionPercentage(
+		actualConnectionCount,
+		maxConnections
+	);
+
+	return {
+		actualConnectionCount,
+		isAtLimit,
+		hasValidation,
+		isValid,
+		shouldPulse,
+		shouldShowBadge,
+		percentage,
+	};
 };
 
 // Animation variants for framer-motion
@@ -359,14 +408,17 @@ const CustomHandle = ({
 	maxConnections = Number.POSITIVE_INFINITY,
 	validation = null,
 	showBadge = false,
-	showPulse = true,
+	showPulse = false,
 	showTooltip = true,
 	tooltipText = "",
 	size = "medium",
 	shape = "circle",
+	visible = true,
 	className = "",
 	onHandleClick,
+	onHoverChange,
 	nodeData,
+	visualOffset,
 	...props
 }: CustomHandleProps) => {
 	const [isHovered, setIsHovered] = useState(false);
@@ -395,20 +447,26 @@ const CustomHandle = ({
 		return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
 	}, [isDragging]);
 
-	// Calculate derived states
-	const actualConnectionCount = connectionCount || 0;
-	const isAtLimit = actualConnectionCount >= maxConnections;
-	const hasValidation = validation !== null;
-	const isValid = validation?.valid;
-	const shouldPulse = showPulse && !isConnected && isConnectable && !isAtLimit;
-	const shouldShowBadge = showBadge && actualConnectionCount > 0;
-	const percentage = getConnectionPercentage(
+	// Calculate derived states using helper
+	const {
 		actualConnectionCount,
-		maxConnections
+		isAtLimit,
+		hasValidation,
+		isValid,
+		shouldPulse,
+		shouldShowBadge,
+		percentage,
+	} = computeHandleState(
+		connectionCount,
+		maxConnections,
+		validation,
+		showPulse,
+		isConnected,
+		isConnectable,
+		showBadge
 	);
 
 	// Get dynamic styling
-	const positionClass = getPositionClasses(position);
 	const colors = getHandleColors(isConnected, isValid ?? null, isHovered);
 	const sizeClasses = getHandleSizeClasses(size);
 	const shapeClass = getHandleShapeClasses(shape);
@@ -442,6 +500,7 @@ const CustomHandle = ({
 	const handleMouseEnter = () => {
 		setIsHovered(true);
 		setShowTooltipState(true);
+		onHoverChange?.(true);
 	};
 
 	const handleMouseLeave = () => {
@@ -450,6 +509,7 @@ const CustomHandle = ({
 		setIsDragging(false);
 		setClickStartTime(null);
 		setClickStartPosition(null);
+		onHoverChange?.(false);
 	};
 
 	const handleMouseUp = (e: React.MouseEvent) => {
@@ -473,6 +533,9 @@ const CustomHandle = ({
 		setClickStartPosition(null);
 	};
 
+	// Calculate pixel sizes for inline styles to override React Flow defaults
+	const sizePixels = getSizePixels(size);
+
 	return (
 		<Handle
 			id={id}
@@ -481,29 +544,40 @@ const CustomHandle = ({
 			type={type}
 			{...props}
 			className={cn(
-				"bg-transparent!",
-				"border-0!",
-				sizeClasses.outer,
 				"flex",
 				"items-center",
 				"justify-center",
-				positionClass,
 				"group/handle",
 				"cursor-pointer",
 				"z-10",
 				getDisabledClass(isConnectable, isAtLimit),
 				className
 			)}
-			onMouseDown={handleMouseDown}
+			onMouseDownCapture={handleMouseDown}
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
-			onMouseUp={handleMouseUp}
+			onMouseUpCapture={handleMouseUp}
+			style={{
+				width: `${sizePixels}px`,
+				height: `${sizePixels}px`,
+				minWidth: "0px",
+				minHeight: "0px",
+				background: "transparent",
+				border: "none",
+				// Center the handle on the node edge
+				// React Flow's default CSS applies: left: 50%; transform: translate(-50%);
+				// We override both to position the handle center at the node center.
+				// left: calc(50% - halfWidth) puts the left edge so the center aligns with node center.
+				// transform: none removes React Flow's translate(-50%) which would shift it further.
+				left: `calc(50% - ${sizePixels / 2}px)`,
+				transform: "none",
+			}}
 		>
 			<AnimatePresence>
-				{isConnectable && (
+				{isConnectable && visible && (
 					<motion.div
 						animate={animationVariant}
-						className="relative"
+						className={cn("pointer-events-none relative", visualOffset)}
 						exit="hidden"
 						initial="visible"
 						variants={handleDecoratorVariants}
@@ -549,7 +623,7 @@ const CustomHandle = ({
 				)}
 			</AnimatePresence>
 
-			{showTooltip && showTooltipState && isConnectable && (
+			{showTooltip && showTooltipState && isConnectable && visible && (
 				<AnimatePresence>
 					<HandleTooltip position={position} text={computedTooltipText} />
 				</AnimatePresence>

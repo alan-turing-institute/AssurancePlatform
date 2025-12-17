@@ -33,15 +33,6 @@ export {
 	MemoizedCollapsibleNode,
 	ProgressiveCollapsibleNode,
 } from "./collapsible-node";
-// Context Node Components (TypeScript)
-export {
-	AssumptionContextNode,
-	CompactContextNode,
-	ConstraintContextNode,
-	CriticalContextNode,
-	default as ContextNode,
-	JustificationContextNode,
-} from "./context-node";
 // Evidence Node Components (TypeScript)
 export {
 	CompactEvidenceNode,

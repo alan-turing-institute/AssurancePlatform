@@ -76,6 +76,8 @@ type ColorScheme = {
 	dark: string;
 	bg: string;
 	bgHover: string;
+	bgLight: string; // Light mode background (e.g., green-50)
+	bgDark: string; // Dark mode background (e.g., green-950)
 	border: string;
 	borderHover: string;
 	icon: string;
@@ -182,9 +184,36 @@ type HandleStyleConfig = {
 	};
 };
 
+type HandleClickCallback = (
+	nodeId: string,
+	handleId: string | undefined,
+	position: { x: number; y: number },
+	nodeData?: Record<string, unknown>
+) => void;
+
+type NodeDataUpdate = {
+	name?: string;
+	description?: string;
+	context?: string[];
+	assumption?: string;
+	justification?: string;
+	[key: string]: unknown;
+};
+
 type ThemeContextValue = {
 	isDarkMode: boolean;
 	colorMode: "dark" | "light";
+	editable: boolean;
+	onHandleClick?: HandleClickCallback;
+	// New callbacks for node actions
+	onNodeDelete?: (nodeId: string) => void;
+	onNodeDescriptionChange?: (nodeId: string, description: string) => void;
+	onNodeDataChange?: (nodeId: string, data: NodeDataUpdate) => void;
+	onToggleChildrenVisibility?: (nodeId: string) => void;
+	hiddenNodeIds?: Set<string>;
+	hasChildren?: (nodeId: string) => boolean;
+	hasHiddenChildren?: (nodeId: string) => boolean;
+	isRootNode?: (nodeId: string) => boolean;
 };
 
 type ThemeColors = {
@@ -316,6 +345,8 @@ export const nodeTypeConfig: NodeTypeConfigMap = {
 			dark: "#059669", // green-600
 			bg: "bg-green-500/10",
 			bgHover: "bg-green-500/20",
+			bgLight: "bg-green-50",
+			bgDark: "bg-green-950",
 			border: "border-green-400/30",
 			borderHover: "border-green-400/50",
 			icon: "text-green-400",
@@ -337,6 +368,8 @@ export const nodeTypeConfig: NodeTypeConfigMap = {
 			dark: "#9333ea", // purple-600
 			bg: "bg-purple-500/10",
 			bgHover: "bg-purple-500/20",
+			bgLight: "bg-purple-50",
+			bgDark: "bg-purple-950",
 			border: "border-purple-400/30",
 			borderHover: "border-purple-400/50",
 			icon: "text-purple-400",
@@ -358,6 +391,8 @@ export const nodeTypeConfig: NodeTypeConfigMap = {
 			dark: "#ea580c", // orange-600
 			bg: "bg-orange-500/10",
 			bgHover: "bg-orange-500/20",
+			bgLight: "bg-orange-50",
+			bgDark: "bg-orange-950",
 			border: "border-orange-400/30",
 			borderHover: "border-orange-400/50",
 			icon: "text-orange-400",
@@ -379,6 +414,8 @@ export const nodeTypeConfig: NodeTypeConfigMap = {
 			dark: "#0891b2", // cyan-600
 			bg: "bg-cyan-500/10",
 			bgHover: "bg-cyan-500/20",
+			bgLight: "bg-cyan-50",
+			bgDark: "bg-cyan-950",
 			border: "border-cyan-400/30",
 			borderHover: "border-cyan-400/50",
 			icon: "text-cyan-400",
@@ -400,6 +437,8 @@ export const nodeTypeConfig: NodeTypeConfigMap = {
 			dark: "#4b5563", // gray-600
 			bg: "bg-gray-500/10",
 			bgHover: "bg-gray-500/20",
+			bgLight: "bg-gray-50",
+			bgDark: "bg-gray-800",
 			border: "border-gray-400/30",
 			borderHover: "border-gray-400/50",
 			icon: "text-gray-400",
@@ -754,32 +793,37 @@ export const getNodeIcon = (nodeType: string): LucideIcon => {
 
 /**
  * Build Tailwind class string for node styling
+ * Uses theme-aware tinted backgrounds based on node type
  */
 export const buildNodeClasses = (
 	nodeType: string,
 	isSelected = false,
-	isHovered = false
+	isHovered = false,
+	isDarkMode = false
 ): string => {
 	const colors = getColorSchemeClasses(nodeType);
+
+	// Use theme-appropriate tinted background
+	const bgClass = isDarkMode ? colors.bgDark : colors.bgLight;
 
 	const baseClasses = [
 		"relative",
 		"min-w-[200px]",
 		"max-w-[400px]",
-		"bg-background-transparent-black",
-		"f-effect-backdrop-blur-lg",
+		bgClass,
 		"rounded-xl",
-		"shadow-glassmorphic",
+		"shadow-md",
 		"cursor-pointer",
 		"transition-all",
 		"duration-300",
 	];
 
-	const borderClasses = ["border", colors.border];
+	// Use a 2px coloured border based on node type
+	const borderClasses = ["border-2", colors.border];
 
 	if (isHovered) {
 		borderClasses.push(colors.borderHover);
-		baseClasses.push("shadow-3d");
+		baseClasses.push("shadow-lg");
 	}
 
 	if (isSelected) {
@@ -800,6 +844,7 @@ export const buildNodeClasses = (
 export const ThemeContext = createContext<ThemeContextValue>({
 	isDarkMode: true,
 	colorMode: "dark",
+	editable: false,
 });
 
 /**
@@ -829,6 +874,9 @@ export const getThemeVar = (varName: string, _isDarkMode = true): string =>
 // ========================================================================
 // Export All
 // ========================================================================
+
+// Export the NodeDataUpdate type for use in other files
+export type { NodeDataUpdate };
 
 export default {
 	// Color tokens

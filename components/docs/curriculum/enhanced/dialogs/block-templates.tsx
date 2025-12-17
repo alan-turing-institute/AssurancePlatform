@@ -11,7 +11,6 @@
 
 import { motion } from "framer-motion";
 import {
-	AlertCircle,
 	Check,
 	CheckCircle,
 	Download,
@@ -96,30 +95,18 @@ const extendedTemplates: Template[] = [
 		usageCount: 98,
 		icon: FileText,
 	},
-	{
-		id: "context-pattern",
-		name: "Context Pattern",
-		description: "Goal with contextual information",
-		category: TEMPLATE_CATEGORIES.BASIC,
-		nodes: [
-			{ type: "goal", name: "Goal", offsetY: 0 },
-			{ type: "context", name: "Context/Assumption", offsetX: 200, offsetY: 0 },
-		],
-		usageCount: 76,
-		icon: AlertCircle,
-	},
 
 	// Advanced Templates
 	{
 		id: "hierarchical-decomposition",
 		name: "Hierarchical Decomposition",
-		description: "Three-level goal decomposition with evidence",
+		description: "Goal decomposition into property claims",
 		category: TEMPLATE_CATEGORIES.ADVANCED,
 		nodes: [
 			{ type: "goal", name: "Top-Level Goal", offsetY: 0 },
 			{ type: "strategy", name: "AND Strategy", offsetY: 150 },
-			{ type: "goal", name: "Sub-Goal 1", offsetX: -150, offsetY: 300 },
-			{ type: "goal", name: "Sub-Goal 2", offsetX: 150, offsetY: 300 },
+			{ type: "propertyClaim", name: "Claim 1", offsetX: -150, offsetY: 300 },
+			{ type: "propertyClaim", name: "Claim 2", offsetX: 150, offsetY: 300 },
 		],
 		usageCount: 54,
 		icon: GitBranch,
@@ -139,13 +126,12 @@ const extendedTemplates: Template[] = [
 		icon: CheckCircle,
 	},
 	{
-		id: "contextualized-argument",
-		name: "Contextualized Argument",
-		description: "Complete argument with context and evidence",
+		id: "complete-argument",
+		name: "Complete Argument",
+		description: "Goal with strategy, claim, and evidence",
 		category: TEMPLATE_CATEGORIES.ADVANCED,
 		nodes: [
 			{ type: "goal", name: "System Goal", offsetY: 0 },
-			{ type: "context", name: "System Context", offsetX: 250, offsetY: 0 },
 			{ type: "strategy", name: "Argument Strategy", offsetY: 150 },
 			{ type: "propertyClaim", name: "Property Claim", offsetY: 300 },
 			{ type: "evidence", name: "Supporting Evidence", offsetY: 450 },

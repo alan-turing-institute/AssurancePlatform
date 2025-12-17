@@ -9,9 +9,8 @@
  * @module curriculum
  */
 
-// Lightweight components only
+// Lightweight wrapper - lazy loads the enhanced viewer
 export { default as CaseViewerWrapper } from "./case-viewer-wrapper";
-export { default as InteractiveCaseViewer } from "./interactive-case-viewer";
 
 // NOTE: EnhancedInteractiveCaseViewer removed from exports - it imports 730+ modules
 // Import it directly when needed to avoid module explosion

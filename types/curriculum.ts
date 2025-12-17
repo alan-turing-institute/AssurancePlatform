@@ -8,12 +8,14 @@
 // Assurance Case Element Types
 // ============================================
 
-export type NodeType =
-	| "goal"
-	| "strategy"
-	| "propertyClaim"
-	| "evidence"
-	| "context";
+/**
+ * Node types for React Flow visualisation in curriculum components.
+ *
+ * Note on Context: The Prisma schema supports CONTEXT as an ElementType, but in
+ * the current design context is stored as a string[] attribute on nodes
+ * (see TreeNode.context), not as a separate node type.
+ */
+export type NodeType = "goal" | "strategy" | "propertyClaim" | "evidence";
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 
@@ -24,6 +26,7 @@ export type QualityLevel = "high" | "medium" | "low";
 /**
  * Base element shared by all assurance case nodes.
  * Contains common properties for all element types.
+ * @deprecated Use TreeNode from CaseExportNested format instead
  */
 export type BaseElement = {
 	name: string;
@@ -38,19 +41,32 @@ export type BaseElement = {
 	justifications?: string[];
 };
 
+/**
+ * @deprecated Context is now a string[] attribute on nodes, not a separate element.
+ * See TreeNode.context for the current implementation.
+ */
 export type Context = BaseElement;
 
+/**
+ * @deprecated Use TreeNode from CaseExportNested format instead
+ */
 export type Evidence = BaseElement & {
 	evidenceType?: string;
 	quality?: QualityLevel;
 	context?: Context[];
 };
 
+/**
+ * @deprecated Use TreeNode from CaseExportNested format instead
+ */
 export type PropertyClaim = BaseElement & {
 	evidence?: Evidence[];
 	context?: Context[];
 };
 
+/**
+ * @deprecated Use TreeNode from CaseExportNested format instead
+ */
 export type Strategy = BaseElement & {
 	strategyType?: "AND" | "OR";
 	approach?: "decomposition" | "alternative";
@@ -58,6 +74,9 @@ export type Strategy = BaseElement & {
 	context?: Context[];
 };
 
+/**
+ * @deprecated Use TreeNode from CaseExportNested format instead
+ */
 export type Goal = BaseElement & {
 	id?: string;
 	importance?: ImportanceLevel;
@@ -158,7 +177,6 @@ export type TreeNode = {
 export type CaseMetadata = {
 	name: string;
 	description: string;
-	colorProfile: string;
 };
 
 /**
@@ -321,7 +339,6 @@ export type ConceptType =
 	| "strategy"
 	| "property_claim"
 	| "evidence"
-	| "context"
 	| "general";
 
 /**
@@ -478,28 +495,33 @@ export type CustomNodeProps<T = ReactFlowNodeData> = {
 };
 
 /**
- * Props for InteractiveCaseViewer component.
- */
-export type InteractiveCaseViewerProps = {
-	caseData: CaseData;
-	onNodeClick?: (nodeId: string, nodeData: ReactFlowNodeData) => void;
-	guidedPath?: string[];
-	showAllNodes?: boolean;
-	highlightedNodes?: string[];
-	enableExploration?: boolean;
-	height?: string;
-	className?: string;
-};
-
-/**
  * Props for EnhancedInteractiveCaseViewer component.
+ * Uses CaseExportNested (v1.0) format only.
  */
-export type EnhancedInteractiveCaseViewerProps = InteractiveCaseViewerProps & {
+export type EnhancedInteractiveCaseViewerProps = {
+	/** Case data in CaseExportNested (v1.0) format */
+	caseData: CaseExportNested;
+	/** Callback when a node is clicked */
+	onNodeClick?: (nodeId: string, nodeData: ReactFlowNodeData) => void;
+	/** Array of node IDs defining a guided exploration path */
+	guidedPath?: string[];
+	/** Array of node IDs to highlight */
+	highlightedNodes?: string[];
+	/** Container height */
+	height?: string;
+	/** Additional CSS classes */
+	className?: string;
+	/** Enable collapsible node sections */
 	enableCollapsible?: boolean;
+	/** Enable right-click context menus */
 	enableContextMenus?: boolean;
+	/** Enable double-click to create new nodes */
 	enableNodeCreation?: boolean;
+	/** Enable entrance/hover animations */
 	enableAnimations?: boolean;
+	/** Enable animated edge styling */
 	enableEnhancedEdges?: boolean;
+	/** localStorage key for persisting edits */
 	persistKey?: string;
 };
 

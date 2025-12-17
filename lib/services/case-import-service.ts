@@ -97,7 +97,6 @@ async function createCaseWithPermission(
 		data: {
 			name: caseData.name,
 			description: caseData.description,
-			colorProfile: caseData.colorProfile,
 			createdById: userId,
 		},
 	});
