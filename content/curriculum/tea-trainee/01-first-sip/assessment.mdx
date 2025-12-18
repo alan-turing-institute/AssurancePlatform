@@ -3,14 +3,11 @@ title: "Assessment: Check Your Understanding"
 description: Quiz yourself and assess your confidence
 ---
 
-import {
-  MultipleChoiceQuiz,
-  TrueFalseQuiz,
-  ConfidenceRating,
-} from "@/components/docs/curriculum/quiz-components";
+import { Quiz, ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
 import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
 import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
-import { firstSipTasks } from "@/components/docs/curriculum/task-registry";
+import { firstSipTasks } from "./tasks";
+import { firstSipQuiz } from "./questions";
 
 export const PageContent = ({ children }) => {
   return (
@@ -21,7 +18,7 @@ export const PageContent = ({ children }) => {
       currentPage="assessment"
     >
       {children}
-      <ModuleProgressTracker show={false} />
+      <ModuleProgressTracker show={true} />
     </ModuleProgressProvider>
   );
 };
@@ -30,101 +27,14 @@ export const PageContent = ({ children }) => {
 
 # Assessment: Check Your Understanding
 
-## Quick Knowledge Check
+## Knowledge Check
 
-Let's quickly check your understanding of the key concepts:
+Let's check your understanding of the key concepts from the Fair Recruitment AI case:
 
-<MultipleChoiceQuiz
-  questions={[
-    {
-      id: "q1",
-      question:
-        "In the Fair Recruitment AI case, what was the top-level goal trying to establish?",
-      options: [
-        { id: "a", text: "The system is fast and efficient" },
-        {
-          id: "b",
-          text: "The system makes fair and unbiased hiring recommendations",
-        },
-        { id: "c", text: "The system is cost-effective" },
-        { id: "d", text: "The system is easy to use" },
-      ],
-      correctAnswer: "b",
-      explanation:
-        "The main goal explicitly states that the AI recruitment system makes fair and unbiased hiring recommendations.",
-    },
-    {
-      id: "q2",
-      question: "What role do strategies play in an assurance case?",
-      options: [
-        { id: "a", text: "They provide evidence" },
-        { id: "b", text: "They define the context" },
-        {
-          id: "c",
-          text: "They break down complex goals into manageable arguments",
-        },
-        { id: "d", text: "They state the main claim" },
-      ],
-      correctAnswer: "c",
-      explanation:
-        "Strategies describe the approach used to argue that a goal is satisfied by breaking it into smaller parts.",
-    },
-    {
-      id: "q3",
-      question: "Why is evidence important in an assurance case?",
-      options: [
-        { id: "a", text: "It makes the case look professional" },
-        {
-          id: "b",
-          text: "It provides concrete proof that supports the claims",
-        },
-        { id: "c", text: "It defines the scope of the argument" },
-        { id: "d", text: "It connects different strategies" },
-      ],
-      correctAnswer: "b",
-      explanation:
-        "Evidence provides the concrete facts, test results, or documentation that grounds the argument in reality.",
-    },
-  ]}
-  showFeedback={true}
-  allowRetry={true}
-  taskId="multiple-choice-quiz"
+<Quiz
+  config={firstSipQuiz}
+  taskId="knowledge-check"
   useGlobalProgress={true}
-  passThreshold={60}
-/>
-
-### True or False?
-
-<TrueFalseQuiz
-  statements={[
-    {
-      id: "tf1",
-      statement:
-        "An assurance case starts with evidence and builds up to a goal.",
-      correct: false,
-      explanation:
-        "Assurance cases start with a top-level goal and decompose it down to evidence.",
-    },
-    {
-      id: "tf2",
-      statement:
-        "Context elements help define the boundaries and assumptions of the case.",
-      correct: true,
-      explanation:
-        "Context explicitly states the scope, assumptions, and conditions under which the goal is claimed to be satisfied.",
-    },
-    {
-      id: "tf3",
-      statement: "Property claims must be specific and measurable.",
-      correct: true,
-      explanation:
-        "Property claims represent concrete, verifiable statements that can be supported by evidence.",
-    },
-  ]}
-  showExplanations={true}
-  taskId="true-false-quiz"
-  useGlobalProgress={true}
-  passThreshold={60}
 />
 
 ## Well Done!

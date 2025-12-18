@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "exportedAt": "2025-12-17T10:00:00.000Z",
+  "case": {
+    "name": "Fair Recruitment AI System",
+    "description": "An assurance case demonstrating that an AI-powered recruitment system operates fairly and without discrimination in the hiring process."
+  },
+  "tree": {
+    "id": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "The AI recruitment system makes fair and non-discriminatory hiring recommendations.",
+    "inSandbox": false,
+    "role": "TOP_LEVEL",
+    "context": [
+      "Fairness is defined according to UK Equality Act 2010 protected characteristics (age, disability, gender reassignment, marriage, pregnancy, race, religion, sex, and sexual orientation).",
+      "The system processes 10,000+ applications monthly for entry-level software engineering positions in a context where diversity and inclusion are strategic priorities."
+    ],
+    "children": [
+      {
+        "id": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+        "type": "STRATEGY",
+        "name": "S1",
+        "description": "Demonstrate fairness through discrimination prevention mechanisms and effective mitigation strategies implemented throughout the AI system's lifecycle.",
+        "inSandbox": false,
+        "children": []
+      },
+      {
+        "id": "f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+        "type": "STRATEGY",
+        "name": "S2",
+        "description": "Establish fairness by ensuring the AI system's decisions are transparent and explainable to candidates and hiring managers, enabling scrutiny of potentially discriminatory outcomes.",
+        "inSandbox": false,
+        "children": []
+      },
+      {
+        "id": "e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b",
+        "type": "STRATEGY",
+        "name": "S3",
+        "description": "Maintain fairness through ongoing monitoring of system performance across demographic groups, with regular audits and updates to address emerging discrimination.",
+        "inSandbox": false,
+        "children": []
+      }
+    ]
+  }
+}

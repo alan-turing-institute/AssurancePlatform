@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	AlertCircle,
-	BookOpen,
 	CheckCircle,
 	ChevronLeft,
 	ChevronRight,
@@ -13,10 +12,7 @@ import {
 	Send,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type {
-	ReflectionPrompt,
-	ReflectionPromptsProps,
-} from "@/types/curriculum";
+import type { ReflectionPromptsProps } from "@/types/curriculum";
 import { useModuleProgress } from "./module-progress-context";
 
 /**
@@ -50,8 +46,9 @@ const ReflectionPrompts = ({
 	showProgress = true,
 	minResponseLength = 50,
 	useGlobalProgress = false,
+	taskId,
 }: ReflectionPromptsProps): React.ReactNode => {
-	const contextProgress = useSafeProgress(useGlobalProgress);
+	const contextProgress = useSafeProgress(useGlobalProgress || !!taskId);
 	const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 	const [responses, setResponses] = useState<Record<string, string>>({});
 	const [currentResponse, setCurrentResponse] = useState("");
@@ -180,6 +177,12 @@ const ReflectionPrompts = ({
 			}
 
 			setSubmitted(true);
+
+			// Mark the overall reflection task as complete
+			if (taskId && contextProgress) {
+				contextProgress.completeTask(taskId);
+			}
+
 			if (onSubmit) {
 				onSubmit(allResponses);
 			}
@@ -192,6 +195,8 @@ const ReflectionPrompts = ({
 		currentResponse,
 		allowSkip,
 		onSubmit,
+		taskId,
+		contextProgress,
 	]);
 
 	const handleNext = useCallback((): void => {
@@ -298,7 +303,6 @@ const ReflectionPrompts = ({
 	const progressPercentage = Math.round(
 		((currentPromptIndex + 1) / prompts.length) * 100
 	);
-	const completedCount = Object.keys(responses).length;
 
 	return (
 		<div className="rounded-lg bg-white shadow-lg dark:bg-gray-800">
@@ -316,11 +320,8 @@ const ReflectionPrompts = ({
 					</div>
 					{showProgress && (
 						<div className="text-right">
-							<div className="mb-1 text-gray-600 text-sm dark:text-gray-400">
+							<div className="text-gray-600 text-sm dark:text-gray-400">
 								Question {currentPromptIndex + 1} of {prompts.length}
-							</div>
-							<div className="text-gray-500 text-xs">
-								{completedCount} responses saved
 							</div>
 						</div>
 					)}
@@ -332,7 +333,7 @@ const ReflectionPrompts = ({
 						<div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
 							<motion.div
 								animate={{ width: `${progressPercentage}%` }}
-								className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
+								className="h-2 rounded-full bg-blue-500"
 								initial={{ width: 0 }}
 								transition={{ duration: 0.3 }}
 							/>
@@ -351,14 +352,6 @@ const ReflectionPrompts = ({
 						key={currentPromptIndex}
 						transition={{ duration: 0.3 }}
 					>
-						{/* Prompt Category */}
-						{currentPrompt?.category && (
-							<div className="mb-3 inline-flex items-center gap-1 rounded-md bg-purple-100 px-2 py-1 font-medium text-purple-700 text-xs dark:bg-purple-900/30 dark:text-purple-300">
-								<BookOpen className="h-3 w-3" />
-								{currentPrompt.category}
-							</div>
-						)}
-
 						{/* Prompt Title */}
 						<h3 className="mb-2 font-semibold text-lg">
 							{currentPrompt?.title}
@@ -412,13 +405,6 @@ const ReflectionPrompts = ({
 								{error}
 							</div>
 						))}
-
-						{/* Required Indicator */}
-						{currentPrompt?.required && !allowSkip && (
-							<p className="mt-2 text-gray-500 text-xs dark:text-gray-400">
-								* This prompt requires a response
-							</p>
-						)}
 					</motion.div>
 				</AnimatePresence>
 			</div>
@@ -488,65 +474,5 @@ const ReflectionPrompts = ({
 		</div>
 	);
 };
-
-/**
- * Example prompts data
- */
-export const exampleReflectionPrompts: ReflectionPrompt[] = [
-	{
-		id: "reflect-1",
-		category: "Initial Understanding",
-		title: "First Impressions",
-		question:
-			"What was your initial reaction when you first saw the Fair Recruitment AI assurance case? What stood out to you?",
-		example:
-			"I was surprised by how the argument was structured in layers, with each level providing more detail...",
-		required: true,
-	},
-	{
-		id: "reflect-2",
-		category: "Structure Analysis",
-		title: "Argument Flow",
-		question:
-			"How does the assurance case build its argument from the main goal down to the evidence? Can you describe the logical flow?",
-		example:
-			"The case starts with a broad fairness claim and systematically breaks it down into specific, measurable aspects...",
-		required: true,
-	},
-	{
-		id: "reflect-3",
-		category: "Critical Thinking",
-		title: "Strengths and Weaknesses",
-		question:
-			"What do you think are the strongest parts of this assurance case? Are there any areas that could be improved?",
-		required: false,
-	},
-	{
-		id: "reflect-4",
-		category: "Application",
-		title: "Real-World Relevance",
-		question:
-			"How might this type of structured argument be useful in your own work or field? Can you think of a specific application?",
-		required: false,
-	},
-	{
-		id: "reflect-5",
-		category: "Synthesis",
-		title: "Key Takeaways",
-		question:
-			"What are the three most important things you learned from exploring this assurance case?",
-		required: true,
-		validation: (response: string): true | string => {
-			const lines = response
-				.trim()
-				.split("\n")
-				.filter((l) => l.trim().length > 0);
-			if (lines.length >= 3) {
-				return true;
-			}
-			return "Please provide at least three key takeaways";
-		},
-	},
-];
 
 export default ReflectionPrompts;

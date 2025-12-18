@@ -11,15 +11,27 @@ import {
 	FileText,
 	GitBranch,
 	Info,
-	Layers,
 	Target,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type {
-	Concept,
-	ConceptCarouselProps,
-	ConceptType,
-} from "@/types/curriculum";
+import type { ConceptCarouselProps, ConceptType } from "@/types/curriculum";
+import { useModuleProgress } from "./module-progress-context";
+
+/**
+ * Safe progress context hook - returns null if context not available
+ */
+type ProgressContextType = ReturnType<typeof useModuleProgress> | null;
+
+const useSafeProgress = (enabled: boolean): ProgressContextType => {
+	let progress: ProgressContextType = null;
+	try {
+		// biome-ignore lint/correctness/useHookAtTopLevel: Safe try-catch pattern for optional context
+		progress = useModuleProgress();
+	} catch {
+		// Context not available
+	}
+	return enabled ? progress : null;
+};
 
 /**
  * Icon map for concept types
@@ -91,12 +103,17 @@ const ConceptCarousel = ({
 	mode = "free",
 	onComplete,
 	onConceptView,
+	taskId,
 }: ConceptCarouselProps): React.ReactNode => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [viewedConcepts, setViewedConcepts] = useState<Set<number>>(
 		new Set([0])
 	);
 	const [direction, setDirection] = useState(0);
+	const [hasCompleted, setHasCompleted] = useState(false);
+
+	// Get module progress context (may not be available if used outside provider)
+	const moduleProgress = useSafeProgress(!!taskId);
 
 	// Mark current concept as viewed
 	useEffect(() => {
@@ -109,12 +126,33 @@ const ConceptCarousel = ({
 		}
 	}, [currentIndex, onConceptView, viewedConcepts, concepts]);
 
-	// Check if all concepts viewed
+	// Check if all concepts viewed and mark task complete
 	useEffect(() => {
-		if (viewedConcepts.size === concepts.length && onComplete) {
-			onComplete();
+		if (
+			viewedConcepts.size === concepts.length &&
+			concepts.length > 0 &&
+			!hasCompleted
+		) {
+			setHasCompleted(true);
+
+			// Call the onComplete callback
+			if (onComplete) {
+				onComplete();
+			}
+
+			// Mark the task as complete in the progress tracker
+			if (taskId && moduleProgress) {
+				moduleProgress.completeTask(taskId);
+			}
 		}
-	}, [viewedConcepts, concepts.length, onComplete]);
+	}, [
+		viewedConcepts,
+		concepts.length,
+		onComplete,
+		taskId,
+		moduleProgress,
+		hasCompleted,
+	]);
 
 	// Navigation handlers
 	const goToNext = useCallback(() => {
@@ -193,11 +231,11 @@ const ConceptCarousel = ({
 			</div>
 
 			{/* Carousel content */}
-			<div className="relative min-h-[400px] overflow-hidden">
-				<AnimatePresence custom={direction} initial={false}>
+			<div className="relative min-h-[400px]">
+				<AnimatePresence custom={direction} initial={false} mode="wait">
 					<motion.div
 						animate="center"
-						className="absolute inset-0 p-6"
+						className="p-6"
 						custom={direction}
 						exit="exit"
 						initial="enter"
@@ -208,7 +246,7 @@ const ConceptCarousel = ({
 						}}
 						variants={slideVariants}
 					>
-						<div className="h-full p-8">
+						<div className="p-8">
 							{/* Icon and title */}
 							<div className="mb-4 flex items-start gap-4">
 								<div className="text-blue-600 dark:text-blue-400">
@@ -221,16 +259,9 @@ const ConceptCarousel = ({
 								</div>
 							</div>
 
-							{/* Brief */}
-							{currentConcept.brief && (
-								<p className="mb-4 font-medium text-gray-600 text-lg dark:text-gray-400">
-									{currentConcept.brief}
-								</p>
-							)}
-
 							{/* Definition */}
 							{currentConcept.definition && (
-								<p className="mb-6 text-base text-gray-700 leading-relaxed dark:text-gray-300">
+								<p className="mb-4 font-medium text-gray-600 text-lg dark:text-gray-400">
 									{currentConcept.definition}
 								</p>
 							)}
@@ -259,7 +290,7 @@ const ConceptCarousel = ({
 
 							{/* Example */}
 							{currentConcept.example && (
-								<div className="mb-6 rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+								<div className="rounded-md border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
 									<h4 className="mb-2 flex items-center gap-2 font-semibold text-gray-700 text-sm dark:text-gray-300">
 										<BookOpen className="h-4 w-4" />
 										Example
@@ -269,27 +300,6 @@ const ConceptCarousel = ({
 									</p>
 								</div>
 							)}
-
-							{/* Relationships */}
-							{currentConcept.relationships &&
-								currentConcept.relationships.length > 0 && (
-									<div>
-										<h4 className="mb-2 flex items-center gap-2 font-semibold text-gray-700 text-sm dark:text-gray-300">
-											<Layers className="h-4 w-4" />
-											How it connects
-										</h4>
-										<div className="flex flex-wrap gap-2">
-											{currentConcept.relationships.map((rel) => (
-												<span
-													className="rounded-full bg-gray-200 px-3 py-1 text-gray-700 text-xs dark:bg-gray-700 dark:text-gray-300"
-													key={`${currentConcept.id}-rel-${rel}`}
-												>
-													{rel}
-												</span>
-											))}
-										</div>
-									</div>
-								)}
 						</div>
 					</motion.div>
 				</AnimatePresence>
@@ -330,87 +340,5 @@ const ConceptCarousel = ({
 		</div>
 	);
 };
-
-/**
- * Example concept data for demonstrations
- */
-export const exampleConcepts: Concept[] = [
-	{
-		id: "concept-goal",
-		type: "goal",
-		name: "Goal",
-		brief: "The main claim or objective",
-		definition:
-			"A goal represents the top-level claim that the assurance case is trying to establish. It states what needs to be assured.",
-		details: [
-			"Always appears at the top of the hierarchy",
-			"Must be clear and unambiguous",
-			"Defines the scope of the entire argument",
-		],
-		example:
-			"The AI recruitment system makes fair and unbiased hiring recommendations",
-		relationships: ["Supported by Strategies", "Scoped by Context"],
-	},
-	{
-		id: "concept-strategy",
-		type: "strategy",
-		name: "Strategy",
-		brief: "How we break down the argument",
-		definition:
-			"A strategy describes the approach used to argue that a goal is satisfied. It breaks down complex goals into manageable parts.",
-		details: [
-			"Divides goals into sub-arguments",
-			"Provides the reasoning approach",
-			"Can be argument by decomposition, by evidence, or by concretion",
-		],
-		example: "Argument through bias detection and mitigation measures",
-		relationships: ["Links Goals to Claims", "Defines argument structure"],
-	},
-	{
-		id: "concept-property-claim",
-		type: "property_claim",
-		name: "Property Claim",
-		brief: "Specific, measurable assertions",
-		definition:
-			"Property claims are specific assertions that can be supported by evidence. They represent concrete, verifiable statements.",
-		details: [
-			"Must be testable or verifiable",
-			"More specific than goals",
-			"Directly linked to evidence",
-		],
-		example: "Training data has been audited and balanced to prevent bias",
-		relationships: ["Supported by Evidence", "Implements Strategy"],
-	},
-	{
-		id: "concept-evidence",
-		type: "evidence",
-		name: "Evidence",
-		brief: "Concrete proof or documentation",
-		definition:
-			"Evidence provides the concrete facts, test results, or documentation that supports property claims.",
-		details: [
-			"Must be objective and verifiable",
-			"Can include test results, audits, or analysis",
-			"Provides the foundation for the argument",
-		],
-		example: "Data audit report showing demographic distribution",
-		relationships: ["Supports Property Claims", "Grounds the argument"],
-	},
-	{
-		id: "concept-context",
-		type: "general",
-		name: "Context",
-		brief: "Scope and assumptions",
-		definition:
-			"Context defines the boundaries, assumptions, and conditions under which the goal is claimed to be satisfied. Context is stored as an attribute on nodes rather than as a separate element.",
-		details: [
-			"Sets boundaries for the argument",
-			"States assumptions explicitly",
-			"Clarifies definitions and scope",
-		],
-		example: "Fairness defined according to UK Equality Act 2010",
-		relationships: ["Scopes Goals", "Defines boundaries"],
-	},
-];
 
 export default ConceptCarousel;

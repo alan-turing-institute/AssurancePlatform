@@ -1,7 +1,7 @@
 export default {
-	introduction: "Module Introduction",
+	index: "Introduction",
 	exploration: "Exploration: Your First TEA Case",
 	reflection: "Reflection: Making Sense of What You Saw",
 	assessment: "Assessment: Check Your Understanding",
-	summary: "Module Summary",
+	summary: "Summary",
 };

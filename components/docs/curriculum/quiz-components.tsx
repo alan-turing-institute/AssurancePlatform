@@ -15,12 +15,23 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import type {
 	ConfidenceRatingProps,
-	MultipleChoiceQuizProps,
-	QuizQuestion,
-	TrueFalseQuizProps,
-	TrueFalseStatement,
+	MultipleChoiceQuestion,
+	Question,
+	QuizConfig,
+	QuizProps,
+	TrueFalseQuestion,
 } from "@/types/curriculum";
 import { useModuleProgress } from "./module-progress-context";
+
+// ============================================
+// Type Guards
+// ============================================
+
+/**
+ * Type guard for multiple choice questions
+ */
+const isMultipleChoice = (q: Question): q is MultipleChoiceQuestion =>
+	q.type === "multiple-choice";
 
 // ============================================
 // Helper Functions
@@ -50,22 +61,6 @@ const getResultMessage = (percentage: number): string => {
 		return "Good Job!";
 	}
 	return "Keep Learning!";
-};
-
-/**
- * Get border class for true/false statement based on revealed state
- */
-const getStatementBorderClass = (
-	isRevealed: boolean,
-	isCorrect: boolean
-): string => {
-	if (!isRevealed) {
-		return "border-gray-200 dark:border-gray-600";
-	}
-	if (isCorrect) {
-		return "border-green-400 bg-green-50 dark:bg-green-900/20";
-	}
-	return "border-red-400 bg-red-50 dark:bg-red-900/20";
 };
 
 /**
@@ -100,15 +95,113 @@ const useSafeProgress = (enabled: boolean): ProgressContextType => {
 	return enabled ? progress : null;
 };
 
+/**
+ * Normalise config input to QuizConfig
+ */
+const normaliseConfig = (config: QuizConfig | Question[]): QuizConfig => {
+	if (Array.isArray(config)) {
+		return {
+			id: "quiz",
+			questions: config,
+		};
+	}
+	return config;
+};
+
+/**
+ * Determine the effective mode based on question types
+ */
+const determineMode = (
+	questions: Question[],
+	requestedMode: "sequential" | "all-at-once" | "auto"
+): "sequential" | "all-at-once" => {
+	if (requestedMode !== "auto") {
+		return requestedMode;
+	}
+	// Auto mode: use all-at-once for pure true/false, sequential otherwise
+	const allTrueFalse = questions.every((q) => q.type === "true-false");
+	return allTrueFalse ? "all-at-once" : "sequential";
+};
+
+/**
+ * Calculate score from answers
+ */
+const calculateScore = (
+	questions: Question[],
+	answers: Record<string, string | boolean>
+): number =>
+	questions.filter((q) => {
+		if (isMultipleChoice(q)) {
+			return answers[q.id] === q.correctAnswer;
+		}
+		return answers[q.id] === q.correct;
+	}).length;
+
+/**
+ * Check if an answer is correct for a given question
+ */
+const isAnswerCorrect = (
+	question: Question,
+	answer: string | boolean | undefined
+): boolean => {
+	if (answer === undefined) {
+		return false;
+	}
+	if (isMultipleChoice(question)) {
+		return answer === question.correctAnswer;
+	}
+	return answer === question.correct;
+};
+
+/**
+ * Get the text to display for a question
+ */
+const getQuestionText = (question: Question): string => {
+	if (isMultipleChoice(question)) {
+		return question.question;
+	}
+	return question.statement;
+};
+
+/**
+ * Get the correct answer text for display
+ */
+const getCorrectAnswerText = (question: Question): string => {
+	if (isMultipleChoice(question)) {
+		const correctOption = question.options.find(
+			(o) => o.id === question.correctAnswer
+		);
+		return correctOption?.text ?? "Unknown";
+	}
+	return question.correct ? "True" : "False";
+};
+
+/**
+ * Get the user's answer text for display
+ */
+const getUserAnswerText = (
+	question: Question,
+	answer: string | boolean | undefined
+): string => {
+	if (answer === undefined) {
+		return "Not answered";
+	}
+	if (isMultipleChoice(question)) {
+		const selectedOption = question.options.find((o) => o.id === answer);
+		return selectedOption?.text ?? "Unknown";
+	}
+	return answer ? "True" : "False";
+};
+
 // ============================================
-// Quiz Results Component (extracted)
+// Quiz Results Component
 // ============================================
 
 type QuizResultsProps = {
 	score: number;
 	total: number;
-	questions: QuizQuestion[];
-	selectedAnswers: Record<string, string>;
+	questions: Question[];
+	answers: Record<string, string | boolean>;
 	showFeedback: boolean;
 	allowRetry: boolean;
 	onRetry: () => void;
@@ -118,7 +211,7 @@ const QuizResults = ({
 	score,
 	total,
 	questions,
-	selectedAnswers,
+	answers,
 	showFeedback,
 	allowRetry,
 	onRetry,
@@ -141,10 +234,7 @@ const QuizResults = ({
 				</p>
 
 				{showFeedback && (
-					<QuizFeedbackList
-						questions={questions}
-						selectedAnswers={selectedAnswers}
-					/>
+					<QuizFeedbackList answers={answers} questions={questions} />
 				)}
 
 				{allowRetry && (
@@ -163,44 +253,41 @@ const QuizResults = ({
 };
 
 // ============================================
-// Quiz Feedback List Component (extracted)
+// Quiz Feedback List Component
 // ============================================
 
 type QuizFeedbackListProps = {
-	questions: QuizQuestion[];
-	selectedAnswers: Record<string, string>;
+	questions: Question[];
+	answers: Record<string, string | boolean>;
 };
 
 const QuizFeedbackList = ({
 	questions,
-	selectedAnswers,
+	answers,
 }: QuizFeedbackListProps): React.ReactNode => (
 	<div className="mx-auto mb-6 max-w-2xl space-y-4 text-left">
 		{questions.map((q, idx) => {
-			const userAnswer = selectedAnswers[q.id];
-			const isCorrect = userAnswer === q.correctAnswer;
+			const userAnswer = answers[q.id];
+			const isCorrect = isAnswerCorrect(q, userAnswer);
 
 			return (
 				<div className="rounded-lg border p-4" key={q.id}>
 					<div className="flex items-start gap-2">
 						{isCorrect ? (
-							<CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+							<CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
 						) : (
-							<XCircle className="mt-0.5 h-5 w-5 text-red-500" />
+							<XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
 						)}
 						<div className="flex-1">
 							<p className="mb-2 font-medium">
-								{idx + 1}. {q.question}
+								{idx + 1}. {getQuestionText(q)}
 							</p>
 							<p className="text-gray-600 text-sm dark:text-gray-400">
-								Your answer:{" "}
-								{q.options.find((o) => o.id === userAnswer)?.text ||
-									"Not answered"}
+								Your answer: {getUserAnswerText(q, userAnswer)}
 							</p>
 							{!isCorrect && (
 								<p className="mt-1 text-green-600 text-sm dark:text-green-400">
-									Correct answer:{" "}
-									{q.options.find((o) => o.id === q.correctAnswer)?.text}
+									Correct answer: {getCorrectAnswerText(q)}
 								</p>
 							)}
 							{q.explanation && (
@@ -217,225 +304,174 @@ const QuizFeedbackList = ({
 );
 
 // ============================================
-// True/False Statement Item (extracted)
+// Multiple Choice Question Renderer
 // ============================================
 
-type StatementItemProps = {
-	statement: TrueFalseStatement;
-	index: number;
-	userAnswer: boolean | undefined;
-	isRevealed: boolean;
-	isCorrect: boolean;
+type MultipleChoiceRendererProps = {
+	question: MultipleChoiceQuestion;
+	selectedAnswer: string | undefined;
+	onAnswer: (optionId: string) => void;
 	disabled: boolean;
-	showExplanations: boolean;
-	onAnswer: (id: string, value: boolean) => void;
+	shuffleOptions: boolean;
+	shuffleKey: number;
 };
 
-const StatementItem = ({
-	statement,
-	index,
-	userAnswer,
-	isRevealed,
-	isCorrect,
-	disabled,
-	showExplanations,
+const MultipleChoiceRenderer = ({
+	question,
+	selectedAnswer,
 	onAnswer,
-}: StatementItemProps): React.ReactNode => (
-	<div
-		className={`rounded-lg border p-4 ${getStatementBorderClass(isRevealed, isCorrect)}`}
-		key={statement.id}
-	>
-		<div className="flex items-start gap-3">
-			<span className="font-semibold text-gray-500">{index + 1}.</span>
-			<div className="flex-1">
-				<p className="mb-3">{statement.statement}</p>
-				<div className="flex gap-3">
-					<button
-						className={`rounded-md px-4 py-2 transition-colors ${
-							userAnswer === true
-								? "bg-blue-600 text-white"
-								: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
-						}`}
-						disabled={disabled}
-						onClick={() => onAnswer(statement.id, true)}
-						type="button"
-					>
-						True
-					</button>
-					<button
-						className={`rounded-md px-4 py-2 transition-colors ${
-							userAnswer === false
-								? "bg-blue-600 text-white"
-								: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
-						}`}
-						disabled={disabled}
-						onClick={() => onAnswer(statement.id, false)}
-						type="button"
-					>
-						False
-					</button>
-				</div>
+	disabled,
+	shuffleOptions,
+	shuffleKey,
+}: MultipleChoiceRendererProps): React.ReactNode => {
+	// biome-ignore lint/correctness/useExhaustiveDependencies: shuffleKey triggers re-shuffle on retry
+	const shuffledOptions = useMemo(
+		() => shuffleArray(question.options, shuffleOptions),
+		[question.options, shuffleOptions, shuffleKey]
+	);
 
-				<AnimatePresence>
-					{isRevealed && (
-						<motion.div
-							animate={{ height: "auto", opacity: 1 }}
-							className="mt-3 overflow-hidden"
-							exit={{ height: 0, opacity: 0 }}
-							initial={{ height: 0, opacity: 0 }}
+	return (
+		<div>
+			<h3 className="mb-4 flex items-start gap-2 font-semibold text-lg">
+				<HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+				{question.question}
+			</h3>
+
+			<div className="space-y-3">
+				{shuffledOptions.map((option) => {
+					const isSelected = selectedAnswer === option.id;
+					return (
+						<button
+							className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+								isSelected
+									? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+									: "border-gray-200 hover:border-gray-300 dark:border-gray-600"
+							} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+							disabled={disabled}
+							key={option.id}
+							onClick={() => !disabled && onAnswer(option.id)}
+							type="button"
 						>
-							<div className="flex items-start gap-2">
-								{isCorrect ? (
-									<CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
-								) : (
-									<XCircle className="mt-0.5 h-5 w-5 text-red-500" />
-								)}
-								<div>
-									<p className="font-medium text-sm">
-										{isCorrect
-											? "Correct!"
-											: `Incorrect. The answer is ${statement.correct ? "True" : "False"}.`}
-									</p>
-									{showExplanations && statement.explanation && (
-										<p className="mt-1 text-gray-600 text-sm dark:text-gray-400">
-											{statement.explanation}
-										</p>
+							<div className="flex items-center gap-3">
+								<div
+									className={`h-4 w-4 shrink-0 rounded-full border-2 ${
+										isSelected
+											? "border-blue-500 bg-blue-500"
+											: "border-gray-400"
+									}`}
+								>
+									{isSelected && (
+										<div className="h-full w-full scale-50 rounded-full bg-white" />
 									)}
 								</div>
+								<span className="flex-1">{option.text}</span>
 							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
+						</button>
+					);
+				})}
 			</div>
+		</div>
+	);
+};
+
+// ============================================
+// True/False Question Renderer
+// ============================================
+
+type TrueFalseRendererProps = {
+	question: TrueFalseQuestion;
+	selectedAnswer: boolean | undefined;
+	onAnswer: (value: boolean) => void;
+	disabled: boolean;
+};
+
+const TrueFalseRenderer = ({
+	question,
+	selectedAnswer,
+	onAnswer,
+	disabled,
+}: TrueFalseRendererProps): React.ReactNode => (
+	<div>
+		<h3 className="mb-4 flex items-start gap-2 font-semibold text-lg">
+			<HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+			{question.statement}
+		</h3>
+
+		<div className="flex gap-3">
+			<button
+				className={`rounded-md px-6 py-2 transition-colors ${
+					selectedAnswer === true
+						? "bg-blue-600 text-white"
+						: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+				} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+				disabled={disabled}
+				onClick={() => !disabled && onAnswer(true)}
+				type="button"
+			>
+				True
+			</button>
+			<button
+				className={`rounded-md px-6 py-2 transition-colors ${
+					selectedAnswer === false
+						? "bg-blue-600 text-white"
+						: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+				} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+				disabled={disabled}
+				onClick={() => !disabled && onAnswer(false)}
+				type="button"
+			>
+				False
+			</button>
 		</div>
 	</div>
 );
 
 // ============================================
-// Multiple Choice Quiz Component
+// Sequential Quiz Mode Component
 // ============================================
 
-export const MultipleChoiceQuiz = ({
-	questions = [],
-	onComplete,
-	showFeedback = true,
-	allowRetry = true,
-	shuffleOptions = false,
-	taskId = "multiple-choice-quiz",
-	useGlobalProgress = false,
-	passThreshold = 60,
-}: MultipleChoiceQuizProps): React.ReactNode => {
-	const contextProgress = useSafeProgress(useGlobalProgress);
-	const [currentQuestion, setCurrentQuestion] = useState(0);
-	const [selectedAnswers, setSelectedAnswers] = useState<
-		Record<string, string>
-	>({});
-	const [showResults, setShowResults] = useState(false);
-	const [score, setScore] = useState(0);
-	const [shuffleKey, setShuffleKey] = useState(0);
+type SequentialQuizProps = {
+	questions: Question[];
+	title?: string;
+	answers: Record<string, string | boolean>;
+	currentIndex: number;
+	shuffleKey: number;
+	shuffleOptions: boolean;
+	onAnswer: (questionId: string, answer: string | boolean) => void;
+	onNext: () => void;
+	onPrevious: () => void;
+};
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: shuffleKey triggers re-shuffle on retry
-	const shuffledQuestions = useMemo(
-		() =>
-			questions.map((q) => ({
-				...q,
-				options: shuffleArray(q.options, shuffleOptions),
-			})),
-		[questions, shuffleOptions, shuffleKey]
-	);
-
-	const handleAnswer = useCallback((questionId: string, optionId: string) => {
-		setSelectedAnswers((prev) => ({ ...prev, [questionId]: optionId }));
-	}, []);
-
-	const calculateScore = useCallback(() => {
-		let correct = 0;
-		for (const q of shuffledQuestions) {
-			if (selectedAnswers[q.id] === q.correctAnswer) {
-				correct++;
-			}
-		}
-		setScore(correct);
-		setShowResults(true);
-
-		const percentage = Math.round((correct / shuffledQuestions.length) * 100);
-
-		if (contextProgress && percentage >= passThreshold) {
-			contextProgress.completeTask(taskId);
-		}
-
-		onComplete?.({
-			score: correct,
-			total: shuffledQuestions.length,
-			percentage,
-			passed: percentage >= passThreshold,
-		});
-	}, [
-		shuffledQuestions,
-		selectedAnswers,
-		contextProgress,
-		passThreshold,
-		taskId,
-		onComplete,
-	]);
-
-	const handleNext = useCallback(() => {
-		if (currentQuestion < shuffledQuestions.length - 1) {
-			setCurrentQuestion((prev) => prev + 1);
-		} else {
-			calculateScore();
-		}
-	}, [currentQuestion, shuffledQuestions.length, calculateScore]);
-
-	const handlePrevious = useCallback(() => {
-		if (currentQuestion > 0) {
-			setCurrentQuestion((prev) => prev - 1);
-		}
-	}, [currentQuestion]);
-
-	const resetQuiz = useCallback(() => {
-		setCurrentQuestion(0);
-		setSelectedAnswers({});
-		setShowResults(false);
-		setScore(0);
-		setShuffleKey((k) => k + 1);
-	}, []);
-
-	if (shuffledQuestions.length === 0) {
-		return <div>No questions available</div>;
-	}
-
-	if (showResults) {
-		return (
-			<QuizResults
-				allowRetry={allowRetry}
-				onRetry={resetQuiz}
-				questions={shuffledQuestions}
-				score={score}
-				selectedAnswers={selectedAnswers}
-				showFeedback={showFeedback}
-				total={shuffledQuestions.length}
-			/>
-		);
-	}
-
-	const activeQuestion = shuffledQuestions[currentQuestion];
-	const hasAnswered = selectedAnswers[activeQuestion.id] !== undefined;
+const SequentialQuiz = ({
+	questions,
+	title,
+	answers,
+	currentIndex,
+	shuffleKey,
+	shuffleOptions,
+	onAnswer,
+	onNext,
+	onPrevious,
+}: SequentialQuizProps): React.ReactNode => {
+	const currentQuestion = questions[currentIndex];
+	const hasAnswered = answers[currentQuestion.id] !== undefined;
 
 	return (
 		<div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+			{title && <h2 className="mb-4 font-bold text-xl">{title}</h2>}
+
 			<div className="mb-6">
 				<div className="mb-2 flex items-center justify-between">
 					<span className="font-medium text-gray-700 text-sm dark:text-gray-300">
-						Question {currentQuestion + 1} of {shuffledQuestions.length}
+						Question {currentIndex + 1} of {questions.length}
 					</span>
 				</div>
 				<div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
 					<motion.div
 						animate={{
-							width: `${((currentQuestion + 1) / shuffledQuestions.length) * 100}%`,
+							width: `${((currentIndex + 1) / questions.length) * 100}%`,
 						}}
-						className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
+						className="h-2 rounded-full bg-blue-600"
 						initial={{ width: 0 }}
 						transition={{ duration: 0.3 }}
 					/>
@@ -447,58 +483,39 @@ export const MultipleChoiceQuiz = ({
 					animate={{ opacity: 1, x: 0 }}
 					exit={{ opacity: 0, x: -20 }}
 					initial={{ opacity: 0, x: 20 }}
-					key={currentQuestion}
+					key={currentIndex}
 				>
-					<h3 className="mb-4 flex items-start gap-2 font-semibold text-lg">
-						<HelpCircle className="mt-0.5 h-5 w-5 text-blue-500" />
-						{activeQuestion.question}
-					</h3>
-
-					<div className="space-y-3">
-						{activeQuestion.options.map((option) => {
-							const isSelected =
-								selectedAnswers[activeQuestion.id] === option.id;
-							return (
-								<button
-									className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
-										isSelected
-											? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-											: "border-gray-200 hover:border-gray-300 dark:border-gray-600"
-									}`}
-									key={option.id}
-									onClick={() => handleAnswer(activeQuestion.id, option.id)}
-									type="button"
-								>
-									<div className="flex items-center gap-3">
-										<div
-											className={`h-4 w-4 rounded-full border-2 ${
-												isSelected
-													? "border-blue-500 bg-blue-500"
-													: "border-gray-400"
-											}`}
-										>
-											{isSelected && (
-												<div className="h-full w-full scale-50 rounded-full bg-white" />
-											)}
-										</div>
-										<span className="flex-1">{option.text}</span>
-									</div>
-								</button>
-							);
-						})}
-					</div>
+					{isMultipleChoice(currentQuestion) ? (
+						<MultipleChoiceRenderer
+							disabled={false}
+							onAnswer={(optionId) => onAnswer(currentQuestion.id, optionId)}
+							question={currentQuestion}
+							selectedAnswer={answers[currentQuestion.id] as string | undefined}
+							shuffleKey={shuffleKey}
+							shuffleOptions={shuffleOptions}
+						/>
+					) : (
+						<TrueFalseRenderer
+							disabled={false}
+							onAnswer={(value) => onAnswer(currentQuestion.id, value)}
+							question={currentQuestion}
+							selectedAnswer={
+								answers[currentQuestion.id] as boolean | undefined
+							}
+						/>
+					)}
 				</motion.div>
 			</AnimatePresence>
 
 			<div className="mt-6 flex items-center justify-between">
 				<button
 					className={`flex items-center gap-2 rounded-md px-4 py-2 ${
-						currentQuestion === 0
+						currentIndex === 0
 							? "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700"
 							: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
 					}`}
-					disabled={currentQuestion === 0}
-					onClick={handlePrevious}
+					disabled={currentIndex === 0}
+					onClick={onPrevious}
 					type="button"
 				>
 					Previous
@@ -511,10 +528,10 @@ export const MultipleChoiceQuiz = ({
 							: "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700"
 					}`}
 					disabled={!hasAnswered}
-					onClick={handleNext}
+					onClick={onNext}
 					type="button"
 				>
-					{currentQuestion === shuffledQuestions.length - 1 ? "Finish" : "Next"}
+					{currentIndex === questions.length - 1 ? "Finish" : "Next"}
 					<ArrowRight className="h-4 w-4" />
 				</button>
 			</div>
@@ -523,100 +540,215 @@ export const MultipleChoiceQuiz = ({
 };
 
 // ============================================
-// True/False Quiz Component
+// All-at-Once Quiz Mode Component
 // ============================================
 
-export const TrueFalseQuiz = ({
-	statements = [],
+type AllAtOnceQuizProps = {
+	questions: Question[];
+	title?: string;
+	answers: Record<string, string | boolean>;
+	shuffleKey: number;
+	shuffleOptions: boolean;
+	onAnswer: (questionId: string, answer: string | boolean) => void;
+	onComplete: () => void;
+};
+
+const AllAtOnceQuiz = ({
+	questions,
+	title,
+	answers,
+	shuffleKey,
+	shuffleOptions,
+	onAnswer,
 	onComplete,
-	showExplanations = true,
-	taskId = "true-false-quiz",
-	useGlobalProgress = false,
-	passThreshold = 60,
-}: TrueFalseQuizProps): React.ReactNode => {
-	const contextProgress = useSafeProgress(useGlobalProgress);
-	const [answers, setAnswers] = useState<Record<string, boolean>>({});
-	const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-	const [completed, setCompleted] = useState(false);
-
-	const handleAnswer = useCallback((statementId: string, value: boolean) => {
-		setAnswers((prev) => ({ ...prev, [statementId]: value }));
-		setRevealed((prev) => ({ ...prev, [statementId]: true }));
-	}, []);
-
-	const calculateResults = useCallback(() => {
-		const correct = statements.filter(
-			(s) => answers[s.id] === s.correct
-		).length;
-		const percentage = Math.round((correct / statements.length) * 100);
-		setCompleted(true);
-
-		if (contextProgress && percentage >= passThreshold) {
-			contextProgress.completeTask(taskId);
-		}
-
-		onComplete?.({
-			score: correct,
-			total: statements.length,
-			percentage,
-			passed: percentage >= passThreshold,
-		});
-	}, [statements, answers, contextProgress, passThreshold, taskId, onComplete]);
-
-	const reset = useCallback(() => {
-		setAnswers({});
-		setRevealed({});
-		setCompleted(false);
-	}, []);
-
-	const allAnswered = statements.every((s) => answers[s.id] !== undefined);
+}: AllAtOnceQuizProps): React.ReactNode => {
+	const allAnswered = questions.every((q) => answers[q.id] !== undefined);
 
 	return (
 		<div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
-			<h3 className="mb-4 font-bold text-xl">True or False?</h3>
+			{title && <h2 className="mb-4 font-bold text-xl">{title}</h2>}
 
-			<div className="space-y-4">
-				{statements.map((statement, idx) => (
-					<StatementItem
-						disabled={completed}
-						index={idx}
-						isCorrect={answers[statement.id] === statement.correct}
-						isRevealed={revealed[statement.id] ?? false}
-						key={statement.id}
-						onAnswer={handleAnswer}
-						showExplanations={showExplanations}
-						statement={statement}
-						userAnswer={answers[statement.id]}
-					/>
+			<div className="space-y-6">
+				{questions.map((question, idx) => (
+					<div
+						className="rounded-lg border border-gray-200 p-4 dark:border-gray-600"
+						key={question.id}
+					>
+						<div className="mb-2 font-medium text-gray-500 text-sm">
+							Question {idx + 1}
+						</div>
+						{isMultipleChoice(question) ? (
+							<MultipleChoiceRenderer
+								disabled={false}
+								onAnswer={(optionId) => onAnswer(question.id, optionId)}
+								question={question}
+								selectedAnswer={answers[question.id] as string | undefined}
+								shuffleKey={shuffleKey}
+								shuffleOptions={shuffleOptions}
+							/>
+						) : (
+							<TrueFalseRenderer
+								disabled={false}
+								onAnswer={(value) => onAnswer(question.id, value)}
+								question={question}
+								selectedAnswer={answers[question.id] as boolean | undefined}
+							/>
+						)}
+					</div>
 				))}
 			</div>
 
-			<div className="mt-6 flex gap-3">
-				{!completed && (
-					<button
-						className={`rounded-md px-6 py-2 ${
-							allAnswered
-								? "bg-blue-600 text-white hover:bg-blue-700"
-								: "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700"
-						}`}
-						disabled={!allAnswered}
-						onClick={calculateResults}
-						type="button"
-					>
-						Check Answers
-					</button>
-				)}
-				{completed && (
-					<button
-						className="rounded-md bg-gray-200 px-6 py-2 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
-						onClick={reset}
-						type="button"
-					>
-						Try Again
-					</button>
-				)}
+			<div className="mt-6">
+				<button
+					className={`w-full rounded-md px-6 py-2 ${
+						allAnswered
+							? "bg-blue-600 text-white hover:bg-blue-700"
+							: "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700"
+					}`}
+					disabled={!allAnswered}
+					onClick={onComplete}
+					type="button"
+				>
+					Check Answers
+				</button>
 			</div>
 		</div>
+	);
+};
+
+// ============================================
+// Unified Quiz Component
+// ============================================
+
+export const Quiz = ({
+	config,
+	onComplete,
+	taskId,
+	useGlobalProgress = false,
+	passThreshold,
+	showFeedback,
+	allowRetry,
+	shuffleOptions,
+	mode = "auto",
+}: QuizProps): React.ReactNode => {
+	const contextProgress = useSafeProgress(useGlobalProgress);
+	const normalisedConfig = normaliseConfig(config);
+	const questions = normalisedConfig.questions;
+
+	const effectiveTaskId = taskId ?? normalisedConfig.id;
+	const effectivePassThreshold =
+		passThreshold ?? normalisedConfig.passThreshold ?? 60;
+	const effectiveShowFeedback =
+		showFeedback ?? normalisedConfig.showFeedback ?? true;
+	const effectiveAllowRetry = allowRetry ?? normalisedConfig.allowRetry ?? true;
+	const effectiveShuffle =
+		shuffleOptions ?? normalisedConfig.shuffleOptions ?? false;
+	const effectiveMode = determineMode(questions, mode);
+
+	const [currentIndex, setCurrentIndex] = useState(0);
+	const [answers, setAnswers] = useState<Record<string, string | boolean>>({});
+	const [showResults, setShowResults] = useState(false);
+	const [score, setScore] = useState(0);
+	const [shuffleKey, setShuffleKey] = useState(0);
+
+	const handleAnswer = useCallback(
+		(questionId: string, answer: string | boolean) => {
+			setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+		},
+		[]
+	);
+
+	const handleComplete = useCallback(() => {
+		const finalScore = calculateScore(questions, answers);
+		const percentage = Math.round((finalScore / questions.length) * 100);
+		setScore(finalScore);
+		setShowResults(true);
+
+		if (contextProgress && percentage >= effectivePassThreshold) {
+			contextProgress.completeTask(effectiveTaskId);
+		}
+
+		onComplete?.({
+			score: finalScore,
+			total: questions.length,
+			percentage,
+			passed: percentage >= effectivePassThreshold,
+		});
+	}, [
+		questions,
+		answers,
+		contextProgress,
+		effectivePassThreshold,
+		effectiveTaskId,
+		onComplete,
+	]);
+
+	const handleNext = useCallback(() => {
+		if (currentIndex < questions.length - 1) {
+			setCurrentIndex((prev) => prev + 1);
+		} else {
+			handleComplete();
+		}
+	}, [currentIndex, questions.length, handleComplete]);
+
+	const handlePrevious = useCallback(() => {
+		if (currentIndex > 0) {
+			setCurrentIndex((prev) => prev - 1);
+		}
+	}, [currentIndex]);
+
+	const handleRetry = useCallback(() => {
+		setCurrentIndex(0);
+		setAnswers({});
+		setShowResults(false);
+		setScore(0);
+		setShuffleKey((k) => k + 1);
+	}, []);
+
+	if (questions.length === 0) {
+		return <div>No questions available</div>;
+	}
+
+	if (showResults) {
+		return (
+			<QuizResults
+				allowRetry={effectiveAllowRetry}
+				answers={answers}
+				onRetry={handleRetry}
+				questions={questions}
+				score={score}
+				showFeedback={effectiveShowFeedback}
+				total={questions.length}
+			/>
+		);
+	}
+
+	if (effectiveMode === "sequential") {
+		return (
+			<SequentialQuiz
+				answers={answers}
+				currentIndex={currentIndex}
+				onAnswer={handleAnswer}
+				onNext={handleNext}
+				onPrevious={handlePrevious}
+				questions={questions}
+				shuffleKey={shuffleKey}
+				shuffleOptions={effectiveShuffle}
+				title={normalisedConfig.title}
+			/>
+		);
+	}
+
+	return (
+		<AllAtOnceQuiz
+			answers={answers}
+			onAnswer={handleAnswer}
+			onComplete={handleComplete}
+			questions={questions}
+			shuffleKey={shuffleKey}
+			shuffleOptions={effectiveShuffle}
+			title={normalisedConfig.title}
+		/>
 	);
 };
 
@@ -731,56 +863,4 @@ export const ConfidenceRating = ({
 	);
 };
 
-// ============================================
-// Example Data
-// ============================================
-
-export const exampleQuizData = {
-	multipleChoice: [
-		{
-			id: "mc-1",
-			question: "What is the top-level element in an assurance case?",
-			options: [
-				{ id: "a", text: "Evidence" },
-				{ id: "b", text: "Strategy" },
-				{ id: "c", text: "Goal" },
-				{ id: "d", text: "Context" },
-			],
-			correctAnswer: "c",
-			explanation:
-				"The goal represents the main claim that the assurance case is trying to establish.",
-		},
-		{
-			id: "mc-2",
-			question: "Which element provides concrete proof for property claims?",
-			options: [
-				{ id: "a", text: "Evidence" },
-				{ id: "b", text: "Strategy" },
-				{ id: "c", text: "Goal" },
-				{ id: "d", text: "Context" },
-			],
-			correctAnswer: "a",
-			explanation:
-				"Evidence provides the concrete facts, test results, or documentation that supports property claims.",
-		},
-	] satisfies QuizQuestion[],
-	trueFalse: [
-		{
-			id: "tf-1",
-			statement: "Strategies connect goals directly to evidence.",
-			correct: false,
-			explanation:
-				"Strategies connect goals to property claims, which are then supported by evidence.",
-		},
-		{
-			id: "tf-2",
-			statement:
-				"Context defines the boundaries and assumptions of the assurance case.",
-			correct: true,
-			explanation:
-				"Context elements explicitly state the scope, assumptions, and conditions under which the goal is claimed to be satisfied.",
-		},
-	] satisfies TrueFalseStatement[],
-};
-
-export default { MultipleChoiceQuiz, TrueFalseQuiz, ConfidenceRating };
+export default { Quiz, ConfidenceRating };

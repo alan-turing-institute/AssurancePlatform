@@ -471,6 +471,8 @@ const BaseNode = ({
 	const nodeId = data.id || "";
 	const toolbarVisible = editable && (isHovered || selected);
 	const handleVisible = editable && (isHovered || selected);
+	// Only allow connections when editable is true
+	const handleConnectable = editable && isConnectable;
 	const nodeHasChildren = hasChildren?.(nodeId) ?? false;
 	const nodeHasHiddenChildren = hasHiddenChildren?.(nodeId) ?? false;
 	const nodeIsRoot = isRootNode?.(nodeId) ?? false;
@@ -505,7 +507,7 @@ const BaseNode = ({
 			{config.showTargetHandle && (
 				<CustomHandle
 					id={`${data.id}-target`}
-					isConnectable={isConnectable}
+					isConnectable={handleConnectable}
 					nodeData={data}
 					nodeId={data.id || ""}
 					onHandleClick={onHandleClick}
@@ -560,7 +562,7 @@ const BaseNode = ({
 			{config.showSourceHandle && (
 				<CustomHandle
 					id={`${data.id}-source`}
-					isConnectable={isConnectable}
+					isConnectable={handleConnectable}
 					nodeData={data}
 					nodeId={data.id || ""}
 					onHandleClick={onHandleClick}

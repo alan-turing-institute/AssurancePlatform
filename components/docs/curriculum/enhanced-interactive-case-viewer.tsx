@@ -546,6 +546,12 @@ const EnhancedInteractiveCaseViewerInner = ({
 
 	const onConnectEnd = useCallback(
 		(event: MouseEvent | TouchEvent) => {
+			// Only allow node creation via drag if editable is true
+			if (!editable) {
+				setConnectionSource(null);
+				return;
+			}
+
 			const target = event.target as HTMLElement;
 			const targetIsPane = target.classList.contains("react-flow__pane");
 
@@ -571,7 +577,7 @@ const EnhancedInteractiveCaseViewerInner = ({
 
 			setConnectionSource(null);
 		},
-		[connectionSource, nodes, reactFlowInstance]
+		[connectionSource, nodes, reactFlowInstance, editable]
 	);
 
 	const handleCreateNode = useCallback(
@@ -641,6 +647,11 @@ const EnhancedInteractiveCaseViewerInner = ({
 			_position: { x: number; y: number },
 			_nodeData?: Record<string, unknown>
 		) => {
+			// Only allow node creation via handle click if editable is true
+			if (!editable) {
+				return;
+			}
+
 			const sourceNode = nodes.find((n) => n.id === nodeId);
 
 			if (sourceNode) {
@@ -651,7 +662,7 @@ const EnhancedInteractiveCaseViewerInner = ({
 				setIsAddDialogOpen(true);
 			}
 		},
-		[nodes]
+		[nodes, editable]
 	);
 
 	useEffect(() => {
@@ -695,7 +706,13 @@ const EnhancedInteractiveCaseViewerInner = ({
 			const currentTime = Date.now();
 			const timeSinceLastClick = currentTime - lastPaneClickRef.current;
 
-			if (timeSinceLastClick < 300 && enableNodeCreation && reactFlowInstance) {
+			// Only allow node creation via double-click if editable is true
+			if (
+				timeSinceLastClick < 300 &&
+				enableNodeCreation &&
+				editable &&
+				reactFlowInstance
+			) {
 				const screenPosition = {
 					x: event.clientX,
 					y: event.clientY,
@@ -711,7 +728,7 @@ const EnhancedInteractiveCaseViewerInner = ({
 
 			lastPaneClickRef.current = currentTime;
 		},
-		[enableNodeCreation, reactFlowInstance]
+		[enableNodeCreation, editable, reactFlowInstance]
 	);
 
 	const enhancedNodeTypes = useMemo(

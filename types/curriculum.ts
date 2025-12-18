@@ -262,27 +262,6 @@ export type QuizOption = {
 };
 
 /**
- * A multiple choice quiz question with options and explanation.
- */
-export type QuizQuestion = {
-	id: string;
-	question: string;
-	options: QuizOption[];
-	correctAnswer: string;
-	explanation?: string;
-};
-
-/**
- * A true/false quiz statement.
- */
-export type TrueFalseStatement = {
-	id: string;
-	statement: string;
-	correct: boolean;
-	explanation?: string;
-};
-
-/**
  * Result of completing a quiz.
  */
 export type QuizResult = {
@@ -293,30 +272,94 @@ export type QuizResult = {
 	passed: boolean;
 };
 
+// ============================================
+// Unified Quiz Types
+// ============================================
+
 /**
- * Props for MultipleChoiceQuiz component.
+ * Question type discriminator for the unified Quiz component.
  */
-export type MultipleChoiceQuizProps = {
-	questions: QuizQuestion[];
-	onComplete?: (result: QuizResult) => void;
-	showFeedback?: boolean;
-	allowRetry?: boolean;
-	shuffleOptions?: boolean;
-	taskId?: string;
-	useGlobalProgress?: boolean;
-	passThreshold?: number;
+export type QuestionType = "multiple-choice" | "true-false";
+
+/**
+ * Base question properties shared by all question types.
+ */
+type BaseQuestion = {
+	id: string;
+	explanation?: string;
 };
 
 /**
- * Props for TrueFalseQuiz component.
+ * Multiple choice question with options.
  */
-export type TrueFalseQuizProps = {
-	statements: TrueFalseStatement[];
-	onComplete?: (result: QuizResult) => void;
-	showExplanations?: boolean;
-	taskId?: string;
-	useGlobalProgress?: boolean;
+export type MultipleChoiceQuestion = BaseQuestion & {
+	type: "multiple-choice";
+	question: string;
+	options: QuizOption[];
+	correctAnswer: string;
+};
+
+/**
+ * True/false question (statement).
+ */
+export type TrueFalseQuestion = BaseQuestion & {
+	type: "true-false";
+	statement: string;
+	correct: boolean;
+};
+
+/**
+ * Union type for all question types in the unified Quiz component.
+ */
+export type Question = MultipleChoiceQuestion | TrueFalseQuestion;
+
+/**
+ * Quiz configuration object for loading from questions.ts files.
+ */
+export type QuizConfig = {
+	/** Unique identifier for the quiz (used for task tracking) */
+	id: string;
+	/** Display title for the quiz */
+	title?: string;
+	/** Questions in the quiz */
+	questions: Question[];
+	/** Percentage required to pass (0-100) */
 	passThreshold?: number;
+	/** Whether to show feedback after completion */
+	showFeedback?: boolean;
+	/** Whether to allow retries */
+	allowRetry?: boolean;
+	/** Whether to shuffle options (multiple choice only) */
+	shuffleOptions?: boolean;
+};
+
+/**
+ * UI mode for the Quiz component.
+ */
+export type QuizMode = "sequential" | "all-at-once" | "auto";
+
+/**
+ * Props for the unified Quiz component.
+ */
+export type QuizProps = {
+	/** Quiz configuration or array of questions */
+	config: QuizConfig | Question[];
+	/** Callback when quiz is completed */
+	onComplete?: (result: QuizResult) => void;
+	/** Task ID for progress tracking (overrides config.id) */
+	taskId?: string;
+	/** Whether to integrate with ModuleProgressContext */
+	useGlobalProgress?: boolean;
+	/** Pass threshold override (0-100) */
+	passThreshold?: number;
+	/** Show feedback override */
+	showFeedback?: boolean;
+	/** Allow retry override */
+	allowRetry?: boolean;
+	/** Shuffle options override */
+	shuffleOptions?: boolean;
+	/** UI mode for the quiz */
+	mode?: QuizMode;
 };
 
 /**
@@ -363,6 +406,8 @@ export type ConceptCarouselProps = {
 	mode?: "guided" | "free";
 	onComplete?: () => void;
 	onConceptView?: (id: string, index: number) => void;
+	/** Task ID to mark complete when all concepts have been viewed */
+	taskId?: string;
 };
 
 /**
@@ -403,7 +448,6 @@ export type LearningObjectivesVariant = "card" | "list" | "compact";
 export type LearningObjectivesProps = {
 	objectives: LearningObjective[];
 	title?: string;
-	showProgress?: boolean;
 	variant?: LearningObjectivesVariant;
 	collapsible?: boolean;
 };
@@ -437,6 +481,8 @@ export type ReflectionPromptsProps = {
 	showProgress?: boolean;
 	minResponseLength?: number;
 	useGlobalProgress?: boolean;
+	/** Task ID to mark complete when all required prompts are submitted */
+	taskId?: string;
 };
 
 // ============================================

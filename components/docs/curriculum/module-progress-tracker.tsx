@@ -20,7 +20,12 @@ import { type TaskDefinition, TaskStatus } from "./task-registry";
 type ModuleProgressTrackerProps = {
 	show?: boolean;
 	showHints?: boolean;
+	/** Custom navigation handler. If not provided, uses built-in scroll navigation */
 	onNavigate?: ((page: string, section?: string | null) => void) | null;
+	/** Base path for curriculum module (used for cross-page navigation) */
+	basePath?: string;
+	/** Current page identifier (used to determine if task is on current page) */
+	currentPage?: string | null;
 };
 
 /**
@@ -46,11 +51,13 @@ const ModuleProgressTracker = ({
 	show = true,
 	showHints = true,
 	onNavigate = null,
+	basePath = "/documentation/docs/curriculum/tea-trainee/first-sip",
+	currentPage = null,
 }: ModuleProgressTrackerProps): React.ReactNode => {
 	const { tasks, progress, completeTask, resetProgress } = useModuleProgress();
 
 	const [isExpanded, setIsExpanded] = useState(false);
-	const [isMinimized, setIsMinimized] = useState(false);
+	const [isMinimized, setIsMinimized] = useState(true);
 	const [isDismissed, setIsDismissed] = useState(false);
 	const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
 
@@ -77,9 +84,47 @@ const ModuleProgressTracker = ({
 		setExpandedHints(newExpanded);
 	};
 
+	/**
+	 * Handle clicking on a task to navigate to its location
+	 * - If custom onNavigate is provided, use that
+	 * - If task is on current page, scroll to section
+	 * - Otherwise, navigate to the task's page with section anchor
+	 */
 	const handleTaskClick = (task: TaskDefinition): void => {
+		// Use custom handler if provided
 		if (onNavigate && task.page) {
 			onNavigate(task.page, task.section);
+			return;
+		}
+
+		// If task is on a different page, navigate there
+		if (task.page && task.page !== currentPage) {
+			const targetUrl = task.section
+				? `${basePath}/${task.page}#${task.section}`
+				: `${basePath}/${task.page}`;
+			window.location.href = targetUrl;
+			return;
+		}
+
+		// Task is on current page - scroll to section
+		if (task.section) {
+			const element = document.getElementById(task.section);
+			if (element) {
+				const offset = 80; // Account for fixed header
+				const elementPosition = element.getBoundingClientRect().top;
+				const offsetPosition = elementPosition + window.scrollY - offset;
+
+				window.scrollTo({
+					top: offsetPosition,
+					behavior: "smooth",
+				});
+
+				// Briefly highlight the element
+				element.classList.add("scroll-highlight");
+				setTimeout(() => {
+					element.classList.remove("scroll-highlight");
+				}, 2000);
+			}
 		}
 	};
 

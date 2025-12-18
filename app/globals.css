@@ -464,3 +464,44 @@
 		transition: none;
 	}
 }
+
+/* ========================================================================
+   Scroll Highlight Animation (Progress Tracker Navigation)
+   ======================================================================== */
+.scroll-highlight {
+	animation: scroll-highlight-pulse 2s ease-out;
+}
+
+@keyframes scroll-highlight-pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+		background-color: rgba(59, 130, 246, 0.1);
+	}
+	50% {
+		box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+		background-color: rgba(59, 130, 246, 0.05);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+		background-color: transparent;
+	}
+}
+
+.dark .scroll-highlight {
+	animation: scroll-highlight-pulse-dark 2s ease-out;
+}
+
+@keyframes scroll-highlight-pulse-dark {
+	0% {
+		box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.5);
+		background-color: rgba(96, 165, 250, 0.15);
+	}
+	50% {
+		box-shadow: 0 0 0 8px rgba(96, 165, 250, 0);
+		background-color: rgba(96, 165, 250, 0.08);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(96, 165, 250, 0);
+		background-color: transparent;
+	}
+}

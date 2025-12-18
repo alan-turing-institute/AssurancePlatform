@@ -3,14 +3,11 @@ title: "Exploration: Your First TEA Case"
 description: Interact with a Fair Recruitment AI assurance case
 ---
 
-import CaseViewerWrapper from "@/components/docs/curriculum/case-viewer-wrapper";
-import ExplorationChecklist from "@/components/docs/curriculum/exploration-checklist";
-import { firstSipChecklistItems } from "@/components/docs/curriculum/first-sip-checklist-items";
-import ConceptCarousel, { exampleConcepts } from "@/components/docs/curriculum/concept-carousel";
 import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
 import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
-import { firstSipTasks } from "@/components/docs/curriculum/task-registry";
-import TaskCheckpoint from "@/components/docs/curriculum/task-checkpoint";
+import ProgressiveCaseViewer from "@/components/docs/curriculum/progressive-case-viewer";
+import { fairRecruitmentStages } from "./stages";
+import { firstSipTasks } from "./tasks";
 
 export const PageContent = ({ children }) => {
   return (
@@ -21,7 +18,11 @@ export const PageContent = ({ children }) => {
       currentPage="exploration"
     >
       {children}
-      <ModuleProgressTracker showHints={true} />
+      <ModuleProgressTracker
+        showHints={true}
+        currentPage="exploration"
+        basePath="/documentation/docs/curriculum/tea-trainee/first-sip"
+      />
     </ModuleProgressProvider>
   );
 };
@@ -32,45 +33,23 @@ export const PageContent = ({ children }) => {
 
 The best way to learn about assurance cases is to experience one first-hand. Rather than starting with definitions and theory, you'll dive straight into exploring a real example.
 
-Below, you'll interact with a Fair Recruitment AI assurance case. You'll be guided through the structure with specific tasks, helping you discover how structured arguments build trust. This is a simple example of how organisations would demonstrate their AI systems are trustworthy using the TEA platform.
+Below, you'll progressively explore an assurance case. The case will be revealed stage by stage, helping you understand how structured arguments build trust. Each stage introduces new elements, with guidance to help you discover how assurance cases work.
 
-Click on different elements in the case to understand how the argument flows from a high-level claim down to concrete evidence. **Follow the guided tasks that appear in the progress tracker at the bottom-right.**
+## Case Study
 
-<CaseViewerWrapper
-  caseFile="fair-recruitment-ai.json"
+Imagine you work for TalentFlow, a technology company that has developed an AI-powered recruitment system to help organisations screen job applications for entry-level software engineering roles. The system processes over 10,000 applications monthly and makes recommendations about which candidates should progress to the interview stage.
+
+Recently, concerns have been raised about whether AI recruitment tools can be truly fair. High-profile cases of algorithmic bias in hiring have made the news, and regulators are paying closer attention. TalentFlow's leadership has commissioned an assurance case to demonstrate that their system operates without discrimination based on protected characteristics under the UK Equality Act 2010.
+
+Your task is to review this assurance case and understand how it builds a structured argument for the system's fairness. As you explore each stage, consider whether the claims are convincing and whether the evidence provided adequately supports them.
+
+<div id="progressive-viewer">
+
+<ProgressiveCaseViewer
+  stages={fairRecruitmentStages}
+  enableKeyboard={true}
 />
 
-## Independent Exploration
-
-<TaskCheckpoint
-  id="explore-connections"
-  showHeader={false}
-  showButton={true}
-  buttonPosition="bottom"
->
-
-Now that you've been guided through the structure, explore freely. Click "Reveal All" to see the complete argument at once.
-
-### Discovery Questions
-
-As you explore, consider:
-
-* What makes this argument convincing (or not)?
-* Are there any claims that seem weak or unsupported?
-* How does breaking down "fairness" into smaller parts help?
-* Would you trust this AI system based on this case?
-
-Take your time to click through the different elements and understand their relationships. When you feel you've explored thoroughly, mark this task as complete below.
-
-</TaskCheckpoint>
-
-### Understanding the Elements
-
-Navigate through each concept to understand what role it plays in the assurance case. Use the arrows or keyboard to move between concepts:
-
-<ConceptCarousel
-  concepts={exampleConcepts}
-  mode="free"
-/>
+</div>
 
 </PageContent>

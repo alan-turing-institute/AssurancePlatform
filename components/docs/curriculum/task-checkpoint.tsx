@@ -1,20 +1,206 @@
 "use client";
 
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 import type React from "react";
 import { useModuleProgress } from "./module-progress-context";
 import { TaskStatus } from "./task-registry";
 
-type ButtonPosition = "top" | "bottom";
+type CheckpointVariant = "minimal" | "inline" | "border";
 
 type TaskCheckpointProps = {
 	id: string;
 	title?: string | null;
 	section?: string | null;
 	children: React.ReactNode;
+	/** Style variant: "minimal" (default), "inline", or "border" */
+	variant?: CheckpointVariant;
+	/** Whether to show the completion toggle */
+	showToggle?: boolean;
+	/** @deprecated Use variant instead */
 	showButton?: boolean;
-	buttonPosition?: ButtonPosition;
+	/** @deprecated Use variant="border" instead */
 	showHeader?: boolean;
+};
+
+type ToggleButtonProps = {
+	isComplete: boolean;
+	onClick: () => void;
+	size?: "sm" | "md";
+	showLabel?: boolean;
+};
+
+/**
+ * Small toggle button with checkbox indicator
+ */
+const ToggleButton = ({
+	isComplete,
+	onClick,
+	size = "sm",
+	showLabel = true,
+}: ToggleButtonProps): React.ReactNode => {
+	const sizeClasses = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+	const checkSize = size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5";
+
+	const baseClasses = isComplete
+		? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+		: "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300";
+
+	const circleClasses = isComplete
+		? "border-emerald-500 bg-emerald-500 dark:border-emerald-400 dark:bg-emerald-400"
+		: "border-gray-300 bg-white group-hover:border-gray-400 dark:border-gray-600 dark:bg-gray-900 dark:group-hover:border-gray-500";
+
+	return (
+		<button
+			className={`group flex items-center gap-1.5 rounded-full px-3 py-1 font-medium text-xs transition-all ${baseClasses}`}
+			onClick={onClick}
+			type="button"
+		>
+			<span
+				className={`flex items-center justify-center rounded-full border transition-all ${sizeClasses} ${circleClasses}`}
+			>
+				{isComplete && (
+					<Check className={`${checkSize} text-white dark:text-gray-900`} />
+				)}
+			</span>
+			{showLabel && (isComplete ? "Done" : "Mark done")}
+		</button>
+	);
+};
+
+/**
+ * Minimal variant - small pill at bottom
+ */
+const MinimalCheckpoint = ({
+	id,
+	section,
+	children,
+	isComplete,
+	shouldShowToggle,
+	autoTrack,
+	onToggle,
+}: {
+	id: string;
+	section: string | null;
+	children: React.ReactNode;
+	isComplete: boolean;
+	shouldShowToggle: boolean;
+	autoTrack: boolean;
+	onToggle: () => void;
+}): React.ReactNode => (
+	<div className="task-checkpoint" id={section || id}>
+		<div className={isComplete ? "opacity-60" : ""}>{children}</div>
+		{shouldShowToggle && !autoTrack && (
+			<div className="mt-3 flex items-center">
+				<ToggleButton isComplete={isComplete} onClick={onToggle} size="md" />
+			</div>
+		)}
+	</div>
+);
+
+/**
+ * Inline variant - checkbox at start of content
+ */
+const InlineCheckpoint = ({
+	id,
+	section,
+	children,
+	isComplete,
+	shouldShowToggle,
+	autoTrack,
+	onToggle,
+}: {
+	id: string;
+	section: string | null;
+	children: React.ReactNode;
+	isComplete: boolean;
+	shouldShowToggle: boolean;
+	autoTrack: boolean;
+	onToggle: () => void;
+}): React.ReactNode => {
+	const buttonClasses = isComplete
+		? "border-emerald-500 bg-emerald-500 dark:border-emerald-400 dark:bg-emerald-400"
+		: "border-gray-300 bg-white hover:border-gray-400 dark:border-gray-600 dark:bg-gray-900 dark:hover:border-gray-500";
+
+	return (
+		<div className="task-checkpoint flex items-start gap-3" id={section || id}>
+			{shouldShowToggle && !autoTrack && (
+				<button
+					aria-label={isComplete ? "Mark as incomplete" : "Mark as complete"}
+					className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${buttonClasses}`}
+					onClick={onToggle}
+					type="button"
+				>
+					{isComplete && (
+						<Check className="h-3.5 w-3.5 text-white dark:text-gray-900" />
+					)}
+				</button>
+			)}
+			<div className={`flex-1 ${isComplete ? "opacity-60" : ""}`}>
+				{children}
+			</div>
+		</div>
+	);
+};
+
+/**
+ * Border variant - left accent with optional header
+ */
+const BorderCheckpoint = ({
+	id,
+	section,
+	children,
+	isComplete,
+	shouldShowToggle,
+	autoTrack,
+	displayTitle,
+	showHeader,
+	onToggle,
+}: {
+	id: string;
+	section: string | null;
+	children: React.ReactNode;
+	isComplete: boolean;
+	shouldShowToggle: boolean;
+	autoTrack: boolean;
+	displayTitle: string | null | undefined;
+	showHeader: boolean | undefined;
+	onToggle: () => void;
+}): React.ReactNode => {
+	const containerClasses = isComplete
+		? "border-emerald-400 bg-emerald-50/50 dark:border-emerald-500 dark:bg-emerald-900/10"
+		: "border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30";
+
+	const titleClasses = isComplete
+		? "text-emerald-700 dark:text-emerald-400"
+		: "text-gray-600 dark:text-gray-400";
+
+	const hasHeader = showHeader || displayTitle;
+
+	return (
+		<div
+			className={`task-checkpoint relative rounded-r-lg border-l-4 py-2 pl-4 transition-all ${containerClasses}`}
+			id={section || id}
+		>
+			{hasHeader && (
+				<div className="mb-2 flex items-center justify-between">
+					<span className={`font-medium text-sm ${titleClasses}`}>
+						{displayTitle}
+					</span>
+					{shouldShowToggle && !autoTrack && (
+						<ToggleButton isComplete={isComplete} onClick={onToggle} />
+					)}
+				</div>
+			)}
+
+			<div className={isComplete ? "opacity-60" : ""}>{children}</div>
+
+			{!hasHeader && shouldShowToggle && !autoTrack && (
+				<div className="mt-2 flex justify-end">
+					<ToggleButton isComplete={isComplete} onClick={onToggle} />
+				</div>
+			)}
+		</div>
+	);
 };
 
 /**
@@ -22,18 +208,23 @@ type TaskCheckpointProps = {
  *
  * Integrates with ModuleProgressContext to track task completion
  * Provides visual feedback and manual completion trigger
+ *
+ * Variants:
+ * - minimal: Small pill toggle at the bottom (default)
+ * - inline: Checkbox-style toggle inline with content
+ * - border: Left border accent with status indicator
  */
 const TaskCheckpoint = ({
 	id,
 	title = null,
 	section = null,
 	children,
-	showButton = true,
-	buttonPosition = "bottom",
-	showHeader = false,
+	variant = "minimal",
+	showToggle = true,
+	showButton,
+	showHeader,
 }: TaskCheckpointProps): React.ReactNode => {
 	const { getTask, completeTask, resetTask } = useModuleProgress();
-
 	const task = getTask(id);
 
 	if (!task) {
@@ -43,8 +234,10 @@ const TaskCheckpoint = ({
 
 	const isComplete = task.status === TaskStatus.COMPLETED;
 	const displayTitle = title || (task as { title?: string }).title;
+	const autoTrack = (task as { autoTrack?: boolean }).autoTrack ?? false;
+	const shouldShowToggle = showButton ?? showToggle;
 
-	const handleComplete = (): void => {
+	const handleToggle = (): void => {
 		if (isComplete) {
 			resetTask(id);
 		} else {
@@ -52,69 +245,31 @@ const TaskCheckpoint = ({
 		}
 	};
 
-	const autoTrack = (task as { autoTrack?: boolean }).autoTrack;
-	const description = (task as { description?: string }).description;
+	const commonProps = {
+		id,
+		section,
+		children,
+		isComplete,
+		shouldShowToggle,
+		autoTrack,
+		onToggle: handleToggle,
+	};
 
-	const completionButton = showButton && !autoTrack && (
-		<div className="mt-4">
-			<button
-				className={`flex items-center gap-2 rounded-md px-4 py-2 font-medium transition-all ${
-					isComplete
-						? "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-						: "bg-green-600 text-white shadow-xs hover:bg-green-700"
-				}`}
-				onClick={handleComplete}
-				type="button"
-			>
-				{isComplete ? (
-					<>
-						<CheckCircle2 className="h-4 w-4" />
-						<span>Completed</span>
-					</>
-				) : (
-					<>
-						<Circle className="h-4 w-4" />
-						<span>Mark as Complete</span>
-					</>
-				)}
-			</button>
-			{description && !isComplete && (
-				<p className="mt-2 text-gray-600 text-sm dark:text-gray-400">
-					{description}
-				</p>
-			)}
-		</div>
-	);
+	if (variant === "inline") {
+		return <InlineCheckpoint {...commonProps} />;
+	}
 
-	return (
-		<div
-			className={`task-checkpoint ${isComplete ? "task-checkpoint--complete" : ""}`}
-			id={section || id}
-		>
-			{/* Optional header with completion status */}
-			{showHeader && displayTitle && (
-				<div className="mb-4 flex items-center gap-2">
-					{isComplete ? (
-						<CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-					) : (
-						<Circle className="h-5 w-5 text-gray-400" />
-					)}
-					<h3 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-						{displayTitle}
-					</h3>
-				</div>
-			)}
+	if (variant === "border") {
+		return (
+			<BorderCheckpoint
+				{...commonProps}
+				displayTitle={displayTitle}
+				showHeader={showHeader}
+			/>
+		);
+	}
 
-			{/* Button at top if specified */}
-			{buttonPosition === "top" && completionButton}
-
-			{/* Content */}
-			<div className={isComplete ? "opacity-75" : ""}>{children}</div>
-
-			{/* Button at bottom (default) */}
-			{buttonPosition === "bottom" && completionButton}
-		</div>
-	);
+	return <MinimalCheckpoint {...commonProps} />;
 };
 
 export default TaskCheckpoint;

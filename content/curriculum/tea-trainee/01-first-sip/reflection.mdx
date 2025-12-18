@@ -1,12 +1,15 @@
 ---
 title: "Reflection: Making Sense of What You Saw"
-description: Synthesize your learning and understand the vocabulary
+description: Synthesise your learning and understand the vocabulary
 ---
 
+import ConceptCarousel from "@/components/docs/curriculum/concept-carousel";
+import { coreElementsConcepts } from "./concepts";
+import { firstSipReflectionPrompts } from "./reflections";
 import ReflectionPrompts from "@/components/docs/curriculum/reflection-prompts";
 import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
 import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
-import { firstSipTasks } from "@/components/docs/curriculum/task-registry";
+import { firstSipTasks } from "./tasks";
 
 export const PageContent = ({ children }) => {
   return (
@@ -17,7 +20,7 @@ export const PageContent = ({ children }) => {
       currentPage="reflection"
     >
       {children}
-      <ModuleProgressTracker showHints={true} />
+      <ModuleProgressTracker showHints={true} currentPage="reflection" />
     </ModuleProgressProvider>
   );
 };
@@ -26,71 +29,38 @@ export const PageContent = ({ children }) => {
 
 # Reflection: Making Sense of What You Saw
 
+An assurance case works by decomposing a broad claim (like "our AI is fair and non-discriminatory") into specific, manageable claims, and then providing evidence for each one. This structured approach helps build trust by making the reasoning clear and transparent.
+
+In this page you will step back and reflect on the key elements you encountered in the Fair Recruitment AI assurance case. You'll synthesise your learning and familiarise yourself with the vocabulary used to describe assurance cases.
+
+## The Core Elements
+
+The following cards offer a refresher of the core elements you just encountered in the Fair Recruitment AI case. Click through each card to remind yourself of their definitions and see examples from the case.
+
+<div id="core-elements" className="mt-8">
+
+<ConceptCarousel
+  concepts={coreElementsConcepts}
+  mode="guided"
+  taskId="review-core-elements"
+/>
+
+</div>
+
 ## Reflection & Synthesis
 
-Now that you've explored the Fair Recruitment AI case, let's reflect on what you've discovered. Take a few minutes to think deeply about your experience:
+Now that you've reviewed the core elements, take a few minutes to reflect on what you've learned.
+
+<div id="first-sip-reflection" className="mt-8">
 
 <ReflectionPrompts
-  prompts={[
-    {
-      id: "first-impression",
-      category: "Initial Understanding",
-      title: "First Impressions",
-      question:
-        "What was your initial reaction when you first saw the Fair Recruitment AI assurance case? What stood out to you?",
-      required: true,
-    },
-    {
-      id: "argument-flow",
-      category: "Structure Analysis",
-      title: "Following the Logic",
-      question:
-        "How does the case build its argument from the main goal down to specific evidence? Can you describe the logical flow?",
-      required: true,
-    },
-    {
-      id: "convincing-aspects",
-      category: "Critical Thinking",
-      title: "Strengths and Weaknesses",
-      question:
-        "What aspects of this assurance case did you find most convincing? Were there any parts that seemed weak or incomplete?",
-      required: false,
-    },
-    {
-      id: "real-world",
-      category: "Application",
-      title: "Your Context",
-      question:
-        "Can you think of a system or decision in your own work where this structured approach to building trust would be valuable?",
-      required: false,
-    },
-  ]}
+  prompts={firstSipReflectionPrompts}
   allowSkip={false}
   autoSave={true}
   showProgress={true}
-  useGlobalProgress={true}
+  taskId="complete-reflection"
 />
 
-## Naming What You Discovered
-
-Congratulations! You've just explored your first assurance case. Let's name what you discovered:
-
-### The Core Elements
-
-You encountered five types of elements in the Fair Recruitment AI case:
-
-1. **Goal** (Green) - The main claim: "The AI recruitment system makes fair and unbiased hiring recommendations"
-2. **Strategies** (Purple) - Three approaches to argue fairness: bias detection, transparency, and monitoring
-3. **Property Claims** (Orange) - Specific, measurable statements like "Training data has been audited"
-4. **Evidence** (Cyan) - Concrete proof like audit reports and statistical analyses
-5. **Context** (Grey) - Boundaries and definitions, like what "fairness" means legally
-
-### The Key Insight
-
-An assurance case works by **decomposing** a big claim (like "our AI is fair") into smaller, more manageable claims, and then providing evidence for each small claim. It's like building a pyramid of trust, where each level supports the one above it.
-
-> **The Power of Decomposition**
->
-> Breaking down complex claims into smaller, evidence-backed parts is what makes assurance cases powerful. Instead of vague assurances, you get a clear chain of reasoning that can be challenged, verified, and improved.
+</div>
 
 </PageContent>

@@ -4,10 +4,8 @@ import { motion } from "framer-motion";
 import {
 	Award,
 	BookOpen,
-	CheckCircle2,
 	ChevronDown,
 	ChevronUp,
-	Circle,
 	Lightbulb,
 	Target,
 } from "lucide-react";
@@ -18,52 +16,21 @@ import type {
 } from "@/types/curriculum";
 
 /**
- * Get background class for card variant based on completion state
- */
-const getCardBackground = (isComplete: boolean): string => {
-	if (isComplete) {
-		return "bg-green-100 dark:bg-green-900/20";
-	}
-	return "bg-white dark:bg-gray-800";
-};
-
-/**
  * LearningObjectives - Display module learning objectives
  *
- * Can be used standalone or with progress tracking to show completion status.
  * Supports three display variants: card, list, and compact.
  */
 const LearningObjectives = ({
 	objectives = [],
 	title = "Learning Objectives",
-	showProgress = false,
 	variant = "card",
 	collapsible = false,
 }: LearningObjectivesProps): React.ReactNode => {
 	const [isExpanded, setIsExpanded] = useState(true);
-	const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
 	if (objectives.length === 0) {
 		return null;
 	}
-
-	const toggleComplete = (id: string): void => {
-		if (!showProgress) {
-			return;
-		}
-
-		const newCompleted = new Set(completedIds);
-		if (newCompleted.has(id)) {
-			newCompleted.delete(id);
-		} else {
-			newCompleted.add(id);
-		}
-		setCompletedIds(newCompleted);
-	};
-
-	const completionPercentage = showProgress
-		? Math.round((completedIds.size / objectives.length) * 100)
-		: 0;
 
 	// Compact variant - simple list
 	if (variant === "compact") {
@@ -89,54 +56,28 @@ const LearningObjectives = ({
 		);
 	}
 
-	// List variant - simple checkable list
+	// List variant - simple list with icons
 	if (variant === "list") {
 		return (
 			<div className="my-6">
-				<div className="mb-4 flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-						<h3 className="font-semibold text-xl">{title}</h3>
-					</div>
-					{showProgress && (
-						<span className="text-gray-600 text-sm dark:text-gray-400">
-							{completedIds.size}/{objectives.length} completed
-						</span>
-					)}
+				<div className="mb-4 flex items-center gap-2">
+					<Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+					<h3 className="font-semibold text-xl">{title}</h3>
 				</div>
 				<ul className="space-y-3">
-					{objectives.map((objective) => {
-						const isComplete = completedIds.has(objective.id);
-						return (
-							<li className="flex items-start gap-3" key={objective.id}>
-								{showProgress ? (
-									<button
-										className="mt-0.5 transition-colors"
-										onClick={() => toggleComplete(objective.id)}
-										type="button"
-									>
-										{isComplete ? (
-											<CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-										) : (
-											<Circle className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-										)}
-									</button>
-								) : (
-									<Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-								)}
-								<div className="flex-1">
-									<p className={isComplete ? "text-gray-500 line-through" : ""}>
-										{objective.text}
+					{objectives.map((objective) => (
+						<li className="flex items-start gap-3" key={objective.id}>
+							<Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+							<div className="flex-1">
+								<p>{objective.text}</p>
+								{objective.description && (
+									<p className="mt-1 text-gray-600 text-sm dark:text-gray-400">
+										{objective.description}
 									</p>
-									{objective.description && (
-										<p className="mt-1 text-gray-600 text-sm dark:text-gray-400">
-											{objective.description}
-										</p>
-									)}
-								</div>
-							</li>
-						);
-					})}
+								)}
+							</div>
+						</li>
+					))}
 				</ul>
 			</div>
 		);
@@ -161,44 +102,20 @@ const LearningObjectives = ({
 							</p>
 						</div>
 					</div>
-					<div className="flex items-center gap-3">
-						{showProgress && (
-							<div className="text-right">
-								<div className="font-bold text-2xl text-blue-600 dark:text-blue-400">
-									{completionPercentage}%
-								</div>
-								<div className="text-gray-500 text-xs">complete</div>
-							</div>
-						)}
-						{collapsible && (
-							<button
-								className="rounded-lg p-2 transition-colors hover:bg-white/50 dark:hover:bg-black/20"
-								onClick={() => setIsExpanded(!isExpanded)}
-								type="button"
-							>
-								{isExpanded ? (
-									<ChevronUp className="h-5 w-5" />
-								) : (
-									<ChevronDown className="h-5 w-5" />
-								)}
-							</button>
-						)}
-					</div>
+					{collapsible && (
+						<button
+							className="rounded-lg p-2 transition-colors hover:bg-white/50 dark:hover:bg-black/20"
+							onClick={() => setIsExpanded(!isExpanded)}
+							type="button"
+						>
+							{isExpanded ? (
+								<ChevronUp className="h-5 w-5" />
+							) : (
+								<ChevronDown className="h-5 w-5" />
+							)}
+						</button>
+					)}
 				</div>
-
-				{/* Progress Bar */}
-				{showProgress && (
-					<div className="mt-4">
-						<div className="h-2 w-full rounded-full bg-blue-200 dark:bg-blue-900">
-							<motion.div
-								animate={{ width: `${completionPercentage}%` }}
-								className="h-2 rounded-full bg-linear-to-r from-blue-500 to-purple-600"
-								initial={{ width: 0 }}
-								transition={{ duration: 0.5, ease: "easeOut" }}
-							/>
-						</div>
-					</div>
-				)}
 			</div>
 
 			{/* Objectives List */}
@@ -212,43 +129,22 @@ const LearningObjectives = ({
 				>
 					<div className="space-y-4">
 						{objectives.map((objective, idx) => {
-							const isComplete = completedIds.has(objective.id);
 							const Icon = objective.icon || BookOpen;
 
 							return (
 								<motion.div
 									animate={{ opacity: 1, x: 0 }}
-									className={`flex items-start gap-4 rounded-lg p-4 transition-all ${getCardBackground(isComplete)}`}
+									className="flex items-start gap-4 rounded-lg bg-white p-4 transition-all dark:bg-gray-800"
 									initial={{ opacity: 0, x: -20 }}
 									key={objective.id}
 									transition={{ delay: idx * 0.1 }}
 								>
-									{showProgress ? (
-										<button
-											className="mt-0.5 shrink-0 transition-colors"
-											onClick={() => toggleComplete(objective.id)}
-											type="button"
-										>
-											{isComplete ? (
-												<CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-											) : (
-												<Circle className="h-6 w-6 text-gray-400 hover:text-gray-600" />
-											)}
-										</button>
-									) : (
-										<div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-											<Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-										</div>
-									)}
+									<div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+										<Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+									</div>
 
 									<div className="flex-1">
-										<p
-											className={`mb-1 font-medium ${
-												isComplete
-													? "text-gray-600 line-through dark:text-gray-400"
-													: "text-gray-900 dark:text-gray-100"
-											}`}
-										>
+										<p className="mb-1 font-medium text-gray-900 dark:text-gray-100">
 											{objective.text}
 										</p>
 										{objective.description && (
