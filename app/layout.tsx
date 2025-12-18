@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from "next-auth";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { authOptions } from "@/lib/auth-options";
 import { cn } from "@/lib/utils";
 import { ModalProvider } from "@/providers/modal-provider";
@@ -46,7 +45,6 @@ export default async function RootLayout({
 						{children}
 						<ModalProvider />
 						<Toaster />
-						<SonnerToaster />
 					</ThemeProvider>
 				</SessionProvider>
 			</body>

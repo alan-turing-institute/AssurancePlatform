@@ -9,7 +9,6 @@ import ReactFlow, {
 } from "reactflow";
 
 import "reactflow/dist/style.css";
-import "react-toastify/dist/ReactToastify.css";
 import { Loader2, Unplug, X } from "lucide-react";
 import EvidenceNode from "@/components/cases/evidence-node";
 import GoalNode from "@/components/cases/goal-node";
@@ -22,8 +21,8 @@ import useStore from "@/data/store";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { convertAssuranceCase } from "@/lib/convert-case";
 import { getLayoutedElements } from "@/lib/layout-helper";
+import { useToast } from "@/lib/toast";
 import { Button } from "../ui/button";
-import { useToast } from "../ui/use-toast";
 import ActionButtons from "./action-buttons";
 
 // Define nodeTypes at module level to ensure stable reference

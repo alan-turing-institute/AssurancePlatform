@@ -26,6 +26,7 @@ import {
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case";
+import { useToast } from "@/lib/toast";
 import type {
 	AssuranceCase,
 	Evidence,
@@ -35,7 +36,6 @@ import type {
 } from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-import { useToast } from "../ui/use-toast";
 
 const formSchema = z.object({
 	description: z.string().min(2, {

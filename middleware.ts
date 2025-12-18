@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
+import { isPublicRoute } from "./lib/routes";
 
 export default withAuth(
 	function middleware(req) {
@@ -52,25 +53,8 @@ export default withAuth(
 			authorized: ({ token, req }) => {
 				const pathname = req.nextUrl.pathname;
 
-				// Public routes that don't require authentication
-				const publicRoutes = [
-					"/",
-					"/login",
-					"/register",
-					"/discover",
-					"/docs",
-					"/auth-error",
-					"/cookie-policy",
-					"/feedback",
-					"/forgot-password",
-					"/reset-password",
-				];
-				const isPublicRoute = publicRoutes.some(
-					(route) => pathname === route || pathname.startsWith(`${route}/`)
-				);
-
-				// Allow public routes
-				if (isPublicRoute) {
+				// Allow public routes (defined in lib/routes.ts)
+				if (isPublicRoute(pathname)) {
 					return true;
 				}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { CalendarDaysIcon } from "lucide-react";
-import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -13,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import { normalizeImageUrl } from "@/lib/utils";
 import type { CaseStudiesProps, CaseStudy } from "@/types/domain";
@@ -107,7 +107,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 									<div className="mt-8 flex items-center gap-x-4 text-xs">
 										<div className="flex items-center justify-start gap-2 text-gray-500">
 											<CalendarDaysIcon className="size-4" />
-											{moment(caseStudy.publishedDate).format("DD/MM/YYYY")}
+											{formatShortDate(caseStudy.publishedDate)}
 										</div>
 										<span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 font-medium text-indigo-700 text-xs">
 											{caseStudy.sector}

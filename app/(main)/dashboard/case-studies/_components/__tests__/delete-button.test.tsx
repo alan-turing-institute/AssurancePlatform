@@ -34,7 +34,7 @@ vi.mock("next-auth/react", () => ({
 
 // Mock toast hook
 const mockToast = vi.fn();
-vi.mock("@/components/ui/use-toast", () => ({
+vi.mock("@/lib/toast", () => ({
 	useToast: () => ({
 		toast: mockToast,
 	}),

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/lib/toast";
 
 // Minimal user data needed for this form
 type UserData = {

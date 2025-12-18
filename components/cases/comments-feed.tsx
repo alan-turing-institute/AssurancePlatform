@@ -10,13 +10,13 @@ import {
 	User2Icon,
 	XCircle,
 } from "lucide-react";
-import moment from "moment";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import useStore from "@/data/store";
+import { formatShortDate } from "@/lib/date";
+import { useToast } from "@/lib/toast";
 import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
-import { useToast } from "../ui/use-toast";
 import CommentsForm from "./comment-form";
 import CommentsEditForm from "./comments-edit-form";
 
@@ -56,7 +56,7 @@ function ResolvedBanner({ comment }: { comment: Comment }) {
 			<span>
 				Resolved by {comment.resolvedBy}
 				{comment.resolvedAt &&
-					` on ${moment(new Date(comment.resolvedAt)).format("DD/MM/YYYY")}`}
+					` on ${formatShortDate(new Date(comment.resolvedAt))}`}
 			</span>
 		</div>
 	);
@@ -94,7 +94,7 @@ function CommentMeta({
 				>
 					<circle cx={1} cy={1} r={1} />
 				</svg>
-				{moment(new Date(comment.created_at)).format("DD/MM/YYYY")}
+				{formatShortDate(new Date(comment.created_at))}
 			</div>
 
 			{hasReplies && (

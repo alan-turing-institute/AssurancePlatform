@@ -1,7 +1,6 @@
 "use client";
 
 import { Eye, MessageCircleMore, PencilRuler, Trash2 } from "lucide-react";
-import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +13,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/date";
 import { Skeleton } from "../ui/skeleton";
 
 // Flexible type for case data - compatible with both actions and domain types
@@ -123,7 +123,9 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 						</CardDescription>
 					</CardHeader>
 					<CardFooter className="flex w-full items-center justify-between text-gray-500 text-xs dark:text-gray-300">
-						<p>Created on: {moment(created_date).format("DD/MM/YYYY")}</p>
+						<p>
+							Created on: {created_date ? formatShortDate(created_date) : "N/A"}
+						</p>
 						<div className="flex items-center justify-start gap-2">
 							{permissions.includes("view") && <Eye className="h-4 w-4" />}
 							{permissions.includes("review") && (

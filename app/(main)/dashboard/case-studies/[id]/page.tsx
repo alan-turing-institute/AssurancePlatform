@@ -1,10 +1,10 @@
-import moment from "moment";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { fetchCaseStudyById } from "@/actions/case-studies";
 import BackButton from "@/components/ui/back-button";
 import PageHeading from "@/components/ui/page-heading";
 import { authOptions } from "@/lib/auth-options";
+import { formatFullDate, formatShortDate } from "@/lib/date";
 import type { CaseStudy } from "@/types/domain";
 import CaseStudyForm from "../_components/case-study-form";
 
@@ -34,7 +34,7 @@ async function CaseStudyDetails({
 				<BackButton url="/dashboard/case-studies" />
 				<PageHeading
 					caseStudy={caseStudy}
-					description={`Created on: ${moment(caseStudy.createdOn).format("DD/MM/YYYY")} | Last modified on: ${moment(caseStudy.lastModifiedOn).format("DD/MM/YYYY")}`}
+					description={`Created on: ${formatShortDate(caseStudy.createdOn)} | Last modified on: ${formatShortDate(caseStudy.lastModifiedOn)}`}
 					// button={{ label: caseStudy.published ? 'Unpublish' : 'Publish', published: caseStudy.published }}
 					title={caseStudy.title}
 				/>
@@ -50,7 +50,7 @@ async function CaseStudyDetails({
               </div>
               <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
                 <dt className="text-sm/6 font-medium text-foreground">Date Published</dt>
-                <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{moment(caseStudy.publishedDate).format('DD/MM/YYYY')}</dd>
+                <dd className="mt-1 text-sm/6 text-foreground sm:mt-2">{formatShortDate(caseStudy.publishedDate)}</dd>
               </div>
               <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-6 sm:col-span-1 sm:px-0">
                 <dt className="text-sm/6 font-medium text-foreground">Category</dt>
@@ -139,7 +139,7 @@ function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
 					>
 						<circle cx={1} cy={1} r={1} />
 					</svg>
-					{moment(caseStudy.publishedDate).format("LLLL")}
+					{formatFullDate(caseStudy.publishedDate)}
 				</div>
 			</div>
 		</div>

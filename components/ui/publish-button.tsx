@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { updateCaseStudy } from "@/actions/case-studies";
+import { useToast } from "@/lib/toast";
 import type { CaseStudy } from "@/types/domain";
-import { useToast } from "./use-toast";
 
 type PublishButtonProps = {
 	label: string;
