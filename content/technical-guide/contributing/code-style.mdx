@@ -1,0 +1,363 @@
+---
+sidebar_position: 2
+sidebar_label: 'Code Style'
+---
+
+import { Callout } from 'nextra/components'
+
+# Code Style Guide
+
+This guide documents the coding conventions and style rules for the TEA Platform codebase.
+
+## Tooling
+
+### Linting and Formatting
+
+The project uses [Biome](https://biomejs.dev) via Ultracite for linting and formatting:
+
+```shell
+# Check for issues
+pnpm exec ultracite check
+
+# Fix issues automatically
+pnpm exec ultracite fix
+```
+
+<Callout type="warning">
+**Always run before committing**
+
+CI will fail if linting errors are present. Run `ultracite check` before pushing.
+</Callout>
+
+### Type Checking
+
+TypeScript strict mode is enabled. Run type checking with:
+
+```shell
+npx tsc --noEmit
+```
+
+## TypeScript Rules
+
+### No `any` Type
+
+Never use `any`. Use proper types or `unknown` with type guards:
+
+```typescript
+// Bad
+function process(data: any) { ... }
+
+// Good
+function process(data: unknown) {
+  if (isValidData(data)) { ... }
+}
+
+// Good - use proper types
+function process(data: ProcessableData) { ... }
+```
+
+### Use Defined Types
+
+Import types from `types/` or generate them from Prisma:
+
+```typescript
+// Import from types directory
+import type { AssuranceCaseWithElements } from '@/types/cases'
+
+// Use Prisma generated types
+import type { AssuranceCase, AssuranceElement } from '@/src/generated/prisma'
+```
+
+### Prefer Type Inference
+
+Let TypeScript infer types where obvious:
+
+```typescript
+// Unnecessary - type is inferred
+const count: number = items.length
+
+// Better
+const count = items.length
+
+// Do specify for function return types
+function getCount(items: Item[]): number {
+  return items.length
+}
+```
+
+## Naming Conventions
+
+### Files and Folders
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | kebab-case | `flow-editor.tsx` |
+| Utilities | kebab-case | `format-date.ts` |
+| Types | kebab-case | `case-types.ts` |
+| Server Actions | kebab-case | `case-actions.ts` |
+| Folders | kebab-case | `flow-editor/` |
+
+### Code Identifiers
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Variables | camelCase | `caseData` |
+| Functions | camelCase | `getCaseById` |
+| Components | PascalCase | `FlowEditor` |
+| Types/Interfaces | PascalCase | `AssuranceCase` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| Enums | PascalCase (values too) | `ElementType.Goal` |
+
+## British English
+
+Use British English spelling throughout the codebase:
+
+| Use | Don't Use |
+|-----|-----------|
+| colour | color |
+| behaviour | behavior |
+| optimise | optimize |
+| analyse | analyze |
+| centre | center |
+| licence (noun) | license (noun) |
+
+<Callout>
+**Exception**: External API names and library identifiers should use their original spelling (e.g., `backgroundColor` in CSS-in-JS).
+</Callout>
+
+## React Patterns
+
+### Server vs Client Components
+
+Default to Server Components. Use Client Components only when necessary:
+
+```typescript
+// Server Component (default) - no directive needed
+async function CasePage({ params }) {
+  const data = await getCaseData(params.id)
+  return <CaseView data={data} />
+}
+
+// Client Component - needs 'use client'
+'use client'
+
+function InteractiveEditor({ initialData }) {
+  const [state, setState] = useState(initialData)
+  // ...
+}
+```
+
+### Component Structure
+
+Organise components consistently:
+
+```typescript
+'use client' // if needed
+
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import type { ComponentProps } from './types'
+
+interface Props {
+  // ...
+}
+
+export function ComponentName({ prop1, prop2 }: Props) {
+  // Hooks first
+  const [state, setState] = useState()
+
+  // Event handlers
+  const handleClick = () => { ... }
+
+  // Render helpers
+  const renderItem = (item: Item) => { ... }
+
+  // Return JSX
+  return (
+    <div>
+      {/* ... */}
+    </div>
+  )
+}
+```
+
+### Props Interface
+
+Define props interface above the component:
+
+```typescript
+interface FlowEditorProps {
+  initialNodes: Node[]
+  initialEdges: Edge[]
+  readOnly?: boolean
+  onSave?: (data: CaseData) => void
+}
+
+export function FlowEditor({
+  initialNodes,
+  initialEdges,
+  readOnly = false,
+  onSave,
+}: FlowEditorProps) {
+  // ...
+}
+```
+
+## Server Actions
+
+### Action Structure
+
+Server Actions follow a consistent pattern:
+
+```typescript
+'use server'
+
+import { z } from 'zod'
+import { prisma } from '@/lib/db'
+import { requireAuth } from '@/lib/auth'
+
+const createElementSchema = z.object({
+  caseId: z.string().uuid(),
+  elementType: z.nativeEnum(ElementType),
+  description: z.string().min(1),
+})
+
+export async function createElement(
+  input: z.infer<typeof createElementSchema>
+) {
+  const user = await requireAuth()
+
+  const validated = createElementSchema.parse(input)
+
+  // Check permissions
+  const hasAccess = await checkCaseAccess(validated.caseId, user.id, 'EDIT')
+  if (!hasAccess) {
+    throw new Error('Permission denied')
+  }
+
+  // Perform action
+  const element = await prisma.assuranceElement.create({
+    data: {
+      ...validated,
+      createdById: user.id,
+    }
+  })
+
+  return { success: true, data: element }
+}
+```
+
+### Return Types
+
+Actions should return consistent result objects:
+
+```typescript
+// Success
+return { success: true, data: result }
+
+// Error
+return { success: false, error: 'Error message' }
+```
+
+## Imports
+
+### Import Order
+
+Organise imports in this order:
+
+1. React/Next.js
+2. External libraries
+3. Internal aliases (`@/`)
+4. Relative imports
+5. Types (with `type` keyword)
+
+```typescript
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+
+import { toast } from 'sonner'
+import { z } from 'zod'
+
+import { prisma } from '@/lib/db'
+import { cn } from '@/lib/utils'
+
+import { LocalComponent } from './local-component'
+
+import type { CaseData } from '@/types/cases'
+```
+
+### Path Aliases
+
+Use the `@/` alias for imports from project root:
+
+```typescript
+// Good
+import { Button } from '@/components/ui/button'
+
+// Avoid
+import { Button } from '../../../components/ui/button'
+```
+
+## Comments
+
+### When to Comment
+
+- Complex business logic
+- Non-obvious workarounds
+- TODO items with context
+
+### Comment Style
+
+```typescript
+// Single line for brief notes
+
+/**
+ * Multi-line for function documentation.
+ * Explains what the function does and why.
+ */
+function complexFunction() { ... }
+
+// TODO(username): Description of what needs to be done
+// and why it's deferred
+```
+
+### Avoid Obvious Comments
+
+```typescript
+// Bad - states the obvious
+// Increment counter
+counter++
+
+// Good - explains why
+// Skip the header row when processing CSV
+startIndex = 1
+```
+
+## Testing
+
+### Test File Location
+
+Place test files next to source files:
+
+```
+components/
+  flow-editor/
+    flow-editor.tsx
+    flow-editor.test.tsx
+```
+
+### Test Naming
+
+```typescript
+describe('FlowEditor', () => {
+  it('should render initial nodes', () => { ... })
+  it('should add node when toolbar button clicked', () => { ... })
+  it('should delete selected node on Delete key', () => { ... })
+})
+```
+
+## Further Reading
+
+- [Biome Documentation](https://biomejs.dev)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/)
+- [Next.js Documentation](https://nextjs.org/docs)

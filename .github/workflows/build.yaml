@@ -11,7 +11,9 @@ on:
       - "hooks/**"
       - "prisma/**"
       - "scripts/**"
-      - "tea-docs/**"
+      - "content/**"
+      - "theme.config.tsx"
+      - "mdx-components.tsx"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -28,7 +30,9 @@ on:
       - "hooks/**"
       - "prisma/**"
       - "scripts/**"
-      - "tea-docs/**"
+      - "content/**"
+      - "theme.config.tsx"
+      - "mdx-components.tsx"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -93,20 +97,8 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      # Stage B: Documentation caching based on tea-docs/** hash
-      - name: Restore cached documentation
-        id: cache-docs
-        uses: actions/cache@v4
-        with:
-          path: public/documentation
-          key: docs-${{ hashFiles('tea-docs/**') }}
-
-      - name: Build documentation (if cache miss)
-        if: steps.cache-docs.outputs.cache-hit != 'true'
-        run: |
-          cd tea-docs
-          pnpm install --frozen-lockfile
-          pnpm build
+      # Note: Documentation is now built as part of Next.js (Nextra integration)
+      # No separate tea-docs build step needed
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

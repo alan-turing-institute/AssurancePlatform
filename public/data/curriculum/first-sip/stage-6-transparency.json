@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "exportedAt": "2025-12-17T10:00:00.000Z",
+  "case": {
+    "name": "Fair Recruitment AI System",
+    "description": "An assurance case demonstrating that an AI-powered recruitment system operates fairly and without discrimination in the hiring process."
+  },
+  "tree": {
+    "id": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "The AI recruitment system makes fair and non-discriminatory hiring recommendations.",
+    "inSandbox": false,
+    "role": "TOP_LEVEL",
+    "context": [
+      "Fairness is defined according to UK Equality Act 2010 protected characteristics (age, disability, gender reassignment, marriage, pregnancy, race, religion, sex, and sexual orientation).",
+      "The system processes 10,000+ applications monthly for entry-level software engineering positions in a context where diversity and inclusion are strategic priorities."
+    ],
+    "children": [
+      {
+        "id": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
+        "type": "STRATEGY",
+        "name": "S1",
+        "description": "Demonstrate fairness through discrimination prevention mechanisms and effective mitigation strategies implemented throughout the AI system's lifecycle.",
+        "inSandbox": false,
+        "children": [
+          {
+            "id": "b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e",
+            "type": "PROPERTY_CLAIM",
+            "name": "P1",
+            "description": "The training dataset has been audited and balanced to ensure representation across all demographic groups and cleansed of historically discriminatory patterns.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f",
+                "type": "EVIDENCE",
+                "name": "E1",
+                "description": "Audit report detailing demographic breakdown of 50,000 candidate profiles, demonstrating balanced representation across protected characteristics.",
+                "inSandbox": false,
+                "url": "https://example.com/data-audit-report-2025",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a",
+            "type": "PROPERTY_CLAIM",
+            "name": "P2",
+            "description": "Statistical testing demonstrates that the AI system's recommendations show no disparate impact or treatment across protected characteristic groups.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b",
+                "type": "EVIDENCE",
+                "name": "E2",
+                "description": "Statistical analysis showing demographic parity, equalised odds, and calibration metrics across protected groups, demonstrating no significant discrimination.",
+                "inSandbox": false,
+                "url": "https://example.com/fairness-metrics-q4-2025",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+        "type": "STRATEGY",
+        "name": "S2",
+        "description": "Establish fairness by ensuring the AI system's decisions are transparent and explainable to candidates and hiring managers, enabling scrutiny of potentially discriminatory outcomes.",
+        "inSandbox": false,
+        "children": [
+          {
+            "id": "a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2d",
+            "type": "PROPERTY_CLAIM",
+            "name": "P3",
+            "description": "Every AI recommendation is accompanied by a human-readable explanation detailing the key factors, enabling hiring managers to verify the rationale.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3e",
+                "type": "EVIDENCE",
+                "name": "E3",
+                "description": "Documentation of explanation system with examples and user study results showing 85% comprehension rate among hiring managers and candidates.",
+                "inSandbox": false,
+                "url": "https://example.com/explainability-study-2025",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4f",
+            "type": "PROPERTY_CLAIM",
+            "name": "P4",
+            "description": "A formal appeals process allows candidates to challenge AI decisions and request human review, ensuring meaningful oversight and error correction.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a",
+                "type": "EVIDENCE",
+                "name": "E4",
+                "description": "Appeals procedure documentation showing 100% of appeals receive human review within 72 hours, with 15% overturn rate indicating effective oversight.",
+                "inSandbox": false,
+                "url": "https://example.com/appeals-process-stats-2025",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b",
+        "type": "STRATEGY",
+        "name": "S3",
+        "description": "Maintain fairness through ongoing monitoring of system performance across demographic groups, with regular audits and updates to address emerging discrimination.",
+        "inSandbox": false,
+        "children": []
+      }
+    ]
+  }
+}

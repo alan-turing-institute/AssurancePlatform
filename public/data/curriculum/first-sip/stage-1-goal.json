@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "exportedAt": "2025-12-17T10:00:00.000Z",
+  "case": {
+    "name": "Fair Recruitment AI System",
+    "description": "An assurance case demonstrating that an AI-powered recruitment system operates fairly and without discrimination in the hiring process."
+  },
+  "tree": {
+    "id": "f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "The AI recruitment system makes fair and non-discriminatory hiring recommendations.",
+    "inSandbox": false,
+    "role": "TOP_LEVEL",
+    "children": []
+  }
+}

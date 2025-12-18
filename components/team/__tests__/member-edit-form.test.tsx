@@ -499,7 +499,7 @@ describe("MemberEditForm", () => {
 			// Default button variant should be applied
 		});
 
-		it("should render deactivate button as outline variant", () => {
+		it("should render deactivate button as outline-solid variant", () => {
 			renderWithoutProviders(<MemberEditForm member={adminMember} />);
 
 			const deactivateButton = screen.getByRole("button", {

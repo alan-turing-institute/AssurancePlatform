@@ -1,10 +1,81 @@
-version: "3"
+# TEA Platform - Production Docker Compose for Self-Hosting
+#
+# This file sets up a complete production-ready stack including:
+# - PostgreSQL database with persistent storage
+# - TEA Platform application with automatic migrations
+#
+# Usage:
+#   1. Copy .env.example to .env and configure your settings
+#   2. Run: docker-compose up -d
+#   3. Access the application at http://localhost:3000
+#
+# For development with hot reloading, use docker-compose.development.yml instead.
 
 services:
-  tea-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: tea-frontend
+  postgres:
+    image: postgres:15-alpine
+    container_name: tea_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tea}
+      POSTGRES_USER: ${POSTGRES_USER:-tea_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tea_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tea_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tea_user} -d ${POSTGRES_DB:-tea}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tea_app:
+    image: ghcr.io/alan-turing-institute/assuranceplatform:latest
+    # Alternatively, build from source:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: tea_app
+    restart: unless-stopped
     ports:
-      - "3001:3000"
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database - uses internal Docker network hostname
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tea_user}:${POSTGRES_PASSWORD:-tea_password}@postgres:5432/${POSTGRES_DB:-tea}
+
+      # NextAuth - REQUIRED: Change these for production
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+
+      # GitHub OAuth - REQUIRED for GitHub login
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET}
+
+      # File Storage - choose ONE option:
+      # Option 1: Local filesystem (default for self-hosting)
+      USE_LOCAL_STORAGE: ${USE_LOCAL_STORAGE:-true}
+      # Option 2: Azure Blob Storage (for cloud deployments)
+      # AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
+      # AZURE_STORAGE_ACCOUNT_KEY: ${AZURE_STORAGE_ACCOUNT_KEY}
+
+      # Optional: Azure Communication Services (for email notifications)
+      # ACS_CONNECTION_STRING: ${ACS_CONNECTION_STRING}
+      # ACS_SENDER_ADDRESS: ${ACS_SENDER_ADDRESS}
+
+      NODE_ENV: production
+    volumes:
+      - uploads_data:/app/public/uploads
+    networks:
+      - tea_network
+
+networks:
+  tea_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads_data:

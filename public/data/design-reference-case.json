@@ -1,0 +1,256 @@
+{
+  "version": "1.0",
+  "exportedAt": "2025-12-15T10:00:00.000Z",
+  "case": {
+    "name": "AI-Assisted Medical Diagnosis System",
+    "description": "Assurance case demonstrating that an AI system for assisting radiologists in detecting lung abnormalities operates safely and effectively within clinical settings."
+  },
+  "tree": {
+    "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "The AI-assisted diagnosis system is acceptably safe and effective for clinical deployment in lung abnormality detection.",
+    "inSandbox": false,
+    "role": "TOP_LEVEL",
+    "assumption": "The system is used as a decision-support tool, with final diagnosis made by qualified radiologists.",
+    "justification": "Patient safety and diagnostic accuracy are paramount in healthcare AI systems, requiring comprehensive assurance.",
+    "context": [
+      "NHS clinical environment",
+      "Secondary care radiology departments",
+      "Adult patient population"
+    ],
+    "comments": [
+      {
+        "author": "clinical_lead",
+        "content": "This case aligns with MHRA guidance on AI as a Medical Device.",
+        "createdAt": "2025-12-01T09:00:00.000Z"
+      }
+    ],
+    "children": [
+      {
+        "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+        "type": "STRATEGY",
+        "name": "S1",
+        "description": "Argue safety and effectiveness through decomposition into performance validation, risk management, and human factors assurance.",
+        "inSandbox": false,
+        "justification": "This decomposition follows the structure recommended by FDA guidance on Clinical Decision Support Software.",
+        "children": [
+          {
+            "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+            "type": "PROPERTY_CLAIM",
+            "name": "P1",
+            "description": "System sensitivity for detecting clinically significant lung nodules exceeds 95% threshold.",
+            "inSandbox": false,
+            "level": 1,
+            "assumption": "Clinically significant defined as nodules ≥6mm requiring follow-up per Fleischner Society guidelines.",
+            "justification": "95% sensitivity threshold established through clinical stakeholder consultation and literature review.",
+            "children": [
+              {
+                "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+                "type": "EVIDENCE",
+                "name": "E1",
+                "description": "Clinical validation study report showing 97.2% sensitivity (95% CI: 95.1-98.6%) on 2,847 patient cohort.",
+                "inSandbox": false,
+                "url": "https://example.org/clinical-validation-report-v2.pdf",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+            "type": "PROPERTY_CLAIM",
+            "name": "P2",
+            "description": "System specificity maintains acceptable false positive rate to avoid unnecessary patient anxiety and follow-up procedures.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+                "type": "PROPERTY_CLAIM",
+                "name": "P2.1",
+                "description": "False positive rate per scan is below 1.5, meeting clinical acceptability threshold.",
+                "inSandbox": false,
+                "level": 2,
+                "justification": "Threshold based on published radiologist performance benchmarks and clinical workflow impact analysis.",
+                "children": [
+                  {
+                    "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+                    "type": "EVIDENCE",
+                    "name": "E2",
+                    "description": "Validation study results: 0.8 false positives per scan (SD: 0.3), significantly below threshold.",
+                    "inSandbox": false,
+                    "url": "https://example.org/clinical-validation-report-v2.pdf#specificity",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+            "type": "PROPERTY_CLAIM",
+            "name": "P3",
+            "description": "Performance is consistent across demographic subgroups without clinically significant disparities.",
+            "inSandbox": false,
+            "level": 1,
+            "assumption": "Subgroups defined by age, sex, and ethnicity as recorded in clinical datasets.",
+            "children": [
+              {
+                "id": "c9d0e1f2-a3b4-4c5d-6e7f-8a9b0c1d2e3f",
+                "type": "EVIDENCE",
+                "name": "E3",
+                "description": "Subgroup analysis report showing no statistically significant performance differences (p>0.05) across demographic groups.",
+                "inSandbox": false,
+                "url": "https://example.org/fairness-analysis-report.pdf",
+                "comments": [
+                  {
+                    "author": "data_scientist",
+                    "content": "Age stratification shows slight decrease in 80+ cohort - flagged for monitoring.",
+                    "createdAt": "2025-11-15T14:30:00.000Z"
+                  }
+                ],
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a",
+        "type": "STRATEGY",
+        "name": "S2",
+        "description": "Identify hazards through FMEA, assess risks, and demonstrate mitigation effectiveness.",
+        "inSandbox": false,
+        "justification": "FMEA is the standard technique for medical device risk analysis per ISO 14971.",
+        "children": [
+          {
+            "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+            "type": "PROPERTY_CLAIM",
+            "name": "P4",
+            "description": "All reasonably foreseeable hazards have been systematically identified and documented.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "f2a3b4c5-d6e7-4f8a-9b0c-1d2e3f4a5b6c",
+                "type": "EVIDENCE",
+                "name": "E4",
+                "description": "FMEA report documenting 47 identified hazards across software, integration, and use-related categories.",
+                "inSandbox": false,
+                "url": "https://example.org/fmea-report-v3.xlsx",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "a3b4c5d6-e7f8-4a9b-0c1d-2e3f4a5b6c7d",
+            "type": "PROPERTY_CLAIM",
+            "name": "P5",
+            "description": "All high and medium severity risks have been mitigated to acceptable residual risk levels.",
+            "inSandbox": false,
+            "level": 1,
+            "assumption": "Risk acceptability matrix approved by clinical safety officer.",
+            "children": [
+              {
+                "id": "b4c5d6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e",
+                "type": "PROPERTY_CLAIM",
+                "name": "P5.1",
+                "description": "Risk of false negative (missed abnormality) is mitigated through mandatory radiologist review of all AI-negative cases.",
+                "inSandbox": false,
+                "level": 2,
+                "justification": "Human-in-the-loop design ensures AI augments rather than replaces clinical judgement.",
+                "children": [
+                  {
+                    "id": "c5d6e7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f",
+                    "type": "EVIDENCE",
+                    "name": "E5",
+                    "description": "Clinical workflow specification mandating radiologist sign-off on all cases, with audit trail logging.",
+                    "inSandbox": false,
+                    "url": "https://example.org/clinical-workflow-spec.pdf",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "d6e7f8a9-b0c1-4d2e-3f4a-5b6c7d8e9f0a",
+                "type": "PROPERTY_CLAIM",
+                "name": "P5.2",
+                "description": "Risk of automation bias (over-reliance on AI) is mitigated through training and interface design.",
+                "inSandbox": false,
+                "level": 2,
+                "children": [
+                  {
+                    "id": "e7f8a9b0-c1d2-4e3f-4a5b-6c7d8e9f0a1b",
+                    "type": "EVIDENCE",
+                    "name": "E6",
+                    "description": "Mandatory training programme including automation bias awareness module, with 100% radiologist completion.",
+                    "inSandbox": false,
+                    "url": "https://example.org/training-completion-records.pdf",
+                    "children": []
+                  },
+                  {
+                    "id": "f8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+                    "type": "EVIDENCE",
+                    "name": "E7",
+                    "description": "User interface design document showing confidence calibration display and uncertainty communication.",
+                    "inSandbox": false,
+                    "url": "https://example.org/ui-design-specification.pdf",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "a9b0c1d2-e3f4-4a5b-6c7d-8e9f0a1b2c3d",
+        "type": "STRATEGY",
+        "name": "S3",
+        "description": "Demonstrate usability through formative and summative human factors evaluation.",
+        "inSandbox": false,
+        "children": [
+          {
+            "id": "b0c1d2e3-f4a5-4b6c-7d8e-9f0a1b2c3d4e",
+            "type": "PROPERTY_CLAIM",
+            "name": "P6",
+            "description": "System usability has been validated with representative end users in simulated clinical environment.",
+            "inSandbox": false,
+            "level": 1,
+            "children": [
+              {
+                "id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+                "type": "EVIDENCE",
+                "name": "E8",
+                "description": "Summative usability study report: 15 radiologists completed 10 representative tasks with 100% success rate, SUS score 82.5.",
+                "inSandbox": false,
+                "url": "https://example.org/usability-study-report.pdf",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6a",
+            "type": "PROPERTY_CLAIM",
+            "name": "P7",
+            "description": "System integrates seamlessly with existing clinical workflow without increasing radiologist workload.",
+            "inSandbox": false,
+            "level": 1,
+            "justification": "Workflow efficiency is critical for clinical adoption and sustained safe use.",
+            "children": [
+              {
+                "id": "e3f4a5b6-c7d8-4e9f-0a1b-2c3d4e5f6a7b",
+                "type": "EVIDENCE",
+                "name": "E9",
+                "description": "Time-motion study showing 12% reduction in average case review time with AI assistance.",
+                "inSandbox": false,
+                "url": "https://example.org/workflow-efficiency-study.pdf",
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

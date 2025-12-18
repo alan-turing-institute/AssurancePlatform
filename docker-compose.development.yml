@@ -30,14 +30,23 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    environment:
+      # Override DATABASE_URL to use Docker network hostname
+      - DATABASE_URL=postgresql://tea_user:tea_password@postgres:5432/tea_dev
+      # Increase Node.js memory limit for Next.js dev server
+      - NODE_OPTIONS=--max-old-space-size=4096
     volumes:
       - .:/app
       - app_next:/app/.next
       - /app/node_modules
     networks:
       - tea_dev_network
+    # Memory limit (requires docker-compose v2)
+    mem_limit: 6g
+    memswap_limit: 6g
+    # Use webpack instead of turbo - turbopack is too memory-intensive for Docker
     command:
-      sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"
+      sh -c "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm exec next dev; else npx next dev; fi"
 
 networks:
   tea_dev_network:

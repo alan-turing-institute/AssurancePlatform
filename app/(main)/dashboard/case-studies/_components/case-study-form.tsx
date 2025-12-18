@@ -769,7 +769,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 
 								{/* <button
                     onClick={() => importModal.onOpen()}
-                    className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                    className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500/40 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                   >
                     <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
                     <span className='hidden md:block'>Import</span>

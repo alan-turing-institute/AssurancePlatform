@@ -1,0 +1,110 @@
+---
+sidebar_position: 1
+sidebar_label: 'Overview'
+---
+
+import { Callout } from 'nextra/components'
+
+# Architecture Overview
+
+The TEA Platform is a full-stack web application built with Next.js 15 using the App Router pattern. This page provides a high-level overview of how the platform is structured.
+
+## Directory Structure
+
+```
+AssurancePlatform/
+├── actions/              # Server Actions for data mutations
+├── app/                  # Next.js App Router
+│   ├── (main)/           # Authenticated routes
+│   ├── (auth)/           # Authentication routes (login, register)
+│   └── api/              # REST API routes
+├── components/           # React components
+│   ├── ui/               # Base UI components (shadcn/ui)
+│   ├── common/           # Shared components
+│   └── cases/            # Assurance case components
+├── lib/                  # Utilities and core logic
+│   ├── auth/             # Authentication utilities
+│   └── db.ts             # Prisma client
+├── prisma/               # Database schema and migrations
+├── public/               # Static assets
+├── types/                # TypeScript type definitions
+└── content/              # Documentation (Nextra)
+```
+
+## Key Architectural Patterns
+
+### Server Components and Server Actions
+
+The platform uses React Server Components by default, with Client Components only where interactivity is required. Data mutations are handled through [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations), which provide type-safe, server-side data handling.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Client (Browser)                    │
+├─────────────────────────────────────────────────────────┤
+│  Server Components     │     Client Components          │
+│  (Default, SSR)        │     ('use client')             │
+│                        │     - Flow Editor              │
+│                        │     - Interactive forms        │
+├────────────────────────┴────────────────────────────────┤
+│                    Server Actions                       │
+│                    (actions/*.ts)                       │
+├─────────────────────────────────────────────────────────┤
+│                    Prisma ORM                           │
+├─────────────────────────────────────────────────────────┤
+│                    PostgreSQL                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Authentication
+
+Authentication is handled by NextAuth.js (Auth.js), supporting:
+- **Local accounts** with email/password
+- **GitHub OAuth** for social login
+
+Session management uses JWT tokens with refresh token rotation for security. See the [NextAuth.js documentation](https://authjs.dev) for configuration details.
+
+### Database Layer
+
+The database layer uses Prisma ORM with PostgreSQL:
+- **Schema**: Defined in `prisma/schema.prisma`
+- **Migrations**: Managed with `prisma migrate`
+- **Client**: Generated and accessed via `lib/db.ts`
+
+For details on the data model, see [Assurance Case Model](./assurance-case-model).
+
+## Core Features
+
+### Assurance Case Editor
+
+The centrepiece of the platform is the visual assurance case editor, built with [ReactFlow](https://reactflow.dev). This allows users to create and edit assurance cases as node-based diagrams.
+
+For implementation details, see [Assurance Case Editor](./assurance-case-editor).
+
+### Teams and Permissions
+
+The platform supports collaborative editing through:
+- **Teams** - Groups of users who can share access to cases
+- **Permissions** - Granular access control (View, Comment, Edit, Admin)
+- **Invites** - Email-based invitations to collaborate on cases
+
+### Publishing and Releases
+
+Assurance cases can be published to share with the community:
+- **Draft** → **Ready to Publish** → **Published** workflow
+- **Releases** with version snapshots
+- **Community comments** on published cases
+
+## API Layer
+
+The platform exposes a REST API for programmatic access:
+- **Base URL**: `/api/v1/`
+- **Authentication**: Bearer token (from session)
+- **Resources**: Cases, Elements, Teams, Users, Comments
+
+See [API Reference](/technical-guide/api-reference) for full documentation.
+
+## Further Reading
+
+- [Assurance Case Model](./assurance-case-model) - Deep-dive into the data model
+- [Assurance Case Editor](./assurance-case-editor) - How the visual editor works
+- [Plugin Ecosystem](./plugin-ecosystem) - Future extensibility plans

@@ -13,7 +13,7 @@ function Header() {
 
 	const navigation = [
 		// { name: 'Showcase', href: '/documentation' },
-		{ name: "Documentation", href: "/documentation", external: true },
+		{ name: "Documentation", href: "/docs", external: false },
 		// { name: 'Documentation', href: 'https://alan-turing-institute.github.io/AssurancePlatform/' },
 		{
 			name: "GitHub",
@@ -47,7 +47,7 @@ function Header() {
 							className="h-12 w-auto"
 							height={48}
 							priority
-							src="/images/tea-logo.png"
+							src="/images/logos/tea-logo-full-light.png"
 							unoptimized
 							width={183}
 						/>
@@ -108,7 +108,7 @@ function Header() {
 								className="h-12 w-auto"
 								height={48}
 								priority
-								src="/images/tea-logo.png"
+								src="/images/logos/tea-logo-full-light.png"
 								unoptimized
 								width={183}
 							/>

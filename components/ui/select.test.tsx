@@ -294,8 +294,8 @@ describe("Select", () => {
 		});
 		expect(disabledOption).toHaveAttribute("aria-disabled", "true");
 		expect(disabledOption).toHaveClass(
-			"data-[disabled]:pointer-events-none",
-			"data-[disabled]:opacity-50"
+			"data-disabled:pointer-events-none",
+			"data-disabled:opacity-50"
 		);
 
 		await user.click(disabledOption);
@@ -491,7 +491,7 @@ describe("Select", () => {
 			"text-sm",
 			"ring-offset-background",
 			"placeholder:text-muted-foreground",
-			"focus:outline-none",
+			"focus:outline-hidden",
 			"focus:ring-2",
 			"focus:ring-ring",
 			"focus:ring-offset-2"

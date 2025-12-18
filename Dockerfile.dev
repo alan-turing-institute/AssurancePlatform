@@ -22,8 +22,8 @@ COPY . .
 RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
     npx prisma generate --schema=prisma/schema.prisma
 
-# Build documentation
-RUN cd tea-docs && corepack enable pnpm && pnpm i && pnpm build
+# Note: Documentation is now built as part of Next.js (Nextra integration)
+# No separate tea-docs build step needed
 
 # Expose port
 EXPOSE 3000

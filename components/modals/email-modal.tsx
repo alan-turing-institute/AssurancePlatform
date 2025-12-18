@@ -25,7 +25,7 @@ export const EmailModal = () => {
 		>
 			<div className="mt-4 flex items-center justify-start gap-2">
 				<Button
-					className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0"
+					className="focus-visible:outline-hidden focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0"
 					onClick={hanleRedirect}
 				>
 					Go to settings <MoveRightIcon className="ml-2 h-4 w-4" />

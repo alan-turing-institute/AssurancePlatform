@@ -82,7 +82,7 @@ const DiscoverCaseStudyPage = async ({
 							<figure>
 								<Image
 									alt={caseStudy.title}
-									className="aspect-[12/7] w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
+									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
 									height={1376}
 									src={
 										normalizeImageUrl(caseStudy.feature_image_url) ??

@@ -182,7 +182,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 				<div className="flex items-center justify-start gap-2">
 					<Button
 						aria-label="Back to dashboard"
-						className="hover:bg-indigo-900/20 hover:text-white hover:dark:bg-gray-100/10"
+						className="hover:bg-indigo-900/20 hover:text-white dark:hover:bg-gray-100/10"
 						onClick={() => router.push("/dashboard")}
 						size={"icon"}
 						title="Back to dashboard"
@@ -203,7 +203,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					<ActiveUsersList />
 					<SearchNodes focusNode={focusNode} nodes={nodes} />
 					<LogoutButton />
-					<ModeToggle className="border-none bg-indigo-500 hover:bg-indigo-900/20 hover:text-white dark:bg-slate-900 hover:dark:bg-gray-100/10" />
+					<ModeToggle className="border-none bg-indigo-500 hover:bg-indigo-900/20 hover:text-white dark:bg-slate-900 dark:hover:bg-gray-100/10" />
 					<StatusButton
 						disabled={!canEditCase}
 						hasChanges={hasChanges}

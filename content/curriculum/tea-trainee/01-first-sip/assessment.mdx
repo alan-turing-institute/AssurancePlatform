@@ -1,0 +1,54 @@
+---
+title: "Assessment: Check Your Understanding"
+description: Quiz yourself and assess your confidence
+---
+
+import { Quiz, ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { firstSipTasks } from "./tasks";
+import { firstSipQuiz } from "./questions";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="assessment"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Assessment: Check Your Understanding
+
+## Knowledge Check
+
+Let's check your understanding of the key concepts from the Fair Recruitment AI case:
+
+<Quiz
+  config={firstSipQuiz}
+  taskId="knowledge-check"
+  useGlobalProgress={true}
+/>
+
+## Well Done!
+
+You've completed the knowledge assessment. When you're ready, proceed to the module summary to:
+
+- Review what you've learned
+- Rate your confidence
+- Discover what's next in your TEA journey
+
+---
+
+**Navigation:**
+- [Reflection](/docs/curriculum/tea-trainee/01-first-sip/reflection)
+- [Module Summary](/docs/curriculum/tea-trainee/01-first-sip/summary)
+
+</PageContent>

@@ -227,7 +227,7 @@ describe("MailingList", () => {
 			const emailInput = screen.getByPlaceholderText("Enter your email");
 			expect(emailInput).toHaveClass(
 				"focus:border-transparent",
-				"focus:outline-none",
+				"focus:outline-hidden",
 				"focus:ring-2",
 				"focus:ring-white"
 			);
@@ -238,7 +238,7 @@ describe("MailingList", () => {
 
 			const submitButton = screen.getByRole("button", { name: "Notify me" });
 			expect(submitButton).toHaveClass(
-				"focus:outline-none",
+				"focus:outline-hidden",
 				"focus:ring-2",
 				"focus:ring-white"
 			);
@@ -347,7 +347,7 @@ describe("MailingList", () => {
 			expect(emailInput).toHaveValue("");
 		});
 
-		it("should preserve input value after blur", async () => {
+		it("should preserve input value after blur-sm", async () => {
 			const user = userEvent.setup();
 			render(<MailingList />);
 

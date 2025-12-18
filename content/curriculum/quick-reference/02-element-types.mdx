@@ -1,0 +1,321 @@
+---
+title: 'Element Types Guide'
+description: 'Quick reference for assurance case element types and their relationships'
+sidebar_label: 'Element Types'
+sidebar_position: 3
+tags:
+  - quick-reference
+  - elements
+---
+
+import { Callout, Tabs } from 'nextra/components';
+
+# Element Types Guide
+
+A quick reference for the four core element types in TEA assurance cases.
+
+## Overview
+
+| Element            | Purpose                                                |
+| ------------------ | ------------------------------------------------------ |
+| **Goal Claim**     | Top-level normative claim directing the assurance case |
+| **Property Claim** | Specific, testable claims about system properties      |
+| **Strategy**       | Explanation of how claims are decomposed               |
+| **Evidence**       | Information that supports and justifies claims         |
+
+## Core Element
+
+### Goal Claims
+
+**Purpose:** The top-level normative claim that directs the entire assurance case and states what you are trying to demonstrate about the system.
+
+**Characteristics:**
+
+- Normative (states what _should_ be true)
+- Usually one per case (unless using module extension)
+- Sets the direction for all other elements
+- Broad enough to encompass the assurance scope
+
+**When to use:**
+
+- Starting a new assurance case
+- Defining the overall assurance objective
+- Establishing what property you're trying to demonstrate
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "The system is sufficiently safe for use in the intended context"
+    - "The AI model produces fair outcomes for all demographic groups"
+    - "The deployment process is secure and protects user data"
+    - "The system respects user privacy throughout its lifecycle"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "The system is good" *(too vague, not normative)*
+    - "We built the system correctly" *(process-focused, not outcome-focused)*
+    - "The system passes all tests" *(too narrow, focuses on one type of evidence)*
+  </Tabs.Tab>
+</Tabs>
+
+### Property Claims
+
+**Purpose:** Specific claims about particular properties of the system or project that collectively support the goal claim.
+
+A property claim must be a **claim**—a statement that asserts something about the system or project that can be either true or false. If a statement cannot be validated against evidence, or if there's no conceivable way it could be wrong, it's not a useful property claim.
+
+**Characteristics:**
+
+- Testable, specific, and defeasible—can be evaluated as true or false based on evidence
+- Provide additional specificity for parent goal claims
+- Multiple property claims typically support a single goal
+- Can be nested (sub-claims supporting parent claims)
+- Should be linked directly to evidence that supports them.
+
+**When to use:**
+
+- Breaking down a goal into specific properties of a system or project
+- Making assertions about the system or project that can be validated
+- Creating sub-arguments within the case
+- Connecting abstract goals to concrete evidence
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "The model achieves greater than 95% accuracy on the validation dataset"
+    - "Training data includes representative samples from all demographic groups"
+    - "All user data is encrypted at rest using AES-256"
+    - "The system logs all access attempts for audit purposes"
+    - "Response latency is below 200ms for 99% of requests"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "The system works well" *(too vague—what does "well" mean?)*
+    - "We followed best practices" *(vague and unverifiable—which practices? According to what standard?)*
+    - "Users like the system" *(subjective without defined criteria)*
+    - "The team worked hard on security" *(describes effort, not a system property)*
+    - "We believe the system is fair" *(expresses belief, not a testable claim)*
+    - "The model has been trained on a diverse dataset that was carefully curated by domain experts and includes representative samples from all demographic groups, and the training process used state-of-the-art techniques including data augmentation and regularisation, and the resulting model achieves high accuracy while also being fair across different subgroups as measured by multiple fairness metrics." *(an "essay in a claim"—too long, says multiple things, should be split into separate claims)*
+  </Tabs.Tab>
+</Tabs>
+
+### Strategies
+
+**Purpose:** Help to make the argument structure explicit and transparent by decomposing the argument into smaller, manageable sub-arguments.
+
+**Characteristics:**
+
+- Scaffolding that organises the argument structure
+- Makes decomposition reasoning explicit
+- Helps reviewers understand the argument logic
+- Optional—useful for clarity in complex cases, but not required for simple arguments
+
+**When to use:**
+
+- Breaking down a goal into multiple property claims
+- Explaining your decomposition approach
+- Organising complex arguments with many claims
+- Making the argument logic transparent to reviewers
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "Argument over key system attributes: accuracy, fairness, reliability"
+    - "Argument over lifecycle stages: data collection, training, deployment, monitoring"
+    - "Argument by addressing stakeholder needs: developers, users, regulators"
+    - "Argument over system components: data pipeline, model, API, user interface"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "We decompose the goal" *(doesn't explain how or why)*
+    - "Breaking down the claim" *(no indication of decomposition logic)*
+    - "See below for details" *(provides no structural insight)*
+  </Tabs.Tab>
+</Tabs>
+
+### Evidence
+
+**Purpose:** Ground claims in verifiable, concrete information that demonstrates why the claim should be believed.
+
+**Characteristics:**
+
+- Concrete and specific
+- Linked to one or more property claims
+- Should be accessible and verifiable by reviewers
+- Can be of various types (technical, process, stakeholder, standards)
+
+**When to use:**
+
+- Supporting property claims with concrete data
+- Providing verification that claims are true
+- Documenting the basis for trust in claims
+- Creating an audit trail for reviewers
+
+**Evidence types:**
+
+| Type | Description | Examples |
+| --- | --- | --- |
+| **Technical** | Data about system performance | Test results, benchmarks, metrics, error rates |
+| **Process** | Information about procedures | Audits, certifications, documentation, reviews |
+| **Stakeholder** | Input from people | Surveys, interviews, feedback, workshop outputs |
+| **Standards** | Compliance information | ISO certifications, regulatory approvals |
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "Fairness audit conducted by [organisation], dated [date], showing demographic parity within 2%"
+    - "User survey (n=200, representative sample) showing 87% satisfaction with explanation quality"
+    - "Penetration test report identifying and remediating 15 vulnerabilities"
+    - "ISO 27001 certification, valid until [date], covering data handling procedures"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "Test results" *(too vague, no details)*
+    - "We did testing" *(no specifics about what or when)*
+    - "Good feedback" *(not specific or quantifiable)*
+    - "The team reviewed it" *(no documentation or criteria)*
+  </Tabs.Tab>
+</Tabs>
+
+## Element Attributes
+
+Goal claims, property claims, and strategies can have three types of attributes attached to them: **Context**, **Justifications**, and **Assumptions**. These attributes provide important supporting information that helps reviewers understand and evaluate the argument.
+
+### Context
+
+**Purpose:** Define the specific conditions under which claims are valid. Context is essential—you cannot meaningfully assure a system without specifying the conditions of its use.
+
+Consider: you cannot assure the safety of an aircraft without specifying (a) who is operating it (a qualified pilot vs an untrained person), (b) where it will be flown (regulated airspace vs restricted zones), and (c) under what conditions (fair weather vs extreme storms). The same system can be safe in one context and dangerous in another. Context makes claims evaluable.
+
+**Characteristics:**
+
+- Essential for meaningful assurance—claims without context cannot be properly evaluated
+- Defines the boundaries within which claims hold true
+- Specifies who, what, where, when, and under what conditions
+- Makes explicit what is excluded from the scope of assurance
+
+**When to use:**
+
+- Always attach context to your goal claim to frame the entire case
+- Add context to specific property claims when they apply under narrower conditions than the parent goal
+- Clarify operational constraints, user qualifications, or environmental requirements
+
+**Context categories:**
+
+| Category | Description | Examples |
+| --- | --- | --- |
+| **Operational** | Who uses the system and how | Trained operators, supervised use, specific workflows |
+| **Environmental** | Where and under what conditions | Geographic region, physical environment, network conditions |
+| **Technical** | System configuration and dependencies | Software version, hardware specs, integrations |
+| **Regulatory** | Applicable standards and requirements | GDPR, sector-specific regulations, organisational policies |
+| **Temporal** | When the assurance applies | Valid until date, review frequency, version lifecycle |
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "System is operated by clinicians who have completed the mandatory 2-day training programme"
+    - "Deployed in UK NHS trusts operating under CQC regulation"
+    - "Valid for software version 2.1.x; major version changes require reassessment"
+    - "Model predictions are reviewed by a qualified human before any decision is made"
+    - "System operates on internal network only; not exposed to public internet"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "Normal use" *(what is normal? For whom?)*
+    - "Trained users" *(what training? How verified?)*
+    - "Standard deployment" *(no specific configuration)*
+    - "Safe conditions" *(circular—safety is what we're trying to assure)*
+  </Tabs.Tab>
+</Tabs>
+
+### Justifications
+
+**Purpose:** Explain _why_ a particular claim, goal, or strategy is appropriate or relevant to the argument.
+
+**Characteristics:**
+
+- Provides rationale for including an element in the argument
+- Explains the reasoning behind a decomposition strategy
+- Helps reviewers understand the logic of the argument structure
+
+**When to use:**
+
+- Explaining why a particular property claim is relevant to the goal
+- Justifying why a specific decomposition strategy was chosen
+- Clarifying the rationale for the argument structure
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "Accuracy is a key requirement specified in the project contract and regulatory guidance"
+    - "This decomposition follows the ALTAI framework for trustworthy AI assessment"
+    - "Fairness metrics were selected based on stakeholder consultation workshops"
+    - "This property is required by ISO 27001 certification requirements"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "This is important" *(doesn't explain why)*
+    - "Standard practice" *(no specific rationale)*
+    - "Because we need to" *(circular reasoning)*
+  </Tabs.Tab>
+</Tabs>
+
+### Assumptions
+
+**Purpose:** Make explicit any assumptions that underpin a claim, goal, or strategy and must hold for the argument to be valid.
+
+**Characteristics:**
+
+- States conditions that are taken to be true without direct evidence
+- Identifies dependencies that could invalidate the argument if violated
+- Makes implicit reasoning explicit for reviewers to evaluate
+
+**When to use:**
+
+- Documenting preconditions that must hold for a claim to be valid
+- Identifying external dependencies outside the scope of the assurance case
+- Making explicit any simplifications or approximations in the argument
+
+<Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
+  <Tabs.Tab>
+    - "Assumes compliance with GDPR data handling requirements"
+    - "Assumes the training data distribution matches the deployment distribution"
+    - "Assumes users have received the mandatory training programme"
+    - "Assumes third-party APIs maintain their documented SLAs"
+  </Tabs.Tab>
+  <Tabs.Tab>
+    - "Everything works correctly" *(too vague, not falsifiable)*
+    - "Users behave normally" *(undefined behaviour)*
+    - "No assumptions" *(unlikely—most arguments have implicit assumptions)*
+  </Tabs.Tab>
+</Tabs>
+
+---
+
+## Valid Relationships
+
+Elements can be connected to form argument structures. The following relationships are valid:
+
+### Core Element Relationships
+
+| From           | To             | Description                           |
+| -------------- | -------------- | ------------------------------------- |
+| Goal Claim     | Strategy       | How the goal will be decomposed       |
+| Goal Claim     | Property Claim | Direct support for the goal           |
+| Strategy       | Property Claim | Claims following the strategy pattern |
+| Property Claim | Property Claim | Sub-claims supporting parent claims   |
+| Property Claim | Strategy       | Further decomposition of a claim      |
+| Property Claim | Evidence       | Evidence supporting the claim         |
+
+### Attribute Relationships
+
+Attributes can be attached to goals, property claims, and strategies:
+
+| Element        | Context | Justification | Assumption |
+| -------------- | :-----: | :-----------: | :--------: |
+| Goal Claim     |    ✓    |       ✓       |     ✓      |
+| Property Claim |    ✓    |       ✓       |     ✓      |
+| Strategy       |    ✓    |       ✓       |     ✓      |
+| Evidence       |    ✗    |       ✗       |     ✗      |
+
+<Callout type="warning">
+**Invalid Links**
+
+The platform prevents invalid links. If you cannot create a link between two elements, it's not a valid relationship in the TEA structure.
+
+</Callout>
+
+---
+
+## Further Reading
+
+- **Detailed tutorial:** [Pouring Your First Cup of TEA](../tea-trainee/01-first-sip)
+- **Terminology:** [Glossary](./glossary)

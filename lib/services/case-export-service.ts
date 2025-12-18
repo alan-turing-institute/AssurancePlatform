@@ -271,7 +271,6 @@ export async function exportCase(
 			case: {
 				name: caseData.name,
 				description: caseData.description,
-				colorProfile: caseData.colorProfile,
 			},
 			tree,
 		};

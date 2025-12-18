@@ -1,0 +1,499 @@
+"use client";
+
+/**
+ * Node Creator Component
+ *
+ * Manages the node creation workflow, integrating with React Flow instance.
+ * Handles node ID generation, default data, undo/redo, and validation.
+ *
+ * Features:
+ * - Integrates with React Flow instance
+ * - Handles node ID generation
+ * - Sets default node data based on type
+ * - Manages undo/redo for creation
+ * - Validates creation position
+ * - Manages creation history
+ * - Supports batch creation
+ *
+ * @component
+ */
+
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Redo2, Undo2, X } from "lucide-react";
+import { useCallback, useState } from "react";
+import type { Node } from "reactflow";
+import { useReactFlow } from "reactflow";
+import { cn } from "@/lib/utils";
+import {
+	createNodeObject,
+	findNonOverlappingPosition,
+	loadCreationPreferences,
+	loadRecentTypes,
+	saveCreationPreferences,
+	saveRecentTypes,
+	snapToGrid,
+	validateNodeCreation,
+} from "./creation-utils";
+
+type Position = {
+	x: number;
+	y: number;
+};
+
+type NodeTemplate = {
+	nodes: Array<{
+		type: string;
+		name: string;
+		offsetX?: number;
+		offsetY?: number;
+	}>;
+};
+
+type CreationPreferences = {
+	gridSnap: boolean;
+	autoConnect: boolean;
+	quickCreateEnabled: boolean;
+	defaultNodeType: string;
+};
+
+type NodeConfig = {
+	type: string;
+	position: Position;
+	customData?: Record<string, unknown>;
+};
+
+type UseNodeCreatorOptions = {
+	onNodeCreated?: (node: Node) => void;
+	onCreationError?: (error: string) => void;
+	enableUndo?: boolean;
+	maxHistorySize?: number;
+};
+
+type UseNodeCreatorReturn = {
+	createNode: (
+		nodeType: string,
+		position: Position,
+		customData?: Record<string, unknown>
+	) => Node | null;
+	createNodes: (nodeConfigs: NodeConfig[]) => Node[];
+	createFromTemplate: (
+		template: NodeTemplate,
+		basePosition: Position
+	) => Node[];
+	undo: () => void;
+	redo: () => void;
+	clearHistory: () => void;
+	updatePreferences: (newPreferences: Partial<CreationPreferences>) => void;
+	isCreating: boolean;
+	canUndo: boolean;
+	canRedo: boolean;
+	creationHistory: string[];
+	recentTypes: string[];
+	preferences: CreationPreferences;
+};
+
+/**
+ * Node Creator Hook
+ * Main hook for managing node creation workflow
+ */
+export const useNodeCreator = ({
+	onNodeCreated,
+	onCreationError,
+	enableUndo = true,
+	maxHistorySize = 50,
+}: UseNodeCreatorOptions = {}): UseNodeCreatorReturn => {
+	const reactFlowInstance = useReactFlow();
+	const [creationHistory, setCreationHistory] = useState<string[]>([]);
+	const [undoStack, setUndoStack] = useState<string[]>([]);
+	const [redoStack, setRedoStack] = useState<Node[]>([]);
+	const [isCreating, setIsCreating] = useState(false);
+	const [preferences, setPreferences] = useState<CreationPreferences>(
+		loadCreationPreferences()
+	);
+	const [recentTypes, setRecentTypes] = useState<string[]>(loadRecentTypes());
+
+	/**
+	 * Create a new node
+	 */
+	const createNode = useCallback(
+		(
+			nodeType: string,
+			position: Position,
+			customData: Record<string, unknown> = {}
+		): Node | null => {
+			setIsCreating(true);
+
+			try {
+				const nodes = reactFlowInstance.getNodes();
+
+				// Validate creation
+				const validation = validateNodeCreation(nodeType, position, nodes);
+				if (!validation.valid) {
+					if (onCreationError) {
+						onCreationError(validation.error || "Unknown error");
+					}
+					setIsCreating(false);
+					return null;
+				}
+
+				// Apply grid snapping if enabled
+				let finalPosition = position;
+				if (preferences.gridSnap) {
+					finalPosition = snapToGrid(position);
+				}
+
+				// Find non-overlapping position
+				finalPosition = findNonOverlappingPosition(finalPosition, nodes);
+
+				// Create node object
+				const newNode = createNodeObject(nodeType, finalPosition, customData);
+
+				// Add node to React Flow
+				reactFlowInstance.setNodes((nds) => [...nds, newNode]);
+
+				// Update history
+				setCreationHistory((prev) => {
+					const newHistory = [...prev, nodeType];
+					if (newHistory.length > maxHistorySize) {
+						newHistory.shift();
+					}
+					return newHistory;
+				});
+
+				// Update recent types
+				const newRecentTypes = [
+					nodeType,
+					...recentTypes.filter((t) => t !== nodeType),
+				].slice(0, 5);
+				setRecentTypes(newRecentTypes);
+				saveRecentTypes(newRecentTypes);
+
+				// Add to undo stack if enabled
+				if (enableUndo) {
+					setUndoStack((prev) => [...prev, newNode.id]);
+					setRedoStack([]); // Clear redo stack on new action
+				}
+
+				// Trigger callback
+				if (onNodeCreated) {
+					onNodeCreated(newNode);
+				}
+
+				setIsCreating(false);
+				return newNode;
+			} catch (error) {
+				console.error("Failed to create node:", error);
+				if (onCreationError) {
+					const errorMessage =
+						error instanceof Error ? error.message : "Unknown error";
+					onCreationError(errorMessage);
+				}
+				setIsCreating(false);
+				return null;
+			}
+		},
+		[
+			reactFlowInstance,
+			preferences,
+			recentTypes,
+			enableUndo,
+			maxHistorySize,
+			onNodeCreated,
+			onCreationError,
+		]
+	);
+
+	/**
+	 * Create multiple nodes (batch creation)
+	 */
+	const createNodes = useCallback(
+		(nodeConfigs: NodeConfig[]): Node[] => {
+			const createdNodes: Node[] = [];
+
+			for (const config of nodeConfigs) {
+				const node = createNode(
+					config.type,
+					config.position,
+					config.customData
+				);
+				if (node) {
+					createdNodes.push(node);
+				}
+			}
+
+			return createdNodes;
+		},
+		[createNode]
+	);
+
+	/**
+	 * Create node from template
+	 */
+	const createFromTemplate = useCallback(
+		(template: NodeTemplate, basePosition: Position): Node[] => {
+			const createdNodes: Node[] = [];
+
+			for (const [index, nodeConfig] of template.nodes.entries()) {
+				const position = {
+					x: basePosition.x + (nodeConfig.offsetX || 0),
+					y: basePosition.y + (nodeConfig.offsetY || 0) + index * 200,
+				};
+
+				const node = createNode(nodeConfig.type, position, {
+					name: nodeConfig.name,
+				});
+
+				if (node) {
+					createdNodes.push(node);
+				}
+			}
+
+			// Create edges between template nodes if needed
+			if (createdNodes.length > 1) {
+				const edges: Array<{
+					id: string;
+					source: string;
+					target: string;
+					type: string;
+				}> = [];
+				for (let i = 0; i < createdNodes.length - 1; i++) {
+					edges.push({
+						id: `template-edge-${i}`,
+						source: createdNodes[i].id,
+						target: createdNodes[i + 1].id,
+						type: "default",
+					});
+				}
+				reactFlowInstance.setEdges((eds) => [...eds, ...edges]);
+			}
+
+			return createdNodes;
+		},
+		[createNode, reactFlowInstance]
+	);
+
+	/**
+	 * Undo last creation
+	 */
+	const undo = useCallback(() => {
+		if (!enableUndo || undoStack.length === 0) {
+			return;
+		}
+
+		const nodeIdToRemove = undoStack.at(-1);
+		const nodes = reactFlowInstance.getNodes();
+		const nodeToRemove = nodes.find((n) => n.id === nodeIdToRemove);
+
+		if (nodeToRemove) {
+			// Remove node
+			reactFlowInstance.setNodes((nds) =>
+				nds.filter((n) => n.id !== nodeIdToRemove)
+			);
+
+			// Update stacks
+			setUndoStack((prev) => prev.slice(0, -1));
+			setRedoStack((prev) => [...prev, nodeToRemove]);
+		}
+	}, [enableUndo, undoStack, reactFlowInstance]);
+
+	/**
+	 * Redo last undone creation
+	 */
+	const redo = useCallback(() => {
+		if (!enableUndo || redoStack.length === 0) {
+			return;
+		}
+
+		const nodeToRestore = redoStack.at(-1);
+		if (!nodeToRestore) {
+			return;
+		}
+
+		// Add node back
+		reactFlowInstance.setNodes((nds) => [...nds, nodeToRestore]);
+
+		// Update stacks
+		setRedoStack((prev) => prev.slice(0, -1));
+		setUndoStack((prev) => [...prev, nodeToRestore.id]);
+	}, [enableUndo, redoStack, reactFlowInstance]);
+
+	/**
+	 * Clear creation history
+	 */
+	const clearHistory = useCallback(() => {
+		setCreationHistory([]);
+		setUndoStack([]);
+		setRedoStack([]);
+	}, []);
+
+	/**
+	 * Update preferences
+	 */
+	const updatePreferences = useCallback(
+		(newPreferences: Partial<CreationPreferences>) => {
+			setPreferences((prev) => {
+				const updated = { ...prev, ...newPreferences };
+				saveCreationPreferences(updated);
+				return updated;
+			});
+		},
+		[]
+	);
+
+	return {
+		createNode,
+		createNodes,
+		createFromTemplate,
+		undo,
+		redo,
+		clearHistory,
+		updatePreferences,
+		isCreating,
+		canUndo: undoStack.length > 0,
+		canRedo: redoStack.length > 0,
+		creationHistory,
+		recentTypes,
+		preferences,
+	};
+};
+
+type NodeCreatorProps = {
+	onNodeCreated?: (node: Node) => void;
+	onCreationError?: (error: string) => void;
+	showControls?: boolean;
+	className?: string;
+};
+
+type FeedbackMessage = {
+	message: string;
+	type: "success" | "error";
+};
+
+/**
+ * Node Creator Component
+ * Visual component for node creation with feedback
+ */
+const NodeCreator = ({
+	onNodeCreated,
+	onCreationError,
+	showControls = true,
+	className,
+}: NodeCreatorProps) => {
+	const { undo, redo, canUndo, canRedo, isCreating } = useNodeCreator({
+		onNodeCreated,
+		onCreationError,
+	});
+
+	const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
+
+	// Show feedback message - used by undo/redo buttons to display status
+	const displayFeedback = useCallback(
+		(message: string, type: "success" | "error" = "success") => {
+			setFeedback({ message, type });
+			setTimeout(() => setFeedback(null), 3000);
+		},
+		[]
+	);
+
+	// Use displayFeedback when undo/redo actions complete
+	const handleUndo = useCallback(() => {
+		undo();
+		displayFeedback("Action undone");
+	}, [undo, displayFeedback]);
+
+	const handleRedo = useCallback(() => {
+		redo();
+		displayFeedback("Action redone");
+	}, [redo, displayFeedback]);
+
+	return (
+		<div className={cn("relative", className)}>
+			{/* Creation Controls */}
+			{showControls && (
+				<div className="flex gap-2">
+					<motion.button
+						className={cn(
+							"rounded-lg p-2",
+							"bg-background-transparent-white-hover",
+							"hover:bg-background-transparent-white-secondaryHover",
+							"border border-transparent",
+							"transition-all duration-200",
+							"disabled:cursor-not-allowed disabled:opacity-50"
+						)}
+						disabled={!canUndo}
+						onClick={undo}
+						title="Undo (Ctrl+Z)"
+						whileHover={{ scale: 1.05 }}
+						whileTap={{ scale: 0.95 }}
+					>
+						<Undo2 className="h-4 w-4 text-text-light" />
+					</motion.button>
+
+					<motion.button
+						className={cn(
+							"rounded-lg p-2",
+							"bg-background-transparent-white-hover",
+							"hover:bg-background-transparent-white-secondaryHover",
+							"border border-transparent",
+							"transition-all duration-200",
+							"disabled:cursor-not-allowed disabled:opacity-50"
+						)}
+						disabled={!canRedo}
+						onClick={redo}
+						title="Redo (Ctrl+Shift+Z)"
+						whileHover={{ scale: 1.05 }}
+						whileTap={{ scale: 0.95 }}
+					>
+						<Redo2 className="h-4 w-4 text-text-light" />
+					</motion.button>
+				</div>
+			)}
+
+			{/* Feedback Toast */}
+			<AnimatePresence>
+				{feedback && (
+					<motion.div
+						animate={{ opacity: 1, y: 0 }}
+						className={cn(
+							"absolute top-0 right-0",
+							"rounded-lg px-4 py-2",
+							"backdrop-blur-lg",
+							"border border-transparent",
+							"shadow-lg",
+							"flex items-center gap-2",
+							feedback.type === "success"
+								? "bg-green-500/20 text-green-400"
+								: "bg-red-500/20 text-red-400"
+						)}
+						exit={{ opacity: 0, y: -20 }}
+						initial={{ opacity: 0, y: -20 }}
+					>
+						{feedback.type === "success" ? (
+							<Check className="h-4 w-4" />
+						) : (
+							<X className="h-4 w-4" />
+						)}
+						<span className="font-medium text-sm">{feedback.message}</span>
+					</motion.div>
+				)}
+			</AnimatePresence>
+
+			{/* Creation Indicator */}
+			{isCreating && (
+				<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/20 backdrop-blur-sm">
+					<motion.div
+						animate={{ rotate: 360 }}
+						className="h-8 w-8 rounded-full border-2 border-blue-500 border-t-transparent"
+						transition={{
+							duration: 1,
+							repeat: Number.POSITIVE_INFINITY,
+							ease: "linear",
+						}}
+					/>
+				</div>
+			)}
+		</div>
+	);
+};
+
+export default NodeCreator;

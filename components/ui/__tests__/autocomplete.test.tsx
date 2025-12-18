@@ -510,7 +510,7 @@ describe("AutoComplete", () => {
 			});
 		});
 
-		it("should close dropdown on blur with delay", async () => {
+		it("should close dropdown on blur-sm with delay", async () => {
 			const user = userEvent.setup();
 			render(
 				<AutoComplete

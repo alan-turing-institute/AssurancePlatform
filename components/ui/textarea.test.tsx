@@ -120,7 +120,7 @@ describe("Textarea", () => {
 		expect(textarea).toBeRequired();
 	});
 
-	it("should handle focus and blur events", async () => {
+	it("should handle focus and blur-sm events", async () => {
 		const user = userEvent.setup();
 		const handleFocus = vi.fn();
 		const handleBlur = vi.fn();
@@ -195,7 +195,7 @@ describe("Textarea", () => {
 			"text-sm",
 			"ring-offset-background",
 			"placeholder:text-muted-foreground",
-			"focus-visible:outline-none",
+			"focus-visible:outline-hidden",
 			"focus-visible:ring-2",
 			"focus-visible:ring-ring",
 			"focus-visible:ring-offset-2"

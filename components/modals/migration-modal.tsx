@@ -57,7 +57,7 @@ export const MigrationModal = () => {
 				{/* What's new section */}
 				<div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
 					<div className="flex items-start gap-3">
-						<PartyPopperIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600 dark:text-green-400" />
+						<PartyPopperIcon className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
 						<div>
 							<h4 className="font-medium text-green-800 dark:text-green-200">
 								What's new
@@ -76,7 +76,7 @@ export const MigrationModal = () => {
 				{migrationModal.isMissingEmail && (
 					<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
 						<div className="flex items-start gap-3">
-							<AlertTriangleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+							<AlertTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
 							<div>
 								<h4 className="font-medium text-amber-800 dark:text-amber-200">
 									Action required
@@ -95,7 +95,7 @@ export const MigrationModal = () => {
 				<div className="flex items-center justify-start gap-2 pt-2">
 					{migrationModal.isMissingEmail && (
 						<Button
-							className="focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0"
+							className="focus-visible:outline-hidden focus-visible:ring-0 focus-visible:ring-ring focus-visible:ring-offset-0"
 							onClick={handleGoToSettings}
 						>
 							Take me to settings <MoveRightIcon className="ml-2 h-4 w-4" />

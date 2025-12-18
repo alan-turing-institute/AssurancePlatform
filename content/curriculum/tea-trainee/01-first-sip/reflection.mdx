@@ -1,0 +1,66 @@
+---
+title: "Reflection: Making Sense of What You Saw"
+description: Synthesise your learning and understand the vocabulary
+---
+
+import ConceptCarousel from "@/components/docs/curriculum/concept-carousel";
+import { coreElementsConcepts } from "./concepts";
+import { firstSipReflectionPrompts } from "./reflections";
+import ReflectionPrompts from "@/components/docs/curriculum/reflection-prompts";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { firstSipTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="reflection"
+    >
+      {children}
+      <ModuleProgressTracker showHints={true} currentPage="reflection" />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Reflection: Making Sense of What You Saw
+
+An assurance case works by decomposing a broad claim (like "our AI is fair and non-discriminatory") into specific, manageable claims, and then providing evidence for each one. This structured approach helps build trust by making the reasoning clear and transparent.
+
+In this page you will step back and reflect on the key elements you encountered in the Fair Recruitment AI assurance case. You'll synthesise your learning and familiarise yourself with the vocabulary used to describe assurance cases.
+
+## The Core Elements
+
+The following cards offer a refresher of the core elements you just encountered in the Fair Recruitment AI case. Click through each card to remind yourself of their definitions and see examples from the case.
+
+<div id="core-elements" className="mt-8">
+
+<ConceptCarousel
+  concepts={coreElementsConcepts}
+  mode="guided"
+  taskId="review-core-elements"
+/>
+
+</div>
+
+## Reflection & Synthesis
+
+Now that you've reviewed the core elements, take a few minutes to reflect on what you've learned.
+
+<div id="first-sip-reflection" className="mt-8">
+
+<ReflectionPrompts
+  prompts={firstSipReflectionPrompts}
+  allowSkip={false}
+  autoSave={true}
+  showProgress={true}
+  taskId="complete-reflection"
+/>
+
+</div>
+
+</PageContent>

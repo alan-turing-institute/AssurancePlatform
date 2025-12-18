@@ -193,7 +193,7 @@ function Flow() {
 					{orphanedElements &&
 						orphanedElements.length > 0 &&
 						showOrphanMessage && (
-							<div className="absolute top-16 left-0 w-full bg-slate-200/30 px-8 py-2 text-foreground backdrop-blur-sm dark:bg-violet-500/30">
+							<div className="absolute top-16 left-0 w-full bg-slate-200/30 px-8 py-2 text-foreground backdrop-blur-xs dark:bg-violet-500/30">
 								<div className="flex items-center justify-center">
 									<div className="container mx-auto flex items-center justify-center gap-2">
 										<Unplug className="h-4 w-4" />
