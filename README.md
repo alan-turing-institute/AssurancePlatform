@@ -8,7 +8,7 @@
 
 ## About this Repository 🗂
 
-This repository contains the code and documentation for the Trustworthy and Ethical Assurance (TEA) platform—an application for building trustworthy and ethical assurance cases, developed by researchers at the [Alan Turing Institute](https://www.google.com/url?sa=t&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi-4ZW65bL-AhXJMMAKHfeGCJ8QFnoECBUQAQ&url=https%3A%2F%2Fwww.turing.ac.uk%2F&usg=AOvVaw0uxvZzQpCGw78bVsaCsSOm) and [University of York](https://www.york.ac.uk/assuring-autonomy/).
+This repository contains the code and documentation for the Trustworthy and Ethical Assurance (TEA) platform—an application for building trustworthy and ethical assurance cases, developed by researchers at the [Alan Turing Institute](https://www.turing.ac.uk/) and [University of York](https://www.york.ac.uk/assuring-autonomy/).
 
 ### What is TEA? 🫖
 
@@ -32,7 +32,7 @@ Whether you're new to assurance cases or looking to deepen your expertise, our s
 - **TEA Specialist** — Develop advanced skills in building and reviewing assurance cases
 - **TEA Expert** — Master the art of facilitating assurance processes across organisations
 
-Explore the [TEA Curriculum](https://assuranceplatform.azurewebsites.net/documentation/docs/curriculum) to begin your learning journey.
+Explore the [TEA Curriculum](https://assuranceplatform.azurewebsites.net/docs/curriculum) to begin your learning journey.
 
 ### Developer Information 💻
 
@@ -60,7 +60,7 @@ docker-compose -f docker-compose.development.yml up -d --build
 # Access at http://localhost:3000
 ```
 
-For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/documentation/docs/technical-guide).
+For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/docs/technical-guide.
 
 ### Further Resources 📚
 
