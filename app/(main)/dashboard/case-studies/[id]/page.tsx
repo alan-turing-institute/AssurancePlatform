@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { fetchCaseStudyById } from "@/actions/case-studies";
 import BackButton from "@/components/ui/back-button";
 import PageHeading from "@/components/ui/page-heading";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { formatFullDate, formatShortDate } from "@/lib/date";
 import type { CaseStudy } from "@/types/domain";
 import CaseStudyForm from "../_components/case-study-form";
@@ -13,19 +12,14 @@ async function CaseStudyDetails({
 }: {
 	params: Promise<{ id: string }>;
 }) {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 
 	const { id } = await params;
 
-	const caseStudy = await fetchCaseStudyById(
-		session.key,
-		Number.parseInt(id, 10)
-	);
+	const caseStudy = await fetchCaseStudyById("", Number.parseInt(id, 10));
 
 	return (
 		<>

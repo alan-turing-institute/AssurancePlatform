@@ -139,14 +139,12 @@ const SignInForm = () => {
 			);
 		}
 
-		// Only redirect if we have a valid session with a key
-		// This prevents redirect loops during the authentication process
-		if (session?.key) {
+		// Only redirect if we have a valid session
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (session?.user?.id) {
 			const redirectTo = searchParams.get("redirect") || "/dashboard";
 			router.push(redirectTo);
 		}
-		// Note: Stale sessions (session without key) are handled by middleware
-		// which clears cookies and redirects to /login
 	}, [session, router, searchParams]);
 
 	return (

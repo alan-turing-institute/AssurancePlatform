@@ -149,7 +149,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			return;
 		}
 
-		if (!session?.key) {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (!session?.user?.id) {
 			setLoading(false);
 			return;
 		}
@@ -162,10 +163,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			assurance_case_id: assuranceCase.id,
 		};
 
+		// Pass empty string - server action uses validateSession() internally
 		const result = await createAssuranceCaseNode(
 			"strategies",
 			newStrategyItem,
-			session.key
+			""
 		);
 
 		if (result.error) {

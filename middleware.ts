@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
+import { isJwtOnlyAuth } from "./lib/auth/feature-flags";
 import { isPublicRoute } from "./lib/routes";
 
 export default withAuth(
@@ -23,8 +24,9 @@ export default withAuth(
 			return errorResponse;
 		}
 
-		// If user has a token but no key (stale session), clear it and redirect to login
-		if (token && !token.key && pathname !== "/login") {
+		// Legacy mode only: check for stale sessions (token exists but no key)
+		// In JWT-only mode, we trust the JWT directly without a refresh token
+		if (!isJwtOnlyAuth() && token && !token.key && pathname !== "/login") {
 			const response = NextResponse.redirect(new URL("/login", req.url));
 			// Clear the session cookies
 			response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
@@ -58,7 +60,12 @@ export default withAuth(
 					return true;
 				}
 
-				// For protected routes (like /dashboard), require a valid session with key
+				// JWT-only mode: trust the JWT directly (just check token.id exists)
+				if (isJwtOnlyAuth()) {
+					return token?.id != null;
+				}
+
+				// Legacy mode: require a valid session with refresh token key
 				return token?.key != null;
 			},
 		},

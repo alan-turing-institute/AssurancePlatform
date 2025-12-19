@@ -1,29 +1,27 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { fetchAssuranceCases } from "@/actions/assurance-cases";
 import { fetchCurrentUser } from "@/actions/users";
 import CaseList from "@/components/cases/case-list";
 import NoCasesFound from "@/components/cases/no-cases-found";
 import CheckMigrationNotice from "@/components/check-migration-notice";
 import CheckUserEmail from "@/components/check-user-email";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 const Dashboard = async () => {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	// Validate session (supports both JWT-only and legacy modes)
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 
 	// Fetch current logged in user
-	const currentUser = await fetchCurrentUser(session.key);
+	const currentUser = await fetchCurrentUser("");
 	if (currentUser == null) {
 		redirect("/login");
 	}
 
 	// Fetch cases for current logged in user
-	const assuranceCases = await fetchAssuranceCases(session.key);
+	const assuranceCases = await fetchAssuranceCases("");
 	if (assuranceCases == null) {
 		redirect("/login");
 	}

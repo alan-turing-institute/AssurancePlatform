@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { validateSession } from "@/lib/auth/validate-session";
 import { authOptions } from "@/lib/auth-options";
 
 type CommentWithElement = {
@@ -31,31 +32,19 @@ type CommentResult =
 	| { success: false; response: NextResponse };
 
 /**
- * Validates session and refresh token for Prisma auth.
+ * Validates session using the unified validateSession wrapper.
  */
 async function validateAuth(): Promise<AuthResult> {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return {
 			success: false,
 			response: NextResponse.json({ error: "Unauthorised" }, { status: 401 }),
 		};
 	}
 
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
-		return {
-			success: false,
-			response: NextResponse.json({ error: "Unauthorised" }, { status: 401 }),
-		};
-	}
-
-	return { success: true, userId: validation.userId };
+	return { success: true, userId: validated.userId };
 }
 
 /**

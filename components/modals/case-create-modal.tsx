@@ -51,7 +51,8 @@ export const CaseCreateModal = () => {
 
 	const CreateCase = useCallback(
 		async (name: string, description: string) => {
-			if (!session?.key) {
+			// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+			if (!session?.user?.id) {
 				setErrors(["You must be logged in to create a case"]);
 				return;
 			}
@@ -59,7 +60,8 @@ export const CaseCreateModal = () => {
 			setLoading(true);
 
 			try {
-				const result = await createAssuranceCase(session.key, {
+				// Pass empty string - server action uses validateSession() internally
+				const result = await createAssuranceCase("", {
 					name,
 					description,
 				});

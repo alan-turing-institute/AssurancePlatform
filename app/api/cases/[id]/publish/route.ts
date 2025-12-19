@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import {
 	getPublishStatus,
 	publishAssuranceCase,
@@ -35,24 +34,15 @@ export async function GET(
 	_request: NextRequest,
 	{ params }: RouteParams
 ): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	const validation = await validateRefreshToken(session.key);
-
-	if (!validation.valid) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { id: caseId } = await params;
 
-	const status = await getPublishStatus(validation.userId, caseId);
+	const status = await getPublishStatus(validated.userId, caseId);
 
 	if (!status) {
 		return NextResponse.json(
@@ -78,18 +68,9 @@ export async function POST(
 	request: NextRequest,
 	{ params }: RouteParams
 ): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	const validation = await validateRefreshToken(session.key);
-
-	if (!validation.valid) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
@@ -105,7 +86,7 @@ export async function POST(
 	}
 
 	const result = await publishAssuranceCase(
-		validation.userId,
+		validated.userId,
 		caseId,
 		description
 	);
@@ -130,25 +111,16 @@ export async function DELETE(
 	request: NextRequest,
 	{ params }: RouteParams
 ): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	const validation = await validateRefreshToken(session.key);
-
-	if (!validation.valid) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { id: caseId } = await params;
 	const force = request.nextUrl.searchParams.get("force") === "true";
 
-	const result = await unpublishAssuranceCase(validation.userId, caseId, force);
+	const result = await unpublishAssuranceCase(validated.userId, caseId, force);
 
 	if (!result.success) {
 		const status = getErrorStatus(result.error);
