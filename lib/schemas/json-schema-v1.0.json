@@ -29,12 +29,7 @@
         },
         "description": {
           "type": "string",
-          "description": "The case description"
-        },
-        "colorProfile": {
-          "type": "string",
-          "default": "default",
-          "description": "Visual colour profile for the case diagram"
+          "description": "A description of the assurance case, such as its purpose and scope."
         }
       }
     },
@@ -48,17 +43,13 @@
       "type": "string",
       "enum": [
         "GOAL",
-        "CONTEXT",
         "STRATEGY",
         "PROPERTY_CLAIM",
         "EVIDENCE",
-        "JUSTIFICATION",
-        "ASSUMPTION",
         "MODULE",
-        "AWAY_GOAL",
         "CONTRACT"
       ],
-      "description": "The type of assurance case element"
+      "description": "The type of assurance case element. Note: Context, Justification, and Assumption are now attributes, not standalone element types."
     },
     "ElementRole": {
       "type": "string",
@@ -69,6 +60,27 @@
       "type": "string",
       "enum": ["COPY", "REFERENCE"],
       "description": "How a MODULE element embeds its referenced case"
+    },
+    "Comment": {
+      "type": "object",
+      "description": "A comment attached to an element",
+      "required": ["author", "content", "createdAt"],
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": "string",
+          "description": "Username or identifier of the comment author"
+        },
+        "content": {
+          "type": "string",
+          "description": "The comment text"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the comment was created"
+        }
+      }
     },
     "TreeNode": {
       "type": "object",
@@ -101,7 +113,14 @@
           "items": {
             "$ref": "#/definitions/TreeNode"
           },
-          "description": "Child elements. Note: CONTEXT, JUSTIFICATION, and ASSUMPTION elements cannot have children."
+          "description": "Child elements"
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Comment"
+          },
+          "description": "Comments attached to this element. Can be added to any element type."
         },
         "fromPattern": {
           "type": "boolean",
@@ -132,9 +151,18 @@
                 "$ref": "#/definitions/ElementRole",
                 "description": "Role of the goal (TOP_LEVEL or SUPPORTING)"
               },
+              "context": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Context statements that define conditions under which the goal is valid"
+              },
+              "justification": {
+                "type": ["string", "null"],
+                "description": "Justification explaining why this goal is appropriate"
+              },
               "assumption": {
                 "type": ["string", "null"],
-                "description": "Assumption text attached to this goal"
+                "description": "Assumption that must hold for this goal to be valid"
               }
             }
           }
@@ -145,13 +173,18 @@
           },
           "then": {
             "properties": {
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption text attached to this strategy"
+              "context": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Context statements that define conditions under which the strategy applies"
               },
               "justification": {
                 "type": ["string", "null"],
-                "description": "Justification text for this strategy"
+                "description": "Justification explaining why this decomposition strategy was chosen"
+              },
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption that must hold for this strategy to be valid"
               }
             }
           }
@@ -162,14 +195,23 @@
           },
           "then": {
             "properties": {
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption text attached to this claim"
-              },
               "level": {
                 "type": ["integer", "null"],
                 "minimum": 1,
                 "description": "Hierarchy level of the property claim (1 = direct child of goal/strategy)"
+              },
+              "context": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Context statements that define conditions under which the claim is valid"
+              },
+              "justification": {
+                "type": ["string", "null"],
+                "description": "Justification explaining why this claim is relevant"
+              },
+              "assumption": {
+                "type": ["string", "null"],
+                "description": "Assumption that must hold for this claim to be valid"
               }
             }
           }
@@ -184,54 +226,8 @@
                 "type": ["string", "null"],
                 "description": "URL linking to the evidence source"
               }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "JUSTIFICATION" } }
-          },
-          "then": {
-            "properties": {
-              "justification": {
-                "type": ["string", "null"],
-                "description": "The justification text content"
-              },
-              "children": {
-                "const": [],
-                "description": "Justification elements cannot have children"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "ASSUMPTION" } }
-          },
-          "then": {
-            "properties": {
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "The assumption text content"
-              },
-              "children": {
-                "const": [],
-                "description": "Assumption elements cannot have children"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "CONTEXT" } }
-          },
-          "then": {
-            "properties": {
-              "children": {
-                "const": [],
-                "description": "Context elements cannot have children"
-              }
-            }
+            },
+            "description": "Evidence elements cannot have context, justification, or assumption attributes"
           }
         },
         {
@@ -253,25 +249,6 @@
               "modulePublicSummary": {
                 "type": ["string", "null"],
                 "description": "Public summary of the module's content"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "AWAY_GOAL" } }
-          },
-          "then": {
-            "required": ["moduleReferenceId"],
-            "properties": {
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption text attached to this away goal"
-              },
-              "moduleReferenceId": {
-                "type": "string",
-                "format": "uuid",
-                "description": "ID of the external goal being referenced"
               }
             }
           }

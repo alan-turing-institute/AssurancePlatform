@@ -1,0 +1,28 @@
+---
+sidebar_position: 4
+title: "React Flow Demo"
+description: "Interactive demo showcasing enhanced React Flow editing features"
+keywords: ["react flow", "editing", "nodes", "interactive", "demo"]
+---
+
+import { CaseViewerWrapper } from "@/components/docs/curriculum";
+
+# React Flow Components Demo
+
+This page demonstrates a new React Flow case viewer/editor, being developed as a curriculum component initially, before updating the main app. The case below represents a realistic AI-assisted medical diagnosis system assurance case, showcasing all element types and attributes.
+
+<CaseViewerWrapper
+  caseFile="design-reference-case.json"
+  editable={true}
+/>
+
+## Development Notes
+
+This page serves as the **design reference** for the Case Viewer redesign (Phase 2b). The assurance case above will be used to:
+
+1. Develop and test the unified `AssuranceNode` component
+2. Validate attribute display (assumption, justification, context)
+3. Test ELK layout engine integration
+4. Iterate on visual design before finalising
+
+See `TASKS/Phase2/2b-prime-CurriculumModules/01-CaseViewer.md` for the full implementation plan.

@@ -197,7 +197,7 @@ export default function TiptapEditor({
 
 			{/* Editor */}
 			<EditorContent
-				className="prose prose-sm sm:prose-base prose-neutral dark:prose-invert min-h-[200px] max-w-none p-4 focus:outline-none"
+				className="prose prose-sm sm:prose-base prose-neutral dark:prose-invert min-h-[200px] max-w-none p-4 focus:outline-hidden"
 				editor={editor}
 			/>
 		</div>

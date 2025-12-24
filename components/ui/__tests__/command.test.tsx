@@ -331,7 +331,7 @@ describe("Command", () => {
 			);
 
 			const command = screen.getByTestId("command-root");
-			expect(command.className).toContain("[&_[cmdk-group-heading]]:px-2");
+			expect(command.className).toContain("**:[[cmdk-group-heading]]:px-2");
 		});
 	});
 
@@ -372,7 +372,7 @@ describe("Command", () => {
 			expect(input.className).toContain("w-full");
 			expect(input.className).toContain("rounded-md");
 			expect(input.className).toContain("bg-transparent");
-			expect(input.className).toContain("outline-none");
+			expect(input.className).toContain("outline-hidden");
 		});
 
 		it("should handle disabled state", () => {
@@ -501,9 +501,9 @@ describe("Command", () => {
 			render(<CommandGroup />);
 
 			const group = screen.getByTestId("command-group");
-			expect(group.className).toContain("[&_[cmdk-group-heading]]:px-2");
-			expect(group.className).toContain("[&_[cmdk-group-heading]]:py-1.5");
-			expect(group.className).toContain("[&_[cmdk-group-heading]]:font-medium");
+			expect(group.className).toContain("**:[[cmdk-group-heading]]:px-2");
+			expect(group.className).toContain("**:[[cmdk-group-heading]]:py-1.5");
+			expect(group.className).toContain("**:[[cmdk-group-heading]]:font-medium");
 		});
 	});
 

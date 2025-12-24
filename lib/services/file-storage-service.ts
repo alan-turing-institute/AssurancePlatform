@@ -131,13 +131,18 @@ export async function saveFile(
 		return { success: true, path: result.url };
 	}
 
-	// Fall back to local storage in development
-	if (process.env.NODE_ENV === "development") {
+	// Fall back to local storage in development or when explicitly enabled for self-hosting
+	if (
+		process.env.NODE_ENV === "development" ||
+		process.env.USE_LOCAL_STORAGE === "true"
+	) {
 		return saveFileLocally(buffer, subDirectory, extension);
 	}
 
-	// Production without Azure configured - error
-	console.error("Azure Blob Storage not configured for production");
+	// Production without Azure configured and local storage not enabled
+	console.error(
+		"Storage not configured. Set USE_LOCAL_STORAGE=true for local filesystem storage, or configure Azure Blob Storage."
+	);
 	return { success: false, error: "Storage not configured" };
 }
 

@@ -1,0 +1,55 @@
+---
+title: "Exploration: Your First TEA Case"
+description: Interact with a Fair Recruitment AI assurance case
+---
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import ProgressiveCaseViewer from "@/components/docs/curriculum/progressive-case-viewer";
+import { fairRecruitmentStages } from "./stages";
+import { firstSipTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="exploration"
+    >
+      {children}
+      <ModuleProgressTracker
+        showHints={true}
+        currentPage="exploration"
+        basePath="/documentation/docs/curriculum/tea-trainee/first-sip"
+      />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Exploration: Your First TEA Case
+
+The best way to learn about assurance cases is to experience one first-hand. Rather than starting with definitions and theory, you'll dive straight into exploring a real example.
+
+Below, you'll progressively explore an assurance case. The case will be revealed stage by stage, helping you understand how structured arguments build trust. Each stage introduces new elements, with guidance to help you discover how assurance cases work.
+
+## Case Study
+
+Imagine you work for TalentFlow, a technology company that has developed an AI-powered recruitment system to help organisations screen job applications for entry-level software engineering roles. The system processes over 10,000 applications monthly and makes recommendations about which candidates should progress to the interview stage.
+
+Recently, concerns have been raised about whether AI recruitment tools can be truly fair. High-profile cases of algorithmic bias in hiring have made the news, and regulators are paying closer attention. TalentFlow's leadership has commissioned an assurance case to demonstrate that their system operates without discrimination based on protected characteristics under the UK Equality Act 2010.
+
+Your task is to review this assurance case and understand how it builds a structured argument for the system's fairness. As you explore each stage, consider whether the claims are convincing and whether the evidence provided adequately supports them.
+
+<div id="progressive-viewer">
+
+<ProgressiveCaseViewer
+  stages={fairRecruitmentStages}
+  enableKeyboard={true}
+/>
+
+</div>
+
+</PageContent>

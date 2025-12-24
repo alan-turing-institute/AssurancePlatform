@@ -62,7 +62,7 @@ export default function CookieConsent({
 	return (
 		<div
 			className={cn(
-				"fixed right-0 bottom-0 left-0 z-[200] w-full duration-700 sm:bottom-4 sm:left-4 sm:max-w-md",
+				"fixed right-0 bottom-0 left-0 z-200 w-full duration-700 sm:bottom-4 sm:left-4 sm:max-w-md",
 				isOpen
 					? "translate-y-0 opacity-100 transition-[opacity,transform]"
 					: "translate-y-8 opacity-0 transition-[opacity,transform]",

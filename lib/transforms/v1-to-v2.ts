@@ -428,7 +428,6 @@ export function transformV1ToV2(v1Case: CaseExportV1): TransformResult {
 		case: {
 			name: v1Case.name,
 			description: v1Case.description ?? "",
-			colorProfile: v1Case.color_profile ?? "default",
 		},
 		elements: ctx.elements,
 		evidenceLinks: ctx.evidenceLinks,

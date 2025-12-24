@@ -92,7 +92,6 @@ export const CaseExportV2Schema = z.object({
 	case: z.object({
 		name: z.string().min(1, "Case name is required"),
 		description: z.string(),
-		colorProfile: z.string().default("default"),
 	}),
 	elements: z.array(ElementV2Schema),
 	evidenceLinks: z.array(EvidenceLinkV2Schema),
@@ -209,7 +208,6 @@ export const CaseExportNestedSchema = z.object({
 	case: z.object({
 		name: z.string().min(1, "Case name is required"),
 		description: z.string(),
-		colorProfile: z.string().default("default"),
 	}),
 	tree: TreeNodeSchema,
 });

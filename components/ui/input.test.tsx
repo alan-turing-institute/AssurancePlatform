@@ -110,7 +110,7 @@ describe("Input", () => {
 		expect(input).toBeRequired();
 	});
 
-	it("should handle focus and blur events", async () => {
+	it("should handle focus and blur-sm events", async () => {
 		const user = userEvent.setup();
 		const handleFocus = vi.fn();
 		const handleBlur = vi.fn();
@@ -165,7 +165,7 @@ describe("Input", () => {
 			"py-2",
 			"text-sm",
 			"placeholder:text-muted-foreground",
-			"focus-visible:outline-none",
+			"focus-visible:outline-hidden",
 			"focus-visible:ring-2"
 		);
 	});

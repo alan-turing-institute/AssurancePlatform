@@ -87,7 +87,7 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 
 			<form className="flex items-start md:col-span-2">
 				<button
-					className="rounded-md bg-red-500 px-3 py-2 font-semibold text-sm text-white shadow-sm hover:bg-red-400"
+					className="rounded-md bg-red-500 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-red-400"
 					onClick={(e) => {
 						e.preventDefault();
 						setDeleteOpen(true);

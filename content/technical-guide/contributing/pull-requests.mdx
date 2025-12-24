@@ -1,0 +1,167 @@
+---
+sidebar_position: 1
+sidebar_label: 'Pull Requests'
+---
+
+import { Callout } from 'nextra/components'
+
+# Contributing Pull Requests
+
+Thank you for your interest in contributing to the TEA Platform! This guide explains what kinds of contributions we welcome and how to submit them.
+
+<Callout type="info">
+**Community Engagement**
+
+For broader community engagement, discussions, and getting help, see our [Community section](/community).
+</Callout>
+
+## What We Welcome
+
+### Bug Fixes
+
+Found a bug? We appreciate bug fix contributions:
+
+- Check [existing issues](https://github.com/alan-turing-institute/AssurancePlatform/issues) to see if it's already reported
+- If not, create a new issue describing the bug
+- Reference the issue number in your PR
+
+### Documentation Improvements
+
+Help us improve the documentation:
+
+- Fix typos, clarify explanations
+- Add missing documentation
+- Improve code examples
+
+### Feature Contributions
+
+New features should align with the platform's goals:
+
+- Discuss the feature in a GitHub issue first
+- Get maintainer feedback before significant work
+- Consider impact on existing users
+
+### Test Coverage
+
+Improving test coverage is always welcome:
+
+- Unit tests for utilities and helpers
+- Integration tests for Server Actions
+- End-to-end tests for critical user flows
+
+## Getting Started
+
+### 1. Find an Issue
+
+Browse issues labelled:
+- `good first issue` - Suitable for newcomers
+- `help wanted` - Maintainers would appreciate help
+- `documentation` - Documentation improvements
+
+### 2. Fork and Clone
+
+```shell
+# Fork the repository on GitHub, then:
+git clone https://github.com/YOUR-USERNAME/AssurancePlatform.git
+cd AssurancePlatform
+```
+
+### 3. Set Up Development Environment
+
+Follow the [Docker Quickstart](/technical-guide/getting-started/docker-quickstart) or [Local Development](/technical-guide/getting-started/local-development) guide.
+
+### 4. Create a Branch
+
+Use descriptive branch names:
+
+```shell
+# For features
+git checkout -b feature/add-export-functionality
+
+# For bug fixes
+git checkout -b fix/login-redirect-issue
+
+# For documentation
+git checkout -b docs/improve-api-reference
+```
+
+### 5. Make Your Changes
+
+- Follow the [Code Style Guide](./code-style)
+- Write tests for new functionality
+- Update documentation if needed
+
+### 6. Run Quality Checks
+
+Before submitting, ensure all checks pass:
+
+```shell
+# Lint and format
+pnpm exec ultracite check
+
+# Type check
+npx tsc --noEmit
+
+# Run tests
+pnpm run test
+```
+
+### 7. Commit Your Changes
+
+Write clear, descriptive commit messages:
+
+```shell
+git add .
+git commit -m "Fix: Resolve login redirect issue on expired sessions"
+```
+
+Commit message guidelines:
+- Start with a type: `Fix:`, `Feature:`, `Docs:`, `Refactor:`, `Test:`
+- Use present tense ("Add feature" not "Added feature")
+- Keep the first line under 72 characters
+- Reference issues: `Fixes #123`
+
+### 8. Push and Create PR
+
+```shell
+git push origin your-branch-name
+```
+
+Then create a Pull Request on GitHub with:
+- Clear title describing the change
+- Description of what and why
+- Link to related issue(s)
+- Screenshots for UI changes
+
+## PR Review Process
+
+1. **Automated Checks** - CI runs linting, type checking, and tests
+2. **Maintainer Review** - A maintainer will review your code
+3. **Feedback** - Address any requested changes
+4. **Approval** - Once approved, a maintainer will merge
+
+<Callout>
+**Response Time**
+
+We aim to respond to PRs within a week. For urgent fixes, mention this in the PR description.
+</Callout>
+
+## What Makes a Good PR
+
+- **Focused** - One feature or fix per PR
+- **Tested** - Includes tests for changes
+- **Documented** - Updates docs if needed
+- **Clean** - Passes all quality checks
+- **Explained** - Clear description of changes
+
+## Code of Conduct
+
+All contributors must follow our community guidelines:
+- Be respectful and inclusive
+- Focus on constructive feedback
+- Help others learn and grow
+
+## Questions?
+
+- Open a [GitHub Discussion](https://github.com/alan-turing-institute/AssurancePlatform/discussions)
+- Check the [Community section](/community) for support options

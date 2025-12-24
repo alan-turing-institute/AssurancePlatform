@@ -1,0 +1,55 @@
+---
+title: "Module Summary"
+description: Reflect on your learning and prepare for what's next
+---
+
+import { ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { firstSipTasks } from "./tasks";
+import LearningObjectives from "@/components/docs/curriculum/learning-objectives";
+import { firstSipObjectives } from "./objectives";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="first-sip"
+      tasks={firstSipTasks}
+      currentPage="summary"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+# Module Summary
+
+Congratulations! You've finished the first module in your TEA journey. Let's review the learning objectives for this module.
+
+<LearningObjectives
+  title="Module Learning Objectives"
+  variant="card"
+  objectives={firstSipObjectives}
+/>
+
+You can now:
+
+- **Review your progress** using the tracker in the bottom-right
+- **Continue to Module 2** *(coming soon)* to start building your own cases
+- **Explore more examples** in the Hands-On Resources section
+- **Rate your confidence** in understanding these concepts below.
+
+## How Confident Do You Feel?
+
+Before moving on, take a moment to assess your confidence in understanding these concepts:
+
+<ConfidenceRating
+  topic="Understanding how assurance cases structure arguments about AI trustworthiness"
+  showFeedback={true}
+/>
+
+</PageContent>

@@ -40,7 +40,7 @@ describe("Card", () => {
 				"border",
 				"bg-card",
 				"text-card-foreground",
-				"shadow-sm"
+				"shadow-xs"
 			);
 		});
 

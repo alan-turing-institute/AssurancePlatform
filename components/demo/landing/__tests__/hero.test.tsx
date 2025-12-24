@@ -210,7 +210,7 @@ describe("Hero", () => {
 			});
 			expect(learnMoreLink).toHaveAttribute(
 				"href",
-				"https://alan-turing-institute.github.io/AssurancePlatform/introductory-resources/"
+				"/docs/curriculum"
 			);
 		});
 
@@ -404,7 +404,7 @@ describe("Hero", () => {
 
 			const { container } = render(<Hero />);
 
-			const gradientDiv = container.querySelector(".bg-gradient-to-tr");
+			const gradientDiv = container.querySelector(".bg-linear-to-tr");
 			expect(gradientDiv).toBeInTheDocument();
 		});
 
@@ -421,7 +421,7 @@ describe("Hero", () => {
 			expect(negativeZIndex.length).toBeGreaterThan(0);
 		});
 
-		it("should have blur effect on gradient", () => {
+		it("should have blur-sm effect on gradient", () => {
 			mockUseSession.mockReturnValue({
 				data: null,
 				status: "unauthenticated",

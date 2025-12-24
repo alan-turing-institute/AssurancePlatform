@@ -93,7 +93,7 @@ describe("DesktopNav", () => {
 			const logo = screen.getByAltText("Turing Ethical Assurance Logo");
 			expect(logo).toBeInTheDocument();
 			expect(logo).toHaveClass("w-16");
-			expect(logo).toHaveAttribute("src", "/images/tea-logo2.png");
+			expect(logo).toHaveAttribute("src", "/images/logos/tea-logo-icon-dark.png");
 
 			expect(
 				screen.getByText("Trustworthy and Ethical Assurance Platform")

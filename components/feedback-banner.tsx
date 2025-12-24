@@ -15,7 +15,7 @@ export default function FeedbackBanner() {
 			<div className="w-full text-sm text-white leading-6">
 				<Link
 					className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0"
-					href="https://alan-turing-institute.github.io/AssurancePlatform/community/community-support/"
+					href="/docs/community/community-support"
 				>
 					<div className="flex items-center justify-start gap-2">
 						<MessageSquareMore className="h-4 w-4" />
@@ -36,7 +36,7 @@ export default function FeedbackBanner() {
 			</div>
 			<div className="flex flex-1 justify-end">
 				<button
-					className="-m-3 p-3 focus-visible:outline-offset-[-4px]"
+					className="-m-3 focus-visible:-outline-offset-4 p-3"
 					type="button"
 				>
 					<span className="sr-only">Dismiss</span>

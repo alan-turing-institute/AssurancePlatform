@@ -1,0 +1,158 @@
+---
+sidebar_position: 2
+sidebar_label: 'Docker Production'
+draft: true
+---
+
+import { Callout } from 'nextra/components'
+
+# Docker Production Deployment
+
+<Callout type="warning">
+**Coming Soon**
+
+Detailed production deployment documentation is in development. This page provides preliminary guidance.
+</Callout>
+
+## Overview
+
+For production deployments, we recommend using Docker Compose with production-optimised settings. This differs from the development configuration in several ways:
+
+- Production-ready image builds
+- Proper secret management
+- Database persistence and backups
+- Reverse proxy configuration
+- Health checks and monitoring
+
+## Quick Start
+
+### 1. Clone the Repository
+
+```shell
+git clone https://github.com/alan-turing-institute/AssurancePlatform.git
+cd AssurancePlatform
+```
+
+### 2. Create Production Environment File
+
+```shell
+cp .env.example .env.production
+```
+
+Edit `.env.production` with production values:
+
+```bash
+# Application
+NODE_ENV=production
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=<generate-with-openssl-rand-base64-32>
+
+# Database
+DATABASE_URL=postgresql://tea:secure-password@db:5432/tea
+POSTGRES_USER=tea
+POSTGRES_PASSWORD=secure-password
+POSTGRES_DB=tea
+
+# GitHub OAuth (optional)
+GITHUB_APP_CLIENT_ID=your-client-id
+GITHUB_APP_CLIENT_SECRET=your-client-secret
+```
+
+### 3. Deploy
+
+```shell
+docker-compose -f docker-compose.production.yml up -d
+```
+
+## Production Configuration
+
+### Reverse Proxy
+
+For production, place the application behind a reverse proxy:
+
+**Using Traefik:**
+```yaml
+# Add to docker-compose.production.yml
+services:
+  traefik:
+    image: traefik:v2.10
+    ports:
+      - "80:80"
+      - "443:443"
+    # ... configuration
+```
+
+**Using nginx:**
+```nginx
+server {
+    listen 443 ssl;
+    server_name tea.example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Database Persistence
+
+Ensure database data is persisted on a reliable volume:
+
+```yaml
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/postgres
+```
+
+### Health Checks
+
+The application includes health check endpoints:
+
+- `/api/health` - Application health
+- Database connection is verified on startup
+
+## Updating
+
+To update to a new version:
+
+```shell
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart
+docker-compose -f docker-compose.production.yml up -d --build
+```
+
+## Troubleshooting
+
+### View Logs
+
+```shell
+docker-compose -f docker-compose.production.yml logs -f
+```
+
+### Database Connection Issues
+
+1. Verify `DATABASE_URL` is correct
+2. Check database container is running
+3. Ensure network connectivity between containers
+
+### Application Not Starting
+
+1. Check logs for error messages
+2. Verify all required environment variables are set
+3. Ensure database migrations have run
+
+## Further Reading
+
+- [Deployment Overview](./index) - General deployment guidance
+- [Database Management](./database-management) - Backup and restore procedures

@@ -6,7 +6,7 @@ const navigation = {
 	main: [
 		{ name: "Platform", href: "/dashboard" },
 		{ name: "Discover", href: "/discover" },
-		{ name: "Documentation", href: "/documentation" },
+		{ name: "Documentation", href: "/docs" },
 		{ name: "Cookie Policy", href: "/cookie-policy" },
 	],
 	social: [

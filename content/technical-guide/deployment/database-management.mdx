@@ -1,0 +1,275 @@
+---
+sidebar_position: 3
+sidebar_label: 'Database Management'
+---
+
+import { Callout } from 'nextra/components'
+
+# Database Management
+
+This guide covers database administration tasks for the TEA Platform, including backups, restores, migrations, and resets.
+
+<Callout type="warning">
+**Caution**
+
+Database operations can result in data loss. Always backup before making changes, and test procedures in a non-production environment first.
+</Callout>
+
+## Backups
+
+### Creating a Backup
+
+#### Docker Environment
+
+```shell
+# Create a backup
+docker exec tea_db_prod pg_dump -U tea tea > backup-$(date +%Y%m%d-%H%M%S).sql
+
+# Compressed backup
+docker exec tea_db_prod pg_dump -U tea tea | gzip > backup-$(date +%Y%m%d-%H%M%S).sql.gz
+```
+
+#### Local PostgreSQL
+
+```shell
+pg_dump -U postgres tea > backup.sql
+```
+
+### Automated Backups
+
+For production, set up automated daily backups:
+
+```shell
+# Example cron job (add to crontab)
+0 2 * * * docker exec tea_db_prod pg_dump -U tea tea | gzip > /backups/tea-$(date +\%Y\%m\%d).sql.gz
+```
+
+### Backup Retention
+
+Implement a retention policy to manage backup storage:
+
+```shell
+# Keep last 7 daily backups
+find /backups -name "tea-*.sql.gz" -mtime +7 -delete
+```
+
+## Restoring from Backup
+
+### Docker Environment
+
+```shell
+# Stop the application
+docker-compose -f docker-compose.production.yml stop tea_app
+
+# Restore from backup
+cat backup.sql | docker exec -i tea_db_prod psql -U tea tea
+
+# Or from compressed backup
+gunzip -c backup.sql.gz | docker exec -i tea_db_prod psql -U tea tea
+
+# Start the application
+docker-compose -f docker-compose.production.yml start tea_app
+```
+
+### Local PostgreSQL
+
+```shell
+# Drop and recreate database
+dropdb tea
+createdb tea
+
+# Restore
+psql -U postgres tea < backup.sql
+```
+
+## Database Migrations
+
+### Running Migrations
+
+Migrations update the database schema to match the Prisma schema:
+
+```shell
+# Development - creates migration and applies it
+npx prisma migrate dev
+
+# Production - applies pending migrations
+npx prisma migrate deploy
+```
+
+#### Docker Environment
+
+```shell
+# Run migrations in container
+docker exec tea_app_prod npx prisma migrate deploy
+```
+
+### Migration Workflow
+
+1. **Make schema changes** in `prisma/schema.prisma`
+2. **Create migration** with `npx prisma migrate dev --name descriptive-name`
+3. **Review** the generated migration SQL
+4. **Commit** the migration files
+5. **Deploy** with `npx prisma migrate deploy` in production
+
+### Handling Migration Issues
+
+If a migration fails:
+
+```shell
+# Check migration status
+npx prisma migrate status
+
+# Mark a migration as applied (use carefully)
+npx prisma migrate resolve --applied "migration_name"
+
+# Mark a migration as rolled back
+npx prisma migrate resolve --rolled-back "migration_name"
+```
+
+## Resetting the Database
+
+<Callout type="warning">
+**Data Loss Warning**
+
+Resetting the database removes all data. Only do this in development or when intentionally clearing production data.
+</Callout>
+
+### Development Reset
+
+```shell
+# Reset database (drops all data, re-runs migrations)
+npx prisma migrate reset
+```
+
+#### Docker Development
+
+```shell
+# Stop containers
+docker-compose -f docker-compose.development.yml down
+
+# Remove database volume
+docker volume rm assuranceplatform_postgres_data
+
+# Restart
+docker-compose -f docker-compose.development.yml up -d --build
+```
+
+### Production Reset
+
+For production, a more careful approach is needed:
+
+```shell
+# 1. Backup first!
+docker exec tea_db_prod pg_dump -U tea tea > pre-reset-backup.sql
+
+# 2. Stop application
+docker-compose -f docker-compose.production.yml stop tea_app
+
+# 3. Connect to database
+docker exec -it tea_db_prod psql -U tea tea
+
+# 4. Drop all tables (in psql)
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO tea;
+\q
+
+# 5. Run migrations
+docker exec tea_app_prod npx prisma migrate deploy
+
+# 6. Start application
+docker-compose -f docker-compose.production.yml start tea_app
+```
+
+## Database Connection
+
+### Connection String Format
+
+```
+postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+```
+
+Example:
+```
+postgresql://tea:secret@localhost:5432/tea
+```
+
+### Connection from Application
+
+The application connects using the `DATABASE_URL` environment variable. The Prisma client is configured in `lib/db.ts`.
+
+### Direct Database Access
+
+#### Prisma Studio (GUI)
+
+```shell
+npx prisma studio
+```
+
+Opens a web interface at `http://localhost:5555` for browsing and editing data.
+
+#### psql (Command Line)
+
+```shell
+# Local
+psql -U postgres -d tea
+
+# Docker
+docker exec -it tea_db_dev psql -U tea tea
+```
+
+### Useful psql Commands
+
+```sql
+-- List tables
+\dt
+
+-- Describe table
+\d assurance_cases
+
+-- Show table contents
+SELECT * FROM assurance_cases LIMIT 10;
+
+-- Count records
+SELECT COUNT(*) FROM assurance_elements;
+
+-- Exit
+\q
+```
+
+## Performance
+
+### Checking Database Size
+
+```sql
+SELECT pg_size_pretty(pg_database_size('tea'));
+```
+
+### Table Sizes
+
+```sql
+SELECT
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename))
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname || '.' || tablename) DESC;
+```
+
+### Index Usage
+
+```sql
+SELECT
+  indexrelname,
+  idx_scan,
+  idx_tup_read
+FROM pg_stat_user_indexes
+ORDER BY idx_scan DESC;
+```
+
+## Further Reading
+
+- [Prisma Migrate Documentation](https://www.prisma.io/docs/concepts/components/prisma-migrate)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Deployment Overview](./index) - General deployment guidance

@@ -145,7 +145,7 @@ describe("Features", () => {
 			expect(image).toHaveAttribute("height", "1442");
 		});
 
-		it("should style image with shadow and ring", () => {
+		it("should style image with shadow-sm and ring-3", () => {
 			render(<Features />);
 
 			const image = screen.getByTestId("features-image");
