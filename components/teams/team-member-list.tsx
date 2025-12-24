@@ -50,7 +50,8 @@ export function TeamMemberList({
 	const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "OWNER";
 
 	const handleRemoveMember = async () => {
-		if (!(memberToRemove && session?.key)) {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (!(memberToRemove && session?.user?.id)) {
 			return;
 		}
 

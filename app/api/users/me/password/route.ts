@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { changePassword } from "@/lib/services/user-management-service";
 
 type PasswordChangeRequest = {
@@ -15,16 +13,10 @@ type PasswordChangeRequest = {
  */
 export async function PUT(request: Request) {
 	try {
-		const session = await getServerSession(authOptions);
+		const validated = await validateSession();
 
-		if (!session?.key) {
+		if (!validated) {
 			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
-
-		const validation = await validateRefreshToken(session.key);
-
-		if (!validation.valid) {
-			return NextResponse.json({ error: "Session expired" }, { status: 401 });
 		}
 
 		// Parse request body
@@ -37,7 +29,7 @@ export async function PUT(request: Request) {
 			);
 		}
 
-		const result = await changePassword(validation.userId, {
+		const result = await changePassword(validated.userId, {
 			currentPassword: body.currentPassword,
 			newPassword: body.newPassword,
 		});

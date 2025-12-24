@@ -7,7 +7,7 @@ import { useState } from "react";
 import { deleteCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/lib/toast";
 
 type DeleteCaseButtonProps = {
 	caseStudyId: number;

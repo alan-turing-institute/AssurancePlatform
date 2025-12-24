@@ -26,12 +26,12 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import useStore from "@/data/store";
 import { useShareModal } from "@/hooks/use-share-modal";
+import { useToast } from "@/lib/toast";
 // import { unauthorized, useLoginToken } from ".*/use-auth";
 import type { User } from "@/types";
 import { Button } from "../ui/button";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
-import { useToast } from "../ui/use-toast";
 
 type ShareItem = {
 	email: string;

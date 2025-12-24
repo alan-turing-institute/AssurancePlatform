@@ -1,5 +1,7 @@
 "use server";
 
+import { validateSession } from "@/lib/auth/validate-session";
+
 type AssuranceCase = {
 	id: number | string;
 	name: string;
@@ -10,15 +12,12 @@ type AssuranceCase = {
 };
 
 export const fetchAssuranceCases = async (
-	token: string
+	_token: string
 ): Promise<AssuranceCase[] | null> => {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 
-	const validation = await validateRefreshToken(token);
-	if (!validation.valid) {
+	const validated = await validateSession();
+	if (!validated) {
 		return null;
 	}
 
@@ -26,11 +25,11 @@ export const fetchAssuranceCases = async (
 	const cases = await prismaNew.assuranceCase.findMany({
 		where: {
 			OR: [
-				{ createdById: validation.userId },
+				{ createdById: validated.userId },
 				{
 					userPermissions: {
 						some: {
-							userId: validation.userId,
+							userId: validated.userId,
 						},
 					},
 				},
@@ -60,15 +59,12 @@ export const fetchAssuranceCases = async (
 };
 
 export const fetchSharedAssuranceCases = async (
-	token: string
+	_token: string
 ): Promise<AssuranceCase[] | null> => {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 
-	const validation = await validateRefreshToken(token);
-	if (!validation.valid) {
+	const validated = await validateSession();
+	if (!validated) {
 		return null;
 	}
 
@@ -83,7 +79,7 @@ export const fetchSharedAssuranceCases = async (
 						{
 							userPermissions: {
 								some: {
-									userId: validation.userId,
+									userId: validated.userId,
 								},
 							},
 						},
@@ -94,7 +90,7 @@ export const fetchSharedAssuranceCases = async (
 									team: {
 										members: {
 											some: {
-												userId: validation.userId,
+												userId: validated.userId,
 											},
 										},
 									},
@@ -106,7 +102,7 @@ export const fetchSharedAssuranceCases = async (
 				// User is NOT the creator
 				{
 					NOT: {
-						createdById: validation.userId,
+						createdById: validated.userId,
 					},
 				},
 			],
@@ -147,16 +143,13 @@ type CreateCaseResult = {
 };
 
 export const createAssuranceCase = async (
-	token: string,
+	_token: string,
 	input: CreateCaseInput
 ): Promise<CreateCaseResult> => {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 
-	const validation = await validateRefreshToken(token);
-	if (!validation.valid) {
+	const validated = await validateSession();
+	if (!validated) {
 		return { success: false, error: "Invalid session" };
 	}
 
@@ -166,7 +159,7 @@ export const createAssuranceCase = async (
 				name: input.name,
 				description: input.description,
 				colorProfile: input.colorProfile ?? "default",
-				createdById: validation.userId,
+				createdById: validated.userId,
 			},
 		});
 

@@ -1,8 +1,8 @@
 import { MailIcon, MoveLeftIcon, Users2Icon } from "lucide-react";
-import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
+import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import { normalizeImageUrl } from "@/lib/utils";
 import CaseStudyCases from "../../_components/case-study-cases";
@@ -37,8 +37,7 @@ const DiscoverCaseStudyPage = async ({
 								{caseStudy.sector}
 							</span>
 							<p className="text-muted-foreground text-sm">
-								Published On{" "}
-								{moment(caseStudy.publishedDate).format("DD/MM/YYYY")}
+								Published On {formatShortDate(caseStudy.publishedDate)}
 							</p>
 						</div>
 					</div>

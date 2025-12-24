@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import useStore from "@/data/store";
+import { useToast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-import { useToast } from "../ui/use-toast";
 
 const formSchema = z.object({
 	name: z

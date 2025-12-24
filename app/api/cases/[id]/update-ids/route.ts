@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
 import { prismaNew } from "@/lib/prisma";
 
@@ -247,19 +245,14 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	try {
-		const validation = await validateRefreshToken(session.key);
-		if (!(validation.valid && validation.userId)) {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
-
-		const result = await resetIdentifiersWithPrisma(caseId, validation.userId);
+		const result = await resetIdentifiersWithPrisma(caseId, validated.userId);
 
 		if (!result.success) {
 			return NextResponse.json(

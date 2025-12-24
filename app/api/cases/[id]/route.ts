@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 // Type definitions for Prisma elements
 type PrismaElement = {
@@ -56,22 +55,14 @@ function mapPermissionToFrontend(
 
 async function fetchCaseFromPrisma(
 	caseId: string,
-	refreshToken: string
+	userId: string
 ): Promise<CaseResult> {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
-	const validation = await validateRefreshToken(refreshToken);
-	if (!validation.valid) {
-		return { error: "Unauthorised", status: 401 };
-	}
-
 	// Check if user has access to this case (handles owner, direct, and team permissions)
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId,
 		caseId,
 	});
 
@@ -288,15 +279,15 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { id } = await params;
 
-	const result: CaseResult = await fetchCaseFromPrisma(id, session.key);
+	const result: CaseResult = await fetchCaseFromPrisma(id, validated.userId);
 
 	if (result.error) {
 		return NextResponse.json(
@@ -335,25 +326,17 @@ function buildCaseUpdateData(
  */
 async function updateCaseWithPrisma(
 	id: string,
-	sessionKey: string,
+	userId: string,
 	body: Record<string, unknown>
 ): Promise<NextResponse> {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);
 
-	const validation = await validateRefreshToken(sessionKey);
-	if (!(validation.valid && validation.userId)) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	// Check permission
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId,
 		caseId: id,
 	});
 	const hasEditAccess =
@@ -389,9 +372,9 @@ export async function PUT(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
@@ -399,7 +382,7 @@ export async function PUT(
 
 	try {
 		const body = await request.json();
-		return await updateCaseWithPrisma(id, session.key, body);
+		return await updateCaseWithPrisma(id, validated.userId, body);
 	} catch (error) {
 		console.error("Error updating case:", error);
 		return NextResponse.json(
@@ -417,28 +400,20 @@ export async function DELETE(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { id } = await params;
 
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
-	const validation = await validateRefreshToken(session.key);
-	if (!(validation.valid && validation.userId)) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	// Check permission - only ADMIN can delete
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId: validated.userId,
 		caseId: id,
 	});
 	if (!permissionResult.hasAccess || permissionResult.permission !== "ADMIN") {

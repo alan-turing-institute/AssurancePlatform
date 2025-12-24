@@ -20,9 +20,9 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import useStore from "@/data/store";
+import { useToast } from "@/lib/toast";
 import type { Comment as CaseComment } from "@/types";
 import { Textarea } from "../ui/textarea";
-import { useToast } from "../ui/use-toast";
 
 type CommentsEditFormProps = {
 	node: {

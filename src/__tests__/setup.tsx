@@ -258,11 +258,9 @@ vi.mock("reactflow", () => {
 });
 
 // Mock toast hook
-vi.mock("@/components/ui/use-toast", () => ({
+vi.mock("@/lib/toast", () => ({
 	useToast: () => ({
-		toasts: [],
 		toast: vi.fn(),
-		dismiss: vi.fn(),
 	}),
 	toast: vi.fn(),
 }));

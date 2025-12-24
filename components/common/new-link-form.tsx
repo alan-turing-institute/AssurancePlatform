@@ -26,6 +26,7 @@ import {
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case";
+import { useToast } from "@/lib/toast";
 import type {
 	AssuranceCase,
 	Evidence,
@@ -35,7 +36,6 @@ import type {
 } from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-import { useToast } from "../ui/use-toast";
 
 const formSchema = z.object({
 	description: z.string().min(2, {
@@ -149,7 +149,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			return;
 		}
 
-		if (!session?.key) {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (!session?.user?.id) {
 			setLoading(false);
 			return;
 		}
@@ -162,10 +163,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			assurance_case_id: assuranceCase.id,
 		};
 
+		// Pass empty string - server action uses validateSession() internally
 		const result = await createAssuranceCaseNode(
 			"strategies",
 			newStrategyItem,
-			session.key
+			""
 		);
 
 		if (result.error) {

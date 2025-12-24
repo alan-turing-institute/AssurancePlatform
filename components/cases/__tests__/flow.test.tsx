@@ -159,11 +159,9 @@ vi.mock("@/lib/layout-helper", () => ({
 
 // Mock toast
 const mockToast = vi.fn();
-vi.mock("../ui/use-toast", () => ({
+vi.mock("@/lib/toast", () => ({
 	useToast: () => ({
 		toast: mockToast,
-		toasts: [],
-		dismiss: vi.fn(),
 	}),
 }));
 

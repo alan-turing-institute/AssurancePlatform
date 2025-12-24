@@ -74,12 +74,12 @@ export default function Hero() {
 										<Link
 											className="rounded-md bg-indigo-600 px-3.5 py-2.5 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
 											href={
-												session?.key
+												session?.user?.id
 													? "/dashboard"
 													: "/login?redirect=/dashboard"
 											}
 										>
-											{session?.key ? "Go to Dashboard" : "Get started"}
+											{session?.user?.id ? "Go to Dashboard" : "Get started"}
 										</Link>
 										<a
 											className="font-semibold text-gray-900 text-sm leading-6"

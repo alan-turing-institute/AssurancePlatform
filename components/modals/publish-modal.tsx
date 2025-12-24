@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import useStore from "@/data/store";
 import { usePublishModal } from "@/hooks/use-publish-modal";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "@/lib/toast";
 
 /**
  * Shows a toast notification based on the unpublish result.

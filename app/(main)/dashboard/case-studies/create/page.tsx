@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import BackButton from "@/components/ui/back-button";
 import PageHeading from "@/components/ui/page-heading";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import CaseStudyForm from "../_components/case-study-form";
 
 async function NewCaseStudy() {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 

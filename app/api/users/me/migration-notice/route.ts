@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 /**
  * POST /api/users/me/migration-notice
@@ -9,26 +8,17 @@ import { authOptions } from "@/lib/auth-options";
  */
 export async function POST() {
 	try {
-		const session = await getServerSession(authOptions);
+		const validated = await validateSession();
 
-		if (!session?.key) {
+		if (!validated) {
 			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 		}
 
-		const { validateRefreshToken } = await import(
-			"@/lib/auth/refresh-token-service"
-		);
 		const { prismaNew } = await import("@/lib/prisma");
-
-		const validation = await validateRefreshToken(session.key);
-
-		if (!validation.valid) {
-			return NextResponse.json({ error: "Session expired" }, { status: 401 });
-		}
 
 		// Fetch user to check if they have a valid email
 		const user = await prismaNew.user.findUnique({
-			where: { id: validation.userId },
+			where: { id: validated.userId },
 			select: { email: true },
 		});
 
@@ -48,7 +38,7 @@ export async function POST() {
 
 		// Update user to mark migration notice as seen
 		await prismaNew.user.update({
-			where: { id: validation.userId },
+			where: { id: validated.userId },
 			data: { hasSeenMigrationNotice: true },
 		});
 

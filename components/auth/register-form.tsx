@@ -166,11 +166,11 @@ const RegisterForm = () => {
 	}
 
 	useEffect(() => {
-		const token = session?.key;
-		if (token) {
+		// Redirect to dashboard if already logged in (check user.id for JWT-only mode compatibility)
+		if (session?.user?.id) {
 			router.push("/dashboard");
 		}
-	}, [session?.key, router]);
+	}, [session?.user?.id, router]);
 
 	return (
 		<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">

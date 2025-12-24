@@ -1,19 +1,16 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { fetchSharedAssuranceCases } from "@/actions/assurance-cases";
 import CaseList from "@/components/cases/case-list";
 import NoCasesFound from "@/components/cases/no-cases-found";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 const SharedWithMePage = async () => {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 
-	const sharedAssuranceCases = await fetchSharedAssuranceCases(session.key);
+	const sharedAssuranceCases = await fetchSharedAssuranceCases("");
 
 	// Handle null or empty array
 	const cases = sharedAssuranceCases ?? [];
