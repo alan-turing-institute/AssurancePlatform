@@ -40,9 +40,9 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
 import { sectors } from "@/config/index";
 import { useImportModal } from "@/hooks/use-import-modal";
+import { useToast } from "@/lib/toast";
 import type { CaseStudyFormProps } from "@/types/domain";
 import DeleteCaseButton from "./delete-button";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";

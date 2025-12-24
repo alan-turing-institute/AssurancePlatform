@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/lib/toast";
 
 type UnpublishCaseButtonProps = {
 	caseStudyId: number;

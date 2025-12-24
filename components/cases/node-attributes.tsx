@@ -84,7 +84,8 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 	};
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		if (!(assuranceCase && session?.key && node.type)) {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (!(assuranceCase && session?.user?.id && node.type)) {
 			return;
 		}
 
@@ -95,10 +96,11 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 			context: values.context || [],
 		};
 
+		// Pass empty string - server action uses validateSession() internally
 		const updated = await updateAssuranceCaseNode(
 			node.type,
 			node.data.id,
-			session.key,
+			"",
 			updateItem
 		);
 

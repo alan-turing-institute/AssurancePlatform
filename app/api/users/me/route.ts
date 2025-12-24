@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { prismaNew } from "@/lib/prisma";
 
 type UserResponse = {
@@ -78,19 +76,13 @@ type DeleteAccountRequest = {
  */
 export async function GET() {
 	try {
-		const session = await getServerSession(authOptions);
+		const validated = await validateSession();
 
-		if (!session?.key) {
+		if (!validated) {
 			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 		}
 
-		const validation = await validateRefreshToken(session.key);
-
-		if (!validation.valid) {
-			return NextResponse.json({ error: "Session expired" }, { status: 401 });
-		}
-
-		const user = await getUserFromPrisma(validation.userId);
+		const user = await getUserFromPrisma(validated.userId);
 
 		if (!user) {
 			return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -112,16 +104,10 @@ export async function GET() {
  */
 export async function PATCH(request: Request) {
 	try {
-		const session = await getServerSession(authOptions);
+		const validated = await validateSession();
 
-		if (!session?.key) {
+		if (!validated) {
 			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
-
-		const validation = await validateRefreshToken(session.key);
-
-		if (!validation.valid) {
-			return NextResponse.json({ error: "Session expired" }, { status: 401 });
 		}
 
 		// Parse request body
@@ -132,7 +118,7 @@ export async function PATCH(request: Request) {
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await updateUserProfile(validation.userId, {
+		const result = await updateUserProfile(validated.userId, {
 			username: body.username,
 			firstName: body.firstName,
 			lastName: body.lastName,
@@ -147,7 +133,7 @@ export async function PATCH(request: Request) {
 		}
 
 		// Fetch updated user to return
-		const updatedUser = await getUserFromPrisma(validation.userId);
+		const updatedUser = await getUserFromPrisma(validated.userId);
 		return NextResponse.json(updatedUser);
 	} catch (error) {
 		console.error("Error updating user profile:", error);
@@ -164,16 +150,10 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
 	try {
-		const session = await getServerSession(authOptions);
+		const validated = await validateSession();
 
-		if (!session?.key) {
+		if (!validated) {
 			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
-
-		const validation = await validateRefreshToken(session.key);
-
-		if (!validation.valid) {
-			return NextResponse.json({ error: "Session expired" }, { status: 401 });
 		}
 
 		// Parse request body (password for confirmation)
@@ -190,7 +170,7 @@ export async function DELETE(request: Request) {
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await deleteAccount(validation.userId, password);
+		const result = await deleteAccount(validated.userId, password);
 
 		if (!result.success) {
 			return NextResponse.json(

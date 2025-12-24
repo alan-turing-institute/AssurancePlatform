@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { exportCase } from "@/lib/services/case-export-service";
 
 /**
@@ -17,9 +15,9 @@ import { exportCase } from "@/lib/services/case-export-service";
  * Returns JSON with Content-Disposition header for download.
  */
 export async function GET(request: Request) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
@@ -34,12 +32,7 @@ export async function GET(request: Request) {
 		return NextResponse.json({ error: "Case ID is required" }, { status: 400 });
 	}
 
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const result = await exportCase(validation.userId, caseId, {
+	const result = await exportCase(validated.userId, caseId, {
 		includeComments,
 	});
 

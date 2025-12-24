@@ -20,9 +20,9 @@ type Member = {
 	permissionId?: string;
 };
 
+import { useToast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { useToast } from "../ui/use-toast";
 
 export const PermissionsModal = () => {
 	const {

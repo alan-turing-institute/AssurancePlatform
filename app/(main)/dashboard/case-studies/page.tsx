@@ -1,25 +1,22 @@
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
-import moment from "moment";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { fetchCaseStudies } from "@/actions/case-studies";
 import PageHeading from "@/components/ui/page-heading";
 import { Separator } from "@/components/ui/separator";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
+import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { CaseStudy } from "@/types/domain";
 import TableActions from "./_components/table-actions";
 
 async function CaseStudiesPage() {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 
-	const caseStudies = await fetchCaseStudies(session.key);
+	const caseStudies = await fetchCaseStudies("");
 
 	return (
 		<div className="min-h-screen space-y-4 p-8">
@@ -102,7 +99,7 @@ async function CaseStudiesPage() {
 											</dd>
 											<dt className="sr-only sm:hidden">Published</dt>
 											<dd className="mt-1 truncate text-gray-500 sm:hidden">
-												{moment(caseStudy.publishedDate).format("DD/MM/YYYY")}
+												{formatShortDate(caseStudy.publishedDate)}
 											</dd>
 										</dl>
 									</td>
@@ -120,7 +117,7 @@ async function CaseStudiesPage() {
                     </span>
                   </td> */}
 									<td className="px-3 py-4 text-foreground/80 text-sm">
-										{moment(caseStudy.createdOn).format("DD/MM/YYYY")}
+										{formatShortDate(caseStudy.createdOn)}
 									</td>
 									<td className="px-3 py-4 text-foreground/80 text-sm">
 										{caseStudy.published && (

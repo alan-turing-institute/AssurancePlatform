@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { validateRefreshToken } from "@/lib/auth/refresh-token-service";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { importCase } from "@/lib/services/case-import-service";
 
 /**
@@ -14,14 +12,9 @@ import { importCase } from "@/lib/services/case-import-service";
  * Returns: { id, name, elementCount, evidenceLinkCount, warnings } or validation errors
  */
 export async function POST(request: Request) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
@@ -35,7 +28,7 @@ export async function POST(request: Request) {
 		);
 	}
 
-	const result = await importCase(validation.userId, jsonData);
+	const result = await importCase(validated.userId, jsonData);
 
 	if (!result.success) {
 		return NextResponse.json(
@@ -64,20 +57,15 @@ export async function POST(request: Request) {
  * Useful for preview/confirmation UI.
  */
 export async function PUT(request: Request) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { validateImportData } = await import(
 		"@/lib/services/case-import-service"
 	);
-
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
 
 	let jsonData: unknown;
 	try {

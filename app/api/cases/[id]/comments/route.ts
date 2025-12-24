@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 type CommentResponse = {
 	id: string;
@@ -89,21 +88,13 @@ function buildCommentTree(comments: PrismaComment[]): CommentResponse[] {
  */
 async function fetchPrismaComments(
 	caseId: string,
-	sessionKey: string
+	userId: string
 ): Promise<NextResponse> {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
-	const validation = await validateRefreshToken(sessionKey);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId,
 		caseId,
 	});
 
@@ -131,15 +122,15 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	const { id: caseId } = await params;
 
-	return fetchPrismaComments(caseId, session.key);
+	return fetchPrismaComments(caseId, validated.userId);
 }
 
 /**
@@ -149,23 +140,15 @@ async function createPrismaComment(
 	caseId: string,
 	content: string,
 	parentId: string | null,
-	sessionKey: string
+	userId: string
 ): Promise<NextResponse> {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);
 
-	const validation = await validateRefreshToken(sessionKey);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId,
 		caseId,
 	});
 
@@ -181,7 +164,7 @@ async function createPrismaComment(
 	const comment = await prismaNew.comment.create({
 		data: {
 			caseId,
-			authorId: validation.userId,
+			authorId: userId,
 			content: content.trim(),
 			parentCommentId: parentId,
 		},
@@ -209,12 +192,7 @@ async function createPrismaComment(
 	const { emitSSEEvent } = await import(
 		"@/lib/services/sse-connection-manager"
 	);
-	emitSSEEvent(
-		"comment:created",
-		caseId,
-		{ comment: response },
-		validation.userId
-	);
+	emitSSEEvent("comment:created", caseId, { comment: response }, userId);
 
 	return NextResponse.json(response, { status: 201 });
 }
@@ -227,9 +205,9 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
@@ -246,7 +224,12 @@ export async function POST(
 			);
 		}
 
-		return createPrismaComment(caseId, content, parentId ?? null, session.key);
+		return createPrismaComment(
+			caseId,
+			content,
+			parentId ?? null,
+			validated.userId
+		);
 	} catch (error) {
 		console.error("Error creating comment:", error);
 		return NextResponse.json(

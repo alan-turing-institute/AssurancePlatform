@@ -15,14 +15,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
 import useStore from "@/data/store";
-import { AlertModal } from "../modals/alert-modal";
-import ActionTooltip from "../ui/action-tooltip";
-import CaseNotes from "./case-notes";
-import "react-toastify/dist/ReactToastify.css";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { usePermissionsModal } from "@/hooks/use-permissions-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { useShareModal } from "@/hooks/use-share-modal";
+import { AlertModal } from "../modals/alert-modal";
+import ActionTooltip from "../ui/action-tooltip";
+import CaseNotes from "./case-notes";
 
 type ActionButtonProps = {
 	showCreateGoal: boolean;

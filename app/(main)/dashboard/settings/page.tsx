@@ -1,20 +1,17 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { fetchCurrentUser } from "@/actions/users";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import { DeleteForm } from "./_components/delete-form";
 import { PasswordForm } from "./_components/password-form";
 import { PersonalInfoForm } from "./_components/personal-info-form";
 
 const SettingsPage = async () => {
-	const session = await getServerSession(authOptions);
-
-	// Redirect user to login if no `key`
-	if (!session?.key) {
+	const session = await validateSession();
+	if (!session) {
 		redirect("/login");
 	}
 
-	const currentUser = await fetchCurrentUser(session.key);
+	const currentUser = await fetchCurrentUser("");
 
 	return (
 		<main>

@@ -144,18 +144,6 @@ export async function canAccessCase(
 	return hasPermissionLevel(result.permission, requiredPermission);
 }
 
-/**
- * Validates the current session and returns user ID if valid.
- */
-export async function validateSession(
-	sessionKey: string
-): Promise<{ valid: true; userId: string } | { valid: false; reason: string }> {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	return validateRefreshToken(sessionKey);
-}
-
 // ============================================
 // TEAM PERMISSION HELPERS
 // ============================================

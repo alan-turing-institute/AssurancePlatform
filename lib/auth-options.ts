@@ -16,16 +16,14 @@ async function authenticateWithPrisma(
 	id: string;
 	name: string;
 	email: string;
-	key: string;
+	key?: string;
 } | null> {
 	// Dynamic imports to avoid loading Prisma when not using this auth method
 	const { prismaNew } = await import("@/lib/prisma");
 	const { verifyPassword, hashPassword } = await import(
 		"@/lib/auth/password-service"
 	);
-	const { createRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
+	const { isJwtOnlyAuth } = await import("@/lib/auth/feature-flags");
 	type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
 
 	const user = await prismaNew.user.findFirst({
@@ -67,14 +65,26 @@ async function authenticateWithPrisma(
 		});
 	}
 
-	// Create a refresh token for the session
+	// In JWT-only mode, skip refresh token creation
+	if (isJwtOnlyAuth()) {
+		return {
+			id: user.id,
+			name: user.username,
+			email: user.email,
+		};
+	}
+
+	// Legacy mode: create a refresh token for the session
+	const { createRefreshToken } = await import(
+		"@/lib/auth/refresh-token-service"
+	);
 	const { token } = await createRefreshToken(user.id);
 
 	return {
 		id: user.id,
 		name: user.username,
 		email: user.email,
-		key: token, // Use refresh token as the session key
+		key: token,
 	};
 }
 
@@ -86,11 +96,9 @@ async function authenticateGitHubWithPrisma(profile: {
 	id?: string | number;
 	login?: string;
 	email?: string | null;
-}): Promise<{ id: string; key: string } | null> {
+}): Promise<{ id: string; key?: string } | null> {
 	const { prismaNew } = await import("@/lib/prisma");
-	const { createRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
+	const { isJwtOnlyAuth } = await import("@/lib/auth/feature-flags");
 
 	const githubId = String(profile?.id ?? "");
 	const githubUsername = profile?.login ?? "";
@@ -132,6 +140,15 @@ async function authenticateGitHubWithPrisma(profile: {
 		userId = newUser.id;
 	}
 
+	// In JWT-only mode, skip refresh token creation
+	if (isJwtOnlyAuth()) {
+		return { id: userId };
+	}
+
+	// Legacy mode: create a refresh token for the session
+	const { createRefreshToken } = await import(
+		"@/lib/auth/refresh-token-service"
+	);
 	const { token } = await createRefreshToken(userId);
 	return { id: userId, key: token };
 }

@@ -11,9 +11,9 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import useStore from "@/data/store";
+import { useToast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-import { useToast } from "../ui/use-toast";
 
 const formSchema = z.object({
 	note: z.string().min(2, {

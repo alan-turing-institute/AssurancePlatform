@@ -26,10 +26,11 @@ function Header() {
 	const { data: session } = useSession();
 
 	useEffect(() => {
-		if (session?.key) {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (session?.user?.id) {
 			setLoggedIn(true);
 		}
-	}, [session?.key]);
+	}, [session?.user?.id]);
 
 	return (
 		<header className="">

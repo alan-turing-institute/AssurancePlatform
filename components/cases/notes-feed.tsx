@@ -1,13 +1,13 @@
 "use client";
 
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
-import moment from "moment";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useStore from "@/data/store";
+import { formatShortDate } from "@/lib/date";
+import { useToast } from "@/lib/toast";
 import type { Comment, User } from "@/types";
 import { Button } from "../ui/button";
-import { useToast } from "../ui/use-toast";
 import NotesEditForm from "./notes-edit-form";
 
 export default function NotesFeed() {
@@ -152,8 +152,7 @@ export default function NotesFeed() {
 											</p>
 										</div>
 										<p className="mt-0.5 text-foreground/70 text-sm">
-											Created On:{" "}
-											{moment(new Date(note.created_at)).format("DD/MM/YYYY")}
+											Created On: {formatShortDate(new Date(note.created_at))}
 										</p>
 									</div>
 									<div className="mt-2 text-foreground text-sm">

@@ -1,5 +1,7 @@
 "use server";
 
+import { validateSession } from "@/lib/auth/validate-session";
+
 type CurrentUser = {
 	id: number | string;
 	username: string;
@@ -12,20 +14,17 @@ type CurrentUser = {
 };
 
 export const fetchCurrentUser = async (
-	token: string
+	_token: string
 ): Promise<CurrentUser | null | undefined> => {
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 
-	const validation = await validateRefreshToken(token);
-	if (!validation.valid) {
+	const validated = await validateSession();
+	if (!validated) {
 		return null;
 	}
 
 	const user = await prismaNew.user.findUnique({
-		where: { id: validation.userId },
+		where: { id: validated.userId },
 		select: {
 			id: true,
 			username: true,

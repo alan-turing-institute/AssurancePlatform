@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 
 // Throttle duration in milliseconds (30 minutes)
 const SCREENSHOT_THROTTLE_MS = 30 * 60 * 1000;
@@ -14,26 +13,18 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	// Check user has permission to view the case
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId: validated.userId,
 		caseId,
 	});
 	if (!permissionResult.hasAccess) {
@@ -65,29 +56,21 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	const validated = await validateSession();
 
-	if (!session?.key) {
+	if (!validated) {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
-	const { validateRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 	const { uploadToBlob, generateScreenshotBlobPath } = await import(
 		"@/lib/services/blob-storage-service"
 	);
 
-	const validation = await validateRefreshToken(session.key);
-	if (!validation.valid) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	// Check user has edit permission
 	const permissionResult = await getCasePermission({
-		userId: validation.userId,
+		userId: validated.userId,
 		caseId,
 	});
 	if (
@@ -154,12 +137,12 @@ export async function POST(
 			caseId,
 			imageUrl: uploadResult.url,
 			uploadedAt: now,
-			uploadedById: validation.userId,
+			uploadedById: validated.userId,
 		},
 		update: {
 			imageUrl: uploadResult.url,
 			uploadedAt: now,
-			uploadedById: validation.userId,
+			uploadedById: validated.userId,
 		},
 	});
 

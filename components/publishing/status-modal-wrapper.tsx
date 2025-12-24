@@ -4,7 +4,7 @@ import { useState } from "react";
 import useStore from "@/data/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "@/lib/toast";
 import { StatusModal } from "./status-modal";
 
 /**
