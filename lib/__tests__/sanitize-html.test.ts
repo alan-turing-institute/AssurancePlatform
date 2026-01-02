@@ -9,9 +9,10 @@ describe("sanitize-html", () => {
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
-		it("should remove only first empty paragraph break", () => {
+		it("should remove empty paragraph breaks in output", () => {
 			const input = "<p><br></p><p><br></p><p>Content</p><p><br></p>";
-			const expected = "<p><br></p><p>Content</p><p><br></p>";
+			// sanitize-html uses XHTML-style self-closing tags
+			const expected = "<p><br /></p><p>Content</p><p><br /></p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
@@ -31,7 +32,8 @@ describe("sanitize-html", () => {
 
 		it("should handle strings with only empty paragraph breaks", () => {
 			const input = "<p><br></p><p><br></p>";
-			const expected = "<p><br></p>"; // Only removes first occurrence
+			// sanitize-html uses XHTML-style self-closing tags
+			const expected = "<p><br /></p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
@@ -42,13 +44,15 @@ describe("sanitize-html", () => {
 
 		it("should handle br tags with attributes", () => {
 			const input = '<p><br class="clear"></p><p>Content</p>';
-			const expected = '<p><br class="clear"></p><p>Content</p>';
+			// sanitize-html uses XHTML-style self-closing tags
+			const expected = '<p><br class="clear" /></p><p>Content</p>';
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
 		it("should only remove exact match pattern", () => {
 			const input = "<p><br>Text</p><p>Content</p>";
-			const expected = "<p><br>Text</p><p>Content</p>";
+			// sanitize-html uses XHTML-style self-closing tags
+			const expected = "<p><br />Text</p><p>Content</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
@@ -70,12 +74,15 @@ describe("sanitize-html", () => {
 
 		it("should preserve paragraph breaks with content", () => {
 			const input = "<p><br>Some text after br</p>";
-			expect(sanitizeDescription(input)).toBe(input);
+			// sanitize-html uses XHTML-style self-closing tags
+			const expected = "<p><br />Some text after br</p>";
+			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
 		it("should handle HTML entities", () => {
 			const input = "<p>&nbsp;</p><p><br></p><p>Content &amp; more</p>";
-			const expected = "<p>&nbsp;</p><p>Content &amp; more</p>";
+			// sanitize-html decodes &nbsp; to a non-breaking space (U+00A0) and uses XHTML-style br tags
+			const expected = "<p>\u00A0</p><p>Content &amp; more</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
@@ -119,8 +126,8 @@ describe("sanitize-html", () => {
 
 		it("should handle input with many replacements", () => {
 			const input = `${new Array(100).fill("<p><br></p>").join("")}<p>Final</p>`;
-			// Only removes the first occurrence
-			const expected = `${new Array(99).fill("<p><br></p>").join("")}<p>Final</p>`;
+			// sanitize-html uses XHTML-style self-closing tags, only removes first <p><br /></p>
+			const expected = `${new Array(99).fill("<p><br /></p>").join("")}<p>Final</p>`;
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 

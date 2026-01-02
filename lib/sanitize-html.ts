@@ -1,14 +1,16 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * Safely sanitizes HTML content by removing dangerous elements and attributes.
- * Uses DOMPurify to strip XSS vectors (script tags, event handlers, etc.)
- * while preserving safe HTML formatting.
+ * Strips XSS vectors (script tags, event handlers, etc.) while preserving
+ * safe HTML formatting.
+ *
+ * Uses sanitize-html which works natively in Node.js without requiring jsdom.
  */
 export function sanitizeDescription(html: string): string {
 	// Sanitize HTML to remove XSS vectors
-	const sanitized = DOMPurify.sanitize(html, {
-		ALLOWED_TAGS: [
+	const sanitized = sanitizeHtml(html, {
+		allowedTags: [
 			"p",
 			"br",
 			"strong",
@@ -31,16 +33,24 @@ export function sanitizeDescription(html: string): string {
 			"div",
 			"span",
 		],
-		ALLOWED_ATTR: ["href", "target", "rel", "class"],
+		allowedAttributes: {
+			a: ["href", "target", "rel"],
+			"*": ["class"],
+		},
+		// Ensure javascript: URLs are stripped
+		allowedSchemes: ["http", "https", "mailto"],
 	});
 
 	// Remove empty paragraph breaks that are commonly inserted by WYSIWYG editors
-	return sanitized.replace("<p><br></p>", "").trim();
+	return sanitized
+		.replace("<p><br></p>", "")
+		.replace("<p><br /></p>", "")
+		.trim();
 }
 
 /**
- * Extracts plain text from HTML content for safe display
- * This removes all HTML tags and returns only the text content
+ * Extracts plain text from HTML content for safe display.
+ * This removes all HTML tags and returns only the text content.
  */
 export function extractTextFromHtml(html: string): string {
 	// Create a temporary DOM element to safely extract text
