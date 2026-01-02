@@ -42,6 +42,8 @@
       "!TASKS",
       "!.claude",
       "!**/.claude",
+      "!.beads",
+      "!**/.beads",
       "!tea-docs",
       "!*.openapi.json",
       "!public/openapi.json"
