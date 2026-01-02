@@ -31,7 +31,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
 
 	try {
 		const start = Date.now();
-		await prisma.$queryRaw`SELECT 1`;
+		await prisma.user.count({ take: 1 });
 		dbLatency = Date.now() - start;
 
 		// Mark as degraded if latency exceeds 1 second
