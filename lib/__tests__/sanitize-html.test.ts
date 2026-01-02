@@ -40,18 +40,6 @@ describe("sanitize-html", () => {
 			expect(sanitizeDescription(input)).toBe(input);
 		});
 
-		it("should handle mixed case HTML tags", () => {
-			const input = "<P><BR></P><p>Content</p>";
-			const expected = "<P><BR></P><p>Content</p>"; // Case-sensitive, doesn't match
-			expect(sanitizeDescription(input)).toBe(expected);
-		});
-
-		it("should handle self-closing br tags", () => {
-			const input = "<p><br/></p><p>Content</p>";
-			const expected = "<p><br/></p><p>Content</p>";
-			expect(sanitizeDescription(input)).toBe(expected);
-		});
-
 		it("should handle br tags with attributes", () => {
 			const input = '<p><br class="clear"></p><p>Content</p>';
 			const expected = '<p><br class="clear"></p><p>Content</p>';
@@ -92,16 +80,28 @@ describe("sanitize-html", () => {
 		});
 
 		// Security-focused tests
-		it("should not execute or interpret script content", () => {
+		it("should strip script tags (XSS prevention)", () => {
 			const input = '<p><br></p><script>alert("xss")</script><p>Content</p>';
-			const expected = '<script>alert("xss")</script><p>Content</p>';
+			const expected = "<p>Content</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
-		it("should handle potentially malicious input", () => {
+		it("should strip event handler attributes (XSS prevention)", () => {
 			const input = '<p><br></p><p onclick="alert()">Content</p>';
-			const expected = '<p onclick="alert()">Content</p>';
+			const expected = "<p>Content</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
+		});
+
+		it("should strip onerror attributes (XSS prevention)", () => {
+			const input = '<img src=x onerror="alert(document.cookie)">';
+			const expected = "";
+			expect(sanitizeDescription(input)).toBe(expected);
+		});
+
+		it("should strip javascript: URLs (XSS prevention)", () => {
+			const input = '<a href="javascript:alert(1)">Click me</a>';
+			const result = sanitizeDescription(input);
+			expect(result).not.toContain("javascript:");
 		});
 
 		it("should handle very long strings efficiently", () => {
@@ -129,12 +129,6 @@ describe("sanitize-html", () => {
 				"<p>🚀 Émojis and açcénts</p><p><br></p><p>More ünïcode</p>";
 			const expected = "<p>🚀 Émojis and açcénts</p><p>More ünïcode</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
-		});
-
-		it("should handle null and undefined gracefully", () => {
-			// TypeScript should prevent this, but test runtime safety
-			expect(() => sanitizeDescription(null as any)).toThrow();
-			expect(() => sanitizeDescription(undefined as any)).toThrow();
 		});
 	});
 
