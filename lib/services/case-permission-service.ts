@@ -84,6 +84,27 @@ export type CaseLockResponse = {
 	};
 };
 
+export type SecurityContext = {
+	ipAddress: string | null;
+	userAgent: string | null;
+};
+
+export type AcceptInviteResult =
+	| { success: true; case_id: string }
+	| { success: false; error: string };
+
+type InviteTransactionError =
+	| { error: "invalid_token" }
+	| { error: "expired"; inviteId: string }
+	| { error: "already_used"; inviteId: string }
+	| { error: "email_mismatch"; inviteId: string; inviteEmail: string };
+
+type InviteTransactionSuccess = { success: true; caseId: string };
+
+type InviteTransactionResult =
+	| InviteTransactionError
+	| InviteTransactionSuccess;
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -123,6 +144,28 @@ async function validateCaseView(
  */
 function generateInviteToken(): string {
 	return randomBytes(32).toString("hex");
+}
+
+/**
+ * Logs a security event for invite acceptance audit purposes.
+ */
+async function logInviteSecurityEvent(params: {
+	eventType: string;
+	userId: string | null;
+	ipAddress: string | null;
+	userAgent: string | null;
+	metadata?: Record<string, unknown>;
+}): Promise<void> {
+	await prismaNew.securityAuditLog.create({
+		data: {
+			userId: params.userId,
+			eventType: params.eventType,
+			ipAddress: params.ipAddress,
+			userAgent: params.userAgent,
+			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
+			metadata: (params.metadata ?? null) as any,
+		},
+	});
 }
 
 /**
@@ -675,72 +718,150 @@ export async function revokeTeamPermission(
  */
 export async function acceptInvite(
 	userId: string,
-	inviteToken: string
-): Promise<{ success?: boolean; case_id?: string; error?: string }> {
+	inviteToken: string,
+	securityContext: SecurityContext = { ipAddress: null, userAgent: null }
+): Promise<AcceptInviteResult> {
+	const { ipAddress, userAgent } = securityContext;
+
 	try {
-		// Find invite
-		const invite = await prismaNew.caseInvite.findUnique({
-			where: { inviteToken },
-		});
-
-		if (!invite) {
-			return { error: "Invalid invite" };
-		}
-
-		// Check if expired
-		if (invite.inviteExpiresAt < new Date()) {
-			return { error: "Invite has expired" };
-		}
-
-		// Check if already accepted
-		if (invite.acceptedAt) {
-			return { error: "Invite has already been used" };
-		}
-
-		// Get user email to verify match
-		const _user = await prismaNew.user.findUnique({
+		// Validate user exists first (explicit null check)
+		const user = await prismaNew.user.findUnique({
 			where: { id: userId },
 			select: { email: true },
 		});
 
-		// Optionally verify email matches (strict mode)
-		// For now, allow any logged-in user to accept
-		// if (user?.email.toLowerCase() !== invite.email.toLowerCase()) {
-		//   return { error: "Invite was sent to a different email address" };
-		// }
-
-		// Check if user already has permission
-		const existingPermission = await prismaNew.casePermission.findUnique({
-			where: {
-				caseId_userId: { caseId: invite.caseId, userId },
-			},
-		});
-
-		if (!existingPermission) {
-			// Grant permission
-			await prismaNew.casePermission.create({
-				data: {
-					caseId: invite.caseId,
-					userId,
-					permission: invite.permission,
-					grantedById: invite.invitedById,
-				},
+		if (user === null) {
+			await logInviteSecurityEvent({
+				eventType: "invite_acceptance_user_not_found",
+				userId,
+				ipAddress,
+				userAgent,
+				metadata: { inviteToken: `${inviteToken.substring(0, 8)}...` },
 			});
+			return { success: false, error: "User not found" };
 		}
 
-		// Mark invite as accepted
-		await prismaNew.caseInvite.update({
-			where: { inviteToken },
-			data: {
-				acceptedAt: new Date(),
-				acceptedById: userId,
+		// Atomic transaction for invite acceptance (prevents race conditions)
+		const result: InviteTransactionResult = await prismaNew.$transaction(
+			async (tx) => {
+				// Find invite with implicit row lock
+				const invite = await tx.caseInvite.findUnique({
+					where: { inviteToken },
+				});
+
+				if (!invite) {
+					return { error: "invalid_token" as const };
+				}
+
+				if (invite.inviteExpiresAt < new Date()) {
+					return { error: "expired" as const, inviteId: invite.id };
+				}
+
+				// Double-check not already accepted (race condition guard)
+				if (invite.acceptedAt !== null) {
+					return { error: "already_used" as const, inviteId: invite.id };
+				}
+
+				// Email verification
+				if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+					return {
+						error: "email_mismatch" as const,
+						inviteId: invite.id,
+						inviteEmail: invite.email,
+					};
+				}
+
+				// Check existing permission
+				const existingPermission = await tx.casePermission.findUnique({
+					where: {
+						caseId_userId: { caseId: invite.caseId, userId },
+					},
+				});
+
+				// Grant permission if not exists
+				if (!existingPermission) {
+					await tx.casePermission.create({
+						data: {
+							caseId: invite.caseId,
+							userId,
+							permission: invite.permission,
+							grantedById: invite.invitedById,
+						},
+					});
+				}
+
+				// Mark invite as accepted (atomic with permission grant)
+				await tx.caseInvite.update({
+					where: { inviteToken },
+					data: {
+						acceptedAt: new Date(),
+						acceptedById: userId,
+					},
+				});
+
+				return { success: true as const, caseId: invite.caseId };
+			}
+		);
+
+		// Handle transaction results and log appropriately
+		if (!("success" in result)) {
+			const errorKey = result.error;
+
+			const errorMap = {
+				invalid_token: "Invalid invite",
+				expired: "Invite has expired",
+				already_used: "Invite has already been used",
+				email_mismatch: "Invite was sent to a different email address",
+			} as const;
+
+			const eventTypeMap = {
+				invalid_token: "invite_acceptance_invalid_token",
+				expired: "invite_acceptance_expired",
+				already_used: "invite_acceptance_already_used",
+				email_mismatch: "invite_acceptance_email_mismatch",
+			} as const;
+
+			await logInviteSecurityEvent({
+				eventType: eventTypeMap[errorKey],
+				userId,
+				ipAddress,
+				userAgent,
+				metadata: {
+					inviteToken: `${inviteToken.substring(0, 8)}...`,
+					...("inviteId" in result && { inviteId: result.inviteId }),
+					...("inviteEmail" in result && { inviteEmail: result.inviteEmail }),
+					userEmail: user.email,
+				},
+			});
+
+			return { success: false, error: errorMap[errorKey] };
+		}
+
+		// Log successful acceptance
+		await logInviteSecurityEvent({
+			eventType: "invite_acceptance_completed",
+			userId,
+			ipAddress,
+			userAgent,
+			metadata: { caseId: result.caseId },
+		});
+
+		return { success: true, case_id: result.caseId };
+	} catch (error) {
+		console.error("Failed to accept invite:", error);
+
+		await logInviteSecurityEvent({
+			eventType: "invite_acceptance_failed",
+			userId,
+			ipAddress,
+			userAgent,
+			metadata: {
+				error: error instanceof Error ? error.message : "Unknown error",
+				inviteToken: `${inviteToken.substring(0, 8)}...`,
 			},
 		});
 
-		return { success: true, case_id: invite.caseId };
-	} catch (error) {
-		console.error("Failed to accept invite:", error);
-		return { error: "Failed to accept invite" };
+		return { success: false, error: "Failed to accept invite" };
 	}
 }
 
