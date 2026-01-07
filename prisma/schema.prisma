@@ -136,6 +136,21 @@ model SecurityAuditLog {
   @@map("security_audit_logs")
 }
 
+model RateLimitAttempt {
+  id             String   @id @default(uuid())
+  endpoint       String   // e.g., "register", "invite_accept"
+  identifier     String   // IP address, email, or user ID
+  identifierType String   @map("identifier_type") // "ip", "email", "user_id"
+  attemptedAt    DateTime @default(now()) @map("attempted_at")
+  blocked        Boolean  @default(false) // Was this attempt rate-limited?
+  metadata       Json?    // Optional additional context
+
+  @@index([endpoint, identifier, attemptedAt])
+  @@index([endpoint, identifierType, attemptedAt])
+  @@index([attemptedAt]) // For cleanup queries
+  @@map("rate_limit_attempts")
+}
+
 // ============================================
 // TEAMS
 // ============================================
