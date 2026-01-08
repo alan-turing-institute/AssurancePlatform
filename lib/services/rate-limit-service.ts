@@ -1,5 +1,3 @@
-"use server";
-
 import { prismaNew } from "@/lib/prisma";
 
 // ============================================
