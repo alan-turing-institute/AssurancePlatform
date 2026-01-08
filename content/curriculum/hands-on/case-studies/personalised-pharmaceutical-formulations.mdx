@@ -22,9 +22,9 @@ tags:
 
 ## Overview
 
-PharmaGenix Ltd has developed an AI-powered system to generate personalised drug formulations based on individual patient characteristics. The system analyses genetic markers, metabolic profiles, and clinical history to recommend optimal drug dosages, delivery mechanisms, and formulation adjustments for patients with chronic conditions including diabetes, hypertension, and cardiovascular disease.
+Formulus BioSciences Ltd has developed an AI-powered system to generate personalised drug formulations based on individual patient characteristics. The system analyses genetic markers, metabolic profiles, and clinical history to recommend optimal drug dosages, delivery mechanisms, and formulation adjustments for patients with chronic conditions including diabetes, hypertension, and cardiovascular disease.
 
-Following an internal audit, PharmaGenix discovered that the training dataset—compiled from historical clinical trials and electronic health records—contains significant demographic imbalances. Certain populations (older adults, ethnic minorities, and women) are substantially underrepresented, raising concerns that the system may produce less accurate or potentially harmful recommendations for these groups.
+Following an internal audit, Formulus BioSciences discovered that the training dataset, which was compiled from historical clinical trials and electronic health records (EHRs), contains significant demographic imbalances. Certain populations (e.g. older adults, ethnic minorities, and women) are substantially underrepresented, raising concerns that the system may produce less accurate or potentially harmful recommendations for these groups.
 
 The company has commissioned an assurance case to demonstrate that the system provides equitable recommendations across all patient demographics, despite the limitations of its training data.
 
@@ -45,12 +45,12 @@ The Personalised Pharmaceutical Formulation System (PPFS) supports clinical deci
 When a clinician requests a personalised formulation recommendation:
 
 1. **Patient Data Collection**: The system ingests patient data including genetic test results, current medications, clinical history, age, weight, and relevant biomarkers
-2. **Pharmacogenomic Analysis**: A machine learning model predicts how the patient will metabolise the drug based on genetic variants affecting drug-processing enzymes (e.g., CYP450 family)
+2. **Pharmacogenomic Analysis**: A machine learning model predicts how the patient will metabolise the drug based on genetic variants affecting drug-processing enzymes
 3. **Risk Stratification**: The system assesses the patient's risk profile for adverse drug reactions based on their complete clinical picture
 4. **Dosage Optimisation**: A regression model recommends an optimal starting dose and titration schedule personalised to the patient
 5. **Formulation Selection**: The system suggests the most appropriate drug formulation considering the patient's age, swallowing ability, and adherence patterns
 6. **Confidence Assessment**: Cases with high uncertainty or underrepresented patient profiles are flagged for specialist pharmacist review
-
+AssurancePlatform-op3
 ### Key Technical Details
 
 | Aspect | Details |
@@ -59,7 +59,7 @@ When a clinician requests a personalised formulation recommendation:
 | **Training Data** | 2.3 million patient records from UK clinical trials and NHS electronic health records (2010-2023); pharmacogenomic data from 180,000 patients |
 | **Input Features** | 47 features including genetic variants, age, sex, ethnicity, BMI, renal function, hepatic function, concurrent medications, and disease severity scores |
 | **Output** | Recommended dose (mg), formulation type, titration schedule, confidence score (0-100%), risk flags, and similar patient cohort reference |
-| **Performance** | Mean Absolute Error: 8.2% for dosage prediction; Adverse event prediction AUC: 0.89 (validated on held-out UK dataset) |
+| **Performance** | Mean Absolute Error: 11% for dosage prediction; Adverse event prediction AUC: 0.84 (validated on held-out UK dataset) |
 | **Explainability Methods** | [SHAP values](https://alan-turing-institute.github.io/tea-techniques/techniques/shapley-additive-explanations/) for feature importance; counterfactual explanations showing how recommendations would change with different patient characteristics |
 | **Validation** | Prospective clinical validation in 3 NHS trusts; quarterly performance monitoring stratified by demographics |
 
@@ -68,9 +68,9 @@ When a clinician requests a personalised formulation recommendation:
 - **Coverage**: 15 NHS trusts across England, integrated with hospital pharmacy systems
 - **Volume**: ~50,000 formulation recommendations annually
 - **Patient Population**: Adults with chronic conditions requiring long-term medication management
-- **Therapeutic Areas**: Currently deployed for diabetes (metformin, insulin), hypertension (ACE inhibitors, ARBs), and anticoagulation (warfarin, DOACs)
+- **Therapeutic Areas**: Currently deployed for diabetes (metformin, insulin), hypertension (ACE inhibitors, ARBs), anticoagulation (warfarin, DOACs), and antiplatelet therapy (clopidogrel)
 - **Human Oversight**: All recommendations reviewed by clinical pharmacists before implementation
-- **Operational Since**: March 2024
+- **Operational Since**: March 2022
 
 ## Stakeholders
 
@@ -94,7 +94,7 @@ The system operates within several regulatory frameworks:
 - **UK GDPR**: Special category health data processing; automated decision-making provisions under Article 22
 - **Equality Act 2010**: Prohibition of discrimination in healthcare provision; relevant where AI recommendations vary by protected characteristics
 - **NICE Evidence Standards Framework for Digital Health Technologies**: Requirements for demonstrating effectiveness across relevant population subgroups
-- **NHS England AI and Digital Regulations Service (AIDRS)**: Guidance on safe deployment of AI in NHS settings
+- **NHS AI Lab (NHS Transformation Directorate)**: Guidance on safe deployment of AI in NHS settings
 
 ## Fairness Considerations
 
@@ -184,7 +184,7 @@ The following techniques from the [TEA Techniques library](https://alan-turing-i
 
 - [Demographic Parity Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/demographic-parity-assessment/) - Evaluate whether dosing recommendations and predicted outcomes are consistent across demographic groups
 - [Counterfactual Fairness Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/counterfactual-fairness-assessment/) - Test whether recommendations would differ if a patient's demographic characteristics were changed while clinical factors remained constant
-- [Calibration Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/calibration-assessment/) - Verify that confidence scores accurately reflect prediction reliability across all demographic subgroups
+- [Empirical Calibration](https://alan-turing-institute.github.io/tea-techniques/techniques/empirical-calibration/) - Verify that confidence scores accurately reflect prediction reliability across all demographic subgroups
 - [Sensitivity Analysis for Fairness](https://alan-turing-institute.github.io/tea-techniques/techniques/sensitivity-analysis-for-fairness/) - Assess how sensitive the model's predictions are to features that may act as proxies for protected characteristics
 - [Conformal Prediction](https://alan-turing-institute.github.io/tea-techniques/techniques/conformal-prediction/) - Generate statistically valid confidence intervals for dosing recommendations, enabling appropriate uncertainty communication
 

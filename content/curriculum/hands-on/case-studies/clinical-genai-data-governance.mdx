@@ -23,11 +23,11 @@ tags:
 
 ## Overview
 
-The Greater Manchester Integrated Care System (GM ICS) has deployed a Generative AI-powered clinical decision support system to assist clinicians in managing patients with complex, multi-morbid conditions. The system—called ClinAssist—analyses patient records and generates natural language summaries, identifies potential care gaps, suggests evidence-based interventions, and drafts clinical correspondence.
+The Greater Manchester Integrated Care System (ICS) has deployed a Generative AI-powered clinical decision support system to assist clinicians in managing patients with complex, multi-morbid conditions. The system—called ClinAssist—analyses patient records and generates natural language summaries, identifies potential care gaps, suggests evidence-based interventions, and drafts clinical correspondence.
 
-ClinAssist was trained on 15 years of electronic health records from across Greater Manchester, comprising over 3 million patient journeys. However, these records were collected under consent frameworks that permitted data use for "improving the quality of care" and "healthcare research"—terms that predate the emergence of large language models and generative AI. Patients did not specifically consent to their data being used to train AI systems that generate novel content.
+ClinAssist was trained on 15 years of electronic health records from across Greater Manchester, comprising over 3 million patient records. However, these records were collected under consent frameworks that permitted data use for "improving the quality of care" and "healthcare research"—terms that predate the emergence of large language models (LLMs) and generative AI (GenAI). Patients did not specifically consent to their data being used to train GenAI systems.
 
-Following concerns raised by patient advocacy groups and the local Healthwatch organisation, GM ICS has commissioned an assurance case to demonstrate that ClinAssist operates transparently, with appropriate accountability for its use of patient data and clear communication to patients about how their information contributes to AI-assisted care.
+Following concerns raised by patient advocacy groups and the local Healthwatch organisation, the Greater Manchester ICS has commissioned an assurance case to demonstrate that ClinAssist operates transparently, with appropriate accountability for its use of patient data and clear communication to patients about how their information contributes to AI-assisted care.
 
 ## System Description
 
@@ -58,7 +58,7 @@ When a clinician accesses ClinAssist for a patient consultation:
 | Aspect | Details |
 |--------|---------|
 | **Model Architecture** | Fine-tuned large language model (based on open-source foundation model) with retrieval-augmented generation; 70 billion parameters |
-| **Training Data** | 3.2 million patient records (2008-2023) from GM ICS; clinical guidelines from NICE, royal colleges, and specialist societies; medical literature corpus |
+| **Training Data** | Foundation model pre-trained on general text corpora; fine-tuned on 3.2 million patient records (2008-2023) from GM ICS; RAG knowledge base includes clinical guidelines from NICE, royal colleges, specialist societies, and medical literature |
 | **Fine-tuning Approach** | Supervised fine-tuning on clinician-verified summaries and responses; reinforcement learning from human feedback (RLHF) with clinical experts |
 | **Input** | Patient record context (retrieved), clinician query, current clinical guidelines |
 | **Output** | Natural language response with citations to source records, confidence indicators, and safety flags |
@@ -67,11 +67,11 @@ When a clinician accesses ClinAssist for a patient consultation:
 
 ### Deployment Context
 
-- **Coverage**: All 10 localities within Greater Manchester ICS, serving 2.8 million residents
+- **Coverage**: All localities within Greater Manchester ICS, serving 2.8 million residents
 - **Care Settings**: Primary care (GP practices), acute hospitals, community services, mental health trusts
 - **Users**: ~12,000 clinicians including GPs, hospital doctors, nurses, pharmacists, and allied health professionals
-- **Query Volume**: ~25,000 clinical queries daily
-- **Patient Records Accessed**: 3.2 million patient records in training; ~50,000 individual records accessed daily for inference
+- **Query Volume**: ~8,000 clinical queries daily (growing as adoption increases)
+- **Patient Records Accessed**: 3.2 million patient records used for fine-tuning; ~50,000 individual records accessed daily for inference
 - **Operational Since**: September 2024
 
 ## Stakeholders
@@ -91,13 +91,15 @@ When a clinician accesses ClinAssist for a patient consultation:
 
 The system operates within a complex and evolving regulatory landscape:
 
-- **UK GDPR and Data Protection Act 2018**: Lawful basis for processing (consent, legitimate interests, or public task); purpose limitation principle; transparency requirements; Article 22 rights regarding automated decision-making
+- **UK GDPR and Data Protection Act 2018**: Lawful basis for processing (consent, legitimate interests, or public task); purpose limitation principle; transparency requirements; Article 22 rights regarding solely automated decision-making (noting ClinAssist is decision support with clinician oversight, so Article 22 may not directly apply, though its principles inform system design)
 - **Common Law Duty of Confidentiality**: Patients' reasonable expectations about how their health information will be used
-- **NHS Act 2006 (as amended)**: Section 251 provisions for using patient data without consent for medical purposes in certain circumstances
+- **NHS Act 2006 (as amended)**: Section 251 provisions for using patient data without consent for medical purposes in certain circumstances (noting that Confidentiality Advisory Group approval for GenAI training represents novel and contested regulatory ground)
 - **Caldicott Principles**: Framework for handling patient-identifiable information, including the principle that patient data should only be used for the purpose for which it was collected
 - **National Data Guardian Guidance**: Recommendations on patient data use, including the importance of transparency and public engagement
 - **ICO Guidance on AI and Data Protection**: Emerging guidance on fairness, transparency, and accountability in AI systems
 - **EU AI Act (for reference)**: While not directly applicable post-Brexit, provides influential framework for high-risk AI classification
+- **National Data Opt-Out**: Patients who have registered a national data opt-out must have their data excluded from uses beyond their direct care; ClinAssist excludes opted-out patients from both training data and inference
+- **UK Medical Devices Regulations**: ClinAssist is classified as a Class IIa medical device (clinical decision support software) requiring UKCA marking and conformity with MHRA guidance on AI as a Medical Device
 
 ## Transparency Considerations
 
@@ -115,7 +117,7 @@ The original consent frameworks under which patient data was collected could not
 When ClinAssist generates a clinical summary or recommendation:
 - Which specific patient records influenced the output?
 - How does training data (from other patients) influence responses about a specific patient?
-- Can patients understand—and contest—how their data contributed to the model's capabilities?
+- Can patients understand and contest how their data contributed to the model's capabilities?
 
 ### Distinguishing Patient Data Roles
 
@@ -197,11 +199,11 @@ Clarify accountability for AI-influenced clinical decisions:
 
 The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
 
-- [Data Lineage Tracking](https://alan-turing-institute.github.io/tea-techniques/techniques/data-lineage-tracking/) - Document the flow of patient data through training and inference pipelines, enabling transparency about data provenance
 - [Model Cards](https://alan-turing-institute.github.io/tea-techniques/techniques/model-cards/) - Create standardised documentation describing the model's training data, intended use, and limitations
-- [Retrieval Attribution](https://alan-turing-institute.github.io/tea-techniques/techniques/retrieval-attribution/) - For RAG systems, provide clear citations showing which source documents influenced generated responses
-- [Membership Inference Testing](https://alan-turing-institute.github.io/tea-techniques/techniques/membership-inference-testing/) - Assess privacy risks by testing whether specific patient records can be identified as having been in training data
-- [Stakeholder Impact Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/stakeholder-impact-assessment/) - Systematically analyse impacts on different patient groups and stakeholders to inform transparency communications
+- [Datasheets for Datasets](https://alan-turing-institute.github.io/tea-techniques/techniques/datasheets-for-datasets/) - Document the provenance, composition, and intended uses of training datasets to enable transparency about data origins
+- [Retrieval-Augmented Generation Evaluation](https://alan-turing-institute.github.io/tea-techniques/techniques/retrieval-augmented-generation-evaluation/) - For RAG systems, evaluate and document how retrieved content influences generated responses
+- [Membership Inference Attack Testing](https://alan-turing-institute.github.io/tea-techniques/techniques/membership-inference-attack-testing/) - Assess privacy risks by testing whether specific patient records can be identified as having been in training data
+- [Model Development Audit Trails](https://alan-turing-institute.github.io/tea-techniques/techniques/model-development-audit-trails/) - Maintain comprehensive records of data processing, model training decisions, and validation results for governance and accountability
 
 ## Further Reading
 
@@ -210,4 +212,3 @@ The following techniques from the [TEA Techniques library](https://alan-turing-i
 - [ICO Guidance: AI and Data Protection](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/)
 - [NHS England: Transformation Directorate AI Guidance](https://transform.england.nhs.uk/ai-lab/)
 - [Understanding Patient Data](https://understandingpatientdata.org.uk/)
-- [use MY data: Patient Perspectives on Health Data Use](https://www.usemydata.org/)
