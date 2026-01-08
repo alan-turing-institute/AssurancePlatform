@@ -227,6 +227,14 @@ export type ApiResponse<T = unknown> = {
 	message?: string;
 };
 
+/**
+ * Standard result type for Server Actions
+ * Use this for all mutation Server Actions to provide consistent error handling
+ */
+export type ActionResult<T> =
+	| { success: true; data: T }
+	| { success: false; error: string; fieldErrors?: Record<string, string> };
+
 // Form-related types
 export type CaseStudyFormData = {
 	title: string;

@@ -476,7 +476,7 @@ describe("CaseStudyForm Component", () => {
 	describe("Form Submission", () => {
 		it("should create new case study successfully", async () => {
 			// Mock successful creation using the action
-			mockCreateCaseStudy.mockResolvedValue({ id: 3 });
+			mockCreateCaseStudy.mockResolvedValue({ success: true, data: { id: 3 } });
 
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);
 
@@ -496,7 +496,7 @@ describe("CaseStudyForm Component", () => {
 
 		it("should update existing case study successfully", async () => {
 			// Mock successful update using the action
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<CaseStudyForm caseStudy={mockCaseStudy} />);
 
@@ -560,7 +560,7 @@ describe("CaseStudyForm Component", () => {
 	describe("Publishing/Unpublishing", () => {
 		it("should publish case study successfully", async () => {
 			// Mock successful publish
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<CaseStudyForm caseStudy={mockCaseStudy} />);
 
@@ -578,7 +578,7 @@ describe("CaseStudyForm Component", () => {
 
 		it("should unpublish case study successfully", async () => {
 			// Mock successful unpublish
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<CaseStudyForm caseStudy={mockPublishedCaseStudy} />);
 
@@ -695,7 +695,7 @@ describe("CaseStudyForm Component", () => {
 
 		it("should handle update errors gracefully", async () => {
 			// Mock update error
-			mockUpdateCaseStudy.mockResolvedValue(false);
+			mockUpdateCaseStudy.mockResolvedValue({ success: false, error: "Update failed" });
 
 			renderWithAuth(<CaseStudyForm caseStudy={mockCaseStudy} />);
 
@@ -718,9 +718,12 @@ describe("CaseStudyForm Component", () => {
 
 	describe("Loading States", () => {
 		it("should show loading state during form submission", async () => {
-			// Mock slow response
+			// Mock slow response with ActionResult
 			mockCreateCaseStudy.mockImplementation(
-				() => new Promise((resolve) => setTimeout(() => resolve(3), 100))
+				() =>
+					new Promise((resolve) =>
+						setTimeout(() => resolve({ success: true, data: { id: 3 } }), 100)
+					)
 			);
 
 			renderWithAuth(<CaseStudyForm caseStudy={undefined} />);

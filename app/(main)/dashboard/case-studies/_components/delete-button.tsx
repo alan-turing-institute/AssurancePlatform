@@ -28,9 +28,9 @@ const DeleteCaseButton = ({
 	const [deleteLoading] = useState<boolean>(false);
 
 	const handleDelete = async () => {
-		const deleted = await deleteCaseStudy(data?.key ?? "", caseStudyId);
+		const result = await deleteCaseStudy(data?.key ?? "", caseStudyId);
 
-		if (deleted) {
+		if (result.success) {
 			toast({
 				title: "Successfully Deleted",
 				description: "Case Study Deleted",
@@ -42,7 +42,7 @@ const DeleteCaseButton = ({
 			toast({
 				variant: "destructive",
 				title: "Delete Failed",
-				description: "Something went wrong!",
+				description: result.error || "Something went wrong!",
 			});
 		}
 	};

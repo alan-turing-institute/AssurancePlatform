@@ -1,0 +1,196 @@
+---
+title: "Equitable Personalised Pharmaceutical Formulation System"
+description: "A case study exploring fairness assurance for AI-powered personalised drug formulations trained on demographically biased data"
+sidebar_label: "Personalised Pharma Formulations"
+sidebar_position: 6
+tags:
+  - case-studies
+  - healthcare
+  - pharmaceutical
+  - fairness
+  - AI
+---
+
+# Equitable Personalised Pharmaceutical Formulation System
+
+![Personalised Pharmaceutical Formulations Hero Image](/images/case-studies/personalised-pharmaceutical-formulations.png)
+
+| Field | Details |
+|-------|---------|
+| **Domain** | Pharmaceutical Development |
+| **Assurance Goal** | Fairness |
+
+## Overview
+
+Formulus BioSciences Ltd has developed an AI-powered system to generate personalised drug formulations based on individual patient characteristics. The system analyses genetic markers, metabolic profiles, and clinical history to recommend optimal drug dosages, delivery mechanisms, and formulation adjustments for patients with chronic conditions including diabetes, hypertension, and cardiovascular disease.
+
+Following an internal audit, Formulus BioSciences discovered that the training dataset, which was compiled from historical clinical trials and electronic health records (EHRs), contains significant demographic imbalances. Certain populations (e.g. older adults, ethnic minorities, and women) are substantially underrepresented, raising concerns that the system may produce less accurate or potentially harmful recommendations for these groups.
+
+The company has commissioned an assurance case to demonstrate that the system provides equitable recommendations across all patient demographics, despite the limitations of its training data.
+
+## System Description
+
+### What the System Does
+
+The Personalised Pharmaceutical Formulation System (PPFS) supports clinical decision-making by:
+
+- Analysing patient genetic markers (pharmacogenomic data) to predict drug metabolism rates
+- Assessing metabolic profiles to identify potential drug interactions and contraindications
+- Recommending personalised dosages based on individual patient characteristics
+- Suggesting formulation adjustments (e.g., extended-release vs. immediate-release, alternative delivery mechanisms)
+- Generating confidence scores and flagging cases requiring additional clinical review
+
+### How It Works
+
+When a clinician requests a personalised formulation recommendation:
+
+1. **Patient Data Collection**: The system ingests patient data including genetic test results, current medications, clinical history, age, weight, and relevant biomarkers
+2. **Pharmacogenomic Analysis**: A machine learning model predicts how the patient will metabolise the drug based on genetic variants affecting drug-processing enzymes
+3. **Risk Stratification**: The system assesses the patient's risk profile for adverse drug reactions based on their complete clinical picture
+4. **Dosage Optimisation**: A regression model recommends an optimal starting dose and titration schedule personalised to the patient
+5. **Formulation Selection**: The system suggests the most appropriate drug formulation considering the patient's age, swallowing ability, and adherence patterns
+6. **Confidence Assessment**: Cases with high uncertainty or underrepresented patient profiles are flagged for specialist pharmacist review
+AssurancePlatform-op3
+### Key Technical Details
+
+| Aspect | Details |
+|--------|---------|
+| **Model Architecture** | Ensemble combining gradient boosting (for structured clinical data) with transformer-based models (for genetic sequence analysis) |
+| **Training Data** | 2.3 million patient records from UK clinical trials and NHS electronic health records (2010-2023); pharmacogenomic data from 180,000 patients |
+| **Input Features** | 47 features including genetic variants, age, sex, ethnicity, BMI, renal function, hepatic function, concurrent medications, and disease severity scores |
+| **Output** | Recommended dose (mg), formulation type, titration schedule, confidence score (0-100%), risk flags, and similar patient cohort reference |
+| **Performance** | Mean Absolute Error: 11% for dosage prediction; Adverse event prediction AUC: 0.84 (validated on held-out UK dataset) |
+| **Explainability Methods** | [SHAP values](https://alan-turing-institute.github.io/tea-techniques/techniques/shapley-additive-explanations/) for feature importance; counterfactual explanations showing how recommendations would change with different patient characteristics |
+| **Validation** | Prospective clinical validation in 3 NHS trusts; quarterly performance monitoring stratified by demographics |
+
+### Deployment Context
+
+- **Coverage**: 15 NHS trusts across England, integrated with hospital pharmacy systems
+- **Volume**: ~50,000 formulation recommendations annually
+- **Patient Population**: Adults with chronic conditions requiring long-term medication management
+- **Therapeutic Areas**: Currently deployed for diabetes (metformin, insulin), hypertension (ACE inhibitors, ARBs), anticoagulation (warfarin, DOACs), and antiplatelet therapy (clopidogrel)
+- **Human Oversight**: All recommendations reviewed by clinical pharmacists before implementation
+- **Operational Since**: March 2022
+
+## Stakeholders
+
+| Stakeholder | Interest | Concern |
+|-------------|----------|---------|
+| **Patients** | Receive safe, effective personalised treatment | May receive suboptimal care if their demographic group is underrepresented in training data |
+| **Clinical Pharmacists** | Reliable AI assistance for complex dosing decisions | Must understand AI reasoning and limitations to exercise appropriate judgement |
+| **Prescribing Clinicians** | Evidence-based personalised recommendations | Need confidence that recommendations are equitable across their patient population |
+| **NHS Trusts** | Improved patient outcomes and reduced adverse events | Liability concerns if AI recommendations harm underrepresented patients |
+| **MHRA** | Safe and effective medical device operation | Regulatory compliance, particularly regarding algorithmic bias |
+| **Patient Advocacy Groups** | Equitable healthcare for all communities | Historical exclusion from clinical research perpetuating health inequities |
+| **NICE** | Evidence of clinical and cost effectiveness | Standards for AI in clinical pathways |
+
+## Regulatory Context
+
+The system operates within several regulatory frameworks:
+
+- **UK Medical Devices Regulations 2002**: PPFS is classified as a Class IIb medical device (software providing diagnostic/therapeutic recommendations) requiring UKCA marking
+- **MHRA Guidance on AI as a Medical Device**: Requirements for clinical evidence, algorithmic transparency, and ongoing monitoring for bias
+- **EU AI Act (for EU market access)**: High-risk AI system classification requiring conformity assessment, including bias testing
+- **UK GDPR**: Special category health data processing; automated decision-making provisions under Article 22
+- **Equality Act 2010**: Prohibition of discrimination in healthcare provision; relevant where AI recommendations vary by protected characteristics
+- **NICE Evidence Standards Framework for Digital Health Technologies**: Requirements for demonstrating effectiveness across relevant population subgroups
+- **NHS AI Lab (NHS Transformation Directorate)**: Guidance on safe deployment of AI in NHS settings
+
+## Fairness Considerations
+
+Several aspects of this system raise significant fairness concerns:
+
+### Training Data Imbalance
+
+The historical clinical trial data used to train the system reflects decades of biased research practices:
+- Women were systematically excluded from cardiovascular trials until the 1990s
+- Ethnic minorities remain underrepresented in UK clinical trials (comprising ~14% of the population but only ~5% of trial participants)
+- Older adults (>75 years) are frequently excluded from trials despite being the primary users of chronic disease medications
+- Patients with multiple comorbidities—common in real-world practice—were excluded from most trials
+
+### Pharmacogenomic Representation
+
+Genetic variants affecting drug metabolism vary significantly across ethnic groups. The pharmacogenomic databases used for training are predominantly derived from European populations, meaning:
+- Variants common in African, South Asian, or East Asian populations may be underrepresented
+- Dosing algorithms may be less accurate for patients with non-European ancestry
+- Novel or rare variants in underrepresented populations may not be recognised
+
+### Proxy Discrimination
+
+Even without using protected characteristics directly, the model may learn discriminatory patterns through correlated features:
+- Postcode may correlate with ethnicity and socioeconomic status
+- Certain biomarker patterns may be more common in specific demographic groups
+- Historical prescribing patterns may reflect existing healthcare inequities
+
+### Performance Disparities
+
+Model performance metrics (accuracy, adverse event prediction) may vary significantly across demographic subgroups:
+- Higher error rates for underrepresented populations
+- Different types of errors (over-dosing vs. under-dosing) affecting different groups
+- Confidence calibration may be poor for patients unlike those in training data
+
+### Feedback Loop Risks
+
+If the system's recommendations are less accurate for certain groups, this may lead to:
+- More adverse events in underrepresented populations
+- These adverse events being attributed to patient characteristics rather than algorithmic bias
+- Reinforcement of existing health inequities through seemingly "objective" AI recommendations
+
+## Assurance Focus
+
+The assurance case should demonstrate that:
+
+> **The Personalised Pharmaceutical Formulation System provides equitable dosing recommendations across all patient demographics, with appropriate safeguards where training data limitations may affect recommendation quality for specific populations.**
+
+### Deliberative Prompts
+
+- What does "fairness" mean when the underlying scientific evidence base is itself biased? Should the AI aim for equal accuracy, equal outcomes, or something else?
+- How should uncertainty be communicated when the system encounters a patient from an underrepresented demographic? Is flagging for human review sufficient, or does this create a two-tier system?
+- Who bears responsibility when a patient from an underrepresented group experiences an adverse event—the AI developer, the prescribing clinician, or the healthcare system that failed to generate inclusive research?
+- Should patients be informed that AI recommendations may be less reliable for their demographic group? How might this affect trust and treatment adherence?
+- Can retrospective bias mitigation techniques genuinely address decades of exclusionary research practices, or do they risk creating false confidence?
+
+## Suggested Strategies
+
+When developing your assurance case, consider these potential approaches:
+
+### Strategy 1: Transparent Data Provenance
+
+Document the demographic composition of training data and explicitly communicate which patient populations are well-represented versus underrepresented, enabling clinicians to calibrate their trust in recommendations appropriately.
+
+### Strategy 2: Stratified Performance Validation
+
+Validate model performance separately for each demographic subgroup, establishing minimum acceptable performance thresholds and halting deployment for populations where these thresholds are not met.
+
+### Strategy 3: Uncertainty-Aware Recommendations
+
+Develop calibrated confidence estimates that accurately reflect increased uncertainty for patients from underrepresented groups, with clear escalation pathways to specialist review.
+
+### Strategy 4: Bias Mitigation Techniques
+
+Apply algorithmic fairness techniques (reweighting, adversarial debiasing, or post-processing calibration) to reduce performance disparities, while being transparent about the limitations of these approaches.
+
+### Strategy 5: Inclusive Data Collection
+
+Establish partnerships with healthcare providers serving diverse communities to prospectively collect data that addresses training set gaps, with appropriate consent and governance frameworks.
+
+### Strategy 6: Ongoing Fairness Monitoring
+
+Implement continuous monitoring of recommendation outcomes stratified by demographics, with automated alerts when disparities emerge and governance processes to respond.
+
+## Recommended Techniques for Evidence
+
+The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
+
+- [Demographic Parity Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/demographic-parity-assessment/) - Evaluate whether dosing recommendations and predicted outcomes are consistent across demographic groups
+- [Counterfactual Fairness Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/counterfactual-fairness-assessment/) - Test whether recommendations would differ if a patient's demographic characteristics were changed while clinical factors remained constant
+- [Empirical Calibration](https://alan-turing-institute.github.io/tea-techniques/techniques/empirical-calibration/) - Verify that confidence scores accurately reflect prediction reliability across all demographic subgroups
+- [Sensitivity Analysis for Fairness](https://alan-turing-institute.github.io/tea-techniques/techniques/sensitivity-analysis-for-fairness/) - Assess how sensitive the model's predictions are to features that may act as proxies for protected characteristics
+- [Conformal Prediction](https://alan-turing-institute.github.io/tea-techniques/techniques/conformal-prediction/) - Generate statistically valid confidence intervals for dosing recommendations, enabling appropriate uncertainty communication
+
+## Further Reading
+
+- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
+- [MHRA Guidance: Software and AI as a Medical Device](https://www.gov.uk/government/publications/software-and-ai-as-a-medical-device-change-programme)
+- [NICE Evidence Standards Framework for Digital Health Technologies](https://www.nice.org.uk/about/what-we-do/our-programmes/evidence-standards-framework-for-digital-health-technologies)
+- [NHS AI Lab: Bias in AI](https://transform.england.nhs.uk/ai-lab/)

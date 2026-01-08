@@ -369,13 +369,13 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		formData.append("id", caseStudy.id.toString());
-		const updated = await updateCaseStudy(data?.key, formData);
+		const result = await updateCaseStudy(data?.key, formData);
 
 		if (values.image) {
 			await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
 		}
 
-		if (updated) {
+		if (result.success) {
 			toast({
 				title: "Successfully Updated",
 				description: "You have updated a case study!",
@@ -384,7 +384,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			toast({
 				variant: "destructive",
 				title: "Failed to Update",
-				description: "Something went wrong!",
+				description: result.error || "Something went wrong!",
 			});
 		}
 	}
@@ -393,19 +393,19 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		values: z.infer<typeof caseStudyFormSchema>,
 		formData: FormData
 	) {
-		const createdCaseStudy = await createCaseStudy(data?.key ?? "", formData);
+		const result = await createCaseStudy(data?.key ?? "", formData);
 
-		if (!createdCaseStudy) {
+		if (!result.success) {
 			toast({
 				title: "Error",
-				description: "Failed to create case study",
+				description: result.error || "Failed to create case study",
 				variant: "destructive",
 			});
 			return;
 		}
 
 		if (values.image) {
-			await uploadCaseStudyFeatureImage(createdCaseStudy.id, values.image);
+			await uploadCaseStudyFeatureImage(result.data.id, values.image);
 		}
 
 		toast({
@@ -413,7 +413,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			description: "You have created a case study!",
 		});
 
-		router.push(`/dashboard/case-studies/${createdCaseStudy.id}`);
+		router.push(`/dashboard/case-studies/${result.data.id}`);
 	}
 
 	async function handleSubmit(values: z.infer<typeof caseStudyFormSchema>) {
@@ -453,9 +453,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		// Send the formData to the API
-		const response = await updateCaseStudy(data?.key, formData);
+		const result = await updateCaseStudy(data?.key, formData);
 
-		if (response) {
+		if (result.success) {
 			toast({
 				title: caseStudy.published
 					? "Successfully Unpublished"
@@ -466,7 +466,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			toast({
 				variant: "destructive",
 				title: "Failed to Update",
-				description: "Something went wrong!",
+				description: result.error || "Something went wrong!",
 			});
 		}
 	};
@@ -475,9 +475,9 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		if (!caseStudy) {
 			return;
 		}
-		const deleted = await deleteCaseStudy(data?.key ?? "", caseStudy.id);
+		const result = await deleteCaseStudy(data?.key ?? "", caseStudy.id);
 
-		if (deleted) {
+		if (result.success) {
 			toast({
 				title: "Successfully Deleted",
 				description: "Case Study Deleted",
@@ -487,7 +487,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			toast({
 				variant: "destructive",
 				title: "Delete Failed",
-				description: "Something went wrong!",
+				description: result.error || "Something went wrong!",
 			});
 		}
 	};

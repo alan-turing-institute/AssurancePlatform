@@ -1,6 +1,12 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import {
+	type CreateAssuranceCaseInput,
+	createAssuranceCaseSchema,
+} from "@/lib/schemas/assurance-case";
+import { validateInput } from "@/lib/validation/server-action";
+import type { ActionResult } from "@/types";
 
 type AssuranceCase = {
 	id: number | string;
@@ -130,40 +136,40 @@ export const fetchSharedAssuranceCases = async (
 	}));
 };
 
-type CreateCaseInput = {
-	name: string;
-	description: string;
-	colorProfile?: string;
-};
-
-type CreateCaseResult = {
-	success: boolean;
-	id?: string;
-	error?: string;
-};
-
 export const createAssuranceCase = async (
 	_token: string,
-	input: CreateCaseInput
-): Promise<CreateCaseResult> => {
-	const { prismaNew } = await import("@/lib/prisma");
+	input: CreateAssuranceCaseInput
+): Promise<ActionResult<{ id: string }>> => {
+	// 1. Validate input
+	const validation = validateInput(input, createAssuranceCaseSchema);
+	if (!validation.success) {
+		return {
+			success: false,
+			error: validation.error,
+			fieldErrors: validation.fieldErrors,
+		};
+	}
 
+	// 2. Authenticate
 	const validated = await validateSession();
 	if (!validated) {
 		return { success: false, error: "Invalid session" };
 	}
 
+	// 3. Business logic
+	const { prismaNew } = await import("@/lib/prisma");
+
 	try {
 		const newCase = await prismaNew.assuranceCase.create({
 			data: {
-				name: input.name,
-				description: input.description,
-				colorProfile: input.colorProfile ?? "default",
+				name: validation.data.name,
+				description: validation.data.description,
+				colorProfile: validation.data.colorProfile,
 				createdById: validated.userId,
 			},
 		});
 
-		return { success: true, id: newCase.id };
+		return { success: true, data: { id: newCase.id } };
 	} catch (error) {
 		console.error("Failed to create case:", error);
 		return { success: false, error: "Failed to create case" };

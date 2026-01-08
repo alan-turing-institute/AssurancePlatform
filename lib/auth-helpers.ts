@@ -1,33 +1,27 @@
 import type { NextResponse } from "next/server";
 import type { Session } from "next-auth";
+import { isTimestampValid } from "@/lib/auth/timing-safe";
 
 /**
- * Check if a session is valid (has key and hasn't expired)
+ * Check if a session is valid (has key and hasn't expired).
+ * Uses constant-time operations to prevent timing attacks.
  */
 export function isValidSession(session: Session | null): boolean {
-	if (!session) {
-		return false;
-	}
+	const now = Date.now();
 
-	// Check if session has a key
-	if (!session.key) {
-		return false;
-	}
+	// Evaluate all conditions without early returns to prevent timing leaks
+	const hasSession = session !== null;
+	const hasKey = Boolean(session?.key);
+	const keyNotExpired = isTimestampValid(session?.keyExpires, now);
 
-	// Check if session has expired
-	if (session.keyExpires && Date.now() > session.keyExpires) {
-		return false;
-	}
+	// Parse NextAuth expiry (always parse even if undefined)
+	const expiryTimestamp = session?.expires
+		? new Date(session.expires).getTime()
+		: Number.MAX_SAFE_INTEGER;
+	const sessionNotExpired = isTimestampValid(expiryTimestamp, now);
 
-	// Check NextAuth session expiry
-	if (session.expires) {
-		const expiryDate = new Date(session.expires);
-		if (expiryDate < new Date()) {
-			return false;
-		}
-	}
-
-	return true;
+	// Combine all checks (constant time AND operation)
+	return hasSession && hasKey && keyNotExpired && sessionNotExpired;
 }
 
 /**
