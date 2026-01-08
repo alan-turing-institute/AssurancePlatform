@@ -297,6 +297,7 @@ export const authOptions: NextAuthOptions = {
 
 		/**
 		 * Callback to handle JWT token creation and updates.
+		 * Uses constant-time operations to prevent timing attacks.
 		 *
 		 * @param {Object} params - Parameters related to the JWT.
 		 * @param {Object} params.token - The current token.
@@ -307,6 +308,9 @@ export const authOptions: NextAuthOptions = {
 		 * @returns {Object} The updated token with access token and provider information.
 		 */
 		jwt({ token, user }) {
+			// Dynamically import to avoid circular dependencies
+			const { isTimestampValid } = require("@/lib/auth/timing-safe");
+
 			if (user) {
 				token.id = user.id; // Store the user ID for Prisma auth
 				token.key = user.key; // Store the key from the user object
@@ -315,10 +319,14 @@ export const authOptions: NextAuthOptions = {
 				token.keyExpires = Date.now() + 24 * 60 * 60 * 1000;
 			}
 
-			// Check if token has expired and clear it if so
-			if (token.keyExpires && Date.now() > token.keyExpires) {
-				token.key = undefined;
-				token.keyExpires = undefined;
+			// Constant-time expiry check to prevent timing attacks
+			const isExpired = !isTimestampValid(
+				token.keyExpires as number | undefined
+			);
+
+			// Return cleared token if expired, otherwise return as-is
+			if (isExpired) {
+				return { ...token, key: undefined, keyExpires: undefined };
 			}
 
 			return token;

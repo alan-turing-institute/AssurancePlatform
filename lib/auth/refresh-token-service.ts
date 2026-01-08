@@ -46,10 +46,15 @@ export async function createRefreshToken(
 
 /**
  * Validates a refresh token and returns the associated user ID if valid.
+ * Uses constant-time operations to prevent timing attacks.
  */
 export async function validateRefreshToken(
 	token: string
 ): Promise<{ valid: true; userId: string } | { valid: false; reason: string }> {
+	const { addTimingNoise, isTimestampValid } = await import(
+		"@/lib/auth/timing-safe"
+	);
+
 	const refreshToken = await prismaNew.refreshToken.findUnique({
 		where: { token },
 		select: {
@@ -60,19 +65,39 @@ export async function validateRefreshToken(
 		},
 	});
 
-	if (!refreshToken) {
-		return { valid: false, reason: "Token not found" };
+	// Add timing noise to mask database lookup variance
+	await addTimingNoise();
+
+	// Evaluate all conditions without early returns to prevent timing leaks
+	const tokenExists = refreshToken !== null;
+	const notRevoked = tokenExists && refreshToken.revokedAt === null;
+	const notExpired =
+		tokenExists && isTimestampValid(refreshToken?.expiresAt?.getTime());
+
+	const isValid = tokenExists && notRevoked && notExpired;
+
+	// Determine reason using function to avoid nested ternary
+	function getValidationReason(): string {
+		if (!tokenExists) {
+			return "Token not found";
+		}
+		if (!notRevoked) {
+			return "Token has been revoked";
+		}
+		if (!notExpired) {
+			return "Token has expired";
+		}
+		return "";
 	}
 
-	if (refreshToken.revokedAt) {
-		return { valid: false, reason: "Token has been revoked" };
+	// Always compute reason regardless of validity (constant-time)
+	const reason = getValidationReason();
+
+	if (isValid && refreshToken) {
+		return { valid: true, userId: refreshToken.userId };
 	}
 
-	if (refreshToken.expiresAt < new Date()) {
-		return { valid: false, reason: "Token has expired" };
-	}
-
-	return { valid: true, userId: refreshToken.userId };
+	return { valid: false, reason: reason || "Token validation failed" };
 }
 
 /**
