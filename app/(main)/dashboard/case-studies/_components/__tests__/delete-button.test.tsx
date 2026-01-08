@@ -219,7 +219,7 @@ describe("DeleteCaseButton Component", () => {
 	describe("Delete Functionality", () => {
 		it("should successfully delete case study without redirect", async () => {
 			// Mock successful deletion
-			mockDeleteCaseStudy.mockResolvedValue(true);
+			mockDeleteCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(
 				<DeleteCaseButton
@@ -263,7 +263,7 @@ describe("DeleteCaseButton Component", () => {
 
 		it("should successfully delete case study with redirect", async () => {
 			// Mock successful deletion
-			mockDeleteCaseStudy.mockResolvedValue(true);
+			mockDeleteCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(
 				<DeleteCaseButton
@@ -309,7 +309,7 @@ describe("DeleteCaseButton Component", () => {
 
 		it("should handle deletion failure gracefully", async () => {
 			// Mock failed deletion
-			mockDeleteCaseStudy.mockResolvedValue(false);
+			mockDeleteCaseStudy.mockResolvedValue({ success: false, error: "Delete failed" });
 
 			renderWithAuth(
 				<DeleteCaseButton
@@ -354,7 +354,7 @@ describe("DeleteCaseButton Component", () => {
 
 		it("should handle API errors gracefully", async () => {
 			// Mock API error - the component expects false on error, not a rejection
-			mockDeleteCaseStudy.mockResolvedValue(false);
+			mockDeleteCaseStudy.mockResolvedValue({ success: false, error: "Delete failed" });
 
 			renderWithAuth(
 				<DeleteCaseButton
@@ -400,9 +400,12 @@ describe("DeleteCaseButton Component", () => {
 
 	describe("Loading States", () => {
 		it("should handle async deletion properly", async () => {
-			// Mock slow deletion
+			// Mock slow deletion with ActionResult
 			mockDeleteCaseStudy.mockImplementation(
-				() => new Promise((resolve) => setTimeout(() => resolve(true), 100))
+				() =>
+					new Promise((resolve) =>
+						setTimeout(() => resolve({ success: true, data: true }), 100)
+					)
 			);
 
 			renderWithAuth(
@@ -514,7 +517,7 @@ describe("DeleteCaseButton Component", () => {
 
 	describe("Multiple Case Studies", () => {
 		it("should handle different case study IDs correctly", async () => {
-			mockDeleteCaseStudy.mockResolvedValue(true);
+			mockDeleteCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			// Test with different case study ID
 			const { rerender } = renderWithAuth(

@@ -27,9 +27,9 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 			formData.append("published_date", ""); // Clear the published date
 
 			// Send the formData to the API
-			const response = await updateCaseStudy(data?.key, formData);
+			const result = await updateCaseStudy(data?.key, formData);
 
-			if (response) {
+			if (result.success) {
 				toast({
 					title: "Successfully Unpublished",
 					description: "You have unpublished your case study!",
@@ -38,7 +38,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 				toast({
 					variant: "destructive",
 					title: "Failed to Unpublish",
-					description: "Sorry something went wrong!",
+					description: result.error || "Sorry something went wrong!",
 				});
 			}
 		} catch (_error) {

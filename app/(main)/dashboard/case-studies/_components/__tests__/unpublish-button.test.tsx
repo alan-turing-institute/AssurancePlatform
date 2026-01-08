@@ -187,7 +187,7 @@ describe("UnpublishCaseButton Component", () => {
 	describe("Unpublish Functionality", () => {
 		it("should successfully unpublish case study", async () => {
 			// Mock successful unpublish
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
@@ -237,7 +237,7 @@ describe("UnpublishCaseButton Component", () => {
 
 		it("should handle unpublish failure from API", async () => {
 			// Mock failed unpublish
-			mockUpdateCaseStudy.mockResolvedValue(false);
+			mockUpdateCaseStudy.mockResolvedValue({ success: false, error: "Update failed" });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
@@ -326,7 +326,7 @@ describe("UnpublishCaseButton Component", () => {
 			);
 
 			// updateCaseStudy action should handle this and return false
-			mockUpdateCaseStudy.mockResolvedValue(false);
+			mockUpdateCaseStudy.mockResolvedValue({ success: false, error: "Update failed" });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
@@ -391,7 +391,7 @@ describe("UnpublishCaseButton Component", () => {
 
 		it("should close modal after successful unpublish", async () => {
 			// Mock successful unpublish
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 
@@ -487,7 +487,7 @@ describe("UnpublishCaseButton Component", () => {
 
 	describe("Different Case Study IDs", () => {
 		it("should handle different case study IDs correctly", async () => {
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			// Test with different case study ID
 			const { rerender } = renderWithAuth(
@@ -542,7 +542,7 @@ describe("UnpublishCaseButton Component", () => {
 		});
 
 		it("should handle edge case ID values", async () => {
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={0} />);
 
@@ -572,7 +572,7 @@ describe("UnpublishCaseButton Component", () => {
 
 	describe("FormData Structure", () => {
 		it("should send correct FormData structure", async () => {
-			mockUpdateCaseStudy.mockResolvedValue(true);
+			mockUpdateCaseStudy.mockResolvedValue({ success: true, data: true });
 
 			renderWithAuth(<UnpublishCaseButton caseStudyId={1} />);
 

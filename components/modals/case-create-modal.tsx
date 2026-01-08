@@ -66,10 +66,10 @@ export const CaseCreateModal = () => {
 					description,
 				});
 
-				if (result.success && result.id) {
+				if (result.success) {
 					setLoading(false);
 					createCaseModal.onClose();
-					router.push(`/case/${result.id}`);
+					router.push(`/case/${result.data.id}`);
 				} else {
 					setLoading(false);
 					setErrors([
