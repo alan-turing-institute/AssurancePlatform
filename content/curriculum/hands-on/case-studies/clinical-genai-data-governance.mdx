@@ -1,0 +1,213 @@
+---
+title: "Transparent Clinical GenAI System with Legacy Data"
+description: "A case study exploring transparency and accountability for a GenAI clinical decision support system trained on patient data collected under historical consent frameworks"
+sidebar_label: "Clinical GenAI Data Governance"
+sidebar_position: 7
+tags:
+  - case-studies
+  - healthcare
+  - genai
+  - transparency
+  - data-governance
+  - AI
+---
+
+# Transparent Clinical GenAI System with Legacy Data
+
+![Clinical GenAI Data Governance Hero Image](/images/case-studies/clinical-genai-data-governance.png)
+
+| Field | Details |
+|-------|---------|
+| **Domain** | Healthcare AI / Data Governance |
+| **Assurance Goal** | Transparency |
+
+## Overview
+
+The Greater Manchester Integrated Care System (GM ICS) has deployed a Generative AI-powered clinical decision support system to assist clinicians in managing patients with complex, multi-morbid conditions. The system—called ClinAssist—analyses patient records and generates natural language summaries, identifies potential care gaps, suggests evidence-based interventions, and drafts clinical correspondence.
+
+ClinAssist was trained on 15 years of electronic health records from across Greater Manchester, comprising over 3 million patient journeys. However, these records were collected under consent frameworks that permitted data use for "improving the quality of care" and "healthcare research"—terms that predate the emergence of large language models and generative AI. Patients did not specifically consent to their data being used to train AI systems that generate novel content.
+
+Following concerns raised by patient advocacy groups and the local Healthwatch organisation, GM ICS has commissioned an assurance case to demonstrate that ClinAssist operates transparently, with appropriate accountability for its use of patient data and clear communication to patients about how their information contributes to AI-assisted care.
+
+## System Description
+
+### What the System Does
+
+ClinAssist supports clinical workflows across primary and secondary care by:
+
+- Generating comprehensive patient summaries from fragmented health records across multiple care settings
+- Identifying potential care gaps by comparing patient records against clinical guidelines
+- Suggesting evidence-based interventions tailored to the patient's specific circumstances
+- Drafting clinical correspondence (referral letters, discharge summaries, GP communications)
+- Answering clinician queries about patient history and relevant clinical evidence
+- Flagging potential drug interactions, contraindications, and safety concerns
+
+### How It Works
+
+When a clinician accesses ClinAssist for a patient consultation:
+
+1. **Record Retrieval**: The system accesses the patient's integrated care record, pulling data from GP records, hospital episodes, community care, mental health services, and social care where relevant
+2. **Context Assembly**: A retrieval-augmented generation (RAG) architecture identifies the most relevant portions of the patient's history for the current clinical context
+3. **Query Processing**: The clinician's request (e.g., "summarise this patient's diabetes management over the past two years") is processed by the language model
+4. **Response Generation**: The LLM generates a response drawing on the patient's specific records, clinical guidelines, and its training knowledge
+5. **Citation and Grounding**: The system provides citations to specific records that informed its response, enabling clinician verification
+6. **Audit Logging**: All queries and responses are logged for clinical governance and audit purposes
+
+### Key Technical Details
+
+| Aspect | Details |
+|--------|---------|
+| **Model Architecture** | Fine-tuned large language model (based on open-source foundation model) with retrieval-augmented generation; 70 billion parameters |
+| **Training Data** | 3.2 million patient records (2008-2023) from GM ICS; clinical guidelines from NICE, royal colleges, and specialist societies; medical literature corpus |
+| **Fine-tuning Approach** | Supervised fine-tuning on clinician-verified summaries and responses; reinforcement learning from human feedback (RLHF) with clinical experts |
+| **Input** | Patient record context (retrieved), clinician query, current clinical guidelines |
+| **Output** | Natural language response with citations to source records, confidence indicators, and safety flags |
+| **Guardrails** | Content filtering for harmful outputs; mandatory citation requirements; escalation triggers for high-risk scenarios |
+| **Validation** | Clinical accuracy assessment by specialty panels; ongoing monitoring of clinician acceptance rates and corrections |
+
+### Deployment Context
+
+- **Coverage**: All 10 localities within Greater Manchester ICS, serving 2.8 million residents
+- **Care Settings**: Primary care (GP practices), acute hospitals, community services, mental health trusts
+- **Users**: ~12,000 clinicians including GPs, hospital doctors, nurses, pharmacists, and allied health professionals
+- **Query Volume**: ~25,000 clinical queries daily
+- **Patient Records Accessed**: 3.2 million patient records in training; ~50,000 individual records accessed daily for inference
+- **Operational Since**: September 2024
+
+## Stakeholders
+
+| Stakeholder | Interest | Concern |
+|-------------|----------|---------|
+| **Patients (Past)** | Data used appropriately and respectfully | Did not consent to GenAI training; may feel data was used beyond reasonable expectations |
+| **Patients (Current)** | Benefit from AI-assisted care; understand AI involvement | Need to know how AI uses their data and contributes to their care |
+| **Clinicians** | Efficient, accurate clinical support | Must understand data provenance and system limitations; professional accountability |
+| **GM ICS Leadership** | Improved care quality and efficiency | Legal and reputational risk from data governance concerns; public trust |
+| **Information Governance Teams** | Lawful, fair data processing | Ensuring compliance with evolving interpretation of consent and data protection law |
+| **Healthwatch Greater Manchester** | Patient voice in healthcare decisions | Ensuring patients have meaningful say in how their data is used |
+| **ICO** | Data protection compliance | Interpretation of consent, purpose limitation, and automated decision-making provisions |
+| **NHS England** | Safe, effective AI deployment nationally | Setting precedents for GenAI data governance across the NHS |
+
+## Regulatory Context
+
+The system operates within a complex and evolving regulatory landscape:
+
+- **UK GDPR and Data Protection Act 2018**: Lawful basis for processing (consent, legitimate interests, or public task); purpose limitation principle; transparency requirements; Article 22 rights regarding automated decision-making
+- **Common Law Duty of Confidentiality**: Patients' reasonable expectations about how their health information will be used
+- **NHS Act 2006 (as amended)**: Section 251 provisions for using patient data without consent for medical purposes in certain circumstances
+- **Caldicott Principles**: Framework for handling patient-identifiable information, including the principle that patient data should only be used for the purpose for which it was collected
+- **National Data Guardian Guidance**: Recommendations on patient data use, including the importance of transparency and public engagement
+- **ICO Guidance on AI and Data Protection**: Emerging guidance on fairness, transparency, and accountability in AI systems
+- **EU AI Act (for reference)**: While not directly applicable post-Brexit, provides influential framework for high-risk AI classification
+
+## Transparency Considerations
+
+Several aspects of this system require careful attention to transparency:
+
+### Consent Scope and Evolution
+
+The original consent frameworks under which patient data was collected could not have anticipated generative AI:
+- "Improving quality of care" was typically understood to mean service audits and quality improvement, not training AI models
+- "Healthcare research" traditionally implied statistical analysis, not systems that generate novel content
+- Patients could not have formed reasonable expectations about uses that did not exist when they consented
+
+### Data Provenance in Generated Content
+
+When ClinAssist generates a clinical summary or recommendation:
+- Which specific patient records influenced the output?
+- How does training data (from other patients) influence responses about a specific patient?
+- Can patients understand—and contest—how their data contributed to the model's capabilities?
+
+### Distinguishing Patient Data Roles
+
+Patient data plays multiple distinct roles in the system:
+- **Training data**: Historical records used to train the underlying model (one-time, aggregated)
+- **Inference data**: Current patient's records used to generate specific responses (real-time, individual)
+- These different uses have different privacy implications and may warrant different transparency approaches
+
+### Attribution and Accountability
+
+When the system provides clinical advice:
+- How should the relative contributions of training data, retrieved records, and model reasoning be communicated?
+- Who is accountable if advice informed by another patient's data leads to harm?
+- How can patients exercise rights over data that has been absorbed into model weights?
+
+### Public Trust and Social Licence
+
+Beyond legal compliance, the system's legitimacy depends on public trust:
+- Do patients believe their data should be used this way?
+- Has there been adequate public engagement about AI uses of health data?
+- How should the system's existence and data practices be communicated to the public?
+
+## Assurance Focus
+
+The assurance case should demonstrate that:
+
+> **ClinAssist operates transparently, with clear accountability for its use of patient data, meaningful communication to patients about AI involvement in their care, and appropriate mechanisms for patients to understand and exercise their data rights.**
+
+### Deliberative Prompts
+
+- Can consent given for "healthcare research" in 2010 legitimately cover training generative AI in 2024? Where should the line be drawn on evolving interpretations of historical consent?
+- What is the ethical balance between using data for patient benefit and respecting patient autonomy when explicit consent for AI training was not obtained?
+- How should transparency obligations differ for training data (where specific attribution may be impossible) versus inference data (where the patient is identifiable)?
+- If a patient exercises their right to erasure, what does this mean for data that has been absorbed into model weights? Is meaningful erasure even possible?
+- Who bears the burden of ensuring patients understand AI involvement in their care—the technology provider, the healthcare organisation, or individual clinicians?
+- Does providing better care through AI-assisted insights justify using data in ways patients may not have anticipated? How do we weigh collective benefit against individual autonomy?
+
+## Suggested Strategies
+
+When developing your assurance case, consider these potential approaches:
+
+### Strategy 1: Layered Transparency
+
+Develop transparency mechanisms appropriate to different audiences and contexts:
+- Public-facing communications about the system's existence and general data practices
+- Patient-specific notifications when AI contributes to their individual care
+- Detailed technical documentation for governance bodies and regulators
+- Clinician guidance on explaining AI involvement to patients
+
+### Strategy 2: Data Lineage and Attribution
+
+Implement technical capabilities to trace how patient data influences system outputs:
+- Clear distinction between training data contributions and inference data use
+- Citation mechanisms linking generated content to source records
+- Audit trails enabling retrospective analysis of data influence
+
+### Strategy 3: Meaningful Consent Refresh
+
+Develop mechanisms for patients to express preferences about their data use:
+- Prospective consent options for new patients and new data collection
+- Retrospective engagement with patients whose historical data was used
+- Opt-out mechanisms that are practically meaningful (even if complete erasure from trained models is infeasible)
+
+### Strategy 4: Public Engagement and Social Licence
+
+Establish ongoing dialogue with the public about AI use of health data:
+- Citizen panels and deliberative engagement on data governance
+- Transparent reporting on system performance, benefits, and limitations
+- Responsive governance that adapts to public concerns
+
+### Strategy 5: Accountability Frameworks
+
+Clarify accountability for AI-influenced clinical decisions:
+- Clear allocation of responsibility between technology provider, healthcare organisation, and individual clinicians
+- Governance structures for investigating adverse events involving AI
+- Mechanisms for patients to raise concerns and seek redress
+
+## Recommended Techniques for Evidence
+
+The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
+
+- [Data Lineage Tracking](https://alan-turing-institute.github.io/tea-techniques/techniques/data-lineage-tracking/) - Document the flow of patient data through training and inference pipelines, enabling transparency about data provenance
+- [Model Cards](https://alan-turing-institute.github.io/tea-techniques/techniques/model-cards/) - Create standardised documentation describing the model's training data, intended use, and limitations
+- [Retrieval Attribution](https://alan-turing-institute.github.io/tea-techniques/techniques/retrieval-attribution/) - For RAG systems, provide clear citations showing which source documents influenced generated responses
+- [Membership Inference Testing](https://alan-turing-institute.github.io/tea-techniques/techniques/membership-inference-testing/) - Assess privacy risks by testing whether specific patient records can be identified as having been in training data
+- [Stakeholder Impact Assessment](https://alan-turing-institute.github.io/tea-techniques/techniques/stakeholder-impact-assessment/) - Systematically analyse impacts on different patient groups and stakeholders to inform transparency communications
+
+## Further Reading
+
+- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
+- [National Data Guardian: Caldicott Principles](https://www.gov.uk/government/publications/the-caldicott-principles)
+- [ICO Guidance: AI and Data Protection](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/)
+- [NHS England: Transformation Directorate AI Guidance](https://transform.england.nhs.uk/ai-lab/)
+- [Understanding Patient Data](https://understandingpatientdata.org.uk/)
+- [use MY data: Patient Perspectives on Health Data Use](https://www.usemydata.org/)
