@@ -785,10 +785,9 @@ model GitHubRepository {
 }
 
 // ============================================
-// CASE STUDIES (Legacy Django Tables)
+// CASE STUDIES
 // ============================================
-// These models map to existing Django tables for case study functionality.
-// They use the old table/column names via @@map() for compatibility.
+// Models for case study functionality (publishing and showcasing assurance cases).
 
 model CaseStudy {
   id             Int       @id @default(autoincrement()) @map("id")
@@ -811,8 +810,8 @@ model CaseStudy {
   publishedCases CaseStudyPublishedCase[]
   featureImage   CaseStudyImage?
 
-  @@index([ownerId], map: "eap_api_casestudy_owner_id_32cc0f00")
-  @@map("api_casestudy")
+  @@index([ownerId], map: "case_studies_owner_id_idx")
+  @@map("case_studies")
 }
 
 model CaseStudyPublishedCase {
@@ -824,10 +823,10 @@ model CaseStudyPublishedCase {
   caseStudy               CaseStudy             @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   publishedAssuranceCase  PublishedAssuranceCase @relation(fields: [publishedAssuranceCaseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([caseStudyId, publishedAssuranceCaseId], map: "eap_api_casestudy_publis_casestudy_id_publishedas_2b4d76e9_uniq")
-  @@index([caseStudyId], map: "eap_api_casestudy_publishe_casestudy_id_a7e4f836")
-  @@index([publishedAssuranceCaseId], map: "eap_api_casestudy_publishe_publishedassurancecase_id_922f4694")
-  @@map("api_casestudy_assurance_cases")
+  @@unique([caseStudyId, publishedAssuranceCaseId], map: "case_study_published_cases_unique")
+  @@index([caseStudyId], map: "case_study_published_cases_case_study_id_idx")
+  @@index([publishedAssuranceCaseId], map: "case_study_published_cases_published_case_id_idx")
+  @@map("case_study_published_cases")
 }
 
 model CaseStudyImage {
@@ -839,7 +838,7 @@ model CaseStudyImage {
   // Relations
   caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("api_casestudyfeatureimage")
+  @@map("case_study_images")
 }
 
 model PublishedAssuranceCase {
@@ -854,8 +853,8 @@ model PublishedAssuranceCase {
   assuranceCase   AssuranceCase            @relation(fields: [assuranceCaseId], references: [id])
   caseStudyLinks  CaseStudyPublishedCase[]
 
-  @@index([assuranceCaseId], map: "eap_api_publishedassurancecase_assurance_case_id_92434322")
-  @@map("api_publishedassurancecase")
+  @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
+  @@map("published_assurance_cases")
 }
 
 // ============================================
