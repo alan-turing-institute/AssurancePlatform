@@ -60,8 +60,8 @@ RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
 
-# Install Prisma CLI, tsx for TypeScript scripts, and dependencies for data migration
-RUN npm install -g prisma@7.0.0 tsx && npm install prisma@7.0.0 postgres dotenv
+# Install Prisma CLI for runtime migrations
+RUN npm install -g prisma@7.0.0 && npm install prisma@7.0.0
 
 COPY --from=builder --link /app/public ./public
 
@@ -70,10 +70,9 @@ COPY --from=builder --link /app/public ./public
 COPY --from=builder --link --chown=1001:1001 /app/.next/standalone ./
 COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 
-# Copy Prisma schema, config, migrations, and data migration scripts for runtime
+# Copy Prisma schema, config, and migrations for runtime
 COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
-COPY --from=builder --link --chown=1001:1001 /app/prisma/scripts ./prisma/scripts
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
 
 # Copy and set up entrypoint script
