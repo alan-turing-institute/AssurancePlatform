@@ -1,0 +1,735 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Project "TEA Platform" {
+  database_type: 'PostgreSQL'
+  Note: ''
+}
+
+Table users {
+  id String [pk]
+  email String [unique, not null, note: 'Primary email address, used for login and notifications']
+  username String [unique, not null, note: 'Unique display name shown throughout the platform']
+  passwordHash String [note: 'Hashed password (null for OAuth-only users)']
+  passwordAlgorithm String [not null, default: 'django_pbkdf2', note: 'Hash algorithm: \'argon2id\' (new) or \'django_pbkdf2\' (legacy)']
+  firstName String [note: 'User\'s first name for display']
+  lastName String [note: 'User\'s last name for display']
+  avatarUrl String [note: 'Profile picture URL (from GitHub or uploaded)']
+  authProvider AuthProvider [not null, default: 'LOCAL']
+  githubId String [unique]
+  githubUsername String
+  emailVerified Boolean [not null, default: false, note: 'Whether email has been verified (for email-based signup)']
+  passwordResetToken String
+  passwordResetExpires DateTime
+  defaultCaseMode CaseMode [not null, default: 'STANDARD', note: 'Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)']
+  hasSeenMigrationNotice Boolean [not null, default: false, note: 'Whether user has dismissed the Django-to-Next.js migration notice']
+  isSystemUser Boolean [not null, default: false, note: 'True for system/bot accounts (e.g., automated imports)']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  lastLoginAt DateTime [note: 'Most recent login timestamp for audit purposes']
+  teamMemberships team_members [not null]
+  createdTeams teams [not null]
+  createdCases assurance_cases [not null]
+  casePermissions case_permissions [not null]
+  grantedPermissions case_permissions [not null]
+  createdElements assurance_elements [not null]
+  authoredComments comments [not null]
+  resolvedComments comments [not null]
+  releaseComments release_comments [not null]
+  githubRepositories github_repositories [not null]
+  refreshTokens refresh_tokens [not null]
+  caseStudies case_studies [not null]
+  markedReadyCases assurance_cases [not null]
+
+  Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
+}
+
+Table refresh_tokens {
+  id String [pk]
+  token String [unique, not null]
+  userId String [not null]
+  expiresAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  revokedAt DateTime
+  userAgent String
+  ipAddress String
+  user users [not null]
+
+  Note: 'JWT refresh tokens for maintaining user sessions. Tokens can be revoked for security.'
+}
+
+Table password_reset_attempts {
+  id String [pk]
+  email String [not null]
+  ipAddress String [not null]
+  attemptedAt DateTime [default: `now()`, not null]
+  successful Boolean [not null, default: false]
+
+  Note: 'Tracks password reset attempts for rate limiting and security monitoring.'
+}
+
+Table security_audit_logs {
+  id String [pk]
+  userId String
+  eventType String [not null, note: 'Event type: login_success, login_failed, password_change, etc.']
+  ipAddress String
+  userAgent String
+  metadata Json
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'Security event log for auditing authentication and authorization events.'
+}
+
+Table rate_limit_attempts {
+  id String [pk]
+  endpoint String [not null, note: 'Endpoint identifier, e.g., "register", "invite_accept", "password_reset"']
+  identifier String [not null, note: 'The rate-limited identifier (IP address, email, or user ID)']
+  identifierType String [not null, note: 'Type of identifier: "ip", "email", or "user_id"']
+  attemptedAt DateTime [default: `now()`, not null]
+  blocked Boolean [not null, default: false, note: 'True if this attempt was rate-limited/rejected']
+  metadata Json [note: 'Additional context (request details, etc.)']
+
+  Note: 'Tracks API endpoint access for rate limiting. Used to prevent abuse of sensitive endpoints.'
+}
+
+Table teams {
+  id String [pk]
+  name String [not null, note: 'Display name of the team']
+  slug String [unique, not null, note: 'URL-safe identifier for the team']
+  description String
+  organisationId String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  createdById String [not null]
+  createdBy users [not null]
+  members team_members [not null]
+  casePermissions case_team_permissions [not null]
+  patternPermissions pattern_team_permissions [not null]
+
+  Note: 'Team for collaborative work with role-based access (OWNER, ADMIN, MEMBER). Replaces legacy Django "Group".'
+}
+
+Table team_members {
+  id String [pk]
+  teamId String [not null]
+  userId String [not null]
+  role TeamRole [not null, default: 'MEMBER', note: 'OWNER can delete team, ADMIN can manage members, MEMBER has basic access']
+  invitedById String
+  joinedAt DateTime [default: `now()`, not null]
+  team teams [not null]
+  user users [not null]
+
+  indexes {
+    (teamId, userId) [unique]
+  }
+
+  Note: 'Junction table linking users to teams with role-based access.'
+}
+
+Table assurance_cases {
+  id String [pk]
+  name String [not null, note: 'Title of the assurance case']
+  description String [not null, note: 'Summary describing the case\'s purpose and scope']
+  createdById String [not null, note: 'User who created the case (for audit trail)']
+  mode CaseMode [not null, default: 'STANDARD', note: 'STANDARD (simplified UI) or ADVANCED (full GSN notation)']
+  colorProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
+  sourcePatternId String [note: 'If created from a pattern, the source pattern ID']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  published Boolean [not null, default: false]
+  publishedAt DateTime
+  publishStatus PublishStatus [not null, default: 'DRAFT', note: 'DRAFT, READY_TO_PUBLISH, or PUBLISHED']
+  markedReadyAt DateTime [note: 'When owner marked case as ready to publish']
+  markedReadyById String [note: 'Who marked the case as ready']
+  createdBy users [not null]
+  markedReadyBy users
+  sourcePattern argument_patterns
+  elements assurance_elements [not null]
+  userPermissions case_permissions [not null]
+  teamPermissions case_team_permissions [not null]
+  invites case_invites [not null]
+  comments comments [not null]
+  caseImage case_images
+  caseTypes case_type_assignments [not null]
+  sourceReleases releases [not null]
+  publishedReleases releases [not null]
+  publishedVersions published_assurance_cases [not null]
+  embeddedIn assurance_elements [not null]
+
+  Note: 'Structured argument with goals, strategies, property claims, and evidence demonstrating system trustworthiness.'
+}
+
+Table case_permissions {
+  id String [pk]
+  caseId String [not null]
+  userId String [not null]
+  permission PermissionLevel [not null, note: 'VIEW, COMMENT, EDIT, or ADMIN']
+  grantedById String [not null]
+  grantedAt DateTime [default: `now()`, not null]
+  case assurance_cases [not null]
+  user users [not null]
+  grantedBy users [not null]
+
+  indexes {
+    (caseId, userId) [unique]
+  }
+
+  Note: 'Grants a user permission to access a specific assurance case.'
+}
+
+Table case_team_permissions {
+  id String [pk]
+  caseId String [not null]
+  teamId String [not null]
+  permission PermissionLevel [not null, note: 'VIEW, COMMENT, EDIT, or ADMIN']
+  grantedById String [not null]
+  grantedAt DateTime [default: `now()`, not null]
+  case assurance_cases [not null]
+  team teams [not null]
+
+  indexes {
+    (caseId, teamId) [unique]
+  }
+
+  Note: 'Grants a team permission to access a specific assurance case. All team members inherit this permission.'
+}
+
+Table case_invites {
+  id String [pk]
+  caseId String [not null]
+  email String [not null, note: 'Email address of the invitee']
+  permission PermissionLevel [not null, note: 'Permission level granted when accepted']
+  inviteToken String [unique, not null, note: 'Unique token for the invite URL']
+  inviteExpiresAt DateTime [not null, note: 'Invitation expiry timestamp']
+  acceptedAt DateTime [note: 'When the invite was accepted (null if pending)']
+  acceptedById String [note: 'User who accepted (may differ from email if account existed)']
+  invitedById String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  case assurance_cases [not null]
+
+  Note: 'Pending invitation to collaborate on a case. Sent via email with a unique token link.'
+}
+
+Table assurance_elements {
+  id String [pk]
+  caseId String [not null]
+  elementType ElementType [not null, note: 'Type of element: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.']
+  role ElementRole [note: 'TOP_LEVEL (root elements) or SUPPORTING (child elements)']
+  parentId String [note: 'Parent element ID (null for root elements)']
+  name String [note: 'Short identifier/title for the element']
+  description String [not null, note: 'Main content/description of the element']
+  assumption String [note: 'Assumptions upon which this element depends']
+  justification String [note: 'Rationale for strategies explaining the decomposition approach']
+  context String[] [not null, note: 'Contextual information strings (replaces legacy CONTEXT element type)']
+  url String [note: 'Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]']
+  urls String[] [not null, note: 'Multiple evidence URLs. Must be valid http/https URLs']
+  moduleReferenceId String [note: 'For MODULE type: the referenced case ID']
+  moduleEmbedType ModuleEmbedType [note: 'COPY (snapshot) or REFERENCE (live link)']
+  modulePublicSummary String [note: 'Public summary when module is not viewable']
+  fromPattern Boolean [not null, default: false, note: 'True if element came from a pattern template']
+  modifiedFromPattern Boolean [not null, default: false, note: 'True if element was modified after pattern application']
+  inSandbox Boolean [not null, default: false, note: 'True if element is in draft/sandbox mode']
+  isDefeater Boolean [not null, default: false, note: 'True if element is a counter-argument']
+  defeatsElementId String [note: 'Element this defeater challenges']
+  level Int [note: 'Hierarchy depth level for property claims']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  createdById String [not null]
+  case assurance_cases [not null]
+  createdBy users [not null]
+  parent assurance_elements
+  children assurance_elements [not null]
+  defeatsElement assurance_elements
+  defeatedBy assurance_elements [not null]
+  moduleReference assurance_cases
+  evidenceLinksFrom evidence_links [not null]
+  evidenceLinksTo evidence_links [not null]
+  comments comments [not null]
+  releaseComments release_comments [not null]
+
+  Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
+}
+
+Table evidence_links {
+  id String [pk]
+  evidenceId String [not null, note: 'The evidence element']
+  claimId String [not null, note: 'The claim being supported']
+  createdAt DateTime [default: `now()`, not null]
+  evidence assurance_elements [not null]
+  claim assurance_elements [not null]
+
+  indexes {
+    (evidenceId, claimId) [unique]
+  }
+
+  Note: 'Links evidence elements to claims (many-to-many). One piece of evidence can support multiple claims.'
+}
+
+Table argument_patterns {
+  id String [pk]
+  name String [not null, note: 'Pattern title']
+  description String [not null, note: 'Description of what this pattern covers']
+  version String [not null, note: 'Version string (e.g., "1.0", "2.1")']
+  category String
+  tags String[] [not null]
+  published Boolean [not null, default: false]
+  publishedAt DateTime
+  createdById String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  elements pattern_elements [not null]
+  userPermissions pattern_permissions [not null]
+  teamPermissions pattern_team_permissions [not null]
+  derivedCases assurance_cases [not null]
+
+  Note: 'Reusable template for creating assurance cases with optional placeholder elements for customisation.'
+}
+
+Table pattern_elements {
+  id String [pk]
+  patternId String [not null]
+  elementType ElementType [not null]
+  role ElementRole
+  parentId String
+  name String
+  description String [not null]
+  assumption String
+  justification String
+  context String[] [not null]
+  url String
+  isPlaceholder Boolean [not null, default: false, note: 'True if this element should be filled in when pattern is used']
+  placeholderHint String [note: 'Guidance text for filling in placeholder']
+  displayOrder Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  pattern argument_patterns [not null]
+  parent pattern_elements
+  children pattern_elements [not null]
+
+  Note: 'Element within an argument pattern. Includes placeholder support for customisation on instantiation.'
+}
+
+Table pattern_permissions {
+  id String [pk]
+  patternId String [not null]
+  userId String [not null]
+  permission PermissionLevel [not null]
+  grantedById String [not null]
+  grantedAt DateTime [default: `now()`, not null]
+  pattern argument_patterns [not null]
+
+  indexes {
+    (patternId, userId) [unique]
+  }
+}
+
+Table pattern_team_permissions {
+  id String [pk]
+  patternId String [not null]
+  teamId String [not null]
+  permission PermissionLevel [not null]
+  grantedById String [not null]
+  grantedAt DateTime [default: `now()`, not null]
+  pattern argument_patterns [not null]
+  team teams [not null]
+
+  indexes {
+    (patternId, teamId) [unique]
+  }
+}
+
+Table releases {
+  id String [pk]
+  sourceCaseId String [not null, note: 'Original case this release was created from']
+  publishedCaseId String [note: 'Read-only community copy of the case']
+  title String [not null, note: 'Published title (may differ from source case)']
+  description String [not null, note: 'Public description of the release']
+  currentVersion Int [not null, default: 0, note: 'Current version number']
+  authors String [not null]
+  contactEmail String
+  category String
+  sector String
+  tags String[] [not null]
+  status ReleaseStatus [not null, default: 'DRAFT']
+  firstPublishedAt DateTime
+  lastUpdatedAt DateTime
+  allowComments Boolean [not null, default: true]
+  createdById String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  sourceCase assurance_cases [not null]
+  publishedCase assurance_cases
+  snapshots release_snapshots [not null]
+  comments release_comments [not null]
+  image release_images
+
+  Note: 'Published release of an assurance case for community viewing with version history and comments.'
+}
+
+Table release_snapshots {
+  id String [pk]
+  releaseId String [not null]
+  versionNumber Int [not null, note: 'Sequential version number']
+  versionLabel String [note: 'Optional human-readable label (e.g., "v2.0-beta")']
+  content Json [not null, note: 'Complete case content serialised as JSON']
+  snapshotTakenAt DateTime [not null]
+  snapshotTakenById String [not null]
+  reason SnapshotReason [not null]
+  createdAt DateTime [default: `now()`, not null]
+  release releases [not null]
+
+  Note: 'Point-in-time snapshot of a release. Captures the full case content as JSON for version history.'
+}
+
+Table release_comments {
+  id String [pk]
+  releaseId String [not null]
+  elementId String [note: 'If set, comment is on a specific element']
+  parentCommentId String [note: 'For threaded replies']
+  content String [not null, note: 'Comment text (supports markdown)']
+  authorId String [not null]
+  status CommentStatus [not null, default: 'VISIBLE', note: 'VISIBLE, HIDDEN, or DELETED']
+  hiddenById String
+  hiddenAt DateTime
+  hiddenReason String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  release releases [not null]
+  element assurance_elements
+  author users [not null]
+  parentComment release_comments
+  replies release_comments [not null]
+
+  Note: 'Community comment on a published release. Supports threading and moderation.'
+}
+
+Table release_images {
+  id String [pk]
+  releaseId String [unique, not null]
+  imageUrl String [not null]
+  altText String
+  uploadedAt DateTime [not null]
+  uploadedById String [not null]
+  release releases [not null]
+}
+
+Table comments {
+  id String [pk]
+  caseId String [note: 'Case-level comment if set']
+  elementId String [note: 'Element-level comment if set']
+  parentCommentId String [note: 'For threaded replies']
+  content String [not null, note: 'Comment text']
+  authorId String [not null]
+  resolved Boolean [not null, default: false, note: 'True when the feedback has been addressed']
+  resolvedById String [note: 'Who marked it resolved']
+  resolvedAt DateTime [note: 'When it was resolved']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  case assurance_cases
+  element assurance_elements
+  author users [not null]
+  resolvedBy users
+  parentComment comments
+  replies comments [not null]
+
+  Note: 'Internal comment for collaboration between case editors. Distinct from ReleaseComment (public).'
+}
+
+Table case_images {
+  id String [pk]
+  caseId String [unique, not null]
+  imageUrl String [not null, note: 'URL or path to the image file']
+  uploadedAt DateTime [not null]
+  uploadedById String [not null]
+  case assurance_cases [not null]
+
+  Note: 'Cover/thumbnail image for an assurance case. One image per case.'
+}
+
+Table case_types {
+  id String [pk]
+  name String [unique, not null, note: 'Display name of the type']
+  description String [note: 'Description of what this type covers']
+  category CaseTypeCategory [not null, note: 'DOMAIN, TECHNIQUE, or STANDARD']
+  externalUrl String [note: 'Link to external standard/reference']
+  createdAt DateTime [default: `now()`, not null]
+  assignments case_type_assignments [not null]
+
+  Note: 'Classification type for assurance cases: DOMAIN (healthcare), TECHNIQUE (ML safety), STANDARD (ISO 26262).'
+}
+
+Table case_type_assignments {
+  id String [pk]
+  caseId String [not null]
+  caseTypeId String [not null]
+  assignedById String [not null]
+  assignedAt DateTime [default: `now()`, not null]
+  case assurance_cases [not null]
+  caseType case_types [not null]
+
+  indexes {
+    (caseId, caseTypeId) [unique]
+  }
+
+  Note: 'Junction table assigning case types to assurance cases. Allows multiple types per case.'
+}
+
+Table github_repositories {
+  id String [pk]
+  name String [not null, note: 'Repository name']
+  url String [not null, note: 'Full GitHub URL']
+  description String [note: 'Repository description']
+  githubId String [note: 'GitHub\'s internal repository ID']
+  defaultBranch String [not null, default: 'main', note: 'Default branch name']
+  userId String [not null, note: 'Owner of this repository link']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user users [not null]
+
+  Note: 'GitHub repository linked to a user account. Used for evidence gathering and repository integration.'
+}
+
+Table case_studies {
+  id Int [pk, increment]
+  title String [not null, note: 'Case study title']
+  description String [note: 'Full description/narrative']
+  authors String [note: 'Author names']
+  category String [note: 'Category (e.g., "Healthcare", "Automotive")']
+  publishedDate DateTime [note: 'When first published']
+  lastModifiedOn DateTime [not null]
+  createdOn DateTime [not null]
+  sector String [note: 'Industry sector']
+  contact String [note: 'Contact email']
+  image String [note: 'Legacy image path']
+  published Boolean [not null, note: 'Whether the case study is publicly visible']
+  ownerId String [note: 'Creator/owner of the case study']
+  type String [note: 'Case study type classification']
+  owner users
+  publishedCases case_study_published_cases [not null]
+  featureImage case_study_images
+
+  Note: 'Public community document showcasing published assurance cases with narrative context.'
+}
+
+Table case_study_published_cases {
+  id BigInt [pk, increment]
+  caseStudyId Int [not null, note: 'The case study']
+  publishedAssuranceCaseId String [not null, note: 'The published case']
+  caseStudy case_studies [not null]
+  publishedAssuranceCase published_assurance_cases [not null]
+
+  indexes {
+    (caseStudyId, publishedAssuranceCaseId) [unique]
+  }
+
+  Note: 'Junction table linking case studies to published assurance case snapshots.'
+}
+
+Table case_study_images {
+  id BigInt [pk, increment]
+  image String [not null, note: 'Image URL or path']
+  uploadedAt DateTime [not null]
+  caseStudyId Int [unique, not null]
+  caseStudy case_studies [not null]
+
+  Note: 'Feature image for a case study. One image per case study.'
+}
+
+Table published_assurance_cases {
+  id String [pk]
+  title String [not null, note: 'Title at time of publishing']
+  content Json [not null, note: 'Full case content as JSON snapshot']
+  createdAt DateTime [default: `now()`, not null]
+  assuranceCaseId String [not null, note: 'Source case this was published from']
+  description String [note: 'Description at time of publishing']
+  assuranceCase assurance_cases [not null]
+  caseStudyLinks case_study_published_cases [not null]
+
+  Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
+}
+
+Table legacy_mappings {
+  id String [pk]
+  entityType String [not null, note: 'Entity type: \'user\', \'case\', \'element\', \'team\', etc.']
+  legacyId BigInt [not null, note: 'Old Django integer ID']
+  newId String [not null, note: 'New Prisma UUID']
+  createdAt DateTime [default: `now()`, not null]
+
+  indexes {
+    (entityType, legacyId) [unique]
+  }
+
+  Note: 'Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.'
+}
+
+Enum AuthProvider {
+  LOCAL
+  GITHUB
+  SYSTEM
+}
+
+Enum CaseMode {
+  STANDARD
+  ADVANCED
+}
+
+Enum PublishStatus {
+  DRAFT
+  READY_TO_PUBLISH
+  PUBLISHED
+}
+
+Enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+Enum PermissionLevel {
+  VIEW
+  COMMENT
+  EDIT
+  ADMIN
+}
+
+Enum ElementType {
+  GOAL
+  CONTEXT
+  STRATEGY
+  PROPERTY_CLAIM
+  EVIDENCE
+  JUSTIFICATION
+  ASSUMPTION
+  MODULE
+  AWAY_GOAL
+  CONTRACT
+}
+
+Enum ElementRole {
+  TOP_LEVEL
+  SUPPORTING
+}
+
+Enum ModuleEmbedType {
+  COPY
+  REFERENCE
+}
+
+Enum ReleaseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+Enum SnapshotReason {
+  INITIAL_PUBLISH
+  UPDATE
+  ARCHIVE
+}
+
+Enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+Enum CaseTypeCategory {
+  DOMAIN
+  TECHNIQUE
+  STANDARD
+}
+
+Ref: refresh_tokens.userId > users.id [delete: Cascade]
+
+Ref: teams.createdById > users.id
+
+Ref: team_members.teamId > teams.id [delete: Cascade]
+
+Ref: team_members.userId > users.id [delete: Cascade]
+
+Ref: assurance_cases.createdById > users.id
+
+Ref: assurance_cases.markedReadyById > users.id
+
+Ref: assurance_cases.sourcePatternId > argument_patterns.id
+
+Ref: case_permissions.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: case_permissions.userId > users.id [delete: Cascade]
+
+Ref: case_permissions.grantedById > users.id [delete: Cascade]
+
+Ref: case_team_permissions.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: case_team_permissions.teamId > teams.id [delete: Cascade]
+
+Ref: case_invites.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: assurance_elements.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: assurance_elements.createdById > users.id
+
+Ref: assurance_elements.parentId - assurance_elements.id
+
+Ref: assurance_elements.defeatsElementId - assurance_elements.id
+
+Ref: assurance_elements.moduleReferenceId > assurance_cases.id [delete: Cascade]
+
+Ref: evidence_links.evidenceId > assurance_elements.id [delete: Cascade]
+
+Ref: evidence_links.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: pattern_elements.patternId > argument_patterns.id [delete: Cascade]
+
+Ref: pattern_elements.parentId - pattern_elements.id
+
+Ref: pattern_permissions.patternId > argument_patterns.id [delete: Cascade]
+
+Ref: pattern_team_permissions.patternId > argument_patterns.id [delete: Cascade]
+
+Ref: pattern_team_permissions.teamId > teams.id [delete: Cascade]
+
+Ref: releases.sourceCaseId > assurance_cases.id
+
+Ref: releases.publishedCaseId > assurance_cases.id
+
+Ref: release_snapshots.releaseId > releases.id [delete: Cascade]
+
+Ref: release_comments.releaseId > releases.id [delete: Cascade]
+
+Ref: release_comments.elementId > assurance_elements.id
+
+Ref: release_comments.authorId > users.id
+
+Ref: release_comments.parentCommentId - release_comments.id
+
+Ref: release_images.releaseId - releases.id [delete: Cascade]
+
+Ref: comments.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: comments.elementId > assurance_elements.id [delete: Cascade]
+
+Ref: comments.authorId > users.id
+
+Ref: comments.resolvedById > users.id
+
+Ref: comments.parentCommentId - comments.id
+
+Ref: case_images.caseId - assurance_cases.id [delete: Cascade]
+
+Ref: case_type_assignments.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: case_type_assignments.caseTypeId > case_types.id [delete: Cascade]
+
+Ref: github_repositories.userId > users.id [delete: Cascade]
+
+Ref: case_studies.ownerId > users.id
+
+Ref: case_study_published_cases.caseStudyId > case_studies.id [delete: No Action]
+
+Ref: case_study_published_cases.publishedAssuranceCaseId > published_assurance_cases.id [delete: No Action]
+
+Ref: case_study_images.caseStudyId - case_studies.id [delete: No Action]
+
+Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id

@@ -160,8 +160,6 @@ export function useCaseEvents({
 			"element:attached",
 			"element:detached",
 			"permission:changed",
-			"lock:acquired",
-			"lock:released",
 		];
 
 		for (const eventType of eventTypes) {

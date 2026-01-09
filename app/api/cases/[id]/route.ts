@@ -125,7 +125,6 @@ async function fetchCaseFromPrisma(
 			name: caseData.name,
 			description: caseData.description,
 			created_date: caseData.createdAt.toISOString(),
-			lock_uuid: caseData.lockUuid,
 			color_profile: caseData.colorProfile,
 			owner: caseData.createdById,
 			goals,
@@ -315,9 +314,6 @@ function buildCaseUpdateData(
 	if (body.color_profile !== undefined) {
 		updateData.colorProfile = body.color_profile;
 	}
-	if (body.lock_uuid !== undefined) {
-		updateData.lockUuid = body.lock_uuid;
-	}
 	return updateData;
 }
 
@@ -359,7 +355,6 @@ async function updateCaseWithPrisma(
 		name: updated.name,
 		description: updated.description,
 		created_date: updated.createdAt.toISOString(),
-		lock_uuid: updated.lockUuid,
 		color_profile: updated.colorProfile,
 	});
 }

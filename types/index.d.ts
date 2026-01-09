@@ -139,7 +139,6 @@ export type AssuranceCase = {
 	name: string;
 	description: string;
 	created_date: string;
-	lock_uuid: string | null;
 	goals: Goal[];
 	owner: number;
 	edit_groups: Group[];

@@ -175,7 +175,6 @@ export type AssuranceCase = {
 	createdOn?: string;
 	updatedOn?: string;
 	type: string;
-	lock_uuid: string | null;
 	comments: Comment[];
 	permissions: string | string[];
 	created_date: string;
