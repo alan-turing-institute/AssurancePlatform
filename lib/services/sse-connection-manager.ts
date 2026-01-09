@@ -15,9 +15,7 @@ export type SSEEventType =
 	| "element:deleted"
 	| "element:attached"
 	| "element:detached"
-	| "permission:changed"
-	| "lock:acquired"
-	| "lock:released";
+	| "permission:changed";
 
 export type SSEEvent = {
 	type: SSEEventType;

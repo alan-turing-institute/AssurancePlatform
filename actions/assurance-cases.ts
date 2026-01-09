@@ -13,7 +13,6 @@ type AssuranceCase = {
 	name: string;
 	description?: string;
 	created_date?: string;
-	lock_reason?: string | null;
 	owner?: number | string;
 };
 
@@ -46,7 +45,6 @@ export const fetchAssuranceCases = async (
 			name: true,
 			description: true,
 			createdAt: true,
-			lockUuid: true,
 			createdById: true,
 		},
 		orderBy: {
@@ -59,7 +57,6 @@ export const fetchAssuranceCases = async (
 		name: c.name,
 		description: c.description ?? undefined,
 		created_date: c.createdAt.toISOString(),
-		lock_reason: c.lockUuid,
 		owner: c.createdById ?? undefined,
 	}));
 };
@@ -118,7 +115,6 @@ export const fetchSharedAssuranceCases = async (
 			name: true,
 			description: true,
 			createdAt: true,
-			lockUuid: true,
 			createdById: true,
 		},
 		orderBy: {
@@ -131,7 +127,6 @@ export const fetchSharedAssuranceCases = async (
 		name: c.name,
 		description: c.description ?? undefined,
 		created_date: c.createdAt.toISOString(),
-		lock_reason: c.lockUuid,
 		owner: c.createdById ?? undefined,
 	}));
 };

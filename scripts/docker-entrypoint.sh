@@ -14,9 +14,24 @@ if [ $MIGRATE_EXIT_CODE -eq 0 ]; then
     echo "Migrations applied successfully."
 
     # Check if data migration is needed (users table empty but api_eapuser has data)
+    # First check if api_eapuser table exists (it was dropped in migration 20260110000000)
     echo "Checking if data migration is needed..."
     set +e
-    NEEDS_DATA_MIGRATION=$(npx prisma db execute --stdin <<'CHECK_MIGRATION' 2>/dev/null | grep -c "t" || echo "0"
+    LEGACY_TABLE_EXISTS=$(npx prisma db execute --stdin <<'CHECK_TABLE' 2>/dev/null | grep -c "t" || echo "0"
+SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'api_eapuser'
+);
+CHECK_TABLE
+)
+    set -e
+
+    if [ "$LEGACY_TABLE_EXISTS" != "1" ] && [ "$LEGACY_TABLE_EXISTS" != "t" ]; then
+        echo "Legacy tables already removed - data migration not needed."
+        NEEDS_DATA_MIGRATION="0"
+    else
+        set +e
+        NEEDS_DATA_MIGRATION=$(npx prisma db execute --stdin <<'CHECK_MIGRATION' 2>/dev/null | grep -c "t" || echo "0"
 SELECT EXISTS (
     SELECT 1 FROM api_eapuser WHERE id IS NOT NULL
 ) AND NOT EXISTS (
@@ -24,7 +39,8 @@ SELECT EXISTS (
 );
 CHECK_MIGRATION
 )
-    set -e
+        set -e
+    fi
 
     if [ "$NEEDS_DATA_MIGRATION" = "1" ] || [ "$NEEDS_DATA_MIGRATION" = "t" ]; then
         echo "Data migration needed - migrating Django data to Prisma tables..."
@@ -82,7 +98,23 @@ MIGRATIONS_TABLE
     echo "Running data migration scripts..."
 
     # Check if data migration is needed (users table empty but api_eapuser has data)
-    NEEDS_DATA_MIGRATION=$(npx prisma db execute --stdin <<'CHECK_MIGRATION' 2>/dev/null | grep -c "t" || echo "0"
+    # First check if api_eapuser table exists (it was dropped in migration 20260110000000)
+    set +e
+    LEGACY_TABLE_EXISTS=$(npx prisma db execute --stdin <<'CHECK_TABLE' 2>/dev/null | grep -c "t" || echo "0"
+SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'api_eapuser'
+);
+CHECK_TABLE
+)
+    set -e
+
+    if [ "$LEGACY_TABLE_EXISTS" != "1" ] && [ "$LEGACY_TABLE_EXISTS" != "t" ]; then
+        echo "Legacy tables already removed - data migration not needed."
+        NEEDS_DATA_MIGRATION="0"
+    else
+        set +e
+        NEEDS_DATA_MIGRATION=$(npx prisma db execute --stdin <<'CHECK_MIGRATION' 2>/dev/null | grep -c "t" || echo "0"
 SELECT EXISTS (
     SELECT 1 FROM api_eapuser WHERE id IS NOT NULL
 ) AND NOT EXISTS (
@@ -90,6 +122,8 @@ SELECT EXISTS (
 );
 CHECK_MIGRATION
 )
+        set -e
+    fi
 
     if [ "$NEEDS_DATA_MIGRATION" = "1" ] || [ "$NEEDS_DATA_MIGRATION" = "t" ]; then
         echo "Data migration needed - migrating Django data to Prisma tables..."

@@ -5,6 +5,15 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+generator dbml {
+  provider            = "prisma-dbml-generator"
+  output              = "../docs/database"
+  outputName          = "schema.dbml"
+  projectName         = "TEA Platform"
+  projectDatabaseType = "PostgreSQL"
+  manyToMany          = false // Disabled: prevents spurious CommentThread join table from self-referential relations
+}
+
 datasource db {
   provider = "postgresql"
 }
@@ -13,41 +22,42 @@ datasource db {
 // USERS & AUTHENTICATION
 // ============================================
 
+/// Platform user account. Supports local (email/password) and GitHub OAuth authentication.
 model User {
   id                   String       @id @default(uuid())
-  email                String       @unique
-  username             String       @unique
-  passwordHash         String?      @map("password_hash")
-  passwordAlgorithm    String       @default("django_pbkdf2") @map("password_algorithm")
+  email                String       @unique /// Primary email address, used for login and notifications
+  username             String       @unique /// Unique display name shown throughout the platform
+  passwordHash         String?      @map("password_hash") /// Hashed password (null for OAuth-only users)
+  passwordAlgorithm    String       @default("django_pbkdf2") @map("password_algorithm") /// Hash algorithm: 'argon2id' (new) or 'django_pbkdf2' (legacy)
 
   // Profile
-  firstName            String?      @map("first_name")
-  lastName             String?      @map("last_name")
-  avatarUrl            String?      @map("avatar_url")
+  firstName            String?      @map("first_name") /// User's first name for display
+  lastName             String?      @map("last_name") /// User's last name for display
+  avatarUrl            String?      @map("avatar_url") /// Profile picture URL (from GitHub or uploaded)
 
   // Authentication
   authProvider         AuthProvider @default(LOCAL) @map("auth_provider")
   githubId             String?      @unique @map("github_id")
   githubUsername       String?      @map("github_username")
-  emailVerified        Boolean      @default(false) @map("email_verified")
+  emailVerified        Boolean      @default(false) @map("email_verified") /// Whether email has been verified (for email-based signup)
 
   // Password reset
   passwordResetToken   String?      @map("password_reset_token")
   passwordResetExpires DateTime?    @map("password_reset_expires")
 
   // Preferences
-  defaultCaseMode      CaseMode     @default(STANDARD) @map("default_case_mode")
+  defaultCaseMode      CaseMode     @default(STANDARD) @map("default_case_mode") /// Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)
 
   // Migration notice tracking
-  hasSeenMigrationNotice Boolean    @default(false) @map("has_seen_migration_notice")
+  hasSeenMigrationNotice Boolean    @default(false) @map("has_seen_migration_notice") /// Whether user has dismissed the Django-to-Next.js migration notice
 
   // System flag
-  isSystemUser         Boolean      @default(false) @map("is_system_user")
+  isSystemUser         Boolean      @default(false) @map("is_system_user") /// True for system/bot accounts (e.g., automated imports)
 
   // Timestamps
   createdAt            DateTime     @default(now()) @map("created_at")
   updatedAt            DateTime     @updatedAt @map("updated_at")
-  lastLoginAt          DateTime?    @map("last_login_at")
+  lastLoginAt          DateTime?    @map("last_login_at") /// Most recent login timestamp for audit purposes
 
   // Relations
   teamMemberships      TeamMember[]
@@ -77,6 +87,7 @@ enum AuthProvider {
 // REFRESH TOKENS (Session Management)
 // ============================================
 
+/// JWT refresh tokens for maintaining user sessions. Tokens can be revoked for security.
 model RefreshToken {
   id        String    @id @default(uuid())
   token     String    @unique
@@ -109,6 +120,7 @@ enum PublishStatus {
 // PASSWORD RESET & SECURITY AUDIT
 // ============================================
 
+/// Tracks password reset attempts for rate limiting and security monitoring.
 model PasswordResetAttempt {
   id          String   @id @default(uuid())
   email       String
@@ -121,10 +133,11 @@ model PasswordResetAttempt {
   @@map("password_reset_attempts")
 }
 
+/// Security event log for auditing authentication and authorization events.
 model SecurityAuditLog {
   id        String   @id @default(uuid())
   userId    String?  @map("user_id")
-  eventType String   @map("event_type")
+  eventType String   @map("event_type") /// Event type: login_success, login_failed, password_change, etc.
   ipAddress String?  @map("ip_address")
   userAgent String?  @map("user_agent")
   metadata  Json?
@@ -136,14 +149,15 @@ model SecurityAuditLog {
   @@map("security_audit_logs")
 }
 
+/// Tracks API endpoint access for rate limiting. Used to prevent abuse of sensitive endpoints.
 model RateLimitAttempt {
   id             String   @id @default(uuid())
-  endpoint       String   // e.g., "register", "invite_accept"
-  identifier     String   // IP address, email, or user ID
-  identifierType String   @map("identifier_type") // "ip", "email", "user_id"
+  endpoint       String   /// Endpoint identifier, e.g., "register", "invite_accept", "password_reset"
+  identifier     String   /// The rate-limited identifier (IP address, email, or user ID)
+  identifierType String   @map("identifier_type") /// Type of identifier: "ip", "email", or "user_id"
   attemptedAt    DateTime @default(now()) @map("attempted_at")
-  blocked        Boolean  @default(false) // Was this attempt rate-limited?
-  metadata       Json?    // Optional additional context
+  blocked        Boolean  @default(false) /// True if this attempt was rate-limited/rejected
+  metadata       Json?    /// Additional context (request details, etc.)
 
   @@index([endpoint, identifier, attemptedAt])
   @@index([endpoint, identifierType, attemptedAt])
@@ -155,10 +169,11 @@ model RateLimitAttempt {
 // TEAMS
 // ============================================
 
+/// Team for collaborative work with role-based access (OWNER, ADMIN, MEMBER). Replaces legacy Django "Group".
 model Team {
   id                 String                  @id @default(uuid())
-  name               String
-  slug               String                  @unique
+  name               String                  /// Display name of the team
+  slug               String                  @unique /// URL-safe identifier for the team
   description        String?
 
   // Future: Organisation support
@@ -178,11 +193,12 @@ model Team {
   @@map("teams")
 }
 
+/// Junction table linking users to teams with role-based access.
 model TeamMember {
   id          String   @id @default(uuid())
   teamId      String   @map("team_id")
   userId      String   @map("user_id")
-  role        TeamRole @default(MEMBER)
+  role        TeamRole @default(MEMBER) /// OWNER can delete team, ADMIN can manage members, MEMBER has basic access
 
   invitedById String?  @map("invited_by_id")
   joinedAt    DateTime @default(now()) @map("joined_at")
@@ -205,27 +221,24 @@ enum TeamRole {
 // ASSURANCE CASES
 // ============================================
 
+/// Structured argument with goals, strategies, property claims, and evidence demonstrating system trustworthiness.
+// Key features: 3-state publish workflow, permission-based access, element comments, snapshots.
 model AssuranceCase {
   id              String                @id @default(uuid())
-  name            String
-  description     String
+  name            String                /// Title of the assurance case
+  description     String                /// Summary describing the case's purpose and scope
 
   // Creator (for audit, NOT ownership)
-  createdById     String                @map("created_by_id")
+  createdById     String                @map("created_by_id") /// User who created the case (for audit trail)
 
   // Mode
-  mode            CaseMode              @default(STANDARD)
+  mode            CaseMode              @default(STANDARD) /// STANDARD (simplified UI) or ADVANCED (full GSN notation)
 
   // Visual settings
-  colorProfile    String                @default("default") @map("color_profile")
-
-  // Concurrency control
-  lockUuid        String?               @map("lock_uuid")
-  lockedById      String?               @map("locked_by_id")
-  lockedAt        DateTime?             @map("locked_at")
+  colorProfile    String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
 
   // Pattern tracking
-  sourcePatternId String?               @map("source_pattern_id")
+  sourcePatternId String?               @map("source_pattern_id") /// If created from a pattern, the source pattern ID
 
   // Timestamps
   createdAt       DateTime              @default(now()) @map("created_at")
@@ -236,9 +249,9 @@ model AssuranceCase {
   publishedAt     DateTime?             @map("published_at")
 
   // Publishing - 3-state workflow
-  publishStatus     PublishStatus         @default(DRAFT) @map("publish_status")
-  markedReadyAt     DateTime?             @map("marked_ready_at")
-  markedReadyById   String?               @map("marked_ready_by_id")
+  publishStatus     PublishStatus         @default(DRAFT) @map("publish_status") /// DRAFT, READY_TO_PUBLISH, or PUBLISHED
+  markedReadyAt     DateTime?             @map("marked_ready_at") /// When owner marked case as ready to publish
+  markedReadyById   String?               @map("marked_ready_by_id") /// Who marked the case as ready
 
   // Relations
   createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
@@ -267,11 +280,12 @@ model AssuranceCase {
   @@map("assurance_cases")
 }
 
+/// Grants a user permission to access a specific assurance case.
 model CasePermission {
   id          String          @id @default(uuid())
   caseId      String          @map("case_id")
   userId      String          @map("user_id")
-  permission  PermissionLevel
+  permission  PermissionLevel /// VIEW, COMMENT, EDIT, or ADMIN
 
   grantedById String          @map("granted_by_id")
   grantedAt   DateTime        @default(now()) @map("granted_at")
@@ -285,11 +299,12 @@ model CasePermission {
   @@map("case_permissions")
 }
 
+/// Grants a team permission to access a specific assurance case. All team members inherit this permission.
 model CaseTeamPermission {
   id          String          @id @default(uuid())
   caseId      String          @map("case_id")
   teamId      String          @map("team_id")
-  permission  PermissionLevel
+  permission  PermissionLevel /// VIEW, COMMENT, EDIT, or ADMIN
 
   grantedById String          @map("granted_by_id")
   grantedAt   DateTime        @default(now()) @map("granted_at")
@@ -309,16 +324,17 @@ enum PermissionLevel {
   ADMIN
 }
 
+/// Pending invitation to collaborate on a case. Sent via email with a unique token link.
 model CaseInvite {
   id              String    @id @default(uuid())
   caseId          String    @map("case_id")
-  email           String
-  permission      PermissionLevel
+  email           String    /// Email address of the invitee
+  permission      PermissionLevel /// Permission level granted when accepted
 
-  inviteToken     String    @unique @map("invite_token")
-  inviteExpiresAt DateTime  @map("invite_expires_at")
-  acceptedAt      DateTime? @map("accepted_at")
-  acceptedById    String?   @map("accepted_by_id")
+  inviteToken     String    @unique @map("invite_token") /// Unique token for the invite URL
+  inviteExpiresAt DateTime  @map("invite_expires_at") /// Invitation expiry timestamp
+  acceptedAt      DateTime? @map("accepted_at") /// When the invite was accepted (null if pending)
+  acceptedById    String?   @map("accepted_by_id") /// User who accepted (may differ from email if account existed)
 
   invitedById     String    @map("invited_by_id")
   createdAt       DateTime  @default(now()) @map("created_at")
@@ -333,48 +349,51 @@ model CaseInvite {
 // ASSURANCE ELEMENTS (CONSOLIDATED)
 // ============================================
 
+/// Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.
+// Hierarchy: GOAL → STRATEGY → PROPERTY_CLAIM. Evidence linked via EvidenceLink (many-to-many).
+// CONTEXT as element type is legacy - prefer context[] field. parentId=null for roots, role=TOP_LEVEL/SUPPORTING.
 model AssuranceElement {
   id                  String           @id @default(uuid())
   caseId              String           @map("case_id")
 
   // Element classification
-  elementType         ElementType      @map("element_type")
-  role                ElementRole?
+  elementType         ElementType      @map("element_type") /// Type of element: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.
+  role                ElementRole?     /// TOP_LEVEL (root elements) or SUPPORTING (child elements)
 
   // Hierarchy
-  parentId            String?          @map("parent_id")
+  parentId            String?          @map("parent_id") /// Parent element ID (null for root elements)
 
   // Common fields
-  name                String?
-  description         String           // Migrated from short_description
+  name                String?          /// Short identifier/title for the element
+  description         String           /// Main content/description of the element
 
-  // GSN-specific fields
-  assumption          String?          // For goals, strategies, claims
-  justification       String?          // For strategies
-  context             String[]         @default([]) // For goals, strategies, claims
+  // GSN-specific fields (applicable to GOAL, STRATEGY, PROPERTY_CLAIM only)
+  assumption          String?          /// Assumptions upon which this element depends
+  justification       String?          /// Rationale for strategies explaining the decomposition approach
+  context             String[]         @default([]) /// Contextual information strings (replaces legacy CONTEXT element type)
 
-  // Evidence-specific
-  url                 String?
-  urls                String[]         @default([])
+  // Evidence-specific (EVIDENCE elements only)
+  url                 String?          /// Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]
+  urls                String[]         @default([]) /// Multiple evidence URLs. Must be valid http/https URLs
 
   // Module-specific
-  moduleReferenceId   String?          @map("module_reference_id")
-  moduleEmbedType     ModuleEmbedType? @map("module_embed_type")
-  modulePublicSummary String?          @map("module_public_summary")
+  moduleReferenceId   String?          @map("module_reference_id") /// For MODULE type: the referenced case ID
+  moduleEmbedType     ModuleEmbedType? @map("module_embed_type") /// COPY (snapshot) or REFERENCE (live link)
+  modulePublicSummary String?          @map("module_public_summary") /// Public summary when module is not viewable
 
   // Pattern tracking
-  fromPattern         Boolean          @default(false) @map("from_pattern")
-  modifiedFromPattern Boolean          @default(false) @map("modified_from_pattern")
+  fromPattern         Boolean          @default(false) @map("from_pattern") /// True if element came from a pattern template
+  modifiedFromPattern Boolean          @default(false) @map("modified_from_pattern") /// True if element was modified after pattern application
 
   // Sandbox/draft status
-  inSandbox           Boolean          @default(false) @map("in_sandbox")
+  inSandbox           Boolean          @default(false) @map("in_sandbox") /// True if element is in draft/sandbox mode
 
   // Dialogical reasoning (defeaters)
-  isDefeater          Boolean          @default(false) @map("is_defeater")
-  defeatsElementId    String?          @map("defeats_element_id")
+  isDefeater          Boolean          @default(false) @map("is_defeater") /// True if element is a counter-argument
+  defeatsElementId    String?          @map("defeats_element_id") /// Element this defeater challenges
 
   // Level (calculated, for property claims)
-  level               Int?
+  level               Int?             /// Hierarchy depth level for property claims
 
   // Timestamps
   createdAt           DateTime         @default(now()) @map("created_at")
@@ -426,10 +445,11 @@ enum ModuleEmbedType {
   REFERENCE
 }
 
+/// Links evidence elements to claims (many-to-many). One piece of evidence can support multiple claims.
 model EvidenceLink {
   id         String           @id @default(uuid())
-  evidenceId String           @map("evidence_id")
-  claimId    String           @map("claim_id")
+  evidenceId String           @map("evidence_id") /// The evidence element
+  claimId    String           @map("claim_id") /// The claim being supported
 
   createdAt  DateTime         @default(now()) @map("created_at")
 
@@ -445,11 +465,12 @@ model EvidenceLink {
 // ARGUMENT PATTERNS
 // ============================================
 
+/// Reusable template for creating assurance cases with optional placeholder elements for customisation.
 model ArgumentPattern {
   id              String                  @id @default(uuid())
-  name            String
-  description     String
-  version         String
+  name            String                  /// Pattern title
+  description     String                  /// Description of what this pattern covers
+  version         String                  /// Version string (e.g., "1.0", "2.1")
 
   // Categorisation
   category        String?
@@ -475,6 +496,7 @@ model ArgumentPattern {
   @@map("argument_patterns")
 }
 
+/// Element within an argument pattern. Includes placeholder support for customisation on instantiation.
 model PatternElement {
   id              String         @id @default(uuid())
   patternId       String         @map("pattern_id")
@@ -489,14 +511,14 @@ model PatternElement {
   // GSN-specific fields (same as AssuranceElement)
   assumption      String?
   justification   String?
-  context         String[]       @default([]) // For goals, strategies, claims
+  context         String[]       @default([])
 
   // Evidence-specific
   url             String?
 
   // Placeholder support (pattern-specific)
-  isPlaceholder   Boolean        @default(false) @map("is_placeholder")
-  placeholderHint String?        @map("placeholder_hint")
+  isPlaceholder   Boolean        @default(false) @map("is_placeholder") /// True if this element should be filled in when pattern is used
+  placeholderHint String?        @map("placeholder_hint") /// Guidance text for filling in placeholder
 
   // Ordering
   displayOrder    Int            @default(0) @map("display_order")
@@ -547,19 +569,20 @@ model PatternTeamPermission {
 // RELEASES (PUBLISHING)
 // ============================================
 
+/// Published release of an assurance case for community viewing with version history and comments.
 model Release {
   id               String        @id @default(uuid())
 
   // Source case (user's private version)
-  sourceCaseId     String        @map("source_case_id")
+  sourceCaseId     String        @map("source_case_id") /// Original case this release was created from
 
   // Published case (community-visible fork)
-  publishedCaseId  String?       @map("published_case_id")
+  publishedCaseId  String?       @map("published_case_id") /// Read-only community copy of the case
 
   // Metadata
-  title            String
-  description      String
-  currentVersion   Int           @default(0) @map("current_version")
+  title            String        /// Published title (may differ from source case)
+  description      String        /// Public description of the release
+  currentVersion   Int           @default(0) @map("current_version") /// Current version number
 
   // Authors
   authors          String
@@ -601,16 +624,17 @@ enum ReleaseStatus {
   ARCHIVED
 }
 
+/// Point-in-time snapshot of a release. Captures the full case content as JSON for version history.
 model ReleaseSnapshot {
   id                String         @id @default(uuid())
   releaseId         String         @map("release_id")
 
   // Version tracking
-  versionNumber     Int            @map("version_number")
-  versionLabel      String?        @map("version_label")
+  versionNumber     Int            @map("version_number") /// Sequential version number
+  versionLabel      String?        @map("version_label") /// Optional human-readable label (e.g., "v2.0-beta")
 
   // Full case data as JSON
-  content           Json
+  content           Json           /// Complete case content serialised as JSON
 
   // Metadata
   snapshotTakenAt   DateTime       @map("snapshot_taken_at")
@@ -631,18 +655,19 @@ enum SnapshotReason {
   ARCHIVE
 }
 
+/// Community comment on a published release. Supports threading and moderation.
 model ReleaseComment {
   id              String           @id @default(uuid())
   releaseId       String           @map("release_id")
-  elementId       String?          @map("element_id")
+  elementId       String?          @map("element_id") /// If set, comment is on a specific element
 
-  parentCommentId String?          @map("parent_comment_id")
-  content         String
+  parentCommentId String?          @map("parent_comment_id") /// For threaded replies
+  content         String           /// Comment text (supports markdown)
 
   authorId        String           @map("author_id")
 
   // Moderation
-  status          CommentStatus    @default(VISIBLE)
+  status          CommentStatus    @default(VISIBLE) /// VISIBLE, HIDDEN, or DELETED
   hiddenById      String?          @map("hidden_by_id")
   hiddenAt        DateTime?        @map("hidden_at")
   hiddenReason    String?          @map("hidden_reason")
@@ -683,23 +708,24 @@ model ReleaseImage {
 // COMMENTS (INTERNAL)
 // ============================================
 
+/// Internal comment for collaboration between case editors. Distinct from ReleaseComment (public).
 model Comment {
   id              String           @id @default(uuid())
 
   // Polymorphic attachment
-  caseId          String?          @map("case_id")
-  elementId       String?          @map("element_id")
+  caseId          String?          @map("case_id") /// Case-level comment if set
+  elementId       String?          @map("element_id") /// Element-level comment if set
 
   // Threading
-  parentCommentId String?          @map("parent_comment_id")
+  parentCommentId String?          @map("parent_comment_id") /// For threaded replies
 
-  content         String
+  content         String           /// Comment text
   authorId        String           @map("author_id")
 
   // Status
-  resolved        Boolean          @default(false)
-  resolvedById    String?          @map("resolved_by_id")
-  resolvedAt      DateTime?        @map("resolved_at")
+  resolved        Boolean          @default(false) /// True when the feedback has been addressed
+  resolvedById    String?          @map("resolved_by_id") /// Who marked it resolved
+  resolvedAt      DateTime?        @map("resolved_at") /// When it was resolved
 
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
@@ -719,10 +745,11 @@ model Comment {
 // SUPPORTING ENTITIES
 // ============================================
 
+/// Cover/thumbnail image for an assurance case. One image per case.
 model CaseImage {
   id           String        @id @default(uuid())
   caseId       String        @unique @map("case_id")
-  imageUrl     String        @map("image_url")
+  imageUrl     String        @map("image_url") /// URL or path to the image file
   uploadedAt   DateTime      @map("uploaded_at")
   uploadedById String        @map("uploaded_by_id")
 
@@ -731,12 +758,13 @@ model CaseImage {
   @@map("case_images")
 }
 
+/// Classification type for assurance cases: DOMAIN (healthcare), TECHNIQUE (ML safety), STANDARD (ISO 26262).
 model CaseType {
   id          String               @id @default(uuid())
-  name        String               @unique
-  description String?
-  category    CaseTypeCategory
-  externalUrl String?              @map("external_url")
+  name        String               @unique /// Display name of the type
+  description String?              /// Description of what this type covers
+  category    CaseTypeCategory     /// DOMAIN, TECHNIQUE, or STANDARD
+  externalUrl String?              @map("external_url") /// Link to external standard/reference
   createdAt   DateTime             @default(now()) @map("created_at")
 
   assignments CaseTypeAssignment[]
@@ -750,6 +778,7 @@ enum CaseTypeCategory {
   STANDARD
 }
 
+/// Junction table assigning case types to assurance cases. Allows multiple types per case.
 model CaseTypeAssignment {
   id           String        @id @default(uuid())
   caseId       String        @map("case_id")
@@ -764,16 +793,17 @@ model CaseTypeAssignment {
   @@map("case_type_assignments")
 }
 
+/// GitHub repository linked to a user account. Used for evidence gathering and repository integration.
 model GitHubRepository {
   id            String   @id @default(uuid())
-  name          String
-  url           String
-  description   String?
+  name          String   /// Repository name
+  url           String   /// Full GitHub URL
+  description   String?  /// Repository description
 
-  githubId      String?  @map("github_id")
-  defaultBranch String   @default("main") @map("default_branch")
+  githubId      String?  @map("github_id") /// GitHub's internal repository ID
+  defaultBranch String   @default("main") @map("default_branch") /// Default branch name
 
-  userId        String   @map("user_id")
+  userId        String   @map("user_id") /// Owner of this repository link
 
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -785,88 +815,95 @@ model GitHubRepository {
 }
 
 // ============================================
-// CASE STUDIES (Legacy Django Tables)
+// CASE STUDIES
 // ============================================
-// These models map to existing Django tables for case study functionality.
-// They use the old table/column names via @@map() for compatibility.
 
+/// Public community document showcasing published assurance cases with narrative context.
+// Distinct from AssuranceCase (the structured argument). Links to PublishedAssuranceCase snapshots.
+// When creating, READY_TO_PUBLISH cases are automatically published and linked.
 model CaseStudy {
   id             Int       @id @default(autoincrement()) @map("id")
-  title          String    @db.VarChar(255)
-  description    String?
-  authors        String?   @db.VarChar(255)
-  category       String?   @db.VarChar(100)
-  publishedDate  DateTime? @map("published_date") @db.Timestamptz(6)
+  title          String    @db.VarChar(255) /// Case study title
+  description    String?   /// Full description/narrative
+  authors        String?   @db.VarChar(255) /// Author names
+  category       String?   @db.VarChar(100) /// Category (e.g., "Healthcare", "Automotive")
+  publishedDate  DateTime? @map("published_date") @db.Timestamptz(6) /// When first published
   lastModifiedOn DateTime  @map("last_modified_on") @db.Timestamptz(6)
   createdOn      DateTime  @map("created_on") @db.Timestamptz(6)
-  sector         String?   @db.VarChar(100)
-  contact        String?   @db.VarChar(254)
-  image          String?   @db.VarChar(200)
-  published      Boolean
-  ownerId        String?   @map("owner_id")
-  type           String?   @db.VarChar(100)
+  sector         String?   @db.VarChar(100) /// Industry sector
+  contact        String?   @db.VarChar(254) /// Contact email
+  image          String?   @db.VarChar(200) /// Legacy image path
+  published      Boolean   /// Whether the case study is publicly visible
+  ownerId        String?   @map("owner_id") /// Creator/owner of the case study
+  type           String?   @db.VarChar(100) /// Case study type classification
 
   // Relations
   owner          User?                    @relation(fields: [ownerId], references: [id])
   publishedCases CaseStudyPublishedCase[]
   featureImage   CaseStudyImage?
 
-  @@index([ownerId], map: "eap_api_casestudy_owner_id_32cc0f00")
-  @@map("api_casestudy")
+  @@index([ownerId], map: "case_studies_owner_id_idx")
+  @@map("case_studies")
 }
 
+/// Junction table linking case studies to published assurance case snapshots.
+// Auto-publishes READY_TO_PUBLISH cases, creates links, migrates when published case is updated.
 model CaseStudyPublishedCase {
   id                      BigInt                @id @default(autoincrement())
-  caseStudyId             Int                   @map("casestudy_id")
-  publishedAssuranceCaseId String               @map("publishedassurancecase_id") @db.Uuid
+  caseStudyId             Int                   @map("casestudy_id") /// The case study
+  publishedAssuranceCaseId String               @map("publishedassurancecase_id") @db.Uuid /// The published case
 
   // Relations
   caseStudy               CaseStudy             @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   publishedAssuranceCase  PublishedAssuranceCase @relation(fields: [publishedAssuranceCaseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@unique([caseStudyId, publishedAssuranceCaseId], map: "eap_api_casestudy_publis_casestudy_id_publishedas_2b4d76e9_uniq")
-  @@index([caseStudyId], map: "eap_api_casestudy_publishe_casestudy_id_a7e4f836")
-  @@index([publishedAssuranceCaseId], map: "eap_api_casestudy_publishe_publishedassurancecase_id_922f4694")
-  @@map("api_casestudy_assurance_cases")
+  @@unique([caseStudyId, publishedAssuranceCaseId], map: "case_study_published_cases_unique")
+  @@index([caseStudyId], map: "case_study_published_cases_case_study_id_idx")
+  @@index([publishedAssuranceCaseId], map: "case_study_published_cases_published_case_id_idx")
+  @@map("case_study_published_cases")
 }
 
+/// Feature image for a case study. One image per case study.
 model CaseStudyImage {
   id          BigInt    @id @default(autoincrement())
-  image       String    @db.VarChar(500)
+  image       String    @db.VarChar(500) /// Image URL or path
   uploadedAt  DateTime  @map("uploaded_at") @db.Timestamptz(6)
   caseStudyId Int       @unique @map("case_study_id")
 
   // Relations
   caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@map("api_casestudyfeatureimage")
+  @@map("case_study_images")
 }
 
+/// Snapshot of an assurance case for case study integration. Content stored as JSON.
+// Multiple versions per case (history). Distinct from Release model (for community releases).
 model PublishedAssuranceCase {
   id              String   @id @default(uuid()) @db.Uuid
-  title           String   @db.VarChar(255)
-  content         Json
+  title           String   @db.VarChar(255) /// Title at time of publishing
+  content         Json     /// Full case content as JSON snapshot
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  assuranceCaseId String   @map("assurance_case_id")
-  description     String?  @db.VarChar(1000)
+  assuranceCaseId String   @map("assurance_case_id") /// Source case this was published from
+  description     String?  @db.VarChar(1000) /// Description at time of publishing
 
   // Relations
   assuranceCase   AssuranceCase            @relation(fields: [assuranceCaseId], references: [id])
   caseStudyLinks  CaseStudyPublishedCase[]
 
-  @@index([assuranceCaseId], map: "eap_api_publishedassurancecase_assurance_case_id_92434322")
-  @@map("api_publishedassurancecase")
+  @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
+  @@map("published_assurance_cases")
 }
 
 // ============================================
 // LEGACY MAPPING (for migration tracking)
 // ============================================
 
+/// Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.
 model LegacyMapping {
   id          String   @id @default(uuid())
-  entityType  String   @map("entity_type")  // 'user', 'case', 'element', 'team', etc.
-  legacyId    BigInt   @map("legacy_id")    // Old Django ID
-  newId       String   @map("new_id")       // New UUID
+  entityType  String   @map("entity_type") /// Entity type: 'user', 'case', 'element', 'team', etc.
+  legacyId    BigInt   @map("legacy_id") /// Old Django integer ID
+  newId       String   @map("new_id") /// New Prisma UUID
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@unique([entityType, legacyId])

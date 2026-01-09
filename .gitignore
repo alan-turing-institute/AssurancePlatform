@@ -196,6 +196,9 @@ TASKS/
 .mcp.json
 .playwright-mcp/
 
+# beads issue tracking
+.beads/last-touched
+
 # IDE and editor files
 .idea/
 *.swp

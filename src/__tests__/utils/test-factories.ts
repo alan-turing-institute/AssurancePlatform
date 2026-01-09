@@ -176,7 +176,6 @@ export const AssuranceCaseFactory = {
 			name: `Assurance Case ${id}`,
 			description: `Comprehensive assurance case ${id} for testing`,
 			created_date: currentDate,
-			lock_uuid: null,
 			view_groups: [],
 			edit_groups: [],
 			review_groups: [],
