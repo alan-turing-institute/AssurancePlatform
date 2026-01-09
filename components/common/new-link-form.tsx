@@ -1,10 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Minus, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
 import {
@@ -39,15 +40,13 @@ import { Textarea } from "../ui/textarea";
 
 const formSchema = z.object({
 	description: z.string().min(2, {
-		message: "Description must be atleast 2 characters",
+		message: "Description must be at least 2 characters",
 	}),
-	URL: z
-		.string()
-		.min(2, {
-			message: "url must be at least 2 characters.",
+	urls: z.array(
+		z.object({
+			value: z.string(),
 		})
-		.or(z.literal(""))
-		.optional(),
+	),
 });
 
 type NodeActions = {
@@ -406,10 +405,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	};
 
 	/** Helper function to create evidence data object */
-	const createEvidenceData = (description: string, url?: string) => ({
+	const createEvidenceData = (description: string, urls: string[]) => ({
 		short_description: description,
 		long_description: description,
-		URL: url || "",
+		urls,
+		URL: urls[0] || "", // Backward compatibility
 		property_claim_id: [node.data.id],
 		type: "Evidence",
 		assurance_case_id: assuranceCase?.id,
@@ -481,8 +481,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	};
 
 	/** Function used to handle creation of a evidence node linked to a property claim */
-	const handleEvidenceAdd = async (description: string, url?: string) => {
-		const newEvidenceItem = createEvidenceData(description, url);
+	const handleEvidenceAdd = async (description: string, urls: string[]) => {
+		const newEvidenceItem = createEvidenceData(description, urls);
 
 		const result = await createAssuranceCaseNode(
 			"evidence",
@@ -551,8 +551,13 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			description: "",
-			URL: "", // Add empty string as default to prevent uncontrolled input error
+			urls: [{ value: "" }],
 		},
+	});
+
+	const { fields, append, remove } = useFieldArray({
+		control: form.control,
+		name: "urls",
 	});
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
@@ -569,9 +574,14 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			case "strategy":
 				handleStrategyAdd(description);
 				break;
-			case "evidence":
-				handleEvidenceAdd(description, values.URL || "");
+			case "evidence": {
+				// Filter out empty URLs and extract values
+				const urlValues = values.urls
+					.map((u) => u.value.trim())
+					.filter((url) => url.length > 0);
+				handleEvidenceAdd(description, urlValues);
 				break;
+			}
 			default:
 				setLoading(false);
 				break;
@@ -579,11 +589,12 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	}
 
 	useEffect(() => {
-		form.watch((_values, { name }) => {
-			if (name === "description" || name === "URL") {
+		const subscription = form.watch((_values, { name }) => {
+			if (name?.startsWith("urls") || name === "description") {
 				setUnresolvedChanges(true);
 			}
 		});
+		return () => subscription.unsubscribe();
 	}, [form, setUnresolvedChanges]);
 
 	return (
@@ -610,19 +621,48 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 						)}
 					/>
 					{linkType === "evidence" && (
-						<FormField
-							control={form.control}
-							name="URL"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Evidence URL</FormLabel>
-									<FormControl>
-										<Input placeholder="www.sample.com" {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
+						<div className="space-y-3">
+							<FormLabel>Evidence URLs (optional)</FormLabel>
+							{fields.map((field, index) => (
+								<FormField
+									control={form.control}
+									key={field.id}
+									name={`urls.${index}.value`}
+									render={({ field: inputField }) => (
+										<FormItem>
+											<div className="flex gap-2">
+												<FormControl>
+													<Input
+														placeholder="https://example.com/evidence"
+														{...inputField}
+													/>
+												</FormControl>
+												{fields.length > 1 && (
+													<Button
+														onClick={() => remove(index)}
+														size="icon"
+														type="button"
+														variant="outline"
+													>
+														<Minus className="h-4 w-4" />
+													</Button>
+												)}
+											</div>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							))}
+							<Button
+								className="w-full"
+								onClick={() => append({ value: "" })}
+								type="button"
+								variant="outline"
+							>
+								<Plus className="mr-2 h-4 w-4" />
+								Add URL
+							</Button>
+						</div>
 					)}
 					<div className="flex items-center justify-start gap-3 pt-4">
 						<Button

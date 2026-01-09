@@ -355,6 +355,7 @@ model AssuranceElement {
 
   // Evidence-specific
   url                 String?
+  urls                String[]         @default([])
 
   // Module-specific
   moduleReferenceId   String?          @map("module_reference_id")

@@ -13,7 +13,7 @@ import EditForm from "../edit-form";
 // Regex constants
 const DESCRIPTION_REGEX = /description/i;
 const UPDATE_REGEX = /update/i;
-const EVIDENCE_URL_REGEX = /evidence url/i;
+const EVIDENCE_URL_REGEX = /evidence urls/i;
 const UPDATE_STRATEGY_REGEX = /update strategy/i;
 
 // Mock the store
@@ -158,7 +158,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(screen.getByLabelText(EVIDENCE_URL_REGEX)).toBeInTheDocument();
+			expect(screen.getByText(EVIDENCE_URL_REGEX)).toBeInTheDocument();
 			expect(
 				screen.getByDisplayValue("https://example.com")
 			).toBeInTheDocument();
@@ -177,9 +177,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			expect(
-				screen.queryByLabelText(EVIDENCE_URL_REGEX)
-			).not.toBeInTheDocument();
+			expect(screen.queryByText(EVIDENCE_URL_REGEX)).not.toBeInTheDocument();
 		});
 	});
 
@@ -249,7 +247,7 @@ describe("EditForm", () => {
 
 			await waitFor(() => {
 				expect(
-					screen.getByText("Description must be atleast 2 characters")
+					screen.getByText("Description must be at least 2 characters")
 				).toBeInTheDocument();
 			});
 		});
@@ -275,7 +273,7 @@ describe("EditForm", () => {
 
 			// Should not show validation error
 			expect(
-				screen.queryByText("Description must be atleast 2 characters")
+				screen.queryByText("Description must be at least 2 characters")
 			).not.toBeInTheDocument();
 		});
 	});
@@ -370,7 +368,7 @@ describe("EditForm", () => {
 				/>
 			);
 
-			const urlInput = screen.getByLabelText(EVIDENCE_URL_REGEX);
+			const urlInput = screen.getByDisplayValue("https://example.com");
 			await user.type(urlInput, "/modified");
 
 			await waitFor(() => {

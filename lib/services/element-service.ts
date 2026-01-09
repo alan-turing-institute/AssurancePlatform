@@ -48,6 +48,7 @@ export type CreateElementInput = {
 	// Evidence-specific
 	url?: string;
 	URL?: string;
+	urls?: string[];
 	// GSN-specific
 	assumption?: string;
 	justification?: string;
@@ -62,6 +63,7 @@ export type UpdateElementInput = {
 	parentId?: string | null;
 	url?: string;
 	URL?: string;
+	urls?: string[];
 	assumption?: string;
 	justification?: string;
 	context?: string[];
@@ -85,6 +87,7 @@ export type ElementResponse = {
 	strategy_id?: string | null;
 	property_claim_id?: string | string[] | null;
 	URL?: string;
+	urls?: string[];
 	assumption?: string;
 	justification?: string;
 	context?: string[];
@@ -145,6 +148,42 @@ function mapElementType(type: string): string {
 }
 
 /**
+ * Resolves URLs from input, handling both legacy single URL and new array format.
+ * Returns both the legacy url field and the urls array for backward compatibility.
+ */
+function resolveUrls(input: CreateElementInput | UpdateElementInput): {
+	url: string | null;
+	urls: string[];
+} {
+	const legacyUrl = input.url || input.URL;
+
+	if (input.urls && input.urls.length > 0) {
+		return { url: input.urls[0], urls: input.urls };
+	}
+	if (legacyUrl) {
+		return { url: legacyUrl, urls: [legacyUrl] };
+	}
+	return { url: null, urls: [] };
+}
+
+/**
+ * Applies URL updates to the update data object if any URL fields are provided.
+ */
+function applyUrlUpdates(
+	input: UpdateElementInput,
+	updateData: Record<string, unknown>
+): void {
+	if (input.urls !== undefined) {
+		updateData.urls = input.urls;
+		updateData.url = input.urls.length > 0 ? input.urls[0] : null;
+	} else if (input.url !== undefined || input.URL !== undefined) {
+		const singleUrl = input.url ?? input.URL;
+		updateData.url = singleUrl;
+		updateData.urls = singleUrl ? [singleUrl] : [];
+	}
+}
+
+/**
  * Adds parent reference to response in Django format
  */
 function addParentReference(
@@ -186,6 +225,7 @@ function transformToResponse(element: {
 	justification: string | null;
 	context: string[];
 	url: string | null;
+	urls: string[];
 	inSandbox: boolean;
 	level: number | null;
 	caseId: string;
@@ -214,8 +254,13 @@ function transformToResponse(element: {
 	}
 
 	// Add type-specific fields
-	if (element.url) {
+	// Handle URLs: prefer urls array, fall back to legacy url field
+	if (element.urls && element.urls.length > 0) {
+		response.urls = element.urls;
+		response.URL = element.urls[0]; // Backward compatibility: first URL
+	} else if (element.url) {
 		response.URL = element.url;
+		response.urls = [element.url]; // Backward compatibility
 	}
 	if (element.assumption) {
 		response.assumption = element.assumption;
@@ -394,7 +439,7 @@ export async function createElement(
 					input.longDescription ||
 					"",
 				parentId,
-				url: input.url || input.URL,
+				...resolveUrls(input),
 				assumption: input.assumption,
 				justification: input.justification,
 				context: input.context ?? [],
@@ -467,12 +512,7 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.longDescription !== undefined) {
 		updateData.description = input.longDescription;
 	}
-	if (input.url !== undefined) {
-		updateData.url = input.url;
-	}
-	if (input.URL !== undefined) {
-		updateData.url = input.URL;
-	}
+	applyUrlUpdates(input, updateData);
 	if (input.assumption !== undefined) {
 		updateData.assumption = input.assumption;
 	}

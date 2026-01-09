@@ -35,6 +35,7 @@ export type ElementType = (typeof ELEMENT_TYPES)[number];
  */
 export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 	url: new Set(["EVIDENCE"]),
+	urls: new Set(["EVIDENCE"]),
 	justification: new Set([
 		"GOAL",
 		"STRATEGY",
@@ -177,6 +178,24 @@ const PropertyClaimSchema = BaseElementSchema.extend({
 const EvidenceSchema = BaseElementSchema.extend({
 	elementType: z.literal("EVIDENCE"),
 	url: z.string().nullable().optional(),
+	urls: z
+		.array(
+			z.string().refine(
+				(val) => {
+					if (!val) {
+						return true;
+					}
+					try {
+						const parsed = new URL(val);
+						return parsed.protocol === "http:" || parsed.protocol === "https:";
+					} catch {
+						return false;
+					}
+				},
+				{ message: "Must be a valid http or https URL" }
+			)
+		)
+		.default([]),
 });
 
 const JustificationSchema = BaseElementSchema.extend({
@@ -268,6 +287,7 @@ export function cleanElementDataForType(
 	// Type-specific fields that may need to be removed
 	const typeSpecificFields = [
 		"url",
+		"urls",
 		"justification",
 		"assumption",
 		"context",
