@@ -26,6 +26,7 @@ function buildCreateInput(
 		property_claim_id: body.property_claim_id as string | undefined,
 		assurance_case_id: body.assurance_case_id as string | undefined,
 		url: (body.url || body.URL) as string | undefined,
+		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
 	};

@@ -116,6 +116,7 @@ export type Evidence = {
 	long_description: string;
 	created_date?: string;
 	URL: string;
+	urls?: string[];
 	property_claim_id: number[];
 	comments?: Comment[];
 	in_sandbox?: boolean;
