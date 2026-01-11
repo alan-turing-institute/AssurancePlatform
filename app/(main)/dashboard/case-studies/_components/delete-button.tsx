@@ -2,7 +2,6 @@
 
 import { Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { deleteCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
@@ -20,7 +19,6 @@ const DeleteCaseButton = ({
 	variant,
 	redirect = false,
 }: DeleteCaseButtonProps) => {
-	const { data } = useSession();
 	const { toast } = useToast();
 	const router = useRouter();
 
@@ -28,7 +26,7 @@ const DeleteCaseButton = ({
 	const [deleteLoading] = useState<boolean>(false);
 
 	const handleDelete = async () => {
-		const result = await deleteCaseStudy(data?.key ?? "", caseStudyId);
+		const result = await deleteCaseStudy("", caseStudyId);
 
 		if (result.success) {
 			toast({

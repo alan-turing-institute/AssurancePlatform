@@ -101,7 +101,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		const result = await createAssuranceCaseNode(
 			"contexts",
 			newContextItem,
-			session?.key ?? ""
+			""
 		);
 
 		if (result.error) {
@@ -374,7 +374,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		const result = await createAssuranceCaseNode(
 			"propertyclaims",
 			newPropertyClaimItem,
-			session?.key ?? ""
+			""
 		);
 
 		if (result.error) {
@@ -487,7 +487,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		const result = await createAssuranceCaseNode(
 			"evidence",
 			newEvidenceItem,
-			session?.key ?? ""
+			""
 		);
 
 		if (result.error) {

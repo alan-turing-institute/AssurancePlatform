@@ -70,7 +70,6 @@ model User {
   resolvedComments     Comment[]          @relation("CommentResolver")
   releaseComments      ReleaseComment[]
   githubRepositories   GitHubRepository[]
-  refreshTokens        RefreshToken[]
   caseStudies          CaseStudy[]
   markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
 
@@ -81,28 +80,6 @@ enum AuthProvider {
   LOCAL
   GITHUB
   SYSTEM
-}
-
-// ============================================
-// REFRESH TOKENS (Session Management)
-// ============================================
-
-/// JWT refresh tokens for maintaining user sessions. Tokens can be revoked for security.
-model RefreshToken {
-  id        String    @id @default(uuid())
-  token     String    @unique
-  userId    String    @map("user_id")
-  expiresAt DateTime  @map("expires_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  revokedAt DateTime? @map("revoked_at")
-  userAgent String?   @map("user_agent")
-  ipAddress String?   @map("ip_address")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("refresh_tokens")
 }
 
 enum CaseMode {

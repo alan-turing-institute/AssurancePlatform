@@ -45,7 +45,7 @@ const mockUser = {
 	id: 1,
 	name: "Test User",
 	email: "test@example.com",
-	key: "mock-session-key",
+	key: "",
 };
 
 describe("UnpublishCaseButton Component", () => {
@@ -209,7 +209,7 @@ describe("UnpublishCaseButton Component", () => {
 			// Check unpublish was called with correct parameters
 			await waitFor(() => {
 				expect(mockUpdateCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
+					"",
 					expect.any(FormData)
 				);
 			});
@@ -442,10 +442,10 @@ describe("UnpublishCaseButton Component", () => {
 			});
 			await user.click(confirmButton);
 
-			// Check unpublish was called with undefined key
+			// Check unpublish was called with empty string (session key no longer used)
 			await waitFor(() => {
 				expect(mockUpdateCaseStudy).toHaveBeenCalledWith(
-					undefined,
+					"",
 					expect.any(FormData)
 				);
 			});
@@ -475,10 +475,10 @@ describe("UnpublishCaseButton Component", () => {
 			});
 			await user.click(confirmButton);
 
-			// Check unpublish was called with undefined key
+			// Check unpublish was called with empty string (session key no longer used)
 			await waitFor(() => {
 				expect(mockUpdateCaseStudy).toHaveBeenCalledWith(
-					undefined,
+					"",
 					expect.any(FormData)
 				);
 			});

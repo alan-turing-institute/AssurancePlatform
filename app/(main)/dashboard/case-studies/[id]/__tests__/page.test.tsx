@@ -104,9 +104,9 @@ describe("CaseStudyDetails", () => {
 			expect(redirect).toHaveBeenCalledWith("/login");
 		});
 
-		it("should redirect to login if session has no key", async () => {
+		it("should redirect to login if session has no user id", async () => {
 			vi.mocked(getServerSession).mockResolvedValue({
-				user: { id: "1", name: "Test User", email: "test@example.com" },
+				user: { name: "Test User", email: "test@example.com" },
 				expires: "2025-12-31",
 			} as Session);
 			const mockRedirect = vi.mocked(redirect);
@@ -127,7 +127,6 @@ describe("CaseStudyDetails", () => {
 	describe("With Authentication", () => {
 		const mockSession = {
 			user: { id: "1", name: "Test User", email: "test@example.com" },
-			key: "mock-jwt-token",
 			expires: "2025-12-31",
 		};
 

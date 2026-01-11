@@ -9,7 +9,6 @@ import {
 	Route,
 	Trash2,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import React, {
 	type Dispatch,
 	type SetStateAction,
@@ -59,9 +58,6 @@ const OrphanElements = ({
 		OrphanElement[]
 	>([]);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 
 	// Refetch case and orphaned elements from server to get fresh data with children
 	const refetchCaseData = async () => {
@@ -158,7 +154,7 @@ const OrphanElements = ({
 		const result = await attachCaseElement(
 			orphanAsReactFlowNode,
 			orphan.id,
-			session?.key ?? "",
+			"",
 			{
 				id: node.id,
 				type: node.type || "",
@@ -192,7 +188,7 @@ const OrphanElements = ({
 				const deleted = await deleteAssuranceCaseNode(
 					orphan.type ?? "",
 					orphan.id,
-					session?.key ?? ""
+					""
 				);
 
 				return { deleted, orphanId: orphan.id };
@@ -230,7 +226,7 @@ const OrphanElements = ({
 			const deleted = await deleteAssuranceCaseNode(
 				orphan.type ?? "",
 				orphan.id,
-				session?.key ?? ""
+				""
 			);
 
 			if (deleted) {

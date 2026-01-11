@@ -176,7 +176,7 @@ describe("Header", () => {
 		it("should show get started link when user is authenticated", async () => {
 			mockUseSession.mockReturnValue({
 				data: {
-					key: "mock-session-key",
+					user: { id: "user-123", email: "test@example.com" },
 					expires: new Date(Date.now() + 86_400_000).toISOString(),
 				},
 				status: "authenticated",
@@ -205,7 +205,7 @@ describe("Header", () => {
 			// Update session to authenticated
 			mockUseSession.mockReturnValue({
 				data: {
-					key: "mock-session-key",
+					user: { id: "user-123", email: "test@example.com" },
 					expires: new Date(Date.now() + 86_400_000).toISOString(),
 				},
 				status: "authenticated",
@@ -470,7 +470,7 @@ describe("Header", () => {
 	});
 
 	describe("Edge Cases", () => {
-		it("should handle session with undefined key", () => {
+		it("should handle session without user id", () => {
 			mockUseSession.mockReturnValue({
 				data: {
 					user: { email: "test@example.com" },
@@ -482,7 +482,7 @@ describe("Header", () => {
 
 			render(<Header />);
 
-			// Should still show login link since session.key is undefined
+			// Should still show login link since session.user.id is undefined
 			expect(
 				screen.getByRole("link", { name: LOG_IN_REGEX })
 			).toBeInTheDocument();
@@ -513,7 +513,7 @@ describe("Header", () => {
 			// Rapidly change session states
 			mockUseSession.mockReturnValue({
 				data: {
-					key: "test-key",
+					user: { id: "user-123", email: "test@example.com" },
 					expires: new Date(Date.now() + 86_400_000).toISOString(),
 				},
 				status: "authenticated",
@@ -530,7 +530,7 @@ describe("Header", () => {
 
 			mockUseSession.mockReturnValue({
 				data: {
-					key: "new-key",
+					user: { id: "user-456", email: "test2@example.com" },
 					expires: new Date(Date.now() + 86_400_000).toISOString(),
 				},
 				status: "authenticated",

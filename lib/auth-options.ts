@@ -6,7 +6,7 @@ import GithubProvider from "next-auth/providers/github";
 dotenv.config(); // Explicitly load environment variables
 
 /**
- * Authenticates a user using Prisma (new implementation).
+ * Authenticates a user using Prisma.
  * Verifies password against stored hash and upgrades to argon2id if needed.
  */
 async function authenticateWithPrisma(
@@ -16,14 +16,12 @@ async function authenticateWithPrisma(
 	id: string;
 	name: string;
 	email: string;
-	key?: string;
 } | null> {
 	// Dynamic imports to avoid loading Prisma when not using this auth method
 	const { prismaNew } = await import("@/lib/prisma");
 	const { verifyPassword, hashPassword } = await import(
 		"@/lib/auth/password-service"
 	);
-	const { isJwtOnlyAuth } = await import("@/lib/auth/feature-flags");
 	type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
 
 	const user = await prismaNew.user.findFirst({
@@ -65,26 +63,10 @@ async function authenticateWithPrisma(
 		});
 	}
 
-	// In JWT-only mode, skip refresh token creation
-	if (isJwtOnlyAuth()) {
-		return {
-			id: user.id,
-			name: user.username,
-			email: user.email,
-		};
-	}
-
-	// Legacy mode: create a refresh token for the session
-	const { createRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	const { token } = await createRefreshToken(user.id);
-
 	return {
 		id: user.id,
 		name: user.username,
 		email: user.email,
-		key: token,
 	};
 }
 
@@ -96,9 +78,8 @@ async function authenticateGitHubWithPrisma(profile: {
 	id?: string | number;
 	login?: string;
 	email?: string | null;
-}): Promise<{ id: string; key?: string } | null> {
+}): Promise<{ id: string } | null> {
 	const { prismaNew } = await import("@/lib/prisma");
-	const { isJwtOnlyAuth } = await import("@/lib/auth/feature-flags");
 
 	const githubId = String(profile?.id ?? "");
 	const githubUsername = profile?.login ?? "";
@@ -140,17 +121,7 @@ async function authenticateGitHubWithPrisma(profile: {
 		userId = newUser.id;
 	}
 
-	// In JWT-only mode, skip refresh token creation
-	if (isJwtOnlyAuth()) {
-		return { id: userId };
-	}
-
-	// Legacy mode: create a refresh token for the session
-	const { createRefreshToken } = await import(
-		"@/lib/auth/refresh-token-service"
-	);
-	const { token } = await createRefreshToken(userId);
-	return { id: userId, key: token };
+	return { id: userId };
 }
 
 /**
@@ -233,7 +204,6 @@ export const authOptions: NextAuthOptions = {
 				const result = await authenticateGitHubWithPrisma(githubProfile);
 				if (result) {
 					user.id = result.id;
-					user.key = result.key;
 					user.provider = "github";
 					return true;
 				}
@@ -281,12 +251,10 @@ export const authOptions: NextAuthOptions = {
 		 *
 		 * @param {Object} params - Parameters related to the session.
 		 * @param {Object} params.session - The current session object.
-		 * @param {Object} params.user - User information attached to the session.
 		 * @param {Object} params.token - The JWT token associated with the session.
-		 * @returns {Object} The modified session object with an access token and provider information.
+		 * @returns {Object} The modified session object with provider information.
 		 */
 		session({ session, token }) {
-			session.key = token.key; // Add the key to the session object
 			session.provider = token.provider;
 			// Add user ID to session for Prisma auth
 			if (token.id && session.user) {
@@ -297,38 +265,17 @@ export const authOptions: NextAuthOptions = {
 
 		/**
 		 * Callback to handle JWT token creation and updates.
-		 * Uses constant-time operations to prevent timing attacks.
 		 *
 		 * @param {Object} params - Parameters related to the JWT.
 		 * @param {Object} params.token - The current token.
 		 * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).
-		 * @param {Object} params.account - The account object from the provider (initial sign-in only).
-		 * @param {Object} params.profile - Profile information from the provider (optional).
-		 * @param {boolean} params.isNewUser - Flag indicating if this is a new user (optional).
-		 * @returns {Object} The updated token with access token and provider information.
+		 * @returns {Object} The updated token with user ID and provider information.
 		 */
 		jwt({ token, user }) {
-			// Dynamically import to avoid circular dependencies
-			const { isTimestampValid } = require("@/lib/auth/timing-safe");
-
 			if (user) {
-				token.id = user.id; // Store the user ID for Prisma auth
-				token.key = user.key; // Store the key from the user object
+				token.id = user.id;
 				token.provider = user.provider || "credentials";
-				// Track token expiry (24 hours from login)
-				token.keyExpires = Date.now() + 24 * 60 * 60 * 1000;
 			}
-
-			// Constant-time expiry check to prevent timing attacks
-			const isExpired = !isTimestampValid(
-				token.keyExpires as number | undefined
-			);
-
-			// Return cleared token if expired, otherwise return as-is
-			if (isExpired) {
-				return { ...token, key: undefined, keyExpires: undefined };
-			}
-
 			return token;
 		},
 	},

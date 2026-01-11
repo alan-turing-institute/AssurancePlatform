@@ -1,7 +1,6 @@
 "use client";
 
 import { CloudDownloadIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
@@ -12,7 +11,6 @@ type UnpublishCaseButtonProps = {
 };
 
 const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
-	const { data } = useSession();
 	const { toast } = useToast();
 
 	const [alertOpen, setAlertOpen] = useState(false);
@@ -27,7 +25,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 			formData.append("published_date", ""); // Clear the published date
 
 			// Send the formData to the API
-			const result = await updateCaseStudy(data?.key, formData);
+			const result = await updateCaseStudy("", formData);
 
 			if (result.success) {
 				toast({

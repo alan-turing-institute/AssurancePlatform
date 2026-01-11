@@ -24,106 +24,55 @@ describe("auth-helpers", () => {
 	describe("isValidSession", () => {
 		const futureDate = new Date(Date.now() + 86_400_000).toISOString(); // 24 hours from now
 		const pastDate = new Date(Date.now() - 86_400_000).toISOString(); // 24 hours ago
-		const futureTimestamp = Date.now() + 86_400_000; // 24 hours from now
-		const pastTimestamp = Date.now() - 86_400_000; // 24 hours ago
 
 		it("should return false for null session", () => {
 			expect(isValidSession(null)).toBe(false);
 		});
 
-		it("should return false for session without key", () => {
+		it("should return false for session without user", () => {
 			const session: Session = {
-				user: { name: "Test User" },
 				expires: futureDate,
 			};
 			expect(isValidSession(session)).toBe(false);
 		});
 
-		it("should return false for session with empty key", () => {
+		it("should return false for session without user id", () => {
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { name: "Test User", email: "test@example.com" },
 				expires: futureDate,
-				key: "",
-			};
-			expect(isValidSession(session)).toBe(false);
-		});
-
-		it("should return false for session with expired keyExpires", () => {
-			const session: Session = {
-				user: { name: "Test User" },
-				expires: futureDate,
-				key: "valid-key",
-				keyExpires: pastTimestamp,
 			};
 			expect(isValidSession(session)).toBe(false);
 		});
 
 		it("should return false for session with expired NextAuth expires", () => {
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { id: "user-123", name: "Test User" },
 				expires: pastDate,
-				key: "valid-key",
 			};
 			expect(isValidSession(session)).toBe(false);
 		});
 
-		it("should return true for valid session with all required fields", () => {
+		it("should return true for valid session with user id", () => {
 			const session: Session = {
-				user: { name: "Test User" },
-				expires: futureDate,
-				key: "valid-key",
-			};
-			expect(isValidSession(session)).toBe(true);
-		});
-
-		it("should return true for valid session with future keyExpires", () => {
-			const session: Session = {
-				user: { name: "Test User" },
-				expires: futureDate,
-				key: "valid-key",
-				keyExpires: futureTimestamp,
-			};
-			expect(isValidSession(session)).toBe(true);
-		});
-
-		it("should return true for valid session without keyExpires", () => {
-			const session: Session = {
-				user: { name: "Test User" },
-				expires: futureDate,
-				key: "valid-key",
-			};
-			expect(isValidSession(session)).toBe(true);
-		});
-
-		it("should return true for valid session without NextAuth expires", () => {
-			const session: Session = {
-				user: { name: "Test User" },
-				key: "valid-key",
+				user: { id: "user-123", name: "Test User" },
 				expires: futureDate,
 			};
 			expect(isValidSession(session)).toBe(true);
 		});
 
-		it("should handle edge case where keyExpires equals current time", () => {
-			const now = Date.now();
-			vi.spyOn(Date, "now").mockReturnValue(now);
-
+		it("should return true for valid session with future expiry", () => {
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { id: "user-123", name: "Test User" },
 				expires: futureDate,
-				key: "valid-key",
-				keyExpires: now,
 			};
-			// The condition is Date.now() > session.keyExpires, so equal should return true
 			expect(isValidSession(session)).toBe(true);
 		});
 
 		it("should handle edge case where NextAuth expires equals current time", () => {
 			const now = new Date();
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { id: "user-123", name: "Test User" },
 				expires: now.toISOString(),
-				key: "valid-key",
 			};
 			// The condition is expiryDate < new Date(), so equal time should return true
 			expect(isValidSession(session)).toBe(true);
@@ -131,9 +80,8 @@ describe("auth-helpers", () => {
 
 		it("should handle malformed date strings gracefully", () => {
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { id: "user-123", name: "Test User" },
 				expires: "invalid-date",
-				key: "valid-key",
 			};
 			// Should not throw and should handle invalid date as Invalid Date object
 			expect(() => isValidSession(session)).not.toThrow();
@@ -141,11 +89,9 @@ describe("auth-helpers", () => {
 
 		it("should handle session with additional properties", () => {
 			const session: Session = {
-				user: { name: "Test User" },
+				user: { id: "user-123", name: "Test User" },
 				expires: futureDate,
-				key: "valid-key",
 				provider: "github",
-				keyExpires: futureTimestamp,
 			};
 			expect(isValidSession(session)).toBe(true);
 		});
@@ -624,25 +570,30 @@ describe("auth-helpers", () => {
 
 	describe("Edge cases and integration scenarios", () => {
 		it("should handle session validation with all possible field combinations", () => {
-			// Test with minimal valid session
+			// Test with minimal valid session (must have user.id)
 			expect(
 				isValidSession({
-					user: {},
+					user: { id: "user-123" },
 					expires: new Date(Date.now() + 1000).toISOString(),
-					key: "key",
 				})
 			).toBe(true);
 
 			// Test with maximal valid session
 			expect(
 				isValidSession({
-					user: { name: "Test", email: "test@example.com" },
+					user: { id: "user-123", name: "Test", email: "test@example.com" },
 					expires: new Date(Date.now() + 86_400_000).toISOString(),
-					key: "valid-key",
 					provider: "github",
-					keyExpires: Date.now() + 86_400_000,
 				})
 			).toBe(true);
+
+			// Test with missing user.id (should fail)
+			expect(
+				isValidSession({
+					user: { name: "Test", email: "test@example.com" },
+					expires: new Date(Date.now() + 86_400_000).toISOString(),
+				})
+			).toBe(false);
 		});
 
 		it("should handle error messages for security audit scenarios", () => {

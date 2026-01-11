@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
-import { isJwtOnlyAuth } from "./lib/auth/feature-flags";
 import { isPublicRoute } from "./lib/routes";
 
 export default withAuth(
 	function middleware(req) {
-		const token = req.nextauth.token;
 		const pathname = req.nextUrl.pathname;
 
 		// Check redirect loop protection
@@ -22,22 +20,6 @@ export default withAuth(
 			// Reset the counter
 			errorResponse.cookies.set("auth-redirects", "0", { maxAge: 60 });
 			return errorResponse;
-		}
-
-		// Legacy mode only: check for stale sessions (token exists but no key)
-		// In JWT-only mode, we trust the JWT directly without a refresh token
-		if (!isJwtOnlyAuth() && token && !token.key && pathname !== "/login") {
-			const response = NextResponse.redirect(new URL("/login", req.url));
-			// Clear the session cookies
-			response.cookies.set("next-auth.session-token", "", { maxAge: 0 });
-			response.cookies.set("__Secure-next-auth.session-token", "", {
-				maxAge: 0,
-			});
-			// Increment redirect counter
-			response.cookies.set("auth-redirects", String(redirectCount + 1), {
-				maxAge: 60,
-			});
-			return response;
 		}
 
 		// Reset redirect counter on successful navigation
@@ -60,13 +42,8 @@ export default withAuth(
 					return true;
 				}
 
-				// JWT-only mode: trust the JWT directly (just check token.id exists)
-				if (isJwtOnlyAuth()) {
-					return token?.id != null;
-				}
-
-				// Legacy mode: require a valid session with refresh token key
-				return token?.key != null;
+				// JWT auth: require valid token with user ID
+				return token?.id != null;
 			},
 		},
 	}

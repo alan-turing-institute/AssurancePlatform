@@ -55,7 +55,7 @@ const mockUser = {
 	id: 1,
 	name: "Test User",
 	email: "test@example.com",
-	key: "mock-session-key",
+	key: "",
 };
 
 // Regex patterns for button selectors
@@ -246,7 +246,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("", 1);
 			});
 
 			// Check success toast
@@ -290,7 +290,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("", 1);
 			});
 
 			// Check success toast
@@ -336,7 +336,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("", 1);
 			});
 
 			// Check error toast
@@ -381,7 +381,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check deletion was called
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 1);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("", 1);
 			});
 
 			// Check error toast
@@ -545,7 +545,7 @@ describe("DeleteCaseButton Component", () => {
 
 			// Check deletion was called with correct ID
 			await waitFor(() => {
-				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("mock-session-key", 5);
+				expect(mockDeleteCaseStudy).toHaveBeenCalledWith("", 5);
 			});
 
 			// Test with another ID
@@ -570,7 +570,7 @@ describe("DeleteCaseButton Component", () => {
 
 			await waitFor(() => {
 				expect(mockDeleteCaseStudy).toHaveBeenCalledWith(
-					"mock-session-key",
+					"",
 					10
 				);
 			});

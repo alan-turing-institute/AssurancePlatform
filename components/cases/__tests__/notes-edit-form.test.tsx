@@ -24,7 +24,6 @@ vi.mock("@/data/store", () => ({
 
 // Mock next-auth
 const mockSession = {
-	key: "test-session-key",
 	user: { email: "test@example.com" },
 };
 

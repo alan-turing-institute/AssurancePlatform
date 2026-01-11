@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { fetchCurrentUser } from "@/actions/users";
 import { Skeleton } from "../ui/skeleton";
@@ -12,15 +11,13 @@ type UserData = {
 };
 
 const LoggedInUser = () => {
-	const { data } = useSession();
-
 	const [currentUser, setCurrentUser] = useState<UserData | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
 
 	useEffect(() => {
 		const loadUser = async () => {
 			try {
-				const result = await fetchCurrentUser(data?.key ?? "");
+				const result = await fetchCurrentUser("");
 				if (result) {
 					setCurrentUser({ username: result.username, email: result.email });
 				} else {
@@ -35,7 +32,7 @@ const LoggedInUser = () => {
 		};
 
 		loadUser();
-	}, [data?.key]);
+	}, []);
 
 	return (
 		<>

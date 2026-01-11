@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { useToast } from "@/lib/toast";
 import type { CaseStudy } from "@/types/domain";
@@ -13,7 +12,6 @@ type PublishButtonProps = {
 };
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
-	const { data } = useSession();
 	const { toast } = useToast();
 	const _router = useRouter();
 
@@ -84,7 +82,7 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 		}
 
 		// Send the formData to the API
-		const response = await updateCaseStudy(data?.key, formData);
+		const response = await updateCaseStudy("", formData);
 
 		if (response) {
 			toast({

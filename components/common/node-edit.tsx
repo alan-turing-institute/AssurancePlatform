@@ -1093,7 +1093,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 				node as ReactFlowNode,
 				child.type,
 				child.id,
-				session?.key ?? ""
+				""
 			);
 		}
 
@@ -1116,7 +1116,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 		const deleted = await deleteAssuranceCaseNode(
 			node.type,
 			node.data.id,
-			session?.key ?? ""
+			""
 		);
 
 		if (deleted && assuranceCase) {
@@ -1205,7 +1205,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
 	const handleMove = async (): Promise<void> => {
 		setLoading(true);
-		const sessionKey = session?.key ?? "";
+		const sessionKey = "";
 
 		if (selectedClaimMove) {
 			const type = selectedClaimMove.name.substring(0, 1);
@@ -1301,7 +1301,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 			node as ReactFlowNode,
 			node.type,
 			node.data.id,
-			session?.key ?? ""
+			""
 		);
 
 		if ("error" in result) {
