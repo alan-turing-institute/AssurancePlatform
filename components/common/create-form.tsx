@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -46,8 +45,6 @@ const CreateForm: React.FC<CreateFormProps> = ({
 	setUnresolvedChanges,
 }) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
-	// const [token] = useLoginToken();
-	const { data: session } = useSession();
 	const [loading, setLoading] = useState<boolean>(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -87,11 +84,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
 			type: "TopLevelNormativeGoal",
 		};
 
-		const result = await createAssuranceCaseNode(
-			"goals",
-			newGoal,
-			session?.key ?? ""
-		);
+		const result = await createAssuranceCaseNode("goals", newGoal, "");
 
 		if (result.error) {
 			// TODO: Rendering error

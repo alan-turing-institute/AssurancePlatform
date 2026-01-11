@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Minus, Plus } from "lucide-react";
-import { useSession } from "next-auth/react";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -68,7 +67,6 @@ const EditForm: React.FC<EditFormProps> = ({
 	setUnresolvedChanges,
 }) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
-	const { data: session } = useSession();
 	const [loading, setLoading] = useState(false);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -104,7 +102,7 @@ const EditForm: React.FC<EditFormProps> = ({
 		const updated = await updateAssuranceCaseNode(
 			node.type || "unknown",
 			node.data.id,
-			session?.key ?? "",
+			"",
 			updateItem
 		);
 

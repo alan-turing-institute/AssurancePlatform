@@ -47,7 +47,6 @@ const mockUser = {
 	id: 1,
 	name: "Test User",
 	email: "test@example.com",
-	key: "mock-session-key",
 };
 
 // Mock assurance cases data
@@ -559,10 +558,8 @@ describe("RelatedAssuranceCaseList Component", () => {
 			server.use(
 				http.get("/api/published-assurance-cases", ({ request }) => {
 					requestMade = true;
-					// Check authorization header
-					expect(request.headers.get("Authorization")).toBe(
-						"Token mock-session-key"
-					);
+					// Check authorization header (session key is no longer used)
+					expect(request.headers.get("Authorization")).toBe("Token");
 					return HttpResponse.json(mockAssuranceCases);
 				})
 			);
@@ -623,7 +620,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 			});
 		});
 
-		it("should refetch data when session key changes", async () => {
+		it("should make request with empty token (session key no longer used)", async () => {
 			let requestCount = 0;
 			server.use(
 				http.get("/api/published-assurance-cases", () => {
@@ -632,7 +629,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 				})
 			);
 
-			const { rerender } = renderWithAuth(
+			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[]}
 					setSelectedAssuranceCases={mockSetSelectedAssuranceCases}
@@ -641,23 +638,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 			await waitFor(() => {
 				expect(requestCount).toBe(1);
-			});
-
-			// Change session key
-			(useSession as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-				data: { ...mockUser, key: "new-session-key" },
-				status: "authenticated",
-			});
-
-			rerender(
-				<RelatedAssuranceCaseList
-					selectedAssuranceCases={[]}
-					setSelectedAssuranceCases={mockSetSelectedAssuranceCases}
-				/>
-			);
-
-			await waitFor(() => {
-				expect(requestCount).toBe(2);
 			});
 		});
 	});
@@ -670,36 +650,8 @@ describe("RelatedAssuranceCaseList Component", () => {
 			});
 
 			server.use(
-				http.get("/api/published-assurance-cases", ({ request }) => {
-					// Should make request without auth header
-					expect(request.headers.get("Authorization")).toBe("Token undefined");
-					return HttpResponse.json([]);
-				})
-			);
-
-			renderWithAuth(
-				<RelatedAssuranceCaseList
-					selectedAssuranceCases={[]}
-					setSelectedAssuranceCases={mockSetSelectedAssuranceCases}
-				/>
-			);
-
-			await waitFor(() => {
-				expect(
-					screen.getByText("No Published Assurance Cases Found")
-				).toBeInTheDocument();
-			});
-		});
-
-		it("should handle session without key", async () => {
-			(useSession as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-				data: { ...mockUser, key: undefined },
-				status: "authenticated",
-			});
-
-			server.use(
-				http.get("/api/published-assurance-cases", ({ request }) => {
-					expect(request.headers.get("Authorization")).toBe("Token undefined");
+				http.get("/api/published-assurance-cases", () => {
+					// Session key is no longer used - requests use empty token
 					return HttpResponse.json([]);
 				})
 			);

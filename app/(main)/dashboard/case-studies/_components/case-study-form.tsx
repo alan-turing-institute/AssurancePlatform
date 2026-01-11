@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CloudDownload, InfoIcon, Share, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -155,7 +154,6 @@ const useAuthorManagement = (
 };
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
-	const { data } = useSession();
 	const { toast } = useToast();
 	const router = useRouter();
 	const _importModal = useImportModal();
@@ -369,7 +367,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		formData.append("id", caseStudy.id.toString());
-		const result = await updateCaseStudy(data?.key, formData);
+		const result = await updateCaseStudy("", formData);
 
 		if (values.image) {
 			await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
@@ -393,7 +391,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		values: z.infer<typeof caseStudyFormSchema>,
 		formData: FormData
 	) {
-		const result = await createCaseStudy(data?.key ?? "", formData);
+		const result = await createCaseStudy("", formData);
 
 		if (!result.success) {
 			toast({
@@ -453,7 +451,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		// Send the formData to the API
-		const result = await updateCaseStudy(data?.key, formData);
+		const result = await updateCaseStudy("", formData);
 
 		if (result.success) {
 			toast({
@@ -475,7 +473,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		if (!caseStudy) {
 			return;
 		}
-		const result = await deleteCaseStudy(data?.key ?? "", caseStudy.id);
+		const result = await deleteCaseStudy("", caseStudy.id);
 
 		if (result.success) {
 			toast({

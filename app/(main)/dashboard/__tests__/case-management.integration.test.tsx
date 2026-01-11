@@ -104,7 +104,6 @@ vi.mock("next/navigation", async () => {
 vi.mock("next-auth", () => ({
 	getServerSession: vi.fn(() =>
 		Promise.resolve({
-			key: "mock-session-key",
 			user: {
 				id: "1",
 				name: "Test User",
@@ -256,7 +255,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 
 		fetch(url, {
 			headers: {
-				Authorization: "Token mock-session-key",
+				Authorization: "Token",
 			},
 		})
 			.then((res) => {
@@ -307,7 +306,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: "Token mock-session-key",
+					Authorization: "Token",
 				},
 				body: JSON.stringify({
 					name: "New Goal",
@@ -338,7 +337,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: "Token mock-session-key",
+					Authorization: "Token",
 				},
 				body: JSON.stringify({
 					name: "New Strategy",
@@ -370,7 +369,7 @@ const CaseEditor = ({ caseId }: { caseId: string }) => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: "Token mock-session-key",
+					Authorization: "Token",
 				},
 				body: JSON.stringify({
 					name: "New Evidence",

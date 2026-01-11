@@ -304,17 +304,6 @@ export async function resetPassword(
 		},
 	});
 
-	// Revoke all existing refresh tokens for security
-	await prismaNew.refreshToken.updateMany({
-		where: {
-			userId: validation.userId,
-			revokedAt: null,
-		},
-		data: {
-			revokedAt: new Date(),
-		},
-	});
-
 	// Update the attempt record to mark as successful
 	await prismaNew.passwordResetAttempt.updateMany({
 		where: {

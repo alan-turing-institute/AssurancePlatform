@@ -229,7 +229,7 @@ const mockUser = {
 	id: 1,
 	name: "Test User",
 	email: "test@example.com",
-	key: "mock-session-key",
+	key: "",
 };
 
 // Mock URL.createObjectURL for image upload tests

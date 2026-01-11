@@ -188,7 +188,6 @@ describe("OrphanElements", () => {
 		vi.mocked(useSession).mockReturnValue({
 			data: {
 				user: { id: "1", email: "test@example.com" },
-				key: "test-session-key",
 			} as MockSession,
 			status: "authenticated",
 			update: vi.fn(),
@@ -401,7 +400,7 @@ describe("OrphanElements", () => {
 						type: mockContext.type,
 					}),
 					mockContext.id,
-					"test-session-key",
+					"",
 					expect.any(Object)
 				);
 			});
@@ -622,7 +621,7 @@ describe("OrphanElements", () => {
 				expect(deleteAssuranceCaseNode).toHaveBeenCalledWith(
 					orphan.type,
 					orphan.id,
-					"test-session-key"
+					""
 				);
 			}
 

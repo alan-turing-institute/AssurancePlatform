@@ -573,13 +573,25 @@ export async function updateElement(
 
 		// Handle parent change (for move operations)
 		const newParentId = resolveParentId(input);
-		if (newParentId !== undefined) {
+		if (newParentId !== undefined && newParentId !== null) {
+			// Validate parent change doesn't create circular reference
+			const validationError = await validateParentChange(
+				elementId,
+				newParentId
+			);
+			if (validationError) {
+				return { error: validationError };
+			}
+
 			updateData.parentId = newParentId;
 
 			// Recalculate level if it's a property claim
 			if (existing.elementType === "PROPERTY_CLAIM" && newParentId) {
 				updateData.level = await calculateNewLevel(newParentId);
 			}
+		} else if (newParentId === null) {
+			// Allow setting parent to null (detaching)
+			updateData.parentId = null;
 		}
 
 		const element = await prismaNew.assuranceElement.update({
@@ -623,7 +635,7 @@ export async function deleteElement(
 			return { error: "Permission denied" };
 		}
 
-		// Delete element (children will cascade)
+		// Delete element and all descendants (cascade delete configured in schema)
 		await prismaNew.assuranceElement.delete({
 			where: { id: elementId },
 		});
@@ -695,6 +707,28 @@ async function getDescendantIds(parentId: string): Promise<string[]> {
 }
 
 /**
+ * Validates that setting a new parent doesn't create a circular reference.
+ * Returns an error message if invalid, undefined if valid.
+ */
+async function validateParentChange(
+	elementId: string,
+	newParentId: string
+): Promise<string | undefined> {
+	// Cannot set parent to self
+	if (elementId === newParentId) {
+		return "Cannot set element as its own parent";
+	}
+
+	// Cannot set parent to a descendant (would create circular reference)
+	const descendantIds = await getDescendantIds(elementId);
+	if (descendantIds.includes(newParentId)) {
+		return "Cannot move element to one of its descendants";
+	}
+
+	return;
+}
+
+/**
  * Attaches an element (moves from sandbox to parent)
  * Also cascades to all descendants, removing them from sandbox
  */
@@ -718,6 +752,12 @@ export async function attachElement(
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
 			return { error: "Permission denied" };
+		}
+
+		// Validate parent change doesn't create circular reference
+		const validationError = await validateParentChange(elementId, parentId);
+		if (validationError) {
+			return { error: validationError };
 		}
 
 		// Calculate level if property claim

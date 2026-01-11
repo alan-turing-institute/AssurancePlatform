@@ -178,24 +178,9 @@ const PropertyClaimSchema = BaseElementSchema.extend({
 const EvidenceSchema = BaseElementSchema.extend({
 	elementType: z.literal("EVIDENCE"),
 	url: z.string().nullable().optional(),
-	urls: z
-		.array(
-			z.string().refine(
-				(val) => {
-					if (!val) {
-						return true;
-					}
-					try {
-						const parsed = new URL(val);
-						return parsed.protocol === "http:" || parsed.protocol === "https:";
-					} catch {
-						return false;
-					}
-				},
-				{ message: "Must be a valid http or https URL" }
-			)
-		)
-		.default([]),
+	// URLs/URIs are stored as simple strings - no strict validation
+	// to allow DOIs, URNs, file paths, document references, etc.
+	urls: z.array(z.string()).default([]),
 });
 
 const JustificationSchema = BaseElementSchema.extend({

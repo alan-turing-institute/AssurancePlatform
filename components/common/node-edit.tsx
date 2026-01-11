@@ -41,6 +41,7 @@ import NodeAttributes from "../cases/node-attributes";
 import NodeComment from "../cases/node-comments";
 import OrphanElements from "../cases/orphan-elements";
 import { AlertModal } from "../modals/alert-modal";
+import { DeleteElementModal } from "../modals/delete-element-modal";
 import EditSheet from "../ui/edit-sheet";
 import { Separator } from "../ui/separator";
 import {
@@ -664,8 +665,7 @@ const DeleteButtons = ({
 					variant={"destructive"}
 				>
 					<Trash2 className="mr-2" />
-					Delete&nbsp;
-					<span className="capitalize">{node.type}</span>
+					<span>Delete <span className="capitalize">{node.type}</span></span>
 				</Button>
 			</div>
 		)}
@@ -840,13 +840,283 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 		setLinkToCreate(type);
 	};
 
+	// Count all descendants of the current node
+	const countDescendants = (): number => {
+		if (!node.data) return 0;
+
+		let count = 0;
+
+		// For goals: count strategies and their children
+		if (node.type === "goal" && assuranceCase?.goals) {
+			const goalData = assuranceCase.goals.find((g) => g.id === node.data.id);
+			if (goalData) {
+				// Count strategies
+				count += goalData.strategies?.length ?? 0;
+				// Count property claims directly under goal
+				count += goalData.property_claims?.length ?? 0;
+				// Recursively count children of each strategy
+				for (const strategy of goalData.strategies ?? []) {
+					count += countPropertyClaimDescendants(strategy.property_claims);
+				}
+				// Recursively count children of property claims under goal
+				count += countPropertyClaimDescendants(goalData.property_claims);
+			}
+		}
+
+		// For strategies: count property claims and their children
+		if (node.type === "strategy" && assuranceCase?.goals) {
+			const goalData = assuranceCase.goals[0];
+			const strategyData = goalData?.strategies?.find(
+				(s) => s.id === node.data.id
+			);
+			if (strategyData) {
+				count += countPropertyClaimDescendants(strategyData.property_claims);
+			}
+		}
+
+		// For property claims: count nested claims and evidence
+		if (node.type === "property") {
+			const claimData = node.data as unknown as PropertyClaim;
+			count += countPropertyClaimDescendants([claimData]) - 1; // Subtract 1 to exclude self
+		}
+
+		return count;
+	};
+
+	// Helper to recursively count property claim descendants
+	const countPropertyClaimDescendants = (
+		claims: PropertyClaim[] | undefined
+	): number => {
+		if (!claims) return 0;
+		let count = 0;
+		for (const claim of claims) {
+			count += 1; // Count the claim itself
+			count += claim.evidence?.length ?? 0; // Count evidence
+			count += countPropertyClaimDescendants(claim.property_claims); // Recurse into nested claims
+		}
+		return count;
+	};
+
+	// Helper to get all descendant claim IDs (for filtering move targets)
+	const getDescendantClaimIds = (
+		claimList: PropertyClaim[] | undefined,
+		targetId: number
+	): Set<number> => {
+		const ids = new Set<number>();
+
+		const collectDescendants = (claims: PropertyClaim[] | undefined): void => {
+			if (!claims) return;
+			for (const claim of claims) {
+				ids.add(claim.id);
+				collectDescendants(claim.property_claims);
+			}
+		};
+
+		// Find the target claim and collect its descendants
+		const findAndCollect = (claims: PropertyClaim[] | undefined): boolean => {
+			if (!claims) return false;
+			for (const claim of claims) {
+				if (claim.id === targetId) {
+					// Found target - collect all its descendants
+					collectDescendants(claim.property_claims);
+					return true;
+				}
+				// Recurse into nested claims
+				if (findAndCollect(claim.property_claims)) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		findAndCollect(claimList);
+		return ids;
+	};
+
+	// Filter claims to exclude self and descendants for move operations
+	const getValidMoveTargets = (
+		allClaims: PropertyClaim[],
+		currentNodeId: number
+	): PropertyClaim[] => {
+		const descendantIds = getDescendantClaimIds(allClaims, currentNodeId);
+		// Exclude self and all descendants
+		return allClaims.filter(
+			(claim) => claim.id !== currentNodeId && !descendantIds.has(claim.id)
+		);
+	};
+
+	const childCount = countDescendants();
+
+	// Get direct child IDs for detaching
+	const getDirectChildIds = (): Array<{ id: number; type: string }> => {
+		if (!node.data) return [];
+
+		const children: Array<{ id: number; type: string }> = [];
+
+		// For goals: get strategies and direct property claims
+		if (node.type === "goal" && assuranceCase?.goals) {
+			const goalData = assuranceCase.goals.find((g) => g.id === node.data.id);
+			if (goalData) {
+				for (const strategy of goalData.strategies ?? []) {
+					children.push({ id: strategy.id, type: "strategy" });
+				}
+				for (const claim of goalData.property_claims ?? []) {
+					children.push({ id: claim.id, type: "property" });
+				}
+			}
+		}
+
+		// For strategies: get direct property claims
+		if (node.type === "strategy" && assuranceCase?.goals) {
+			const goalData = assuranceCase.goals[0];
+			const strategyData = goalData?.strategies?.find(
+				(s) => s.id === node.data.id
+			);
+			if (strategyData) {
+				for (const claim of strategyData.property_claims ?? []) {
+					children.push({ id: claim.id, type: "property" });
+				}
+			}
+		}
+
+		// For property claims: get nested claims and evidence
+		if (node.type === "property") {
+			const claimData = node.data as unknown as PropertyClaim;
+			for (const nested of claimData.property_claims ?? []) {
+				children.push({ id: nested.id, type: "property" });
+			}
+			for (const ev of claimData.evidence ?? []) {
+				children.push({ id: ev.id, type: "evidence" });
+			}
+		}
+
+		return children;
+	};
+
+	// Helper to collect orphan elements from a strategy (including its property claims subtree)
+	const collectStrategyOrphanElements = (
+		strategy: Strategy,
+		typeMap: Record<string, string>
+	): OrphanElementData[] => {
+		const elements: OrphanElementData[] = [];
+
+		// Add the strategy itself
+		elements.push({
+			id: strategy.id,
+			type: typeMap.strategy ?? "Strategy",
+			name: strategy.name,
+			short_description: strategy.short_description ?? "",
+			long_description: strategy.long_description ?? "",
+		});
+
+		// Add all property claims (and their children) under this strategy
+		for (const claim of strategy.property_claims ?? []) {
+			elements.push(...collectOrphanElements(claim, typeMap));
+		}
+
+		return elements;
+	};
+
+	// Get full child data from assurance case for creating orphan elements
+	const getDirectChildrenData = (): {
+		strategies: Strategy[];
+		propertyClaims: PropertyClaim[];
+	} => {
+		const strategies: Strategy[] = [];
+		const propertyClaims: PropertyClaim[] = [];
+
+		if (!node.data || !assuranceCase?.goals) {
+			return { strategies, propertyClaims };
+		}
+
+		// For goals: get strategies and direct property claims with full data
+		if (node.type === "goal") {
+			const goalData = assuranceCase.goals.find((g) => g.id === node.data.id);
+			if (goalData) {
+				strategies.push(...(goalData.strategies ?? []));
+				propertyClaims.push(...(goalData.property_claims ?? []));
+			}
+		}
+
+		// For strategies: get direct property claims
+		if (node.type === "strategy") {
+			const goalData = assuranceCase.goals[0];
+			const strategyData = goalData?.strategies?.find(
+				(s) => s.id === node.data.id
+			);
+			if (strategyData) {
+				propertyClaims.push(...(strategyData.property_claims ?? []));
+			}
+		}
+
+		// For property claims: get nested claims (evidence handled by collectOrphanElements)
+		if (node.type === "property") {
+			const claimData = node.data as unknown as PropertyClaim;
+			propertyClaims.push(...(claimData.property_claims ?? []));
+		}
+
+		return { strategies, propertyClaims };
+	};
+
+	// Detach all direct children then delete the element
+	const handleDetachAndDelete = async () => {
+		setLoading(true);
+
+		const directChildren = getDirectChildIds();
+		const childrenData = getDirectChildrenData();
+
+		// Map React Flow node type to orphan element type
+		const typeMap: Record<string, string> = {
+			property: "PropertyClaim",
+			strategy: "Strategy",
+			evidence: "Evidence",
+			context: "Context",
+			goal: "Goal",
+		};
+
+		// Collect all orphan elements from children (including their subtrees)
+		const newOrphanElements: OrphanElementData[] = [];
+
+		// Collect from strategies (each strategy includes its property claims subtree)
+		for (const strategy of childrenData.strategies) {
+			newOrphanElements.push(...collectStrategyOrphanElements(strategy, typeMap));
+		}
+
+		// Collect from direct property claims (each includes nested claims and evidence)
+		for (const claim of childrenData.propertyClaims) {
+			newOrphanElements.push(...collectOrphanElements(claim, typeMap));
+		}
+
+		// Detach all direct children (they keep their subtrees)
+		for (const child of directChildren) {
+			await detachCaseElement(
+				node as ReactFlowNode,
+				child.type,
+				child.id,
+				""
+			);
+		}
+
+		// Update orphanedElements with the newly detached elements
+		const existingIds = new Set(orphanedElements.map((el) => el.id));
+		const uniqueNewOrphans = newOrphanElements.filter(
+			(el) => !existingIds.has(el.id)
+		);
+		if (uniqueNewOrphans.length > 0) {
+			setOrphanedElements([...orphanedElements, ...uniqueNewOrphans]);
+		}
+
+		// Now delete the element (which is now childless)
+		await handleDelete();
+	};
+
 	/** Function used to handle deletion of the current selected item */
 	const handleDelete = async () => {
 		setLoading(true);
 		const deleted = await deleteAssuranceCaseNode(
 			node.type,
 			node.data.id,
-			session?.key ?? ""
+			""
 		);
 
 		if (deleted && assuranceCase) {
@@ -935,7 +1205,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
 	const handleMove = async (): Promise<void> => {
 		setLoading(true);
-		const sessionKey = session?.key ?? "";
+		const sessionKey = "";
 
 		if (selectedClaimMove) {
 			const type = selectedClaimMove.name.substring(0, 1);
@@ -1031,7 +1301,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 			node as ReactFlowNode,
 			node.type,
 			node.data.id,
-			session?.key ?? ""
+			""
 		);
 
 		if ("error" in result) {
@@ -1159,7 +1429,11 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 			<ActionContent
 				action={action}
 				assuranceCase={assuranceCase || ({} as AssuranceCase)}
-				claims={claims}
+				claims={
+					node.type === "property"
+						? getValidMoveTargets(claims, node.data.id as number)
+						: claims
+				}
 				goal={goal}
 				handleClose={handleClose}
 				handleMove={handleMove}
@@ -1178,16 +1452,14 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 				setUnresolvedChanges={setUnresolvedChanges}
 				strategies={strategies}
 			/>
-			<AlertModal
-				cancelButtonText={"No, keep the element"}
-				confirmButtonText={"Yes, delete this element!"}
+			<DeleteElementModal
+				childCount={childCount}
+				hasChildren={childCount > 0}
 				isOpen={deleteOpen}
 				loading={loading}
-				message={
-					"Deleting this element will also remove all of the connected child elements. Please detach any child elements that you wish to keep before deleting, as the current action cannot be undone."
-				}
 				onClose={() => setDeleteOpen(false)}
-				onConfirm={handleDelete}
+				onDeleteWithChildren={handleDelete}
+				onDetachAndDelete={handleDetachAndDelete}
 			/>
 			<AlertModal
 				cancelButtonText={"No, keep editing"}

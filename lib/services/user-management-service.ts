@@ -330,25 +330,16 @@ export async function changePassword(
 		// Hash new password with argon2id
 		const newHash = await hashPassword(input.newPassword);
 
-		// Update password and revoke all sessions in a transaction
-		await prismaNew.$transaction(async (tx) => {
-			// Update password
-			await tx.user.update({
-				where: { id: userId },
-				data: {
-					passwordHash: newHash,
-					passwordAlgorithm: "argon2id",
-					// Clear any pending password reset
-					passwordResetToken: null,
-					passwordResetExpires: null,
-				},
-			});
-
-			// Revoke all refresh tokens (force re-login everywhere)
-			await tx.refreshToken.updateMany({
-				where: { userId, revokedAt: null },
-				data: { revokedAt: new Date() },
-			});
+		// Update password
+		await prismaNew.user.update({
+			where: { id: userId },
+			data: {
+				passwordHash: newHash,
+				passwordAlgorithm: "argon2id",
+				// Clear any pending password reset
+				passwordResetToken: null,
+				passwordResetExpires: null,
+			},
 		});
 
 		return { success: true };

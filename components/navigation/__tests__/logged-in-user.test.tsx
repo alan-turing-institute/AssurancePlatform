@@ -42,22 +42,11 @@ vi.mock("@/actions/users", () => ({
 	),
 }));
 
-// Mock next-auth/react
-const mockUseSession = vi.fn();
-vi.mock("next-auth/react", () => ({
-	useSession: () => mockUseSession(),
-	SessionProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
-
 describe("LoggedInUser", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		fetchCurrentUserResolve = null;
 		fetchCurrentUserReject = null;
-		mockUseSession.mockReturnValue({
-			data: { key: "test-session-key" },
-			status: "authenticated",
-		});
 	});
 
 	describe("Loading State", () => {
@@ -348,11 +337,7 @@ describe("LoggedInUser", () => {
 	});
 
 	describe("Session Handling", () => {
-		it("should handle missing session data", async () => {
-			mockUseSession.mockReturnValue({
-				data: null,
-				status: "unauthenticated",
-			});
+		it("should handle null user data", async () => {
 			// Reset to use promise-based mock
 			vi.mocked(fetchCurrentUser).mockImplementation(
 				() =>
@@ -376,11 +361,7 @@ describe("LoggedInUser", () => {
 			});
 		});
 
-		it("should handle session with undefined key", async () => {
-			mockUseSession.mockReturnValue({
-				data: { key: undefined },
-				status: "authenticated",
-			});
+		it("should call fetchCurrentUser with empty string (no session key needed)", async () => {
 			// Reset to use promise-based mock
 			vi.mocked(fetchCurrentUser).mockImplementation(
 				() =>
@@ -391,34 +372,8 @@ describe("LoggedInUser", () => {
 
 			render(<LoggedInUser />);
 
-			// Should call fetchCurrentUser with empty string when key is undefined
+			// Should call fetchCurrentUser with empty string (session key no longer used)
 			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith("");
-
-			// Resolve the promise
-			await act(async () => {
-				fetchCurrentUserResolve?.(null);
-				// Give React time to process the state update
-				await new Promise((resolve) => setTimeout(resolve, 0));
-			});
-		});
-
-		it("should use session key for fetchCurrentUser", async () => {
-			const sessionKey = "test-session-key-123";
-			mockUseSession.mockReturnValue({
-				data: { key: sessionKey },
-				status: "authenticated",
-			});
-			// Reset to use promise-based mock
-			vi.mocked(fetchCurrentUser).mockImplementation(
-				() =>
-					new Promise((resolve) => {
-						fetchCurrentUserResolve = resolve;
-					})
-			);
-
-			render(<LoggedInUser />);
-
-			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith(sessionKey);
 
 			// Resolve the promise
 			await act(async () => {
@@ -552,7 +507,7 @@ describe("LoggedInUser", () => {
 			});
 		});
 
-		it("should refetch user data when session key changes", async () => {
+		it("should call fetchCurrentUser with empty string", async () => {
 			// Reset to use promise-based mock
 			vi.mocked(fetchCurrentUser).mockImplementation(
 				() =>
@@ -561,38 +516,12 @@ describe("LoggedInUser", () => {
 					})
 			);
 
-			const { rerender } = render(<LoggedInUser />);
+			render(<LoggedInUser />);
 
-			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith(
-				"test-session-key"
-			);
+			// Session key is no longer used - always called with empty string
+			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith("");
 
-			// Resolve the first promise
-			await act(async () => {
-				fetchCurrentUserResolve?.({
-					username: "testuser",
-					email: "test@example.com",
-				});
-				// Give React time to process the state update
-				await new Promise((resolve) => setTimeout(resolve, 0));
-			});
-
-			// Change session key
-			mockUseSession.mockReturnValue({
-				data: { key: "new-session-key" },
-				status: "authenticated",
-			});
-
-			rerender(<LoggedInUser />);
-
-			await waitFor(() => {
-				expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledTimes(2);
-				expect(vi.mocked(fetchCurrentUser)).toHaveBeenLastCalledWith(
-					"new-session-key"
-				);
-			});
-
-			// Resolve the second promise
+			// Resolve the promise
 			await act(async () => {
 				fetchCurrentUserResolve?.({
 					username: "testuser",
