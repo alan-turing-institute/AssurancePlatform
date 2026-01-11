@@ -233,6 +233,14 @@ async function resetIdentifiersWithPrisma(
 
 	await Promise.all(updates);
 
+	// Emit SSE event for real-time updates
+	// Note: Don't pass userId to ensure the triggering user also receives the event
+	// (the frontend doesn't update optimistically for reset identifiers)
+	const { emitSSEEvent } = await import(
+		"@/lib/services/sse-connection-manager"
+	);
+	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
+
 	return { success: true, status: 200 };
 }
 
