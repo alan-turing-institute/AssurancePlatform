@@ -403,7 +403,7 @@ model AssuranceElement {
   // Relations
   case                AssuranceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
   createdBy           User             @relation("ElementCreator", fields: [createdById], references: [id])
-  parent              AssuranceElement? @relation("ElementHierarchy", fields: [parentId], references: [id])
+  parent              AssuranceElement? @relation("ElementHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children            AssuranceElement[] @relation("ElementHierarchy")
   defeatsElement      AssuranceElement? @relation("Defeater", fields: [defeatsElementId], references: [id])
   defeatedBy          AssuranceElement[] @relation("Defeater")
@@ -528,7 +528,7 @@ model PatternElement {
 
   // Relations
   pattern         ArgumentPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
-  parent          PatternElement? @relation("PatternHierarchy", fields: [parentId], references: [id])
+  parent          PatternElement? @relation("PatternHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children        PatternElement[] @relation("PatternHierarchy")
 
   @@map("pattern_elements")

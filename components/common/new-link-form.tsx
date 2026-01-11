@@ -622,7 +622,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 					/>
 					{linkType === "evidence" && (
 						<div className="space-y-3">
-							<FormLabel>Evidence URLs (optional)</FormLabel>
+							<FormLabel>Evidence Link(s) (Optional)</FormLabel>
 							{fields.map((field, index) => (
 								<FormField
 									control={form.control}
@@ -633,7 +633,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 											<div className="flex gap-2">
 												<FormControl>
 													<Input
-														placeholder="https://example.com/evidence"
+														placeholder="URL, DOI, or reference"
 														{...inputField}
 													/>
 												</FormControl>

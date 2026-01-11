@@ -18,17 +18,11 @@ import React, {
 } from "react";
 import type { Node } from "reactflow";
 import useStore from "@/data/store";
-import {
-	addEvidenceToClaim,
-	addPropertyClaimToNested,
-	attachCaseElement,
-	deleteAssuranceCaseNode,
-} from "@/lib/case";
+import { attachCaseElement, deleteAssuranceCaseNode } from "@/lib/case";
 import type {
 	AssuranceCase,
 	Context,
 	Evidence,
-	Goal,
 	PropertyClaim,
 	Strategy,
 } from "@/types";
@@ -37,102 +31,6 @@ import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 
 type OrphanElement = Context | Evidence | PropertyClaim | Strategy;
-
-// Type for elements in the store's orphanedElements array
-type StoreOrphanedElement = {
-	id: number;
-	type?: string;
-	name?: string;
-	property_claim_id?: number | number[] | null;
-	[key: string]: unknown;
-};
-
-/**
- * Recursively finds all orphaned children IDs (evidence and nested property claims)
- * for a given property claim from the orphanedElements list.
- */
-function findOrphanedChildrenIds(
-	orphanedElements: StoreOrphanedElement[],
-	parentId: number
-): number[] {
-	const childIds: number[] = [];
-
-	// Find orphaned evidence with property_claim_id matching this parent
-	const orphanedEvidence = orphanedElements.filter((el) => {
-		if (el.type?.toLowerCase() !== "evidence") {
-			return false;
-		}
-		const claimIds = el.property_claim_id;
-		if (Array.isArray(claimIds)) {
-			return claimIds.includes(parentId);
-		}
-		return claimIds === parentId;
-	});
-
-	childIds.push(...orphanedEvidence.map((e) => e.id));
-
-	// Find orphaned nested property claims with property_claim_id matching parent
-	const orphanedNestedClaims = orphanedElements.filter((el) => {
-		if (el.type?.toLowerCase() !== "propertyclaim") {
-			return false;
-		}
-		return el.property_claim_id === parentId;
-	});
-
-	// Recursively find children of nested claims
-	for (const nestedClaim of orphanedNestedClaims) {
-		childIds.push(nestedClaim.id);
-		const nestedChildIds = findOrphanedChildrenIds(
-			orphanedElements,
-			nestedClaim.id
-		);
-		childIds.push(...nestedChildIds);
-	}
-
-	return childIds;
-}
-
-/**
- * Recursively populates a property claim with its orphaned children
- */
-function populatePropertyClaimWithChildren(
-	orphan: PropertyClaim,
-	orphanedElements: StoreOrphanedElement[]
-): PropertyClaim {
-	// Find evidence for this claim
-	const evidence = orphanedElements.filter((el) => {
-		if (el.type?.toLowerCase() !== "evidence") {
-			return false;
-		}
-		const claimIds = el.property_claim_id;
-		if (Array.isArray(claimIds)) {
-			return claimIds.includes(orphan.id);
-		}
-		return claimIds === orphan.id;
-	}) as unknown as Evidence[];
-
-	// Find nested property claims for this claim
-	const nestedClaims = orphanedElements.filter((el) => {
-		if (el.type?.toLowerCase() !== "propertyclaim") {
-			return false;
-		}
-		return el.property_claim_id === orphan.id;
-	}) as unknown as PropertyClaim[];
-
-	// Recursively populate nested claims
-	const populatedNestedClaims = nestedClaims.map((claim) =>
-		populatePropertyClaimWithChildren(claim, orphanedElements)
-	);
-
-	return {
-		...orphan,
-		evidence: [...(orphan.evidence ?? []), ...evidence],
-		property_claims: [
-			...(orphan.property_claims ?? []),
-			...populatedNestedClaims,
-		],
-	};
-}
 
 type OrphanElementsProps = {
 	node: Node;
@@ -164,6 +62,33 @@ const OrphanElements = ({
 
 	// const [token] = useLoginToken();
 	const { data: session } = useSession();
+
+	// Refetch case and orphaned elements from server to get fresh data with children
+	const refetchCaseData = async () => {
+		if (!assuranceCase?.id) {
+			return;
+		}
+
+		try {
+			// Fetch fresh case data
+			const caseResponse = await fetch(`/api/cases/${assuranceCase.id}`);
+			if (caseResponse.ok) {
+				const freshCase = await caseResponse.json();
+				setAssuranceCase(freshCase as AssuranceCase);
+			}
+
+			// Fetch fresh orphaned elements
+			const orphanResponse = await fetch(
+				`/api/cases/${assuranceCase.id}/sandbox`
+			);
+			if (orphanResponse.ok) {
+				const freshOrphans = await orphanResponse.json();
+				setOrphanedElements(freshOrphans || []);
+			}
+		} catch {
+			// Silently fail - SSE will eventually sync the data
+		}
+	};
 
 	const filterOrphanElements = React.useCallback(
 		(currentNodeType: string): OrphanElement[] => {
@@ -205,256 +130,6 @@ const OrphanElements = ({
 		[orphanedElements]
 	);
 
-	// Helper functions to break down complexity
-	const handleContextAttachment = (orphan: Context) => {
-		if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
-			setLoading(false);
-			return;
-		}
-		orphan.goal_id = node.data.id;
-		const newContext = [...(assuranceCase.goals[0].context ?? []), orphan];
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: [
-				{
-					...assuranceCase.goals[0],
-					context: newContext,
-				},
-			],
-		};
-		// Type assertion needed for legacy Context object handling
-		setAssuranceCase(updatedAssuranceCase as AssuranceCase);
-		setLoading(false);
-		handleClose();
-	};
-
-	const handleStrategyAttachment = (orphan: Strategy) => {
-		if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
-			setLoading(false);
-			return;
-		}
-		orphan.goal_id = node.data.id;
-		const newStrategy = [...assuranceCase.goals[0].strategies, orphan];
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: [
-				{
-					...assuranceCase.goals[0],
-					strategies: newStrategy,
-				},
-			],
-		};
-		setAssuranceCase(updatedAssuranceCase);
-		setLoading(false);
-		handleClose();
-	};
-
-	const handlePropertyClaimToGoal = (orphan: PropertyClaim) => {
-		if (!assuranceCase?.goals || assuranceCase.goals.length === 0) {
-			setLoading(false);
-			return;
-		}
-		orphan.goal_id = node.data.id;
-		const newPropertyClaim = [
-			...(assuranceCase.goals[0].property_claims ?? []),
-			orphan,
-		];
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: [
-				{
-					...assuranceCase.goals[0],
-					property_claims: newPropertyClaim,
-				},
-			],
-		};
-		setAssuranceCase(updatedAssuranceCase);
-		setLoading(false);
-		handleClose();
-	};
-
-	const handlePropertyClaimToProperty = (orphan: PropertyClaim) => {
-		if (!assuranceCase?.goals) {
-			setLoading(false);
-			return;
-		}
-		orphan.property_claim_id = node.data.id;
-		// Deep clone goals to ensure React detects the state change
-		const clonedGoals = JSON.parse(JSON.stringify(assuranceCase.goals));
-		const added = addPropertyClaimToNested(
-			clonedGoals as unknown as PropertyClaim[],
-			node.data.id,
-			orphan
-		);
-		if (!added) {
-			setLoading(false);
-			return;
-		}
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: clonedGoals,
-		};
-		setAssuranceCase(updatedAssuranceCase);
-		setLoading(false);
-		handleClose();
-	};
-
-	const handlePropertyClaimToStrategy = (orphan: PropertyClaim) => {
-		if (!assuranceCase?.goals) {
-			setLoading(false);
-			return;
-		}
-		orphan.strategy_id = node.data.id;
-		const goalContainingStrategy = assuranceCase.goals.find((goal) =>
-			goal.strategies?.some((strategy) => strategy.id === node.data.id)
-		);
-
-		if (goalContainingStrategy) {
-			// Populate the orphan with any orphaned children (evidence, nested claims)
-			const populatedOrphan = populatePropertyClaimWithChildren(
-				orphan,
-				orphanedElements
-			);
-
-			// Find all child IDs to remove from orphanedElements
-			const childIds = findOrphanedChildrenIds(orphanedElements, orphan.id);
-			const idsToRemove = new Set([orphan.id, ...childIds]);
-
-			// Remove orphan and its children from orphanedElements
-			const updatedOrphanedElements = orphanedElements.filter(
-				(el) => !idsToRemove.has(el.id)
-			);
-			setOrphanedElements(updatedOrphanedElements);
-
-			const updatedAssuranceCase = { ...assuranceCase };
-			const updatedStrategies = goalContainingStrategy.strategies.map(
-				(strategy) => {
-					if (strategy.id === node.data.id) {
-						return {
-							...strategy,
-							property_claims: [
-								...(strategy.property_claims ?? []),
-								populatedOrphan,
-							],
-						};
-					}
-					return strategy;
-				}
-			);
-
-			const updatedGoalContainingStrategy = {
-				...goalContainingStrategy,
-				strategies: updatedStrategies,
-			};
-
-			updatedAssuranceCase.goals = (assuranceCase.goals || []).map((goal) => {
-				if (goal === goalContainingStrategy) {
-					return updatedGoalContainingStrategy;
-				}
-				return goal;
-			});
-
-			setAssuranceCase(updatedAssuranceCase);
-			setLoading(false);
-			handleClose();
-		} else {
-			setLoading(false);
-		}
-	};
-
-	// Helper function to find and add evidence to property claim
-	const findPropertyClaimAndAddEvidence = (
-		propertyClaims: PropertyClaim[] | undefined,
-		claimId: number,
-		evidence: Evidence
-	): boolean => {
-		if (!propertyClaims || propertyClaims.length === 0) {
-			return false;
-		}
-		return addEvidenceToClaim(propertyClaims, claimId, evidence);
-	};
-
-	// Helper function to search for property claim in strategies
-	const searchPropertyClaimInStrategies = (
-		strategies: Strategy[] | undefined,
-		claimId: number,
-		evidence: Evidence
-	): boolean => {
-		if (!strategies || strategies.length === 0) {
-			return false;
-		}
-
-		for (const strategy of strategies) {
-			if (
-				findPropertyClaimAndAddEvidence(
-					strategy.property_claims,
-					claimId,
-					evidence
-				)
-			) {
-				return true;
-			}
-		}
-		return false;
-	};
-
-	// Helper function to search for property claim in goal
-	const searchPropertyClaimInGoal = (
-		goal: Goal,
-		claimId: number,
-		evidence: Evidence
-	): boolean => {
-		// Check direct property claims
-		if (
-			findPropertyClaimAndAddEvidence(goal.property_claims, claimId, evidence)
-		) {
-			return true;
-		}
-		// Check property claims inside strategies
-		return searchPropertyClaimInStrategies(goal.strategies, claimId, evidence);
-	};
-
-	const handleEvidenceAttachment = (orphan: Evidence) => {
-		if (!assuranceCase?.goals) {
-			setLoading(false);
-			return;
-		}
-
-		orphan.property_claim_id = [node.data.id];
-
-		// Deep clone goals to ensure React detects the state change
-		const clonedGoals = JSON.parse(JSON.stringify(assuranceCase.goals));
-
-		// Try to find the property claim in the goals and their nested structures
-		const added = clonedGoals.some((goal: Goal) =>
-			searchPropertyClaimInGoal(goal, node.data.id, orphan)
-		);
-
-		if (!added) {
-			setLoading(false);
-			return; // Parent property claim not found
-		}
-
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: clonedGoals,
-		};
-
-		setAssuranceCase(updatedAssuranceCase);
-		setLoading(false);
-		handleClose();
-	};
-
-	const handlePropertyClaimAttachment = (orphan: PropertyClaim) => {
-		if (node.type === "goal") {
-			handlePropertyClaimToGoal(orphan);
-		} else if (node.type === "property") {
-			handlePropertyClaimToProperty(orphan);
-		} else if (node.type === "strategy") {
-			handlePropertyClaimToStrategy(orphan);
-		}
-	};
-
 	// Helper function to convert OrphanElement to ReactFlowNode format
 	const convertToReactFlowNode = (orphan: OrphanElement) => ({
 		id: orphan.id.toString(),
@@ -474,31 +149,6 @@ const OrphanElements = ({
 				"property_claim_id" in orphan ? orphan.property_claim_id : null,
 		},
 	});
-
-	// Helper function to handle orphan attachment based on type
-	const processOrphanAttachment = (orphan: OrphanElement) => {
-		if (!assuranceCase) {
-			setLoading(false);
-			return;
-		}
-		switch (orphan.type?.toLowerCase()) {
-			case "context":
-				handleContextAttachment(orphan as Context);
-				break;
-			case "strategy":
-				handleStrategyAttachment(orphan as Strategy);
-				break;
-			case "propertyclaim":
-				handlePropertyClaimAttachment(orphan as PropertyClaim);
-				break;
-			case "evidence":
-				handleEvidenceAttachment(orphan as Evidence);
-				break;
-			default:
-				setLoading(false);
-				break;
-		}
-	};
 
 	const handleOrphanSelection = async (orphan: OrphanElement) => {
 		setLoading(true);
@@ -527,7 +177,10 @@ const OrphanElements = ({
 			return;
 		}
 
-		processOrphanAttachment(orphan);
+		// Refetch fresh case data from server to get the attached element with its children
+		await refetchCaseData();
+		setLoading(false);
+		handleClose();
 	};
 
 	const handleDelete = async () => {
