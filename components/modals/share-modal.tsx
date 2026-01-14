@@ -6,6 +6,7 @@ import {
 	Cloud,
 	Download,
 	FileIcon,
+	ImageIcon,
 	Loader2,
 	Share2,
 	User2,
@@ -29,11 +30,19 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import useStore from "@/data/store";
 import { useShareModal } from "@/hooks/use-share-modal";
+import { exportDiagramImage } from "@/lib/case/image-export";
 import { useToast } from "@/lib/toast";
-// import { unauthorized, useLoginToken } from ".*/use-auth";
 import type { User } from "@/types";
 import { Button } from "../ui/button";
+import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../ui/select";
 import { Separator } from "../ui/separator";
 
 type ShareItem = {
@@ -88,6 +97,7 @@ export const ShareModal = () => {
 		setEditMembers,
 		reviewMembers,
 		setReviewMembers,
+		nodes,
 	} = useStore();
 	const shareModal = useShareModal();
 
@@ -103,6 +113,11 @@ export const ShareModal = () => {
 	// Google Drive backup state
 	const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
 	const [backupLoading, setBackupLoading] = useState(false);
+
+	// Image export state
+	const [imageFormat, setImageFormat] = useState<"svg" | "png">("png");
+	const [imageScale, setImageScale] = useState<"1" | "2" | "3">("2");
+	const [imageExportLoading, setImageExportLoading] = useState(false);
 
 	const _router = useRouter();
 	const { toast } = useToast();
@@ -303,6 +318,46 @@ export const ShareModal = () => {
 		}
 	};
 
+	const handleImageExport = async () => {
+		if (!assuranceCase?.name) {
+			toast({
+				variant: "destructive",
+				title: "Export failed",
+				description: "No assurance case loaded",
+			});
+			return;
+		}
+
+		setImageExportLoading(true);
+
+		try {
+			await exportDiagramImage({
+				format: imageFormat,
+				scale:
+					imageFormat === "png" ? (Number(imageScale) as 1 | 2 | 3) : undefined,
+				caseName: assuranceCase.name,
+				nodes,
+			});
+
+			toast({
+				variant: "success",
+				title: "Export complete",
+				description: `Diagram exported as ${imageFormat.toUpperCase()}`,
+			});
+		} catch (exportError) {
+			toast({
+				variant: "destructive",
+				title: "Export failed",
+				description:
+					exportError instanceof Error
+						? exportError.message
+						: "An error occurred",
+			});
+		} finally {
+			setImageExportLoading(false);
+		}
+	};
+
 	return (
 		<Modal
 			description="How would you like the share your assurance case?"
@@ -432,6 +487,74 @@ export const ShareModal = () => {
 				>
 					<Download className="mr-2 h-4 w-4" />
 					Download File
+				</Button>
+			</div>
+			<Separator />
+			<div className="my-4">
+				<h2 className="mb-2 flex items-center justify-start gap-2">
+					<ImageIcon className="h-4 w-4" />
+					Export as Image
+				</h2>
+				<p className="text-muted-foreground text-sm">
+					Download the diagram as an image file.
+				</p>
+				<div className="my-3 space-y-3">
+					<div className="flex items-center gap-4">
+						<Label className="text-sm">Format</Label>
+						<RadioGroup
+							className="flex items-center gap-4"
+							onValueChange={(value) => setImageFormat(value as "svg" | "png")}
+							value={imageFormat}
+						>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="format-png" value="png" />
+								<Label className="font-normal" htmlFor="format-png">
+									PNG
+								</Label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="format-svg" value="svg" />
+								<Label className="font-normal" htmlFor="format-svg">
+									SVG
+								</Label>
+							</div>
+						</RadioGroup>
+					</div>
+					{imageFormat === "png" && (
+						<div className="flex items-center gap-4">
+							<Label className="text-sm" htmlFor="scale-select">
+								Resolution
+							</Label>
+							<Select
+								onValueChange={(v) => setImageScale(v as "1" | "2" | "3")}
+								value={imageScale}
+							>
+								<SelectTrigger className="w-24" id="scale-select">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="1">1x</SelectItem>
+									<SelectItem value="2">2x</SelectItem>
+									<SelectItem value="3">3x</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					)}
+				</div>
+				<Button
+					className="my-2"
+					disabled={imageExportLoading}
+					onClick={handleImageExport}
+					variant="outline"
+				>
+					{imageExportLoading ? (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					) : (
+						<Download className="mr-2 h-4 w-4" />
+					)}
+					{imageExportLoading
+						? "Exporting..."
+						: `Download ${imageFormat.toUpperCase()}`}
 				</Button>
 			</div>
 			<Separator />
