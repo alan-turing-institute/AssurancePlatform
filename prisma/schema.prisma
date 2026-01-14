@@ -41,6 +41,14 @@ model User {
   githubUsername       String?      @map("github_username")
   githubAccessToken    String?      @map("github_access_token") /// Encrypted GitHub OAuth access token for API calls
   githubTokenExpiresAt DateTime?    @map("github_token_expires_at") /// Expiry timestamp for the GitHub token
+
+  // Google OAuth
+  googleId             String?      @unique @map("google_id") /// Google account ID for OAuth
+  googleEmail          String?      @map("google_email") /// Google email address
+  googleAccessToken    String?      @map("google_access_token") /// Google OAuth access token for Drive API calls
+  googleRefreshToken   String?      @map("google_refresh_token") /// Google OAuth refresh token (tokens expire after 1 hour)
+  googleTokenExpiresAt DateTime?    @map("google_token_expires_at") /// Expiry timestamp for the Google access token
+
   emailVerified        Boolean      @default(false) @map("email_verified") /// Whether email has been verified (for email-based signup)
 
   // Password reset
@@ -81,6 +89,7 @@ model User {
 enum AuthProvider {
   LOCAL
   GITHUB
+  GOOGLE
   SYSTEM
 }
 

@@ -21,6 +21,11 @@ Table users {
   githubUsername String
   githubAccessToken String [note: 'Encrypted GitHub OAuth access token for API calls']
   githubTokenExpiresAt DateTime [note: 'Expiry timestamp for the GitHub token']
+  googleId String [unique, note: 'Google account ID for OAuth']
+  googleEmail String [note: 'Google email address']
+  googleAccessToken String [note: 'Google OAuth access token for Drive API calls']
+  googleRefreshToken String [note: 'Google OAuth refresh token (tokens expire after 1 hour)']
+  googleTokenExpiresAt DateTime [note: 'Expiry timestamp for the Google access token']
   emailVerified Boolean [not null, default: false, note: 'Whether email has been verified (for email-based signup)']
   passwordResetToken String
   passwordResetExpires DateTime
@@ -553,6 +558,7 @@ Table legacy_mappings {
 Enum AuthProvider {
   LOCAL
   GITHUB
+  GOOGLE
   SYSTEM
 }
 

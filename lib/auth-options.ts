@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
 
 dotenv.config(); // Explicitly load environment variables
 
@@ -137,16 +138,85 @@ async function authenticateGitHubWithPrisma(
 }
 
 /**
+ * Authenticates a Google user using Prisma.
+ * Creates or updates user record, stores OAuth access and refresh tokens, and returns session credentials.
+ */
+async function authenticateGoogleWithPrisma(
+	profile: {
+		sub?: string;
+		email?: string | null;
+		name?: string;
+	},
+	accessToken?: string,
+	refreshToken?: string,
+	expiresAt?: number
+): Promise<{ id: string } | null> {
+	const { prismaNew } = await import("@/lib/prisma");
+
+	const googleId = profile?.sub ?? "";
+	const email = profile?.email;
+
+	if (!email) {
+		console.error("Google OAuth: No email provided");
+		return null;
+	}
+
+	// Calculate token expiry (Google tokens expire after ~1 hour)
+	const tokenExpiresAt = expiresAt ? new Date(expiresAt * 1000) : null;
+
+	// Find existing user by Google ID or email (account linking)
+	const existingUser = await prismaNew.user.findFirst({
+		where: {
+			OR: [{ googleId }, { email }],
+		},
+	});
+
+	let userId: string;
+	if (existingUser) {
+		userId = existingUser.id;
+		await prismaNew.user.update({
+			where: { id: userId },
+			data: {
+				googleId,
+				googleEmail: email,
+				// Store tokens for Google Drive API calls
+				...(accessToken && { googleAccessToken: accessToken }),
+				...(refreshToken && { googleRefreshToken: refreshToken }),
+				...(tokenExpiresAt && { googleTokenExpiresAt: tokenExpiresAt }),
+			},
+		});
+	} else {
+		// Create new user for Google login
+		const username = email.split("@")[0] || email;
+		const newUser = await prismaNew.user.create({
+			data: {
+				email,
+				username,
+				googleId,
+				googleEmail: email,
+				authProvider: "GOOGLE",
+				googleAccessToken: accessToken,
+				googleRefreshToken: refreshToken,
+				googleTokenExpiresAt: tokenExpiresAt,
+			},
+		});
+		userId = newUser.id;
+	}
+
+	return { id: userId };
+}
+
+/**
  * Configuration options for NextAuth authentication.
  *
- * This object sets up authentication for a Next.js app using GitHub as an authentication provider.
+ * This object sets up authentication for a Next.js app using GitHub and Google as authentication providers.
  * It defines providers, session strategy, and callbacks for handling sign-in, redirect, session, and JWT behaviors.
  *
  * @type {NextAuthOptions}
  *
  * @property {string} secret - Secret for encrypting/decrypting JWT tokens. Fetched from environment variables.
  * @property {Object} session - Configuration for session management, using JWT as the strategy.
- * @property {Array} providers - List of authentication providers. Here, GitHub is configured.
+ * @property {Array} providers - List of authentication providers. GitHub, Google, and Credentials are configured.
  * @property {Object} callbacks - Defines callback functions for various authentication events such as signIn, redirect, session, and JWT management.
  *
  * @example
@@ -174,6 +244,19 @@ export const authOptions: NextAuthOptions = {
 			authorization: {
 				params: {
 					scope: "read:user user:email repo",
+				},
+			},
+		}),
+		GoogleProvider({
+			clientId: process.env.GOOGLE_CLIENT_ID as string,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+			authorization: {
+				params: {
+					// Request Drive API scope for backup/import functionality
+					scope:
+						"openid email profile https://www.googleapis.com/auth/drive.file",
+					access_type: "offline", // Required to get refresh token
+					prompt: "consent", // Force consent to ensure refresh token is returned
 				},
 			},
 		}),
@@ -228,6 +311,28 @@ export const authOptions: NextAuthOptions = {
 				if (result) {
 					user.id = result.id;
 					user.provider = "github";
+					return true;
+				}
+				return false;
+			}
+
+			if (account?.provider === "google") {
+				const googleProfile = profile as {
+					sub?: string;
+					email?: string;
+					name?: string;
+				};
+
+				// Pass access and refresh tokens for storage (enables Google Drive API calls)
+				const result = await authenticateGoogleWithPrisma(
+					googleProfile,
+					account.access_token,
+					account.refresh_token,
+					account.expires_at
+				);
+				if (result) {
+					user.id = result.id;
+					user.provider = "google";
 					return true;
 				}
 				return false;
