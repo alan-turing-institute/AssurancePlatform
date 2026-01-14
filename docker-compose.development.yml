@@ -38,7 +38,7 @@ services:
     volumes:
       - .:/app
       - app_next:/app/.next
-      - /app/node_modules
+      - node_modules_dev:/app/node_modules
     networks:
       - tea_dev_network
     # Memory limit (requires docker-compose v2)
@@ -56,3 +56,6 @@ networks:
 volumes:
   postgres_data:
   app_next:
+  # Named volume for container's node_modules (Linux binaries, separate from host's macOS binaries)
+  # Clear when dependencies change: docker volume rm assuranceplatform_node_modules_dev
+  node_modules_dev:

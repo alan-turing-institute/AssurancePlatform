@@ -72,13 +72,17 @@ async function authenticateWithPrisma(
 
 /**
  * Authenticates a GitHub user using Prisma.
- * Creates or updates user record and returns session credentials.
+ * Creates or updates user record, stores OAuth access token, and returns session credentials.
  */
-async function authenticateGitHubWithPrisma(profile: {
-	id?: string | number;
-	login?: string;
-	email?: string | null;
-}): Promise<{ id: string } | null> {
+async function authenticateGitHubWithPrisma(
+	profile: {
+		id?: string | number;
+		login?: string;
+		email?: string | null;
+	},
+	accessToken?: string,
+	expiresAt?: number
+): Promise<{ id: string } | null> {
 	const { prismaNew } = await import("@/lib/prisma");
 
 	const githubId = String(profile?.id ?? "");
@@ -89,6 +93,9 @@ async function authenticateGitHubWithPrisma(profile: {
 		console.error("GitHub OAuth: No email provided");
 		return null;
 	}
+
+	// Calculate token expiry (GitHub tokens typically don't expire, but we store it if provided)
+	const tokenExpiresAt = expiresAt ? new Date(expiresAt * 1000) : null;
 
 	// Find existing user by GitHub ID or email
 	const existingUser = await prismaNew.user.findFirst({
@@ -106,6 +113,9 @@ async function authenticateGitHubWithPrisma(profile: {
 				githubId,
 				githubUsername,
 				authProvider: "GITHUB",
+				// Store access token for GitHub API calls (e.g., importing cases from repos)
+				...(accessToken && { githubAccessToken: accessToken }),
+				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
 			},
 		});
 	} else {
@@ -116,6 +126,8 @@ async function authenticateGitHubWithPrisma(profile: {
 				githubId,
 				githubUsername,
 				authProvider: "GITHUB",
+				githubAccessToken: accessToken,
+				githubTokenExpiresAt: tokenExpiresAt,
 			},
 		});
 		userId = newUser.id;
@@ -158,6 +170,12 @@ export const authOptions: NextAuthOptions = {
 			clientSecret:
 				process.env.GITHUB_APP_CLIENT_SECRET ||
 				(process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string),
+			// Request repo scope to access private repositories for import feature
+			authorization: {
+				params: {
+					scope: "read:user user:email repo",
+				},
+			},
 		}),
 		CredentialsProvider({
 			name: "Credentials",
@@ -201,7 +219,12 @@ export const authOptions: NextAuthOptions = {
 					email: profile?.email,
 				};
 
-				const result = await authenticateGitHubWithPrisma(githubProfile);
+				// Pass access token for storage (enables GitHub API calls like repo imports)
+				const result = await authenticateGitHubWithPrisma(
+					githubProfile,
+					account.access_token,
+					account.expires_at
+				);
 				if (result) {
 					user.id = result.id;
 					user.provider = "github";

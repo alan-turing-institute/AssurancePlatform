@@ -132,22 +132,49 @@ export type ValidationResult =
 // ZOD SCHEMAS
 // ============================================
 
-const ElementRoleSchema = z.enum(["TOP_LEVEL", "SUPPORTING"]);
-const ModuleEmbedTypeSchema = z.enum(["COPY", "REFERENCE"]);
+const ElementRoleSchema = z
+	.enum(["TOP_LEVEL", "SUPPORTING"])
+	.describe("Role of an element in the case hierarchy");
+const ModuleEmbedTypeSchema = z
+	.enum(["COPY", "REFERENCE"])
+	.describe("How a module is embedded in the case");
 
 /**
  * Base fields common to all element types.
  */
-const BaseElementSchema = z.object({
-	name: z.string().nullable().optional(),
-	description: z.string(),
-	inSandbox: z.boolean().default(false),
-	fromPattern: z.boolean().default(false),
-	modifiedFromPattern: z.boolean().default(false),
-	// Dialogical reasoning - available to all types
-	isDefeater: z.boolean().default(false),
-	defeatsElementId: z.string().uuid().nullable().optional(),
-});
+const BaseElementSchema = z
+	.object({
+		name: z
+			.string()
+			.nullable()
+			.optional()
+			.describe("Display name of the element"),
+		description: z.string().describe("Detailed description or content"),
+		inSandbox: z
+			.boolean()
+			.default(false)
+			.describe("Whether the element is in draft mode"),
+		fromPattern: z
+			.boolean()
+			.default(false)
+			.describe("Whether created from a pattern"),
+		modifiedFromPattern: z
+			.boolean()
+			.default(false)
+			.describe("Whether modified from pattern"),
+		// Dialogical reasoning - available to all types
+		isDefeater: z
+			.boolean()
+			.default(false)
+			.describe("Whether this element is a defeater"),
+		defeatsElementId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe("ID of the element this defeats"),
+	})
+	.describe("Base fields common to all element types");
 
 /**
  * Type-specific schemas using discriminated union.
@@ -213,17 +240,19 @@ const ContractSchema = BaseElementSchema.extend({
 /**
  * Discriminated union of all element type schemas.
  */
-export const ElementValidationSchema = z.discriminatedUnion("elementType", [
-	GoalSchema,
-	StrategySchema,
-	PropertyClaimSchema,
-	EvidenceSchema,
-	JustificationSchema,
-	AssumptionSchema,
-	ModuleSchema,
-	AwayGoalSchema,
-	ContractSchema,
-]);
+export const ElementValidationSchema = z
+	.discriminatedUnion("elementType", [
+		GoalSchema,
+		StrategySchema,
+		PropertyClaimSchema,
+		EvidenceSchema,
+		JustificationSchema,
+		AssumptionSchema,
+		ModuleSchema,
+		AwayGoalSchema,
+		ContractSchema,
+	])
+	.describe("Validation schema for assurance case elements by type");
 
 // ============================================
 // VALIDATION FUNCTIONS

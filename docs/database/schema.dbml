@@ -19,6 +19,8 @@ Table users {
   authProvider AuthProvider [not null, default: 'LOCAL']
   githubId String [unique]
   githubUsername String
+  githubAccessToken String [note: 'Encrypted GitHub OAuth access token for API calls']
+  githubTokenExpiresAt DateTime [note: 'Expiry timestamp for the GitHub token']
   emailVerified Boolean [not null, default: false, note: 'Whether email has been verified (for email-based signup)']
   passwordResetToken String
   passwordResetExpires DateTime
@@ -38,25 +40,10 @@ Table users {
   resolvedComments comments [not null]
   releaseComments release_comments [not null]
   githubRepositories github_repositories [not null]
-  refreshTokens refresh_tokens [not null]
   caseStudies case_studies [not null]
   markedReadyCases assurance_cases [not null]
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
-}
-
-Table refresh_tokens {
-  id String [pk]
-  token String [unique, not null]
-  userId String [not null]
-  expiresAt DateTime [not null]
-  createdAt DateTime [default: `now()`, not null]
-  revokedAt DateTime
-  userAgent String
-  ipAddress String
-  user users [not null]
-
-  Note: 'JWT refresh tokens for maintaining user sessions. Tokens can be revoked for security.'
 }
 
 Table password_reset_attempts {
@@ -640,8 +627,6 @@ Enum CaseTypeCategory {
   STANDARD
 }
 
-Ref: refresh_tokens.userId > users.id [delete: Cascade]
-
 Ref: teams.createdById > users.id
 
 Ref: team_members.teamId > teams.id [delete: Cascade]
@@ -670,9 +655,9 @@ Ref: assurance_elements.caseId > assurance_cases.id [delete: Cascade]
 
 Ref: assurance_elements.createdById > users.id
 
-Ref: assurance_elements.parentId - assurance_elements.id
+Ref: assurance_elements.parentId - assurance_elements.id [delete: Cascade]
 
-Ref: assurance_elements.defeatsElementId - assurance_elements.id
+Ref: assurance_elements.defeatsElementId - assurance_elements.id [delete: Cascade]
 
 Ref: assurance_elements.moduleReferenceId > assurance_cases.id [delete: Cascade]
 
@@ -682,7 +667,7 @@ Ref: evidence_links.claimId > assurance_elements.id [delete: Cascade]
 
 Ref: pattern_elements.patternId > argument_patterns.id [delete: Cascade]
 
-Ref: pattern_elements.parentId - pattern_elements.id
+Ref: pattern_elements.parentId - pattern_elements.id [delete: Cascade]
 
 Ref: pattern_permissions.patternId > argument_patterns.id [delete: Cascade]
 

@@ -3,16 +3,20 @@ import { validateSession } from "@/lib/auth/validate-session";
 import { exportCase } from "@/lib/services/case-export-service";
 
 /**
- * GET /api/cases/export?id=xxx&includeComments=true
+ * Export an assurance case as JSON
  *
- * Exports a case in v2 JSON format.
+ * @description Exports the specified case in nested JSON format (v1.0).
+ * Returns a downloadable JSON file with the full case structure.
  * Requires VIEW permission on the case.
  *
- * Query parameters:
- * - id: Case ID (required)
- * - includeComments: Include comments in export (default: true)
- *
- * Returns JSON with Content-Disposition header for download.
+ * @queryParam id - Case ID (UUID, required)
+ * @queryParam includeComments - Include comments in export (boolean, default: true)
+ * @response 200 - CaseExportNested schema with Content-Disposition header
+ * @response 400 - Missing case ID
+ * @response 401 - Unauthorised
+ * @response 403 - Permission denied
+ * @auth bearer
+ * @tag Cases
  */
 export async function GET(request: Request) {
 	const validated = await validateSession();
