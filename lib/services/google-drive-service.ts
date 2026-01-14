@@ -215,7 +215,7 @@ export async function uploadBackupToDrive(
 	};
 
 	// Use a readable stream for the media body
-	const { Readable } = await import("node:stream");
+	const { Readable } = require("node:stream");
 	const stream = Readable.from([jsonContent]);
 
 	const file = await drive.files.create({
