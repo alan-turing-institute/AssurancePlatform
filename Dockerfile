@@ -31,6 +31,15 @@ RUN \
 # 2. Rebuild the source code only when needed
 FROM base AS builder
 
+# Redeclare build arguments (ARGs don't carry over between stages)
+ARG GITHUB_APP_CLIENT_ID
+ARG GITHUB_APP_CLIENT_SECRET
+ARG GOOGLE_CLIENT_ID
+ARG GOOGLE_CLIENT_SECRET
+ARG NEXTAUTH_SECRET
+ARG NEXTAUTH_URL
+ARG DATABASE_URL
+
 # Install dependencies needed for compatibility
 RUN apk add --no-cache libc6-compat
 
