@@ -52,7 +52,13 @@ export {
 	type Exporter,
 	ExporterRegistry,
 	exporterRegistry,
+	MarkdownExporter,
 } from "./exporters";
+
+// Register exporters with the global registry
+import { exporterRegistry, MarkdownExporter } from "./exporters";
+
+exporterRegistry.register(new MarkdownExporter());
 
 // Schemas
 export {

@@ -8,3 +8,5 @@ export {
 	ExporterRegistry,
 	exporterRegistry,
 } from "./base-exporter";
+
+export { MarkdownExporter } from "./markdown-exporter";
