@@ -274,6 +274,19 @@ function buildPropertyClaimStructure(
 	};
 }
 
+/**
+ * Get an assurance case by ID
+ *
+ * @description Retrieves the full case structure including goals, strategies,
+ * property claims, evidence, and comments. Requires VIEW permission.
+ *
+ * @pathParam id - Case ID (UUID)
+ * @response 200 - Full case data with nested elements
+ * @response 401 - Unauthorised
+ * @response 404 - Case not found or no access
+ * @auth bearer
+ * @tag Cases
+ */
 export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
@@ -360,8 +373,18 @@ async function updateCaseWithPrisma(
 }
 
 /**
- * PUT /api/cases/[id]
- * Updates case metadata
+ * Update case metadata
+ *
+ * @description Updates the name, description, or colour profile of a case.
+ * Requires EDIT permission on the case.
+ *
+ * @pathParam id - Case ID (UUID)
+ * @body { name?, description?, color_profile? }
+ * @response 200 - Updated case data
+ * @response 401 - Unauthorised
+ * @response 403 - Permission denied
+ * @auth bearer
+ * @tag Cases
  */
 export async function PUT(
 	request: Request,
@@ -388,8 +411,17 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/cases/[id]
- * Deletes a case and all its elements
+ * Delete an assurance case
+ *
+ * @description Permanently deletes a case and all its elements.
+ * Requires ADMIN permission on the case.
+ *
+ * @pathParam id - Case ID (UUID)
+ * @response 200 - { success: true }
+ * @response 401 - Unauthorised
+ * @response 403 - Permission denied (ADMIN required)
+ * @auth bearer
+ * @tag Cases
  */
 export async function DELETE(
 	_request: Request,

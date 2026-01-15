@@ -16,22 +16,32 @@ import { z } from "zod";
 // ENUMS (matching Prisma schema)
 // ============================================
 
-export const ElementTypeSchema = z.enum([
-	"GOAL",
-	"CONTEXT",
-	"STRATEGY",
-	"PROPERTY_CLAIM",
-	"EVIDENCE",
-	"JUSTIFICATION",
-	"ASSUMPTION",
-	"MODULE",
-	"AWAY_GOAL",
-	"CONTRACT",
-]);
+export const ElementTypeSchema = z
+	.enum([
+		"GOAL",
+		"CONTEXT",
+		"STRATEGY",
+		"PROPERTY_CLAIM",
+		"EVIDENCE",
+		"JUSTIFICATION",
+		"ASSUMPTION",
+		"MODULE",
+		"AWAY_GOAL",
+		"CONTRACT",
+	])
+	.describe("The type of element in an assurance case");
 
-export const ElementRoleSchema = z.enum(["TOP_LEVEL", "SUPPORTING"]);
+export const ElementRoleSchema = z
+	.enum(["TOP_LEVEL", "SUPPORTING"])
+	.describe(
+		"The role of an element - TOP_LEVEL for root goals, SUPPORTING for child elements"
+	);
 
-export const ModuleEmbedTypeSchema = z.enum(["COPY", "REFERENCE"]);
+export const ModuleEmbedTypeSchema = z
+	.enum(["COPY", "REFERENCE"])
+	.describe(
+		"How a module is embedded - COPY creates independent copy, REFERENCE links to original"
+	);
 
 export type ElementType = z.infer<typeof ElementTypeSchema>;
 export type ElementRole = z.infer<typeof ElementRoleSchema>;
@@ -44,58 +54,107 @@ export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
 /**
  * V2 Element schema - flat structure with parentId references
  */
-export const ElementV2Schema = z.object({
-	id: z.string().uuid(),
-	elementType: ElementTypeSchema,
-	role: ElementRoleSchema.nullable().optional(),
-	parentId: z.string().uuid().nullable(),
-	name: z.string().nullable(),
-	description: z.string(),
-	assumption: z.string().nullable().optional(),
-	justification: z.string().nullable().optional(),
-	context: z.array(z.string()).optional(),
-	url: z.string().nullable().optional(),
-	level: z.number().int().nullable().optional(),
-	inSandbox: z.boolean().default(false),
-	fromPattern: z.boolean().default(false).optional(),
-	modifiedFromPattern: z.boolean().default(false).optional(),
-	// Comments (optional - only present when imported from nested format with comments)
-	comments: z
-		.array(
-			z.object({
-				author: z.string(),
-				content: z.string(),
-				createdAt: z.string(),
-			})
-		)
-		.optional(),
-});
+export const ElementV2Schema = z
+	.object({
+		id: z.string().uuid().describe("Unique identifier for the element"),
+		elementType: ElementTypeSchema,
+		role: ElementRoleSchema.nullable().optional(),
+		parentId: z
+			.string()
+			.uuid()
+			.nullable()
+			.describe("ID of the parent element, null for root elements"),
+		name: z.string().nullable().describe("Display name of the element"),
+		description: z.string().describe("Detailed description or content"),
+		assumption: z
+			.string()
+			.nullable()
+			.optional()
+			.describe("Assumption text for applicable element types"),
+		justification: z
+			.string()
+			.nullable()
+			.optional()
+			.describe("Justification text for applicable element types"),
+		context: z
+			.array(z.string())
+			.optional()
+			.describe("Context tags associated with the element"),
+		url: z.string().nullable().optional().describe("URL for evidence elements"),
+		level: z
+			.number()
+			.int()
+			.nullable()
+			.optional()
+			.describe("Hierarchy level for property claims"),
+		inSandbox: z
+			.boolean()
+			.default(false)
+			.describe("Whether the element is in sandbox/draft mode"),
+		fromPattern: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("Whether the element was created from a pattern"),
+		modifiedFromPattern: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("Whether the element has been modified from its pattern"),
+		comments: z
+			.array(
+				z.object({
+					author: z.string().describe("Username of comment author"),
+					content: z.string().describe("Comment text content"),
+					createdAt: z
+						.string()
+						.describe("ISO 8601 timestamp of comment creation"),
+				})
+			)
+			.optional()
+			.describe("Comments attached to this element"),
+	})
+	.describe("An element in an assurance case (V2 flat format)");
 
 export type ElementV2 = z.infer<typeof ElementV2Schema>;
 
 /**
  * V2 Evidence Link schema - many-to-many relationship
  */
-export const EvidenceLinkV2Schema = z.object({
-	evidenceId: z.string().uuid(),
-	claimId: z.string().uuid(),
-});
+export const EvidenceLinkV2Schema = z
+	.object({
+		evidenceId: z.string().uuid().describe("ID of the evidence element"),
+		claimId: z
+			.string()
+			.uuid()
+			.describe("ID of the claim element the evidence supports"),
+	})
+	.describe("Link between evidence and the claim it supports");
 
 export type EvidenceLinkV2 = z.infer<typeof EvidenceLinkV2Schema>;
 
 /**
  * V2 Export format - the canonical export schema
  */
-export const CaseExportV2Schema = z.object({
-	version: z.literal("2.0"),
-	exportedAt: z.string().datetime(),
-	case: z.object({
-		name: z.string().min(1, "Case name is required"),
-		description: z.string(),
-	}),
-	elements: z.array(ElementV2Schema),
-	evidenceLinks: z.array(EvidenceLinkV2Schema),
-});
+export const CaseExportV2Schema = z
+	.object({
+		version: z.literal("2.0").describe("Schema version identifier"),
+		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		case: z
+			.object({
+				name: z
+					.string()
+					.min(1, "Case name is required")
+					.describe("Name of the assurance case"),
+				description: z.string().describe("Description of the assurance case"),
+			})
+			.describe("Case metadata"),
+		elements: z.array(ElementV2Schema).describe("All elements in the case"),
+		evidenceLinks: z
+			.array(EvidenceLinkV2Schema)
+			.describe("Links between evidence and claims"),
+	})
+	.describe("Assurance case export in V2 flat format");
 
 export type CaseExportV2 = z.infer<typeof CaseExportV2Schema>;
 
@@ -159,11 +218,13 @@ export type TreeNode = {
 };
 
 // Comment schema for export/import
-export const ExportCommentSchema = z.object({
-	author: z.string(),
-	content: z.string(),
-	createdAt: z.string(),
-});
+export const ExportCommentSchema = z
+	.object({
+		author: z.string().describe("Username of the comment author"),
+		content: z.string().describe("Comment text content"),
+		createdAt: z.string().describe("ISO 8601 timestamp of comment creation"),
+	})
+	.describe("A comment attached to an element");
 
 // biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing
 export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
@@ -202,15 +263,22 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
  * Uses version "1.0" as this is the first officially versioned export format
  * (the legacy Django format had no version field).
  */
-export const CaseExportNestedSchema = z.object({
-	version: z.literal("1.0"),
-	exportedAt: z.string().datetime(),
-	case: z.object({
-		name: z.string().min(1, "Case name is required"),
-		description: z.string(),
-	}),
-	tree: TreeNodeSchema,
-});
+export const CaseExportNestedSchema = z
+	.object({
+		version: z.literal("1.0").describe("Schema version identifier"),
+		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		case: z
+			.object({
+				name: z
+					.string()
+					.min(1, "Case name is required")
+					.describe("Name of the assurance case"),
+				description: z.string().describe("Description of the assurance case"),
+			})
+			.describe("Case metadata"),
+		tree: TreeNodeSchema.describe("Root element of the case tree"),
+	})
+	.describe("Assurance case export in nested tree format (v1.0)");
 
 export type CaseExportNested = z.infer<typeof CaseExportNestedSchema>;
 

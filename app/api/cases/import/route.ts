@@ -3,13 +3,18 @@ import { validateSession } from "@/lib/auth/validate-session";
 import { importCase } from "@/lib/services/case-import-service";
 
 /**
- * POST /api/cases/import
+ * Import an assurance case from JSON
  *
- * Imports a case from JSON data.
- * Accepts both v1 (legacy Django) and v2 (Prisma) formats.
+ * @description Imports a case from JSON data. Accepts v1 (legacy Django),
+ * v2 (flat format), and nested (v1.0) formats. Creates a new case with
+ * all elements and evidence links.
  *
- * Body: JSON case data
- * Returns: { id, name, elementCount, evidenceLinkCount, warnings } or validation errors
+ * @body JSON case data in any supported format
+ * @response 200 - { id, name, elementCount, evidenceLinkCount, warnings }
+ * @response 400 - Validation errors
+ * @response 401 - Unauthorised
+ * @auth bearer
+ * @tag Cases
  */
 export async function POST(request: Request) {
 	const validated = await validateSession();
@@ -50,11 +55,17 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/cases/import/validate
- * (POST for consistency with import endpoint)
+ * Validate import data without creating
  *
- * Validates import data without creating anything.
- * Useful for preview/confirmation UI.
+ * @description Validates JSON import data and returns preview information
+ * without actually creating the case. Useful for preview/confirmation UI.
+ *
+ * @body JSON case data to validate
+ * @response 200 - { isValid, version, caseName, elementCount, evidenceLinkCount, warnings }
+ * @response 400 - Validation errors
+ * @response 401 - Unauthorised
+ * @auth bearer
+ * @tag Cases
  */
 export async function PUT(request: Request) {
 	const validated = await validateSession();

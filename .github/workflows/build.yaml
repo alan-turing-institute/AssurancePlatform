@@ -145,6 +145,8 @@ jobs:
           build-args: |
             GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID }}
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_MAIN }}
             DATABASE_URL=postgresql://build:build@localhost:5432/build
@@ -229,6 +231,8 @@ jobs:
           build-args: |
             GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
             DATABASE_URL=postgresql://build:build@localhost:5432/build
@@ -313,6 +317,8 @@ jobs:
           build-args: |
             GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
             GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
             DATABASE_URL=postgresql://build:build@localhost:5432/build

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { fetchConnectedAccounts } from "@/actions/connected-accounts";
 import { fetchCurrentUser } from "@/actions/users";
 import { validateSession } from "@/lib/auth/validate-session";
+import { ConnectedAccountsForm } from "./_components/connected-accounts-form";
 import { DeleteForm } from "./_components/delete-form";
 import { PasswordForm } from "./_components/password-form";
 import { PersonalInfoForm } from "./_components/personal-info-form";
@@ -11,7 +13,10 @@ const SettingsPage = async () => {
 		redirect("/login");
 	}
 
-	const currentUser = await fetchCurrentUser("");
+	const [currentUser, connectedAccounts] = await Promise.all([
+		fetchCurrentUser(""),
+		fetchConnectedAccounts(),
+	]);
 
 	return (
 		<main>
@@ -21,6 +26,7 @@ const SettingsPage = async () => {
       </header> */}
 			<div className="min-h-screen divide-y divide-foreground/5">
 				<PersonalInfoForm data={currentUser} />
+				<ConnectedAccountsForm data={connectedAccounts} />
 				<PasswordForm data={currentUser} />
 				<DeleteForm user={currentUser} />
 			</div>

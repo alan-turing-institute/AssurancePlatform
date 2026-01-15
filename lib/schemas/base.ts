@@ -12,12 +12,16 @@ export const emailSchema = z
 	.min(1, "Email is required")
 	.email("Please enter a valid email address")
 	.max(254, "Email must be less than 254 characters")
-	.transform((v) => v.toLowerCase().trim());
+	.transform((v) => v.toLowerCase().trim())
+	.describe("Valid email address");
 
 /**
  * UUID v4 format
  */
-export const uuidSchema = z.string().uuid("Invalid ID format");
+export const uuidSchema = z
+	.string()
+	.uuid("Invalid ID format")
+	.describe("UUID v4 identifier");
 
 /**
  * Non-empty trimmed string
@@ -31,7 +35,8 @@ export const requiredString = (
 		.string()
 		.min(minLength, `${fieldName} is required`)
 		.max(maxLength, `${fieldName} must be less than ${maxLength} characters`)
-		.transform((v) => v.trim());
+		.transform((v) => v.trim())
+		.describe(`Required ${fieldName} field`);
 
 /**
  * Optional trimmed string (empty string becomes undefined, null becomes undefined)
@@ -42,7 +47,8 @@ export const optionalString = (maxLength = 2000) =>
 		.max(maxLength, `Must be less than ${maxLength} characters`)
 		.optional()
 		.nullable()
-		.transform((v) => (v?.trim() ? v.trim() : undefined));
+		.transform((v) => (v?.trim() ? v.trim() : undefined))
+		.describe("Optional string field");
 
 // ============================================
 // Number Primitives
@@ -54,7 +60,8 @@ export const optionalString = (maxLength = 2000) =>
 export const positiveIntSchema = z
 	.number()
 	.int("Must be a whole number")
-	.positive("Must be a positive number");
+	.positive("Must be a positive number")
+	.describe("Positive integer identifier");
 
 /**
  * Coerce string to positive integer (for query params and FormData)
@@ -62,7 +69,8 @@ export const positiveIntSchema = z
 export const coercePositiveInt = z.coerce
 	.number()
 	.int("Must be a whole number")
-	.positive("Must be a positive number");
+	.positive("Must be a positive number")
+	.describe("Positive integer coerced from string");
 
 // ============================================
 // Boolean Primitives
@@ -75,7 +83,8 @@ export const coerceBoolean = z
 	.string()
 	.optional()
 	.nullable()
-	.transform((v) => v === "true");
+	.transform((v) => v === "true")
+	.describe("Boolean coerced from string");
 
 // ============================================
 // Enums
@@ -84,16 +93,17 @@ export const coerceBoolean = z
 /**
  * Permission levels
  */
-export const permissionLevelSchema = z.enum(
-	["VIEW", "COMMENT", "EDIT", "ADMIN"],
-	{
+export const permissionLevelSchema = z
+	.enum(["VIEW", "COMMENT", "EDIT", "ADMIN"], {
 		errorMap: () => ({ message: "Invalid permission level" }),
-	}
-);
+	})
+	.describe("Permission level for case access");
 
 /**
  * Team roles
  */
-export const teamRoleSchema = z.enum(["ADMIN", "MEMBER"], {
-	errorMap: () => ({ message: "Invalid team role" }),
-});
+export const teamRoleSchema = z
+	.enum(["ADMIN", "MEMBER"], {
+		errorMap: () => ({ message: "Invalid team role" }),
+	})
+	.describe("Role within a team");

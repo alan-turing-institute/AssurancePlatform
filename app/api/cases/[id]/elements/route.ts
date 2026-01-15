@@ -68,8 +68,19 @@ async function createElementPrisma(
 }
 
 /**
- * POST /api/cases/[id]/elements
- * Creates a new element in a case
+ * Create a new element in a case
+ *
+ * @description Creates a goal, strategy, property claim, evidence, or other
+ * element type within the case hierarchy. Requires EDIT permission.
+ *
+ * @pathParam id - Case ID (UUID)
+ * @body { type, name?, description?, parentId?, url?, assumption?, justification? }
+ * @response 201 - Created element data
+ * @response 400 - Validation error
+ * @response 401 - Unauthorised
+ * @response 403 - Permission denied
+ * @auth bearer
+ * @tag Elements
  */
 export async function POST(
 	request: Request,
