@@ -53,12 +53,17 @@ export {
 	ExporterRegistry,
 	exporterRegistry,
 	MarkdownExporter,
+	PDFDocumentComponent,
+	type PDFDocumentProps,
+	PDFExporter,
+	renderBlock,
 } from "./exporters";
 
 // Register exporters with the global registry
-import { exporterRegistry, MarkdownExporter } from "./exporters";
+import { exporterRegistry, MarkdownExporter, PDFExporter } from "./exporters";
 
 exporterRegistry.register(new MarkdownExporter());
+exporterRegistry.register(new PDFExporter());
 
 // Schemas
 export {
