@@ -2,6 +2,7 @@
 
 import { saveAs } from "file-saver";
 import {
+	ChevronDown,
 	Cloud,
 	Download,
 	FileIcon,
@@ -63,6 +64,92 @@ function GoogleIcon({ className }: { className?: string }) {
 	);
 }
 
+/**
+ * Section labels for display in the customisation panel
+ */
+const SECTION_LABELS: Record<string, string> = {
+	titlePage: "Title page",
+	tableOfContents: "Table of contents",
+	diagram: "Diagram",
+	executiveSummary: "Executive summary",
+	assuranceCaseStructure: "Assurance case structure",
+	comments: "Comments",
+	metadata: "Metadata",
+};
+
+type DocSections = {
+	titlePage: boolean;
+	tableOfContents: boolean;
+	diagram: boolean;
+	executiveSummary: boolean;
+	assuranceCaseStructure: boolean;
+	comments: boolean;
+	metadata: boolean;
+};
+
+/**
+ * Collapsible section customisation component
+ */
+function SectionCustomisation({
+	sections,
+	onToggle,
+}: {
+	sections: DocSections;
+	onToggle: (key: keyof DocSections) => void;
+}) {
+	const [isOpen, setIsOpen] = useState(false);
+
+	return (
+		<div className="rounded-md border border-muted">
+			<button
+				className="flex w-full items-center justify-between p-3 text-left text-sm hover:bg-muted/50"
+				onClick={() => setIsOpen(!isOpen)}
+				type="button"
+			>
+				<span>Customise sections</span>
+				<ChevronDown
+					className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+				/>
+			</button>
+			{isOpen && (
+				<div className="space-y-2 border-t px-3 pt-2 pb-3">
+					{Object.entries(SECTION_LABELS).map(([key, label]) => (
+						<div className="flex items-center space-x-2" key={key}>
+							<input
+								checked={sections[key as keyof DocSections]}
+								className="h-4 w-4 rounded border-gray-300"
+								id={`section-${key}`}
+								onChange={() => onToggle(key as keyof DocSections)}
+								type="checkbox"
+							/>
+							<label className="text-sm" htmlFor={`section-${key}`}>
+								{label}
+							</label>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+/**
+ * Template description component
+ */
+function TemplateDescription({ template }: { template: TemplatePreset }) {
+	const descriptions: Record<TemplatePreset, string> = {
+		"full-report":
+			"Comprehensive report with all case elements, comments, and diagram",
+		summary: "Condensed overview with goals and key evidence only",
+		"evidence-list":
+			"Focused list of all evidence items with URLs and descriptions",
+	};
+
+	return (
+		<p className="text-muted-foreground text-xs">{descriptions[template]}</p>
+	);
+}
+
 export const ShareModal = () => {
 	const { assuranceCase, nodes } = useStore();
 	const exportModal = useExportModal();
@@ -82,9 +169,16 @@ export const ShareModal = () => {
 	// Document export state
 	const [docFormat, setDocFormat] = useState<ExportFormat>("pdf");
 	const [docTemplate, setDocTemplate] = useState<TemplatePreset>("full-report");
-	const [docIncludeComments, setDocIncludeComments] = useState(true);
-	const [docIncludeDiagram, setDocIncludeDiagram] = useState(true);
 	const [docExportLoading, setDocExportLoading] = useState(false);
+	const [docSections, setDocSections] = useState<DocSections>({
+		titlePage: true,
+		tableOfContents: true,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: true,
+		comments: true,
+		metadata: true,
+	});
 
 	const { toast } = useToast();
 
@@ -236,9 +330,9 @@ export const ShareModal = () => {
 		setDocExportLoading(true);
 
 		try {
-			// Fetch case data from server
+			// Fetch case data from server (include comments if comments section is enabled)
 			const result = await getDocumentExportData(assuranceCase.id, {
-				includeComments: docIncludeComments,
+				includeComments: docSections.comments,
 			});
 
 			if (!result.success) {
@@ -250,14 +344,15 @@ export const ShareModal = () => {
 				return;
 			}
 
-			// Export document using client-side function
+			// Export document using client-side function with section overrides
 			await exportDocument({
 				caseData: result.data,
 				caseName: assuranceCase.name,
 				format: docFormat,
 				template: docTemplate,
-				includeDiagram: docIncludeDiagram,
+				includeDiagram: docSections.diagram,
 				nodes,
+				sectionOverrides: docSections,
 			});
 
 			const formatLabel = docFormat === "pdf" ? "PDF" : "Markdown";
@@ -278,6 +373,13 @@ export const ShareModal = () => {
 		} finally {
 			setDocExportLoading(false);
 		}
+	};
+
+	const handleSectionToggle = (key: keyof DocSections) => {
+		setDocSections((prev) => ({
+			...prev,
+			[key]: !prev[key],
+		}));
 	};
 
 	return (
@@ -438,50 +540,31 @@ export const ShareModal = () => {
 							</TooltipProvider>
 						</RadioGroup>
 					</div>
-					<div className="flex items-center gap-4">
-						<Label className="text-sm" htmlFor="doc-template-select">
-							Template
-						</Label>
-						<Select
-							onValueChange={(v) => setDocTemplate(v as TemplatePreset)}
-							value={docTemplate}
-						>
-							<SelectTrigger className="w-40" id="doc-template-select">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="full-report">Full Report</SelectItem>
-								<SelectItem value="summary">Summary</SelectItem>
-								<SelectItem value="evidence-list">Evidence List</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
 					<div className="space-y-2">
-						<div className="flex items-center space-x-2">
-							<input
-								checked={docIncludeComments}
-								className="h-4 w-4 rounded border-gray-300"
-								id="doc-include-comments"
-								onChange={(e) => setDocIncludeComments(e.target.checked)}
-								type="checkbox"
-							/>
-							<label className="text-sm" htmlFor="doc-include-comments">
-								Include comments
-							</label>
+						<div className="flex items-center gap-4">
+							<Label className="text-sm" htmlFor="doc-template-select">
+								Template
+							</Label>
+							<Select
+								onValueChange={(v) => setDocTemplate(v as TemplatePreset)}
+								value={docTemplate}
+							>
+								<SelectTrigger className="w-40" id="doc-template-select">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="full-report">Full Report</SelectItem>
+									<SelectItem value="summary">Summary</SelectItem>
+									<SelectItem value="evidence-list">Evidence List</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
-						<div className="flex items-center space-x-2">
-							<input
-								checked={docIncludeDiagram}
-								className="h-4 w-4 rounded border-gray-300"
-								id="doc-include-diagram"
-								onChange={(e) => setDocIncludeDiagram(e.target.checked)}
-								type="checkbox"
-							/>
-							<label className="text-sm" htmlFor="doc-include-diagram">
-								Include diagram
-							</label>
-						</div>
+						<TemplateDescription template={docTemplate} />
 					</div>
+					<SectionCustomisation
+						onToggle={handleSectionToggle}
+						sections={docSections}
+					/>
 				</div>
 				<Button
 					className="my-2"

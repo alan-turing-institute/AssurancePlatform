@@ -307,3 +307,38 @@ export function getTreeDepth(node: TreeNode): number {
 	traverse(node, 0);
 	return maxDepth;
 }
+
+/**
+ * Render hierarchical tree structure preserving parent-child chains.
+ *
+ * This renders the assurance case in its natural hierarchical structure:
+ * Goal → Strategy → Property Claim → Evidence
+ *
+ * Each element is rendered as an "element" block with depth information,
+ * allowing exporters to apply visual hierarchy (indentation, colours).
+ */
+export function renderHierarchicalTree(
+	node: TreeNode,
+	depth = 0,
+	options: TreeRenderOptions = {}
+): ContentBlock[] {
+	const blocks: ContentBlock[] = [];
+
+	if (!shouldIncludeElement(node, depth, options)) {
+		// Still process children even if this node is filtered out
+		for (const child of node.children ?? []) {
+			blocks.push(...renderHierarchicalTree(child, depth + 1, options));
+		}
+		return blocks;
+	}
+
+	// Render this element as an element block (preserves node data for styling)
+	blocks.push({ type: "element", node, depth });
+
+	// Process children recursively (depth-first)
+	for (const child of node.children ?? []) {
+		blocks.push(...renderHierarchicalTree(child, depth + 1, options));
+	}
+
+	return blocks;
+}

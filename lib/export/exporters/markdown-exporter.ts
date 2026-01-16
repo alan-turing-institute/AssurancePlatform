@@ -43,8 +43,12 @@ export class MarkdownExporter extends AbstractExporter {
 			// Add YAML frontmatter
 			parts.push(this.renderFrontmatter(document));
 
-			// Add main title
-			parts.push(`# ${escapeMarkdown(document.metadata.caseName)}\n`);
+			// Only add main title if first section is NOT title-page
+			// (title-page section already contains an h1 heading)
+			const firstSection = document.sections[0];
+			if (!firstSection || firstSection.type !== "title-page") {
+				parts.push(`# ${escapeMarkdown(document.metadata.caseName)}\n`);
+			}
 
 			// Render each section
 			for (const section of document.sections) {
@@ -52,12 +56,6 @@ export class MarkdownExporter extends AbstractExporter {
 				if (rendered) {
 					parts.push(rendered);
 				}
-			}
-
-			// Add footer
-			if (document.branding.footerText) {
-				parts.push("---\n");
-				parts.push(`*${escapeMarkdown(document.branding.footerText)}*\n`);
 			}
 
 			const content = parts.join("\n");
@@ -126,7 +124,16 @@ export class MarkdownExporter extends AbstractExporter {
 
 		// Section title (except for title-page which has the main heading)
 		if (section.type !== "title-page" && section.title) {
-			parts.push(`## ${escapeMarkdown(section.title)}\n`);
+			// Check if first block is already the same heading to avoid duplicates
+			const firstBlock = section.blocks[0];
+			const isDuplicateHeading =
+				firstBlock?.type === "heading" &&
+				firstBlock.level === 2 &&
+				firstBlock.text === section.title;
+
+			if (!isDuplicateHeading) {
+				parts.push(`## ${escapeMarkdown(section.title)}\n`);
+			}
 		}
 
 		// Render each block
@@ -299,9 +306,13 @@ export class MarkdownExporter extends AbstractExporter {
 
 	/**
 	 * Render a metadata key-value block.
+	 * URLs are not escaped to preserve working links.
 	 */
 	private renderMetadata(block: { key: string; value: string }): string {
-		return `**${escapeMarkdown(block.key)}:** ${escapeMarkdown(block.value)}\n`;
+		const isUrl =
+			block.value.startsWith("http://") || block.value.startsWith("https://");
+		const displayValue = isUrl ? block.value : escapeMarkdown(block.value);
+		return `**${escapeMarkdown(block.key)}:** ${displayValue}\n`;
 	}
 
 	/**
