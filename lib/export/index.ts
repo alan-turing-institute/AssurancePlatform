@@ -122,6 +122,7 @@ export {
 	getTreeDepth,
 	type RenderedElement,
 	renderElementAsBlocks,
+	renderHierarchicalTree,
 	renderTreeAsBlocks,
 	SUMMARY_CONFIG,
 	SummaryTemplate,

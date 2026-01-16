@@ -58,6 +58,7 @@ function createStyles(branding: ResolvedBranding) {
 			color: "#666666",
 			flexDirection: "row",
 			justifyContent: "space-between",
+			alignItems: "center",
 		},
 		// Footer for landscape pages
 		landscapeFooter: {
@@ -69,6 +70,17 @@ function createStyles(branding: ResolvedBranding) {
 			color: "#666666",
 			flexDirection: "row",
 			justifyContent: "space-between",
+			alignItems: "center",
+		},
+		// Footer branding container (logo + text)
+		footerBranding: {
+			flexDirection: "row",
+			alignItems: "center",
+			gap: 8,
+		},
+		footerLogo: {
+			width: 60,
+			height: "auto",
 		},
 		// Title page styles
 		titlePage: {
@@ -233,13 +245,43 @@ function createStyles(branding: ResolvedBranding) {
 		metadataValue: {
 			flex: 1,
 		},
-		// Element styles
+		// Element styles - base style
 		element: {
 			marginBottom: 16,
 			paddingLeft: 8,
 			borderLeftWidth: 3,
 			borderLeftColor: branding.primaryColour,
 		},
+		// Depth-based indentation styles
+		elementDepth0: {
+			marginBottom: 16,
+			paddingLeft: 8,
+			borderLeftWidth: 3,
+			borderLeftColor: "#ff1493", // Goal - magenta
+		},
+		elementDepth1: {
+			marginBottom: 16,
+			paddingLeft: 24,
+			borderLeftWidth: 3,
+			borderLeftColor: "#4169e1", // Strategy - royal blue
+		},
+		elementDepth2: {
+			marginBottom: 16,
+			paddingLeft: 40,
+			borderLeftWidth: 3,
+			borderLeftColor: "#1e3a5f", // Claim - dark blue
+		},
+		elementDepth3: {
+			marginBottom: 16,
+			paddingLeft: 56,
+			borderLeftWidth: 3,
+			borderLeftColor: "#228b22", // Evidence - forest green
+		},
+		// Element type colour overrides
+		elementGoal: { borderLeftColor: "#ff1493" }, // Magenta
+		elementStrategy: { borderLeftColor: "#4169e1" }, // Royal blue
+		elementPropertyClaim: { borderLeftColor: "#1e3a5f" }, // Dark blue
+		elementEvidence: { borderLeftColor: "#228b22" }, // Forest green
 		elementTitle: {
 			fontSize: 12,
 			fontFamily: "Helvetica-Bold",
@@ -531,10 +573,27 @@ function PDFCommentsList({
 }
 
 /**
- * Render an element block.
+ * Get element type colour style based on node type.
+ */
+function getElementTypeColour(
+	nodeType: string,
+	styles: PDFStyles
+): { borderLeftColor: string } | undefined {
+	const typeColourMap: Record<string, { borderLeftColor: string }> = {
+		GOAL: styles.elementGoal,
+		STRATEGY: styles.elementStrategy,
+		PROPERTY_CLAIM: styles.elementPropertyClaim,
+		EVIDENCE: styles.elementEvidence,
+	};
+	return typeColourMap[nodeType];
+}
+
+/**
+ * Render an element block with visual hierarchy.
  */
 function PDFElement({
 	node,
+	depth,
 	styles,
 }: {
 	node: TreeNode;
@@ -543,8 +602,18 @@ function PDFElement({
 }) {
 	const title = getElementTitle(node);
 
+	// Get depth-based indentation style (capped at depth 3)
+	const depthKey = `elementDepth${Math.min(depth, 3)}` as keyof PDFStyles;
+	const baseStyle = styles[depthKey] ?? styles.element;
+
+	// Get element type colour override
+	const typeColour = getElementTypeColour(node.type, styles);
+
+	// Combine base style with type-specific colour
+	const combinedStyle = typeColour ? [baseStyle, typeColour] : baseStyle;
+
 	return (
-		<View style={styles.element}>
+		<View style={combinedStyle}>
 			<Text style={styles.elementTitle}>{title}</Text>
 
 			{node.description && (
@@ -631,6 +700,23 @@ export function renderBlock(block: ContentBlock, styles: PDFStyles) {
 }
 
 /**
+ * Render footer branding with logo only (no text).
+ */
+function PDFFooterBranding({
+	branding,
+	styles,
+}: {
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	// Show logo if available, otherwise fall back to text
+	if (branding.logoBase64) {
+		return <Image src={branding.logoBase64} style={styles.footerLogo} />;
+	}
+	return <Text>{branding.footerText}</Text>;
+}
+
+/**
  * Render a section to PDF components.
  */
 function PDFSection({
@@ -671,12 +757,6 @@ function PDFTitlePage({
 	return (
 		<Page size="A4" style={styles.page}>
 			<View style={styles.titlePage}>
-				{document.branding.logoBase64 && (
-					<Image
-						src={document.branding.logoBase64}
-						style={{ width: 120, marginBottom: 24 }}
-					/>
-				)}
 				<Text style={styles.titlePageTitle}>{document.metadata.caseName}</Text>
 				{document.metadata.caseDescription && (
 					<Text style={styles.titlePageDescription}>
@@ -687,14 +767,9 @@ function PDFTitlePage({
 					Exported:{" "}
 					{new Date(document.metadata.exportedAt).toLocaleDateString("en-GB")}
 				</Text>
-				{document.branding.organisationName && (
-					<Text style={styles.titlePageMeta}>
-						{document.branding.organisationName}
-					</Text>
-				)}
 			</View>
 			<View style={styles.footer}>
-				<Text>{document.branding.footerText}</Text>
+				<PDFFooterBranding branding={document.branding} styles={styles} />
 			</View>
 		</Page>
 	);
@@ -740,7 +815,7 @@ function PDFDiagramPage({
 				)}
 			</View>
 			<View fixed style={styles.landscapeFooter}>
-				<Text>{branding.footerText}</Text>
+				<PDFFooterBranding branding={branding} styles={styles} />
 				<Text
 					render={({ pageNumber, totalPages }) =>
 						`Page ${pageNumber} of ${totalPages}`
@@ -793,7 +868,7 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 					/>
 				))}
 				<View fixed style={styles.footer}>
-					<Text>{document.branding.footerText}</Text>
+					<PDFFooterBranding branding={document.branding} styles={styles} />
 					<Text
 						render={({ pageNumber, totalPages }) =>
 							`Page ${pageNumber} of ${totalPages}`
