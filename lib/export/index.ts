@@ -57,13 +57,20 @@ export {
 	type PDFDocumentProps,
 	PDFExporter,
 	renderBlock,
+	WordExporter,
 } from "./exporters";
 
 // Register exporters with the global registry
-import { exporterRegistry, MarkdownExporter, PDFExporter } from "./exporters";
+import {
+	exporterRegistry,
+	MarkdownExporter,
+	PDFExporter,
+	WordExporter,
+} from "./exporters";
 
 exporterRegistry.register(new MarkdownExporter());
 exporterRegistry.register(new PDFExporter());
+exporterRegistry.register(new WordExporter());
 
 // Schemas
 export {

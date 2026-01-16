@@ -16,3 +16,4 @@ export {
 	renderBlock,
 } from "./pdf-components";
 export { PDFExporter } from "./pdf-exporter";
+export { WordExporter } from "./word-exporter";

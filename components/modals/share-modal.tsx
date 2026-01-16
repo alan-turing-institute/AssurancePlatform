@@ -13,12 +13,6 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { getDocumentExportData } from "@/actions/export-document";
 import { Modal } from "@/components/ui/modal";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import useStore from "@/data/store";
 import { useExportModal } from "@/hooks/use-export-modal";
 import { exportDocument } from "@/lib/case/document-export";
@@ -260,11 +254,15 @@ export const ShareModal = () => {
 				nodes,
 			});
 
-			const formatLabel = docFormat === "pdf" ? "PDF" : "Markdown";
+			const formatLabels: Record<ExportFormat, string> = {
+				pdf: "PDF",
+				markdown: "Markdown",
+				docx: "Word",
+			};
 			toast({
 				variant: "success",
 				title: "Export complete",
-				description: `Document exported as ${formatLabel}`,
+				description: `Document exported as ${formatLabels[docFormat]}`,
 			});
 		} catch (exportError) {
 			toast({
@@ -414,28 +412,12 @@ export const ShareModal = () => {
 									Markdown
 								</Label>
 							</div>
-							<TooltipProvider>
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<div className="flex items-center space-x-2 opacity-50">
-											<RadioGroupItem
-												disabled
-												id="doc-format-docx"
-												value="docx"
-											/>
-											<Label
-												className="cursor-not-allowed font-normal"
-												htmlFor="doc-format-docx"
-											>
-												Word
-											</Label>
-										</div>
-									</TooltipTrigger>
-									<TooltipContent>
-										<p>Word export coming soon</p>
-									</TooltipContent>
-								</Tooltip>
-							</TooltipProvider>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="doc-format-docx" value="docx" />
+								<Label className="font-normal" htmlFor="doc-format-docx">
+									Word
+								</Label>
+							</div>
 						</RadioGroup>
 					</div>
 					<div className="flex items-center gap-4">
@@ -496,7 +478,7 @@ export const ShareModal = () => {
 					)}
 					{docExportLoading
 						? "Exporting..."
-						: `Download ${docFormat === "pdf" ? "PDF" : "Markdown"}`}
+						: `Download ${({ pdf: "PDF", markdown: "Markdown", docx: "Word" } as const)[docFormat]}`}
 				</Button>
 			</div>
 			<Separator />
