@@ -39,6 +39,13 @@ function createStyles(branding: ResolvedBranding) {
 			fontFamily: "Helvetica",
 			lineHeight: 1.5,
 		},
+		// Landscape page for diagrams - reduced padding to maximise image space
+		landscapePage: {
+			padding: 30,
+			fontSize: 11,
+			fontFamily: "Helvetica",
+			lineHeight: 1.5,
+		},
 		header: {
 			marginBottom: 20,
 		},
@@ -47,6 +54,17 @@ function createStyles(branding: ResolvedBranding) {
 			bottom: 30,
 			left: 40,
 			right: 40,
+			fontSize: 9,
+			color: "#666666",
+			flexDirection: "row",
+			justifyContent: "space-between",
+		},
+		// Footer for landscape pages
+		landscapeFooter: {
+			position: "absolute",
+			bottom: 20,
+			left: 30,
+			right: 30,
 			fontSize: 9,
 			color: "#666666",
 			flexDirection: "row",
@@ -179,6 +197,29 @@ function createStyles(branding: ResolvedBranding) {
 			color: "#666666",
 			textAlign: "center",
 			marginBottom: 12,
+		},
+		// Diagram page styles (landscape, full-page diagram)
+		diagramPageContainer: {
+			flex: 1,
+			justifyContent: "flex-start",
+			alignItems: "center",
+		},
+		diagramPageTitle: {
+			fontSize: 18,
+			fontFamily: "Helvetica-Bold",
+			marginBottom: 16,
+			textAlign: "center",
+		},
+		diagramImage: {
+			maxWidth: "100%",
+			maxHeight: "85%",
+			objectFit: "contain",
+		},
+		diagramCaption: {
+			fontSize: 10,
+			color: "#666666",
+			textAlign: "center",
+			marginTop: 12,
 		},
 		// Metadata styles
 		metadata: {
@@ -353,6 +394,39 @@ function PDFTable({
 }
 
 /**
+ * Format image source for PDF rendering.
+ *
+ * Converts raw base64 data to proper data URLs that react-pdf can render.
+ */
+function formatImageSrc(src: string): string {
+	// Already a URL or data URL - pass through
+	if (
+		src.startsWith("http://") ||
+		src.startsWith("https://") ||
+		src.startsWith("data:")
+	) {
+		return src;
+	}
+
+	// Detect base64 images by their signatures and add data URL prefix
+	if (src.startsWith("iVBORw0KGgo")) {
+		// PNG signature
+		return `data:image/png;base64,${src}`;
+	}
+	if (src.startsWith("/9j/")) {
+		// JPEG signature
+		return `data:image/jpeg;base64,${src}`;
+	}
+	if (src.startsWith("PHN2Zy") || src.startsWith("PD94bW")) {
+		// SVG or SVG with XML declaration
+		return `data:image/svg+xml;base64,${src}`;
+	}
+
+	// Unknown format, return as-is
+	return src;
+}
+
+/**
  * Render an image block.
  */
 function PDFImage({
@@ -369,9 +443,12 @@ function PDFImage({
 	if (!src) {
 		return <Text style={styles.imageCaption}>[Image: {alt}]</Text>;
 	}
+
+	const formattedSrc = formatImageSrc(src);
+
 	return (
 		<View>
-			<Image src={src} style={styles.image} />
+			<Image src={formattedSrc} style={styles.image} />
 			{caption && <Text style={styles.imageCaption}>{caption}</Text>}
 		</View>
 	);
@@ -631,14 +708,59 @@ export type PDFDocumentProps = {
 };
 
 /**
+ * Render a diagram section on its own landscape page.
+ */
+function PDFDiagramPage({
+	section,
+	branding,
+	styles,
+}: {
+	section: RenderedSection;
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	// Find the image block in the section
+	const imageBlock = section.blocks.find((b) => b.type === "image") as
+		| { type: "image"; src: string; alt: string; caption?: string }
+		| undefined;
+
+	if (!imageBlock) {
+		return null;
+	}
+
+	const formattedSrc = formatImageSrc(imageBlock.src);
+
+	return (
+		<Page orientation="landscape" size="A4" style={styles.landscapePage}>
+			<View style={styles.diagramPageContainer}>
+				<Text style={styles.diagramPageTitle}>{section.title}</Text>
+				<Image src={formattedSrc} style={styles.diagramImage} />
+				{imageBlock.caption && (
+					<Text style={styles.diagramCaption}>{imageBlock.caption}</Text>
+				)}
+			</View>
+			<View fixed style={styles.landscapeFooter}>
+				<Text>{branding.footerText}</Text>
+				<Text
+					render={({ pageNumber, totalPages }) =>
+						`Page ${pageNumber} of ${totalPages}`
+					}
+				/>
+			</View>
+		</Page>
+	);
+}
+
+/**
  * Main PDF document component.
  */
 export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 	const styles = createStyles(document.branding);
 
-	// Filter content sections (title page is rendered separately)
+	// Separate diagram sections from other content
+	const diagramSections = document.sections.filter((s) => s.type === "diagram");
 	const contentSections = document.sections.filter(
-		(s) => s.type !== "title-page"
+		(s) => s.type !== "title-page" && s.type !== "diagram"
 	);
 
 	return (
@@ -651,7 +773,17 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 			{/* Title Page */}
 			<PDFTitlePage document={document} styles={styles} />
 
-			{/* Content Pages */}
+			{/* Diagram Pages (landscape, one per diagram) */}
+			{diagramSections.map((section, index) => (
+				<PDFDiagramPage
+					branding={document.branding}
+					key={`diagram-${index}`}
+					section={section}
+					styles={styles}
+				/>
+			))}
+
+			{/* Content Pages (portrait) */}
 			<Page size="A4" style={styles.page}>
 				{contentSections.map((section, index) => (
 					<PDFSection

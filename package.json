@@ -72,6 +72,7 @@
     "googleapis": "^170.0.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.468.0",
     "neatjson": "^0.10.6",
     "next": "^15.5.7",

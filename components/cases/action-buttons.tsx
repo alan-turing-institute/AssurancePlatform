@@ -9,16 +9,14 @@ import {
 	RotateCw,
 	Share2,
 	Trash2,
-	Users2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
 import useStore from "@/data/store";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
-import { usePermissionsModal } from "@/hooks/use-permissions-modal";
+import { useExportModal } from "@/hooks/use-export-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";
-import { useShareModal } from "@/hooks/use-share-modal";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./case-notes";
@@ -48,8 +46,7 @@ const ActionButtons = ({
 	const { onLayout } = actions;
 
 	const caseSharingModal = useCaseSharingModal();
-	const shareModal = useShareModal();
-	const permissionModal = usePermissionsModal();
+	const exportModal = useExportModal();
 	const resourcesModal = useResourcesModal();
 
 	const onDelete = async () => {
@@ -179,23 +176,11 @@ const ActionButtons = ({
 						<ActionTooltip label="Export">
 							<button
 								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
-								onClick={() => shareModal.onOpen()}
+								onClick={() => exportModal.onOpen()}
 								type="button"
 							>
 								<Download className="h-5 w-5" />
 								<span className="sr-only">Export</span>
-							</button>
-						</ActionTooltip>
-					)}
-					{assuranceCase && assuranceCase.permissions === "manage" && (
-						<ActionTooltip label="Permissions">
-							<button
-								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
-								onClick={() => permissionModal.onOpen()}
-								type="button"
-							>
-								<Users2 className="h-5 w-5" />
-								<span className="sr-only">Permissions</span>
 							</button>
 						</ActionTooltip>
 					)}

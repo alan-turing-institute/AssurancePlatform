@@ -1,10 +1,10 @@
 import { create } from "zustand";
 
 /**
- * Defines the shape of the state for the Share modal store.
- * @interface useShareModalStore
+ * Defines the shape of the state for the Export modal store.
+ * @interface useExportModalStore
  */
-type useShareModalStore = {
+type useExportModalStore = {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 * @type {boolean}
@@ -25,11 +25,11 @@ type useShareModalStore = {
 };
 
 /**
- * Creates a Zustand store for managing the state of the Share modal.
+ * Creates a Zustand store for managing the state of the Export modal.
  * @function
- * @returns {useShareModalStore} The Zustand store with modal state and actions.
+ * @returns {useExportModalStore} The Zustand store with modal state and actions.
  */
-export const useShareModal = create<useShareModalStore>((set) => ({
+export const useExportModal = create<useExportModalStore>((set) => ({
 	isOpen: false,
 	onOpen: () => set({ isOpen: true }),
 	onClose: () => set({ isOpen: false }),

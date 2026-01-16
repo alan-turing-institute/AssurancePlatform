@@ -292,8 +292,8 @@ vi.mock("@/hooks/use-import-modal", () => ({
 	}),
 }));
 
-vi.mock("@/hooks/use-share-modal", () => ({
-	useShareModal: () => ({
+vi.mock("@/hooks/use-export-modal", () => ({
+	useExportModal: () => ({
 		isOpen: false,
 		onOpen: vi.fn(),
 		onClose: vi.fn(),

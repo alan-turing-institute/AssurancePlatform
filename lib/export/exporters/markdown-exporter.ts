@@ -240,6 +240,9 @@ export class MarkdownExporter extends AbstractExporter {
 
 	/**
 	 * Render an image block.
+	 *
+	 * Handles both URLs and base64 data. Base64 data is detected by checking
+	 * if the src doesn't start with http/https and contains valid base64 chars.
 	 */
 	private renderImage(block: {
 		src: string;
@@ -249,7 +252,8 @@ export class MarkdownExporter extends AbstractExporter {
 		const parts: string[] = [];
 
 		if (block.src) {
-			parts.push(`![${escapeMarkdown(block.alt)}](${block.src})`);
+			const imageSrc = this.formatImageSrc(block.src);
+			parts.push(`![${escapeMarkdown(block.alt)}](${imageSrc})`);
 		} else {
 			parts.push(`*[Image: ${escapeMarkdown(block.alt)}]*`);
 		}
@@ -259,6 +263,38 @@ export class MarkdownExporter extends AbstractExporter {
 		}
 
 		return `${parts.join("")}\n`;
+	}
+
+	/**
+	 * Format image source for markdown output.
+	 *
+	 * For base64 images (diagrams), uses a relative path reference since
+	 * the image will be exported as a separate file in a ZIP archive.
+	 * For URLs, passes through as-is.
+	 */
+	private formatImageSrc(src: string): string {
+		// Already a URL or data URL - pass through
+		if (
+			src.startsWith("http://") ||
+			src.startsWith("https://") ||
+			src.startsWith("data:")
+		) {
+			return src;
+		}
+
+		// Base64 images (diagrams) - use relative path
+		// These will be exported as separate files in a ZIP archive
+		if (
+			src.startsWith("iVBORw0KGgo") || // PNG
+			src.startsWith("PHN2Zy") || // SVG
+			src.startsWith("PD94bW") || // SVG with XML declaration
+			src.startsWith("/9j/") // JPEG
+		) {
+			return "./diagram.png";
+		}
+
+		// Unknown format, return as-is
+		return src;
 	}
 
 	/**
