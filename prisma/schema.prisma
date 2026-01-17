@@ -82,6 +82,7 @@ model User {
   githubRepositories   GitHubRepository[]
   caseStudies          CaseStudy[]
   markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
+  deletedCases         AssuranceCase[]    @relation("CaseDeleter")
 
   @@map("users")
 }
@@ -241,9 +242,14 @@ model AssuranceCase {
   markedReadyAt     DateTime?             @map("marked_ready_at") /// When owner marked case as ready to publish
   markedReadyById   String?               @map("marked_ready_by_id") /// Who marked the case as ready
 
+  // Soft delete (recycle bin)
+  deletedAt         DateTime?             @map("deleted_at") /// When the case was moved to trash (null = not deleted)
+  deletedBy         String?               @map("deleted_by_id") /// User ID who deleted the case
+
   // Relations
   createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
   markedReadyBy   User?                 @relation("CaseMarkedReady", fields: [markedReadyById], references: [id])
+  deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedBy], references: [id])
   sourcePattern   ArgumentPattern?      @relation(fields: [sourcePatternId], references: [id])
   elements        AssuranceElement[]
   userPermissions CasePermission[]
@@ -265,6 +271,8 @@ model AssuranceCase {
 
   @@index([publishStatus], map: "assurance_cases_publish_status_idx")
   @@index([createdById, publishStatus], map: "assurance_cases_created_by_status_idx")
+  @@index([deletedAt], map: "assurance_cases_deleted_at_idx")
+  @@index([createdById, deletedAt], map: "assurance_cases_owner_deleted_idx")
   @@map("assurance_cases")
 }
 

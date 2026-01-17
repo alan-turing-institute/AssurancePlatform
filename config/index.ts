@@ -2,6 +2,7 @@ import {
 	DocumentDuplicateIcon,
 	FolderIcon,
 	GlobeAltIcon,
+	TrashIcon,
 	UserGroupIcon,
 	UsersIcon,
 } from "@heroicons/react/24/outline";
@@ -42,6 +43,13 @@ export const navigation = [
 		name: "Teams",
 		href: "/dashboard/teams",
 		icon: UserGroupIcon,
+		current: false,
+		externalLink: false,
+	},
+	{
+		name: "Trash",
+		href: "/dashboard/trash",
+		icon: TrashIcon,
 		current: false,
 		externalLink: false,
 	},

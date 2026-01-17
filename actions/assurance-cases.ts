@@ -26,9 +26,10 @@ export const fetchAssuranceCases = async (
 		return null;
 	}
 
-	// Get cases where user is creator OR has explicit permission
+	// Get cases where user is creator OR has explicit permission (exclude soft-deleted)
 	const cases = await prismaNew.assuranceCase.findMany({
 		where: {
+			deletedAt: null,
 			OR: [
 				{ createdById: validated.userId },
 				{
@@ -71,9 +72,10 @@ export const fetchSharedAssuranceCases = async (
 		return null;
 	}
 
-	// Get cases where user has permission (direct or via team) but is NOT the creator
+	// Get cases where user has permission (direct or via team) but is NOT the creator (exclude soft-deleted)
 	const cases = await prismaNew.assuranceCase.findMany({
 		where: {
+			deletedAt: null,
 			AND: [
 				// User has permission (either direct or via team membership)
 				{
