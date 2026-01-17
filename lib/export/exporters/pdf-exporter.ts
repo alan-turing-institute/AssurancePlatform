@@ -3,12 +3,13 @@
  *
  * Uses @react-pdf/renderer to convert RenderedDocument structures
  * into professionally styled PDF documents.
+ *
+ * Note: Heavy dependencies (@react-pdf/renderer) are lazy-loaded in the
+ * export() method to reduce initial bundle size.
  */
 
-import { pdf } from "@react-pdf/renderer";
 import type { ExportOptions, ExportResult, RenderedDocument } from "../types";
 import type { Exporter } from "./base-exporter";
-import { PDFDocumentComponent } from "./pdf-components";
 
 /**
  * Exporter that converts RenderedDocument to PDF format.
@@ -39,6 +40,12 @@ export class PDFExporter implements Exporter {
 		options: ExportOptions
 	): Promise<ExportResult> {
 		try {
+			// Lazy-load heavy dependencies to reduce initial bundle size
+			const [{ pdf }, { PDFDocumentComponent }] = await Promise.all([
+				import("@react-pdf/renderer"),
+				import("./pdf-components"),
+			]);
+
 			// Render the PDF document to a blob using browser-compatible API
 			const blob = await pdf(PDFDocumentComponent({ document })).toBlob();
 

@@ -454,6 +454,8 @@ model EvidenceLink {
   claim      AssuranceElement @relation("EvidenceTarget", fields: [claimId], references: [id], onDelete: Cascade)
 
   @@unique([evidenceId, claimId])
+  @@index([evidenceId])
+  @@index([claimId])
   @@map("evidence_links")
 }
 
@@ -678,6 +680,8 @@ model ReleaseComment {
   parentComment   ReleaseComment?  @relation("CommentThread", fields: [parentCommentId], references: [id])
   replies         ReleaseComment[] @relation("CommentThread")
 
+  @@index([releaseId])
+  @@index([elementId])
   @@map("release_comments")
 }
 
@@ -734,6 +738,8 @@ model Comment {
   parentComment   Comment?         @relation("CommentThread", fields: [parentCommentId], references: [id])
   replies         Comment[]        @relation("CommentThread")
 
+  @@index([elementId])
+  @@index([caseId])
   @@map("comments")
 }
 

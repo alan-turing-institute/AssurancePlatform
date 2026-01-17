@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth-options";
  */
 export type ValidatedSession = {
 	userId: string;
+	username: string | null;
+	email: string | null;
 };
 
 /**
@@ -22,5 +24,9 @@ export async function validateSession(): Promise<ValidatedSession | null> {
 		return null;
 	}
 
-	return { userId: session.user.id };
+	return {
+		userId: session.user.id,
+		username: session.user.name ?? null,
+		email: session.user.email ?? null,
+	};
 }

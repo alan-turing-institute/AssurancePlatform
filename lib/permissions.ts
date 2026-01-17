@@ -77,26 +77,26 @@ async function getCasePermissionFromPrisma(
 		return { hasAccess: true, permission: "ADMIN", isOwner: true };
 	}
 
-	// Get direct user permission
-	const userPermission = await prismaNew.casePermission.findUnique({
-		where: {
-			caseId_userId: { caseId, userId },
-		},
-		select: { permission: true },
-	});
-
-	// Get team-based permissions
-	const teamPermissions = await prismaNew.caseTeamPermission.findMany({
-		where: {
-			caseId,
-			team: {
-				members: {
-					some: { userId },
+	// Get direct user permission and team-based permissions in parallel
+	const [userPermission, teamPermissions] = await Promise.all([
+		prismaNew.casePermission.findUnique({
+			where: {
+				caseId_userId: { caseId, userId },
+			},
+			select: { permission: true },
+		}),
+		prismaNew.caseTeamPermission.findMany({
+			where: {
+				caseId,
+				team: {
+					members: {
+						some: { userId },
+					},
 				},
 			},
-		},
-		select: { permission: true },
-	});
+			select: { permission: true },
+		}),
+	]);
 
 	// Calculate highest permission from teams
 	let teamPermission: PermissionLevel | null = null;
