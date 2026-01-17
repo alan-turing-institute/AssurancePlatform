@@ -210,9 +210,10 @@ const ActionButtons = ({
 				<NodeCreate isOpen={open} setOpen={setOpen} />
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
 				<AlertModal
-					confirmButtonText={"Delete"}
+					confirmButtonText={"Move to Trash"}
 					isOpen={deleteOpen}
 					loading={loading}
+					message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
 					onClose={() => setDeleteOpen(false)}
 					onConfirm={onDelete}
 				/>
