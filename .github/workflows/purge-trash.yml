@@ -1,0 +1,28 @@
+name: Purge expired trash
+
+on:
+  schedule:
+    # Run daily at 3:00 AM UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call purge endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/cron/purge-trash" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Purge failed with status $http_code"
+            exit 1
+          fi
