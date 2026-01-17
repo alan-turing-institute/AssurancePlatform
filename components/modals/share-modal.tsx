@@ -71,6 +71,40 @@ const SECTION_LABELS: Record<string, string> = {
 	metadata: "Metadata",
 };
 
+/**
+ * Default section states for each template preset.
+ * These match the DEFAULT_SECTIONS_* configs in lib/export/schemas/section-config.ts
+ */
+const TEMPLATE_SECTION_DEFAULTS: Record<TemplatePreset, DocSections> = {
+	"full-report": {
+		titlePage: true,
+		tableOfContents: true,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: true,
+		comments: true,
+		metadata: true,
+	},
+	summary: {
+		titlePage: true,
+		tableOfContents: false,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: false,
+		comments: false,
+		metadata: false,
+	},
+	"evidence-list": {
+		titlePage: true,
+		tableOfContents: false,
+		diagram: false,
+		executiveSummary: false,
+		assuranceCaseStructure: false,
+		comments: false,
+		metadata: true,
+	},
+};
+
 type DocSections = {
 	titlePage: boolean;
 	tableOfContents: boolean;
@@ -528,7 +562,11 @@ export const ShareModal = () => {
 								Template
 							</Label>
 							<Select
-								onValueChange={(v) => setDocTemplate(v as TemplatePreset)}
+								onValueChange={(v) => {
+									const template = v as TemplatePreset;
+									setDocTemplate(template);
+									setDocSections(TEMPLATE_SECTION_DEFAULTS[template]);
+								}}
 								value={docTemplate}
 							>
 								<SelectTrigger className="w-40" id="doc-template-select">
