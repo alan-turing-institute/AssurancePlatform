@@ -16,8 +16,8 @@ import {
 	HeadingLevel,
 	ImageRun,
 	Packer,
-	PageBreak,
 	PageNumber,
+	PageOrientation,
 	Paragraph,
 	ShadingType,
 	Table,
@@ -78,6 +78,25 @@ function base64ToBuffer(base64: string): Buffer {
 	// Remove data URL prefix if present
 	const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
 	return Buffer.from(base64Data, "base64");
+}
+
+/**
+ * Element type colour map for visual hierarchy.
+ * Matches the PDF exporter styling.
+ */
+const ELEMENT_TYPE_COLOURS: Record<string, string> = {
+	GOAL: "FF1493", // Magenta
+	STRATEGY: "4169E1", // Royal blue
+	PROPERTY_CLAIM: "1E3A5F", // Dark blue
+	EVIDENCE: "228B22", // Forest green
+};
+
+/**
+ * Get border colour for an element type.
+ * Falls back to branding primary colour if type not mapped.
+ */
+function getElementBorderColour(nodeType: string, fallback: string): string {
+	return ELEMENT_TYPE_COLOURS[nodeType] ?? fallback;
 }
 
 /**
@@ -378,20 +397,33 @@ function createMetadata(block: MetadataBlock): Paragraph {
 
 /**
  * Create paragraphs for an element block with left border styling.
+ * Includes depth-based indentation and type-specific border colours.
  */
 function createElementBlock(
 	block: ElementBlock,
 	branding: ResolvedBranding
 ): Paragraph[] {
-	const { node } = block;
+	const { node, depth } = block;
 	const paragraphs: Paragraph[] = [];
 	const title = getElementTitle(node);
+
+	// Calculate indentation based on depth (capped at 3)
+	const baseIndent = 0.15; // inches
+	const depthIndent = Math.min(depth, 3) * 0.25; // 0.25 inch per level
+	const totalIndent = baseIndent + depthIndent;
+	const nestedIndent = totalIndent + 0.15; // Additional indent for nested items
+
+	// Get type-specific border colour
+	const borderColour = getElementBorderColour(
+		node.type,
+		normaliseColour(branding.primaryColour)
+	);
 
 	const borderStyle = {
 		left: {
 			style: BorderStyle.SINGLE,
 			size: 12,
-			color: normaliseColour(branding.primaryColour),
+			color: borderColour,
 		},
 	};
 
@@ -406,7 +438,7 @@ function createElementBlock(
 				}),
 			],
 			border: borderStyle,
-			indent: { left: convertInchesToTwip(0.15) },
+			indent: { left: convertInchesToTwip(totalIndent) },
 			spacing: { after: 80 },
 		})
 	);
@@ -417,7 +449,7 @@ function createElementBlock(
 			new Paragraph({
 				children: [new TextRun({ text: node.description })],
 				border: borderStyle,
-				indent: { left: convertInchesToTwip(0.15) },
+				indent: { left: convertInchesToTwip(totalIndent) },
 				spacing: { after: 120 },
 			})
 		);
@@ -429,7 +461,7 @@ function createElementBlock(
 			new Paragraph({
 				children: [new TextRun({ text: "Context:", bold: true, size: 20 })],
 				border: borderStyle,
-				indent: { left: convertInchesToTwip(0.15) },
+				indent: { left: convertInchesToTwip(totalIndent) },
 				spacing: { after: 40 },
 			})
 		);
@@ -440,7 +472,7 @@ function createElementBlock(
 						new TextRun({ text: `• ${ctx}`, size: 20, color: "444444" }),
 					],
 					border: borderStyle,
-					indent: { left: convertInchesToTwip(0.3) },
+					indent: { left: convertInchesToTwip(nestedIndent) },
 					spacing: { after: 40 },
 				})
 			);
@@ -450,14 +482,24 @@ function createElementBlock(
 	// Assumption
 	if (node.assumption) {
 		paragraphs.push(
-			createFieldParagraph("Assumption", node.assumption, borderStyle)
+			createFieldParagraph(
+				"Assumption",
+				node.assumption,
+				borderStyle,
+				totalIndent
+			)
 		);
 	}
 
 	// Justification
 	if (node.justification) {
 		paragraphs.push(
-			createFieldParagraph("Justification", node.justification, borderStyle)
+			createFieldParagraph(
+				"Justification",
+				node.justification,
+				borderStyle,
+				totalIndent
+			)
 		);
 	}
 
@@ -480,7 +522,7 @@ function createElementBlock(
 					}),
 				],
 				border: borderStyle,
-				indent: { left: convertInchesToTwip(0.15) },
+				indent: { left: convertInchesToTwip(totalIndent) },
 				spacing: { after: 80 },
 			})
 		);
@@ -499,7 +541,7 @@ function createElementBlock(
 					}),
 				],
 				border: borderStyle,
-				indent: { left: convertInchesToTwip(0.15) },
+				indent: { left: convertInchesToTwip(totalIndent) },
 				spacing: { after: 80 },
 			})
 		);
@@ -511,24 +553,24 @@ function createElementBlock(
 			new Paragraph({
 				children: [new TextRun({ text: "Comments:", bold: true, size: 20 })],
 				border: borderStyle,
-				indent: { left: convertInchesToTwip(0.15) },
+				indent: { left: convertInchesToTwip(totalIndent) },
 				spacing: { after: 40 },
 			})
 		);
 		for (const comment of node.comments) {
-			paragraphs.push(createCommentParagraph(comment, borderStyle));
+			paragraphs.push(
+				createCommentParagraph(comment, borderStyle, nestedIndent)
+			);
 		}
 	}
 
-	// Add spacing after the element block
-	const lastIndex = paragraphs.length - 1;
-	const lastParagraph = paragraphs.at(-1);
-	if (lastParagraph && lastIndex >= 0) {
-		paragraphs[lastIndex] = new Paragraph({
-			...lastParagraph,
-			spacing: { after: 320 },
-		});
-	}
+	// Add spacing paragraph after the element block for visual separation
+	paragraphs.push(
+		new Paragraph({
+			children: [],
+			spacing: { after: 200 },
+		})
+	);
 
 	return paragraphs;
 }
@@ -545,7 +587,8 @@ function createFieldParagraph(
 			size: number;
 			color: string;
 		};
-	}
+	},
+	indent: number
 ): Paragraph {
 	return new Paragraph({
 		children: [
@@ -553,7 +596,7 @@ function createFieldParagraph(
 			new TextRun({ text: value, size: 20, color: "444444" }),
 		],
 		border: borderStyle,
-		indent: { left: convertInchesToTwip(0.15) },
+		indent: { left: convertInchesToTwip(indent) },
 		spacing: { after: 80 },
 	});
 }
@@ -569,7 +612,8 @@ function createCommentParagraph(
 			size: number;
 			color: string;
 		};
-	}
+	},
+	indent: number
 ): Paragraph {
 	const dateStr = comment.createdAt
 		? ` (${new Date(comment.createdAt).toLocaleDateString("en-GB")})`
@@ -592,7 +636,7 @@ function createCommentParagraph(
 				color: "E5E7EB",
 			},
 		},
-		indent: { left: convertInchesToTwip(0.3) },
+		indent: { left: convertInchesToTwip(indent) },
 		spacing: { after: 80 },
 	});
 }
@@ -663,40 +707,17 @@ function renderSection(
 
 /**
  * Create title page content.
+ * Logo is shown in the footer, not on the title page.
  */
 function createTitlePage(document: RenderedDocument): Paragraph[] {
 	const paragraphs: Paragraph[] = [];
 	const { metadata, branding } = document;
 
-	// Logo (if available)
-	if (branding.logoBase64) {
-		try {
-			const imageType = detectImageType(branding.logoBase64);
-			const imageBuffer = base64ToBuffer(branding.logoBase64);
-
-			paragraphs.push(
-				new Paragraph({
-					children: [
-						new ImageRun({
-							data: imageBuffer,
-							transformation: { width: 120, height: 60 },
-							type: imageType,
-						}),
-					],
-					alignment: AlignmentType.CENTER,
-					spacing: { after: 480 },
-				})
-			);
-		} catch {
-			// Skip logo on error
-		}
-	}
-
-	// Add spacing before title
+	// Add spacing before title (no logo - it's in the footer)
 	paragraphs.push(
 		new Paragraph({
 			children: [],
-			spacing: { before: 2000 },
+			spacing: { before: 2400 },
 		})
 	);
 
@@ -733,7 +754,7 @@ function createTitlePage(document: RenderedDocument): Paragraph[] {
 		);
 	}
 
-	// Export date
+	// Export date (no organisation name - matches PDF)
 	paragraphs.push(
 		new Paragraph({
 			children: [
@@ -744,38 +765,16 @@ function createTitlePage(document: RenderedDocument): Paragraph[] {
 				}),
 			],
 			alignment: AlignmentType.CENTER,
-			spacing: { after: 80 },
 		})
 	);
 
-	// Organisation
-	if (branding.organisationName) {
-		paragraphs.push(
-			new Paragraph({
-				children: [
-					new TextRun({
-						text: branding.organisationName,
-						size: 20,
-						color: "999999",
-					}),
-				],
-				alignment: AlignmentType.CENTER,
-			})
-		);
-	}
-
-	// Page break after title page
-	paragraphs.push(
-		new Paragraph({
-			children: [new PageBreak()],
-		})
-	);
-
+	// No page break needed - section break handles page transition
 	return paragraphs;
 }
 
 /**
- * Create diagram page content (landscape orientation handled at section level).
+ * Create diagram page content for landscape section.
+ * Image dimensions optimised for A4 landscape with 0.5" margins.
  */
 function createDiagramPage(section: RenderedSection): Paragraph[] {
 	const paragraphs: Paragraph[] = [];
@@ -800,11 +799,13 @@ function createDiagramPage(section: RenderedSection): Paragraph[] {
 				}),
 			],
 			alignment: AlignmentType.CENTER,
-			spacing: { after: 320 },
+			spacing: { after: 240 },
 		})
 	);
 
-	// Diagram image
+	// Diagram image - sized for landscape A4, filling page width
+	// Landscape A4 with 0.5" margins = ~10.7" usable width
+	// Using 900px width at ~90 DPI fills the page well
 	if (imageBlock.src) {
 		try {
 			const imageType = detectImageType(imageBlock.src);
@@ -816,14 +817,15 @@ function createDiagramPage(section: RenderedSection): Paragraph[] {
 						new ImageRun({
 							data: imageBuffer,
 							transformation: {
-								width: 700,
-								height: 450,
+								// Fill landscape page width with 2.5:1 aspect ratio
+								width: 900,
+								height: 360,
 							},
 							type: imageType,
 						}),
 					],
 					alignment: AlignmentType.CENTER,
-					spacing: { after: 240 },
+					spacing: { after: 160 },
 				})
 			);
 		} catch {
@@ -859,22 +861,50 @@ function createDiagramPage(section: RenderedSection): Paragraph[] {
 		);
 	}
 
-	// Page break after diagram
-	paragraphs.push(
-		new Paragraph({
-			children: [new PageBreak()],
-		})
-	);
-
+	// No page break needed - section break handles page transition
 	return paragraphs;
 }
 
 /**
- * Create footer for the document.
+ * Create footer for title page with logo.
  */
-function createFooter(branding: ResolvedBranding): Footer {
-	return new Footer({
-		children: [
+function createTitlePageFooter(branding: ResolvedBranding): Footer {
+	const footerChildren: Paragraph[] = [];
+
+	// Left side: Logo or footer text
+	if (branding.logoBase64) {
+		try {
+			const imageType = detectImageType(branding.logoBase64);
+			const imageBuffer = base64ToBuffer(branding.logoBase64);
+
+			footerChildren.push(
+				new Paragraph({
+					children: [
+						new ImageRun({
+							data: imageBuffer,
+							// TEA logo is wide - use ~4:1 aspect ratio to prevent vertical stretch
+							transformation: { width: 80, height: 20 },
+							type: imageType,
+						}),
+					],
+				})
+			);
+		} catch {
+			// Fall back to text on error
+			footerChildren.push(
+				new Paragraph({
+					children: [
+						new TextRun({
+							text: branding.footerText,
+							size: 18,
+							color: "666666",
+						}),
+					],
+				})
+			);
+		}
+	} else {
+		footerChildren.push(
 			new Paragraph({
 				children: [
 					new TextRun({
@@ -883,7 +913,21 @@ function createFooter(branding: ResolvedBranding): Footer {
 						color: "666666",
 					}),
 				],
-			}),
+			})
+		);
+	}
+
+	return new Footer({
+		children: footerChildren,
+	});
+}
+
+/**
+ * Create footer for content pages (no logo, just page numbers).
+ */
+function createContentFooter(): Footer {
+	return new Footer({
+		children: [
 			new Paragraph({
 				children: [
 					new TextRun({
@@ -938,20 +982,114 @@ export class WordExporter implements Exporter {
 				(s) => s.type !== "title-page" && s.type !== "diagram"
 			);
 
-			// Build document content
-			const children: (Paragraph | Table)[] = [];
+			// Common page margins
+			const portraitMargin = {
+				top: convertInchesToTwip(0.75),
+				right: convertInchesToTwip(0.75),
+				bottom: convertInchesToTwip(0.75),
+				left: convertInchesToTwip(0.75),
+			};
 
-			// Title page
-			children.push(...createTitlePage(document));
+			const landscapeMargin = {
+				top: convertInchesToTwip(0.5),
+				right: convertInchesToTwip(0.5),
+				bottom: convertInchesToTwip(0.5),
+				left: convertInchesToTwip(0.5),
+			};
 
-			// Diagram pages
+			// Build document sections with different orientations
+			const docSections: {
+				properties?: {
+					page?: {
+						size?: {
+							orientation?: (typeof PageOrientation)[keyof typeof PageOrientation];
+							width?: number;
+							height?: number;
+						};
+						margin?: {
+							top?: number;
+							right?: number;
+							bottom?: number;
+							left?: number;
+						};
+					};
+				};
+				headers?: { default: Header };
+				footers?: { default: Footer };
+				children: (Paragraph | Table)[];
+			}[] = [];
+
+			// Section 1: Title page (portrait)
+			const titlePageContent: (Paragraph | Table)[] = [];
+			titlePageContent.push(...createTitlePage(document));
+			docSections.push({
+				properties: {
+					page: {
+						margin: portraitMargin,
+					},
+				},
+				headers: {
+					default: new Header({ children: [] }),
+				},
+				footers: {
+					default: createTitlePageFooter(branding),
+				},
+				children: titlePageContent,
+			});
+
+			// Section 2: Diagram pages (landscape) - one section per diagram
+			// Note: docx library swaps width/height internally when LANDSCAPE is set,
+			// so we provide standard A4 portrait dimensions here
 			for (const diagramSection of diagramSections) {
-				children.push(...createDiagramPage(diagramSection));
+				const diagramContent = createDiagramPage(diagramSection);
+				docSections.push({
+					properties: {
+						page: {
+							size: {
+								orientation: PageOrientation.LANDSCAPE,
+								// A4 portrait dimensions - library swaps them for landscape
+								width: convertInchesToTwip(8.27),
+								height: convertInchesToTwip(11.69),
+							},
+							margin: landscapeMargin,
+						},
+					},
+					headers: {
+						default: new Header({ children: [] }),
+					},
+					footers: {
+						default: createContentFooter(),
+					},
+					children: diagramContent,
+				});
 			}
 
-			// Content sections
+			// Section 3: Content sections (portrait)
+			const contentChildren: (Paragraph | Table)[] = [];
 			for (const section of contentSections) {
-				children.push(...renderSection(section, branding));
+				contentChildren.push(...renderSection(section, branding));
+			}
+
+			if (contentChildren.length > 0) {
+				docSections.push({
+					properties: {
+						page: {
+							size: {
+								orientation: PageOrientation.PORTRAIT,
+								width: convertInchesToTwip(8.27),
+								height: convertInchesToTwip(11.69),
+							},
+							margin: portraitMargin,
+						},
+					},
+					headers: {
+						default: new Header({ children: [] }),
+					},
+					footers: {
+						default: createContentFooter(),
+					},
+					children: contentChildren,
+				});
 			}
 
 			// Create the document
@@ -959,27 +1097,7 @@ export class WordExporter implements Exporter {
 				creator: "TEA Platform",
 				title: document.metadata.caseName,
 				description: document.metadata.caseDescription,
-				sections: [
-					{
-						properties: {
-							page: {
-								margin: {
-									top: convertInchesToTwip(0.75),
-									right: convertInchesToTwip(0.75),
-									bottom: convertInchesToTwip(0.75),
-									left: convertInchesToTwip(0.75),
-								},
-							},
-						},
-						headers: {
-							default: new Header({ children: [] }),
-						},
-						footers: {
-							default: createFooter(branding),
-						},
-						children,
-					},
-				],
+				sections: docSections,
 			});
 
 			// Generate the document as a Buffer
