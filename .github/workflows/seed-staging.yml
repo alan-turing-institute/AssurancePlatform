@@ -35,7 +35,7 @@ jobs:
       - name: Reset and migrate database
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: npx prisma migrate reset --force --skip-seed
+        run: npx prisma migrate reset --force
 
       - name: Run seed script
         env:
