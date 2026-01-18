@@ -32,6 +32,11 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma generate
 
+      - name: Reset and migrate database
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx prisma migrate reset --force --skip-seed
+
       - name: Run seed script
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
