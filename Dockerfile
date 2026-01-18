@@ -66,9 +66,11 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate && corepack enable pnpm && pnpm build
 
 # Prepare Prisma CLI for copying to runner (dereference pnpm symlinks)
-RUN mkdir -p /prisma-cli && \
+# @prisma/engines is in .pnpm store but not symlinked to node_modules/@prisma
+RUN mkdir -p /prisma-cli/@prisma && \
     cp -rL node_modules/prisma /prisma-cli/ && \
-    cp -rL node_modules/@prisma /prisma-cli/ && \
+    cp -rL node_modules/@prisma/* /prisma-cli/@prisma/ && \
+    cp -rL node_modules/.pnpm/@prisma+engines@7.0.0/node_modules/@prisma/engines /prisma-cli/@prisma/ && \
     cp -rL node_modules/.bin/prisma /prisma-cli/.bin-prisma
 
 # 3. Production image, copy all the files and run next
