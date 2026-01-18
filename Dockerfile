@@ -73,9 +73,6 @@ RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
 
-# Install Prisma CLI for runtime migrations
-RUN npm install -g prisma@7.0.0 && npm install prisma@7.0.0
-
 COPY --from=builder --link /app/public ./public
 
 # Automatically leverage output traces to reduce image size
@@ -87,6 +84,13 @@ COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
+
+# Copy Prisma CLI from builder for runtime migrations
+# Required because Prisma is a devDependency not included in standalone output
+COPY --from=builder --link --chown=1001:1001 /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --link --chown=1001:1001 /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --link --chown=1001:1001 /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=builder --link --chown=1001:1001 /app/node_modules/dotenv ./node_modules/dotenv
 
 # Copy and set up entrypoint script
 COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
