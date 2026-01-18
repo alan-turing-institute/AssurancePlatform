@@ -63,6 +63,8 @@ ENV DATABASE_URL=${DATABASE_URL}
 # Dummy DATABASE_URL is needed at build time for Prisma config and Next.js static analysis
 # The actual URL is provided at runtime via Azure environment variables
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+# Increase Node.js memory limit for Next.js build (Nextra compilation requires more memory)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npx prisma generate && corepack enable pnpm && pnpm build
 
 # 3. Production image, copy all the files and run next
