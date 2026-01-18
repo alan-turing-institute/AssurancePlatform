@@ -165,6 +165,7 @@ build/
 # Prisma generated files
 src/generated/prisma/
 prisma/scripts/duplicate-user-notifications.json
+prisma/seed/.credentials
 
 # npm/yarn/pnpm
 npm-debug.log*
