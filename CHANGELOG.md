@@ -11,6 +11,64 @@ All notable changes to the TEA Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.2.0...v0.3.0) (2026-01-18)
+
+### ✨ Features
+
+* add connected accounts section to settings page ([9a2f8f2](https://github.com/alan-turing-institute/AssurancePlatform/commit/9a2f8f210994ee82bd05aa16400579fbb42ca513))
+* add GitHub import and OpenAPI documentation ([a798104](https://github.com/alan-turing-institute/AssurancePlatform/commit/a798104a4f6ee5d3223612bd80d4b0eed7e00460))
+* add Google OAuth and Google Drive integration ([5666b45](https://github.com/alan-turing-institute/AssurancePlatform/commit/5666b45c1d8777030711faf2257e81da18de0911))
+* add image export (SVG/PNG) for assurance case diagrams ([f0553e6](https://github.com/alan-turing-institute/AssurancePlatform/commit/f0553e644e13633c0733e6664adfb1f4bbcf59b0))
+* add MarkdownExporter class for document export (aeb.3.5) ([3b582e1](https://github.com/alan-turing-institute/AssurancePlatform/commit/3b582e128e06aba77238cd55dd1b2b4a5f1ba343))
+* add PDFExporter for document export (aeb.3.2) ([518f202](https://github.com/alan-turing-institute/AssurancePlatform/commit/518f2022c0659406b37ffdbccaabbdadd0f0c13a))
+* add report template system for document export (aeb.3.6) ([3a79e4d](https://github.com/alan-turing-institute/AssurancePlatform/commit/3a79e4d759acec15c5c96255445ad9b807249de7))
+* add WordExporter for Word document export (aeb.3.4) ([2406c70](https://github.com/alan-turing-institute/AssurancePlatform/commit/2406c707001e4ac6dea0867369c5205f625d71a9))
+* **docs:** restore detailed case studies and add two new ([5356393](https://github.com/alan-turing-institute/AssurancePlatform/commit/5356393c3c277059b7f746771f7c640d36a28e90))
+* implement recycle bin soft-delete system ([fba56de](https://github.com/alan-turing-institute/AssurancePlatform/commit/fba56dec1b106c69007128d0fd90e1dca87d3714))
+* improve PDF/Markdown export formatting and add TEA branding ([8bbe8a6](https://github.com/alan-turing-institute/AssurancePlatform/commit/8bbe8a6c1d02b02a5386f98f7815ced5cc6cac1d))
+* reorganise export modal and fix PDF/Markdown exports (aeb.3.7) ([782cc8e](https://github.com/alan-turing-institute/AssurancePlatform/commit/782cc8ed5a6c79f84db672f5e811b0472d6c7b28))
+* support multiple evidence URLs per element ([27cc387](https://github.com/alan-turing-institute/AssurancePlatform/commit/27cc3877aa6d0bf8dfc35e08b5a248af480b11f9)), closes [#427](https://github.com/alan-turing-institute/AssurancePlatform/issues/427)
+
+### 🐛 Bug Fixes
+
+* add Google OAuth build args to Dockerfile ([f65cc42](https://github.com/alan-turing-institute/AssurancePlatform/commit/f65cc428335a02dc66a6d24c536625dd37281eb5))
+* add Google OAuth build args to Dockerfile ([a00264f](https://github.com/alan-turing-institute/AssurancePlatform/commit/a00264f1d801733d3da63eeb2ff90d863d9b756b))
+* **build:** replace isomorphic-dompurify with sanitize-html ([75f1514](https://github.com/alan-turing-institute/AssurancePlatform/commit/75f15146fb6aef6de4ce3e621a2ee9701c7deede))
+* **ci:** add dummy DATABASE_URL for Prisma generate and use repo secrets ([4c05595](https://github.com/alan-turing-institute/AssurancePlatform/commit/4c05595004b8371fa119adcf014e853fe1d0fcba))
+* **ci:** remove invalid --skip-seed flag ([7da742a](https://github.com/alan-turing-institute/AssurancePlatform/commit/7da742af20d1973c5ef7c3eeba9aef91501b4edb))
+* **ci:** reset staging DB completely before seeding ([e66fdf8](https://github.com/alan-turing-institute/AssurancePlatform/commit/e66fdf8516a17694d7ef8a52d713f73b4930df8f))
+* **ci:** use pnpm version from packageManager field ([d1e8c1b](https://github.com/alan-turing-institute/AssurancePlatform/commit/d1e8c1b67a65771100f05de97b8c2e43d2d86f33))
+* emit SSE event after reset identifiers to trigger real-time UI update ([d2cc5ff](https://github.com/alan-turing-institute/AssurancePlatform/commit/d2cc5ff790e237a49cd0c72f262788342cb50ee4))
+* exclude HTML files from auth middleware for domain verification ([52eda73](https://github.com/alan-turing-institute/AssurancePlatform/commit/52eda73dc6b27c196fa31cc50658132dbcecf230))
+* redeclare build args in builder stage ([820665d](https://github.com/alan-turing-institute/AssurancePlatform/commit/820665d61d189e22d78db3126ba056949cca55d9))
+* redeclare build args in builder stage ([28c4f50](https://github.com/alan-turing-institute/AssurancePlatform/commit/28c4f501614fb53448ca5fac58328c5a5e30562e))
+* remove legacy RefreshToken authentication system ([6d461d0](https://github.com/alan-turing-institute/AssurancePlatform/commit/6d461d00930ca7fc6f503433fbb3220f0368585c))
+* remove use server directive from rate-limit-service ([3c3731a](https://github.com/alan-turing-institute/AssurancePlatform/commit/3c3731aa0ecc97c64a0b8800ea8174a9d0c73933))
+* resolve Word exporter styling issues ([acc8a9a](https://github.com/alan-turing-institute/AssurancePlatform/commit/acc8a9af3c57b48524cea0f985a118d33e314d8d))
+* **security:** add proper HTML sanitisation to sanitizeDescription ([db86da2](https://github.com/alan-turing-institute/AssurancePlatform/commit/db86da2e32a3e563e4ded884c5745425b5eda0f4))
+* **security:** address timing attack vulnerability in JWT callback ([45b4cfd](https://github.com/alan-turing-institute/AssurancePlatform/commit/45b4cfdc2cbcc4a7296bf86080be64783a013822))
+* **security:** harden invite acceptance with transaction and audit logging ([f0ba447](https://github.com/alan-turing-institute/AssurancePlatform/commit/f0ba4471ee4b6afa985745ae8b818d5fd935b9ce))
+* skip data migration check when legacy tables already removed ([6d206dc](https://github.com/alan-turing-institute/AssurancePlatform/commit/6d206dc5cbe18acb8d0e8a6689226e28c8a2e145))
+* state refresh for detach/reattach element operations ([74d2438](https://github.com/alan-turing-institute/AssurancePlatform/commit/74d2438f422c738f85b8fd8192d5b6fd4573a289)), closes [#1](https://github.com/alan-turing-institute/AssurancePlatform/issues/1) [#2](https://github.com/alan-turing-institute/AssurancePlatform/issues/2)
+* sync section checkboxes with template selection in export modal ([1574a38](https://github.com/alan-turing-institute/AssurancePlatform/commit/1574a38aa2fae8e51056e0b03da21c0a3028164b))
+* update delete modal text to reflect soft-delete behaviour ([db0036e](https://github.com/alan-turing-institute/AssurancePlatform/commit/db0036e4c2d44b13317e29a968e9db460fdb74e4))
+* use require for node:stream in Google Drive service ([e958aef](https://github.com/alan-turing-institute/AssurancePlatform/commit/e958aefb3fba234a72751bccb8a6d875b7ba524c))
+
+### ⚡ Performance Improvements
+
+* implement aeb.7 performance optimisations ([5381f14](https://github.com/alan-turing-institute/AssurancePlatform/commit/5381f1483b887bee614bc9d5d343872021f1c0e7))
+
+### 📚 Documentation
+
+* add data retention policy for inactive accounts ([fdc655e](https://github.com/alan-turing-institute/AssurancePlatform/commit/fdc655ef8f5c8007c87b543b959c26aeb6155b71))
+
+### 🔧 CI/CD
+
+* add dev seed database for reproducible test environment ([0295c19](https://github.com/alan-turing-institute/AssurancePlatform/commit/0295c199e97c8382710ed51abc3094210715871b))
+* add semantic-release workflow and fix changelog docs ([beca77d](https://github.com/alan-turing-institute/AssurancePlatform/commit/beca77d64eb77947e46742da552c6211ae801045))
+* disable semantic-release success/fail comments ([9316a64](https://github.com/alan-turing-institute/AssurancePlatform/commit/9316a64c4056a9156e83b073d54495bfc58dc52f))
+* use RELEASE_TOKEN for semantic-release branch protection bypass ([51669d2](https://github.com/alan-turing-institute/AssurancePlatform/commit/51669d2f69436d28ac7023bb170f5ae825c6eb04))
+
 ## [1.0.1](https://github.com/alan-turing-institute/AssurancePlatform/compare/v1.0.0...v1.0.1) (2026-01-18)
 
 ### 🔧 CI/CD
