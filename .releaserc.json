@@ -67,11 +67,8 @@
     [
       "@semantic-release/github",
       {
-        "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version ${nextRelease.version} :tada:",
-        "labels": ["released"],
-        "releasedLabels": [
-          "released<%= nextRelease.type === 'prerelease' ? '-prerelease' : '' %>"
-        ],
+        "successComment": false,
+        "failComment": false,
         "addReleases": "bottom"
       }
     ],
