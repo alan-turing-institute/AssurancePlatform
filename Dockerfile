@@ -87,7 +87,8 @@ COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.conf
 
 # Install Prisma CLI for runtime migrations
 # Install to /opt/prisma to avoid conflicts with Next.js standalone node_modules
-RUN mkdir -p /opt/prisma && cd /opt/prisma && npm init -y && npm install prisma@7.0.0 && \
+# Also install dotenv required by prisma.config.ts
+RUN mkdir -p /opt/prisma && cd /opt/prisma && npm init -y && npm install prisma@7.0.0 dotenv && \
     chown -R nextjs:nodejs /opt/prisma
 
 # Copy and set up entrypoint script
