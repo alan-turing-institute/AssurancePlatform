@@ -40,4 +40,5 @@ jobs:
       - name: Run seed script
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
         run: npx tsx prisma/seed/dev-seed.ts

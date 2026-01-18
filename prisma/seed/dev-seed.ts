@@ -42,6 +42,8 @@ type Credentials = {
 
 function loadCredentials(): Credentials {
 	const credentialsPath = join(__dirname, ".credentials");
+
+	// First, try to load from .credentials file (local development)
 	try {
 		const content = readFileSync(credentialsPath, "utf-8");
 		const credentials: Credentials = {};
@@ -51,19 +53,28 @@ function loadCredentials(): Credentials {
 				credentials[username] = password;
 			}
 		}
+		console.log("Loaded credentials from .credentials file");
 		return credentials;
 	} catch {
-		console.error(
-			"Failed to load .credentials file. Using fallback passwords."
-		);
-		// Fallback passwords that meet validation rules
+		// File doesn't exist - check for environment variable (CI/staging)
+	}
+
+	// Fall back to SEED_USER_PASSWORD environment variable (CI/staging)
+	const envPassword = process.env.SEED_USER_PASSWORD;
+	if (envPassword) {
+		console.log("Using SEED_USER_PASSWORD from environment");
 		return {
-			chris: "DevPassword#1",
-			alice: "DevPassword#2",
-			bob: "DevPassword#3",
-			charlie: "DevPassword#4",
+			chris: envPassword,
+			alice: envPassword,
+			bob: envPassword,
+			charlie: envPassword,
 		};
 	}
+
+	throw new Error(
+		"No credentials available. Either create prisma/seed/.credentials file " +
+			"or set SEED_USER_PASSWORD environment variable."
+	);
 }
 
 async function main() {
