@@ -24,7 +24,7 @@
           { "type": "refactor", "release": "patch" },
           { "type": "test", "release": "patch" },
           { "type": "build", "release": "patch" },
-          { "type": "ci", "release": "patch" },
+          { "type": "ci", "release": false },
           { "type": "chore", "release": false },
           { "type": "revert", "release": "patch" },
           { "breaking": true, "release": "major" }
@@ -67,11 +67,8 @@
     [
       "@semantic-release/github",
       {
-        "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version ${nextRelease.version} :tada:",
-        "labels": ["released"],
-        "releasedLabels": [
-          "released<%= nextRelease.type === 'prerelease' ? '-prerelease' : '' %>"
-        ],
+        "successComment": false,
+        "failComment": false,
         "addReleases": "bottom"
       }
     ],
