@@ -65,16 +65,6 @@ ENV DATABASE_URL=${DATABASE_URL}
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate && corepack enable pnpm && pnpm build
 
-# Prepare Prisma CLI for copying to runner (dereference pnpm symlinks)
-# Prisma has many interdependent @prisma/* packages in .pnpm store
-RUN mkdir -p /prisma-cli/@prisma && \
-    cp -rL node_modules/prisma /prisma-cli/ && \
-    cp -rL node_modules/@prisma/* /prisma-cli/@prisma/ 2>/dev/null || true && \
-    for pkg in node_modules/.pnpm/@prisma+*@7.0.0*/node_modules/@prisma/*; do \
-      [ -d "$pkg" ] && cp -rL "$pkg" /prisma-cli/@prisma/ 2>/dev/null || true; \
-    done && \
-    cp -rL node_modules/.bin/prisma /prisma-cli/.bin-prisma
-
 # 3. Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -95,12 +85,9 @@ COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.prisma ./prisma/
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
 
-# Copy Prisma CLI from builder for runtime migrations
-# Required because Prisma is a devDependency not included in standalone output
-# These are dereferenced copies (pnpm uses symlinks that don't work across stages)
-COPY --from=builder --link --chown=1001:1001 /prisma-cli/prisma ./node_modules/prisma
-COPY --from=builder --link --chown=1001:1001 /prisma-cli/@prisma ./node_modules/@prisma
-COPY --from=builder --link --chown=1001:1001 /prisma-cli/.bin-prisma ./node_modules/.bin/prisma
+# Install Prisma CLI for runtime migrations (owned by nextjs user)
+# This is cleaner than copying from builder due to pnpm's complex symlink structure
+RUN npm install --prefix /app prisma@7.0.0 && chown -R nextjs:nodejs /app/node_modules
 
 # Copy and set up entrypoint script
 COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
