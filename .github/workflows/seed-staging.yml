@@ -7,6 +7,10 @@ on:
   push:
     branches:
       - staging
+    paths-ignore:
+      - ".beads/**"
+      - "*.md"
+      - "docs/**"
 
 jobs:
   seed:
