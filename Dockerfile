@@ -86,12 +86,9 @@ COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/mig
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
 
 # Install Prisma CLI for runtime migrations
-# Install to a separate directory to avoid conflicts with Next.js standalone node_modules
-RUN mkdir /prisma-install && cd /prisma-install && npm init -y && npm install prisma@7.0.0 && \
-    mkdir -p /app/node_modules && \
-    cp -r /prisma-install/node_modules/* /app/node_modules/ && \
-    chown -R nextjs:nodejs /app/node_modules && \
-    rm -rf /prisma-install
+# Install to /opt/prisma to avoid conflicts with Next.js standalone node_modules
+RUN mkdir -p /opt/prisma && cd /opt/prisma && npm init -y && npm install prisma@7.0.0 && \
+    chown -R nextjs:nodejs /opt/prisma
 
 # Copy and set up entrypoint script
 COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
