@@ -7,6 +7,10 @@ on:
   push:
     branches:
       - staging
+    paths-ignore:
+      - ".beads/**"
+      - "*.md"
+      - "docs/**"
 
 jobs:
   seed:
@@ -37,7 +41,20 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: npx prisma migrate reset --force
 
+      - name: Grant permissions to app user
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -c "
+            GRANT USAGE, CREATE ON SCHEMA public TO tea_app;
+            GRANT ALL ON ALL TABLES IN SCHEMA public TO tea_app;
+            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO tea_app;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tea_app;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO tea_app;
+          "
+
       - name: Run seed script
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
         run: npx tsx prisma/seed/dev-seed.ts
