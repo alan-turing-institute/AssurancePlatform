@@ -24,7 +24,7 @@
           { "type": "refactor", "release": "patch" },
           { "type": "test", "release": "patch" },
           { "type": "build", "release": "patch" },
-          { "type": "ci", "release": "patch" },
+          { "type": "ci", "release": false },
           { "type": "chore", "release": false },
           { "type": "revert", "release": "patch" },
           { "breaking": true, "release": "major" }

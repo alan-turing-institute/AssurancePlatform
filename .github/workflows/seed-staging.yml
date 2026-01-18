@@ -1,0 +1,39 @@
+name: Seed staging database
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  # Trigger after staging deployment (adjust if you have a different deployment workflow)
+  push:
+    branches:
+      - staging
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run seed script
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx tsx prisma/seed/dev-seed.ts
