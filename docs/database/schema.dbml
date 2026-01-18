@@ -47,6 +47,7 @@ Table users {
   githubRepositories github_repositories [not null]
   caseStudies case_studies [not null]
   markedReadyCases assurance_cases [not null]
+  deletedCases assurance_cases [not null]
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -134,8 +135,11 @@ Table assurance_cases {
   publishStatus PublishStatus [not null, default: 'DRAFT', note: 'DRAFT, READY_TO_PUBLISH, or PUBLISHED']
   markedReadyAt DateTime [note: 'When owner marked case as ready to publish']
   markedReadyById String [note: 'Who marked the case as ready']
+  deletedAt DateTime [note: 'When the case was moved to trash (null = not deleted)']
+  deletedBy String [note: 'User ID who deleted the case']
   createdBy users [not null]
   markedReadyBy users
+  deletedByUser users
   sourcePattern argument_patterns
   elements assurance_elements [not null]
   userPermissions case_permissions [not null]
@@ -642,6 +646,8 @@ Ref: team_members.userId > users.id [delete: Cascade]
 Ref: assurance_cases.createdById > users.id
 
 Ref: assurance_cases.markedReadyById > users.id
+
+Ref: assurance_cases.deletedBy > users.id
 
 Ref: assurance_cases.sourcePatternId > argument_patterns.id
 

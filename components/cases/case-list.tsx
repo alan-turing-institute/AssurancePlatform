@@ -2,7 +2,7 @@
 
 import { ArrowUpTrayIcon } from "@heroicons/react/20/solid";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
 import { useImportModal } from "@/hooks/use-import-modal";
@@ -19,28 +19,25 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 	const importModal = useImportModal();
 
 	const [searchTerm, setSearchTerm] = useState<string>("");
-	const [filteredCases, setFilteredCases] = useState(assuranceCases);
 
-	// Set cases with the last created on first
-	filteredCases.sort(
-		(a, b) =>
-			new Date(b.created_date ?? 0).getTime() -
-			new Date(a.created_date ?? 0).getTime()
-	);
+	// Filter and sort cases - useMemo to avoid recalculating on every render
+	const filteredCases = useMemo(() => {
+		const searchTermLowerCase = searchTerm.toLowerCase().trim();
 
-	useEffect(() => {
-		// Convert searchTerm to lowercase for case-insensitive matching
-		const searchTermLowerCase = searchTerm.toLowerCase();
-		if (searchTerm.trim() === "") {
-			// If searchTerm is empty, show all assurance cases
-			setFilteredCases(assuranceCases);
-		} else {
-			// Filter assurance cases by name containing the searchTerm
-			const filtered = assuranceCases.filter((ac) =>
-				ac.name.toLowerCase().includes(searchTermLowerCase)
-			);
-			setFilteredCases(filtered);
-		}
+		// Filter by search term
+		const filtered =
+			searchTermLowerCase === ""
+				? assuranceCases
+				: assuranceCases.filter((ac) =>
+						ac.name.toLowerCase().includes(searchTermLowerCase)
+					);
+
+		// Sort by created_date (newest first) - spread to avoid mutation
+		return [...filtered].sort(
+			(a, b) =>
+				new Date(b.created_date ?? 0).getTime() -
+				new Date(a.created_date ?? 0).getTime()
+		);
 	}, [searchTerm, assuranceCases]);
 
 	return (

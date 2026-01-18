@@ -1,38 +1,25 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { saveAs } from "file-saver";
 import {
+	ChevronDown,
 	Cloud,
 	Download,
 	FileIcon,
+	FileText,
 	ImageIcon,
 	Loader2,
-	Share2,
-	User2,
-	UserCheck,
-	UserX,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { getDocumentExportData } from "@/actions/export-document";
 import { Modal } from "@/components/ui/modal";
 import useStore from "@/data/store";
-import { useShareModal } from "@/hooks/use-share-modal";
+import { useExportModal } from "@/hooks/use-export-modal";
+import { exportDocument } from "@/lib/case/document-export";
 import { exportDiagramImage } from "@/lib/case/image-export";
+import type { ExportFormat, TemplatePreset } from "@/lib/export";
 import { useToast } from "@/lib/toast";
-import type { User } from "@/types";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -44,23 +31,6 @@ import {
 	SelectValue,
 } from "../ui/select";
 import { Separator } from "../ui/separator";
-
-type ShareItem = {
-	email: string;
-	view?: boolean;
-	edit?: boolean;
-	review?: boolean;
-};
-
-const FormSchema = z.object({
-	email: z
-		.string()
-		.min(2, {
-			message: "Email must be at least 2 characters.",
-		})
-		.email(),
-	accessLevel: z.string().min(1),
-});
 
 /**
  * Google icon SVG component
@@ -88,26 +58,131 @@ function GoogleIcon({ className }: { className?: string }) {
 	);
 }
 
+/**
+ * Section labels for display in the customisation panel
+ */
+const SECTION_LABELS: Record<string, string> = {
+	titlePage: "Title page",
+	tableOfContents: "Table of contents",
+	diagram: "Diagram",
+	executiveSummary: "Executive summary",
+	assuranceCaseStructure: "Assurance case structure",
+	comments: "Comments",
+	metadata: "Metadata",
+};
+
+/**
+ * Default section states for each template preset.
+ * These match the DEFAULT_SECTIONS_* configs in lib/export/schemas/section-config.ts
+ */
+const TEMPLATE_SECTION_DEFAULTS: Record<TemplatePreset, DocSections> = {
+	"full-report": {
+		titlePage: true,
+		tableOfContents: true,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: true,
+		comments: true,
+		metadata: true,
+	},
+	summary: {
+		titlePage: true,
+		tableOfContents: false,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: false,
+		comments: false,
+		metadata: false,
+	},
+	"evidence-list": {
+		titlePage: true,
+		tableOfContents: false,
+		diagram: false,
+		executiveSummary: false,
+		assuranceCaseStructure: false,
+		comments: false,
+		metadata: true,
+	},
+};
+
+type DocSections = {
+	titlePage: boolean;
+	tableOfContents: boolean;
+	diagram: boolean;
+	executiveSummary: boolean;
+	assuranceCaseStructure: boolean;
+	comments: boolean;
+	metadata: boolean;
+};
+
+/**
+ * Collapsible section customisation component
+ */
+function SectionCustomisation({
+	sections,
+	onToggle,
+}: {
+	sections: DocSections;
+	onToggle: (key: keyof DocSections) => void;
+}) {
+	const [isOpen, setIsOpen] = useState(false);
+
+	return (
+		<div className="rounded-md border border-muted">
+			<button
+				className="flex w-full items-center justify-between p-3 text-left text-sm hover:bg-muted/50"
+				onClick={() => setIsOpen(!isOpen)}
+				type="button"
+			>
+				<span>Customise sections</span>
+				<ChevronDown
+					className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+				/>
+			</button>
+			{isOpen && (
+				<div className="space-y-2 border-t px-3 pt-2 pb-3">
+					{Object.entries(SECTION_LABELS).map(([key, label]) => (
+						<div className="flex items-center space-x-2" key={key}>
+							<input
+								checked={sections[key as keyof DocSections]}
+								className="h-4 w-4 rounded border-gray-300"
+								id={`section-${key}`}
+								onChange={() => onToggle(key as keyof DocSections)}
+								type="checkbox"
+							/>
+							<label className="text-sm" htmlFor={`section-${key}`}>
+								{label}
+							</label>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+/**
+ * Template description component
+ */
+function TemplateDescription({ template }: { template: TemplatePreset }) {
+	const descriptions: Record<TemplatePreset, string> = {
+		"full-report":
+			"Comprehensive report with all case elements, comments, and diagram",
+		summary: "Condensed overview with goals and key evidence only",
+		"evidence-list":
+			"Focused list of all evidence items with URLs and descriptions",
+	};
+
+	return (
+		<p className="text-muted-foreground text-xs">{descriptions[template]}</p>
+	);
+}
+
 export const ShareModal = () => {
-	const {
-		assuranceCase,
-		viewMembers,
-		setViewMembers,
-		editMembers,
-		setEditMembers,
-		reviewMembers,
-		setReviewMembers,
-		nodes,
-	} = useStore();
-	const shareModal = useShareModal();
+	const { assuranceCase, nodes } = useStore();
+	const exportModal = useExportModal();
 
 	const [loading, setLoading] = useState(false);
-	const [_isDisabled, _setIsDisabled] = useState(false);
-	const [error, _setError] = useState<string>("");
-	const [successMessage, _setSuccessMessage] = useState<string>("");
-	const [_users, _setUsers] = useState<User[]>([]);
-	const [_selectedUsers, _setSelectedUsers] = useState<User[]>([]);
-
 	const [exportWithComments, setExportWithComments] = useState(true);
 
 	// Google Drive backup state
@@ -119,124 +194,36 @@ export const ShareModal = () => {
 	const [imageScale, setImageScale] = useState<"1" | "2" | "3">("2");
 	const [imageExportLoading, setImageExportLoading] = useState(false);
 
-	const _router = useRouter();
-	const { toast } = useToast();
-
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
-		defaultValues: {
-			email: "",
-			accessLevel: "Read",
-		},
+	// Document export state
+	const [docFormat, setDocFormat] = useState<ExportFormat>("pdf");
+	const [docTemplate, setDocTemplate] = useState<TemplatePreset>("full-report");
+	const [docExportLoading, setDocExportLoading] = useState(false);
+	const [docSections, setDocSections] = useState<DocSections>({
+		titlePage: true,
+		tableOfContents: true,
+		diagram: true,
+		executiveSummary: true,
+		assuranceCaseStructure: true,
+		comments: true,
+		metadata: true,
 	});
+
+	const { toast } = useToast();
 
 	// Check Google connection status when modal opens
 	useEffect(() => {
-		if (shareModal.isOpen && googleConnected === null) {
+		if (exportModal.isOpen && googleConnected === null) {
 			fetch("/api/cases/backup/gdrive")
 				.then((res) => res.json())
 				.then((data) => setGoogleConnected(data.connected ?? false))
 				.catch(() => setGoogleConnected(false));
 		}
-	}, [shareModal.isOpen, googleConnected]);
-
-	const mapAccessLevelToPermission = (accessLevel: string): string => {
-		const permissionMap: Record<string, string> = {
-			Read: "VIEW",
-			Edit: "EDIT",
-			Reviewer: "REVIEW",
-		};
-		return permissionMap[accessLevel] || "VIEW";
-	};
-
-	const updateMemberState = (accessLevel: string, email: string) => {
-		const newShareItem: ShareItem = { email };
-		if (accessLevel === "Read") {
-			newShareItem.view = true;
-			setViewMembers([...viewMembers, newShareItem as unknown as User]);
-		} else if (accessLevel === "Edit") {
-			newShareItem.edit = true;
-			setEditMembers([...editMembers, newShareItem as unknown as User]);
-		} else if (accessLevel === "Reviewer") {
-			newShareItem.review = true;
-			setReviewMembers([...reviewMembers, newShareItem as unknown as User]);
-		}
-	};
-
-	const handlePrismaShare = async (data: z.infer<typeof FormSchema>) => {
-		const permission = mapAccessLevelToPermission(data.accessLevel);
-
-		const response = await fetch(
-			`/api/cases/${assuranceCase?.id}/permissions`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ type: "user", email: data.email, permission }),
-			}
-		);
-
-		const result = await response.json();
-
-		if (!response.ok) {
-			toast({
-				variant: "destructive",
-				title: "Unable to share case",
-				description:
-					result.error ||
-					"The email is not registered to an active user of the TEA platform.",
-			});
-			return false;
-		}
-
-		if (result.invite_url) {
-			toast({
-				variant: "success",
-				title: "Invite sent",
-				description: `An invite has been created for ${data.email}`,
-			});
-		} else if (result.message === "User already has access to this case") {
-			toast({
-				variant: "default",
-				title: "Already shared",
-				description: `${data.email} already has access to this case`,
-			});
-		} else {
-			toast({
-				variant: "success",
-				title: "Shared Case with:",
-				description: `${data.email}`,
-			});
-		}
-
-		updateMemberState(data.accessLevel, data.email);
-		return true;
-	};
-
-	const onSubmit = async (data: z.infer<typeof FormSchema>) => {
-		setLoading(true);
-
-		try {
-			const success = await handlePrismaShare(data);
-
-			if (success) {
-				form.reset();
-			}
-		} catch (_error) {
-			toast({
-				variant: "destructive",
-				title: "Error",
-				description: "Something went wrong",
-			});
-		}
-
-		setLoading(false);
-	};
+	}, [exportModal.isOpen, googleConnected]);
 
 	const handleExport = async (includeComments = true) => {
 		setLoading(true);
 
 		if (assuranceCase?.id) {
-			// Use v2 export API
 			try {
 				const params = new URLSearchParams({
 					id: String(assuranceCase.id),
@@ -358,115 +345,90 @@ export const ShareModal = () => {
 		}
 	};
 
+	const handleDocumentExport = async () => {
+		if (!(assuranceCase?.id && assuranceCase?.name)) {
+			toast({
+				variant: "destructive",
+				title: "Export failed",
+				description: "No assurance case loaded",
+			});
+			return;
+		}
+
+		setDocExportLoading(true);
+
+		try {
+			// Fetch case data from server (include comments if comments section is enabled)
+			const result = await getDocumentExportData(assuranceCase.id, {
+				includeComments: docSections.comments,
+			});
+
+			if (!result.success) {
+				toast({
+					variant: "destructive",
+					title: "Export failed",
+					description: result.error,
+				});
+				return;
+			}
+
+			// Export document using client-side function with section overrides
+			await exportDocument({
+				caseData: result.data,
+				caseName: assuranceCase.name,
+				format: docFormat,
+				template: docTemplate,
+				includeDiagram: docSections.diagram,
+				nodes,
+				sectionOverrides: docSections,
+			});
+
+			const formatLabels: Record<ExportFormat, string> = {
+				pdf: "PDF",
+				markdown: "Markdown",
+				docx: "Word",
+			};
+			toast({
+				variant: "success",
+				title: "Export complete",
+				description: `Document exported as ${formatLabels[docFormat]}`,
+			});
+		} catch (exportError) {
+			toast({
+				variant: "destructive",
+				title: "Export failed",
+				description:
+					exportError instanceof Error
+						? exportError.message
+						: "An error occurred",
+			});
+		} finally {
+			setDocExportLoading(false);
+		}
+	};
+
+	const handleSectionToggle = (key: keyof DocSections) => {
+		setDocSections((prev) => ({
+			...prev,
+			[key]: !prev[key],
+		}));
+	};
+
 	return (
 		<Modal
-			description="How would you like the share your assurance case?"
-			isOpen={shareModal.isOpen}
-			onClose={shareModal.onClose}
-			title="Share / Export Case"
+			description="Download your assurance case in various formats."
+			isOpen={exportModal.isOpen}
+			onClose={exportModal.onClose}
+			title="Export Case"
 		>
-			{error && (
-				<div className="flex w-full items-center justify-start gap-2 rounded-md border-2 border-rose-700 bg-rose-500/20 px-3 py-1 text-rose-600">
-					<UserX className="h-4 w-4" />
-					{error}
-				</div>
-			)}
-			{successMessage && (
-				<div className="flex w-full items-center justify-start gap-2 rounded-md border-2 border-emerald-700 bg-emerald-500/20 px-3 py-1 text-emerald-600">
-					<UserCheck className="h-4 w-4" />
-					{successMessage}
-				</div>
-			)}
-			{assuranceCase && assuranceCase.permissions === "manage" && (
-				<div className="my-4 space-y-2">
-					<h2 className="flex items-center justify-start gap-2">
-						<User2 className="h-4 w-4" /> Share with users
-					</h2>
-					<Form {...form}>
-						<form
-							className="w-full space-y-6"
-							onSubmit={form.handleSubmit(onSubmit)}
-						>
-							<FormField
-								control={form.control}
-								name="email"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel className="hidden">Email</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Enter email address"
-												{...field}
-												autoComplete="off"
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="accessLevel"
-								render={({ field }) => (
-									<FormItem className="pb-2">
-										<FormLabel>Access Level</FormLabel>
-										<FormControl>
-											<RadioGroup
-												className="flex items-center justify-start space-x-2"
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormItem
-													className="flex items-center space-x-3 space-y-0"
-													key={crypto.randomUUID()}
-												>
-													<FormControl>
-														<RadioGroupItem value={"Read"} />
-													</FormControl>
-													<FormLabel className="font-normal">Read</FormLabel>
-												</FormItem>
-												<FormItem
-													className="flex items-center space-x-3 space-y-0"
-													key={crypto.randomUUID()}
-												>
-													<FormControl>
-														<RadioGroupItem value={"Edit"} />
-													</FormControl>
-													<FormLabel className="font-normal">Edit</FormLabel>
-												</FormItem>
-												<FormItem
-													className="flex items-center space-x-3 space-y-0"
-													key={crypto.randomUUID()}
-												>
-													<FormControl>
-														<RadioGroupItem value={"Reviewer"} />
-													</FormControl>
-													<FormLabel className="font-normal">
-														Reviewer
-													</FormLabel>
-												</FormItem>
-											</RadioGroup>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<Button disabled={loading} type="submit">
-								<Share2 className="mr-2 h-4 w-4" />
-								Share
-							</Button>
-						</form>
-					</Form>
-				</div>
-			)}
-			<Separator />
 			<div className="my-4">
 				<h2 className="mb-2 flex items-center justify-start gap-2">
 					<FileIcon className="h-4 w-4" />
-					Export as JSON
+					Export Raw JSON
 				</h2>
 				<p className="text-muted-foreground text-sm">
-					Select the button below to download a JSON file.
+					Download a JSON file for backup or importing into another TEA Platform
+					instance.
 				</p>
 				<div className="my-2 flex items-center space-x-2">
 					<input
@@ -555,6 +517,89 @@ export const ShareModal = () => {
 					{imageExportLoading
 						? "Exporting..."
 						: `Download ${imageFormat.toUpperCase()}`}
+				</Button>
+			</div>
+			<Separator />
+			<div className="my-4">
+				<h2 className="mb-2 flex items-center justify-start gap-2">
+					<FileText className="h-4 w-4" />
+					Export Report
+				</h2>
+				<p className="text-muted-foreground text-sm">
+					Download a formatted report of your assurance case.
+				</p>
+				<div className="my-3 space-y-3">
+					<div className="flex items-center gap-4">
+						<Label className="text-sm">Format</Label>
+						<RadioGroup
+							className="flex items-center gap-4"
+							onValueChange={(value) => setDocFormat(value as ExportFormat)}
+							value={docFormat}
+						>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="doc-format-pdf" value="pdf" />
+								<Label className="font-normal" htmlFor="doc-format-pdf">
+									PDF
+								</Label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="doc-format-markdown" value="markdown" />
+								<Label className="font-normal" htmlFor="doc-format-markdown">
+									Markdown
+								</Label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<RadioGroupItem id="doc-format-docx" value="docx" />
+								<Label className="font-normal" htmlFor="doc-format-docx">
+									Word
+								</Label>
+							</div>
+						</RadioGroup>
+					</div>
+					<div className="space-y-2">
+						<div className="flex items-center gap-4">
+							<Label className="text-sm" htmlFor="doc-template-select">
+								Template
+							</Label>
+							<Select
+								onValueChange={(v) => {
+									const template = v as TemplatePreset;
+									setDocTemplate(template);
+									setDocSections(TEMPLATE_SECTION_DEFAULTS[template]);
+								}}
+								value={docTemplate}
+							>
+								<SelectTrigger className="w-40" id="doc-template-select">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="full-report">Full Report</SelectItem>
+									<SelectItem value="summary">Summary</SelectItem>
+									<SelectItem value="evidence-list">Evidence List</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<TemplateDescription template={docTemplate} />
+					</div>
+					<SectionCustomisation
+						onToggle={handleSectionToggle}
+						sections={docSections}
+					/>
+				</div>
+				<Button
+					className="my-2"
+					disabled={docExportLoading}
+					onClick={handleDocumentExport}
+					variant="outline"
+				>
+					{docExportLoading ? (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					) : (
+						<Download className="mr-2 h-4 w-4" />
+					)}
+					{docExportLoading
+						? "Exporting..."
+						: `Download ${({ pdf: "PDF", markdown: "Markdown", docx: "Word" } as const)[docFormat]}`}
 				</Button>
 			</div>
 			<Separator />

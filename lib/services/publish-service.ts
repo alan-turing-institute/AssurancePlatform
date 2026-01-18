@@ -602,41 +602,39 @@ export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 		},
 	});
 
-	// For each case, try to get the published version ID separately
-	const results = await Promise.all(
-		cases.map(async (c) => {
-			let publishedVersionId: string | null = null;
+	// Batch query all published versions for these cases (fixes N+1)
+	const caseIds = cases.map((c) => c.id);
+	let publishedVersionsMap = new Map<string, string>();
 
-			try {
-				const publishedVersions =
-					await prismaNew.publishedAssuranceCase.findMany({
-						where: { assuranceCaseId: c.id },
-						select: { id: true },
-						orderBy: { createdAt: "desc" },
-						take: 1,
-					});
-				publishedVersionId = publishedVersions[0]?.id ?? null;
-			} catch (error) {
-				// Handle legacy table type mismatch gracefully
-				console.warn(
-					`Failed to fetch published version for case ${c.id}:`,
-					error
-				);
+	try {
+		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: { in: caseIds } },
+			select: { id: true, assuranceCaseId: true, createdAt: true },
+			orderBy: { createdAt: "desc" },
+		});
+
+		// Group by assuranceCaseId and take the latest (first due to orderBy desc)
+		for (const pv of publishedVersions) {
+			if (!publishedVersionsMap.has(pv.assuranceCaseId)) {
+				publishedVersionsMap.set(pv.assuranceCaseId, pv.id);
 			}
+		}
+	} catch (error) {
+		// Handle legacy table type mismatch gracefully
+		console.warn("Failed to fetch published versions:", error);
+		publishedVersionsMap = new Map();
+	}
 
-			return {
-				id: c.id,
-				name: c.name,
-				description: c.description,
-				publishStatus: c.publishStatus,
-				publishedAt: c.publishedAt,
-				markedReadyAt: c.markedReadyAt,
-				publishedVersionId,
-			};
-		})
-	);
-
-	return results;
+	// Map cases to results with published version IDs
+	return cases.map((c) => ({
+		id: c.id,
+		name: c.name,
+		description: c.description,
+		publishStatus: c.publishStatus,
+		publishedAt: c.publishedAt,
+		markedReadyAt: c.markedReadyAt,
+		publishedVersionId: publishedVersionsMap.get(c.id) ?? null,
+	}));
 }
 
 /**

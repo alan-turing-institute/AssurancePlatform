@@ -2,7 +2,7 @@
 
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
 import { useToast } from "@/lib/toast";
@@ -18,12 +18,15 @@ export default function NotesFeed() {
 	const { toast } = useToast();
 	const router = useRouter();
 
-	if (assuranceCase?.comments) {
-		assuranceCase.comments.sort(
-			(a: Comment, b: Comment) =>
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-		);
-	}
+	// Sort notes by created_at (newest first) - useMemo to avoid mutation
+	const sortedNotes = useMemo(
+		() =>
+			[...caseNotes].sort(
+				(a: Comment, b: Comment) =>
+					new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			),
+		[caseNotes]
+	);
 
 	// Fetch case notes/comments
 	useEffect(() => {
@@ -117,13 +120,13 @@ export default function NotesFeed() {
 	return (
 		<div className="mt-4 px-4 py-8">
 			<ul className="-mb-8">
-				{caseNotes.length === 0 && (
+				{sortedNotes.length === 0 && (
 					<p className="text-foreground/70">No notes have been added.</p>
 				)}
-				{caseNotes.map((note: Comment, index: number) => (
+				{sortedNotes.map((note: Comment, index: number) => (
 					<li key={note.id}>
 						<div className="group relative pb-8">
-							{index !== caseNotes.length - 1 ? (
+							{index !== sortedNotes.length - 1 ? (
 								<span
 									aria-hidden="true"
 									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-gray-200 dark:bg-gray-800"

@@ -7,14 +7,14 @@ vi.unmock("@/hooks/use-email-modal");
 vi.unmock("@/hooks/use-import-modal");
 vi.unmock("@/hooks/use-permissions-modal");
 vi.unmock("@/hooks/use-resources-modal");
-vi.unmock("@/hooks/use-share-modal");
+vi.unmock("@/hooks/use-export-modal");
 
 import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
 import { useEmailModal } from "@/hooks/use-email-modal";
 import { useImportModal } from "@/hooks/use-import-modal";
 import { usePermissionsModal } from "@/hooks/use-permissions-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";
-import { useShareModal } from "@/hooks/use-share-modal";
+import { useExportModal } from "@/hooks/use-export-modal";
 
 // Type for modal hook return value
 type ModalHookReturn = {
@@ -177,7 +177,7 @@ describe("Modal Hooks", () => {
 		// Reset all Zustand stores to their initial state
 		const stores = [
 			useCreateCaseModal,
-			useShareModal,
+			useExportModal,
 			usePermissionsModal,
 			useImportModal,
 			useEmailModal,
@@ -192,7 +192,7 @@ describe("Modal Hooks", () => {
 
 	// Test all modal hooks with the shared test suite
 	testModalHook("useCreateCaseModal", useCreateCaseModal);
-	testModalHook("useShareModal", useShareModal);
+	testModalHook("useExportModal", useExportModal);
 	testModalHook("usePermissionsModal", usePermissionsModal);
 	testModalHook("useImportModal", useImportModal);
 	testModalHook("useEmailModal", useEmailModal);
@@ -201,7 +201,7 @@ describe("Modal Hooks", () => {
 	describe("Cross-modal interactions", () => {
 		it("should allow multiple modals to be open simultaneously", () => {
 			const { result: createModal } = renderHook(() => useCreateCaseModal());
-			const { result: shareModal } = renderHook(() => useShareModal());
+			const { result: shareModal } = renderHook(() => useExportModal());
 			const { result: permissionsModal } = renderHook(() =>
 				usePermissionsModal()
 			);
@@ -219,7 +219,7 @@ describe("Modal Hooks", () => {
 
 		it("should maintain independent state between different modal hooks", () => {
 			const { result: modal1 } = renderHook(() => useCreateCaseModal());
-			const { result: modal2 } = renderHook(() => useShareModal());
+			const { result: modal2 } = renderHook(() => useExportModal());
 
 			act(() => {
 				modal1.current.onOpen();
@@ -245,7 +245,7 @@ describe("Modal Hooks", () => {
 
 		it("should handle concurrent operations across multiple modals", () => {
 			const { result: createModal } = renderHook(() => useCreateCaseModal());
-			const { result: shareModal } = renderHook(() => useShareModal());
+			const { result: shareModal } = renderHook(() => useExportModal());
 			const { result: importModal } = renderHook(() => useImportModal());
 
 			act(() => {
@@ -288,9 +288,9 @@ describe("Modal Hooks", () => {
 		});
 
 		it("should sync state changes across multiple hook instances", () => {
-			const { result: instance1 } = renderHook(() => useShareModal());
-			const { result: instance2 } = renderHook(() => useShareModal());
-			const { result: instance3 } = renderHook(() => useShareModal());
+			const { result: instance1 } = renderHook(() => useExportModal());
+			const { result: instance2 } = renderHook(() => useExportModal());
+			const { result: instance3 } = renderHook(() => useExportModal());
 
 			// Open via first instance
 			act(() => {
@@ -329,7 +329,7 @@ describe("Modal Hooks", () => {
 		});
 
 		it("should handle large numbers of state changes", () => {
-			const { result } = renderHook(() => useShareModal());
+			const { result } = renderHook(() => useExportModal());
 
 			act(() => {
 				for (let i = 0; i < 1000; i++) {
@@ -349,7 +349,7 @@ describe("Modal Hooks", () => {
 		it("should maintain consistent performance with multiple hooks", () => {
 			const hooks: Array<() => ModalHookReturn> = [
 				useCreateCaseModal,
-				useShareModal,
+				useExportModal,
 				usePermissionsModal,
 				useImportModal,
 				useEmailModal,
@@ -441,7 +441,7 @@ describe("Modal Hooks", () => {
 		});
 
 		it("should support cancellation workflow", () => {
-			const { result } = renderHook(() => useShareModal());
+			const { result } = renderHook(() => useExportModal());
 
 			// User opens modal
 			act(() => {
@@ -458,7 +458,7 @@ describe("Modal Hooks", () => {
 
 		it("should support modal chaining workflow", () => {
 			const { result: createModal } = renderHook(() => useCreateCaseModal());
-			const { result: shareModal } = renderHook(() => useShareModal());
+			const { result: shareModal } = renderHook(() => useExportModal());
 
 			// User creates case
 			act(() => {

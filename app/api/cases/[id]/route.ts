@@ -70,12 +70,12 @@ async function fetchCaseFromPrisma(
 		return { error: "Not found", status: 404 };
 	}
 
-	// Fetch the case data
+	// Fetch the case data (exclude soft-deleted cases)
 	// Note: We exclude publishedVersions query because it uses the legacy Django
 	// table with bigint foreign keys that don't match new UUID case IDs.
 	// For case study integration, use the Release model instead.
 	const caseData = await prismaNew.assuranceCase.findUnique({
-		where: { id: caseId },
+		where: { id: caseId, deletedAt: null },
 		include: {
 			elements: {
 				include: {
@@ -411,15 +411,16 @@ export async function PUT(
 }
 
 /**
- * Delete an assurance case
+ * Delete an assurance case (soft-delete)
  *
- * @description Permanently deletes a case and all its elements.
- * Requires ADMIN permission on the case.
+ * @description Moves a case to trash (soft-delete). Cases remain in trash for 30 days
+ * before automatic purge. Requires ADMIN permission on the case.
  *
  * @pathParam id - Case ID (UUID)
  * @response 200 - { success: true }
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (ADMIN required)
+ * @response 404 - Case not found or already deleted
  * @auth bearer
  * @tag Cases
  */
@@ -435,30 +436,16 @@ export async function DELETE(
 
 	const { id } = await params;
 
-	const { prismaNew } = await import("@/lib/prisma");
-	const { getCasePermission } = await import("@/lib/permissions");
+	const { softDeleteCase } = await import("@/lib/services/case-trash-service");
 
-	// Check permission - only ADMIN can delete
-	const permissionResult = await getCasePermission({
-		userId: validated.userId,
-		caseId: id,
-	});
-	if (!permissionResult.hasAccess || permissionResult.permission !== "ADMIN") {
-		return NextResponse.json({ error: "Permission denied" }, { status: 403 });
-	}
+	const result = await softDeleteCase(validated.userId, id);
 
-	try {
-		// Delete case (elements cascade)
-		await prismaNew.assuranceCase.delete({
-			where: { id },
-		});
-
-		return NextResponse.json({ success: true });
-	} catch (error) {
-		console.error("Error deleting case:", error);
+	if (result.error) {
 		return NextResponse.json(
-			{ error: "Failed to delete case" },
-			{ status: 500 }
+			{ error: result.error },
+			{ status: result.status ?? 500 }
 		);
 	}
+
+	return NextResponse.json({ success: true });
 }

@@ -21,6 +21,7 @@ export type SectionType =
 	| "table-of-contents"
 	| "diagram"
 	| "executive-summary"
+	| "assurance-case-structure"
 	| "goals"
 	| "strategies"
 	| "property-claims"
@@ -165,12 +166,18 @@ export type DiagramImage = {
 };
 
 /**
+ * Section overrides to enable/disable specific sections
+ */
+export type SectionOverrides = Record<string, boolean>;
+
+/**
  * Input for template rendering
  */
 export type TemplateInput = {
 	caseData: import("@/lib/schemas/case-export").CaseExportNested;
 	diagramImage?: DiagramImage;
 	exportedBy?: string;
+	sectionOverrides?: SectionOverrides;
 };
 
 /**

@@ -30,9 +30,13 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 
 		if (searchValue !== "") {
 			const result = nodes.filter((node) =>
-				node.data.short_description.toLowerCase().includes(value.toLowerCase())
+				node.data.short_description
+					.toLowerCase()
+					.includes(searchValue.toLowerCase())
 			);
 			setFilteredNodes(result);
+		} else {
+			setFilteredNodes(nodes);
 		}
 	};
 

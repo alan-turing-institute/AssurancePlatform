@@ -22,6 +22,7 @@ export {
 	getTreeDepth,
 	type RenderedElement,
 	renderElementAsBlocks,
+	renderHierarchicalTree,
 	renderTreeAsBlocks,
 	shouldIncludeElement,
 	type TreeRenderOptions,

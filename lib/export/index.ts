@@ -52,7 +52,25 @@ export {
 	type Exporter,
 	ExporterRegistry,
 	exporterRegistry,
+	MarkdownExporter,
+	PDFDocumentComponent,
+	type PDFDocumentProps,
+	PDFExporter,
+	renderBlock,
+	WordExporter,
 } from "./exporters";
+
+// Register exporters with the global registry
+import {
+	exporterRegistry,
+	MarkdownExporter,
+	PDFExporter,
+	WordExporter,
+} from "./exporters";
+
+exporterRegistry.register(new MarkdownExporter());
+exporterRegistry.register(new PDFExporter());
+exporterRegistry.register(new WordExporter());
 
 // Schemas
 export {
@@ -104,6 +122,7 @@ export {
 	getTreeDepth,
 	type RenderedElement,
 	renderElementAsBlocks,
+	renderHierarchicalTree,
 	renderTreeAsBlocks,
 	SUMMARY_CONFIG,
 	SummaryTemplate,

@@ -30,6 +30,7 @@ import type {
 export abstract class BaseTemplate {
 	protected readonly config: TemplateConfig;
 	protected readonly branding: BrandingConfig;
+	protected sectionOverrides: Record<string, boolean> = {};
 
 	constructor(config: TemplateConfig, branding?: Partial<BrandingConfig>) {
 		this.config = config;
@@ -78,7 +79,10 @@ export abstract class BaseTemplate {
 	 * resolves branding, and delegates section rendering to the subclass.
 	 */
 	async render(input: TemplateInput): Promise<RenderedDocument> {
-		const { caseData, diagramImage, exportedBy } = input;
+		const { caseData, diagramImage, exportedBy, sectionOverrides } = input;
+
+		// Store section overrides for use in isSectionEnabled
+		this.sectionOverrides = sectionOverrides ?? {};
 
 		const metadata = this.buildMetadata(caseData, exportedBy);
 		const resolvedBranding = this.buildResolvedBranding();
@@ -158,8 +162,18 @@ export abstract class BaseTemplate {
 
 	/**
 	 * Check if a section is enabled
+	 *
+	 * Section overrides take precedence over template defaults.
+	 * If an override is explicitly set to false, the section is disabled
+	 * regardless of the template configuration.
 	 */
 	protected isSectionEnabled(sectionKey: keyof SectionsConfig): boolean {
+		// Check section overrides first (explicit user preference)
+		if (sectionKey in this.sectionOverrides) {
+			return this.sectionOverrides[sectionKey];
+		}
+
+		// Fall back to template configuration
 		const section = this.sections[sectionKey];
 		return section?.enabled !== false;
 	}

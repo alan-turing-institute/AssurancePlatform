@@ -38,7 +38,7 @@ export const Modal: React.FC<ModalProps> = ({
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				<div>{children}</div>
+				<div className="max-h-[60vh] overflow-y-auto">{children}</div>
 			</DialogContent>
 		</Dialog>
 	);

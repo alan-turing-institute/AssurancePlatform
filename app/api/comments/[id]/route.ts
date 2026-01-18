@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { validateSession } from "@/lib/auth/validate-session";
-import { authOptions } from "@/lib/auth-options";
 
 type CommentWithElement = {
 	id: string;
@@ -19,7 +17,7 @@ type CommentWithElement = {
 };
 
 type AuthResult =
-	| { success: true; userId: string }
+	| { success: true; userId: string; username: string }
 	| { success: false; response: NextResponse };
 
 type CommentResult =
@@ -33,6 +31,7 @@ type CommentResult =
 
 /**
  * Validates session using the unified validateSession wrapper.
+ * Returns userId and username to avoid duplicate session calls.
  */
 async function validateAuth(): Promise<AuthResult> {
 	const validated = await validateSession();
@@ -44,7 +43,11 @@ async function validateAuth(): Promise<AuthResult> {
 		};
 	}
 
-	return { success: true, userId: validated.userId };
+	return {
+		success: true,
+		userId: validated.userId,
+		username: validated.username || validated.email || "Someone",
+	};
 }
 
 /**
@@ -135,8 +138,6 @@ export async function DELETE(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
-		const session = await getServerSession(authOptions);
-		const username = session?.user?.name || session?.user?.email || "Someone";
 		emitSSEEvent(
 			"comment:deleted",
 			commentResult.caseId,
@@ -144,7 +145,7 @@ export async function DELETE(
 				commentId,
 				elementId: commentResult.comment.elementId,
 				elementName: commentResult.elementName,
-				username,
+				username: authResult.username,
 			},
 			authResult.userId
 		);
@@ -213,8 +214,6 @@ export async function PUT(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
-		const session = await getServerSession(authOptions);
-		const username = session?.user?.name || session?.user?.email || "Someone";
 		emitSSEEvent(
 			"comment:updated",
 			commentResult.caseId,
@@ -222,7 +221,7 @@ export async function PUT(
 				comment: response,
 				elementId: commentResult.comment.elementId,
 				elementName: commentResult.elementName,
-				username,
+				username: authResult.username,
 			},
 			authResult.userId
 		);
@@ -310,8 +309,6 @@ export async function PATCH(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
-		const session = await getServerSession(authOptions);
-		const username = session?.user?.name || session?.user?.email || "Someone";
 		emitSSEEvent(
 			"comment:updated",
 			commentResult.caseId,
@@ -319,7 +316,7 @@ export async function PATCH(
 				comment: response,
 				elementId: commentResult.comment.elementId,
 				elementName: commentResult.elementName,
-				username,
+				username: authResult.username,
 			},
 			authResult.userId
 		);

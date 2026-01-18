@@ -1,0 +1,881 @@
+/**
+ * Reusable PDF components for react-pdf/renderer.
+ *
+ * These components map ContentBlock types to PDF-renderable elements
+ * with consistent styling based on BrandingConfig.
+ *
+ * @fileoverview Static PDF rendering - array indices as keys are safe since
+ * content is never reordered or mutated after render.
+ */
+
+/* biome-ignore-all lint/suspicious/noArrayIndexKey: Static PDF content is never reordered */
+
+import {
+	Document,
+	Image,
+	Link,
+	Page,
+	StyleSheet,
+	Text,
+	View,
+} from "@react-pdf/renderer";
+import type { TreeNode } from "@/lib/schemas/case-export";
+import type {
+	ContentBlock,
+	RenderedDocument,
+	RenderedSection,
+	ResolvedBranding,
+} from "../types";
+import { getElementTitle } from "../utils";
+
+/**
+ * Create styles based on branding configuration.
+ */
+function createStyles(branding: ResolvedBranding) {
+	return StyleSheet.create({
+		page: {
+			padding: 40,
+			fontSize: 11,
+			fontFamily: "Helvetica",
+			lineHeight: 1.5,
+		},
+		// Landscape page for diagrams - reduced padding to maximise image space
+		landscapePage: {
+			padding: 30,
+			fontSize: 11,
+			fontFamily: "Helvetica",
+			lineHeight: 1.5,
+		},
+		header: {
+			marginBottom: 20,
+		},
+		footer: {
+			position: "absolute",
+			bottom: 30,
+			left: 40,
+			right: 40,
+			fontSize: 9,
+			color: "#666666",
+			flexDirection: "row",
+			justifyContent: "space-between",
+			alignItems: "center",
+		},
+		// Footer for landscape pages
+		landscapeFooter: {
+			position: "absolute",
+			bottom: 20,
+			left: 30,
+			right: 30,
+			fontSize: 9,
+			color: "#666666",
+			flexDirection: "row",
+			justifyContent: "space-between",
+			alignItems: "center",
+		},
+		// Footer branding container (logo + text)
+		footerBranding: {
+			flexDirection: "row",
+			alignItems: "center",
+			gap: 8,
+		},
+		footerLogo: {
+			width: 60,
+			height: "auto",
+		},
+		// Title page styles
+		titlePage: {
+			flex: 1,
+			justifyContent: "center",
+			alignItems: "center",
+		},
+		titlePageTitle: {
+			fontSize: 28,
+			fontFamily: "Helvetica-Bold",
+			marginBottom: 16,
+			textAlign: "center",
+			color: branding.primaryColour,
+		},
+		titlePageDescription: {
+			fontSize: 14,
+			textAlign: "center",
+			color: "#666666",
+			maxWidth: 400,
+			marginBottom: 40,
+		},
+		titlePageMeta: {
+			fontSize: 10,
+			color: "#999999",
+			textAlign: "center",
+		},
+		// Heading styles
+		h1: {
+			fontSize: 24,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 20,
+			marginBottom: 12,
+			color: branding.primaryColour,
+		},
+		h2: {
+			fontSize: 18,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 16,
+			marginBottom: 10,
+			color: branding.primaryColour,
+		},
+		h3: {
+			fontSize: 14,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 12,
+			marginBottom: 8,
+		},
+		h4: {
+			fontSize: 12,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 10,
+			marginBottom: 6,
+		},
+		h5: {
+			fontSize: 11,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 8,
+			marginBottom: 4,
+		},
+		h6: {
+			fontSize: 10,
+			fontFamily: "Helvetica-Bold",
+			marginTop: 6,
+			marginBottom: 4,
+		},
+		// Content styles
+		paragraph: {
+			marginBottom: 8,
+		},
+		list: {
+			marginBottom: 8,
+			marginLeft: 16,
+		},
+		listItem: {
+			flexDirection: "row",
+			marginBottom: 4,
+		},
+		listBullet: {
+			width: 16,
+		},
+		listContent: {
+			flex: 1,
+		},
+		// Table styles
+		table: {
+			marginBottom: 12,
+			borderWidth: 1,
+			borderColor: "#e5e7eb",
+		},
+		tableRow: {
+			flexDirection: "row",
+			borderBottomWidth: 1,
+			borderBottomColor: "#e5e7eb",
+		},
+		tableHeaderRow: {
+			flexDirection: "row",
+			backgroundColor: branding.primaryColour,
+			borderBottomWidth: 1,
+			borderBottomColor: "#e5e7eb",
+		},
+		tableCell: {
+			flex: 1,
+			padding: 6,
+			fontSize: 10,
+		},
+		tableHeaderCell: {
+			flex: 1,
+			padding: 6,
+			fontSize: 10,
+			fontFamily: "Helvetica-Bold",
+			color: "#ffffff",
+		},
+		// Divider
+		divider: {
+			borderBottomWidth: 1,
+			borderBottomColor: "#e5e7eb",
+			marginVertical: 16,
+		},
+		// Image styles
+		image: {
+			maxWidth: "100%",
+			marginBottom: 8,
+		},
+		imageCaption: {
+			fontSize: 9,
+			color: "#666666",
+			textAlign: "center",
+			marginBottom: 12,
+		},
+		// Diagram page styles (landscape, full-page diagram)
+		diagramPageContainer: {
+			flex: 1,
+			justifyContent: "flex-start",
+			alignItems: "center",
+		},
+		diagramPageTitle: {
+			fontSize: 18,
+			fontFamily: "Helvetica-Bold",
+			marginBottom: 16,
+			textAlign: "center",
+		},
+		diagramImage: {
+			maxWidth: "100%",
+			maxHeight: "85%",
+			objectFit: "contain",
+		},
+		diagramCaption: {
+			fontSize: 10,
+			color: "#666666",
+			textAlign: "center",
+			marginTop: 12,
+		},
+		// Metadata styles
+		metadata: {
+			flexDirection: "row",
+			marginBottom: 4,
+		},
+		metadataKey: {
+			fontFamily: "Helvetica-Bold",
+			marginRight: 8,
+		},
+		metadataValue: {
+			flex: 1,
+		},
+		// Element styles - base style
+		element: {
+			marginBottom: 16,
+			paddingLeft: 8,
+			borderLeftWidth: 3,
+			borderLeftColor: branding.primaryColour,
+		},
+		// Depth-based indentation styles
+		elementDepth0: {
+			marginBottom: 16,
+			paddingLeft: 8,
+			borderLeftWidth: 3,
+			borderLeftColor: "#ff1493", // Goal - magenta
+		},
+		elementDepth1: {
+			marginBottom: 16,
+			paddingLeft: 24,
+			borderLeftWidth: 3,
+			borderLeftColor: "#4169e1", // Strategy - royal blue
+		},
+		elementDepth2: {
+			marginBottom: 16,
+			paddingLeft: 40,
+			borderLeftWidth: 3,
+			borderLeftColor: "#1e3a5f", // Claim - dark blue
+		},
+		elementDepth3: {
+			marginBottom: 16,
+			paddingLeft: 56,
+			borderLeftWidth: 3,
+			borderLeftColor: "#228b22", // Evidence - forest green
+		},
+		// Element type colour overrides
+		elementGoal: { borderLeftColor: "#ff1493" }, // Magenta
+		elementStrategy: { borderLeftColor: "#4169e1" }, // Royal blue
+		elementPropertyClaim: { borderLeftColor: "#1e3a5f" }, // Dark blue
+		elementEvidence: { borderLeftColor: "#228b22" }, // Forest green
+		elementTitle: {
+			fontSize: 12,
+			fontFamily: "Helvetica-Bold",
+			marginBottom: 4,
+		},
+		elementDescription: {
+			marginBottom: 6,
+		},
+		elementField: {
+			marginBottom: 4,
+		},
+		elementFieldLabel: {
+			fontFamily: "Helvetica-Bold",
+			fontSize: 10,
+		},
+		elementFieldValue: {
+			fontSize: 10,
+			color: "#444444",
+		},
+		draftBadge: {
+			fontSize: 9,
+			color: "#f59e0b",
+			fontFamily: "Helvetica-Oblique",
+		},
+		link: {
+			color: branding.primaryColour,
+			textDecoration: "underline",
+		},
+		// Comment styles
+		comment: {
+			marginLeft: 16,
+			marginBottom: 8,
+			paddingLeft: 8,
+			borderLeftWidth: 2,
+			borderLeftColor: "#e5e7eb",
+		},
+		commentAuthor: {
+			fontSize: 10,
+			fontFamily: "Helvetica-Bold",
+		},
+		commentContent: {
+			fontSize: 10,
+			color: "#666666",
+		},
+	});
+}
+
+type PDFStyles = ReturnType<typeof createStyles>;
+
+/**
+ * Render a heading block.
+ */
+function PDFHeading({
+	level,
+	text,
+	styles,
+}: {
+	level: number;
+	text: string;
+	styles: PDFStyles;
+}) {
+	const styleMap = {
+		1: styles.h1,
+		2: styles.h2,
+		3: styles.h3,
+		4: styles.h4,
+		5: styles.h5,
+		6: styles.h6,
+	} as const;
+	const clampedLevel = Math.min(level, 6) as keyof typeof styleMap;
+	const style = styleMap[clampedLevel] ?? styles.h6;
+	return <Text style={style}>{text}</Text>;
+}
+
+/**
+ * Render a paragraph block.
+ */
+function PDFParagraph({ text, styles }: { text: string; styles: PDFStyles }) {
+	if (!text.trim()) {
+		return null;
+	}
+	return <Text style={styles.paragraph}>{text}</Text>;
+}
+
+/**
+ * Render a list block.
+ */
+function PDFList({
+	ordered,
+	items,
+	styles,
+}: {
+	ordered: boolean;
+	items: string[];
+	styles: PDFStyles;
+}) {
+	if (items.length === 0) {
+		return null;
+	}
+	return (
+		<View style={styles.list}>
+			{items.map((item, index) => (
+				<View key={`list-item-${index}`} style={styles.listItem}>
+					<Text style={styles.listBullet}>
+						{ordered ? `${index + 1}.` : "\u2022"}
+					</Text>
+					<Text style={styles.listContent}>{item}</Text>
+				</View>
+			))}
+		</View>
+	);
+}
+
+/**
+ * Render a table block.
+ */
+function PDFTable({
+	headers,
+	rows,
+	styles,
+}: {
+	headers: string[];
+	rows: string[][];
+	styles: PDFStyles;
+}) {
+	if (headers.length === 0) {
+		return null;
+	}
+	return (
+		<View style={styles.table}>
+			<View style={styles.tableHeaderRow}>
+				{headers.map((header, index) => (
+					<Text key={`header-${index}`} style={styles.tableHeaderCell}>
+						{header}
+					</Text>
+				))}
+			</View>
+			{rows.map((row, rowIndex) => (
+				<View key={`row-${rowIndex}`} style={styles.tableRow}>
+					{headers.map((_, cellIndex) => (
+						<Text
+							key={`cell-${rowIndex}-${cellIndex}`}
+							style={styles.tableCell}
+						>
+							{row[cellIndex] ?? ""}
+						</Text>
+					))}
+				</View>
+			))}
+		</View>
+	);
+}
+
+/**
+ * Format image source for PDF rendering.
+ *
+ * Converts raw base64 data to proper data URLs that react-pdf can render.
+ */
+function formatImageSrc(src: string): string {
+	// Already a URL or data URL - pass through
+	if (
+		src.startsWith("http://") ||
+		src.startsWith("https://") ||
+		src.startsWith("data:")
+	) {
+		return src;
+	}
+
+	// Detect base64 images by their signatures and add data URL prefix
+	if (src.startsWith("iVBORw0KGgo")) {
+		// PNG signature
+		return `data:image/png;base64,${src}`;
+	}
+	if (src.startsWith("/9j/")) {
+		// JPEG signature
+		return `data:image/jpeg;base64,${src}`;
+	}
+	if (src.startsWith("PHN2Zy") || src.startsWith("PD94bW")) {
+		// SVG or SVG with XML declaration
+		return `data:image/svg+xml;base64,${src}`;
+	}
+
+	// Unknown format, return as-is
+	return src;
+}
+
+/**
+ * Render an image block.
+ */
+function PDFImage({
+	src,
+	alt,
+	caption,
+	styles,
+}: {
+	src: string;
+	alt: string;
+	caption?: string;
+	styles: PDFStyles;
+}) {
+	if (!src) {
+		return <Text style={styles.imageCaption}>[Image: {alt}]</Text>;
+	}
+
+	const formattedSrc = formatImageSrc(src);
+
+	return (
+		<View>
+			<Image src={formattedSrc} style={styles.image} />
+			{caption && <Text style={styles.imageCaption}>{caption}</Text>}
+		</View>
+	);
+}
+
+/**
+ * Render a divider block.
+ */
+function PDFDivider({ styles }: { styles: PDFStyles }) {
+	return <View style={styles.divider} />;
+}
+
+/**
+ * Render a metadata block.
+ */
+function PDFMetadata({
+	keyName,
+	value,
+	styles,
+}: {
+	keyName: string;
+	value: string;
+	styles: PDFStyles;
+}) {
+	return (
+		<View style={styles.metadata}>
+			<Text style={styles.metadataKey}>{keyName}:</Text>
+			<Text style={styles.metadataValue}>{value}</Text>
+		</View>
+	);
+}
+
+/**
+ * Render context list for an element.
+ */
+function PDFContextList({
+	context,
+	styles,
+}: {
+	context: string[];
+	styles: PDFStyles;
+}) {
+	return (
+		<View style={styles.elementField}>
+			<Text style={styles.elementFieldLabel}>Context:</Text>
+			{context.map((ctx, index) => (
+				<Text key={`ctx-${index}`} style={styles.elementFieldValue}>
+					{"\u2022"} {ctx}
+				</Text>
+			))}
+		</View>
+	);
+}
+
+/**
+ * Render comments for an element.
+ */
+function PDFCommentsList({
+	comments,
+	styles,
+}: {
+	comments: Array<{ author: string; content: string; createdAt: string }>;
+	styles: PDFStyles;
+}) {
+	return (
+		<View style={styles.elementField}>
+			<Text style={styles.elementFieldLabel}>Comments:</Text>
+			{comments.map((comment, index) => (
+				<View key={`comment-${index}`} style={styles.comment}>
+					<Text style={styles.commentAuthor}>
+						{comment.author}
+						{comment.createdAt &&
+							` (${new Date(comment.createdAt).toLocaleDateString("en-GB")})`}
+					</Text>
+					<Text style={styles.commentContent}>{comment.content}</Text>
+				</View>
+			))}
+		</View>
+	);
+}
+
+/**
+ * Get element type colour style based on node type.
+ */
+function getElementTypeColour(
+	nodeType: string,
+	styles: PDFStyles
+): { borderLeftColor: string } | undefined {
+	const typeColourMap: Record<string, { borderLeftColor: string }> = {
+		GOAL: styles.elementGoal,
+		STRATEGY: styles.elementStrategy,
+		PROPERTY_CLAIM: styles.elementPropertyClaim,
+		EVIDENCE: styles.elementEvidence,
+	};
+	return typeColourMap[nodeType];
+}
+
+/**
+ * Render an element block with visual hierarchy.
+ */
+function PDFElement({
+	node,
+	depth,
+	styles,
+}: {
+	node: TreeNode;
+	depth: number;
+	styles: PDFStyles;
+}) {
+	const title = getElementTitle(node);
+
+	// Get depth-based indentation style (capped at depth 3)
+	const depthKey = `elementDepth${Math.min(depth, 3)}` as keyof PDFStyles;
+	const baseStyle = styles[depthKey] ?? styles.element;
+
+	// Get element type colour override
+	const typeColour = getElementTypeColour(node.type, styles);
+
+	// Combine base style with type-specific colour
+	const combinedStyle = typeColour ? [baseStyle, typeColour] : baseStyle;
+
+	return (
+		<View style={combinedStyle}>
+			<Text style={styles.elementTitle}>{title}</Text>
+
+			{node.description && (
+				<Text style={styles.elementDescription}>{node.description}</Text>
+			)}
+
+			{node.context && node.context.length > 0 && (
+				<PDFContextList context={node.context} styles={styles} />
+			)}
+
+			{node.assumption && (
+				<View style={styles.elementField}>
+					<Text style={styles.elementFieldLabel}>Assumption:</Text>
+					<Text style={styles.elementFieldValue}>{node.assumption}</Text>
+				</View>
+			)}
+
+			{node.justification && (
+				<View style={styles.elementField}>
+					<Text style={styles.elementFieldLabel}>Justification:</Text>
+					<Text style={styles.elementFieldValue}>{node.justification}</Text>
+				</View>
+			)}
+
+			{node.url && (
+				<View style={styles.elementField}>
+					<Text style={styles.elementFieldLabel}>URL:</Text>
+					<Link src={node.url} style={styles.link}>
+						<Text>{node.url}</Text>
+					</Link>
+				</View>
+			)}
+
+			{node.inSandbox && <Text style={styles.draftBadge}>[Draft]</Text>}
+
+			{node.comments && node.comments.length > 0 && (
+				<PDFCommentsList comments={node.comments} styles={styles} />
+			)}
+		</View>
+	);
+}
+
+/**
+ * Render a content block to PDF components.
+ */
+export function renderBlock(block: ContentBlock, styles: PDFStyles) {
+	switch (block.type) {
+		case "heading":
+			return (
+				<PDFHeading level={block.level} styles={styles} text={block.text} />
+			);
+		case "paragraph":
+			return <PDFParagraph styles={styles} text={block.text} />;
+		case "list":
+			return (
+				<PDFList items={block.items} ordered={block.ordered} styles={styles} />
+			);
+		case "table":
+			return (
+				<PDFTable headers={block.headers} rows={block.rows} styles={styles} />
+			);
+		case "image":
+			return (
+				<PDFImage
+					alt={block.alt}
+					caption={block.caption}
+					src={block.src}
+					styles={styles}
+				/>
+			);
+		case "divider":
+			return <PDFDivider styles={styles} />;
+		case "metadata":
+			return (
+				<PDFMetadata keyName={block.key} styles={styles} value={block.value} />
+			);
+		case "element":
+			return (
+				<PDFElement depth={block.depth} node={block.node} styles={styles} />
+			);
+		default:
+			return null;
+	}
+}
+
+/**
+ * Render footer branding with logo only (no text).
+ */
+function PDFFooterBranding({
+	branding,
+	styles,
+}: {
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	// Show logo if available, otherwise fall back to text
+	if (branding.logoBase64) {
+		return <Image src={branding.logoBase64} style={styles.footerLogo} />;
+	}
+	return <Text>{branding.footerText}</Text>;
+}
+
+/**
+ * Render a section to PDF components.
+ */
+function PDFSection({
+	section,
+	styles,
+}: {
+	section: RenderedSection;
+	styles: PDFStyles;
+}) {
+	if (section.blocks.length === 0) {
+		return null;
+	}
+
+	return (
+		<View>
+			{section.type !== "title-page" && section.title && (
+				<Text style={styles.h2}>{section.title}</Text>
+			)}
+			{section.blocks.map((block, index) => (
+				<View key={`block-${section.type}-${index}`}>
+					{renderBlock(block, styles)}
+				</View>
+			))}
+		</View>
+	);
+}
+
+/**
+ * Render the title page.
+ */
+function PDFTitlePage({
+	document,
+	styles,
+}: {
+	document: RenderedDocument;
+	styles: PDFStyles;
+}) {
+	return (
+		<Page size="A4" style={styles.page}>
+			<View style={styles.titlePage}>
+				<Text style={styles.titlePageTitle}>{document.metadata.caseName}</Text>
+				{document.metadata.caseDescription && (
+					<Text style={styles.titlePageDescription}>
+						{document.metadata.caseDescription}
+					</Text>
+				)}
+				<Text style={styles.titlePageMeta}>
+					Exported:{" "}
+					{new Date(document.metadata.exportedAt).toLocaleDateString("en-GB")}
+				</Text>
+			</View>
+			<View style={styles.footer}>
+				<PDFFooterBranding branding={document.branding} styles={styles} />
+			</View>
+		</Page>
+	);
+}
+
+/**
+ * Props for the PDF document component.
+ */
+export type PDFDocumentProps = {
+	document: RenderedDocument;
+};
+
+/**
+ * Render a diagram section on its own landscape page.
+ */
+function PDFDiagramPage({
+	section,
+	branding,
+	styles,
+}: {
+	section: RenderedSection;
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	// Find the image block in the section
+	const imageBlock = section.blocks.find((b) => b.type === "image") as
+		| { type: "image"; src: string; alt: string; caption?: string }
+		| undefined;
+
+	if (!imageBlock) {
+		return null;
+	}
+
+	const formattedSrc = formatImageSrc(imageBlock.src);
+
+	return (
+		<Page orientation="landscape" size="A4" style={styles.landscapePage}>
+			<View style={styles.diagramPageContainer}>
+				<Text style={styles.diagramPageTitle}>{section.title}</Text>
+				<Image src={formattedSrc} style={styles.diagramImage} />
+				{imageBlock.caption && (
+					<Text style={styles.diagramCaption}>{imageBlock.caption}</Text>
+				)}
+			</View>
+			<View fixed style={styles.landscapeFooter}>
+				<PDFFooterBranding branding={branding} styles={styles} />
+				<Text
+					render={({ pageNumber, totalPages }) =>
+						`Page ${pageNumber} of ${totalPages}`
+					}
+				/>
+			</View>
+		</Page>
+	);
+}
+
+/**
+ * Main PDF document component.
+ */
+export function PDFDocumentComponent({ document }: PDFDocumentProps) {
+	const styles = createStyles(document.branding);
+
+	// Separate diagram sections from other content
+	const diagramSections = document.sections.filter((s) => s.type === "diagram");
+	const contentSections = document.sections.filter(
+		(s) => s.type !== "title-page" && s.type !== "diagram"
+	);
+
+	return (
+		<Document
+			author={document.metadata.exportedBy ?? "TEA Platform"}
+			creator="TEA Platform"
+			subject={document.metadata.caseDescription}
+			title={document.metadata.caseName}
+		>
+			{/* Title Page */}
+			<PDFTitlePage document={document} styles={styles} />
+
+			{/* Diagram Pages (landscape, one per diagram) */}
+			{diagramSections.map((section, index) => (
+				<PDFDiagramPage
+					branding={document.branding}
+					key={`diagram-${index}`}
+					section={section}
+					styles={styles}
+				/>
+			))}
+
+			{/* Content Pages (portrait) */}
+			<Page size="A4" style={styles.page}>
+				{contentSections.map((section, index) => (
+					<PDFSection
+						key={`section-${section.type}-${index}`}
+						section={section}
+						styles={styles}
+					/>
+				))}
+				<View fixed style={styles.footer}>
+					<PDFFooterBranding branding={document.branding} styles={styles} />
+					<Text
+						render={({ pageNumber, totalPages }) =>
+							`Page ${pageNumber} of ${totalPages}`
+						}
+					/>
+				</View>
+			</Page>
+		</Document>
+	);
+}
