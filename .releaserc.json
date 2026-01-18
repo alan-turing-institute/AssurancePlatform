@@ -55,7 +55,7 @@
       "@semantic-release/changelog",
       {
         "changelogFile": "CHANGELOG.md",
-        "changelogTitle": "# TEA Platform Changelog\n\nAll notable changes to the TEA Platform will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
+        "changelogTitle": "---\nsidebar_position: 3\ntitle: \"Changelog\"\ndescription: \"Complete version history and release notes for the TEA Platform\"\n---\n\n# Changelog\n\nAll notable changes to the TEA Platform will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
       }
     ],
     [
