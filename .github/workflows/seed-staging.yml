@@ -11,7 +11,6 @@ on:
 jobs:
   seed:
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - name: Checkout code
@@ -29,6 +28,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
         run: npx prisma generate
 
       - name: Run seed script
