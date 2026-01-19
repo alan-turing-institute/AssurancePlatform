@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Code2,
 	Download,
 	Group,
 	Info,
@@ -11,6 +12,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
 import useStore from "@/data/store";
@@ -20,6 +22,7 @@ import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./case-notes";
+import JsonViewPanel from "./json-view-panel";
 
 type ActionButtonProps = {
 	showCreateGoal: boolean;
@@ -38,16 +41,20 @@ const ActionButtons = ({
 	const [alertOpen, setAlertOpen] = useState(false);
 	const [notesOpen, setNotesOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [jsonViewOpen, setJsonViewOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	const { assuranceCase } = useStore();
 	const router = useRouter();
+	const { data: session } = useSession();
 
 	const { onLayout } = actions;
 
 	const caseSharingModal = useCaseSharingModal();
 	const exportModal = useExportModal();
 	const resourcesModal = useResourcesModal();
+
+	const userId = session?.user?.id ?? "";
 
 	const onDelete = async () => {
 		if (!assuranceCase) {
@@ -184,6 +191,16 @@ const ActionButtons = ({
 							</button>
 						</ActionTooltip>
 					)}
+					<ActionTooltip label="JSON View">
+						<button
+							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							onClick={() => setJsonViewOpen(true)}
+							type="button"
+						>
+							<Code2 className="h-5 w-5" />
+							<span className="sr-only">JSON View</span>
+						</button>
+					</ActionTooltip>
 					<ActionTooltip label="Notes">
 						<button
 							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
@@ -209,6 +226,11 @@ const ActionButtons = ({
 				</div>
 				<NodeCreate isOpen={open} setOpen={setOpen} />
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
+				<JsonViewPanel
+					isOpen={jsonViewOpen}
+					onClose={() => setJsonViewOpen(false)}
+					userId={userId}
+				/>
 				<AlertModal
 					confirmButtonText={"Move to Trash"}
 					isOpen={deleteOpen}
