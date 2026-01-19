@@ -617,7 +617,7 @@ async function main() {
 	console.log("    - Alice's Case (alice, Draft, team shared)");
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
 	console.log("  - 2 comments on Medium Case");
-	console.log("\nLogin credentials are in prisma/seed/.credentials");
+	console.log("\nLogin with any test user using the SEED_USER_PASSWORD");
 }
 
 main()
