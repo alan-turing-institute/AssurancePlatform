@@ -63,6 +63,8 @@ ENV DATABASE_URL=${DATABASE_URL}
 # Dummy DATABASE_URL is needed at build time for Prisma config and Next.js static analysis
 # The actual URL is provided at runtime via Azure environment variables
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+# Increase Node.js memory limit for Next.js build (Nextra compilation requires more memory)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npx prisma generate && corepack enable pnpm && pnpm build
 
 # 3. Production image, copy all the files and run next
@@ -72,9 +74,6 @@ WORKDIR /app
 RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
-
-# Install Prisma CLI for runtime migrations
-RUN npm install -g prisma@7.0.0 && npm install prisma@7.0.0
 
 COPY --from=builder --link /app/public ./public
 
@@ -87,6 +86,12 @@ COPY --from=builder --link --chown=1001:1001 /app/.next/static ./.next/static
 COPY --from=builder --link --chown=1001:1001 /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --link --chown=1001:1001 /app/prisma/migrations ./prisma/migrations
 COPY --from=builder --link --chown=1001:1001 /app/prisma.config.ts ./prisma.config.ts
+
+# Install Prisma CLI for runtime migrations
+# Install to /opt/prisma to avoid conflicts with Next.js standalone node_modules
+# Also install dotenv required by prisma.config.ts
+RUN mkdir -p /opt/prisma && cd /opt/prisma && npm init -y && npm install prisma@7.0.0 dotenv && \
+    chown -R nextjs:nodejs /opt/prisma
 
 # Copy and set up entrypoint script
 COPY --link --chown=1001:1001 scripts/docker-entrypoint.sh ./docker-entrypoint.sh
