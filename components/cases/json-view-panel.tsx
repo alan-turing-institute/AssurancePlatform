@@ -1,11 +1,10 @@
 "use client";
 
 import { json } from "@codemirror/lang-json";
+import { linter } from "@codemirror/lint";
 import CodeMirror from "@uiw/react-codemirror";
-import { Check, Copy } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Sheet,
 	SheetContent,
@@ -15,8 +14,18 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import useStore from "@/data/store";
+import { useJsonValidation } from "@/hooks/use-json-validation";
+import { addHiddenProp } from "@/lib/case";
+import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
+import {
+	computeTreeDiff,
+	type ElementChange,
+	type TreeDiffResult,
+} from "@/lib/services/json-diff-service";
 import { useToast } from "@/lib/toast";
+import type { AssuranceCase } from "@/types";
+import { JsonEditorToolbar } from "./json-editor-toolbar";
 
 type JsonViewPanelProps = {
 	isOpen: boolean;
@@ -24,11 +33,96 @@ type JsonViewPanelProps = {
 	userId: string;
 };
 
+type BatchUpdateResult =
+	| {
+			success: true;
+			summary: { created: number; updated: number; deleted: number };
+	  }
+	| { success: false; error: string; conflictDetected?: boolean };
+
 /**
  * Formats JSON with 2-space indentation for readability.
  */
 function formatJson(data: unknown): string {
 	return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Fetches the updated case data and transforms it for the Zustand store.
+ */
+async function fetchAndTransformCase(
+	caseId: string
+): Promise<AssuranceCase | null> {
+	const response = await fetch(`/api/cases/${caseId}`);
+	if (!response.ok) {
+		return null;
+	}
+	const caseData = await response.json();
+	return (await addHiddenProp(caseData)) as AssuranceCase;
+}
+
+/**
+ * Sends batch update to the API.
+ */
+async function sendBatchUpdate(
+	caseId: string,
+	changes: ElementChange[],
+	expectedVersion: string
+): Promise<BatchUpdateResult> {
+	const response = await fetch(`/api/cases/${caseId}/batch`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ changes, expectedVersion }),
+	});
+
+	const result = await response.json();
+
+	if (!response.ok) {
+		return {
+			success: false,
+			error: result.error || "An error occurred",
+			conflictDetected: result.conflictDetected,
+		};
+	}
+
+	return { success: true, summary: result.summary };
+}
+
+/**
+ * Handles the result of a batch update - shows toast and updates state.
+ */
+function handleBatchResult(
+	result: BatchUpdateResult,
+	callbacks: {
+		onConflict: () => void;
+		onSuccess: (summary: {
+			created: number;
+			updated: number;
+			deleted: number;
+		}) => void;
+		showToast: (opts: {
+			variant?: "destructive";
+			title: string;
+			description: string;
+		}) => void;
+	}
+): boolean {
+	if (!result.success) {
+		if (result.conflictDetected) {
+			callbacks.onConflict();
+		}
+		const title = result.conflictDetected
+			? "Conflict detected"
+			: "Failed to apply changes";
+		const description = result.conflictDetected
+			? "The case was modified by another user. Refresh to see the latest changes."
+			: result.error;
+		callbacks.showToast({ variant: "destructive", title, description });
+		return false;
+	}
+
+	callbacks.onSuccess(result.summary);
+	return true;
 }
 
 /**
@@ -50,13 +144,46 @@ function JsonLoadingSkeleton() {
 }
 
 const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
-	const { assuranceCase } = useStore();
+	const { assuranceCase, setAssuranceCase } = useStore();
 	const { resolvedTheme } = useTheme();
 	const { toast } = useToast();
 
-	const [jsonContent, setJsonContent] = useState<string>("");
+	// Server content (original from database)
+	const [serverContent, setServerContent] = useState<string>("");
+	const [serverData, setServerData] = useState<CaseExportNested | null>(null);
+	const [serverVersion, setServerVersion] = useState<string>("");
+
+	// Draft content (user's edits)
+	const [draftContent, setDraftContent] = useState<string>("");
+
+	// UI state
 	const [loading, setLoading] = useState(false);
 	const [copied, setCopied] = useState(false);
+	const [isApplying, setIsApplying] = useState(false);
+	const [hasConflict, setHasConflict] = useState(false);
+
+	// Track if panel was just opened
+	const justOpenedRef = useRef(false);
+
+	// Validation
+	const validation = useJsonValidation(draftContent);
+
+	// Compute diff when validation passes
+	const diffResult: TreeDiffResult | null = useMemo(() => {
+		if (!(validation.isValid && validation.parsedData && serverData)) {
+			return null;
+		}
+		return computeTreeDiff(serverData, validation.parsedData);
+	}, [validation.isValid, validation.parsedData, serverData]);
+
+	// Is the content different from server?
+	const isDirty = draftContent !== serverContent;
+
+	// Create lint extension from validation diagnostics
+	const lintExtension = useMemo(
+		() => linter(() => validation.diagnostics),
+		[validation.diagnostics]
+	);
 
 	const fetchJson = useCallback(async () => {
 		if (!assuranceCase?.id) {
@@ -80,7 +207,11 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 			}
 
 			const formatted = formatJson(result.data);
-			setJsonContent(formatted);
+			setServerContent(formatted);
+			setServerData(result.data);
+			setServerVersion(result.data.exportedAt);
+			setDraftContent(formatted);
+			setHasConflict(false);
 		} catch (error) {
 			toast({
 				variant: "destructive",
@@ -96,13 +227,27 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 	// Fetch JSON when panel opens
 	useEffect(() => {
 		if (isOpen) {
+			justOpenedRef.current = true;
 			fetchJson();
 		}
 	}, [isOpen, fetchJson]);
 
+	// Handle external case updates (SSE events)
+	useEffect(() => {
+		if (!isOpen || justOpenedRef.current) {
+			justOpenedRef.current = false;
+			return;
+		}
+
+		// If case is updated externally and we have dirty changes, show conflict
+		if (isDirty && assuranceCase?.updatedOn) {
+			setHasConflict(true);
+		}
+	}, [isOpen, isDirty, assuranceCase?.updatedOn]);
+
 	const handleCopy = useCallback(async () => {
 		try {
-			await navigator.clipboard.writeText(jsonContent);
+			await navigator.clipboard.writeText(draftContent);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
@@ -112,7 +257,79 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 				description: "Could not copy to clipboard",
 			});
 		}
-	}, [jsonContent, toast]);
+	}, [draftContent, toast]);
+
+	const handleDiscard = useCallback(() => {
+		setDraftContent(serverContent);
+		setHasConflict(false);
+	}, [serverContent]);
+
+	const handleRefresh = useCallback(() => {
+		fetchJson();
+	}, [fetchJson]);
+
+	const handleApply = useCallback(async () => {
+		const caseId = assuranceCase?.id;
+		const hasChanges = diffResult && diffResult.changes.length > 0;
+
+		if (!(caseId && hasChanges)) {
+			return;
+		}
+
+		setIsApplying(true);
+
+		try {
+			const result = await sendBatchUpdate(
+				caseId,
+				diffResult.changes,
+				serverVersion
+			);
+
+			const success = handleBatchResult(result, {
+				onConflict: () => setHasConflict(true),
+				onSuccess: ({ created, updated, deleted }) => {
+					toast({
+						title: "Changes applied",
+						description: `${created} created, ${updated} updated, ${deleted} deleted`,
+					});
+				},
+				showToast: toast,
+			});
+
+			if (!success) {
+				return;
+			}
+
+			// Refetch the case data to update the diagram immediately
+			const updatedCase = await fetchAndTransformCase(caseId);
+			if (updatedCase) {
+				setAssuranceCase(updatedCase);
+			}
+
+			// Refresh JSON editor to sync with server state
+			await fetchJson();
+		} catch (error) {
+			toast({
+				variant: "destructive",
+				title: "Failed to apply changes",
+				description:
+					error instanceof Error ? error.message : "An error occurred",
+			});
+		} finally {
+			setIsApplying(false);
+		}
+	}, [
+		assuranceCase?.id,
+		diffResult,
+		serverVersion,
+		toast,
+		fetchJson,
+		setAssuranceCase,
+	]);
+
+	const handleContentChange = useCallback((value: string) => {
+		setDraftContent(value);
+	}, []);
 
 	const editorTheme = resolvedTheme === "dark" ? "dark" : "light";
 
@@ -123,32 +340,29 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 				side="left"
 			>
 				<SheetHeader>
-					<SheetTitle>JSON View</SheetTitle>
+					<SheetTitle>JSON Editor</SheetTitle>
 					<SheetDescription>
-						View the assurance case data as JSON. Use the copy button to copy
-						the content.
+						Edit the assurance case data as JSON. Changes are validated in
+						real-time and can be applied to update the diagram.
 					</SheetDescription>
 				</SheetHeader>
 
-				<div className="mt-4 flex items-center justify-end">
-					<Button
-						disabled={loading || !jsonContent}
-						onClick={handleCopy}
-						size="sm"
-						variant="outline"
-					>
-						{copied ? (
-							<>
-								<Check className="mr-2 h-4 w-4" />
-								Copied
-							</>
-						) : (
-							<>
-								<Copy className="mr-2 h-4 w-4" />
-								Copy
-							</>
-						)}
-					</Button>
+				{/* Editor toolbar */}
+				<div className="mt-4">
+					<JsonEditorToolbar
+						copied={copied}
+						copyDisabled={loading || !draftContent}
+						diffResult={diffResult}
+						errorCount={validation.errors.length}
+						hasConflict={hasConflict}
+						isApplying={isApplying}
+						isDirty={isDirty}
+						isValid={validation.isValid}
+						onApply={handleApply}
+						onCopy={handleCopy}
+						onDiscard={handleDiscard}
+						onRefresh={handleRefresh}
+					/>
 				</div>
 
 				<div className="mt-4 flex-1 overflow-auto rounded-md border bg-muted/30">
@@ -159,14 +373,13 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 							basicSetup={{
 								lineNumbers: true,
 								foldGutter: true,
-								highlightActiveLine: false,
+								highlightActiveLine: true,
 							}}
-							editable={false}
-							extensions={[json()]}
+							extensions={[json(), lintExtension]}
 							height="100%"
-							readOnly
+							onChange={handleContentChange}
 							theme={editorTheme}
-							value={jsonContent || "No data available"}
+							value={draftContent || "No data available"}
 						/>
 					)}
 				</div>
