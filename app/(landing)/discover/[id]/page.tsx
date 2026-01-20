@@ -2,8 +2,8 @@ import { MailIcon, MoveLeftIcon, Users2Icon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
+import { SanitizedHtml } from "@/components/common/sanitized-html";
 import { formatShortDate } from "@/lib/date";
-import { extractTextFromHtml } from "@/lib/sanitize-html";
 import { normalizeImageUrl } from "@/lib/utils";
 import CaseStudyCases from "../../_components/case-study-cases";
 
@@ -106,9 +106,10 @@ const DiscoverCaseStudyPage = async ({
 									{caseStudy.authors}
 								</div>
 							</div>
-							<div className="prose">
-								<div>{extractTextFromHtml(caseStudy.description)}</div>
-							</div>
+							<SanitizedHtml
+								className="prose prose-indigo max-w-none"
+								html={caseStudy.description}
+							/>
 
 							<div className="pt-6">
 								<CaseStudyCases
