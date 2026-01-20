@@ -265,9 +265,10 @@ export async function exportCase(
 		const tree = buildTreeFromElements(elements);
 
 		// Build the nested export (uses "1.0" as first officially versioned format)
+		// exportedAt uses the case's updatedAt for conflict detection during batch updates
 		const exportData: CaseExportNested = {
 			version: "1.0",
-			exportedAt: new Date().toISOString(),
+			exportedAt: caseData.updatedAt.toISOString(),
 			case: {
 				name: caseData.name,
 				description: caseData.description,

@@ -9,7 +9,7 @@ import { ModalProvider } from "@/providers/modal-provider";
 import SessionProvider from "@/providers/session-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
-export const fontSans = FontSans({
+const fontSans = FontSans({
 	subsets: ["latin"],
 	variable: "--font-sans",
 });
