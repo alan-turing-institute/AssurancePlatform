@@ -19,6 +19,7 @@ import NodeEdit, {
 } from "@/components/common/node-edit";
 import useStore from "@/data/store";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/convert-case";
 import { getLayoutedElements } from "@/lib/layout-helper";
 import { useToast } from "@/lib/toast";
@@ -53,6 +54,9 @@ function Flow() {
 	const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true);
 
 	const { toast } = useToast();
+
+	// Keyboard shortcuts for undo/redo
+	useKeyboardShortcuts();
 
 	// Determine if user can edit (for auto-screenshot)
 	const canEdit =

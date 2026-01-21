@@ -22,6 +22,7 @@ import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./case-notes";
+import { HistoryControls } from "./history-controls";
 import JsonViewPanel from "./json-view-panel";
 
 type ActionButtonProps = {
@@ -128,6 +129,9 @@ const ActionButtons = ({
 								</button>
 							</ActionTooltip>
 						)}
+					{assuranceCase &&
+						assuranceCase.permissions !== "view" &&
+						assuranceCase.permissions !== "review" && <HistoryControls />}
 					<ActionTooltip label="Focus">
 						<button
 							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"

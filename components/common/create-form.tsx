@@ -20,6 +20,7 @@ import {
 	createAssuranceCaseNode,
 	setNodeIdentifier,
 } from "@/lib/case";
+import { recordCreate } from "@/lib/services/history-service";
 import type { AssuranceCase } from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
@@ -90,6 +91,11 @@ const CreateForm: React.FC<CreateFormProps> = ({
 			// TODO: Rendering error
 			setLoading(false);
 			return; // Handle error silently
+		}
+
+		// Record create operation for undo/redo
+		if (result.data?.id) {
+			recordCreate(result.data.id, "goal", result.data);
 		}
 
 		const updatedAssuranceCase = assuranceCase
