@@ -157,6 +157,7 @@ export function useCaseEvents({
 			"element:created",
 			"element:updated",
 			"element:deleted",
+			"element:restored",
 			"element:attached",
 			"element:detached",
 			"permission:changed",

@@ -99,6 +99,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["components/common/sanitized-html.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          }
+        }
+      }
     }
   ]
 }

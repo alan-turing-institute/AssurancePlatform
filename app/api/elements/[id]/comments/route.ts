@@ -103,9 +103,9 @@ export async function GET(
 		const { prismaNew } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
-		// Get the element to find its case
-		const element = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
+		// Get the element to find its case (exclude deleted elements)
+		const element = await prismaNew.assuranceElement.findFirst({
+			where: { id: elementId, deletedAt: null },
 			select: { caseId: true },
 		});
 
@@ -175,9 +175,9 @@ export async function POST(
 		const { prismaNew } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
-		// Get the element to find its case and name
-		const element = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
+		// Get the element to find its case and name (exclude deleted elements)
+		const element = await prismaNew.assuranceElement.findFirst({
+			where: { id: elementId, deletedAt: null },
 			select: { caseId: true, name: true, description: true },
 		});
 

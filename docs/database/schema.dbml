@@ -41,6 +41,7 @@ Table users {
   casePermissions case_permissions [not null]
   grantedPermissions case_permissions [not null]
   createdElements assurance_elements [not null]
+  deletedElements assurance_elements [not null]
   authoredComments comments [not null]
   resolvedComments comments [not null]
   releaseComments release_comments [not null]
@@ -232,7 +233,10 @@ Table assurance_elements {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   createdById String [not null]
+  deletedAt DateTime [note: 'When the element was deleted (null = active)']
+  deletedById String [note: 'User who deleted the element']
   case assurance_cases [not null]
+  deletedBy users
   createdBy users [not null]
   parent assurance_elements
   children assurance_elements [not null]
@@ -664,6 +668,8 @@ Ref: case_team_permissions.teamId > teams.id [delete: Cascade]
 Ref: case_invites.caseId > assurance_cases.id [delete: Cascade]
 
 Ref: assurance_elements.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: assurance_elements.deletedById > users.id
 
 Ref: assurance_elements.createdById > users.id
 

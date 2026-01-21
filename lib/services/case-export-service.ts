@@ -113,10 +113,12 @@ export async function exportCase(
 
 	try {
 		// Fetch case with elements and their evidence links (for claims)
+		// Exclude soft-deleted elements from export
 		const caseData = await prismaNew.assuranceCase.findUnique({
 			where: { id: caseId },
 			include: {
 				elements: {
+					where: { deletedAt: null },
 					select: {
 						id: true,
 						elementType: true,
@@ -143,6 +145,9 @@ export async function exportCase(
 						defeatsElementId: true,
 						// Include evidence linked TO this element (claims get their evidence)
 						evidenceLinksTo: {
+							where: {
+								evidence: { deletedAt: null },
+							},
 							select: {
 								evidence: {
 									select: {

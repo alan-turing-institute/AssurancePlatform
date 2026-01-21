@@ -6,6 +6,7 @@ import {
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
+import { recordDelete } from "@/lib/services/history-service";
 import type { AssuranceCase, PropertyClaim } from "@/types";
 
 /**
@@ -130,6 +131,9 @@ export const deleteNode = async (options: DeleteNodeOptions): Promise<void> => {
 	);
 
 	if (deleted && assuranceCase) {
+		// Record delete operation for undo/redo
+		recordDelete(node.data.id as number, node.type ?? "", node.data);
+
 		const updatedAssuranceCase = await removeAssuranceCaseNode(
 			assuranceCase,
 			node.data.id as number,

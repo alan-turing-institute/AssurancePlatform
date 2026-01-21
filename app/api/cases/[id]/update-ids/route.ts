@@ -205,9 +205,9 @@ async function resetIdentifiersWithPrisma(
 		return { success: false, error: "Permission denied", status: 403 };
 	}
 
-	// Get all elements for this case, ordered by creation date
+	// Get all elements for this case (excluding deleted), ordered by creation date
 	const elements = await prismaNew.assuranceElement.findMany({
-		where: { caseId },
+		where: { caseId, deletedAt: null },
 		orderBy: { createdAt: "asc" },
 		select: {
 			id: true,

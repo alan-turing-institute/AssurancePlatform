@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 import { toast } from "sonner";
+import useHistoryStore from "@/data/history-store";
 import useStore from "@/data/store";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
@@ -26,6 +27,7 @@ const REFETCH_EVENTS = [
 	"element:created",
 	"element:updated",
 	"element:deleted",
+	"element:restored",
 	"element:attached",
 	"element:detached",
 ];
@@ -39,6 +41,7 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 	"element:created": ['added "{element}"', "added a new element"],
 	"element:updated": ['modified "{element}"', "modified an element"],
 	"element:deleted": ['removed "{element}"', "removed an element"],
+	"element:restored": ['restored "{element}"', "restored an element"],
 	"element:attached": ['attached "{element}"', "attached an element"],
 	"element:detached": ['detached "{element}"', "detached an element"],
 	"comment:created": ['added a comment to "{element}"', "added a comment"],
@@ -94,6 +97,7 @@ function showEventToast(event: SSEEvent): void {
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
 	const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
+	const { setCaseId: setHistoryCaseId } = useHistoryStore();
 	const [open, setOpen] = useState(false);
 
 	const params = useParams();
@@ -106,6 +110,13 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	// Get the effective case ID
 	const effectiveCaseId =
 		caseId || (Array.isArray(paramsCaseId) ? paramsCaseId[0] : paramsCaseId);
+
+	// Update history store when case changes (clears history if different case)
+	useEffect(() => {
+		if (effectiveCaseId) {
+			setHistoryCaseId(effectiveCaseId);
+		}
+	}, [effectiveCaseId, setHistoryCaseId]);
 
 	// Fetch a single case by ID
 	const fetchSingleCase = useCallback(

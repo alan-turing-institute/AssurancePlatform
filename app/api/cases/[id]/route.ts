@@ -78,10 +78,14 @@ async function fetchCaseFromPrisma(
 		where: { id: caseId, deletedAt: null },
 		include: {
 			elements: {
+				where: { deletedAt: null },
 				include: {
-					children: true,
+					children: {
+						where: { deletedAt: null },
+					},
 					comments: true,
 					// Include evidence linked TO this element (for claims)
+					// Note: evidence relation is filtered post-query for deleted items
 					evidenceLinksTo: {
 						include: {
 							evidence: true,

@@ -76,6 +76,7 @@ model User {
   casePermissions      CasePermission[]   @relation("PermissionHolder")
   grantedPermissions   CasePermission[]   @relation("PermissionGranter")
   createdElements      AssuranceElement[] @relation("ElementCreator")
+  deletedElements      AssuranceElement[] @relation("ElementDeleter")
   authoredComments     Comment[]          @relation("CommentAuthor")
   resolvedComments     Comment[]          @relation("CommentResolver")
   releaseComments      ReleaseComment[]
@@ -396,8 +397,13 @@ model AssuranceElement {
   updatedAt           DateTime         @updatedAt @map("updated_at")
   createdById         String           @map("created_by_id")
 
+  // Soft delete
+  deletedAt           DateTime?        @map("deleted_at") /// When the element was deleted (null = active)
+  deletedById         String?          @map("deleted_by_id") /// User who deleted the element
+
   // Relations
   case                AssuranceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  deletedBy           User?            @relation("ElementDeleter", fields: [deletedById], references: [id])
   createdBy           User             @relation("ElementCreator", fields: [createdById], references: [id])
   parent              AssuranceElement? @relation("ElementHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children            AssuranceElement[] @relation("ElementHierarchy")
@@ -414,6 +420,7 @@ model AssuranceElement {
 
   @@index([caseId])
   @@index([caseId, elementType])
+  @@index([caseId, deletedAt], map: "assurance_elements_case_deleted_idx")
   @@index([parentId])
   @@map("assurance_elements")
 }

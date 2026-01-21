@@ -14,6 +14,7 @@ import {
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { recordUpdate } from "@/lib/services/history-service";
 import { Button } from "../ui/button";
 import AddAttributeButtons from "./add-attribute-buttons";
 import AttributeTextField from "./attribute-text-field";
@@ -89,6 +90,9 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 			return;
 		}
 
+		// Capture before state for history
+		const beforeData = { ...node.data } as Record<string, unknown>;
+
 		setLoading(true);
 		const updateItem = {
 			assumption: values.assumption || "",
@@ -105,6 +109,10 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 		);
 
 		if (updated) {
+			// Record update operation for undo/redo
+			const afterData = { ...beforeData, ...updateItem };
+			recordUpdate(node.data.id, node.type, beforeData, afterData);
+
 			const updatedAssuranceCase = await updateAssuranceCase(
 				node.type || "",
 				assuranceCase,

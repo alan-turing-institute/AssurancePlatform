@@ -22,6 +22,7 @@ import {
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { recordUpdate } from "@/lib/services/history-service";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
@@ -85,6 +86,9 @@ const EditForm: React.FC<EditFormProps> = ({
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setLoading(true);
 
+		// Capture before state for history
+		const beforeData = { ...node.data } as Record<string, unknown>;
+
 		const updateItem: Record<string, unknown> = {
 			short_description: values.description,
 		};
@@ -107,6 +111,15 @@ const EditForm: React.FC<EditFormProps> = ({
 		);
 
 		if (updated && assuranceCase) {
+			// Record update operation for undo/redo
+			const afterData = { ...beforeData, ...updateItem };
+			recordUpdate(
+				node.data.id as number,
+				node.type || "unknown",
+				beforeData,
+				afterData
+			);
+
 			const updatedAssuranceCase = await updateAssuranceCase(
 				node.type || "unknown",
 				assuranceCase,
