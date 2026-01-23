@@ -642,12 +642,12 @@ const DeleteButtons = ({
 	node,
 	readOnly,
 	handleDetach,
-	setDeleteOpen,
+	onDeleteClick,
 }: {
 	node: AssuranceCaseNode;
 	readOnly: boolean;
 	handleDetach: () => Promise<void>;
-	setDeleteOpen: (open: boolean) => void;
+	onDeleteClick: () => void;
 }) => (
 	<>
 		{!readOnly && (
@@ -664,7 +664,7 @@ const DeleteButtons = ({
 				)}
 				<Button
 					className="flex w-full items-center justify-center"
-					onClick={() => setDeleteOpen(true)}
+					onClick={onDeleteClick}
 					variant={"destructive"}
 				>
 					<Trash2 className="mr-2" />
@@ -807,9 +807,11 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 	const [selectedEvidenceMove, setSelectedEvidenceMove] =
 		useState<MoveElement | null>(null);
 	const [_moveElementType, _setMoveElementType] = useState<string | null>(null);
+	const [skipDeleteConfirmation, setSkipDeleteConfirmation] = useState(false);
 
 	// const [token] = useLoginToken();
 	const { data: session } = useSession();
+
 
 	let goal: Goal | undefined;
 	let strategies: Strategy[] = [];
@@ -1391,8 +1393,14 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 					<DeleteButtons
 						handleDetach={handleDetach}
 						node={node}
+						onDeleteClick={() => {
+							if (skipDeleteConfirmation) {
+								handleDelete();
+							} else {
+								setDeleteOpen(true);
+							}
+						}}
 						readOnly={readOnly}
-						setDeleteOpen={setDeleteOpen}
 					/>
 				</div>
 			)}
@@ -1429,6 +1437,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 				loading={loading}
 				onClose={() => setDeleteOpen(false)}
 				onDelete={handleDelete}
+				onSkipPreferenceChange={(skip) => setSkipDeleteConfirmation(skip)}
 			/>
 			<AlertModal
 				cancelButtonText={"No, keep editing"}
