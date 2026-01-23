@@ -13,11 +13,13 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import useHistoryStore from "@/data/history-store";
 import useStore from "@/data/store";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { addHiddenProp } from "@/lib/case";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
+import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
+import { createSnapshot } from "@/lib/services/history-service";
 import {
 	computeTreeDiff,
 	type ElementChange,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/services/json-diff-service";
 import { useToast } from "@/lib/toast";
 import type { AssuranceCase } from "@/types";
+import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
 
 type JsonViewPanelProps = {
@@ -89,6 +92,19 @@ async function sendBatchUpdate(
 }
 
 /**
+ * Refreshes the case data in the store after batch update.
+ */
+async function refreshCaseData(
+	caseId: string,
+	setAssuranceCase: (c: AssuranceCase) => void
+): Promise<void> {
+	const updatedCase = await fetchAndTransformCase(caseId);
+	if (updatedCase) {
+		setAssuranceCase(updatedCase);
+	}
+}
+
+/**
  * Handles the result of a batch update - shows toast and updates state.
  */
 function handleBatchResult(
@@ -126,6 +142,136 @@ function handleBatchResult(
 }
 
 /**
+ * Flattens a tree structure into a map of id -> node for lookup
+ */
+function flattenTree(node: TreeNode, map: Map<string, TreeNode>): void {
+	map.set(node.id, node);
+	for (const child of node.children) {
+		flattenTree(child, map);
+	}
+}
+
+/**
+ * Creates a snapshot from a TreeNode for history recording
+ */
+function snapshotFromNode(node: TreeNode): ReturnType<typeof createSnapshot> {
+	return createSnapshot({
+		id: node.id,
+		type: node.type,
+		name: node.name,
+		short_description: node.description,
+		assumption: node.assumption,
+		justification: node.justification,
+		context: node.context,
+		URL: node.url,
+		in_sandbox: node.inSandbox,
+	});
+}
+
+/**
+ * Processes a single change into a history command
+ */
+function processChangeToCommand(
+	change: ElementChange,
+	beforeMap: Map<string, TreeNode>,
+	afterMap: Map<string, TreeNode>
+): HistoryCommand | null {
+	// Skip evidence link/unlink operations for history
+	if (change.type === "link_evidence" || change.type === "unlink_evidence") {
+		return null;
+	}
+
+	if (change.type === "create") {
+		const afterNode = afterMap.get(change.elementId);
+		if (!afterNode) {
+			return null;
+		}
+		return {
+			type: "create",
+			elementId: change.elementId,
+			elementType: change.data.type,
+			before: null,
+			after: snapshotFromNode(afterNode),
+		};
+	}
+
+	if (change.type === "update") {
+		const beforeNode = beforeMap.get(change.elementId);
+		const afterNode = afterMap.get(change.elementId);
+		if (!(beforeNode && afterNode)) {
+			return null;
+		}
+		return {
+			type: "update",
+			elementId: change.elementId,
+			elementType: beforeNode.type,
+			before: snapshotFromNode(beforeNode),
+			after: snapshotFromNode(afterNode),
+		};
+	}
+
+	if (change.type === "delete") {
+		const beforeNode = beforeMap.get(change.elementId);
+		if (!beforeNode) {
+			return null;
+		}
+		return {
+			type: "delete",
+			elementId: change.elementId,
+			elementType: beforeNode.type,
+			before: snapshotFromNode(beforeNode),
+			after: null,
+		};
+	}
+
+	return null;
+}
+
+/**
+ * Converts JSON editor changes to history commands for undo/redo
+ */
+function convertChangesToHistoryCommands(
+	changes: ElementChange[],
+	serverData: CaseExportNested,
+	editedData: CaseExportNested
+): HistoryCommand[] {
+	// Build lookup maps for before and after states
+	const beforeMap = new Map<string, TreeNode>();
+	const afterMap = new Map<string, TreeNode>();
+	flattenTree(serverData.tree, beforeMap);
+	flattenTree(editedData.tree, afterMap);
+
+	return changes
+		.map((change) => processChangeToCommand(change, beforeMap, afterMap))
+		.filter((cmd): cmd is HistoryCommand => cmd !== null);
+}
+
+/**
+ * Records history entry from JSON editor changes
+ */
+function recordJsonEditorHistory(
+	changes: ElementChange[],
+	serverData: CaseExportNested,
+	editedData: CaseExportNested,
+	summary: { created: number; updated: number; deleted: number },
+	recordOperation: (entry: HistoryEntry) => void
+): void {
+	const commands = convertChangesToHistoryCommands(
+		changes,
+		serverData,
+		editedData
+	);
+	if (commands.length > 0) {
+		recordOperation({
+			id: crypto.randomUUID(),
+			timestamp: Date.now(),
+			description: `JSON editor: ${summary.created} created, ${summary.updated} updated, ${summary.deleted} deleted`,
+			commands,
+		});
+	}
+}
+
+/**
  * Loading skeleton for the JSON content area.
  */
 function JsonLoadingSkeleton() {
@@ -145,6 +291,7 @@ function JsonLoadingSkeleton() {
 
 const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
+	const { recordOperation, isApplying: isUndoRedoApplying } = useHistoryStore();
 	const { resolvedTheme } = useTheme();
 	const { toast } = useToast();
 
@@ -300,11 +447,24 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 				return;
 			}
 
-			// Refetch the case data to update the diagram immediately
-			const updatedCase = await fetchAndTransformCase(caseId);
-			if (updatedCase) {
-				setAssuranceCase(updatedCase);
+			// Record history for undo/redo (only if not applying undo/redo operation)
+			if (
+				!isUndoRedoApplying &&
+				serverData &&
+				validation.parsedData &&
+				result.success
+			) {
+				recordJsonEditorHistory(
+					diffResult.changes,
+					serverData,
+					validation.parsedData,
+					result.summary,
+					recordOperation
+				);
 			}
+
+			// Refetch the case data to update the diagram immediately
+			await refreshCaseData(caseId, setAssuranceCase);
 
 			// Refresh JSON editor to sync with server state
 			await fetchJson();
@@ -325,6 +485,10 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 		toast,
 		fetchJson,
 		setAssuranceCase,
+		isUndoRedoApplying,
+		serverData,
+		recordOperation,
+		validation.parsedData,
 	]);
 
 	const handleContentChange = useCallback((value: string) => {

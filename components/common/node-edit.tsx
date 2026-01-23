@@ -23,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import useHistoryStore from "@/data/history-store";
 import useStore from "@/data/store";
 import type { ReactFlowNode } from "@/lib/case";
 import {
@@ -36,7 +37,9 @@ import {
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { createSnapshot } from "@/lib/services/history-service";
 import type { AssuranceCase, Goal, PropertyClaim, Strategy } from "@/types";
+import type { HistoryCommand } from "@/types/history";
 import NodeAttributes from "../cases/node-attributes";
 import NodeComment from "../cases/node-comments";
 import OrphanElements from "../cases/orphan-elements";
@@ -788,6 +791,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 		orphanedElements,
 		setOrphanedElements,
 	} = useStore();
+	const { recordOperation, isApplying: isUndoRedoApplying } = useHistoryStore();
 	const [selectedLink, setSelectedLink] = useState(false);
 	const [linkToCreate, setLinkToCreate] = useState("");
 	const [unresolvedChanges, setUnresolvedChanges] = useState(false);
@@ -947,172 +951,109 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 
 	const childCount = countDescendants();
 
-	// Get direct child IDs for detaching
-	const getDirectChildIds = (): Array<{ id: number; type: string }> => {
-		if (!node.data) return [];
+	/**
+	 * Collects element data for history recording before deletion.
+	 * Returns an array of elements (parent + all descendants) with their data.
+	 */
+	const collectElementsForHistory = (): Array<{
+		id: number;
+		type: string;
+		data: Record<string, unknown>;
+	}> => {
+		const elements: Array<{
+			id: number;
+			type: string;
+			data: Record<string, unknown>;
+		}> = [];
 
-		const children: Array<{ id: number; type: string }> = [];
+		// Add the main element
+		elements.push({
+			id: node.data.id as number,
+			type: node.type,
+			data: node.data as Record<string, unknown>,
+		});
 
-		// For goals: get strategies and direct property claims
+		// Collect descendants based on element type
 		if (node.type === "goal" && assuranceCase?.goals) {
 			const goalData = assuranceCase.goals.find((g) => g.id === node.data.id);
 			if (goalData) {
+				// Add strategies and their children
 				for (const strategy of goalData.strategies ?? []) {
-					children.push({ id: strategy.id, type: "strategy" });
+					elements.push({
+						id: strategy.id,
+						type: "strategy",
+						data: strategy as unknown as Record<string, unknown>,
+					});
+					collectPropertyClaimElements(strategy.property_claims, elements);
 				}
-				for (const claim of goalData.property_claims ?? []) {
-					children.push({ id: claim.id, type: "property" });
-				}
+				// Add property claims directly under goal
+				collectPropertyClaimElements(goalData.property_claims, elements);
 			}
 		}
 
-		// For strategies: get direct property claims
 		if (node.type === "strategy" && assuranceCase?.goals) {
 			const goalData = assuranceCase.goals[0];
 			const strategyData = goalData?.strategies?.find(
 				(s) => s.id === node.data.id
 			);
 			if (strategyData) {
-				for (const claim of strategyData.property_claims ?? []) {
-					children.push({ id: claim.id, type: "property" });
-				}
+				collectPropertyClaimElements(strategyData.property_claims, elements);
 			}
 		}
 
-		// For property claims: get nested claims and evidence
 		if (node.type === "property") {
 			const claimData = node.data as unknown as PropertyClaim;
-			for (const nested of claimData.property_claims ?? []) {
-				children.push({ id: nested.id, type: "property" });
-			}
+			// Don't include the main element again, just children
+			collectPropertyClaimElements(claimData.property_claims, elements);
+			// Add evidence
 			for (const ev of claimData.evidence ?? []) {
-				children.push({ id: ev.id, type: "evidence" });
+				elements.push({
+					id: ev.id,
+					type: "evidence",
+					data: ev as unknown as Record<string, unknown>,
+				});
 			}
-		}
-
-		return children;
-	};
-
-	// Helper to collect orphan elements from a strategy (including its property claims subtree)
-	const collectStrategyOrphanElements = (
-		strategy: Strategy,
-		typeMap: Record<string, string>
-	): OrphanElementData[] => {
-		const elements: OrphanElementData[] = [];
-
-		// Add the strategy itself
-		elements.push({
-			id: strategy.id,
-			type: typeMap.strategy ?? "Strategy",
-			name: strategy.name,
-			short_description: strategy.short_description ?? "",
-			long_description: strategy.long_description ?? "",
-		});
-
-		// Add all property claims (and their children) under this strategy
-		for (const claim of strategy.property_claims ?? []) {
-			elements.push(...collectOrphanElements(claim, typeMap));
 		}
 
 		return elements;
 	};
 
-	// Get full child data from assurance case for creating orphan elements
-	const getDirectChildrenData = (): {
-		strategies: Strategy[];
-		propertyClaims: PropertyClaim[];
-	} => {
-		const strategies: Strategy[] = [];
-		const propertyClaims: PropertyClaim[] = [];
-
-		if (!node.data || !assuranceCase?.goals) {
-			return { strategies, propertyClaims };
+	/**
+	 * Helper to recursively collect property claim elements
+	 */
+	const collectPropertyClaimElements = (
+		claims: PropertyClaim[] | undefined,
+		elements: Array<{ id: number; type: string; data: Record<string, unknown> }>
+	): void => {
+		if (!claims) {
+			return;
 		}
-
-		// For goals: get strategies and direct property claims with full data
-		if (node.type === "goal") {
-			const goalData = assuranceCase.goals.find((g) => g.id === node.data.id);
-			if (goalData) {
-				strategies.push(...(goalData.strategies ?? []));
-				propertyClaims.push(...(goalData.property_claims ?? []));
+		for (const claim of claims) {
+			elements.push({
+				id: claim.id,
+				type: "property",
+				data: claim as unknown as Record<string, unknown>,
+			});
+			// Add evidence
+			for (const ev of claim.evidence ?? []) {
+				elements.push({
+					id: ev.id,
+					type: "evidence",
+					data: ev as unknown as Record<string, unknown>,
+				});
 			}
+			// Recursively add nested claims
+			collectPropertyClaimElements(claim.property_claims, elements);
 		}
-
-		// For strategies: get direct property claims
-		if (node.type === "strategy") {
-			const goalData = assuranceCase.goals[0];
-			const strategyData = goalData?.strategies?.find(
-				(s) => s.id === node.data.id
-			);
-			if (strategyData) {
-				propertyClaims.push(...(strategyData.property_claims ?? []));
-			}
-		}
-
-		// For property claims: get nested claims (evidence handled by collectOrphanElements)
-		if (node.type === "property") {
-			const claimData = node.data as unknown as PropertyClaim;
-			propertyClaims.push(...(claimData.property_claims ?? []));
-		}
-
-		return { strategies, propertyClaims };
-	};
-
-	// Detach all direct children then delete the element
-	const handleDetachAndDelete = async () => {
-		setLoading(true);
-
-		const directChildren = getDirectChildIds();
-		const childrenData = getDirectChildrenData();
-
-		// Map React Flow node type to orphan element type
-		const typeMap: Record<string, string> = {
-			property: "PropertyClaim",
-			strategy: "Strategy",
-			evidence: "Evidence",
-			context: "Context",
-			goal: "Goal",
-		};
-
-		// Collect all orphan elements from children (including their subtrees)
-		const newOrphanElements: OrphanElementData[] = [];
-
-		// Collect from strategies (each strategy includes its property claims subtree)
-		for (const strategy of childrenData.strategies) {
-			newOrphanElements.push(...collectStrategyOrphanElements(strategy, typeMap));
-		}
-
-		// Collect from direct property claims (each includes nested claims and evidence)
-		for (const claim of childrenData.propertyClaims) {
-			newOrphanElements.push(...collectOrphanElements(claim, typeMap));
-		}
-
-		// Detach all direct children (they keep their subtrees)
-		for (const child of directChildren) {
-			await detachCaseElement(
-				node as ReactFlowNode,
-				child.type,
-				child.id,
-				""
-			);
-		}
-
-		// Update orphanedElements with the newly detached elements
-		const existingIds = new Set(orphanedElements.map((el) => el.id));
-		const uniqueNewOrphans = newOrphanElements.filter(
-			(el) => !existingIds.has(el.id)
-		);
-		if (uniqueNewOrphans.length > 0) {
-			setOrphanedElements([...orphanedElements, ...uniqueNewOrphans]);
-		}
-
-		// Now delete the element (which is now childless)
-		await handleDelete();
 	};
 
 	/** Function used to handle deletion of the current selected item */
 	const handleDelete = async () => {
 		setLoading(true);
+
+		// Collect element data before deletion for history recording
+		const elementsToDelete = collectElementsForHistory();
+
 		const deleted = await deleteAssuranceCaseNode(
 			node.type,
 			node.data.id,
@@ -1120,6 +1061,35 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 		);
 
 		if (deleted && assuranceCase) {
+			// Record history for undo/redo (only if not applying undo/redo)
+			if (!isUndoRedoApplying) {
+				const commands: HistoryCommand[] = elementsToDelete.map((el) => ({
+					type: "delete" as const,
+					elementId: String(el.id),
+					elementType: el.type,
+					before: createSnapshot({
+						...el.data,
+						id: el.id,
+						type: el.type,
+					}),
+					after: null,
+				}));
+
+				const elementName = node.data.name as string;
+				const childCount = elementsToDelete.length - 1;
+				const description =
+					childCount > 0
+						? `Deleted ${node.type} "${elementName}" and ${childCount} child element${childCount !== 1 ? "s" : ""}`
+						: `Deleted ${node.type} "${elementName}"`;
+
+				recordOperation({
+					id: crypto.randomUUID(),
+					timestamp: Date.now(),
+					description,
+					commands,
+				});
+			}
+
 			const updatedAssuranceCase = await removeAssuranceCaseNode(
 				assuranceCase,
 				node.data.id,
@@ -1458,8 +1428,7 @@ const NodeEdit = ({ node, isOpen, setEditOpen }: NodeEditProps) => {
 				isOpen={deleteOpen}
 				loading={loading}
 				onClose={() => setDeleteOpen(false)}
-				onDeleteWithChildren={handleDelete}
-				onDetachAndDelete={handleDetachAndDelete}
+				onDelete={handleDelete}
 			/>
 			<AlertModal
 				cancelButtonText={"No, keep editing"}
