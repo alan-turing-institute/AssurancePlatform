@@ -23,7 +23,6 @@
     "@azure/storage-blob": "^12.27.0",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lint": "^6.9.2",
-    "@dagrejs/dagre": "^1.1.2",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.1.1",
     "@hookform/resolvers": "^3.3.4",

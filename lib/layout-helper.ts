@@ -1,64 +1,149 @@
-import Dagre from "@dagrejs/dagre";
+/**
+ * ELK Layout Helper
+ *
+ * Provides hierarchical layout for React Flow graphs using ELK (Eclipse Layout Kernel).
+ * Replaces Dagre for improved edge routing and configurable node placement.
+ *
+ * @module layout-helper
+ */
+
+import ELK from "elkjs/lib/elk.bundled.js";
 import type { Edge, Node } from "reactflow";
 
-const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+const elk = new ELK();
 
-type LayoutOptions = {
-	direction: "LR" | "TB" | "RL" | "BT";
+/**
+ * Node dimension configurations based on node type.
+ */
+const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
+	goal: { width: 260, height: 110 },
+	strategy: { width: 250, height: 90 },
+	property: { width: 240, height: 80 },
+	propertyClaim: { width: 240, height: 80 },
+	evidence: { width: 220, height: 70 },
+	default: { width: 250, height: 100 },
 };
 
 /**
- * Generates a layout for the given nodes and edges using Dagre's graph layout algorithm.
- *
- * This function processes the visible nodes and edges in a graph, applies a directed layout
- * (e.g., top-down, left-right), and returns the nodes with updated positions based on the layout.
- * Hidden nodes and edges are ignored during the layout computation but retained in the final output.
- *
- * @param {Node[]} nodes - An array of node objects representing the graph nodes. Each node should have an `id`, and optionally, a `hidden` property.
- * @param {Edge[]} edges - An array of edge objects representing the graph edges. Each edge should specify `source` and `target` node IDs, and optionally, a `hidden` property.
- * @param {LayoutOptions} options - Layout options for the graph.
- * @param {string} options.direction - The layout direction, such as `'LR'` (left-right) or `'TB'` (top-bottom).
- * @returns {{ nodes: Node[], edges: Edge[] }} An object containing the nodes with updated positions and the original edges.
- *
+ * Get dimensions for a node type
  */
-export const getLayoutedElements = (
+function getNodeDimensions(nodeType: string | undefined): {
+	width: number;
+	height: number;
+} {
+	return NODE_DIMENSIONS[nodeType || "default"] || NODE_DIMENSIONS.default;
+}
+
+/**
+ * Direction mapping from React Flow convention to ELK
+ */
+type LayoutDirection = "TB" | "LR" | "RL" | "BT";
+type ElkDirection = "DOWN" | "RIGHT" | "LEFT" | "UP";
+
+const DIRECTION_MAP: Record<LayoutDirection, ElkDirection> = {
+	TB: "DOWN",
+	LR: "RIGHT",
+	RL: "LEFT",
+	BT: "UP",
+};
+
+type LayoutOptions = {
+	direction: LayoutDirection;
+};
+
+type LayoutedElements = {
+	nodes: Node[];
+	edges: Edge[];
+};
+
+/**
+ * Generates a layout for the given nodes and edges using ELK's layered algorithm.
+ *
+ * This function processes the visible nodes and edges in a graph, applies a hierarchical
+ * layout with orthogonal edge routing, and returns the nodes with updated positions.
+ * Hidden nodes and edges are ignored during layout computation but retained in the output.
+ *
+ * @param {Node[]} nodes - An array of node objects representing the graph nodes.
+ * @param {Edge[]} edges - An array of edge objects representing the graph edges.
+ * @param {LayoutOptions} options - Layout options for the graph.
+ * @param {string} options.direction - The layout direction: 'TB', 'LR', 'RL', or 'BT'.
+ * @returns {Promise<LayoutedElements>} An object containing the nodes with updated positions and the original edges.
+ */
+export async function getLayoutedElements(
 	nodes: Node[],
 	edges: Edge[],
 	options: LayoutOptions
-): { nodes: Node[]; edges: Edge[] } => {
-	// Set the graph layout direction (e.g., 'LR' for left-right, 'TB' for top-bottom)
-	g.setGraph({ rankdir: options.direction });
+): Promise<LayoutedElements> {
+	const direction = options.direction || "TB";
+	const elkDirection = DIRECTION_MAP[direction] || "DOWN";
 
 	// Filter out hidden nodes and edges for the layout computation
-	const visibleNodes = nodes.filter((node) => !node.hidden);
-	const visibleEdges = edges.filter((edge) => !edge.hidden);
+	const visibleNodes = nodes.filter(
+		(node) => !(node as Node & { hidden?: boolean }).hidden
+	);
+	const visibleEdges = edges.filter(
+		(edge) => !(edge as Edge & { hidden?: boolean }).hidden
+	);
 
-	// Add edges to the graph based on visible edges
-	for (const edge of visibleEdges) {
-		g.setEdge(edge.source, edge.target);
+	// If no visible nodes, return early
+	if (visibleNodes.length === 0) {
+		return { nodes, edges };
 	}
 
-	// Add nodes to the graph based on visible nodes
-	for (const node of visibleNodes) {
-		g.setNode(node.id, {
-			width: node.width || 100,
-			height: node.height || 50,
-		});
-	}
-
-	// Compute the layout using Dagre's layout algorithm
-	Dagre.layout(g);
-
-	// Return the nodes with updated positions (only for visible nodes) and the original edges
-	return {
-		nodes: nodes.map((node) => {
-			// Only update the position for visible nodes
-			if (!node.hidden) {
-				const { x, y } = g.node(node.id);
-				return { ...node, position: { x, y } };
-			}
-			return node;
+	// Build ELK graph structure
+	const elkGraph = {
+		id: "root",
+		layoutOptions: {
+			"elk.algorithm": "layered",
+			"elk.direction": elkDirection,
+			"elk.spacing.nodeNode": "80",
+			"elk.layered.spacing.nodeNodeBetweenLayers": "120",
+			"elk.edgeRouting": "ORTHOGONAL",
+			"elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+			"elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+			"elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+		},
+		children: visibleNodes.map((node) => {
+			const dimensions = getNodeDimensions(node.type);
+			return {
+				id: node.id,
+				width: (node as Node & { width?: number }).width || dimensions.width,
+				height:
+					(node as Node & { height?: number }).height || dimensions.height,
+			};
 		}),
+		edges: visibleEdges.map((edge) => ({
+			id: edge.id,
+			sources: [edge.source],
+			targets: [edge.target],
+		})),
+	};
+
+	// Compute layout
+	const layoutedGraph = await elk.layout(elkGraph);
+
+	// Create a map of new positions
+	const positionMap = new Map<string, { x: number; y: number }>();
+	for (const child of layoutedGraph.children || []) {
+		if (child.x !== undefined && child.y !== undefined) {
+			positionMap.set(child.id, { x: child.x, y: child.y });
+		}
+	}
+
+	// Apply positions to nodes (only visible nodes get new positions)
+	const layoutedNodes = nodes.map((node) => {
+		const newPosition = positionMap.get(node.id);
+		if (newPosition) {
+			return {
+				...node,
+				position: newPosition,
+			};
+		}
+		return node;
+	});
+
+	return {
+		nodes: layoutedNodes,
 		edges,
 	};
-};
+}

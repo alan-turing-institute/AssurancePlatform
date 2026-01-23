@@ -511,7 +511,7 @@ describe("convert-case utilities", () => {
 				expect(edge).toHaveProperty("source");
 				expect(edge).toHaveProperty("target");
 				expect(edge).toHaveProperty("type");
-				expect(edge.type).toBe("default");
+				expect(edge.type).toBe("step");
 			}
 		});
 	});

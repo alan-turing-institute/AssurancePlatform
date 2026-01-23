@@ -246,7 +246,7 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 				id: edgeId,
 				source: node.data.parentId as string,
 				target: currentNodeId,
-				type: "default", // Add the required type property
+				type: "step", // Orthogonal edges to match ELK layout
 				animated: false,
 				sourceHandle: "c",
 				hidden: false,

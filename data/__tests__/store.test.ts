@@ -9,20 +9,15 @@ beforeAll(() => {
 	vi.unmock("@/data/store");
 });
 
-// Mock Dagre
-vi.mock("@dagrejs/dagre", () => ({
-	default: {
-		graphlib: {
-			Graph: vi.fn().mockImplementation(() => ({
-				setDefaultEdgeLabel: vi.fn().mockReturnThis(),
-				setGraph: vi.fn().mockReturnThis(),
-				setNode: vi.fn(),
-				setEdge: vi.fn(),
-				node: vi.fn().mockReturnValue({ x: 100, y: 100 }),
-			})),
-		},
-		layout: vi.fn(),
-	},
+// Mock layout-helper (ELK)
+vi.mock("@/lib/layout-helper", () => ({
+	getLayoutedElements: vi.fn().mockImplementation(async (nodes, edges) => ({
+		nodes: nodes.map((node: Node) => ({
+			...node,
+			position: { x: 100, y: 100 },
+		})),
+		edges,
+	})),
 }));
 
 // Mock ReactFlow utilities
@@ -514,7 +509,7 @@ describe("useStore", () => {
 	});
 
 	describe("Layout operations", () => {
-		it("should layout nodes vertically", () => {
+		it("should layout nodes using ELK", async () => {
 			const { result } = renderHook(() => useStore());
 			const nodes: Node[] = [
 				{ id: "1", type: "goal", position: { x: 0, y: 0 }, data: {} },
@@ -522,8 +517,8 @@ describe("useStore", () => {
 			];
 			const edges: Edge[] = [{ id: "e1-2", source: "1", target: "2" }];
 
-			act(() => {
-				result.current.layoutNodes(nodes, edges);
+			await act(async () => {
+				await result.current.layoutNodes(nodes, edges);
 			});
 
 			// The nodes should have been positioned by the layout algorithm
@@ -532,7 +527,7 @@ describe("useStore", () => {
 			expect(result.current.nodes[1].position).toEqual({ x: 100, y: 100 });
 		});
 
-		it("should handle hidden edges in layout", () => {
+		it("should handle hidden edges in layout", async () => {
 			const { result } = renderHook(() => useStore());
 			const nodes: Node[] = [
 				{ id: "1", type: "goal", position: { x: 0, y: 0 }, data: {} },
@@ -544,8 +539,8 @@ describe("useStore", () => {
 				},
 			];
 
-			act(() => {
-				result.current.layoutNodes(nodes, edges);
+			await act(async () => {
+				await result.current.layoutNodes(nodes, edges);
 			});
 
 			// Hidden edges should not affect layout

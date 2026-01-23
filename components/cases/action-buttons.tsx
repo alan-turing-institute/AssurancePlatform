@@ -5,6 +5,7 @@ import {
 	Download,
 	Group,
 	Info,
+	Loader2,
 	Notebook,
 	Plus,
 	RotateCw,
@@ -28,7 +29,7 @@ import JsonViewPanel from "./json-view-panel";
 type ActionButtonProps = {
 	showCreateGoal: boolean;
 	actions: {
-		onLayout: (direction: "LR" | "TB" | "RL" | "BT") => void;
+		onLayout: (direction: "LR" | "TB" | "RL" | "BT") => Promise<void>;
 	};
 	notifyError: (message: string) => void;
 };
@@ -44,12 +45,19 @@ const ActionButtons = ({
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [jsonViewOpen, setJsonViewOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [isLayouting, setIsLayouting] = useState(false);
 
 	const { assuranceCase } = useStore();
 	const router = useRouter();
 	const { data: session } = useSession();
 
 	const { onLayout } = actions;
+
+	const handleFocus = async () => {
+		setIsLayouting(true);
+		await onLayout("TB");
+		setIsLayouting(false);
+	};
 
 	const caseSharingModal = useCaseSharingModal();
 	const exportModal = useExportModal();
@@ -134,12 +142,17 @@ const ActionButtons = ({
 						assuranceCase.permissions !== "review" && <HistoryControls />}
 					<ActionTooltip label="Focus">
 						<button
-							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800 disabled:opacity-50"
+							disabled={isLayouting}
 							id="FocusBtn"
-							onClick={() => onLayout("TB")}
+							onClick={handleFocus}
 							type="button"
 						>
-							<Group className="h-5 w-5" />
+							{isLayouting ? (
+								<Loader2 className="h-5 w-5 animate-spin" />
+							) : (
+								<Group className="h-5 w-5" />
+							)}
 							<span className="sr-only">Focus</span>
 						</button>
 					</ActionTooltip>

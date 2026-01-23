@@ -12,9 +12,9 @@ describe("layout-helper utilities", () => {
 			const { getLayoutedElements } = await import("../layout-helper");
 
 			// Test that function doesn't throw with basic parameters
-			expect(() => {
-				getLayoutedElements([], [], { direction: "TB" });
-			}).not.toThrow();
+			await expect(
+				getLayoutedElements([], [], { direction: "TB" })
+			).resolves.not.toThrow();
 		});
 
 		it("should return nodes and edges", async () => {
@@ -28,12 +28,19 @@ describe("layout-helper utilities", () => {
 					data: {},
 					hidden: false,
 				},
+				{
+					id: "node-2",
+					type: "strategy",
+					position: { x: 0, y: 0 },
+					data: {},
+					hidden: false,
+				},
 			];
 			const mockEdges = [
 				{ id: "edge-1", source: "node-1", target: "node-2", hidden: false },
 			];
 
-			const result = getLayoutedElements(mockNodes, mockEdges, {
+			const result = await getLayoutedElements(mockNodes, mockEdges, {
 				direction: "TB",
 			});
 
@@ -57,7 +64,9 @@ describe("layout-helper utilities", () => {
 				},
 			];
 
-			const result = getLayoutedElements(mockNodes, [], { direction: "TB" });
+			const result = await getLayoutedElements(mockNodes, [], {
+				direction: "TB",
+			});
 
 			expect(result.nodes).toHaveLength(1);
 			expect(result.nodes[0]).toMatchObject({
@@ -84,7 +93,9 @@ describe("layout-helper utilities", () => {
 				},
 			];
 
-			const result = getLayoutedElements([], mockEdges, { direction: "TB" });
+			const result = await getLayoutedElements([], mockEdges, {
+				direction: "TB",
+			});
 
 			expect(result.edges).toHaveLength(1);
 			expect(result.edges[0]).toMatchObject({
@@ -99,7 +110,7 @@ describe("layout-helper utilities", () => {
 		it("should handle empty inputs gracefully", async () => {
 			const { getLayoutedElements } = await import("../layout-helper");
 
-			const result = getLayoutedElements([], [], { direction: "TB" });
+			const result = await getLayoutedElements([], [], { direction: "TB" });
 
 			expect(result.nodes).toEqual([]);
 			expect(result.edges).toEqual([]);
@@ -111,11 +122,11 @@ describe("layout-helper utilities", () => {
 			const directions = ["TB", "LR", "BT", "RL"];
 
 			for (const direction of directions) {
-				expect(() => {
+				await expect(
 					getLayoutedElements([], [], {
 						direction: direction as "TB" | "LR" | "RL" | "BT",
-					});
-				}).not.toThrow();
+					})
+				).resolves.not.toThrow();
 			}
 		});
 
@@ -139,7 +150,9 @@ describe("layout-helper utilities", () => {
 				},
 			];
 
-			const result = getLayoutedElements(mixedNodes, [], { direction: "TB" });
+			const result = await getLayoutedElements(mixedNodes, [], {
+				direction: "TB",
+			});
 
 			expect(result.nodes).toHaveLength(2);
 			expect(result.nodes.find((n) => n.id === "visible")).toBeDefined();
@@ -154,7 +167,9 @@ describe("layout-helper utilities", () => {
 				{ id: "hidden", source: "B", target: "C", hidden: true },
 			];
 
-			const result = getLayoutedElements([], mixedEdges, { direction: "TB" });
+			const result = await getLayoutedElements([], mixedEdges, {
+				direction: "TB",
+			});
 
 			expect(result.edges).toHaveLength(2);
 			expect(result.edges.find((e) => e.id === "visible")).toBeDefined();
@@ -169,9 +184,9 @@ describe("layout-helper utilities", () => {
 				{ id: "node-2", type: "claim", position: { x: 0, y: 0 }, data: {} },
 			];
 
-			expect(() => {
-				getLayoutedElements(nodesWithoutHidden, [], { direction: "TB" });
-			}).not.toThrow();
+			await expect(
+				getLayoutedElements(nodesWithoutHidden, [], { direction: "TB" })
+			).resolves.not.toThrow();
 		});
 
 		it("should handle large datasets efficiently", async () => {
@@ -193,31 +208,38 @@ describe("layout-helper utilities", () => {
 			}));
 
 			const start = performance.now();
-			const result = getLayoutedElements(largeNodes, largeEdges, {
+			const result = await getLayoutedElements(largeNodes, largeEdges, {
 				direction: "TB",
 			});
 			const end = performance.now();
 
 			expect(result.nodes).toHaveLength(50);
 			expect(result.edges).toHaveLength(49);
-			expect(end - start).toBeLessThan(100); // Should complete in reasonable time
+			expect(end - start).toBeLessThan(1000); // ELK may be slower, allow up to 1s
 		});
 
 		it("should handle invalid options gracefully", async () => {
 			const { getLayoutedElements } = await import("../layout-helper");
 
 			// Test with invalid options but valid nodes/edges
-			expect(() => {
+			await expect(
 				getLayoutedElements([], [], {
 					direction: "INVALID" as "TB" | "LR" | "BT" | "RL",
-				});
-			}).not.toThrow();
+				})
+			).resolves.not.toThrow();
 
-			expect(() => {
+			await expect(
 				getLayoutedElements([], [], { direction: "TB" } as {
 					direction: "TB" | "LR" | "BT" | "RL";
-				});
-			}).not.toThrow();
+				})
+			).resolves.not.toThrow();
+		});
+
+		it("should return a Promise", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+
+			const result = getLayoutedElements([], [], { direction: "TB" });
+			expect(result).toBeInstanceOf(Promise);
 		});
 	});
 });

@@ -71,8 +71,8 @@ function Flow() {
 		debounceMs: 5000,
 	});
 
-	const onLayout = (direction: "LR" | "TB" | "RL" | "BT") => {
-		const layouted = getLayoutedElements(nodes, edges, { direction });
+	const onLayout = async (direction: "LR" | "TB" | "RL" | "BT") => {
+		const layouted = await getLayoutedElements(nodes, edges, { direction });
 
 		setNodes(layouted.nodes);
 		setEdges(layouted.edges);

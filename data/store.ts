@@ -1,4 +1,3 @@
-import Dagre from "@dagrejs/dagre";
 import {
 	addEdge,
 	applyEdgeChanges,
@@ -15,6 +14,7 @@ import {
 } from "reactflow";
 import { create } from "zustand";
 import { nodeTypes } from "@/data/node-types";
+import { getLayoutedElements } from "@/lib/layout-helper";
 import type { AssuranceCase, Comment as CaseComment, User } from "@/types";
 import { initEdges } from "./edges";
 import { initNodes } from "./nodes";
@@ -57,7 +57,7 @@ type Store = {
 	) => void;
 	setNodes: (nodes: Node[]) => void;
 	setEdges: (edges: Edge[]) => void;
-	layoutNodes: (nodes: Node[], edges: Edge[]) => void;
+	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
 	fitView: () => void;
 	viewMembers: Member[];
 	editMembers: Member[];
@@ -75,35 +75,6 @@ type Store = {
 
 export type NodeData = {
 	color: string;
-};
-
-// Define a function to layout nodes vertically using Dagre
-const layoutNodesVertically = (nodes: Node[], edges: Edge[]) => {
-	const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-	g.setGraph({ rankdir: "TB" });
-
-	// Set all nodes in the graph, including hidden ones
-	for (const node of nodes) {
-		g.setNode(node.id, { width: node.width || 100, height: node.height || 50 });
-	}
-
-	// Set edges for visible nodes only
-	const visibleEdges = edges.filter(
-		(edge) => !(edge as Edge & { hidden?: boolean }).hidden
-	);
-	for (const edge of visibleEdges) {
-		g.setEdge(edge.source, edge.target);
-	}
-
-	Dagre.layout(g);
-
-	return {
-		nodes: nodes.map((node) => {
-			const { x, y } = g.node(node.id);
-			return { ...node, position: { x, y } };
-		}),
-		edges,
-	};
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -178,10 +149,10 @@ const useStore = create<Store>((set, get) => ({
 	fitView: () => {
 		// Placeholder function for fitView - to be implemented when needed
 	},
-	layoutNodes: (nodes: Node[], edges: Edge[]) => {
-		// Layout nodes vertically
+	layoutNodes: async (nodes: Node[], edges: Edge[]) => {
+		// Layout nodes using ELK
 		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			layoutNodesVertically(nodes, edges);
+			await getLayoutedElements(nodes, edges, { direction: "TB" });
 
 		// Set the layouted nodes and edges
 		set({ nodes: layoutedNodes, edges: layoutedEdges });
