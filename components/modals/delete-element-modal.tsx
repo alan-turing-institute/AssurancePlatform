@@ -13,6 +13,7 @@ type DeleteElementModalProps = {
 	loading: boolean;
 	hasChildren: boolean;
 	childCount?: number;
+	onSkipPreferenceChange?: (skip: boolean) => void;
 };
 
 export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
@@ -23,18 +24,21 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 	loading,
 	hasChildren,
 	childCount = 0,
+	onSkipPreferenceChange,
 }) => {
 	const [isMounted, setIsMounted] = useState(false);
 	const [action, setAction] = useState<"delete" | "detach" | null>(null);
+	const [dontAskAgain, setDontAskAgain] = useState(false);
 
 	useEffect(() => {
 		setIsMounted(true);
 	}, []);
 
-	// Reset action state when modal closes
+	// Reset state when modal closes
 	useEffect(() => {
 		if (!isOpen) {
 			setAction(null);
+			setDontAskAgain(false);
 		}
 	}, [isOpen]);
 
@@ -44,6 +48,9 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 
 	const handleDelete = async () => {
 		setAction("delete");
+		if (dontAskAgain && onSkipPreferenceChange) {
+			onSkipPreferenceChange(true);
+		}
 		await onDeleteWithChildren();
 	};
 
@@ -61,17 +68,28 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 				onClose={onClose}
 				title="Delete element?"
 			>
-				<div className="flex w-full items-center justify-end space-x-2 pt-6">
-					<Button disabled={loading} onClick={onClose} variant="outline">
-						Cancel
-					</Button>
-					<Button
-						disabled={loading}
-						onClick={handleDelete}
-						variant="destructive"
-					>
-						{loading ? "Deleting..." : "Delete"}
-					</Button>
+				<div className="space-y-4 pt-4">
+					<label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
+						<input
+							checked={dontAskAgain}
+							className="rounded border-input"
+							onChange={(e) => setDontAskAgain(e.target.checked)}
+							type="checkbox"
+						/>
+						Don't ask me again
+					</label>
+					<div className="flex w-full items-center justify-end space-x-2">
+						<Button disabled={loading} onClick={onClose} variant="outline">
+							Cancel
+						</Button>
+						<Button
+							disabled={loading}
+							onClick={handleDelete}
+							variant="destructive"
+						>
+							{loading ? "Deleting..." : "Delete"}
+						</Button>
+					</div>
 				</div>
 			</Modal>
 		);
@@ -130,7 +148,16 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 					</button>
 				</div>
 
-				<div className="flex justify-end pt-2">
+				<div className="flex items-center justify-between pt-2">
+					<label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
+						<input
+							checked={dontAskAgain}
+							className="rounded border-input"
+							onChange={(e) => setDontAskAgain(e.target.checked)}
+							type="checkbox"
+						/>
+						Don't ask me again
+					</label>
 					<Button disabled={loading} onClick={onClose} variant="outline">
 						Cancel
 					</Button>
