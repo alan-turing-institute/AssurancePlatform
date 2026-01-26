@@ -13,25 +13,74 @@ import type { Edge, Node } from "reactflow";
 const elk = new ELK();
 
 /**
- * Node dimension configurations based on node type.
+ * Fixed width for all nodes - only height changes on expand
  */
+const NODE_WIDTH = 320;
+
 const NODE_DIMENSIONS: Record<string, { width: number; height: number }> = {
-	goal: { width: 260, height: 110 },
-	strategy: { width: 250, height: 90 },
-	property: { width: 240, height: 80 },
-	propertyClaim: { width: 240, height: 80 },
-	evidence: { width: 220, height: 70 },
-	default: { width: 250, height: 100 },
+	goal: { width: NODE_WIDTH, height: 120 },
+	strategy: { width: NODE_WIDTH, height: 110 },
+	property: { width: NODE_WIDTH, height: 100 },
+	propertyClaim: { width: NODE_WIDTH, height: 100 },
+	evidence: { width: NODE_WIDTH, height: 90 },
+	default: { width: NODE_WIDTH, height: 110 },
 };
 
 /**
- * Get dimensions for a node type
+ * Get default dimensions for a node type
  */
-function getNodeDimensions(nodeType: string | undefined): {
+function getDefaultDimensions(nodeType: string | undefined): {
 	width: number;
 	height: number;
 } {
 	return NODE_DIMENSIONS[nodeType || "default"] || NODE_DIMENSIONS.default;
+}
+
+/**
+ * Read actual dimensions from DOM element
+ */
+function getDomDimensions(
+	nodeId: string
+): { width: number; height: number } | null {
+	if (typeof document === "undefined") {
+		return null;
+	}
+
+	const nodeElement = document.querySelector(
+		`[data-id="${nodeId}"]`
+	) as HTMLElement | null;
+
+	if (!nodeElement) {
+		return null;
+	}
+
+	const rect = nodeElement.getBoundingClientRect();
+	if (rect.width > 0 && rect.height > 0) {
+		return { width: rect.width, height: rect.height };
+	}
+
+	return null;
+}
+
+/**
+ * Get actual dimensions for a node, preferring DOM measurements
+ */
+function getActualNodeDimensions(
+	node: Node & { measured?: { width?: number; height?: number } }
+): { width: number; height: number } {
+	// Try DOM dimensions first (most accurate for expanded nodes)
+	const domDimensions = getDomDimensions(node.id);
+	if (domDimensions) {
+		return domDimensions;
+	}
+
+	// Try React Flow measured dimensions
+	if (node.measured?.width && node.measured?.height) {
+		return { width: node.measured.width, height: node.measured.height };
+	}
+
+	// Fall back to defaults
+	return getDefaultDimensions(node.type);
 }
 
 /**
@@ -85,10 +134,28 @@ export async function getLayoutedElements(
 		(edge) => !(edge as Edge & { hidden?: boolean }).hidden
 	);
 
+	// Filter edges whose source or target is hidden (prevents ELK "Referenced shape does not exist" error)
+	const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+	const validEdges = visibleEdges.filter(
+		(edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+	);
+
 	// If no visible nodes, return early
 	if (visibleNodes.length === 0) {
 		return { nodes, edges };
 	}
+
+	// Build ELK graph children with actual dimensions
+	const elkChildren = visibleNodes.map((node) => {
+		const dimensions = getActualNodeDimensions(
+			node as Node & { measured?: { width?: number; height?: number } }
+		);
+		return {
+			id: node.id,
+			width: dimensions.width,
+			height: dimensions.height,
+		};
+	});
 
 	// Build ELK graph structure
 	const elkGraph = {
@@ -96,23 +163,21 @@ export async function getLayoutedElements(
 		layoutOptions: {
 			"elk.algorithm": "layered",
 			"elk.direction": elkDirection,
-			"elk.spacing.nodeNode": "80",
-			"elk.layered.spacing.nodeNodeBetweenLayers": "120",
+			// Spacing between nodes in the same layer (horizontal for TB direction)
+			"elk.spacing.nodeNode": "40",
+			// Spacing between layers (vertical for TB direction)
+			"elk.layered.spacing.nodeNodeBetweenLayers": "60",
+			// Edge routing
 			"elk.edgeRouting": "ORTHOGONAL",
+			// Node placement strategy
 			"elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
 			"elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
 			"elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+			// Ensure nodes don't overlap by considering their actual sizes
+			"elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
 		},
-		children: visibleNodes.map((node) => {
-			const dimensions = getNodeDimensions(node.type);
-			return {
-				id: node.id,
-				width: (node as Node & { width?: number }).width || dimensions.width,
-				height:
-					(node as Node & { height?: number }).height || dimensions.height,
-			};
-		}),
-		edges: visibleEdges.map((edge) => ({
+		children: elkChildren,
+		edges: validEdges.map((edge) => ({
 			id: edge.id,
 			sources: [edge.source],
 			targets: [edge.target],

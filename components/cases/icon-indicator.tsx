@@ -1,9 +1,6 @@
 "use client";
 
-import {
-	ChatBubbleBottomCenterTextIcon,
-	InformationCircleIcon,
-} from "@heroicons/react/20/solid";
+import { ChatBubbleBottomCenterTextIcon } from "@heroicons/react/20/solid";
 import { useCallback, useEffect, useState } from "react";
 import type { Context } from "@/types";
 
@@ -26,12 +23,7 @@ type IconIndicatorProps = {
 const IconIndicator = ({ data }: IconIndicatorProps) => {
 	const [comments, setComments] = useState([]);
 
-	const { assumption, justification, type } = data;
-
-	const hasAssumptionOrJustificationOrContext =
-		(typeof assumption === "string" && assumption.trim() !== "") ||
-		(typeof justification === "string" && justification.trim() !== "") ||
-		(Array.isArray(data.context) && data.context.length > 0);
+	const { type } = data;
 
 	const fetchNodeComments = useCallback(async () => {
 		try {
@@ -62,11 +54,8 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
 			className={`inline-flex ${type === "Strategy" ? "top-0 right-0" : "top-[6px] right-4"}`}
 		>
 			<div className="flex items-center justify-start gap-1">
-				{hasAssumptionOrJustificationOrContext && (
-					<InformationCircleIcon className="size-3 text-white/90" />
-				)}
 				{comments.length > 0 && (
-					<ChatBubbleBottomCenterTextIcon className="size-3 text-white/90" />
+					<ChatBubbleBottomCenterTextIcon className="size-3 text-gray-600" />
 				)}
 			</div>
 		</div>

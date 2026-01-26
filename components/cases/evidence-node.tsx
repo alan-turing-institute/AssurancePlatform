@@ -1,33 +1,41 @@
 "use client";
 
-import { Database } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { memo } from "react";
-import { Handle, type NodeProps, Position } from "reactflow";
+import type { NodeProps } from "reactflow";
+import { BaseNode } from "@/components/shared/nodes";
 import IconIndicator from "./icon-indicator";
 
-function EvidenceNode({ data }: NodeProps) {
-	return (
-		<div
-			className={
-				"w-[300px] rounded-md bg-emerald-600 px-4 py-2 text-white shadow-md"
-			}
-		>
-			<div className="flex items-center justify-start">
-				<div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-800/30">
-					<Database />
-				</div>
-				<div className="ml-2 w-[200px]">
-					<div className="flex items-center justify-start gap-4">
-						<div className="font-bold text-lg">{data.name}</div>
-						<IconIndicator data={data} />
-					</div>
-					<p className="line-clamp-2 text-xs">{data.description}</p>
-				</div>
-			</div>
+function EvidenceNode({ data, ...props }: NodeProps) {
+	const url = data.URL || data.url;
 
-			<Handle position={Position.Top} type="target" />
-			{/* <Handle type="source" position={Position.Bottom} /> */}
-		</div>
+	return (
+		<BaseNode
+			description={data.description}
+			name={data.name}
+			nodeType="evidence"
+			selected={props.selected}
+			topRightActions={<IconIndicator data={data} />}
+		>
+			{url && (
+				<div className="space-y-1">
+					<span className="font-medium text-gray-500 text-xs uppercase tracking-wider">
+						Source
+					</span>
+					<a
+						className="flex items-center gap-1.5 text-blue-600 text-sm hover:text-blue-800 hover:underline"
+						href={url}
+						onClick={(e) => e.stopPropagation()}
+						onMouseDown={(e) => e.stopPropagation()}
+						rel="noopener noreferrer"
+						target="_blank"
+					>
+						<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+						<span className="truncate">{url}</span>
+					</a>
+				</div>
+			)}
+		</BaseNode>
 	);
 }
 
