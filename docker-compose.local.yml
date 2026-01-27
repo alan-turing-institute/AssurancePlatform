@@ -44,10 +44,10 @@ services:
     # Memory limit (requires docker-compose v2)
     mem_limit: 6g
     memswap_limit: 6g
-    # Use webpack instead of turbo - turbopack is too memory-intensive for Docker
-    # Run migrations before starting dev server (matches production entrypoint behaviour)
+    # Run in production mode to avoid Nextra dev compilation crashes
+    # For hot reload, run `pnpm dev` on localhost instead
     command:
-      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm exec next dev; else npx next dev; fi"
+      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build && pnpm start; else npm run build && npm start; fi"
 
 networks:
   tea_dev_network:

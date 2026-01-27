@@ -159,9 +159,9 @@
         "problemMatcher": []
       },
       {
-        "label": "Docker: Start Development",
+        "label": "Docker: Start Local",
         "type": "shell",
-        "command": "docker-compose -f docker-compose.development.yml up --build",
+        "command": "docker-compose -f docker-compose.local.yml up --build",
         "group": "build",
         "presentation": {
           "echo": true,

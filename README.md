@@ -55,7 +55,7 @@ cd AssurancePlatform
 cp .env.example .env.local
 
 # Start the development environment
-docker-compose -f docker-compose.development.yml up -d --build
+docker-compose -f docker-compose.local.yml up -d --build
 
 # Access at http://localhost:3000
 ```
