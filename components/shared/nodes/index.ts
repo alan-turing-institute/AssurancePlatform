@@ -15,7 +15,7 @@ export {
 // Components
 export { default as AttributeSection } from "./attribute-section";
 export { default as BaseNode } from "./base-node";
-
+export { default as NodeActionGroup } from "./node-action-group";
 // Node configuration
 export {
 	getNodeColours,
@@ -26,6 +26,7 @@ export {
 	type NodeTypeConfig,
 	nodeTypeConfigs,
 } from "./node-config";
+export { default as NodeOptionsMenu } from "./node-options-menu";
 
 // Node styling utilities
 export {

@@ -58,6 +58,7 @@ type Store = {
 	setNodes: (nodes: Node[]) => void;
 	setEdges: (edges: Edge[]) => void;
 	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
+	triggerLayout: () => Promise<void>;
 	fitView: () => void;
 	viewMembers: Member[];
 	editMembers: Member[];
@@ -71,6 +72,11 @@ type Store = {
 	setNodeComments: (comments: CaseComment[]) => void;
 	caseNotes: CaseComment[];
 	setCaseNotes: (comments: CaseComment[]) => void;
+	// Comments sheet state
+	commentsSheetOpen: boolean;
+	commentsSheetNode: Node | null;
+	setCommentsSheetOpen: (open: boolean) => void;
+	setCommentsSheetNode: (node: Node | null) => void;
 };
 
 export type NodeData = {
@@ -157,6 +163,13 @@ const useStore = create<Store>((set, get) => ({
 		// Set the layouted nodes and edges
 		set({ nodes: layoutedNodes, edges: layoutedEdges });
 	},
+	triggerLayout: async () => {
+		// Re-layout current nodes and edges (used when node sizes change)
+		const { nodes, edges } = get();
+		const { nodes: layoutedNodes, edges: layoutedEdges } =
+			await getLayoutedElements(nodes, edges, { direction: "TB" });
+		set({ nodes: layoutedNodes, edges: layoutedEdges });
+	},
 	viewMembers: [],
 	editMembers: [],
 	reviewMembers: [],
@@ -198,6 +211,19 @@ const useStore = create<Store>((set, get) => ({
 				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 		);
 		set({ caseNotes: sortedComments });
+	},
+	// Comments sheet state
+	commentsSheetOpen: false,
+	commentsSheetNode: null,
+	setCommentsSheetOpen: (open: boolean) => {
+		set({ commentsSheetOpen: open });
+		// Clear node when closing
+		if (!open) {
+			set({ commentsSheetNode: null });
+		}
+	},
+	setCommentsSheetNode: (node: Node | null) => {
+		set({ commentsSheetNode: node });
 	},
 }));
 

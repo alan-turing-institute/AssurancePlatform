@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import ReactFlow, {
-	Background,
-	Controls,
-	type Node,
-	useReactFlow,
-} from "reactflow";
+import ReactFlow, { Background, Controls, useReactFlow } from "reactflow";
 
 import "reactflow/dist/style.css";
 import { Loader2, Unplug, X } from "lucide-react";
@@ -14,9 +9,6 @@ import EvidenceNode from "@/components/cases/evidence-node";
 import GoalNode from "@/components/cases/goal-node";
 import PropertyNode from "@/components/cases/property-node";
 import StrategyNode from "@/components/cases/strategy-node";
-import NodeEdit, {
-	type AssuranceCaseNode,
-} from "@/components/common/node-edit";
 import useStore from "@/data/store";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -25,6 +17,7 @@ import { getLayoutedElements } from "@/lib/layout-helper";
 import { useToast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import ActionButtons from "./action-buttons";
+import CommentsSheet from "./comments-sheet";
 
 // Define nodeTypes at module level to ensure stable reference
 // This prevents React Flow warning about recreated nodeTypes objects
@@ -48,8 +41,6 @@ function Flow() {
 		orphanedElements,
 	} = useStore();
 
-	const [editOpen, setEditOpen] = useState(false);
-	const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true);
 
@@ -142,11 +133,6 @@ function Flow() {
 		}
 	}, [assuranceCase, loading, markChanged]);
 
-	const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
-		setSelectedNode(node);
-		setEditOpen(true);
-	};
-
 	const showCreateGoal = !(nodes.length > 0 && nodes[0].type === "goal");
 
 	const notifyError = (message: string) => {
@@ -175,7 +161,6 @@ function Flow() {
 						nodes={nodes}
 						nodesDraggable={false}
 						nodeTypes={nodeTypes}
-						onNodeClick={handleNodeClick}
 						onNodesChange={onNodesChange}
 					>
 						<Controls className="z-50" />
@@ -186,13 +171,8 @@ function Flow() {
 						notifyError={notifyError}
 						showCreateGoal={showCreateGoal}
 					/>
-					{selectedNode?.type && (
-						<NodeEdit
-							isOpen={editOpen}
-							node={selectedNode as AssuranceCaseNode}
-							setEditOpen={setEditOpen}
-						/>
-					)}
+					{/* Comments Sheet - controlled by store state */}
+					<CommentsSheet />
 					{orphanedElements &&
 						orphanedElements.length > 0 &&
 						showOrphanMessage && (
