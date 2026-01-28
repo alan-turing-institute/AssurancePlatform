@@ -223,25 +223,11 @@ function buildPropertyClaimStructure(
 ): Record<string, unknown> {
 	const children = allElements.filter((el) => el.parentId === claim.id);
 
-	// Get evidence from direct children (parentId relationship)
-	const childEvidence = children.filter((el) => el.elementType === "EVIDENCE");
-
-	// Get evidence from EvidenceLink table (imported evidence)
+	// Get evidence from EvidenceLink table (evidence uses many-to-many links, not parentId)
 	const linkedEvidence =
 		claim.evidenceLinksTo?.map((link) => link.evidence) ?? [];
 
-	// Combine and deduplicate by ID
-	const evidenceSet = new Map<string, PrismaElement>();
-	for (const ev of childEvidence) {
-		evidenceSet.set(ev.id, ev);
-	}
-	for (const ev of linkedEvidence) {
-		if (!evidenceSet.has(ev.id)) {
-			evidenceSet.set(ev.id, ev);
-		}
-	}
-
-	const evidence = Array.from(evidenceSet.values())
+	const evidence = linkedEvidence
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((ev) => ({
 			id: ev.id,

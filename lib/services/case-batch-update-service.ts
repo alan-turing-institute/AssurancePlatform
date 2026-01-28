@@ -218,7 +218,8 @@ async function calculateLevel(
 }
 
 /**
- * Builds the data object for creating an element
+ * Builds the data object for creating an element.
+ * Evidence elements always have parentId=null (they use evidence_links instead).
  */
 function buildCreateData(
 	data: CreateElementData,
@@ -227,14 +228,18 @@ function buildCreateData(
 	level: number | null,
 	userId: string
 ): Prisma.AssuranceElementUncheckedCreateInput {
+	const elementType = mapElementType(data.type);
+	// Evidence uses evidence_links table, not parentId
+	const effectiveParentId = elementType === "EVIDENCE" ? null : parentId;
+
 	return {
 		id: data.id,
 		caseId,
-		elementType: mapElementType(data.type),
+		elementType,
 		name: data.name,
 		description: data.description,
 		inSandbox: data.inSandbox,
-		parentId,
+		parentId: effectiveParentId,
 		role: data.role as ElementRole | null | undefined,
 		assumption: data.assumption,
 		justification: data.justification,

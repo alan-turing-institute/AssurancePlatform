@@ -371,6 +371,90 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 }
 
 /**
+ * Checks if a case already has a goal element.
+ * Returns true if a goal exists, false otherwise.
+ */
+async function caseHasGoal(caseId: string): Promise<boolean> {
+	const existingGoal = await prismaNew.assuranceElement.findFirst({
+		where: {
+			caseId,
+			elementType: "GOAL",
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	return !!existingGoal;
+}
+
+/**
+ * Creates an evidence link between an evidence element and a claim.
+ */
+async function createEvidenceLink(
+	evidenceId: string,
+	claimId: string
+): Promise<void> {
+	await prismaNew.evidenceLink.create({
+		data: {
+			evidenceId,
+			claimId,
+		},
+	});
+}
+
+/**
+ * Resolves description from input fields with priority order.
+ */
+function resolveDescription(input: CreateElementInput): string {
+	return (
+		input.description || input.shortDescription || input.longDescription || ""
+	);
+}
+
+/**
+ * Creates the element in the database and handles evidence linking.
+ */
+async function createElementInDatabase(
+	input: CreateElementInput,
+	caseId: string,
+	elementType: string,
+	elementName: string,
+	effectiveParentId: string | null | undefined,
+	level: number | undefined,
+	userId: string,
+	intendedParentId: string | null
+): Promise<{ data?: ElementResponse; error?: string }> {
+	const element = await prismaNew.assuranceElement.create({
+		data: {
+			caseId,
+			elementType: elementType as
+				| "GOAL"
+				| "STRATEGY"
+				| "PROPERTY_CLAIM"
+				| "EVIDENCE",
+			name: elementName,
+			description: resolveDescription(input),
+			parentId: effectiveParentId,
+			...resolveUrls(input),
+			assumption: input.assumption,
+			justification: input.justification,
+			context: input.context ?? [],
+			level,
+			createdById: userId,
+		},
+		include: {
+			parent: { select: { id: true, elementType: true } },
+		},
+	});
+
+	// Create EvidenceLink for evidence elements with an intended parent claim
+	if (intendedParentId) {
+		await createEvidenceLink(element.id, intendedParentId);
+	}
+
+	return { data: transformToResponse(element) };
+}
+
+/**
  * Creates a new element in a case
  */
 export async function createElement(
@@ -382,7 +466,6 @@ export async function createElement(
 		return { error: "Case ID is required" };
 	}
 
-	// Validate user has EDIT permission
 	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
 	if (!hasAccess) {
 		return { error: "Permission denied" };
@@ -391,73 +474,40 @@ export async function createElement(
 	const elementType = mapElementType(input.elementType);
 	const parentId = resolveParentId(input);
 
-	// Prevent duplicate goals - a case can only have one goal
-	if (elementType === "GOAL") {
-		const existingGoal = await prismaNew.assuranceElement.findFirst({
-			where: {
-				caseId,
-				elementType: "GOAL",
-				deletedAt: null,
-			},
-			select: { id: true },
-		});
-		if (existingGoal) {
-			return { error: "A case can only have one goal claim" };
-		}
+	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
+		return { error: "A case can only have one goal claim" };
 	}
 
-	// Calculate level and get parent info for property claims
-	let level: number | undefined;
-	let parentInfo: { name: string | null; elementType: string } | null = null;
+	const { level, parentInfo } =
+		elementType === "PROPERTY_CLAIM" && parentId
+			? await calculatePropertyClaimLevel(parentId)
+			: { level: undefined, parentInfo: null };
 
-	if (elementType === "PROPERTY_CLAIM" && parentId) {
-		const result = await calculatePropertyClaimLevel(parentId);
-		level = result.level;
-		parentInfo = result.parentInfo;
-	}
-
-	// Auto-generate name if not provided
-	let elementName = input.name || "";
-	if (!elementName) {
-		elementName = await generateElementName(
+	const elementName =
+		input.name ||
+		(await generateElementName(
 			elementType,
 			caseId,
 			parentId ?? null,
 			parentInfo
-		);
-	}
+		));
+
+	// Evidence uses evidence_links instead of parentId
+	const isEvidence = elementType === "EVIDENCE";
+	const intendedParentId = isEvidence ? (parentId ?? null) : null;
+	const effectiveParentId = isEvidence ? null : parentId;
 
 	try {
-		const element = await prismaNew.assuranceElement.create({
-			data: {
-				caseId,
-				elementType: elementType as
-					| "GOAL"
-					| "STRATEGY"
-					| "PROPERTY_CLAIM"
-					| "EVIDENCE",
-				name: elementName,
-				description:
-					input.description ||
-					input.shortDescription ||
-					input.longDescription ||
-					"",
-				parentId,
-				...resolveUrls(input),
-				assumption: input.assumption,
-				justification: input.justification,
-				context: input.context ?? [],
-				level,
-				createdById: userId,
-			},
-			include: {
-				parent: {
-					select: { id: true, elementType: true },
-				},
-			},
-		});
-
-		return { data: transformToResponse(element) };
+		return await createElementInDatabase(
+			input,
+			caseId,
+			elementType,
+			elementName,
+			effectiveParentId,
+			level,
+			userId,
+			intendedParentId
+		);
 	} catch (error) {
 		console.error("Failed to create element:", error);
 		return { error: "Failed to create element" };
