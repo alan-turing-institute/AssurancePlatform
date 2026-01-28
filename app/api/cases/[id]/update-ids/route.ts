@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateSession } from "@/lib/auth/validate-session";
+import { compareIdentifiers } from "@/lib/identifier-utils";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
 import { prismaNew } from "@/lib/prisma";
 
@@ -56,9 +57,17 @@ function buildElementTree(
 		}
 	}
 
-	// Sort children by creation date at each level
+	// Sort children by existing identifier first, then by creation date
+	// This preserves visual order when renumbering (e.g., S1, S3 becomes S1, S2)
 	const sortChildren = (nodes: ElementWithChildren[]): void => {
-		nodes.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+		nodes.sort((a, b) => {
+			const cmp = compareIdentifiers(a.name, b.name);
+			if (cmp !== 0) {
+				return cmp;
+			}
+			// Fallback to createdAt for elements with same/no identifier
+			return a.createdAt.getTime() - b.createdAt.getTime();
+		});
 		for (const node of nodes) {
 			sortChildren(node.children);
 		}
@@ -218,8 +227,49 @@ async function resetIdentifiersWithPrisma(
 		},
 	});
 
+	// Get evidence links (evidence linked to claims via many-to-many)
+	const evidenceLinks = await prismaNew.evidenceLink.findMany({
+		where: {
+			evidence: { caseId, deletedAt: null },
+			claim: { caseId, deletedAt: null },
+		},
+		select: {
+			evidenceId: true,
+			claimId: true,
+		},
+	});
+
+	// Create a map of evidence ID to linked claim ID (for evidence without parentId)
+	const evidenceToClaimMap = new Map<string, string>();
+	for (const link of evidenceLinks) {
+		// Only use the link if evidence doesn't already have a parentId
+		const element = elements.find((el) => el.id === link.evidenceId);
+		if (element && !element.parentId) {
+			evidenceToClaimMap.set(link.evidenceId, link.claimId);
+		}
+	}
+
+	// Augment elements with effective parentId from evidence links
+	const augmentedElements = elements.map((el) => {
+		if (!el.parentId && evidenceToClaimMap.has(el.id)) {
+			return { ...el, parentId: evidenceToClaimMap.get(el.id) ?? null };
+		}
+		return el;
+	});
+
+	// Filter out orphaned elements (non-GOALs with no parent after augmentation)
+	const connectedElements = augmentedElements.filter((el) => {
+		if (el.elementType === "GOAL") {
+			return true;
+		}
+		if (el.parentId) {
+			return true;
+		}
+		return false;
+	});
+
 	// Build tree structure and generate hierarchical names
-	const tree = buildElementTree(elements);
+	const tree = buildElementTree(connectedElements);
 	const nameMap = generateHierarchicalNames(tree);
 
 	// Update all elements with new names

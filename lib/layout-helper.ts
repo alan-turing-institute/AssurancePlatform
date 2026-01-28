@@ -9,6 +9,7 @@
 
 import ELK from "elkjs/lib/elk.bundled.js";
 import type { Edge, Node } from "reactflow";
+import { compareIdentifiers } from "@/lib/identifier-utils";
 
 const elk = new ELK();
 
@@ -145,8 +146,16 @@ export async function getLayoutedElements(
 		return { nodes, edges };
 	}
 
-	// Build ELK graph children with actual dimensions
-	const elkChildren = visibleNodes.map((node) => {
+	// Sort visible nodes by identifier to ensure consistent left-to-right ordering
+	// (e.g., S1 appears left of S2, P1 appears left of P2)
+	const sortedVisibleNodes = [...visibleNodes].sort((a, b) => {
+		const aName = (a.data?.name as string) || "";
+		const bName = (b.data?.name as string) || "";
+		return compareIdentifiers(aName, bName);
+	});
+
+	// Build ELK graph children with actual dimensions (using sorted order)
+	const elkChildren = sortedVisibleNodes.map((node) => {
 		const dimensions = getActualNodeDimensions(
 			node as Node & { measured?: { width?: number; height?: number } }
 		);
@@ -175,6 +184,8 @@ export async function getLayoutedElements(
 			"elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
 			// Ensure nodes don't overlap by considering their actual sizes
 			"elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+			// Force node order to match model order (sorted by identifier)
+			"elk.layered.crossingMinimization.forceNodeModelOrder": "true",
 		},
 		children: elkChildren,
 		edges: validEdges.map((edge) => ({

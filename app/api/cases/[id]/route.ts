@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateSession } from "@/lib/auth/validate-session";
+import { compareIdentifiers } from "@/lib/identifier-utils";
 
 // Type definitions for Prisma elements
 type PrismaElement = {
@@ -154,10 +155,12 @@ function buildGoalStructure(
 
 	const strategies = children
 		.filter((el) => el.elementType === "STRATEGY")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((strategy) => buildStrategyStructure(strategy, allElements, goal.id));
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
 			buildPropertyClaimStructure(claim, allElements, goal.id, null)
 		);
@@ -190,6 +193,7 @@ function buildStrategyStructure(
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
 			buildPropertyClaimStructure(claim, allElements, null, strategy.id)
 		);
@@ -237,21 +241,24 @@ function buildPropertyClaimStructure(
 		}
 	}
 
-	const evidence = Array.from(evidenceSet.values()).map((ev) => ({
-		id: ev.id,
-		type: "evidence",
-		name: ev.name,
-		short_description: ev.description || "",
-		long_description: ev.description || "",
-		created_date: ev.createdAt.toISOString(),
-		URL: ev.url || "",
-		property_claim_id: [claim.id],
-		comments: ev.comments || [],
-		in_sandbox: ev.inSandbox,
-	}));
+	const evidence = Array.from(evidenceSet.values())
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((ev) => ({
+			id: ev.id,
+			type: "evidence",
+			name: ev.name,
+			short_description: ev.description || "",
+			long_description: ev.description || "",
+			created_date: ev.createdAt.toISOString(),
+			URL: ev.url || "",
+			property_claim_id: [claim.id],
+			comments: ev.comments || [],
+			in_sandbox: ev.inSandbox,
+		}));
 
 	const nestedClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((nested) =>
 			buildPropertyClaimStructure(nested, allElements, null, null)
 		);
