@@ -86,7 +86,7 @@ function ProviderCard({
 						<span className="font-medium">{name}</span>
 						<span
 							className={`inline-flex h-2 w-2 rounded-full ${
-								connected ? "bg-green-500" : "bg-muted-foreground"
+								connected ? "bg-success" : "bg-muted-foreground"
 							}`}
 						/>
 					</div>
@@ -239,7 +239,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 						<div className="flex items-center gap-2">
 							<span
 								className={`inline-flex h-2 w-2 rounded-full ${
-									data.hasPassword ? "bg-green-500" : "bg-muted-foreground"
+									data.hasPassword ? "bg-success" : "bg-muted-foreground"
 								}`}
 							/>
 							<span className="text-sm">

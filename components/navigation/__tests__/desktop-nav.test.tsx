@@ -71,33 +71,32 @@ describe("DesktopNav", () => {
 		it("should render with proper sidebar styling", () => {
 			const { container } = render(<DesktopNav />);
 
-			const sidebar = container.querySelector(".bg-indigo-600");
+			const sidebar = container.querySelector(".bg-sidebar");
 			expect(sidebar).toHaveClass(
 				"flex",
 				"grow",
 				"flex-col",
 				"gap-y-5",
 				"overflow-y-auto",
-				"bg-indigo-600",
+				"bg-sidebar",
 				"px-6",
-				"pb-4",
-				"dark:bg-slate-900"
+				"pb-4"
 			);
 		});
 	});
 
 	describe("Logo and Branding", () => {
-		it("should render the platform logo and title", () => {
+		it("should render the platform logo", () => {
 			render(<DesktopNav />);
 
-			const logo = screen.getByAltText("Turing Ethical Assurance Logo");
+			const logo = screen.getByAltText(
+				"Trustworthy and Ethical Assurance Platform"
+			);
 			expect(logo).toBeInTheDocument();
-			expect(logo).toHaveClass("w-16");
-			expect(logo).toHaveAttribute("src", "/images/logos/tea-logo-icon-dark.png");
-
-			expect(
-				screen.getByText("Trustworthy and Ethical Assurance Platform")
-			).toBeInTheDocument();
+			expect(logo).toHaveAttribute(
+				"src",
+				"/images/logos/tea-logo-full-dark.png"
+			);
 		});
 
 		it("should wrap logo in dashboard link", () => {
@@ -107,7 +106,9 @@ describe("DesktopNav", () => {
 			const logoLink = links.find(
 				(link) =>
 					link.getAttribute("href") === "/dashboard" &&
-					link.querySelector('img[alt="Turing Ethical Assurance Logo"]')
+					link.querySelector(
+						'img[alt="Trustworthy and Ethical Assurance Platform"]'
+					)
 			);
 			expect(logoLink).toBeInTheDocument();
 			expect(logoLink).toHaveAttribute("href", "/dashboard");
@@ -134,7 +135,7 @@ describe("DesktopNav", () => {
 					link.textContent?.includes("My Assurance Cases") &&
 					link.getAttribute("href") === "/dashboard"
 			);
-			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
+			expect(activeLink).toHaveClass("bg-sidebar-accent", "text-sidebar-accent-foreground");
 		});
 
 		it("should apply inactive styling to non-active items", () => {
@@ -145,7 +146,7 @@ describe("DesktopNav", () => {
 			const inactiveLink = links.find((link) =>
 				link.textContent?.includes("Shared With Me")
 			);
-			expect(inactiveLink).toHaveClass("text-indigo-200");
+			expect(inactiveLink).toHaveClass("text-sidebar-foreground");
 		});
 
 		it("should handle external links with proper attributes", () => {
@@ -179,7 +180,7 @@ describe("DesktopNav", () => {
 			const teamsHeader = screen.getByText("Your teams");
 			expect(teamsHeader).toHaveClass(
 				"font-semibold",
-				"text-indigo-200",
+				"text-sidebar-foreground",
 				"text-xs",
 				"leading-6"
 			);
@@ -232,8 +233,8 @@ describe("DesktopNav", () => {
 		it("should have proper sidebar styling", () => {
 			const { container } = render(<DesktopNav />);
 
-			const sidebar = container.querySelector(".bg-indigo-600");
-			expect(sidebar).toHaveClass("dark:bg-slate-900");
+			const sidebar = container.querySelector(".bg-sidebar");
+			expect(sidebar).toHaveClass("bg-sidebar");
 		});
 	});
 
@@ -246,7 +247,7 @@ describe("DesktopNav", () => {
 			const activeLink = links.find(
 				(link) => link.getAttribute("href") === "/dashboard/shared"
 			);
-			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
+			expect(activeLink).toHaveClass("bg-sidebar-accent", "text-sidebar-accent-foreground");
 		});
 
 		it("should handle root pathname", () => {
@@ -265,7 +266,7 @@ describe("DesktopNav", () => {
 			const activeLink = links.find(
 				(link) => link.getAttribute("href") === "/discover"
 			);
-			expect(activeLink).toHaveClass("bg-indigo-700", "text-white");
+			expect(activeLink).toHaveClass("bg-sidebar-accent", "text-sidebar-accent-foreground");
 		});
 	});
 });

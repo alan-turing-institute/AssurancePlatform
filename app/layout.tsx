@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth-options";
 import { cn } from "@/lib/utils";
 import { ModalProvider } from "@/providers/modal-provider";
 import SessionProvider from "@/providers/session-provider";
+import { ThemePresetProvider } from "@/providers/theme-preset-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
 const fontSans = FontSans({
@@ -42,9 +43,11 @@ export default async function RootLayout({
 						disableTransitionOnChange
 						enableSystem
 					>
-						{children}
-						<ModalProvider />
-						<Toaster />
+						<ThemePresetProvider>
+							{children}
+							<ModalProvider />
+							<Toaster />
+						</ThemePresetProvider>
 					</ThemeProvider>
 				</SessionProvider>
 			</body>

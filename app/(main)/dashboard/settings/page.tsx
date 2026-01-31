@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { fetchConnectedAccounts } from "@/actions/connected-accounts";
 import { fetchCurrentUser } from "@/actions/users";
 import { validateSession } from "@/lib/auth/validate-session";
+import { AppearanceForm } from "./_components/appearance-form";
 import { ConnectedAccountsForm } from "./_components/connected-accounts-form";
 import { DeleteForm } from "./_components/delete-form";
 import { PasswordForm } from "./_components/password-form";
@@ -21,10 +22,8 @@ const SettingsPage = async () => {
 	return (
 		<main>
 			<h1 className="sr-only">Account Settings</h1>
-			{/* <header className="border-b border-foreground/500">
-        <SettingsNav />
-      </header> */}
 			<div className="min-h-screen divide-y divide-foreground/5">
+				<AppearanceForm />
 				<PersonalInfoForm data={currentUser} />
 				<ConnectedAccountsForm data={connectedAccounts} />
 				<PasswordForm data={currentUser} />

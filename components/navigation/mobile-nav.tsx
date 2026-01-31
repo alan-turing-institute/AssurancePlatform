@@ -112,7 +112,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 								</div>
 							</Transition.Child>
 							{/* Sidebar component, swap this element with another sidebar if you like */}
-							<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4 dark:bg-slate-900">
+							<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar px-6 pb-4">
 								<div className="my-4 flex shrink-0 items-center">
 									<Link href={"/dashboard"}>
 										<Image
@@ -136,8 +136,8 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 														<a
 															className={classNames(
 																item.href === pathname
-																	? "bg-indigo-700 text-white"
-																	: "text-indigo-200 hover:bg-indigo-700 hover:text-white dark:hover:bg-indigo-700/60",
+																	? "bg-sidebar-accent text-sidebar-accent-foreground"
+																	: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
 																"group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
 															)}
 															href={item.href}
@@ -147,8 +147,8 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 																aria-hidden="true"
 																className={classNames(
 																	item.current
-																		? "text-white"
-																		: "text-indigo-200 group-hover:text-white",
+																		? "text-sidebar-accent-foreground"
+																		: "text-sidebar-foreground group-hover:text-sidebar-accent-foreground",
 																	"h-6 w-6 shrink-0"
 																)}
 															/>
@@ -160,11 +160,11 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 										</li>
 										<li>
 											<div className="flex items-center justify-between">
-												<div className="font-semibold text-indigo-200 text-xs leading-6">
+												<div className="font-semibold text-sidebar-foreground text-xs leading-6">
 													Your teams
 												</div>
 												<button
-													className="rounded p-1 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+													className="rounded p-1 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 													onClick={() => {
 														setSidebarOpen(false);
 														createTeamModal.onOpen();
@@ -177,7 +177,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 											</div>
 											<ul className="-mx-2 mt-2 space-y-1">
 												{teams.length === 0 && (
-													<p className="px-2 text-indigo-100/60 text-sm dark:text-slate-300/50">
+													<p className="px-2 text-sidebar-muted text-sm">
 														No teams added
 													</p>
 												)}
@@ -187,14 +187,14 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 															<Link
 																className={classNames(
 																	pathname === `/dashboard/teams/${team.id}`
-																		? "bg-indigo-700 text-white"
-																		: "text-indigo-200 hover:bg-indigo-700 hover:text-white",
+																		? "bg-sidebar-accent text-sidebar-accent-foreground"
+																		: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
 																	"group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
 																)}
 																href={`/dashboard/teams/${team.id}`}
 																onClick={() => setSidebarOpen(false)}
 															>
-																<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-[0.625rem] text-white">
+																<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sidebar-foreground/40 bg-sidebar-accent font-medium text-[0.625rem] text-white">
 																	{team.name.charAt(0).toUpperCase()}
 																</span>
 																<span className="truncate">{team.name}</span>
@@ -208,14 +208,14 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 												{externalNavigation.map((item) => (
 													<li key={item.name}>
 														<a
-															className="group flex gap-x-3 rounded-md p-2 font-semibold text-indigo-200 text-sm leading-6 hover:bg-indigo-700 hover:text-white"
+															className="group flex gap-x-3 rounded-md p-2 font-semibold text-sidebar-foreground text-sm leading-6 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 															href={item.href}
 															rel="noopener"
 															target="_blank"
 														>
 															<item.icon
 																aria-hidden="true"
-																className="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
+																className="h-6 w-6 shrink-0 text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
 															/>
 															{item.name}
 															{item.externalLink && (
@@ -228,7 +228,7 @@ export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
 										</li>
 									</ul>
 
-									<Separator className="my-4 bg-indigo-700/80 dark:bg-slate-800" />
+									<Separator className="my-4 bg-sidebar-border" />
 
 									<LoggedInUser />
 								</nav>

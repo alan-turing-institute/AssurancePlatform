@@ -208,17 +208,17 @@ describe("LoggedInUser", () => {
 			expect(usernameElement).toHaveClass(
 				"font-medium",
 				"text-sm",
-				"text-white",
+				"text-sidebar-accent-foreground",
 				"capitalize",
-				"group-hover:text-white"
+				"group-hover:text-sidebar-accent-foreground"
 			);
 
 			const emailElement = screen.getByText("test@example.com");
 			expect(emailElement).toHaveClass(
 				"font-medium",
-				"text-gray-300",
+				"text-sidebar-foreground/70",
 				"text-xs",
-				"group-hover:text-white"
+				"group-hover:text-sidebar-accent-foreground"
 			);
 		});
 
@@ -243,15 +243,14 @@ describe("LoggedInUser", () => {
 				"items-center",
 				"justify-center",
 				"rounded-full",
-				"bg-indigo-900/40",
-				"dark:bg-indigo-500"
+				"bg-sidebar-accent/60"
 			);
 
 			const avatarText = screen.getByText("t");
 			expect(avatarText).toHaveClass(
 				"font-medium",
 				"text-sm",
-				"text-white",
+				"text-sidebar-accent-foreground",
 				"capitalize"
 			);
 		});
@@ -311,8 +310,7 @@ describe("LoggedInUser", () => {
 				"shrink-0",
 				"rounded-md",
 				"p-4",
-				"hover:bg-indigo-900/40",
-				"dark:hover:bg-indigo-600"
+				"hover:bg-sidebar-accent/40"
 			);
 		});
 
@@ -475,7 +473,7 @@ describe("LoggedInUser", () => {
 			const emailElement = screen.getAllByText(
 				(content, element) =>
 					element?.tagName.toLowerCase() === "p" &&
-					element?.className.includes("text-gray-300") &&
+					element?.className.includes("text-sidebar-foreground/70") &&
 					content === ""
 			);
 			expect(emailElement.length).toBeGreaterThan(0);

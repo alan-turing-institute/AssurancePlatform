@@ -146,11 +146,11 @@ const ResetPasswordForm = () => {
 	if (tokenState === "invalid") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-rose-700 bg-rose-500/20 px-4 py-6">
-					<h3 className="font-semibold text-rose-800 dark:text-rose-400">
+				<div className="rounded-md border border-destructive bg-destructive/20 px-4 py-6">
+					<h3 className="font-semibold text-destructive dark:text-destructive">
 						Invalid reset link
 					</h3>
-					<p className="mt-2 text-rose-700 text-sm dark:text-rose-300">
+					<p className="mt-2 text-destructive/80 text-sm">
 						This password reset link is invalid. Please request a new one.
 					</p>
 				</div>
@@ -170,11 +170,11 @@ const ResetPasswordForm = () => {
 	if (tokenState === "expired") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-amber-700 bg-amber-500/20 px-4 py-6">
-					<h3 className="font-semibold text-amber-800 dark:text-amber-400">
+				<div className="rounded-md border border-warning bg-warning/20 px-4 py-6">
+					<h3 className="font-semibold text-warning dark:text-warning">
 						Link expired
 					</h3>
-					<p className="mt-2 text-amber-700 text-sm dark:text-amber-300">
+					<p className="mt-2 text-sm text-warning/80">
 						This password reset link has expired. Please request a new one.
 					</p>
 				</div>
@@ -194,11 +194,11 @@ const ResetPasswordForm = () => {
 	if (success) {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-green-700 bg-green-500/20 px-4 py-6">
-					<h3 className="font-semibold text-green-800 dark:text-green-400">
+				<div className="rounded-md border border-success bg-success/20 px-4 py-6">
+					<h3 className="font-semibold text-success dark:text-success">
 						Password reset successful
 					</h3>
-					<p className="mt-2 text-green-700 text-sm dark:text-green-300">
+					<p className="mt-2 text-sm text-success/80">
 						Your password has been reset. Redirecting you to login...
 					</p>
 				</div>
@@ -221,7 +221,7 @@ const ResetPasswordForm = () => {
 			</div>
 
 			{error && (
-				<div className="mt-4 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700">
+				<div className="mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive">
 					<p>{error}</p>
 				</div>
 			)}
