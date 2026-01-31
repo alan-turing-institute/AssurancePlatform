@@ -120,7 +120,7 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 				<h2 className="font-semibold text-base text-foreground leading-7">
 					Personal Information
 				</h2>
-				<p className="mt-1 text-gray-400 text-sm leading-6">
+				<p className="mt-1 text-muted-foreground text-sm leading-6">
 					Update your personal details here.
 				</p>
 			</div>
@@ -199,7 +199,7 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 						</div>
 						{session && (
 							<Button
-								className="bg-indigo-600 text-white hover:bg-indigo-700"
+								className="bg-primary text-primary-foreground hover:bg-primary/80"
 								disabled={loading}
 								type="submit"
 							>

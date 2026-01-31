@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Modal } from "@/components/ui/modal";
 
 type DeleteElementModalProps = {
@@ -59,15 +60,19 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 				title="Delete element?"
 			>
 				<div className="space-y-4 pt-4">
-					<label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
-						<input
+					<div className="flex items-center gap-2">
+						<Checkbox
 							checked={dontAskAgain}
-							className="rounded border-input"
-							onChange={(e) => setDontAskAgain(e.target.checked)}
-							type="checkbox"
+							id="dont-ask-simple"
+							onCheckedChange={(checked) => setDontAskAgain(checked === true)}
 						/>
-						Don't ask me again
-					</label>
+						<label
+							className="cursor-pointer text-muted-foreground text-sm"
+							htmlFor="dont-ask-simple"
+						>
+							Don't ask me again
+						</label>
+					</div>
 					<div className="flex w-full items-center justify-end space-x-2">
 						<Button disabled={loading} onClick={onClose} variant="outline">
 							Cancel
@@ -104,15 +109,19 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 				</div>
 
 				<div className="flex items-center justify-between pt-2">
-					<label className="flex cursor-pointer items-center gap-2 text-muted-foreground text-sm">
-						<input
+					<div className="flex items-center gap-2">
+						<Checkbox
 							checked={dontAskAgain}
-							className="rounded border-input"
-							onChange={(e) => setDontAskAgain(e.target.checked)}
-							type="checkbox"
+							id="dont-ask-children"
+							onCheckedChange={(checked) => setDontAskAgain(checked === true)}
 						/>
-						Don't ask me again
-					</label>
+						<label
+							className="cursor-pointer text-muted-foreground text-sm"
+							htmlFor="dont-ask-children"
+						>
+							Don't ask me again
+						</label>
+					</div>
 					<div className="flex items-center space-x-2">
 						<Button disabled={loading} onClick={onClose} variant="outline">
 							Cancel

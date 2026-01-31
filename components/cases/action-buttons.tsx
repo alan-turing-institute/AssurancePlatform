@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
+import { Button } from "@/components/ui/button";
 import useStore from "@/data/store";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useExportModal } from "@/hooks/use-export-modal";
@@ -117,35 +118,37 @@ const ActionButtons = ({
 	return (
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
 			<div
-				className="m-auto flex items-center justify-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-white shadow-lg dark:bg-indigo-500/20"
+				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-white shadow-lg dark:bg-primary/20"
 				data-show-create-goal={showCreateGoal}
 				data-testid="action-buttons"
 			>
-				<div className="flex items-center justify-center gap-2 border-r-2 border-r-indigo-200 pr-2 dark:border-r-indigo-800/60">
+				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2 dark:border-r-primary/30">
 					{showCreateGoal &&
 						assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && (
 							<ActionTooltip label="New Goal">
-								<button
-									className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								<Button
+									className="rounded-full p-3"
 									onClick={() => setOpen(true)}
+									size="icon"
 									type="button"
 								>
 									<Plus className="h-5 w-5" />
 									<span className="sr-only">Add Goal</span>
-								</button>
+								</Button>
 							</ActionTooltip>
 						)}
 					{assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && <HistoryControls />}
 					<ActionTooltip label="Focus">
-						<button
-							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800 disabled:opacity-50"
+						<Button
+							className="rounded-full p-3 disabled:opacity-50"
 							disabled={isLayouting}
 							id="FocusBtn"
 							onClick={handleFocus}
+							size="icon"
 							type="button"
 						>
 							{isLayouting ? (
@@ -154,90 +157,98 @@ const ActionButtons = ({
 								<Group className="h-5 w-5" />
 							)}
 							<span className="sr-only">Focus</span>
-						</button>
+						</Button>
 					</ActionTooltip>
 					{assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && (
 							<ActionTooltip label="Reset Identifiers">
-								<button
-									className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+								<Button
+									className="rounded-full p-3"
 									onClick={() => setAlertOpen(true)}
+									size="icon"
 									type="button"
 								>
 									<RotateCw className="h-5 w-5" />
 									<span className="sr-only">Reset Identifiers</span>
-								</button>
+								</Button>
 							</ActionTooltip>
 						)}
 					<ActionTooltip label="Resources">
-						<button
-							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+						<Button
+							className="rounded-full p-3"
 							onClick={() => resourcesModal.onOpen()}
+							size="icon"
 							type="button"
 						>
 							<Info className="h-5 w-5" />
 							<span className="sr-only">Resources</span>
-						</button>
+						</Button>
 					</ActionTooltip>
 				</div>
 				<div className="flex items-center justify-center gap-2">
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Share">
-							<button
-								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							<Button
+								className="rounded-full p-3"
 								onClick={() =>
 									caseSharingModal.onOpen(assuranceCase?.id?.toString() ?? "")
 								}
+								size="icon"
 								type="button"
 							>
 								<Share2 className="h-5 w-5" />
 								<span className="sr-only">Share</span>
-							</button>
+							</Button>
 						</ActionTooltip>
 					)}
 					{assuranceCase && assuranceCase.permissions !== "view" && (
 						<ActionTooltip label="Export">
-							<button
-								className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+							<Button
+								className="rounded-full p-3"
 								onClick={() => exportModal.onOpen()}
+								size="icon"
 								type="button"
 							>
 								<Download className="h-5 w-5" />
 								<span className="sr-only">Export</span>
-							</button>
+							</Button>
 						</ActionTooltip>
 					)}
 					<ActionTooltip label="JSON View">
-						<button
-							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+						<Button
+							className="rounded-full p-3"
 							onClick={() => setJsonViewOpen(true)}
+							size="icon"
 							type="button"
 						>
 							<Code2 className="h-5 w-5" />
 							<span className="sr-only">JSON View</span>
-						</button>
+						</Button>
 					</ActionTooltip>
 					<ActionTooltip label="Notes">
-						<button
-							className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800"
+						<Button
+							className="rounded-full p-3"
 							onClick={() => setNotesOpen(true)}
+							size="icon"
 							type="button"
 						>
 							<Notebook className="h-5 w-5" />
 							<span className="sr-only">Notes</span>
-						</button>
+						</Button>
 					</ActionTooltip>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
-							<button
-								className="rounded-full bg-rose-500 p-3 transition-all hover:bg-rose-600"
+							<Button
+								className="rounded-full p-3"
 								onClick={() => setDeleteOpen(true)}
+								size="icon"
 								type="button"
+								variant="destructive"
 							>
 								<Trash2 className="h-5 w-5" />
 								<span className="sr-only">Delete</span>
-							</button>
+							</Button>
 						</ActionTooltip>
 					)}
 				</div>

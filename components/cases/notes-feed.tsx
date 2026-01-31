@@ -129,17 +129,17 @@ export default function NotesFeed() {
 							{index !== sortedNotes.length - 1 ? (
 								<span
 									aria-hidden="true"
-									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-gray-200 dark:bg-gray-800"
+									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-border"
 								/>
 							) : null}
-							<div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
+							<div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-accent">
 								<div className="relative mr-4">
 									{/* <img
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-400 ring-8 ring-white"
                     src={activityItem.imageUrl}
                     alt=""
                   /> */}
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 ring-8 ring-white dark:ring-slate-900">
+									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary ring-8 ring-background">
 										<User2Icon className="h-4 w-4 text-white" />
 									</div>
 

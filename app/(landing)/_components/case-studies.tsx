@@ -44,11 +44,11 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 
 	return (
 		<>
-			<div className="mx-auto mb-24 max-w-2xl text-black">
+			<div className="mx-auto mb-24 max-w-2xl text-foreground">
 				<div className="flex items-center gap-4">
 					{/* Search Bar */}
 					<Input
-						className="h-12 border-gray-100 bg-gray-100 ring-offset-indigo-500"
+						className="h-12 border-border bg-muted ring-offset-indigo-500"
 						onChange={(e) => setSearchKeyword(e.target.value)}
 						placeholder="Search patterns..."
 						type="text"
@@ -60,7 +60,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 						onValueChange={(value) => setSelectedSector(value)}
 						value={selectedSector}
 					>
-						<SelectTrigger className="w-56 rounded-lg border border-gray-100 bg-gray-100 shadow-xs focus:border-indigo-500 focus:ring-3 focus:ring-indigo-200">
+						<SelectTrigger className="w-56 rounded-lg border border-border bg-muted shadow-xs focus:border-indigo-500 focus:ring-3 focus:ring-indigo-200">
 							<SelectValue placeholder="Select a sector" />
 						</SelectTrigger>
 						<SelectContent>
@@ -90,7 +90,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 									<div className="relative w-full">
 										<Image
 											alt={`${caseStudy.title} featured image`}
-											className="aspect-video w-full rounded-2xl bg-gray-100 object-cover sm:aspect-2/1 lg:aspect-3/2"
+											className="aspect-video w-full rounded-2xl bg-muted object-cover sm:aspect-2/1 lg:aspect-3/2"
 											height={400}
 											src={
 												normalizeImageUrl(
@@ -100,26 +100,26 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 											}
 											width={600}
 										/>
-										<div className="absolute inset-0 rounded-2xl ring-1 ring-gray-900/10 ring-inset" />
+										<div className="absolute inset-0 rounded-2xl ring-1 ring-border ring-inset" />
 									</div>
 								</Link>
 								<div className="max-w-xl">
 									<div className="mt-8 flex items-center gap-x-4 text-xs">
-										<div className="flex items-center justify-start gap-2 text-gray-500">
+										<div className="flex items-center justify-start gap-2 text-muted-foreground">
 											<CalendarDaysIcon className="size-4" />
 											{formatShortDate(caseStudy.publishedDate)}
 										</div>
-										<span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 font-medium text-indigo-700 text-xs">
+										<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs">
 											{caseStudy.sector}
 										</span>
 									</div>
 									<div className="group relative">
-										<h3 className="mt-3 font-semibold text-gray-900 text-lg/6 group-hover:text-gray-600">
+										<h3 className="mt-3 font-semibold text-foreground text-lg/6 group-hover:text-muted-foreground">
 											<Link href={`/discover/${caseStudy.id}`}>
 												{caseStudy.title}
 											</Link>
 										</h3>
-										<div className="mt-5 line-clamp-3 text-gray-600 text-sm/6">
+										<div className="mt-5 line-clamp-3 text-muted-foreground text-sm/6">
 											{extractTextFromHtml(caseStudy.description)}
 										</div>
 									</div>
@@ -143,7 +143,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 							</article>
 						))
 					) : (
-						<p className="text-gray-600">
+						<p className="text-muted-foreground">
 							No Case Studies match your search criteria.
 						</p>
 					)}

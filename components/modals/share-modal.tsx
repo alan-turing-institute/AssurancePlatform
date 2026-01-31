@@ -13,6 +13,7 @@ import {
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { getDocumentExportData } from "@/actions/export-document";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Modal } from "@/components/ui/modal";
 import useStore from "@/data/store";
 import { useExportModal } from "@/hooks/use-export-modal";
@@ -143,12 +144,10 @@ function SectionCustomisation({
 				<div className="space-y-2 border-t px-3 pt-2 pb-3">
 					{Object.entries(SECTION_LABELS).map(([key, label]) => (
 						<div className="flex items-center space-x-2" key={key}>
-							<input
+							<Checkbox
 								checked={sections[key as keyof DocSections]}
-								className="h-4 w-4 rounded border-gray-300"
 								id={`section-${key}`}
-								onChange={() => onToggle(key as keyof DocSections)}
-								type="checkbox"
+								onCheckedChange={() => onToggle(key as keyof DocSections)}
 							/>
 							<label className="text-sm" htmlFor={`section-${key}`}>
 								{label}
@@ -431,12 +430,12 @@ export const ShareModal = () => {
 					instance.
 				</p>
 				<div className="my-2 flex items-center space-x-2">
-					<input
+					<Checkbox
 						checked={exportWithComments}
-						className="h-4 w-4 rounded border-gray-300"
 						id="export-comments"
-						onChange={(e) => setExportWithComments(e.target.checked)}
-						type="checkbox"
+						onCheckedChange={(checked) =>
+							setExportWithComments(checked === true)
+						}
 					/>
 					<label className="text-sm" htmlFor="export-comments">
 						Include comments

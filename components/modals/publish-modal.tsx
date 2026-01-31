@@ -237,13 +237,13 @@ export const PublishModal = () => {
 						</div>
 					</div>
 				) : (
-					<div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
-						<GlobeLock className="mt-0.5 h-5 w-5 text-gray-600 dark:text-gray-400" />
+					<div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-3">
+						<GlobeLock className="mt-0.5 h-5 w-5 text-muted-foreground" />
 						<div className="text-sm">
-							<p className="font-medium text-gray-800 dark:text-gray-200">
+							<p className="font-medium text-foreground">
 								Remove public access
 							</p>
-							<p className="text-gray-600 dark:text-gray-400">
+							<p className="text-muted-foreground">
 								Your assurance case will no longer be visible on the Discover
 								page.
 							</p>

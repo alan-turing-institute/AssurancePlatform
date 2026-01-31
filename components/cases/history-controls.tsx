@@ -1,6 +1,7 @@
 "use client";
 
 import { Redo2, Undo2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useHistory } from "@/hooks/use-history";
 import ActionTooltip from "../ui/action-tooltip";
 
@@ -14,26 +15,28 @@ export function HistoryControls() {
 	return (
 		<>
 			<ActionTooltip label="Undo (Cmd+Z)">
-				<button
-					className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+				<Button
+					className="rounded-full p-3"
 					disabled={!canUndo || isApplying}
 					onClick={undo}
+					size="icon"
 					type="button"
 				>
 					<Undo2 className="h-5 w-5" />
 					<span className="sr-only">Undo</span>
-				</button>
+				</Button>
 			</ActionTooltip>
 			<ActionTooltip label="Redo (Cmd+Shift+Z)">
-				<button
-					className="rounded-full bg-indigo-700 p-3 transition-all hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+				<Button
+					className="rounded-full p-3"
 					disabled={!canRedo || isApplying}
 					onClick={redo}
+					size="icon"
 					type="button"
 				>
 					<Redo2 className="h-5 w-5" />
 					<span className="sr-only">Redo</span>
-				</button>
+				</Button>
 			</ActionTooltip>
 		</>
 	);

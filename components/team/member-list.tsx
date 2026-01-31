@@ -84,7 +84,7 @@ export default function MemberList() {
 					</div>
 					<div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
 						<button
-							className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+							className="block rounded-md bg-primary px-3 py-2 text-center font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/80 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-solid focus-visible:outline-offset-2"
 							type="button"
 						>
 							Add user
@@ -94,7 +94,7 @@ export default function MemberList() {
 				<div className="mt-8 flow-root">
 					<div className="-mx-4 -my-2 sm:-mx-6 lg:-mx-8 overflow-x-auto">
 						<div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-							<table className="min-w-full divide-y divide-gray-300 dark:divide-gray-900">
+							<table className="min-w-full divide-y divide-border">
 								<thead>
 									<tr>
 										<th
@@ -129,7 +129,7 @@ export default function MemberList() {
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-gray-200 dark:divide-gray-900">
+								<tbody className="divide-y divide-border">
 									{people.map((person) => (
 										<tr key={person.email}>
 											<td className="whitespace-nowrap py-5 pr-3 pl-4 text-sm sm:pl-0">
@@ -147,19 +147,19 @@ export default function MemberList() {
 														<div className="font-medium text-foreground">
 															{person.name}
 														</div>
-														<div className="mt-1 text-gray-500">
+														<div className="mt-1 text-muted-foreground">
 															{person.email}
 														</div>
 													</div>
 												</div>
 											</td>
-											<td className="whitespace-nowrap px-3 py-5 text-gray-500 text-sm">
+											<td className="whitespace-nowrap px-3 py-5 text-muted-foreground text-sm">
 												<div className="text-foreground">{person.title}</div>
-												<div className="mt-1 text-gray-500">
+												<div className="mt-1 text-muted-foreground">
 													{person.department}
 												</div>
 											</td>
-											<td className="whitespace-nowrap px-3 py-5 text-gray-500 text-sm">
+											<td className="whitespace-nowrap px-3 py-5 text-muted-foreground text-sm">
 												<span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700 text-xs ring-1 ring-emerald-600/20 ring-inset dark:bg-emerald-900/20">
 													Active
 												</span>
@@ -169,7 +169,7 @@ export default function MemberList() {
 											</td>
 											<td className="relative whitespace-nowrap py-5 pr-4 pl-3 text-right font-medium text-sm sm:pr-0">
 												<button
-													className="text-indigo-600 hover:text-indigo-900"
+													className="text-primary hover:text-primary"
 													onClick={() => handleEdit(person)}
 													type="button"
 												>

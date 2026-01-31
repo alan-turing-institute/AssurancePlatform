@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/toast";
@@ -78,7 +79,7 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 				<h2 className="font-semibold text-base text-foreground leading-7">
 					Delete account
 				</h2>
-				<p className="mt-1 text-gray-400 text-sm leading-6">
+				<p className="mt-1 text-muted-foreground text-sm leading-6">
 					No longer want to use our service? You can delete your account here.
 					This action is not reversible. All information related to this account
 					will be deleted permanently.
@@ -86,16 +87,16 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 			</div>
 
 			<form className="flex items-start md:col-span-2">
-				<button
-					className="rounded-md bg-red-500 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-red-400"
+				<Button
 					onClick={(e) => {
 						e.preventDefault();
 						setDeleteOpen(true);
 					}}
 					type="submit"
+					variant="destructive"
 				>
 					Yes, delete my account
-				</button>
+				</Button>
 			</form>
 
 			<AlertModal

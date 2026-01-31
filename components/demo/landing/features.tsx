@@ -49,13 +49,13 @@ const features = [
 
 export default function Features() {
 	return (
-		<div className="bg-white py-24 sm:py-32">
+		<div className="bg-background py-24 sm:py-32">
 			<div className="mx-auto max-w-7xl px-6 lg:px-8">
 				<div className="mx-auto max-w-2xl sm:text-center">
-					<h2 className="font-semibold text-base text-indigo-600 leading-7">
+					<h2 className="font-semibold text-base text-primary leading-7">
 						Everything you need
 					</h2>
-					<p className="mt-2 font-bold text-3xl text-gray-900 tracking-tight sm:text-4xl">
+					<p className="mt-2 font-bold text-3xl text-foreground tracking-tight sm:text-4xl">
 						What TEA offers
 					</p>
 					{/* <p className="mt-6 text-lg leading-8 text-gray-600">
@@ -68,24 +68,24 @@ export default function Features() {
 				<div className="mx-auto max-w-7xl px-6 lg:px-8">
 					<Image
 						alt="App screenshot"
-						className="mb-[-12%] rounded-xl shadow-2xl ring-1 ring-gray-900/10"
+						className="mb-[-12%] rounded-xl shadow-2xl ring-1 ring-border"
 						height={1442}
 						src="/images/tea-chart-example2.png"
 						width={2432}
 					/>
 					<div aria-hidden="true" className="relative">
-						<div className="-inset-x-20 absolute bottom-0 bg-linear-to-t from-white pt-[7%]" />
+						<div className="-inset-x-20 absolute bottom-0 bg-linear-to-t from-background pt-[7%]" />
 					</div>
 				</div>
 			</div>
 			<div className="mx-auto mt-16 max-w-7xl px-6 sm:mt-20 md:mt-24 lg:px-8">
-				<dl className="mx-auto grid max-w-2xl grid-cols-1 gap-x-6 gap-y-10 text-base text-gray-600 leading-7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-x-8 lg:gap-y-16">
+				<dl className="mx-auto grid max-w-2xl grid-cols-1 gap-x-6 gap-y-10 text-base text-muted-foreground leading-7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-x-8 lg:gap-y-16">
 					{features.map((feature) => (
 						<div className="relative pl-9" key={feature.name}>
-							<div className="inline font-semibold text-gray-900">
+							<div className="inline font-semibold text-foreground">
 								<feature.icon
 									aria-hidden="true"
-									className="absolute top-1 left-1 h-5 w-5 text-indigo-600"
+									className="absolute top-1 left-1 h-5 w-5 text-primary"
 								/>
 								{feature.name}
 							</div>{" "}

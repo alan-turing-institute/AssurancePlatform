@@ -99,7 +99,7 @@ function CommentMeta({
 
 			{hasReplies && (
 				<button
-					className="ml-2 flex items-center gap-1 hover:text-indigo-400"
+					className="ml-2 flex items-center gap-1 hover:text-primary"
 					onClick={onToggleReplies}
 					type="button"
 				>
@@ -141,7 +141,7 @@ function CommentActions({
 			<div className="flex items-center justify-start gap-1">
 				{isTopLevel && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onReply}
 						size="sm"
 						title="Reply"
@@ -153,7 +153,7 @@ function CommentActions({
 
 				{isTopLevel && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onResolve}
 						size="sm"
 						title={isResolved ? "Unresolve" : "Resolve"}
@@ -169,7 +169,7 @@ function CommentActions({
 
 				{isOwnComment && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onEdit}
 						size="sm"
 						title="Edit"
@@ -215,14 +215,11 @@ function CommentItem({
 	const isTopLevel = depth === 0;
 	const isOwnComment = currentUsername === comment.author;
 
-	const nestedClass =
-		depth > 0
-			? "ml-6 border-slate-200 border-l-2 pl-4 dark:border-slate-700"
-			: "";
+	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
 
 	const cardClass = isResolved
 		? "bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30"
-		: "hover:bg-indigo-500 hover:pb-8 hover:text-white";
+		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
 		<div className={`w-full ${nestedClass}`}>
@@ -266,7 +263,7 @@ function CommentItem({
 			</div>
 
 			{isReplyingToThis && (
-				<div className="mt-2 ml-6 border-indigo-200 border-l-2 pl-4 dark:border-indigo-700">
+				<div className="mt-2 ml-6 border-primary/20 border-l-2 pl-4">
 					<CommentsForm
 						node={node}
 						onCancel={() => setReplyingTo(null)}

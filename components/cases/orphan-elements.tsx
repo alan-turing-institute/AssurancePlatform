@@ -271,7 +271,7 @@ const OrphanElements = ({
 								aria-label={
 									el.short_description || el.name || `${el.type} element`
 								}
-								className="flex flex-1 items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-indigo-500"
+								className="flex flex-1 items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-primary/80"
 								onClick={() => handleOrphanSelection(el)}
 								type="button"
 							>
@@ -289,7 +289,7 @@ const OrphanElements = ({
 								)}
 								{/* Show identifier (name) */}
 								{el.name && (
-									<span className="ml-2 font-semibold text-indigo-400">
+									<span className="ml-2 font-semibold text-primary">
 										{el.name}
 									</span>
 								)}

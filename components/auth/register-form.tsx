@@ -174,7 +174,7 @@ const RegisterForm = () => {
 
 	return (
 		<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-			<div className="bg-white px-6 py-12 shadow-sm sm:rounded-lg sm:px-12 dark:bg-slate-900">
+			<div className="bg-background px-6 py-12 shadow-sm sm:rounded-lg sm:px-12">
 				{errors?.map((error: string) => (
 					<div
 						className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
@@ -232,20 +232,22 @@ const RegisterForm = () => {
 												type={showPassword1 ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword1 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword1(!showPassword1)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword1 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
@@ -264,31 +266,29 @@ const RegisterForm = () => {
 												type={showPassword2 ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword2 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword2(!showPassword2)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword2 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)}
 						/>
-						<Button
-							className="inline-flex w-full bg-indigo-600 text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={loading}
-							type="submit"
-						>
+						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Creating Account..." : "Submit"}
 						</Button>
 					</form>
@@ -298,7 +298,7 @@ const RegisterForm = () => {
 			<p className="mt-10 text-center text-foreground text-sm">
 				Already a member?{" "}
 				<a
-					className="font-semibold text-indigo-600 leading-6 hover:text-indigo-500"
+					className="font-semibold text-primary leading-6 hover:text-primary/80"
 					href={"/login"}
 				>
 					Login here

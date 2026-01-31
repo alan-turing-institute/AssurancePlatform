@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { updateCaseStudy } from "@/actions/case-studies";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/toast";
 import type { CaseStudy } from "@/types/domain";
 
@@ -101,13 +102,14 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 	};
 
 	return (
-		<button
-			className="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-700 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-offset-2"
+		<Button
+			className="ml-3"
 			onClick={handlePublish}
 			type="button"
+			variant="default"
 		>
 			{label}
-		</button>
+		</Button>
 	);
 };
 

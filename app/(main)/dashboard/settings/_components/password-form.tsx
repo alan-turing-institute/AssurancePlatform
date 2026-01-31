@@ -122,7 +122,7 @@ export function PasswordForm({ data }: PasswordFormProps) {
 				<h2 className="font-semibold text-base text-foreground leading-7">
 					Change password
 				</h2>
-				<p className="mt-1 text-gray-400 text-sm leading-6">
+				<p className="mt-1 text-muted-foreground text-sm leading-6">
 					Update your password associated with your account.
 				</p>
 			</div>
@@ -141,7 +141,7 @@ export function PasswordForm({ data }: PasswordFormProps) {
 									render={({ field }) => (
 										<FormItem className="col-span-full">
 											{error && (
-												<p className="mb-2 text-rose-500">{`${error}, Please try again.`}</p>
+												<p className="mb-2 text-destructive">{`${error}, Please try again.`}</p>
 											)}
 											<FormLabel>Current Password</FormLabel>
 											<FormControl>
@@ -182,7 +182,7 @@ export function PasswordForm({ data }: PasswordFormProps) {
 								/>
 							</div>
 							<Button
-								className="bg-indigo-600 text-white hover:bg-indigo-700"
+								className="bg-primary text-primary-foreground hover:bg-primary/80"
 								disabled={loading}
 								type="submit"
 							>
@@ -193,8 +193,8 @@ export function PasswordForm({ data }: PasswordFormProps) {
 				) : (
 					<p className="w-1/2 text-muted-foreground text-sm">
 						You are logged in with a{" "}
-						<span className="text-indigo-500">{session?.provider}</span>{" "}
-						account, therefore you cannot change your password here.
+						<span className="text-primary">{session?.provider}</span> account,
+						therefore you cannot change your password here.
 					</p>
 				)}
 			</div>

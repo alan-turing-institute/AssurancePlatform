@@ -170,7 +170,7 @@ export const PermissionsModal = () => {
 			onClose={permissionModal.onClose}
 			title="Permissions"
 		>
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<PencilRuler className="h-4 w-4" />
 				Edit members
 			</p>
@@ -203,7 +203,7 @@ export const PermissionsModal = () => {
 				)}
 			</div>
 
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<MessageCircleMore className="h-4 w-4" />
 				Review members
 			</p>
@@ -236,7 +236,7 @@ export const PermissionsModal = () => {
 				)}
 			</div>
 
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<Eye className="h-4 w-4" />
 				View members
 			</p>

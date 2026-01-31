@@ -86,7 +86,7 @@ function ProviderCard({
 						<span className="font-medium">{name}</span>
 						<span
 							className={`inline-flex h-2 w-2 rounded-full ${
-								connected ? "bg-green-500" : "bg-gray-400"
+								connected ? "bg-green-500" : "bg-muted-foreground"
 							}`}
 						/>
 					</div>
@@ -106,7 +106,7 @@ function ProviderCard({
 							<TooltipTrigger asChild>
 								<span>
 									<Button
-										className="text-red-500 hover:text-red-600"
+										className="text-destructive hover:text-destructive"
 										disabled={!canUnlink || loading}
 										onClick={onDisconnect}
 										size="sm"
@@ -198,7 +198,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 					<h2 className="font-semibold text-base text-foreground leading-7">
 						Connected accounts
 					</h2>
-					<p className="mt-1 text-gray-400 text-sm leading-6">
+					<p className="mt-1 text-muted-foreground text-sm leading-6">
 						Link external accounts to your TEA Platform profile. These allow
 						sign-in and access to external services like GitHub repositories and
 						Google Drive.
@@ -239,7 +239,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 						<div className="flex items-center gap-2">
 							<span
 								className={`inline-flex h-2 w-2 rounded-full ${
-									data.hasPassword ? "bg-green-500" : "bg-gray-400"
+									data.hasPassword ? "bg-green-500" : "bg-muted-foreground"
 								}`}
 							/>
 							<span className="text-sm">

@@ -72,13 +72,13 @@ async function CaseStudyDetails({
                       {caseStudy.assuranceCases.map(item => (
                         <li key={item.id} className="flex items-center justify-between py-4 pl-4 pr-5 text-sm/6">
                           <div className="flex w-0 flex-1 items-center">
-                            <PaperclipIcon aria-hidden="true" className="size-5 shrink-0 text-gray-400" />
+                            <PaperclipIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
                             <div className="ml-4 flex min-w-0 flex-1 gap-2">
                               <span className="truncate font-medium">{item.name}</span>
                             </div>
                           </div>
                           <div className="ml-4 shrink-0">
-                            <a href="#" className="font-medium text-indigo-500 hover:text-indigo-500">
+                            <a href="#" className="font-medium text-primary hover:text-primary">
                               Download
                             </a>
                           </div>

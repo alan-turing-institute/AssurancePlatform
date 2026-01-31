@@ -39,7 +39,7 @@ const navigation = {
 
 export default function Footer() {
 	return (
-		<footer className="bg-white">
+		<footer className="bg-background">
 			<div className="mx-auto max-w-7xl overflow-hidden px-6 py-20 sm:py-24 lg:px-6">
 				<nav
 					aria-label="Footer"
@@ -47,7 +47,7 @@ export default function Footer() {
 				>
 					{navigation.main.map((item) => (
 						<a
-							className="text-gray-600 hover:text-gray-900"
+							className="text-muted-foreground hover:text-foreground"
 							href={item.href}
 							key={item.name}
 						>
@@ -58,7 +58,7 @@ export default function Footer() {
 				<div className="mt-16 flex justify-center gap-x-10">
 					{navigation.social.map((item) => (
 						<a
-							className="text-gray-600 hover:text-gray-800"
+							className="text-muted-foreground hover:text-foreground"
 							href={item.href}
 							key={item.name}
 						>
@@ -67,7 +67,7 @@ export default function Footer() {
 						</a>
 					))}
 				</div>
-				<p className="mt-10 text-center text-gray-600 text-sm/6">
+				<p className="mt-10 text-center text-muted-foreground text-sm/6">
 					&copy; 2024 Your Company, Inc. All rights reserved.
 				</p>
 			</div>

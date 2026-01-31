@@ -136,7 +136,7 @@ const ResetPasswordForm = () => {
 	if (tokenState === "loading") {
 		return (
 			<div className="mx-auto flex w-full max-w-sm flex-col items-center justify-center lg:w-96">
-				<Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
 				<p className="mt-4 text-foreground text-sm">Validating reset link...</p>
 			</div>
 		);
@@ -156,7 +156,7 @@ const ResetPasswordForm = () => {
 				</div>
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/forgot-password"
 					>
 						Request new reset link
@@ -180,7 +180,7 @@ const ResetPasswordForm = () => {
 				</div>
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/forgot-password"
 					>
 						Request new reset link
@@ -242,20 +242,22 @@ const ResetPasswordForm = () => {
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword(!showPassword)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormDescription>
@@ -279,35 +281,33 @@ const ResetPasswordForm = () => {
 												type={showConfirmPassword ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showConfirmPassword
 														? "Hide password"
 														: "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() =>
 													setShowConfirmPassword(!showConfirmPassword)
 												}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showConfirmPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)}
 						/>
-						<Button
-							className="w-full bg-indigo-600 text-white hover:bg-indigo-500"
-							disabled={loading}
-							type="submit"
-						>
+						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Resetting..." : "Reset password"}
 						</Button>
 					</form>
@@ -315,7 +315,7 @@ const ResetPasswordForm = () => {
 
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/login"
 					>
 						Back to login
