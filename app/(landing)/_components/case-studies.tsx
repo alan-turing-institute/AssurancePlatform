@@ -48,7 +48,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 				<div className="flex items-center gap-4">
 					{/* Search Bar */}
 					<Input
-						className="h-12 border-border bg-muted ring-offset-indigo-500"
+						className="h-12 border-border bg-muted ring-offset-primary"
 						onChange={(e) => setSearchKeyword(e.target.value)}
 						placeholder="Search patterns..."
 						type="text"
@@ -60,7 +60,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 						onValueChange={(value) => setSelectedSector(value)}
 						value={selectedSector}
 					>
-						<SelectTrigger className="w-56 rounded-lg border border-border bg-muted shadow-xs focus:border-indigo-500 focus:ring-3 focus:ring-indigo-200">
+						<SelectTrigger className="w-56 rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring">
 							<SelectValue placeholder="Select a sector" />
 						</SelectTrigger>
 						<SelectContent>

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import MemberEdit from "./member-edit";
 
 type TeamMember = {
@@ -83,12 +84,7 @@ export default function MemberList() {
 						</p>
 					</div>
 					<div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-						<button
-							className="block rounded-md bg-primary px-3 py-2 text-center font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/80 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-solid focus-visible:outline-offset-2"
-							type="button"
-						>
-							Add user
-						</button>
+						<Button type="button">Add user</Button>
 					</div>
 				</div>
 				<div className="mt-8 flow-root">
@@ -169,7 +165,7 @@ export default function MemberList() {
 											</td>
 											<td className="relative whitespace-nowrap py-5 pr-4 pl-3 text-right font-medium text-sm sm:pr-0">
 												<button
-													className="text-primary hover:text-primary"
+													className="text-primary hover:text-primary/80"
 													onClick={() => handleEdit(person)}
 													type="button"
 												>

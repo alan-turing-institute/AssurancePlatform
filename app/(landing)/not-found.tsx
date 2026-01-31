@@ -22,7 +22,7 @@ export default function Example() {
 					</p>
 					<div className="mt-10 flex items-center justify-center gap-x-6">
 						<Link
-							className="rounded-md bg-primary px-3.5 py-2.5 font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+							className="rounded-md bg-primary px-3.5 py-2.5 font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-solid focus-visible:outline-offset-2"
 							href="/discover"
 						>
 							Back to Discover

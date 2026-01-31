@@ -126,11 +126,14 @@ describe("Header", () => {
 		it("should render header with logo", () => {
 			render(<Header />);
 
-			const logo = screen.getByAltText("TEA Platform Logo");
-			expect(logo).toBeInTheDocument();
-			expect(logo).toHaveAttribute("src", "/images/logos/tea-logo-full-light.png");
-			expect(logo).toHaveAttribute("width", "183");
-			expect(logo).toHaveAttribute("height", "48");
+			const logos = screen.getAllByAltText("TEA Platform Logo");
+			expect(logos).toHaveLength(2);
+			// Light mode logo
+			expect(logos[0]).toHaveAttribute("src", "/images/logos/tea-logo-full-light.png");
+			expect(logos[0]).toHaveAttribute("width", "183");
+			expect(logos[0]).toHaveAttribute("height", "48");
+			// Dark mode logo
+			expect(logos[1]).toHaveAttribute("src", "/images/logos/tea-logo-full-dark.png");
 		});
 
 		it("should render navigation links", () => {
@@ -416,9 +419,11 @@ describe("Header", () => {
 		it("should have alt text for logo images", () => {
 			render(<Header />);
 
-			const logoImage = screen.getByAltText("TEA Platform Logo");
-			expect(logoImage).toBeInTheDocument();
-			expect(logoImage).toHaveAttribute("alt", "TEA Platform Logo");
+			const logos = screen.getAllByAltText("TEA Platform Logo");
+			expect(logos).toHaveLength(2);
+			for (const logo of logos) {
+				expect(logo).toHaveAttribute("alt", "TEA Platform Logo");
+			}
 		});
 
 		it("should have proper aria-hidden attributes for decorative elements", () => {
