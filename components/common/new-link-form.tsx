@@ -672,13 +672,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 						>
 							Add
 						</Button>
-						<Button
-							onClick={() => {
-								setSelectedLink(false);
-								setLinkToCreate("");
-							}}
-							variant={"outline"}
-						>
+						<Button onClick={reset} type="button" variant={"outline"}>
 							Cancel
 						</Button>
 					</div>

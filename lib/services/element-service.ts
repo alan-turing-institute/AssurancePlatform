@@ -451,7 +451,15 @@ async function createElementInDatabase(
 		await createEvidenceLink(element.id, intendedParentId);
 	}
 
-	return { data: transformToResponse(element) };
+	const response = transformToResponse(element);
+
+	// Evidence has no parentId, so transformToResponse won't set property_claim_id.
+	// Add it from the evidence link we just created.
+	if (intendedParentId) {
+		response.property_claim_id = [intendedParentId];
+	}
+
+	return { data: response };
 }
 
 /**

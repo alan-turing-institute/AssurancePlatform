@@ -86,8 +86,8 @@ async function fetchCaseFromPrisma(
 					},
 					comments: true,
 					// Include evidence linked TO this element (for claims)
-					// Note: evidence relation is filtered post-query for deleted items
 					evidenceLinksTo: {
+						where: { evidence: { deletedAt: null } },
 						include: {
 							evidence: true,
 						},
