@@ -232,7 +232,7 @@ describe("Header", () => {
 			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
 			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
-			expect(documentationLink).toHaveAttribute("href", "/documentation");
+			expect(documentationLink).toHaveAttribute("href", "/docs");
 			expect(githubLink).toHaveAttribute(
 				"href",
 				"https://github.com/alan-turing-institute/AssurancePlatform"
@@ -249,7 +249,7 @@ describe("Header", () => {
 			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
 			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
-			expect(documentationLink).toHaveAttribute("target", "_blank");
+			expect(documentationLink).toHaveAttribute("target", "_self");
 			expect(githubLink).toHaveAttribute("target", "_blank");
 			expect(discoverLink).toHaveAttribute("target", "_self");
 		});
@@ -446,7 +446,7 @@ describe("Header", () => {
 
 			// Check desktop navigation links
 			const desktopNavLinks = navigationLinks.filter((link) =>
-				link.className.includes("font-semibold text-gray-900 text-sm leading-6")
+				link.className.includes("font-semibold text-foreground text-sm leading-6")
 			);
 			expect(desktopNavLinks.length).toBeGreaterThan(0);
 		});
@@ -463,8 +463,10 @@ describe("Header", () => {
 				"items-center",
 				"justify-center",
 				"rounded-md",
-				"p-2.5",
-				"text-gray-700"
+				"hover:bg-accent",
+				"hover:text-accent-foreground",
+				"h-10",
+				"w-10"
 			);
 		});
 	});

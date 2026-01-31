@@ -65,11 +65,11 @@ describe("CTA", () => {
 			});
 			expect(actionButton).toHaveClass(
 				"rounded-md",
-				"bg-white",
+				"bg-primary-foreground",
 				"px-3.5",
 				"py-2.5",
 				"font-semibold",
-				"text-indigo-600",
+				"text-primary",
 				"text-sm",
 				"shadow-xs"
 			);
@@ -81,7 +81,7 @@ describe("CTA", () => {
 			const actionButton = screen.getByRole("link", {
 				name: "See it in action",
 			});
-			expect(actionButton).toHaveClass("hover:bg-indigo-50");
+			expect(actionButton).toHaveClass("hover:bg-primary-foreground/90");
 		});
 
 		it("should have focus styles", () => {
@@ -93,7 +93,7 @@ describe("CTA", () => {
 			expect(actionButton).toHaveClass(
 				"focus-visible:outline-solid",
 				"focus-visible:outline-2",
-				"focus-visible:outline-white",
+				"focus-visible:outline-primary-foreground",
 				"focus-visible:outline-offset-2"
 			);
 		});
@@ -103,7 +103,7 @@ describe("CTA", () => {
 		it("should have indigo background", () => {
 			const { container } = render(<CTA />);
 
-			const mainContainer = container.querySelector(".bg-indigo-700");
+			const mainContainer = container.querySelector(".bg-primary");
 			expect(mainContainer).toBeInTheDocument();
 		});
 
@@ -130,7 +130,7 @@ describe("CTA", () => {
 
 			const heading = screen.getByRole("heading", { level: 2 });
 			expect(heading).toHaveClass(
-				"text-white",
+				"text-primary-foreground",
 				"font-bold",
 				"text-3xl",
 				"sm:text-4xl"
@@ -141,7 +141,7 @@ describe("CTA", () => {
 			render(<CTA />);
 
 			const description = screen.getByText(TEA_PLATFORM_DESCRIPTION_REGEX);
-			expect(description).toHaveClass("text-indigo-200", "text-lg");
+			expect(description).toHaveClass("text-primary-foreground/70", "text-lg");
 		});
 
 		it("should have proper spacing between elements", () => {

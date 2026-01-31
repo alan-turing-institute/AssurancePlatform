@@ -204,6 +204,23 @@ describe("OrphanElements", () => {
 		// Mock API functions
 		vi.mocked(attachCaseElement).mockResolvedValue({ attached: true });
 		vi.mocked(deleteAssuranceCaseNode).mockResolvedValue(true);
+
+		// Mock fetch for refetchCaseData
+		global.fetch = vi.fn().mockImplementation((url: string) => {
+			if (url.includes("/api/cases/") && url.includes("/sandbox")) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve([]),
+				});
+			}
+			if (url.includes("/api/cases/")) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve(createMockAssuranceCase()),
+				});
+			}
+			return Promise.resolve({ ok: false });
+		});
 	});
 
 	afterEach(() => {
@@ -530,11 +547,10 @@ describe("OrphanElements", () => {
 				expect(attachCaseElement).toHaveBeenCalled();
 			});
 
-			// Since the evidence attachment is failing (property claim not found in the structure),
-			// the component won't call setAssuranceCase or handleClose
-			// This is a known limitation - the test structure doesn't match what addEvidenceToClaim expects
-			expect(mockSetAssuranceCase).not.toHaveBeenCalled();
-			expect(mockHandleClose).not.toHaveBeenCalled();
+			// After successful attachment, the component refetches case data and closes
+			await waitFor(() => {
+				expect(mockHandleClose).toHaveBeenCalled();
+			});
 		});
 
 		it("should handle attachment failure", async () => {
@@ -773,11 +789,13 @@ describe("OrphanElements", () => {
 				fireEvent.click(contextButton);
 			});
 
+			// After attachment, the component refetches case data from the server
 			await waitFor(() => {
 				expect(mockSetLoading).toHaveBeenCalledWith(false);
 			});
 
-			expect(mockSetAssuranceCase).not.toHaveBeenCalled();
+			// The component now refetches data regardless of local goals state
+			expect(mockHandleClose).toHaveBeenCalled();
 		});
 
 		it("should handle elements without short_description", () => {

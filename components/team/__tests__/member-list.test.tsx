@@ -275,7 +275,7 @@ describe("MemberList", () => {
 			renderWithoutProviders(<MemberList />);
 
 			const table = screen.getByRole("table");
-			expect(table).toHaveClass("min-w-full", "divide-y", "divide-gray-300");
+			expect(table).toHaveClass("min-w-full", "divide-y", "divide-border");
 		});
 	});
 
@@ -290,7 +290,7 @@ describe("MemberList", () => {
 			expect(addButton).toHaveClass(
 				"block",
 				"rounded-md",
-				"bg-indigo-600",
+				"bg-primary",
 				"px-3",
 				"py-2"
 			);
@@ -305,7 +305,7 @@ describe("MemberList", () => {
 			expect(editButtons.length).toBe(4);
 
 			editButtons.forEach((button) => {
-				expect(button).toHaveClass("text-indigo-600", "hover:text-indigo-900");
+				expect(button).toHaveClass("text-primary", "hover:text-primary");
 			});
 		});
 

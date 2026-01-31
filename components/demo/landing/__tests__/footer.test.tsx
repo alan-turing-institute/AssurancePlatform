@@ -71,7 +71,7 @@ describe("Footer", () => {
 			render(<Footer />);
 
 			const platformLink = screen.getByRole("link", { name: "Platform" });
-			expect(platformLink).toHaveClass("text-gray-600", "hover:text-gray-900");
+			expect(platformLink).toHaveClass("text-muted-foreground", "hover:text-foreground");
 		});
 
 		it("should have proper navigation aria-label", () => {
@@ -100,7 +100,7 @@ describe("Footer", () => {
 			render(<Footer />);
 
 			const xLink = screen.getByRole("link", { name: "X" });
-			expect(xLink).toHaveClass("text-gray-600", "hover:text-gray-800");
+			expect(xLink).toHaveClass("text-muted-foreground", "hover:text-foreground");
 		});
 
 		it("should have screen reader text for social links", () => {
@@ -151,7 +151,7 @@ describe("Footer", () => {
 			const { container } = render(<Footer />);
 
 			const footer = container.querySelector("footer");
-			expect(footer).toHaveClass("bg-white");
+			expect(footer).toHaveClass("bg-background");
 		});
 
 		it("should have correct container constraints", () => {
@@ -223,7 +223,7 @@ describe("Footer", () => {
 			const copyright = screen.getByText(COPYRIGHT_PARTIAL_REGEX);
 			expect(copyright).toHaveClass(
 				"text-center",
-				"text-gray-600",
+				"text-muted-foreground",
 				"text-sm/6"
 			);
 		});
@@ -324,11 +324,11 @@ describe("Footer", () => {
 
 			// Main nav links
 			const mainLinks = screen.getByRole("link", { name: "Platform" });
-			expect(mainLinks).toHaveClass("hover:text-gray-900");
+			expect(mainLinks).toHaveClass("hover:text-foreground");
 
 			// Social links
 			const socialLinks = screen.getByRole("link", { name: "X" });
-			expect(socialLinks).toHaveClass("hover:text-gray-800");
+			expect(socialLinks).toHaveClass("hover:text-foreground");
 		});
 	});
 });

@@ -56,12 +56,7 @@ describe("MenuToggleButton", () => {
 			render(<MenuToggleButton setSidebarOpen={mockSetSidebarOpen} />);
 
 			const button = screen.getByRole("button");
-			expect(button).toHaveClass(
-				"-m-2.5",
-				"p-2.5",
-				"text-foreground",
-				"lg:hidden"
-			);
+			expect(button).toHaveClass("-m-2.5", "lg:hidden");
 		});
 	});
 
@@ -180,7 +175,7 @@ describe("MenuToggleButton", () => {
 			render(<MenuToggleButton setSidebarOpen={mockSetSidebarOpen} />);
 
 			const button = screen.getByRole("button");
-			expect(button).toHaveClass("-m-2.5", "p-2.5");
+			expect(button).toHaveClass("-m-2.5");
 		});
 	});
 

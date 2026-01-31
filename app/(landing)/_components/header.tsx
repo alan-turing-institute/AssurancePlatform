@@ -46,10 +46,19 @@ function Header() {
 					>
 						<Image
 							alt="TEA Platform Logo"
-							className="h-12 w-auto"
+							className="h-12 w-auto dark:hidden"
 							height={48}
 							priority
 							src="/images/logos/tea-logo-full-light.png"
+							unoptimized
+							width={183}
+						/>
+						<Image
+							alt="TEA Platform Logo"
+							className="hidden h-12 w-auto dark:block"
+							height={48}
+							priority
+							src="/images/logos/tea-logo-full-dark.png"
 							unoptimized
 							width={183}
 						/>
@@ -109,10 +118,19 @@ function Header() {
 						<Link className="-m-1.5 p-1.5" href="/">
 							<Image
 								alt="TEA Platform Logo"
-								className="h-12 w-auto"
+								className="h-12 w-auto dark:hidden"
 								height={48}
 								priority
 								src="/images/logos/tea-logo-full-light.png"
+								unoptimized
+								width={183}
+							/>
+							<Image
+								alt="TEA Platform Logo"
+								className="hidden h-12 w-auto dark:block"
+								height={48}
+								priority
+								src="/images/logos/tea-logo-full-dark.png"
 								unoptimized
 								width={183}
 							/>

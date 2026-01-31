@@ -177,8 +177,8 @@ describe("Hero", () => {
 
 			const primaryCTA = screen.getByRole("link", { name: "Get started" });
 			expect(primaryCTA.className).toContain("rounded-md");
-			expect(primaryCTA.className).toContain("bg-indigo-600");
-			expect(primaryCTA.className).toContain("text-white");
+			expect(primaryCTA.className).toContain("bg-primary");
+			expect(primaryCTA.className).toContain("text-primary-foreground");
 			expect(primaryCTA.className).toContain("font-semibold");
 		});
 
@@ -228,7 +228,7 @@ describe("Hero", () => {
 			});
 			expect(learnMoreLink).toHaveClass(
 				"font-semibold",
-				"text-gray-900",
+				"text-foreground",
 				"text-sm"
 			);
 		});
@@ -299,12 +299,12 @@ describe("Hero", () => {
 				"inline-flex",
 				"rounded-md",
 				"border",
-				"border-indigo-300",
-				"bg-indigo-100",
+				"border-primary/30",
+				"bg-primary/10",
 				"px-3",
 				"py-2",
 				"font-semibold",
-				"text-indigo-500",
+				"text-primary",
 				"text-xs"
 			);
 		});
@@ -333,7 +333,7 @@ describe("Hero", () => {
 
 			const { container } = render(<Hero />);
 
-			const mainContainer = container.querySelector(".bg-white");
+			const mainContainer = container.querySelector(".bg-background");
 			expect(mainContainer).toBeInTheDocument();
 		});
 
@@ -449,7 +449,7 @@ describe("Hero", () => {
 			expect(heading).toHaveClass(
 				"font-bold",
 				"text-4xl",
-				"text-gray-900",
+				"text-foreground",
 				"sm:text-6xl"
 			);
 		});
@@ -464,7 +464,7 @@ describe("Hero", () => {
 			render(<Hero />);
 
 			const description = screen.getByText(TRUSTWORTHY_ASSURANCE_REGEX);
-			expect(description).toHaveClass("text-gray-600", "text-lg", "leading-8");
+			expect(description).toHaveClass("text-muted-foreground", "text-lg", "leading-8");
 		});
 
 		it("should have proper spacing between text elements", () => {

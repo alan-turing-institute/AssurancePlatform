@@ -154,7 +154,7 @@ describe("Features", () => {
 				"rounded-xl",
 				"shadow-2xl",
 				"ring-1",
-				"ring-gray-900/10"
+				"ring-border"
 			);
 		});
 	});
@@ -163,7 +163,7 @@ describe("Features", () => {
 		it("should have white background", () => {
 			const { container } = render(<Features />);
 
-			const mainContainer = container.querySelector(".bg-white");
+			const mainContainer = container.querySelector(".bg-background");
 			expect(mainContainer).toBeInTheDocument();
 		});
 
@@ -188,7 +188,7 @@ describe("Features", () => {
 
 			const subtitle = screen.getByText("Everything you need");
 			expect(subtitle).toHaveClass(
-				"text-indigo-600",
+				"text-primary",
 				"font-semibold",
 				"text-base"
 			);
@@ -201,7 +201,7 @@ describe("Features", () => {
 			expect(heading).toHaveClass(
 				"font-bold",
 				"text-3xl",
-				"text-gray-900",
+				"text-foreground",
 				"sm:text-4xl"
 			);
 		});
@@ -209,13 +209,13 @@ describe("Features", () => {
 		it("should have gradient overlay", () => {
 			const { container } = render(<Features />);
 
-			const gradient = container.querySelector(".bg-gradient-to-t.from-white");
+			const gradient = container.querySelector(".bg-linear-to-t.from-background");
 			expect(gradient).toBeInTheDocument();
 			// The parent div has aria-hidden, not the gradient itself
 			const ariaHiddenParent = container.querySelector('[aria-hidden="true"]');
 			expect(ariaHiddenParent).toBeInTheDocument();
 			expect(
-				ariaHiddenParent?.querySelector(".bg-gradient-to-t.from-white")
+				ariaHiddenParent?.querySelector(".bg-linear-to-t.from-background")
 			).toBeInTheDocument();
 		});
 
@@ -234,7 +234,7 @@ describe("Features", () => {
 			const { container } = render(<Features />);
 
 			// Icons are rendered as SVG elements with specific classes
-			const icons = container.querySelectorAll(".h-5.w-5.text-indigo-600");
+			const icons = container.querySelectorAll(".h-5.w-5.text-primary");
 			expect(icons).toHaveLength(6);
 		});
 
@@ -325,7 +325,7 @@ describe("Features", () => {
 			const { container } = render(<Features />);
 
 			const featureNames = container.querySelectorAll(
-				".inline.font-semibold.text-gray-900"
+				".inline.font-semibold.text-foreground"
 			);
 			expect(featureNames).toHaveLength(6);
 		});
@@ -348,7 +348,7 @@ describe("Features", () => {
 			const { container } = render(<Features />);
 
 			const dl = container.querySelector("dl");
-			expect(dl).toHaveClass("text-base", "text-gray-600", "leading-7");
+			expect(dl).toHaveClass("text-base", "text-muted-foreground", "leading-7");
 		});
 	});
 
@@ -408,7 +408,7 @@ describe("Features", () => {
 			for (const feature of features) {
 				expect(feature).toHaveClass("relative", "pl-9");
 				expect(
-					feature.querySelector(".inline.font-semibold.text-gray-900")
+					feature.querySelector(".inline.font-semibold.text-foreground")
 				).toBeInTheDocument();
 				expect(
 					feature.querySelector(".inline.text-pretty")
