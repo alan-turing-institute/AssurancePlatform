@@ -161,6 +161,7 @@ site/site
 build/
 .vercel
 *.tsbuildinfo
+.next-docs/
 
 # Prisma generated files
 src/generated/prisma/
