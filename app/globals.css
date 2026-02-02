@@ -14,65 +14,251 @@
 	}
 }
 
-@theme {
-	--font-sans:
-		var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+/* ========================================================================
+   Catppuccin Latte (light) / Mocha (dark) — OKLCH colour tokens
+   ======================================================================== */
 
+:root {
+	--background: oklch(0.9578 0.0058 264.5321);
+	--foreground: oklch(0.4355 0.043 279.325);
+
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.4355 0.043 279.325);
+
+	--popover: oklch(0.8575 0.0145 268.4756);
+	--popover-foreground: oklch(0.4355 0.043 279.325);
+
+	--primary: oklch(0.5547 0.2503 297.0156);
+	--primary-foreground: oklch(1 0 0);
+
+	--secondary: oklch(0.8575 0.0145 268.4756);
+	--secondary-foreground: oklch(0.4355 0.043 279.325);
+
+	--muted: oklch(0.906 0.0117 264.5071);
+	--muted-foreground: oklch(0.5471 0.0343 279.0837);
+
+	--accent: oklch(0.682 0.1448 235.3822);
+	--accent-foreground: oklch(1 0 0);
+
+	--destructive: oklch(0.5505 0.2155 19.8095);
+	--destructive-foreground: oklch(1 0 0);
+
+	--border: oklch(0.8083 0.0174 271.1982);
+	--input: oklch(0.8575 0.0145 268.4756);
+	--ring: oklch(0.5547 0.2503 297.0156);
+
+	--radius: 0.5rem;
+
+	--chart-1: oklch(0.5547 0.2503 297.0156);
+	--chart-2: oklch(0.682 0.1448 235.3822);
+	--chart-3: oklch(0.625 0.1772 140.4448);
+	--chart-4: oklch(0.692 0.2041 42.4293);
+	--chart-5: oklch(0.7141 0.1045 33.0967);
+
+	--success: oklch(0.6242 0.1695 149.1134);
+	--success-foreground: oklch(0.2661 0.064 152.05);
+
+	--warning: oklch(0.7704 0.1646 70.6579);
+	--warning-foreground: oklch(0.2479 0.0535 66.1079);
+
+	--info: oklch(0.6255 0.1867 259.6964);
+	--info-foreground: oklch(0.202 0.0629 254.8129);
+
+	--sidebar: oklch(0.9335 0.0087 264.5206);
+	--sidebar-foreground: oklch(0.4355 0.043 279.325);
+	--sidebar-primary: oklch(0.5547 0.2503 297.0156);
+	--sidebar-primary-foreground: oklch(1 0 0);
+	--sidebar-accent: oklch(0.682 0.1448 235.3822);
+	--sidebar-accent-foreground: oklch(1 0 0);
+	--sidebar-border: oklch(0.8083 0.0174 271.1982);
+	--sidebar-ring: oklch(0.5547 0.2503 297.0156);
+	--sidebar-muted: oklch(0.6 0.03 272);
+
+	--font-sans:
+		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+	--font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+		"Courier New", monospace;
+
+	--shadow-2xs: 0 1px oklch(0 0 0 / 0.05);
+	--shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+	--shadow-sm:
+		0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+	--shadow: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+	--shadow-md:
+		0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+	--shadow-lg:
+		0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+	--shadow-xl:
+		0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
+	--shadow-2xl: 0 25px 50px -12px oklch(0 0 0 / 0.25);
+	--tracking-normal: 0em;
+
+	--node-goal: var(--chart-1);
+	--node-strategy: var(--chart-2);
+	--node-property: var(--chart-3);
+	--node-evidence: var(--chart-4);
+}
+
+.dark {
+	--background: oklch(0.2155 0.0254 284.0647);
+	--foreground: oklch(0.8787 0.0426 272.2767);
+
+	--card: oklch(0.2429 0.0304 283.911);
+	--card-foreground: oklch(0.8787 0.0426 272.2767);
+
+	--popover: oklch(0.4037 0.032 280.152);
+	--popover-foreground: oklch(0.8787 0.0426 272.2767);
+
+	--primary: oklch(0.7871 0.1187 304.7693);
+	--primary-foreground: oklch(0.2429 0.0304 283.911);
+
+	--secondary: oklch(0.4765 0.034 278.643);
+	--secondary-foreground: oklch(0.8787 0.0426 272.2767);
+
+	--muted: oklch(0.2973 0.0294 276.2144);
+	--muted-foreground: oklch(0.751 0.0396 273.932);
+
+	--accent: oklch(0.8467 0.0833 210.2545);
+	--accent-foreground: oklch(0.2429 0.0304 283.911);
+
+	--destructive: oklch(0.7556 0.1297 2.7642);
+	--destructive-foreground: oklch(0.2429 0.0304 283.911);
+
+	--border: oklch(0.324 0.0319 281.9784);
+	--input: oklch(0.324 0.0319 281.9784);
+	--ring: oklch(0.7871 0.1187 304.7693);
+
+	--chart-1: oklch(0.7871 0.1187 304.7693);
+	--chart-2: oklch(0.8467 0.0833 210.2545);
+	--chart-3: oklch(0.8577 0.1092 142.7153);
+	--chart-4: oklch(0.8237 0.1015 52.6294);
+	--chart-5: oklch(0.9226 0.0238 30.4919);
+
+	--success: oklch(0.507 0.1303 150.0779);
+	--success-foreground: oklch(0.9491 0.0547 157.4553);
+
+	--warning: oklch(0.7704 0.1646 70.6579);
+	--warning-foreground: oklch(0.9484 0.0417 82.4891);
+
+	--info: oklch(0.6255 0.1867 259.6964);
+	--info-foreground: oklch(0.906 0.0447 255.6498);
+
+	--sidebar: oklch(0.1828 0.0204 284.2039);
+	--sidebar-foreground: oklch(0.8787 0.0426 272.2767);
+	--sidebar-primary: oklch(0.7871 0.1187 304.7693);
+	--sidebar-primary-foreground: oklch(0.2429 0.0304 283.911);
+	--sidebar-accent: oklch(0.8467 0.0833 210.2545);
+	--sidebar-accent-foreground: oklch(0.2429 0.0304 283.911);
+	--sidebar-border: oklch(0.4037 0.032 280.152);
+	--sidebar-ring: oklch(0.7871 0.1187 304.7693);
+	--sidebar-muted: oklch(0.55 0.035 274);
+
+	--shadow-2xs: 0 1px oklch(0 0 0 / 0.07);
+	--shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.07);
+	--shadow-sm:
+		0 1px 3px 0 oklch(0 0 0 / 0.15), 0 1px 2px -1px oklch(0 0 0 / 0.15);
+	--shadow: 0 1px 3px 0 oklch(0 0 0 / 0.15), 0 1px 2px -1px oklch(0 0 0 / 0.15);
+	--shadow-md:
+		0 4px 6px -1px oklch(0 0 0 / 0.15), 0 2px 4px -2px oklch(0 0 0 / 0.15);
+	--shadow-lg:
+		0 10px 15px -3px oklch(0 0 0 / 0.15), 0 4px 6px -4px oklch(0 0 0 / 0.15);
+	--shadow-xl:
+		0 20px 25px -5px oklch(0 0 0 / 0.15), 0 8px 10px -6px oklch(0 0 0 / 0.15);
+	--shadow-2xl: 0 25px 50px -12px oklch(0 0 0 / 0.35);
+
+	--node-goal: var(--chart-1);
+	--node-strategy: var(--chart-2);
+	--node-property: var(--chart-3);
+	--node-evidence: var(--chart-4);
+}
+
+/* ========================================================================
+   Theme registration — Tailwind v4 @theme inline
+   ======================================================================== */
+
+@theme inline {
 	--background-image-grid-paper: url("data:image/svg+xml,%3Csvg width=%2752%27 height=%2726%27 viewBox=%270 0 52 26%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fill-rule=%27evenodd%27%3E%3Cg fill=%27%23000000%27 fill-opacity=%270.08%27%3E%3Cpath d=%27M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z%27 /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 	--background-image-grid-paper-dark: url("data:image/svg+xml,%3Csvg width=%2752%27 height=%2726%27 viewBox=%270 0 52 26%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fill-rule=%27evenodd%27%3E%3Cg fill=%27%23ffffff%27 fill-opacity=%270.08%27%3E%3Cpath d=%27M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z%27 /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 
-	--color-border: hsl(var(--border));
-	--color-input: hsl(var(--input));
-	--color-ring: hsl(var(--ring));
-	--color-background: hsl(var(--background));
-	--color-foreground: hsl(var(--foreground));
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
 
-	--color-primary: hsl(var(--primary));
-	--color-primary-foreground: hsl(var(--primary-foreground));
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
 
-	--color-secondary: hsl(var(--secondary));
-	--color-secondary-foreground: hsl(var(--secondary-foreground));
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
 
-	--color-destructive: hsl(var(--destructive));
-	--color-destructive-foreground: hsl(var(--destructive-foreground));
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
 
-	--color-muted: hsl(var(--muted));
-	--color-muted-foreground: hsl(var(--muted-foreground));
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
 
-	--color-accent: hsl(var(--accent));
-	--color-accent-foreground: hsl(var(--accent-foreground));
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
 
-	--color-popover: hsl(var(--popover));
-	--color-popover-foreground: hsl(var(--popover-foreground));
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
 
-	--color-card: hsl(var(--card));
-	--color-card-foreground: hsl(var(--card-foreground));
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
 
-	--color-success: hsl(var(--success));
-	--color-success-foreground: hsl(var(--success-foreground));
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
 
-	--color-warning: hsl(var(--warning));
-	--color-warning-foreground: hsl(var(--warning-foreground));
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
 
-	--color-info: hsl(var(--info));
-	--color-info-foreground: hsl(var(--info-foreground));
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
 
-	--color-sidebar: hsl(var(--sidebar));
-	--color-sidebar-foreground: hsl(var(--sidebar-foreground));
-	--color-sidebar-accent: hsl(var(--sidebar-accent));
-	--color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-	--color-sidebar-border: hsl(var(--sidebar-border));
-	--color-sidebar-muted: hsl(var(--sidebar-muted));
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
 
-	--color-node-goal: hsl(var(--node-goal));
-	--color-node-strategy: hsl(var(--node-strategy));
-	--color-node-property: hsl(var(--node-property));
-	--color-node-evidence: hsl(var(--node-evidence));
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-muted: var(--sidebar-muted);
+
+	--color-node-goal: var(--node-goal);
+	--color-node-strategy: var(--node-strategy);
+	--color-node-property: var(--node-property);
+	--color-node-evidence: var(--node-evidence);
 
 	--radius-lg: var(--radius);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-sm: calc(var(--radius) - 4px);
+
+	--font-sans: var(--font-sans);
+	--font-serif: var(--font-serif);
+	--font-mono: var(--font-mono);
+
+	--shadow-2xs: var(--shadow-2xs);
+	--shadow-xs: var(--shadow-xs);
+	--shadow-sm: var(--shadow-sm);
+	--shadow: var(--shadow);
+	--shadow-md: var(--shadow-md);
+	--shadow-lg: var(--shadow-lg);
+	--shadow-xl: var(--shadow-xl);
+	--shadow-2xl: var(--shadow-2xl);
+
+	--tracking-normal: var(--tracking-normal);
 
 	--animate-accordion-down: accordion-down 0.2s ease-out;
 	--animate-accordion-up: accordion-up 0.2s ease-out;
@@ -114,112 +300,6 @@
 }
 
 @layer base {
-	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
-
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
-
-		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
-
-		--primary: 222.2 47.4% 11.2%;
-		--primary-foreground: 210 40% 98%;
-
-		--secondary: 210 40% 96.1%;
-		--secondary-foreground: 222.2 47.4% 11.2%;
-
-		--muted: 210 40% 96.1%;
-		--muted-foreground: 215.4 16.3% 46.9%;
-
-		--accent: 210 40% 96.1%;
-		--accent-foreground: 222.2 47.4% 11.2%;
-
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
-
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
-		--ring: 222.2 84% 4.9%;
-
-		--radius: 0.5rem;
-
-		--success: 142 76% 36%;
-		--success-foreground: 144 80% 10%;
-
-		--warning: 38 92% 50%;
-		--warning-foreground: 32 95% 10%;
-
-		--info: 217 91% 60%;
-		--info-foreground: 214 95% 10%;
-
-		--sidebar: 239 84% 67%;
-		--sidebar-foreground: 226 100% 90%;
-		--sidebar-accent: 239 84% 57%;
-		--sidebar-accent-foreground: 0 0% 100%;
-		--sidebar-border: 239 60% 50%;
-		--sidebar-muted: 226 60% 80%;
-
-		--node-goal: 160 84% 39%;
-		--node-strategy: 271 91% 65%;
-		--node-property: 25 95% 53%;
-		--node-evidence: 187 92% 41%;
-	}
-
-	.dark {
-		--background: 222.2 84% 4.9%;
-		--foreground: 210 40% 98%;
-
-		--card: 222.2 84% 4.9%;
-		--card-foreground: 210 40% 98%;
-
-		--popover: 222.2 84% 4.9%;
-		--popover-foreground: 210 40% 98%;
-
-		--primary: 210 40% 98%;
-		--primary-foreground: 222.2 47.4% 11.2%;
-
-		--secondary: 217.2 32.6% 17.5%;
-		--secondary-foreground: 210 40% 98%;
-
-		--muted: 217.2 32.6% 17.5%;
-		--muted-foreground: 215 20.2% 65.1%;
-
-		--accent: 217.2 32.6% 17.5%;
-		--accent-foreground: 210 40% 98%;
-
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 210 40% 98%;
-
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
-		--ring: 212.7 26.8% 83.9%;
-
-		--success: 142 69% 28%;
-		--success-foreground: 142 80% 90%;
-
-		--warning: 38 92% 50%;
-		--warning-foreground: 38 90% 90%;
-
-		--info: 217 91% 60%;
-		--info-foreground: 214 95% 90%;
-
-		--sidebar: 222 47% 11%;
-		--sidebar-foreground: 215 20% 85%;
-		--sidebar-accent: 239 84% 57%;
-		--sidebar-accent-foreground: 0 0% 100%;
-		--sidebar-border: 217 33% 17%;
-		--sidebar-muted: 215 20% 55%;
-
-		--node-goal: 160 84% 39%;
-		--node-strategy: 271 91% 65%;
-		--node-property: 25 95% 53%;
-		--node-evidence: 187 92% 41%;
-	}
-}
-
-@layer base {
 	* {
 		@apply border-border;
 	}
@@ -228,15 +308,18 @@
 	}
 }
 
-/* Tiptap Editor Styles */
+/* ========================================================================
+   Tiptap Editor Styles
+   ======================================================================== */
+
 .ProseMirror {
 	outline: none;
-	color: hsl(var(--foreground));
-	background-color: hsl(var(--background));
+	color: var(--foreground);
+	background-color: var(--background);
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-	color: hsl(var(--muted-foreground));
+	color: var(--muted-foreground);
 	content: attr(data-placeholder);
 	float: left;
 	height: 0;
@@ -257,7 +340,7 @@
 	line-height: 1.1;
 	margin-top: 2.5rem;
 	text-wrap: pretty;
-	color: hsl(var(--foreground));
+	color: var(--foreground);
 }
 
 .ProseMirror h1,
@@ -282,33 +365,33 @@
 }
 
 .ProseMirror blockquote {
-	border-left: 3px solid hsl(var(--border));
+	border-left: 3px solid var(--border);
 	margin: 1.5rem 0;
 	padding-left: 1rem;
-	color: hsl(var(--muted-foreground));
+	color: var(--muted-foreground);
 	font-style: italic;
 }
 
 .ProseMirror strong {
-	color: hsl(var(--foreground));
+	color: var(--foreground);
 	font-weight: 600;
 }
 
 .ProseMirror em {
-	color: hsl(var(--foreground));
+	color: var(--foreground);
 }
 
 .ProseMirror code {
-	background-color: hsl(var(--muted));
-	color: hsl(var(--foreground));
+	background-color: var(--muted);
+	color: var(--foreground);
 	padding: 0.2rem 0.4rem;
 	border-radius: 0.25rem;
 	font-size: 0.875rem;
 }
 
 .ProseMirror pre {
-	background-color: hsl(var(--muted));
-	color: hsl(var(--foreground));
+	background-color: var(--muted);
+	color: var(--foreground);
 	padding: 1rem;
 	border-radius: 0.5rem;
 	overflow-x: auto;
@@ -322,14 +405,14 @@
 /* Ensure lists have proper spacing and colors */
 .ProseMirror ul li,
 .ProseMirror ol li {
-	color: hsl(var(--foreground));
+	color: var(--foreground);
 	margin: 0.25rem 0;
 }
 
 /* Selection styles */
 .ProseMirror ::selection {
-	background-color: hsl(var(--accent));
-	color: hsl(var(--accent-foreground));
+	background-color: var(--accent);
+	color: var(--accent-foreground);
 }
 
 /* ========================================================================
@@ -340,39 +423,64 @@
    Light Mode - React Flow Variables
    ======================================================================== */
 :root {
-	--rf-background: hsl(var(--muted));
-	--rf-background-pattern: hsl(var(--foreground) / 0.1);
-	--rf-node-bg: hsl(var(--card) / 0.95);
-	--rf-node-bg-hover: hsl(var(--card));
-	--rf-node-border: hsl(var(--border));
-	--rf-node-border-hover: hsl(var(--foreground) / 0.25);
-	--rf-text: hsl(var(--foreground));
-	--rf-text-secondary: hsl(var(--muted-foreground));
-	--rf-text-tertiary: hsl(var(--muted-foreground) / 0.7);
-	/* Edge colours are domain-specific selection/animation highlights */
-	--rf-edge-stroke: hsl(var(--foreground) / 0.3);
-	--rf-edge-stroke-selected: rgba(59, 130, 246, 0.9);
-	--rf-edge-stroke-animated: rgba(139, 92, 246, 0.7);
-	--rf-controls-bg: hsl(var(--card) / 0.8);
-	--rf-controls-border: hsl(var(--border));
-	--rf-controls-text: hsl(var(--muted-foreground));
-	--rf-controls-text-hover: hsl(var(--foreground) / 0.95);
-	--rf-controls-bg-hover: hsl(var(--foreground) / 0.05);
-	--rf-minimap-bg: hsl(var(--card) / 0.8);
-	--rf-minimap-border: hsl(var(--border));
-	--rf-glassmorphism-bg: hsl(var(--card) / 0.8);
-	--rf-glassmorphism-bg-hover: hsl(var(--card) / 0.9);
-	--rf-glassmorphism-border: hsl(var(--border));
-	--rf-shadow-color: hsl(var(--foreground) / 0.1);
+	--rf-background: var(--muted);
+	--rf-background-pattern: color-mix(
+		in oklch,
+		var(--foreground) 10%,
+		transparent
+	);
+	--rf-node-bg: var(--card);
+	--rf-node-bg-hover: var(--card);
+	--rf-node-border: var(--border);
+	--rf-node-border-hover: color-mix(
+		in oklch,
+		var(--foreground) 25%,
+		transparent
+	);
+	--rf-text: var(--foreground);
+	--rf-text-secondary: var(--muted-foreground);
+	--rf-text-tertiary: color-mix(
+		in oklch,
+		var(--muted-foreground) 70%,
+		transparent
+	);
+	/* Edge colours use semantic tokens */
+	--rf-edge-stroke: color-mix(in oklch, var(--foreground) 30%, transparent);
+	--rf-edge-stroke-selected: color-mix(in oklch, var(--info) 90%, transparent);
+	--rf-edge-stroke-animated: color-mix(
+		in oklch,
+		var(--node-strategy) 70%,
+		transparent
+	);
+	--rf-controls-bg: var(--card);
+	--rf-controls-border: var(--border);
+	--rf-controls-text: var(--muted-foreground);
+	--rf-controls-text-hover: color-mix(
+		in oklch,
+		var(--foreground) 95%,
+		transparent
+	);
+	--rf-controls-bg-hover: color-mix(
+		in oklch,
+		var(--foreground) 5%,
+		transparent
+	);
+	--rf-minimap-bg: var(--card);
+	--rf-minimap-border: var(--border);
+	--rf-shadow-color: color-mix(in oklch, var(--foreground) 10%, transparent);
 }
 
 /* ========================================================================
    Dark Mode - React Flow Variables (edge colours only)
    ======================================================================== */
 .dark {
-	--rf-edge-stroke-selected: rgba(59, 130, 246, 0.8);
-	--rf-edge-stroke-animated: rgba(139, 92, 246, 0.6);
-	--rf-shadow-color: hsl(var(--foreground) / 0.3);
+	--rf-edge-stroke-selected: color-mix(in oklch, var(--info) 80%, transparent);
+	--rf-edge-stroke-animated: color-mix(
+		in oklch,
+		var(--node-strategy) 60%,
+		transparent
+	);
+	--rf-shadow-color: color-mix(in oklch, var(--foreground) 30%, transparent);
 }
 
 /* ========================================================================
@@ -415,14 +523,13 @@
 }
 
 /* ========================================================================
-   Controls - Theme-aware Glassmorphism
+   Controls - Theme-aware
    ======================================================================== */
 .react-flow__controls {
 	background: var(--rf-controls-bg);
-	backdrop-filter: blur(40px);
-	-webkit-backdrop-filter: blur(40px);
 	border: 1px solid var(--rf-controls-border);
 	border-radius: 0.75rem;
+	box-shadow: var(--shadow-sm);
 	transition:
 		background 0.3s ease,
 		border-color 0.3s ease;
@@ -444,45 +551,16 @@
 }
 
 /* ========================================================================
-   MiniMap - Theme-aware Glassmorphism
+   MiniMap - Theme-aware
    ======================================================================== */
 .react-flow__minimap {
 	background: var(--rf-minimap-bg);
-	backdrop-filter: blur(40px);
-	-webkit-backdrop-filter: blur(40px);
 	border: 1px solid var(--rf-minimap-border);
 	border-radius: 0.75rem;
+	box-shadow: var(--shadow-sm);
 	transition:
 		background 0.3s ease,
 		border-color 0.3s ease;
-}
-
-/* ========================================================================
-   Glassmorphism Utilities - Theme-aware
-   ======================================================================== */
-.glassmorphism {
-	background: var(--rf-glassmorphism-bg);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	border: 1px solid var(--rf-glassmorphism-border);
-	transition:
-		background 0.3s ease,
-		border-color 0.3s ease;
-}
-
-.glassmorphism:hover {
-	background: var(--rf-glassmorphism-bg-hover);
-}
-
-/* Support for browsers without backdrop-filter */
-@supports not (backdrop-filter: blur(40px)) {
-	.f-effect-backdrop-blur-lg {
-		background: hsl(var(--card) / 0.9);
-	}
-
-	.glassmorphism {
-		background: hsl(var(--card) / 0.85);
-	}
 }
 
 /* ========================================================================
@@ -510,15 +588,15 @@
 
 @keyframes scroll-highlight-pulse {
 	0% {
-		box-shadow: 0 0 0 0 hsl(var(--info) / 0.5);
-		background-color: hsl(var(--info) / 0.1);
+		box-shadow: 0 0 0 0 color-mix(in oklch, var(--info) 50%, transparent);
+		background-color: color-mix(in oklch, var(--info) 10%, transparent);
 	}
 	50% {
-		box-shadow: 0 0 0 8px hsl(var(--info) / 0);
-		background-color: hsl(var(--info) / 0.05);
+		box-shadow: 0 0 0 8px color-mix(in oklch, var(--info) 0%, transparent);
+		background-color: color-mix(in oklch, var(--info) 5%, transparent);
 	}
 	100% {
-		box-shadow: 0 0 0 0 hsl(var(--info) / 0);
+		box-shadow: 0 0 0 0 color-mix(in oklch, var(--info) 0%, transparent);
 		background-color: transparent;
 	}
 }

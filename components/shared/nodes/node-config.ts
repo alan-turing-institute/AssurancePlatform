@@ -62,8 +62,8 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
 		description: "Top-level system property to be assured",
 		icon: Target,
 		colours: {
-			bgLight: "bg-node-goal/5",
-			bgDark: "bg-node-goal/10",
+			bgLight: "bg-card",
+			bgDark: "bg-card",
 			border: "border-node-goal/30",
 			borderHover: "border-node-goal/50",
 			icon: "text-node-goal",
@@ -81,8 +81,8 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
 		description: "Approach for decomposing a goal",
 		icon: GitBranch,
 		colours: {
-			bgLight: "bg-node-strategy/5",
-			bgDark: "bg-node-strategy/10",
+			bgLight: "bg-card",
+			bgDark: "bg-card",
 			border: "border-node-strategy/30",
 			borderHover: "border-node-strategy/50",
 			icon: "text-node-strategy",
@@ -100,8 +100,8 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
 		description: "Specific property or sub-claim",
 		icon: FileText,
 		colours: {
-			bgLight: "bg-node-property/5",
-			bgDark: "bg-node-property/10",
+			bgLight: "bg-card",
+			bgDark: "bg-card",
 			border: "border-node-property/30",
 			borderHover: "border-node-property/50",
 			icon: "text-node-property",
@@ -119,8 +119,8 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
 		description: "Supporting evidence or artifact",
 		icon: CheckCircle,
 		colours: {
-			bgLight: "bg-node-evidence/5",
-			bgDark: "bg-node-evidence/10",
+			bgLight: "bg-card",
+			bgDark: "bg-card",
 			border: "border-node-evidence/30",
 			borderHover: "border-node-evidence/50",
 			icon: "text-node-evidence",

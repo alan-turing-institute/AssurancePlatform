@@ -31,7 +31,7 @@ export function buildNodeContainerClasses({
 		"w-[320px]", // Fixed width - only height changes on expand
 		colours.bgLight, // Light tinted background
 		"rounded-xl",
-		"shadow-md",
+		"shadow-lg",
 		"cursor-pointer",
 		"transition-all",
 		"duration-300",
@@ -57,7 +57,7 @@ export function buildNodeHeaderClasses(): string {
  * Build node title classes (ID badge like G1, S1, etc.)
  */
 export function buildNodeTitleClasses(): string {
-	return cn("font-semibold", "text-gray-900", "text-sm", "truncate");
+	return cn("font-semibold", "text-foreground", "text-sm", "truncate");
 }
 
 /**
@@ -73,14 +73,19 @@ export function buildNodeIconClasses(nodeType: NodeType): string {
  * Build preview text classes (collapsed state - description below header)
  */
 export function buildPreviewTextClasses(): string {
-	return cn("text-xs", "text-gray-600", "line-clamp-3", "leading-relaxed");
+	return cn(
+		"text-xs",
+		"text-muted-foreground",
+		"line-clamp-3",
+		"leading-relaxed"
+	);
 }
 
 /**
  * Build full description classes (expanded state)
  */
 export function buildDescriptionClasses(): string {
-	return cn("text-sm", "text-gray-700", "leading-relaxed");
+	return cn("text-sm", "text-muted-foreground", "leading-relaxed");
 }
 
 /**
@@ -94,7 +99,7 @@ export function buildNodeContentClasses(isExpanded = true): string {
  * Build separator classes
  */
 export function buildSeparatorClasses(): string {
-	return cn("h-px", "bg-gray-200");
+	return cn("h-px", "bg-border");
 }
 
 /**
@@ -103,7 +108,7 @@ export function buildSeparatorClasses(): string {
 export function buildFooterLabelClasses(): string {
 	return cn(
 		"font-medium",
-		"text-gray-500",
+		"text-muted-foreground",
 		"text-xs",
 		"uppercase",
 		"tracking-wider"
@@ -114,5 +119,5 @@ export function buildFooterLabelClasses(): string {
  * Build footer ID classes (e.g., "G1", "S1")
  */
 export function buildFooterIdClasses(): string {
-	return cn("font-mono", "text-gray-400", "text-xs");
+	return cn("font-mono", "text-muted-foreground/70", "text-xs");
 }

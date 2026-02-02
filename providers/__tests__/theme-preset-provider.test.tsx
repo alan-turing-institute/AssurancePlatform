@@ -75,11 +75,11 @@ describe("ThemePresetProvider", () => {
 			}).toThrow("useThemePreset must be used within a ThemePresetProvider");
 		});
 
-		it("should default to 'default' preset", () => {
+		it("should default to 'catpuccin' preset", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
-			expect(result.current.preset.id).toBe("default");
-			expect(result.current.preset.name).toBe("Default");
+			expect(result.current.preset.id).toBe("catpuccin");
+			expect(result.current.preset.name).toBe("Catppuccin");
 		});
 	});
 
@@ -88,11 +88,11 @@ describe("ThemePresetProvider", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			act(() => {
-				result.current.setPreset("slate");
+				result.current.setPreset("high-contrast");
 			});
 
-			expect(result.current.preset.id).toBe("slate");
-			expect(result.current.preset.name).toBe("Slate");
+			expect(result.current.preset.id).toBe("high-contrast");
+			expect(result.current.preset.name).toBe("High Contrast");
 		});
 
 		it("should fall back to default for unknown preset id", () => {
@@ -102,7 +102,7 @@ describe("ThemePresetProvider", () => {
 				result.current.setPreset("nonexistent");
 			});
 
-			expect(result.current.preset.id).toBe("default");
+			expect(result.current.preset.id).toBe("catpuccin");
 		});
 	});
 
@@ -111,33 +111,33 @@ describe("ThemePresetProvider", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			act(() => {
-				result.current.setPreset("ocean");
+				result.current.setPreset("high-contrast");
 			});
 
-			expect(localStorage.getItem("tea-theme-preset")).toBe("ocean");
+			expect(localStorage.getItem("tea-theme-preset")).toBe("high-contrast");
 		});
 
 		it("should remove localStorage key when default preset is selected", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			act(() => {
-				result.current.setPreset("ocean");
+				result.current.setPreset("high-contrast");
 			});
-			expect(localStorage.getItem("tea-theme-preset")).toBe("ocean");
+			expect(localStorage.getItem("tea-theme-preset")).toBe("high-contrast");
 
 			act(() => {
-				result.current.setPreset("default");
+				result.current.setPreset("catpuccin");
 			});
 			expect(localStorage.getItem("tea-theme-preset")).toBeNull();
 		});
 
 		it("should restore preset from localStorage on mount", () => {
-			localStorage.setItem("tea-theme-preset", "emerald");
+			localStorage.setItem("tea-theme-preset", "high-contrast");
 
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			// After effect runs
-			expect(result.current.preset.id).toBe("emerald");
+			expect(result.current.preset.id).toBe("high-contrast");
 		});
 
 		it("should handle invalid localStorage value gracefully", () => {
@@ -145,7 +145,7 @@ describe("ThemePresetProvider", () => {
 
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
-			expect(result.current.preset.id).toBe("default");
+			expect(result.current.preset.id).toBe("catpuccin");
 		});
 	});
 
@@ -156,7 +156,7 @@ describe("ThemePresetProvider", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			act(() => {
-				result.current.setPreset("slate");
+				result.current.setPreset("high-contrast");
 			});
 
 			const root = document.documentElement;
@@ -170,7 +170,7 @@ describe("ThemePresetProvider", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			act(() => {
-				result.current.setPreset("slate");
+				result.current.setPreset("high-contrast");
 			});
 
 			const root = document.documentElement;
@@ -178,41 +178,45 @@ describe("ThemePresetProvider", () => {
 			expect(root.style.getPropertyValue("--background")).toBeTruthy();
 		});
 
-		it("should remove all CSS variables when default preset is applied", () => {
+		it("should apply Catpuccin CSS variables when default preset is reapplied", () => {
 			mockResolvedTheme.mockReturnValue("light");
 
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
-			// Apply a preset first
+			// Apply a different preset first
 			act(() => {
-				result.current.setPreset("slate");
+				result.current.setPreset("high-contrast");
 			});
 
 			const root = document.documentElement;
 			expect(root.style.getPropertyValue("--primary")).toBeTruthy();
 
-			// Switch back to default
+			// Switch back to Catpuccin (the default)
 			act(() => {
-				result.current.setPreset("default");
+				result.current.setPreset("catpuccin");
 			});
 
-			// All variables should be removed
-			expect(root.style.getPropertyValue("--primary")).toBe("");
-			expect(root.style.getPropertyValue("--background")).toBe("");
+			// Catpuccin has its own variable values
+			expect(root.style.getPropertyValue("--primary")).toBeTruthy();
+			expect(root.style.getPropertyValue("--background")).toBeTruthy();
 		});
 	});
 
 	describe("Available presets", () => {
-		it("should include default, slate, ocean, emerald, rose, and high-contrast", () => {
+		it("should include all expected presets", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
 			const ids = result.current.availablePresets.map((p) => p.id);
-			expect(ids).toContain("default");
-			expect(ids).toContain("slate");
-			expect(ids).toContain("ocean");
-			expect(ids).toContain("emerald");
-			expect(ids).toContain("rose");
+			expect(ids).toContain("catpuccin");
 			expect(ids).toContain("high-contrast");
+			expect(ids).toContain("amber");
+			expect(ids).toContain("caffeine");
+			expect(ids).toContain("darkmatter");
+			expect(ids).toContain("ghibli");
+			expect(ids).toContain("modern-minimal");
+			expect(ids).toContain("retro-arcade");
+			expect(ids).toContain("sunset-horizon");
+			expect(ids).toHaveLength(9);
 		});
 
 		it("should have both light and dark variable sets for each preset", () => {
