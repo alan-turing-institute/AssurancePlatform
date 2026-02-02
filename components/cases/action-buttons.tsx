@@ -24,6 +24,7 @@ import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import CaseNotes from "./case-notes";
+import { CaseSettingsPopover } from "./case-settings-popover";
 import { HistoryControls } from "./history-controls";
 import JsonViewPanel from "./json-view-panel";
 
@@ -237,6 +238,7 @@ const ActionButtons = ({
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
+					<CaseSettingsPopover />
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
 							<Button

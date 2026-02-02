@@ -13,7 +13,6 @@ import ActiveUsersList from "./cases/active-users-list";
 import type { PublishStatusType } from "./publishing/status-badge";
 import { StatusButton } from "./publishing/status-button";
 import { Button } from "./ui/button";
-import { ModeToggle } from "./ui/theme-toggle";
 
 type HeaderProps = {
 	setOpen: Dispatch<SetStateAction<boolean>>;
@@ -177,7 +176,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 		assuranceCase?.publishedAt ?? assuranceCase?.published_date;
 
 	return (
-		<div className="fixed top-0 left-0 z-50 w-full bg-sidebar text-sidebar-accent-foreground">
+		<div className="fixed top-0 left-0 z-50 w-full border-sidebar-border border-b bg-sidebar text-sidebar-accent-foreground">
 			<div className="container flex items-center justify-between py-3">
 				<div className="flex items-center justify-start gap-2">
 					<Button
@@ -203,7 +202,6 @@ const Header = ({ setOpen }: HeaderProps) => {
 					<ActiveUsersList />
 					<SearchNodes focusNode={focusNode} nodes={nodes} />
 					<LogoutButton />
-					<ModeToggle className="border-none bg-sidebar-accent hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground" />
 					<StatusButton
 						disabled={!canEditCase}
 						hasChanges={hasChanges}

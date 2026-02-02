@@ -4,6 +4,7 @@ import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PresetSwatch } from "@/components/ui/preset-swatch";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";
 
@@ -13,43 +14,8 @@ const modeOptions = [
 	{ id: "system", label: "System", icon: Monitor },
 ] as const;
 
-/**
- * Swatch showing the primary + background colours for a preset
- */
-function PresetSwatch({
-	primary,
-	background,
-	sidebar,
-	className,
-}: {
-	primary: string;
-	background: string;
-	sidebar: string;
-	className?: string;
-}) {
-	return (
-		<div
-			className={cn(
-				"flex h-10 w-16 overflow-hidden rounded-md border border-border",
-				className
-			)}
-		>
-			<div className="w-1/3" style={{ backgroundColor: `hsl(${sidebar})` }} />
-			<div
-				className="flex w-2/3 items-center justify-center"
-				style={{ backgroundColor: `hsl(${background})` }}
-			>
-				<div
-					className="h-3 w-3 rounded-full"
-					style={{ backgroundColor: `hsl(${primary})` }}
-				/>
-			</div>
-		</div>
-	);
-}
-
 export function AppearanceForm() {
-	const { theme, setTheme } = useTheme();
+	const { theme, setTheme, resolvedTheme } = useTheme();
 	const { preset, setPreset, availablePresets } = useThemePreset();
 	const [mounted, setMounted] = useState(false);
 
@@ -108,10 +74,13 @@ export function AppearanceForm() {
 							const lightVars = p.light;
 							const darkVars = p.dark;
 							// Use whichever mode the user currently has
-							const vars = theme === "dark" ? darkVars : lightVars;
-							const primary = vars["--primary"] ?? "222 47% 11%";
-							const background = vars["--background"] ?? "0 0% 100%";
-							const sidebar = vars["--sidebar"] ?? "239 84% 67%";
+							const vars = resolvedTheme === "dark" ? darkVars : lightVars;
+							const primary =
+								vars["--primary"] ?? "oklch(0.5547 0.2503 297.0156)";
+							const background =
+								vars["--background"] ?? "oklch(0.9578 0.0058 264.5321)";
+							const sidebar =
+								vars["--sidebar"] ?? "oklch(0.9335 0.0087 264.5206)";
 
 							return (
 								<button
