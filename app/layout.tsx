@@ -30,6 +30,14 @@ export default async function RootLayout({
 
 	return (
 		<html lang="en" suppressHydrationWarning>
+			<head>
+				<link href="https://fonts.googleapis.com" rel="preconnect" />
+				<link
+					crossOrigin="anonymous"
+					href="https://fonts.gstatic.com"
+					rel="preconnect"
+				/>
+			</head>
 			<body
 				className={cn(
 					"min-h-screen bg-background font-sans antialiased",

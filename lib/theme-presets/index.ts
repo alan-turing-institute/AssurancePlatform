@@ -2,8 +2,8 @@
  * Theme Presets
  *
  * Curated colour presets in OKLCH format.
- * Catppuccin (Latte/Mocha) is the default — it matches the base
- * CSS variables in globals.css.
+ * Modern Minimal is the default — the first entry in the array is used
+ * by ThemePresetProvider when no preference is saved.
  *
  * To add a new preset: create a file in this directory, then add it to the
  * array below.
@@ -21,13 +21,13 @@ import { retroArcadePreset } from "./retro-arcade";
 import { sunsetHorizonPreset } from "./sunset-horizon";
 
 export const themePresets: ThemePreset[] = [
+	modernMinimalPreset,
 	catpuccinPreset,
 	highContrastPreset,
 	amberPreset,
 	caffeinePreset,
 	darkmatterPreset,
 	ghibliPreset,
-	modernMinimalPreset,
 	retroArcadePreset,
 	sunsetHorizonPreset,
 ];

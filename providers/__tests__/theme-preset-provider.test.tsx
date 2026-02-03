@@ -75,11 +75,11 @@ describe("ThemePresetProvider", () => {
 			}).toThrow("useThemePreset must be used within a ThemePresetProvider");
 		});
 
-		it("should default to 'catpuccin' preset", () => {
+		it("should default to 'modern-minimal' preset", () => {
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
-			expect(result.current.preset.id).toBe("catpuccin");
-			expect(result.current.preset.name).toBe("Catppuccin");
+			expect(result.current.preset.id).toBe("modern-minimal");
+			expect(result.current.preset.name).toBe("Modern Minimal");
 		});
 	});
 
@@ -102,7 +102,7 @@ describe("ThemePresetProvider", () => {
 				result.current.setPreset("nonexistent");
 			});
 
-			expect(result.current.preset.id).toBe("catpuccin");
+			expect(result.current.preset.id).toBe("modern-minimal");
 		});
 	});
 
@@ -126,7 +126,7 @@ describe("ThemePresetProvider", () => {
 			expect(localStorage.getItem("tea-theme-preset")).toBe("high-contrast");
 
 			act(() => {
-				result.current.setPreset("catpuccin");
+				result.current.setPreset("modern-minimal");
 			});
 			expect(localStorage.getItem("tea-theme-preset")).toBeNull();
 		});
@@ -145,7 +145,7 @@ describe("ThemePresetProvider", () => {
 
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
 
-			expect(result.current.preset.id).toBe("catpuccin");
+			expect(result.current.preset.id).toBe("modern-minimal");
 		});
 	});
 
@@ -178,7 +178,7 @@ describe("ThemePresetProvider", () => {
 			expect(root.style.getPropertyValue("--background")).toBeTruthy();
 		});
 
-		it("should apply Catpuccin CSS variables when default preset is reapplied", () => {
+		it("should apply default CSS variables when default preset is reapplied", () => {
 			mockResolvedTheme.mockReturnValue("light");
 
 			const { result } = renderHook(() => useThemePreset(), { wrapper });
@@ -191,12 +191,12 @@ describe("ThemePresetProvider", () => {
 			const root = document.documentElement;
 			expect(root.style.getPropertyValue("--primary")).toBeTruthy();
 
-			// Switch back to Catpuccin (the default)
+			// Switch back to Modern Minimal (the default)
 			act(() => {
-				result.current.setPreset("catpuccin");
+				result.current.setPreset("modern-minimal");
 			});
 
-			// Catpuccin has its own variable values
+			// Modern Minimal has its own variable values
 			expect(root.style.getPropertyValue("--primary")).toBeTruthy();
 			expect(root.style.getPropertyValue("--background")).toBeTruthy();
 		});

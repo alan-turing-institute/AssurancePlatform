@@ -9,6 +9,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
+import { useGoogleFonts } from "@/hooks/use-google-fonts";
 import { themePresets } from "@/lib/theme-presets";
 import type { ThemePreset, ThemeVariable } from "@/types/theme-preset";
 
@@ -35,12 +36,33 @@ const ALL_VARIABLES: ThemeVariable[] = [
 	"--border",
 	"--input",
 	"--ring",
+	"--chart-1",
+	"--chart-2",
+	"--chart-3",
+	"--chart-4",
+	"--chart-5",
 	"--sidebar",
 	"--sidebar-foreground",
+	"--sidebar-primary",
+	"--sidebar-primary-foreground",
 	"--sidebar-accent",
 	"--sidebar-accent-foreground",
 	"--sidebar-border",
+	"--sidebar-ring",
 	"--sidebar-muted",
+	"--radius",
+	"--font-sans",
+	"--font-serif",
+	"--font-mono",
+	"--shadow-2xs",
+	"--shadow-xs",
+	"--shadow-sm",
+	"--shadow",
+	"--shadow-md",
+	"--shadow-lg",
+	"--shadow-xl",
+	"--shadow-2xl",
+	"--tracking-normal",
 ];
 
 type ThemePresetContextValue = {
@@ -60,20 +82,22 @@ function findPreset(id: string): ThemePreset {
 }
 
 function loadSavedPresetId(): string {
+	const fallback = getDefaultPreset().id;
+
 	if (typeof window === "undefined") {
-		return "default";
+		return fallback;
 	}
 
 	try {
-		return localStorage.getItem(STORAGE_KEY) ?? "default";
+		return localStorage.getItem(STORAGE_KEY) ?? fallback;
 	} catch {
-		return "default";
+		return fallback;
 	}
 }
 
 function savePresetId(id: string): void {
 	try {
-		if (id === "default") {
+		if (id === getDefaultPreset().id) {
 			localStorage.removeItem(STORAGE_KEY);
 		} else {
 			localStorage.setItem(STORAGE_KEY, id);
@@ -83,16 +107,30 @@ function savePresetId(id: string): void {
 	}
 }
 
+/**
+ * CSS variables that must be applied on `document.body` rather than the root.
+ * `next/font/google` sets `--font-sans` via a class on `<body>`, so an inherited
+ * value from `<html>` is overridden. Inline styles on body win over class styles.
+ */
+const BODY_VARIABLES = new Set<ThemeVariable>([
+	"--font-sans",
+	"--font-serif",
+	"--font-mono",
+]);
+
 function applyPreset(preset: ThemePreset, resolvedTheme: string): void {
 	const root = document.documentElement;
+	const { body } = document;
 	const variableSet = resolvedTheme === "dark" ? preset.dark : preset.light;
 
 	for (const variable of ALL_VARIABLES) {
 		const value = variableSet[variable];
+		const target = BODY_VARIABLES.has(variable) ? body : root;
+
 		if (value) {
-			root.style.setProperty(variable, value);
+			target.style.setProperty(variable, value);
 		} else {
-			root.style.removeProperty(variable);
+			target.style.removeProperty(variable);
 		}
 	}
 }
@@ -100,6 +138,9 @@ function applyPreset(preset: ThemePreset, resolvedTheme: string): void {
 export function ThemePresetProvider({ children }: { children: ReactNode }) {
 	const { resolvedTheme } = useTheme();
 	const [preset, setPresetState] = useState<ThemePreset>(getDefaultPreset);
+
+	// Load Google Fonts required by the active preset
+	useGoogleFonts(preset);
 
 	// Initialise from localStorage on mount
 	useEffect(() => {
