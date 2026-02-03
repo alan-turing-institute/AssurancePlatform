@@ -95,6 +95,7 @@
 		0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
 	--shadow-2xl: 0 25px 50px -12px oklch(0 0 0 / 0.25);
 	--tracking-normal: 0em;
+	--spacing: 0.25rem;
 
 	--node-goal: var(--chart-1);
 	--node-strategy: var(--chart-2);
@@ -241,9 +242,10 @@
 	--color-node-property: var(--node-property);
 	--color-node-evidence: var(--node-evidence);
 
-	--radius-lg: var(--radius);
-	--radius-md: calc(var(--radius) - 2px);
 	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
 
 	--font-sans: var(--font-sans);
 	--font-serif: var(--font-serif);
@@ -259,6 +261,7 @@
 	--shadow-2xl: var(--shadow-2xl);
 
 	--tracking-normal: var(--tracking-normal);
+	--spacing: var(--spacing);
 
 	--animate-accordion-down: accordion-down 0.2s ease-out;
 	--animate-accordion-up: accordion-up 0.2s ease-out;

@@ -63,6 +63,7 @@ const ALL_VARIABLES: ThemeVariable[] = [
 	"--shadow-xl",
 	"--shadow-2xl",
 	"--tracking-normal",
+	"--spacing",
 ];
 
 type ThemePresetContextValue = {

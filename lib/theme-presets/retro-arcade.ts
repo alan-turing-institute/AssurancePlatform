@@ -55,6 +55,7 @@ export const retroArcadePreset: ThemePreset = {
 			"2px 2px 4px 0px hsl(196 83% 10% / 0.15), 2px 8px 10px -1px hsl(196 83% 10% / 0.15)",
 		"--shadow-2xl": "2px 2px 4px 0px hsl(196 83% 10% / 0.38)",
 		"--tracking-normal": "0em",
+		"--spacing": "0.25rem",
 	},
 	dark: {
 		"--background": "oklch(0.2673 0.0486 219.8169)",

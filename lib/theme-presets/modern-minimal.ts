@@ -54,6 +54,7 @@ export const modernMinimalPreset: ThemePreset = {
 			"0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10)",
 		"--shadow-2xl": "0 1px 3px 0px hsl(0 0% 0% / 0.25)",
 		"--tracking-normal": "0em",
+		"--spacing": "0.25rem",
 	},
 	dark: {
 		"--background": "oklch(0.2046 0 0)",

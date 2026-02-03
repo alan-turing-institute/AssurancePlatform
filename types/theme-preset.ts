@@ -2,7 +2,7 @@
  * Theme Preset Type Definitions
  *
  * Defines the shape of colour presets used by ThemePresetProvider.
- * Each preset contains HSL bare triplets for both light and dark modes.
+ * Each preset contains OKLCH colour values for both light and dark modes.
  */
 
 /** CSS variable names that can be overridden by a preset */
@@ -26,14 +26,36 @@ export type ThemeVariable =
 	| "--border"
 	| "--input"
 	| "--ring"
+	| "--chart-1"
+	| "--chart-2"
+	| "--chart-3"
+	| "--chart-4"
+	| "--chart-5"
 	| "--sidebar"
 	| "--sidebar-foreground"
+	| "--sidebar-primary"
+	| "--sidebar-primary-foreground"
 	| "--sidebar-accent"
 	| "--sidebar-accent-foreground"
 	| "--sidebar-border"
-	| "--sidebar-muted";
+	| "--sidebar-ring"
+	| "--sidebar-muted"
+	| "--radius"
+	| "--font-sans"
+	| "--font-serif"
+	| "--font-mono"
+	| "--shadow-2xs"
+	| "--shadow-xs"
+	| "--shadow-sm"
+	| "--shadow"
+	| "--shadow-md"
+	| "--shadow-lg"
+	| "--shadow-xl"
+	| "--shadow-2xl"
+	| "--tracking-normal"
+	| "--spacing";
 
-/** HSL bare triplet values for a single mode (e.g. "210 40% 98%") */
+/** OKLCH colour values for a single mode (e.g. "oklch(0.205 0 0)") */
 export type ThemeVariableSet = Partial<Record<ThemeVariable, string>>;
 
 /** A complete colour preset with light and dark variable sets */
