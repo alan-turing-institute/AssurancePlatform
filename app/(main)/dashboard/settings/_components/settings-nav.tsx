@@ -12,7 +12,7 @@ const SettingsNav = () => {
 				{settingsNavigation.map((item) => (
 					<li key={item.name}>
 						<a
-							className={path === item.href ? "text-indigo-500" : ""}
+							className={path === item.href ? "text-primary" : ""}
 							href={item.href}
 						>
 							{item.name}

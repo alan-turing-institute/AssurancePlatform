@@ -41,7 +41,7 @@ export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
 					{linkedCaseStudies.map((caseStudy) => (
 						<li key={caseStudy.id}>
 							<Link
-								className="flex items-center gap-2 text-indigo-600 hover:underline dark:text-indigo-500"
+								className="flex items-center gap-2 text-primary hover:underline"
 								href={`/dashboard/case-studies/${caseStudy.id}`}
 								rel="noopener noreferrer"
 								target="_blank"

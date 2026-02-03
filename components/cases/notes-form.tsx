@@ -91,7 +91,7 @@ const NotesForm: React.FC = () => {
 				/>
 				<div className="flex items-center justify-start gap-3">
 					<Button
-						className="bg-indigo-500 text-white hover:bg-indigo-600"
+						className="bg-primary text-primary-foreground hover:bg-primary/90"
 						type="submit"
 					>
 						Add Note

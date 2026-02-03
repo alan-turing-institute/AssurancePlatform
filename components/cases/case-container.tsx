@@ -1,7 +1,6 @@
 "use client";
 
-import { Loader2, MessagesSquare } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
@@ -256,7 +255,6 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 							<Header setOpen={setOpen} />
 							<Flow />
 							<CaseDetails isOpen={open} setOpen={setOpen} />
-							<FeedbackButton />
 						</ReactFlowProvider>
 					);
 				}
@@ -265,14 +263,5 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		</>
 	);
 };
-
-const FeedbackButton = () => (
-	<Link href="/docs/community/community-support" target="_blank">
-		<div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
-			<MessagesSquare className="h-6 w-6 text-white" />
-			<div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />
-		</div>
-	</Link>
-);
 
 export default CaseContainer;

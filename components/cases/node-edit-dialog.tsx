@@ -489,7 +489,7 @@ export default function NodeEditDialog({
 							</Button>
 							{!readOnly && (
 								<Button
-									className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+									className="bg-primary text-primary-foreground hover:bg-primary/90"
 									disabled={loading}
 									type="submit"
 								>

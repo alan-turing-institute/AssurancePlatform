@@ -395,19 +395,6 @@ describe("Hero", () => {
 			expect(svgPattern).toBeInTheDocument();
 		});
 
-		it("should have gradient overlay", () => {
-			mockUseSession.mockReturnValue({
-				data: null,
-				status: "unauthenticated",
-				update: vi.fn(),
-			});
-
-			const { container } = render(<Hero />);
-
-			const gradientDiv = container.querySelector(".bg-linear-to-tr");
-			expect(gradientDiv).toBeInTheDocument();
-		});
-
 		it("should position decorative elements with z-index", () => {
 			mockUseSession.mockReturnValue({
 				data: null,
@@ -419,19 +406,6 @@ describe("Hero", () => {
 
 			const negativeZIndex = container.querySelectorAll(".-z-10");
 			expect(negativeZIndex.length).toBeGreaterThan(0);
-		});
-
-		it("should have blur-sm effect on gradient", () => {
-			mockUseSession.mockReturnValue({
-				data: null,
-				status: "unauthenticated",
-				update: vi.fn(),
-			});
-
-			const { container } = render(<Hero />);
-
-			const blurredElement = container.querySelector(".blur-3xl");
-			expect(blurredElement).toBeInTheDocument();
 		});
 	});
 

@@ -215,7 +215,7 @@ export default function BaseNode({
 				<div className="flex items-center">{bottomLeftActions}</div>
 				<motion.button
 					aria-label={isExpanded ? "Collapse node" : "Expand node"}
-					className="cursor-pointer rounded p-0.5 transition-colors hover:bg-black/5"
+					className="cursor-pointer rounded p-0.5 transition-colors hover:bg-foreground/5"
 					onClick={handleExpandToggle}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
@@ -226,7 +226,7 @@ export default function BaseNode({
 					>
 						<ChevronDown
 							aria-hidden="true"
-							className="h-4 w-4 shrink-0 text-gray-500"
+							className="h-4 w-4 shrink-0 text-muted-foreground"
 						/>
 					</motion.div>
 				</motion.button>

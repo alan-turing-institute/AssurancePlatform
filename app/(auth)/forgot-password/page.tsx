@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
 				<ForgotPasswordForm />
 				<div className="my-8 flex items-center justify-center">
 					<Link
-						className="flex items-center justify-start text-muted-foreground text-sm hover:text-indigo-500"
+						className="flex items-center justify-start text-muted-foreground text-sm hover:text-primary"
 						href={"/"}
 					>
 						Back to homepage

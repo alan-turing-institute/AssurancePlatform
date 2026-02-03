@@ -102,7 +102,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	return (
 		<div className="group relative min-h-[420px]">
 			<Link href={`/case/${assuranceCase.id}`}>
-				<Card className="flex h-full flex-col items-start justify-start transition-all group-hover:bg-indigo-500/5">
+				<Card className="flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5">
 					<CardHeader className="w-full flex-1">
 						{imageLoading ? (
 							<Skeleton className="relative mb-4 flex aspect-video overflow-hidden rounded-md" />
@@ -118,11 +118,11 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 							</div>
 						)}
 						<CardTitle>{name}</CardTitle>
-						<CardDescription className="text-slate-900 dark:text-white">
+						<CardDescription className="text-foreground">
 							{description}
 						</CardDescription>
 					</CardHeader>
-					<CardFooter className="flex w-full items-center justify-between text-gray-500 text-xs dark:text-gray-300">
+					<CardFooter className="flex w-full items-center justify-between text-muted-foreground text-xs">
 						<p>
 							Created on: {created_date ? formatShortDate(created_date) : "N/A"}
 						</p>
@@ -140,7 +140,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			</Link>
 			{(permissions.includes("manage") || permissions.includes("owner")) && (
 				<button
-					className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
+					className="absolute top-4 right-4 z-50 hidden rounded-md bg-destructive p-2 text-destructive-foreground shadow-lg group-hover:block"
 					disabled={loading}
 					onClick={() => setOpen(true)}
 					type="button"

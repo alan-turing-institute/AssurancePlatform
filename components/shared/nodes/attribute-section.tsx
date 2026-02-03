@@ -29,11 +29,11 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 		<div className="space-y-1">
 			<div className="flex items-center gap-1.5">
 				{icon}
-				<span className="font-medium text-gray-500 text-xs uppercase tracking-wider">
+				<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
 					{label}
 				</span>
 			</div>
-			<p className="pl-5 text-gray-700 text-xs leading-relaxed">
+			<p className="pl-5 text-foreground text-xs leading-relaxed">
 				{displayValue}
 			</p>
 		</div>

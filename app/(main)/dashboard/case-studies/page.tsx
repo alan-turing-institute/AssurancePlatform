@@ -87,7 +87,7 @@ async function CaseStudiesPage() {
 								<tr key={caseStudy.id}>
 									<td className="w-full max-w-0 py-4 pr-3 pl-4 font-medium text-foreground text-sm sm:w-auto sm:max-w-none sm:pl-0">
 										<Link
-											className="group transition-all duration-200 hover:text-indigo-500"
+											className="group transition-all duration-200 hover:text-primary"
 											href={`case-studies/${caseStudy.id}`}
 										>
 											{caseStudy.title}

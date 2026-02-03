@@ -14,7 +14,7 @@ export default function ResetPasswordPage() {
 				<Suspense
 					fallback={
 						<div className="mx-auto flex w-full max-w-sm flex-col items-center justify-center lg:w-96">
-							<div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+							<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
 							<p className="mt-4 text-foreground text-sm">Loading...</p>
 						</div>
 					}
@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
 				</Suspense>
 				<div className="my-8 flex items-center justify-center">
 					<Link
-						className="flex items-center justify-start text-muted-foreground text-sm hover:text-indigo-500"
+						className="flex items-center justify-start text-muted-foreground text-sm hover:text-primary"
 						href={"/"}
 					>
 						Back to homepage

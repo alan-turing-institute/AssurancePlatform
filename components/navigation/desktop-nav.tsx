@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { externalNavigation, navigation } from "@/config";
 import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
+import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
 import { Separator } from "../ui/separator";
 import LoggedInUser from "./logged-in-user";
 
@@ -24,6 +25,7 @@ const DesktopNav = () => {
 	const pathname = usePathname();
 	const createTeamModal = useCreateTeamModal();
 	const [teams, setTeams] = useState<Team[]>([]);
+	const sidebarLogo = useSidebarLogo();
 
 	// Page name determined from pathname
 	const _pageName =
@@ -55,7 +57,7 @@ const DesktopNav = () => {
 							className="mt-6 mb-3 h-10"
 							height={432}
 							priority
-							src="/images/logos/tea-logo-full-dark.png"
+							src={sidebarLogo}
 							style={{ width: "auto" }}
 							unoptimized
 							width={1967}

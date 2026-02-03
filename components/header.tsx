@@ -176,12 +176,12 @@ const Header = ({ setOpen }: HeaderProps) => {
 		assuranceCase?.publishedAt ?? assuranceCase?.published_date;
 
 	return (
-		<div className="fixed top-0 left-0 z-50 w-full border-sidebar-border border-b bg-sidebar text-sidebar-accent-foreground">
+		<div className="fixed top-0 left-0 z-50 w-full border-sidebar-border border-b bg-sidebar text-sidebar-foreground">
 			<div className="container flex items-center justify-between py-3">
 				<div className="flex items-center justify-start gap-2">
 					<Button
 						aria-label="Back to dashboard"
-						className="hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground"
+						className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
 						onClick={() => router.push("/dashboard")}
 						size={"icon"}
 						title="Back to dashboard"
@@ -190,7 +190,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 						<ArrowLeft className="h-4 w-4" />
 					</Button>
 					<button
-						className="border-none bg-transparent p-0 font-semibold text-sidebar-accent-foreground hover:cursor-pointer"
+						className="border-none bg-transparent p-0 font-semibold text-sidebar-foreground hover:cursor-pointer"
 						onClick={() => setOpen(true)}
 						type="button"
 					>

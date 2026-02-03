@@ -93,7 +93,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 						{filteredNodes.map((node) => (
 							<div key={node.id}>
 								<button
-									className="group my-2 flex w-full flex-col items-start justify-start gap-1 rounded-md p-2 text-left hover:bg-indigo-500 hover:text-white"
+									className="group my-2 flex w-full flex-col items-start justify-start gap-1 rounded-md p-2 text-left hover:bg-primary hover:text-primary-foreground"
 									onClick={() => handleSelection(node.id)}
 									onKeyDown={(e) => {
 										if (e.key === "Enter" || e.key === " ") {

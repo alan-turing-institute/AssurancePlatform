@@ -183,7 +183,7 @@ function TeamPermissionRow({
 	return (
 		<div className="flex items-center justify-between">
 			<div className="flex items-center gap-3">
-				<div className="flex h-8 w-8 items-center justify-center rounded bg-indigo-500 font-medium text-sm text-white">
+				<div className="flex h-8 w-8 items-center justify-center rounded bg-primary font-medium text-primary-foreground text-sm">
 					<Users className="h-4 w-4" />
 				</div>
 				<div>
@@ -249,7 +249,7 @@ function AvailableTeamsList({
 					key={team.id}
 				>
 					<div className="flex items-center gap-2">
-						<div className="flex h-8 w-8 items-center justify-center rounded bg-indigo-500 font-medium text-sm text-white">
+						<div className="flex h-8 w-8 items-center justify-center rounded bg-primary font-medium text-primary-foreground text-sm">
 							{team.name.charAt(0).toUpperCase()}
 						</div>
 						<span>{team.name}</span>

@@ -107,7 +107,7 @@ const DiscoverCaseStudyPage = async ({
 								</div>
 							</div>
 							<SanitizedHtml
-								className="prose prose-indigo max-w-none"
+								className="prose max-w-none prose-a:text-primary"
 								html={caseStudy.description}
 							/>
 

@@ -74,7 +74,7 @@ export const ResourcesModal = () => {
 						key={component.title}
 						target="_blank"
 					>
-						<div className="flex items-center justify-start gap-3 pb-2 font-bold text-foreground group-hover:text-white">
+						<div className="flex items-center justify-start gap-3 pb-2 font-bold text-foreground group-hover:text-primary-foreground">
 							{component.icon}
 							{component.title}
 						</div>
@@ -93,16 +93,16 @@ const ListItem = React.forwardRef<
 	<li>
 		<a
 			className={cn(
-				"group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden hover:bg-indigo-500 hover:text-accent-foreground dark:hover:bg-indigo-700",
+				"group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden hover:bg-primary hover:text-primary-foreground",
 				className
 			)}
 			ref={ref}
 			{...props}
 		>
-			<div className="font-medium text-sm leading-none group-hover:text-white">
+			<div className="font-medium text-sm leading-none group-hover:text-primary-foreground">
 				{title}
 			</div>
-			<div className="text-muted-foreground text-sm leading-snug group-hover:text-white">
+			<div className="text-muted-foreground text-sm leading-snug group-hover:text-primary-foreground">
 				{children}
 			</div>
 		</a>

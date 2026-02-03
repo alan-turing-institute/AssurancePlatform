@@ -13,8 +13,8 @@ export default function PreviewBanner() {
 
 	return (
 		<div className="fixed bottom-0 left-0 w-full">
-			<div className="flex items-center justify-center gap-x-6 bg-rose-500 px-6 py-4 sm:px-3.5">
-				<div className="text-sm text-white leading-6">
+			<div className="flex items-center justify-center gap-x-6 bg-primary px-6 py-4 sm:px-3.5">
+				<div className="text-primary-foreground text-sm leading-6">
 					<Link
 						className="flex items-center justify-start gap-2"
 						href="/docs/community/community-support"

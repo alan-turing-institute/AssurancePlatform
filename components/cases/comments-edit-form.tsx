@@ -135,7 +135,7 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 				/>
 				<div className="flex items-center justify-end gap-2">
 					<Button
-						className={"hover:bg-indigo-800/50"}
+						className={"hover:bg-primary/20"}
 						onClick={() => setEdit(false)}
 						variant={"ghost"}
 					>

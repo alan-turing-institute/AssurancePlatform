@@ -61,7 +61,7 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 				<button
 					className={`flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors ${
 						selectedFile === file.id
-							? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950"
+							? "border-primary bg-primary/5"
 							: "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
 					}`}
 					disabled={disabled}

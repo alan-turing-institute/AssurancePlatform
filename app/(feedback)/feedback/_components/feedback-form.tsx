@@ -119,7 +119,7 @@ export function FeedbackForm() {
 							Cancel
 						</Button>
 						<Button
-							className="bg-indigo-600 text-white hover:bg-indigo-700"
+							className="bg-primary text-primary-foreground hover:bg-primary/90"
 							type="submit"
 						>
 							Submit
