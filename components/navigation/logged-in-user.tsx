@@ -70,10 +70,10 @@ const LoggedInUser = () => {
 							</span>
 						</span>
 						<div>
-							<p className="font-medium text-sidebar-accent-foreground text-sm capitalize group-hover:text-sidebar-accent-foreground">
+							<p className="font-medium text-sidebar-foreground text-sm capitalize">
 								{displayName}
 							</p>
-							<p className="font-medium text-sidebar-foreground/70 text-xs group-hover:text-sidebar-accent-foreground">
+							<p className="font-medium text-sidebar-foreground/70 text-xs">
 								{currentUser?.email}
 							</p>
 						</div>
