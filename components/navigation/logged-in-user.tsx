@@ -8,6 +8,8 @@ import { Skeleton } from "../ui/skeleton";
 type UserData = {
 	username: string;
 	email: string;
+	firstName?: string;
+	lastName?: string;
 };
 
 const LoggedInUser = () => {
@@ -19,7 +21,12 @@ const LoggedInUser = () => {
 			try {
 				const result = await fetchCurrentUser("");
 				if (result) {
-					setCurrentUser({ username: result.username, email: result.email });
+					setCurrentUser({
+						username: result.username,
+						email: result.email,
+						firstName: result.firstName ?? undefined,
+						lastName: result.lastName ?? undefined,
+					});
 				} else {
 					setCurrentUser(null);
 				}
@@ -33,6 +40,11 @@ const LoggedInUser = () => {
 
 		loadUser();
 	}, []);
+
+	const displayName =
+		[currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") ||
+		currentUser?.username ||
+		"";
 
 	return (
 		<>
@@ -54,12 +66,12 @@ const LoggedInUser = () => {
 					<div className="flex items-center gap-3">
 						<span className="inline-flex size-10 items-center justify-center rounded-full bg-sidebar-accent/60">
 							<span className="font-medium text-sidebar-accent-foreground text-sm capitalize">
-								{currentUser?.username.charAt(0)}
+								{displayName.charAt(0)}
 							</span>
 						</span>
 						<div>
 							<p className="font-medium text-sidebar-accent-foreground text-sm capitalize group-hover:text-sidebar-accent-foreground">
-								{currentUser?.username}
+								{displayName}
 							</p>
 							<p className="font-medium text-sidebar-foreground/70 text-xs group-hover:text-sidebar-accent-foreground">
 								{currentUser?.email}

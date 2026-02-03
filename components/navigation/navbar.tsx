@@ -19,6 +19,9 @@ export const Navbar = ({ children }: { children: React.ReactNode }) => {
 		if (path.includes("/dashboard/case-studies")) {
 			return "Case Studies";
 		}
+		if (path.includes("/dashboard/teams/")) {
+			return "Teams";
+		}
 		return path.split("/").filter(Boolean).pop() || "";
 	};
 
