@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
+import { notFound, validationError } from "@/lib/errors";
 
 /**
  * POST /api/users/me/migration-notice
@@ -8,46 +13,37 @@ import { validateSession } from "@/lib/auth/validate-session";
  */
 export async function POST() {
 	try {
-		const validated = await validateSession();
-
-		if (!validated) {
-			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
+		const userId = await requireAuth();
 
 		const { prismaNew } = await import("@/lib/prisma");
 
 		// Fetch user to check if they have a valid email
 		const user = await prismaNew.user.findUnique({
-			where: { id: validated.userId },
+			where: { id: userId },
 			select: { email: true },
 		});
 
 		if (!user) {
-			return NextResponse.json({ error: "User not found" }, { status: 404 });
+			return apiError(notFound("User"));
 		}
 
 		// Check if email is valid (not a placeholder)
 		const hasValidEmail = user.email && !user.email.includes("@placeholder");
 
 		if (!hasValidEmail) {
-			return NextResponse.json(
-				{ error: "Valid email required to dismiss migration notice" },
-				{ status: 400 }
+			return apiError(
+				validationError("Valid email required to dismiss migration notice")
 			);
 		}
 
 		// Update user to mark migration notice as seen
 		await prismaNew.user.update({
-			where: { id: validated.userId },
+			where: { id: userId },
 			data: { hasSeenMigrationNotice: true },
 		});
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error marking migration notice as seen:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

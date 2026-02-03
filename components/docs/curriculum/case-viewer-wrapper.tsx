@@ -1,6 +1,7 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { Node } from "reactflow";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import type { CaseExportNested, ReactFlowNodeData } from "@/types/curriculum";
 
 // Lazy load EnhancedInteractiveCaseViewer to avoid 730+ module import at startup
@@ -139,13 +140,21 @@ const CaseViewerWrapper = ({
 				</div>
 			}
 		>
-			<EnhancedInteractiveCaseViewer
-				caseData={caseData}
-				editable={editable}
-				guidedPath={guidedPath}
-				highlightedNodes={highlightedNodes}
-				onNodeClick={onNodeClick || undefined}
-			/>
+			<ErrorBoundary
+				fallback={
+					<div className="flex h-96 w-full items-center justify-center rounded-lg bg-gray-100 text-muted-foreground dark:bg-gray-800">
+						<p>Interactive example failed to load.</p>
+					</div>
+				}
+			>
+				<EnhancedInteractiveCaseViewer
+					caseData={caseData}
+					editable={editable}
+					guidedPath={guidedPath}
+					highlightedNodes={highlightedNodes}
+					onNodeClick={onNodeClick || undefined}
+				/>
+			</ErrorBoundary>
 		</Suspense>
 	);
 };

@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { restoreCase } from "@/lib/services/case-trash-service";
 
 /**
@@ -21,22 +26,18 @@ export async function POST(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		const result = await restoreCase(userId, id);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const { id } = await params;
-
-	const result = await restoreCase(validated.userId, id);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: result.status ?? 500 }
-		);
-	}
-
-	return NextResponse.json({ success: true });
 }

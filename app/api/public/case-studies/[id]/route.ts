@@ -1,4 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
+import { notFound, validationError } from "@/lib/errors";
 import { getPublishedCaseStudyById } from "@/lib/services/case-study-service";
 import { transformCaseStudyForApi } from "@/lib/services/case-study-transforms";
 
@@ -10,36 +12,23 @@ type RouteParams = {
  * GET /api/public/case-studies/[id]
  * Get a specific published case study (public access, no auth required)
  */
-export async function GET(
-	_request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
+export async function GET(_request: NextRequest, { params }: RouteParams) {
 	try {
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		const caseStudy = await getPublishedCaseStudyById(caseStudyId);
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
-		return NextResponse.json(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(caseStudy));
 	} catch (error) {
-		console.error("Error fetching published case study:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch case study" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,5 +1,11 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import { changePassword } from "@/lib/services/user-management-service";
 
 type PasswordChangeRequest = {
@@ -13,39 +19,28 @@ type PasswordChangeRequest = {
  */
 export async function PUT(request: Request) {
 	try {
-		const validated = await validateSession();
-
-		if (!validated) {
-			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
+		const userId = await requireAuth();
 
 		// Parse request body
 		const body = (await request.json()) as PasswordChangeRequest;
 
 		if (!(body.currentPassword && body.newPassword)) {
-			return NextResponse.json(
-				{ error: "Current password and new password are required" },
-				{ status: 400 }
+			return apiError(
+				validationError("Current password and new password are required")
 			);
 		}
 
-		const result = await changePassword(validated.userId, {
+		const result = await changePassword(userId, {
 			currentPassword: body.currentPassword,
 			newPassword: body.newPassword,
 		});
 
 		if (!result.success) {
-			// Map field names if needed for frontend compatibility
-			const field = result.field === "currentPassword" ? "password" : undefined;
-			return NextResponse.json({ error: result.error, field }, { status: 400 });
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error changing password:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { getSandboxElements } from "@/lib/services/element-service";
 
 /**
@@ -11,19 +15,18 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		const result = await getSandboxElements(userId, caseId);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await getSandboxElements(session.user.id, caseId);
-
-	if (result.error) {
-		const status = result.error === "Permission denied" ? 403 : 400;
-		return NextResponse.json({ error: result.error }, { status });
-	}
-
-	return NextResponse.json(result.data);
 }

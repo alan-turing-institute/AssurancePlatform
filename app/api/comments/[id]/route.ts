@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+} from "@/lib/api-response";
+import { forbidden, notFound, validationError } from "@/lib/errors";
 
 type CommentWithElement = {
 	id: string;
@@ -16,47 +21,20 @@ type CommentWithElement = {
 	author: { username: string };
 };
 
-type AuthResult =
-	| { success: true; userId: string; username: string }
-	| { success: false; response: NextResponse };
-
-type CommentResult =
-	| {
-			success: true;
-			comment: CommentWithElement;
-			caseId: string;
-			elementName: string | null;
-	  }
-	| { success: false; response: NextResponse };
-
-/**
- * Validates session using the unified validateSession wrapper.
- * Returns userId and username to avoid duplicate session calls.
- */
-async function validateAuth(): Promise<AuthResult> {
-	const validated = await validateSession();
-
-	if (!validated) {
-		return {
-			success: false,
-			response: NextResponse.json({ error: "Unauthorised" }, { status: 401 }),
-		};
-	}
-
-	return {
-		success: true,
-		userId: validated.userId,
-		username: validated.username || validated.email || "Someone",
-	};
-}
+type CommentPermissionResult = {
+	comment: CommentWithElement;
+	caseId: string;
+	elementName: string | null;
+};
 
 /**
  * Fetches a comment and validates the user has permission to modify it.
+ * Throws an AppError on failure.
  */
 async function getCommentWithPermission(
 	commentId: string,
 	userId: string
-): Promise<CommentResult> {
+): Promise<CommentPermissionResult> {
 	const { prismaNew } = await import("@/lib/prisma");
 	const { canAccessCase } = await import("@/lib/permissions");
 
@@ -69,42 +47,24 @@ async function getCommentWithPermission(
 	});
 
 	if (!comment) {
-		return {
-			success: false,
-			response: NextResponse.json(
-				{ error: "Comment not found" },
-				{ status: 404 }
-			),
-		};
+		throw notFound("Comment");
 	}
 
 	const caseId = comment.element?.caseId ?? comment.caseId;
 
 	if (!caseId) {
-		return {
-			success: false,
-			response: NextResponse.json(
-				{ error: "Comment not associated with a case" },
-				{ status: 400 }
-			),
-		};
+		throw validationError("Comment not associated with a case");
 	}
 
 	const isAuthor = comment.authorId === userId;
 	const hasEditAccess = await canAccessCase({ userId, caseId }, "EDIT");
 
 	if (!(isAuthor || hasEditAccess)) {
-		return {
-			success: false,
-			response: NextResponse.json(
-				{ error: "Permission denied" },
-				{ status: 403 }
-			),
-		};
+		throw forbidden();
 	}
 
 	const elementName = comment.element?.name || comment.element?.description;
-	return { success: true, comment, caseId, elementName: elementName ?? null };
+	return { comment, caseId, elementName: elementName ?? null };
 }
 
 /**
@@ -115,21 +75,14 @@ export async function DELETE(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: commentId } = await params;
-
-	const authResult = await validateAuth();
-	if (!authResult.success) {
-		return authResult.response;
-	}
-
 	try {
-		const commentResult = await getCommentWithPermission(
+		const session = await requireAuthSession();
+		const { id: commentId } = await params;
+
+		const { comment, caseId, elementName } = await getCommentWithPermission(
 			commentId,
-			authResult.userId
+			session.userId
 		);
-		if (!commentResult.success) {
-			return commentResult.response;
-		}
 
 		const { prismaNew } = await import("@/lib/prisma");
 		await prismaNew.comment.delete({ where: { id: commentId } });
@@ -138,25 +91,22 @@ export async function DELETE(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
+		const username = session.username || session.email || "Someone";
 		emitSSEEvent(
 			"comment:deleted",
-			commentResult.caseId,
+			caseId,
 			{
 				commentId,
-				elementId: commentResult.comment.elementId,
-				elementName: commentResult.elementName,
-				username: authResult.username,
+				elementId: comment.elementId,
+				elementName,
+				username,
 			},
-			authResult.userId
+			session.userId
 		);
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error deleting comment:", error);
-		return NextResponse.json(
-			{ error: "Failed to delete comment" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -168,33 +118,23 @@ export async function PUT(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: commentId } = await params;
-
-	const authResult = await validateAuth();
-	if (!authResult.success) {
-		return authResult.response;
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: commentId } = await params;
+
 		const body = await request.json();
 		const { content } = body;
 
 		const isValidContent =
 			content && typeof content === "string" && content.trim() !== "";
 		if (!isValidContent) {
-			return NextResponse.json(
-				{ error: "Content is required" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Content is required"));
 		}
 
-		const commentResult = await getCommentWithPermission(
+		const { comment, caseId, elementName } = await getCommentWithPermission(
 			commentId,
-			authResult.userId
+			session.userId
 		);
-		if (!commentResult.success) {
-			return commentResult.response;
-		}
 
 		const { prismaNew } = await import("@/lib/prisma");
 		const updatedComment = await prismaNew.comment.update({
@@ -214,25 +154,22 @@ export async function PUT(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
+		const username = session.username || session.email || "Someone";
 		emitSSEEvent(
 			"comment:updated",
-			commentResult.caseId,
+			caseId,
 			{
 				comment: response,
-				elementId: commentResult.comment.elementId,
-				elementName: commentResult.elementName,
-				username: authResult.username,
+				elementId: comment.elementId,
+				elementName,
+				username,
 			},
-			authResult.userId
+			session.userId
 		);
 
-		return NextResponse.json(response);
+		return apiSuccess(response);
 	} catch (error) {
-		console.error("Error updating comment:", error);
-		return NextResponse.json(
-			{ error: "Failed to update comment" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -244,38 +181,28 @@ export async function PATCH(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: commentId } = await params;
-
-	const authResult = await validateAuth();
-	if (!authResult.success) {
-		return authResult.response;
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: commentId } = await params;
+
 		const body = await request.json();
 		const { resolved } = body;
 
 		if (typeof resolved !== "boolean") {
-			return NextResponse.json(
-				{ error: "resolved must be a boolean" },
-				{ status: 400 }
-			);
+			return apiError(validationError("resolved must be a boolean"));
 		}
 
-		const commentResult = await getCommentWithPermission(
+		const { comment, caseId, elementName } = await getCommentWithPermission(
 			commentId,
-			authResult.userId
+			session.userId
 		);
-		if (!commentResult.success) {
-			return commentResult.response;
-		}
 
 		const { prismaNew } = await import("@/lib/prisma");
 
 		const updateData = resolved
 			? {
 					resolved: true,
-					resolvedById: authResult.userId,
+					resolvedById: session.userId,
 					resolvedAt: new Date(),
 				}
 			: {
@@ -309,24 +236,21 @@ export async function PATCH(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
+		const username = session.username || session.email || "Someone";
 		emitSSEEvent(
 			"comment:updated",
-			commentResult.caseId,
+			caseId,
 			{
 				comment: response,
-				elementId: commentResult.comment.elementId,
-				elementName: commentResult.elementName,
-				username: authResult.username,
+				elementId: comment.elementId,
+				elementName,
+				username,
 			},
-			authResult.userId
+			session.userId
 		);
 
-		return NextResponse.json(response);
+		return apiSuccess(response);
 	} catch (error) {
-		console.error("Error updating comment resolution:", error);
-		return NextResponse.json(
-			{ error: "Failed to update comment" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import { exportCase } from "@/lib/services/case-export-service";
 
 /**
@@ -19,43 +25,42 @@ import { exportCase } from "@/lib/services/case-export-service";
  * @tag Cases
  */
 export async function GET(request: Request) {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		// Get parameters from query string
+		const { searchParams } = new URL(request.url);
+		const caseId = searchParams.get("id");
+		const includeCommentsParam = searchParams.get("includeComments");
+		// Default to true if not specified or not explicitly "false"
+		const includeComments = includeCommentsParam !== "false";
+
+		if (!caseId) {
+			return apiError(validationError("Case ID is required"));
+		}
+
+		const result = await exportCase(userId, caseId, {
+			includeComments,
+		});
+
+		if (!result.success) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Generate filename with timestamp
+		const caseName = result.data.case.name.replace(/[^a-zA-Z0-9-_]/g, "_");
+		const timestamp = new Date().toISOString().slice(0, 10);
+		const filename = `${caseName}-${timestamp}.json`;
+
+		// Return JSON with download header
+		return new NextResponse(JSON.stringify(result.data, null, 2), {
+			status: 200,
+			headers: {
+				"Content-Type": "application/json",
+				"Content-Disposition": `attachment; filename="${filename}"`,
+			},
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	// Get parameters from query string
-	const { searchParams } = new URL(request.url);
-	const caseId = searchParams.get("id");
-	const includeCommentsParam = searchParams.get("includeComments");
-	// Default to true if not specified or not explicitly "false"
-	const includeComments = includeCommentsParam !== "false";
-
-	if (!caseId) {
-		return NextResponse.json({ error: "Case ID is required" }, { status: 400 });
-	}
-
-	const result = await exportCase(validated.userId, caseId, {
-		includeComments,
-	});
-
-	if (!result.success) {
-		const status = result.error === "Permission denied" ? 403 : 500;
-		return NextResponse.json({ error: result.error }, { status });
-	}
-
-	// Generate filename with timestamp
-	const caseName = result.data.case.name.replace(/[^a-zA-Z0-9-_]/g, "_");
-	const timestamp = new Date().toISOString().slice(0, 10);
-	const filename = `${caseName}-${timestamp}.json`;
-
-	// Return JSON with download header
-	return new NextResponse(JSON.stringify(result.data, null, 2), {
-		status: 200,
-		headers: {
-			"Content-Type": "application/json",
-			"Content-Disposition": `attachment; filename="${filename}"`,
-		},
-	});
 }

@@ -23,6 +23,7 @@ import { useExportModal } from "@/hooks/use-export-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
+import { ErrorBoundary } from "../ui/error-boundary";
 import CaseNotes from "./case-notes";
 import { CaseSettingsPopover } from "./case-settings-popover";
 import { HistoryControls } from "./history-controls";
@@ -256,11 +257,19 @@ const ActionButtons = ({
 				</div>
 				<NodeCreate isOpen={open} setOpen={setOpen} />
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
-				<JsonViewPanel
-					isOpen={jsonViewOpen}
-					onClose={() => setJsonViewOpen(false)}
-					userId={userId}
-				/>
+				<ErrorBoundary
+					fallback={
+						<div className="p-4 text-muted-foreground">
+							<p>JSON editor failed. Close and reopen to retry.</p>
+						</div>
+					}
+				>
+					<JsonViewPanel
+						isOpen={jsonViewOpen}
+						onClose={() => setJsonViewOpen(false)}
+						userId={userId}
+					/>
+				</ErrorBoundary>
 				<AlertModal
 					confirmButtonText={"Move to Trash"}
 					isOpen={deleteOpen}

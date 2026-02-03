@@ -89,11 +89,14 @@ function Flow() {
 				setLoading(false);
 			}
 		} catch (_error) {
-			// Error is caught to prevent unhandled rejection
-			// Component will remain in loading state if conversion fails
+			toast({
+				variant: "destructive",
+				title: "Diagram error",
+				description: "Failed to render diagram",
+			});
 			setLoading(false);
 		}
-	}, [assuranceCase, layoutNodes]);
+	}, [assuranceCase, layoutNodes, toast]);
 
 	// intial conversion of the assurance case on component render
 	useEffect(() => {

@@ -8,38 +8,22 @@ export default function GlobalError({
 }) {
 	return (
 		<html lang="en">
-			<body
-				style={{
-					margin: 0,
-					fontFamily: "system-ui, sans-serif",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					minHeight: "100vh",
-					backgroundColor: "#fafafa",
-					color: "#171717",
-				}}
-			>
+			<head>
+				<style>
+					{
+						"body{margin:0;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background-color:#fafafa;color:#171717}.ge-t{color:#737373}.ge-b{margin-top:1.5rem;padding:.5rem 1rem;border-radius:.375rem;border:1px solid #d4d4d4;background-color:#fff;cursor:pointer;font-size:.875rem;color:inherit}@media(prefers-color-scheme:dark){body{background-color:#0a0a0a;color:#fafafa}.ge-t{color:#a3a3a3}.ge-b{background-color:#171717;border-color:#404040}}"
+					}
+				</style>
+			</head>
+			<body>
 				<div style={{ textAlign: "center", padding: "2rem" }}>
 					<h2 style={{ fontSize: "1.25rem", fontWeight: 600 }}>
 						Something went wrong
 					</h2>
-					<p style={{ marginTop: "0.5rem", color: "#737373" }}>
+					<p className="ge-t" style={{ marginTop: "0.5rem" }}>
 						An unexpected error occurred. Please try again.
 					</p>
-					<button
-						onClick={reset}
-						style={{
-							marginTop: "1.5rem",
-							padding: "0.5rem 1rem",
-							borderRadius: "0.375rem",
-							border: "1px solid #d4d4d4",
-							backgroundColor: "#fff",
-							cursor: "pointer",
-							fontSize: "0.875rem",
-						}}
-						type="button"
-					>
+					<button className="ge-b" onClick={reset} type="button">
 						Try again
 					</button>
 				</div>

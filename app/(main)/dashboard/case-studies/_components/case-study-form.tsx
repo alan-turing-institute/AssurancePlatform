@@ -13,6 +13,7 @@ import {
 } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
 	Form,
 	FormControl,
@@ -735,15 +736,23 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 												</Tooltip>
 											</div>
 											<FormControl>
-												<TiptapEditor
-													className="min-h-[200px]" // Ensure controlled component
-													onChange={(content) => {
-														field.onChange(content); // Update form state
-														setValue(content);
-													}}
-													placeholder="Provide a clear and concise summary of the case study..."
-													value={field.value || value}
-												/>
+												<ErrorBoundary
+													fallback={
+														<div className="flex min-h-[200px] items-center justify-center rounded-md border text-muted-foreground">
+															<p>Editor failed to load. Please refresh.</p>
+														</div>
+													}
+												>
+													<TiptapEditor
+														className="min-h-[200px]"
+														onChange={(content) => {
+															field.onChange(content);
+															setValue(content);
+														}}
+														placeholder="Provide a clear and concise summary of the case study..."
+														value={field.value || value}
+													/>
+												</ErrorBoundary>
 											</FormControl>
 											<FormMessage />
 										</FormItem>

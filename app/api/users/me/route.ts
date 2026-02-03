@@ -1,5 +1,11 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { notFound } from "@/lib/errors";
 import { prismaNew } from "@/lib/prisma";
 
 type UserResponse = {
@@ -76,25 +82,17 @@ type DeleteAccountRequest = {
  */
 export async function GET() {
 	try {
-		const validated = await validateSession();
+		const userId = await requireAuth();
 
-		if (!validated) {
-			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
-
-		const user = await getUserFromPrisma(validated.userId);
+		const user = await getUserFromPrisma(userId);
 
 		if (!user) {
-			return NextResponse.json({ error: "User not found" }, { status: 404 });
+			return apiError(notFound("User"));
 		}
 
-		return NextResponse.json(user);
+		return apiSuccess(user);
 	} catch (error) {
-		console.error("Error fetching user:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -104,11 +102,7 @@ export async function GET() {
  */
 export async function PATCH(request: Request) {
 	try {
-		const validated = await validateSession();
-
-		if (!validated) {
-			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
+		const userId = await requireAuth();
 
 		// Parse request body
 		const body = (await request.json()) as ProfileUpdateRequest;
@@ -118,7 +112,7 @@ export async function PATCH(request: Request) {
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await updateUserProfile(validated.userId, {
+		const result = await updateUserProfile(userId, {
 			username: body.username,
 			firstName: body.firstName,
 			lastName: body.lastName,
@@ -126,21 +120,14 @@ export async function PATCH(request: Request) {
 		});
 
 		if (!result.success) {
-			return NextResponse.json(
-				{ error: result.error, field: result.field },
-				{ status: 400 }
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		// Fetch updated user to return
-		const updatedUser = await getUserFromPrisma(validated.userId);
-		return NextResponse.json(updatedUser);
+		const updatedUser = await getUserFromPrisma(userId);
+		return apiSuccess(updatedUser);
 	} catch (error) {
-		console.error("Error updating user profile:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -150,11 +137,7 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE(request: Request) {
 	try {
-		const validated = await validateSession();
-
-		if (!validated) {
-			return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-		}
+		const userId = await requireAuth();
 
 		// Parse request body (password for confirmation)
 		let password: string | undefined;
@@ -170,21 +153,14 @@ export async function DELETE(request: Request) {
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await deleteAccount(validated.userId, password);
+		const result = await deleteAccount(userId, password);
 
 		if (!result.success) {
-			return NextResponse.json(
-				{ error: result.error, field: result.field },
-				{ status: 400 }
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error deleting account:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

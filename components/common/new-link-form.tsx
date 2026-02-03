@@ -105,7 +105,12 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		);
 
 		if (result.error) {
-			// TODO: Rendering error
+			toast({
+				variant: "destructive",
+				title: "Error",
+				description: "Failed to create context",
+			});
+			return;
 		}
 
 		if (result.data && assuranceCase) {
@@ -170,6 +175,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		);
 
 		if (result.error) {
+			toast({
+				variant: "destructive",
+				title: "Error",
+				description: "Failed to create strategy",
+			});
 			setLoading(false);
 			return;
 		}
@@ -378,6 +388,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		);
 
 		if (result.error) {
+			toast({
+				variant: "destructive",
+				title: "Error",
+				description: "Failed to create claim",
+			});
 			return;
 		}
 

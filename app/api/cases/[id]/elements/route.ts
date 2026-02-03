@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import type { CreateElementInput } from "@/lib/services/element-service";
 import { createElement } from "@/lib/services/element-service";
 
@@ -33,41 +37,6 @@ function buildCreateInput(
 }
 
 /**
- * Creates an element using Prisma.
- */
-async function createElementPrisma(
-	userId: string,
-	username: string,
-	caseId: string,
-	body: Record<string, unknown>
-): Promise<NextResponse> {
-	const input = buildCreateInput(caseId, body);
-	const result = await createElement(userId, input);
-
-	if (result.error) {
-		const status = result.error === "Permission denied" ? 403 : 400;
-		return NextResponse.json({ error: result.error }, { status });
-	}
-
-	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
-	emitSSEEvent(
-		"element:created",
-		caseId,
-		{
-			element: result.data,
-			elementName: result.data?.name || result.data?.short_description,
-			username,
-		},
-		userId
-	);
-
-	return NextResponse.json(result.data, { status: 201 });
-}
-
-/**
  * Create a new element in a case
  *
  * @description Creates a goal, strategy, property claim, evidence, or other
@@ -86,22 +55,36 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
 		const body = await request.json();
-		const username = session.user.name || session.user.email || "Someone";
-		return await createElementPrisma(session.user.id, username, caseId, body);
-	} catch (error) {
-		console.error("Error creating element:", error);
-		return NextResponse.json(
-			{ error: "Failed to create element" },
-			{ status: 500 }
+
+		const input = buildCreateInput(caseId, body);
+		const result = await createElement(session.userId, input);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
 		);
+		const username = session.username || session.email || "Someone";
+		emitSSEEvent(
+			"element:created",
+			caseId,
+			{
+				element: result.data,
+				elementName: result.data?.name || result.data?.short_description,
+				username,
+			},
+			session.userId
+		);
+
+		return apiSuccess(result.data, 201);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
 }

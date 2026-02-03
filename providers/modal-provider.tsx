@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 // Dynamic imports with ssr: false to reduce initial bundle size
 const CaseCreateModal = dynamic(
@@ -89,7 +90,9 @@ export const ModalProvider = (): JSX.Element | null => {
 	return (
 		<>
 			<CaseCreateModal />
-			<ImportModal />
+			<ErrorBoundary fallback={null}>
+				<ImportModal />
+			</ErrorBoundary>
 			<MigrationModal />
 			<ShareModal />
 			<PermissionsModal />
@@ -99,7 +102,9 @@ export const ModalProvider = (): JSX.Element | null => {
 			<ResourcesModal />
 			<CreateTeamDialog />
 			<InviteMemberDialog />
-			<CaseSharingDialog />
+			<ErrorBoundary fallback={null}>
+				<CaseSharingDialog />
+			</ErrorBoundary>
 		</>
 	);
 };

@@ -1,7 +1,12 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { AppError, validationError } from "@/lib/errors";
 import {
 	applyBatchUpdate,
 	type BatchUpdateOptions,
@@ -102,81 +107,65 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
-	let body: unknown;
 	try {
-		body = await request.json();
-	} catch {
-		return NextResponse.json(
-			{ error: "Invalid JSON in request body" },
-			{ status: 400 }
-		);
-	}
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
 
-	// Validate request body
-	const parseResult = BatchUpdateRequestSchema.safeParse(body);
-	if (!parseResult.success) {
-		return NextResponse.json(
-			{
-				error: "Invalid request body",
-				details: parseResult.error.issues,
-			},
-			{ status: 400 }
-		);
-	}
-
-	const { changes, expectedVersion } = parseResult.data;
-
-	// Apply the batch update
-	const options: BatchUpdateOptions = {};
-	if (expectedVersion) {
-		options.expectedVersion = expectedVersion;
-	}
-
-	const result = await applyBatchUpdate(
-		session.user.id,
-		caseId,
-		changes as ElementChange[],
-		options
-	);
-
-	if (!result.success) {
-		let status = 400;
-		if (result.conflictDetected) {
-			status = 409;
-		} else if (result.error === "Permission denied") {
-			status = 403;
+		let body: unknown;
+		try {
+			body = await request.json();
+		} catch {
+			return apiError(validationError("Invalid JSON in request body"));
 		}
-		return NextResponse.json(
-			{
-				error: result.error,
-				conflictDetected: result.conflictDetected,
-			},
-			{ status }
+
+		// Validate request body
+		const parseResult = BatchUpdateRequestSchema.safeParse(body);
+		if (!parseResult.success) {
+			return apiError(validationError("Invalid request body"));
+		}
+
+		const { changes, expectedVersion } = parseResult.data;
+
+		// Apply the batch update
+		const options: BatchUpdateOptions = {};
+		if (expectedVersion) {
+			options.expectedVersion = expectedVersion;
+		}
+
+		const result = await applyBatchUpdate(
+			session.userId,
+			caseId,
+			changes as ElementChange[],
+			options
 		);
-	}
 
-	// Emit SSE event for real-time updates
-	const username = session.user.name ?? session.user.email ?? "Someone";
-	emitSSEEvent(
-		"case:updated",
-		caseId,
-		{
+		if (!result.success) {
+			if (result.conflictDetected) {
+				return apiError(
+					new AppError({ code: "CONFLICT", message: result.error })
+				);
+			}
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent(
+			"case:updated",
+			caseId,
+			{
+				summary: result.summary,
+				username,
+				source: "json-editor",
+			},
+			session.userId
+		);
+
+		return apiSuccess({
+			success: true,
 			summary: result.summary,
-			username,
-			source: "json-editor",
-		},
-		session.user.id
-	);
-
-	return NextResponse.json({
-		success: true,
-		summary: result.summary,
-	});
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }

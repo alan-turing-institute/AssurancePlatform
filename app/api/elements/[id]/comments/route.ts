@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+} from "@/lib/api-response";
+import { forbidden, notFound, validationError } from "@/lib/errors";
 
 type CommentResponse = {
 	id: string;
@@ -92,14 +96,10 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
-
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
+
 		const { prismaNew } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
@@ -110,17 +110,17 @@ export async function GET(
 		});
 
 		if (!element) {
-			return NextResponse.json({ error: "Element not found" }, { status: 404 });
+			throw notFound("Element");
 		}
 
 		// Check user has at least VIEW access to the case
 		const hasAccess = await canAccessCase(
-			{ userId: session.user.id, caseId: element.caseId },
+			{ userId: session.userId, caseId: element.caseId },
 			"VIEW"
 		);
 
 		if (!hasAccess) {
-			return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+			throw forbidden();
 		}
 
 		// Fetch all comments for this element (sorted ascending for tree building)
@@ -134,13 +134,9 @@ export async function GET(
 		});
 
 		// Build and return the threaded comment tree
-		return NextResponse.json(buildCommentTree(comments));
+		return apiSuccess(buildCommentTree(comments));
 	} catch (error) {
-		console.error("Error fetching comments:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch comments" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -148,28 +144,20 @@ export async function GET(
  * POST /api/elements/[id]/comments
  * Creates a new comment on an element (supports threading via parentId)
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Business logic requires validation checks
 export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
-
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
+
 		const body = await request.json();
 		const content = body.content || body.comment;
 		const parentId = body.parentId || null;
 
 		if (!content || typeof content !== "string" || !content.trim()) {
-			return NextResponse.json(
-				{ error: "Comment content is required" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Comment content is required"));
 		}
 
 		const { prismaNew } = await import("@/lib/prisma");
@@ -182,17 +170,17 @@ export async function POST(
 		});
 
 		if (!element) {
-			return NextResponse.json({ error: "Element not found" }, { status: 404 });
+			throw notFound("Element");
 		}
 
 		// Check user has at least COMMENT access to the case
 		const hasAccess = await canAccessCase(
-			{ userId: session.user.id, caseId: element.caseId },
+			{ userId: session.userId, caseId: element.caseId },
 			"COMMENT"
 		);
 
 		if (!hasAccess) {
-			return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+			throw forbidden();
 		}
 
 		// If replying to a parent comment, verify it exists and belongs to this element
@@ -203,10 +191,7 @@ export async function POST(
 			});
 
 			if (!parentComment || parentComment.elementId !== elementId) {
-				return NextResponse.json(
-					{ error: "Parent comment not found" },
-					{ status: 400 }
-				);
+				return apiError(validationError("Parent comment not found"));
 			}
 		}
 
@@ -215,7 +200,7 @@ export async function POST(
 			data: {
 				elementId,
 				content: content.trim(),
-				authorId: session.user.id,
+				authorId: session.userId,
 				parentCommentId: parentId,
 			},
 			include: {
@@ -242,7 +227,7 @@ export async function POST(
 		const { emitSSEEvent } = await import(
 			"@/lib/services/sse-connection-manager"
 		);
-		const username = session.user.name || session.user.email || "Someone";
+		const username = session.username || session.email || "Someone";
 		emitSSEEvent(
 			"comment:created",
 			element.caseId,
@@ -252,15 +237,11 @@ export async function POST(
 				elementName: element.name || element.description,
 				username,
 			},
-			session.user.id
+			session.userId
 		);
 
-		return NextResponse.json(response, { status: 201 });
+		return apiSuccess(response, 201);
 	} catch (error) {
-		console.error("Error creating comment:", error);
-		return NextResponse.json(
-			{ error: "Failed to create comment" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

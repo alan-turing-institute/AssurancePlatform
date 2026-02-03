@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
 import { getCasesAvailableForCaseStudy } from "@/lib/services/publish-service";
 
 /**
@@ -11,14 +13,9 @@ import { getCasesAvailableForCaseStudy } from "@/lib/services/publish-service";
  * publishStatus in (READY_TO_PUBLISH, PUBLISHED).
  */
 export async function GET() {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
-		const cases = await getCasesAvailableForCaseStudy(session.user.id);
+		const userId = await requireAuth();
+		const cases = await getCasesAvailableForCaseStudy(userId);
 
 		// Transform to API response format
 		const response = cases.map((c) => ({
@@ -31,12 +28,8 @@ export async function GET() {
 			published_version_id: c.publishedVersionId,
 		}));
 
-		return NextResponse.json(response);
+		return apiSuccess(response);
 	} catch (error) {
-		console.error("Error fetching cases for case study:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

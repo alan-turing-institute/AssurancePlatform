@@ -13,6 +13,7 @@ import { useCaseEvents } from "@/hooks/use-case-events";
 import { addHiddenProp } from "@/lib/case";
 import type { AssuranceCase } from "@/types";
 import Header from "../header";
+import { ErrorBoundary } from "../ui/error-boundary";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
 
@@ -136,6 +137,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				const formattedAssuranceCase = await addHiddenProp(result);
 				return formattedAssuranceCase;
 			} catch (_error) {
+				toast.error("Failed to load case data");
 				return null;
 			}
 		},
@@ -160,6 +162,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				const result = await response.json();
 				return result;
 			} catch (_error) {
+				toast.error("Failed to load sandbox elements");
 				return [];
 			}
 		},
@@ -253,7 +256,15 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					return (
 						<ReactFlowProvider>
 							<Header setOpen={setOpen} />
-							<Flow />
+							<ErrorBoundary
+								fallback={
+									<div className="flex min-h-screen items-center justify-center text-muted-foreground">
+										<p>Diagram failed to render. Try refreshing.</p>
+									</div>
+								}
+							>
+								<Flow />
+							</ErrorBoundary>
 							<CaseDetails isOpen={open} setOpen={setOpen} />
 						</ReactFlowProvider>
 					);

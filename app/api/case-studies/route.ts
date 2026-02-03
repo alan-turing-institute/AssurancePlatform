@@ -1,6 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import type { NextRequest } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import {
 	createCaseStudy,
 	getCaseStudiesByOwner,
@@ -14,22 +19,13 @@ import {
  * GET /api/case-studies
  * List all case studies owned by the current user
  */
-export async function GET(): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+export async function GET() {
 	try {
-		const caseStudies = await getCaseStudiesByOwner(session.user.id);
-		return NextResponse.json(transformCaseStudiesForApi(caseStudies));
+		const userId = await requireAuth();
+		const caseStudies = await getCaseStudiesByOwner(userId);
+		return apiSuccess(transformCaseStudiesForApi(caseStudies));
 	} catch (error) {
-		console.error("Error fetching case studies:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch case studies" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -37,14 +33,10 @@ export async function GET(): Promise<NextResponse> {
  * POST /api/case-studies
  * Create a new case study
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+export async function POST(request: NextRequest) {
 	try {
+		const userId = await requireAuth();
+
 		const contentType = request.headers.get("content-type") ?? "";
 
 		let data: Record<string, unknown>;
@@ -73,10 +65,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		}
 
 		if (!data.title || typeof data.title !== "string") {
-			return NextResponse.json({ error: "Title is required" }, { status: 400 });
+			return apiError(validationError("Title is required"));
 		}
 
-		const caseStudy = await createCaseStudy(session.user.id, {
+		const caseStudy = await createCaseStudy(userId, {
 			title: data.title,
 			description: data.description as string | undefined,
 			authors: data.authors as string | undefined,
@@ -88,14 +80,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 			image: data.image as string | undefined,
 		});
 
-		return NextResponse.json(transformCaseStudyForApi(caseStudy), {
-			status: 201,
-		});
+		return apiSuccess(transformCaseStudyForApi(caseStudy), 201);
 	} catch (error) {
-		console.error("Error creating case study:", error);
-		return NextResponse.json(
-			{ error: "Failed to create case study" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

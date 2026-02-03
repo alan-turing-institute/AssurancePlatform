@@ -1,5 +1,11 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import type { NextResponse } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
+import { forbidden, notFound, validationError } from "@/lib/errors";
 
 type CommentResponse = {
 	id: string;
@@ -99,7 +105,7 @@ async function fetchPrismaComments(
 	});
 
 	if (!permissionResult.hasAccess) {
-		return NextResponse.json({ error: "Not found" }, { status: 404 });
+		return apiError(notFound());
 	}
 
 	const allComments = await prismaNew.comment.findMany({
@@ -111,7 +117,7 @@ async function fetchPrismaComments(
 		orderBy: { createdAt: "asc" },
 	});
 
-	return NextResponse.json(buildCommentTree(allComments));
+	return apiSuccess(buildCommentTree(allComments));
 }
 
 /**
@@ -122,15 +128,14 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		return fetchPrismaComments(caseId, userId);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const { id: caseId } = await params;
-
-	return fetchPrismaComments(caseId, validated.userId);
 }
 
 /**
@@ -158,7 +163,7 @@ async function createPrismaComment(
 		hasPermissionLevel(permissionResult.permission, "COMMENT");
 
 	if (!canComment) {
-		return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+		return apiError(forbidden());
 	}
 
 	const comment = await prismaNew.comment.create({
@@ -194,7 +199,7 @@ async function createPrismaComment(
 	);
 	emitSSEEvent("comment:created", caseId, { comment: response }, userId);
 
-	return NextResponse.json(response, { status: 201 });
+	return apiSuccess(response, 201);
 }
 
 /**
@@ -205,36 +210,19 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
-
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { id: caseId } = await params;
-
 	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
+
 		const body = await request.json();
 		const { content, parentId } = body;
 
 		if (!content || typeof content !== "string" || content.trim() === "") {
-			return NextResponse.json(
-				{ error: "Content is required" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Content is required"));
 		}
 
-		return createPrismaComment(
-			caseId,
-			content,
-			parentId ?? null,
-			validated.userId
-		);
+		return createPrismaComment(caseId, content, parentId ?? null, userId);
 	} catch (error) {
-		console.error("Error creating comment:", error);
-		return NextResponse.json(
-			{ error: "Failed to create comment" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

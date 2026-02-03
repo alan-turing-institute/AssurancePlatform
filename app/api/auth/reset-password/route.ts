@@ -1,5 +1,11 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import {
 	resetPassword,
 	validateResetToken,
@@ -20,25 +26,21 @@ export async function GET(request: Request) {
 		const token = searchParams.get("token");
 
 		if (!token) {
-			return NextResponse.json({ error: "Token is required" }, { status: 400 });
+			return apiError(validationError("Token is required"));
 		}
 
 		const result = await validateResetToken(token);
 
 		if (!result.success) {
-			return NextResponse.json({ error: result.error }, { status: 400 });
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json({
+		return apiSuccess({
 			valid: true,
 			email: result.email,
 		});
 	} catch (error) {
-		console.error("Error validating reset token:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -52,14 +54,11 @@ export async function POST(request: Request) {
 		const body = (await request.json()) as ResetPasswordRequest;
 
 		if (!body.token) {
-			return NextResponse.json({ error: "Token is required" }, { status: 400 });
+			return apiError(validationError("Token is required"));
 		}
 
 		if (!body.password) {
-			return NextResponse.json(
-				{ error: "Password is required" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Password is required"));
 		}
 
 		// Get client IP and user agent for audit logging
@@ -78,18 +77,14 @@ export async function POST(request: Request) {
 		);
 
 		if (!result.success) {
-			return NextResponse.json({ error: result.error }, { status: 400 });
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json({
+		return apiSuccess({
 			success: true,
 			message: "Your password has been reset successfully. You can now log in.",
 		});
 	} catch (error) {
-		console.error("Error resetting password:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

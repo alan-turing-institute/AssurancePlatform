@@ -1,6 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import type { NextRequest } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
+import { forbidden, notFound, validationError } from "@/lib/errors";
 import {
 	deleteCaseStudy,
 	getCaseStudyById,
@@ -16,48 +21,30 @@ type RouteParams = {
  * GET /api/case-studies/[id]
  * Get a specific case study by ID
  */
-export async function GET(
-	_request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+export async function GET(_request: NextRequest, { params }: RouteParams) {
 	try {
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		const caseStudy = await getCaseStudyById(caseStudyId);
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
 		// Check ownership
-		if (caseStudy.ownerId !== session.user.id) {
-			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		if (caseStudy.ownerId !== userId) {
+			return apiError(forbidden());
 		}
 
-		return NextResponse.json(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(caseStudy));
 	} catch (error) {
-		console.error("Error fetching case study:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch case study" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -65,25 +52,14 @@ export async function GET(
  * PUT /api/case-studies/[id]
  * Update a case study
  */
-export async function PUT(
-	request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+export async function PUT(request: NextRequest, { params }: RouteParams) {
 	try {
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		const contentType = request.headers.get("content-type") ?? "";
@@ -120,7 +96,7 @@ export async function PUT(
 			data = await request.json();
 		}
 
-		const caseStudy = await updateCaseStudy(caseStudyId, session.user.id, {
+		const caseStudy = await updateCaseStudy(caseStudyId, userId, {
 			title: data.title as string | undefined,
 			description: data.description as string | undefined,
 			authors: data.authors as string | undefined,
@@ -133,19 +109,12 @@ export async function PUT(
 		});
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found or not owned by user" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
-		return NextResponse.json(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(caseStudy));
 	} catch (error) {
-		console.error("Error updating case study:", error);
-		return NextResponse.json(
-			{ error: "Failed to update case study" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -153,42 +122,24 @@ export async function PUT(
  * DELETE /api/case-studies/[id]
  * Delete a case study
  */
-export async function DELETE(
-	_request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 	try {
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
-		const deleted = await deleteCaseStudy(caseStudyId, session.user.id);
+		const deleted = await deleteCaseStudy(caseStudyId, userId);
 
 		if (!deleted) {
-			return NextResponse.json(
-				{ error: "Case study not found or not owned by user" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error deleting case study:", error);
-		return NextResponse.json(
-			{ error: "Failed to delete case study" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

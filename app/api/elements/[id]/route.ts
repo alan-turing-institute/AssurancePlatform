@@ -1,25 +1,16 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import type { UpdateElementInput } from "@/lib/services/element-service";
 import {
 	deleteElement,
 	getElement,
 	updateElement,
 } from "@/lib/services/element-service";
-
-/**
- * Maps error messages to HTTP status codes.
- */
-function getErrorStatus(error: string): number {
-	if (error === "Permission denied") {
-		return 403;
-	}
-	if (error === "Element not found") {
-		return 404;
-	}
-	return 400;
-}
 
 /**
  * GET /api/elements/[id]
@@ -29,23 +20,20 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
+	try {
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
 
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		const result = await getElement(session.userId, elementId);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await getElement(session.user.id, elementId);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: getErrorStatus(result.error) }
-		);
-	}
-
-	return NextResponse.json(result.data);
 }
 
 /**
@@ -85,23 +73,16 @@ export async function PUT(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
-
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
+
 		const body = await request.json();
 		const input = buildUpdateInput(body);
-		const result = await updateElement(session.user.id, elementId, input);
+		const result = await updateElement(session.userId, elementId, input);
 
 		if (result.error) {
-			return NextResponse.json(
-				{ error: result.error },
-				{ status: getErrorStatus(result.error) }
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		// Emit SSE event for real-time updates
@@ -109,7 +90,7 @@ export async function PUT(
 			const { emitSSEEvent } = await import(
 				"@/lib/services/sse-connection-manager"
 			);
-			const username = session.user.name || session.user.email || "Someone";
+			const username = session.username || session.email || "Someone";
 			emitSSEEvent(
 				"element:updated",
 				result.data.assurance_case_id,
@@ -119,17 +100,13 @@ export async function PUT(
 					elementName: result.data?.name || result.data?.short_description,
 					username,
 				},
-				session.user.id
+				session.userId
 			);
 		}
 
-		return NextResponse.json(result.data);
+		return apiSuccess(result.data);
 	} catch (error) {
-		console.error("Error updating element:", error);
-		return NextResponse.json(
-			{ error: "Failed to update element" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -141,46 +118,43 @@ export async function DELETE(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
+	try {
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
 
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		// Get the element's caseId and name before deletion for SSE event
+		const { prismaNew } = await import("@/lib/prisma");
+		const element = await prismaNew.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, name: true, description: true },
+		});
+
+		const result = await deleteElement(session.userId, elementId);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		if (element?.caseId) {
+			const { emitSSEEvent } = await import(
+				"@/lib/services/sse-connection-manager"
+			);
+			const username = session.username || session.email || "Someone";
+			emitSSEEvent(
+				"element:deleted",
+				element.caseId,
+				{
+					elementId,
+					elementName: element.name || element.description,
+					username,
+				},
+				session.userId
+			);
+		}
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	// Get the element's caseId and name before deletion for SSE event
-	const { prismaNew } = await import("@/lib/prisma");
-	const element = await prismaNew.assuranceElement.findUnique({
-		where: { id: elementId },
-		select: { caseId: true, name: true, description: true },
-	});
-
-	const result = await deleteElement(session.user.id, elementId);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: getErrorStatus(result.error) }
-		);
-	}
-
-	// Emit SSE event for real-time updates
-	if (element?.caseId) {
-		const { emitSSEEvent } = await import(
-			"@/lib/services/sse-connection-manager"
-		);
-		const username = session.user.name || session.user.email || "Someone";
-		emitSSEEvent(
-			"element:deleted",
-			element.caseId,
-			{
-				elementId,
-				elementName: element.name || element.description,
-				username,
-			},
-			session.user.id
-		);
-	}
-
-	return NextResponse.json({ success: true });
 }

@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { listTrashedCases } from "@/lib/services/case-trash-service";
 
 /**
@@ -15,17 +20,16 @@ import { listTrashedCases } from "@/lib/services/case-trash-service";
  * @tag Cases
  */
 export async function GET() {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
+		const result = await listTrashedCases(userId);
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data?.cases ?? []);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await listTrashedCases(validated.userId);
-
-	if (result.error) {
-		return NextResponse.json({ error: result.error }, { status: 500 });
-	}
-
-	return NextResponse.json(result.data?.cases ?? []);
 }

@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { compareIdentifiers } from "@/lib/identifier-utils";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
 import { prismaNew } from "@/lib/prisma";
@@ -201,7 +206,7 @@ function generateHierarchicalNames(
 async function resetIdentifiersWithPrisma(
 	caseId: string,
 	userId: string
-): Promise<{ success: boolean; error?: string; status: number }> {
+): Promise<{ success: boolean; error?: string }> {
 	// Check user has edit permission on this case (includes creator check)
 	const permissionResult = await getCasePermission({ userId, caseId });
 
@@ -211,7 +216,7 @@ async function resetIdentifiersWithPrisma(
 		hasPermissionLevel(permissionResult.permission, "EDIT");
 
 	if (!hasEditAccess) {
-		return { success: false, error: "Permission denied", status: 403 };
+		return { success: false, error: "Permission denied" };
 	}
 
 	// Get all elements for this case (excluding deleted), ordered by creation date
@@ -291,7 +296,7 @@ async function resetIdentifiersWithPrisma(
 	);
 	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
 
-	return { success: true, status: 200 };
+	return { success: true };
 }
 
 /**
@@ -302,32 +307,20 @@ export async function POST(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const validated = await validateSession();
-
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
-		const result = await resetIdentifiersWithPrisma(caseId, validated.userId);
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
+
+		const result = await resetIdentifiersWithPrisma(caseId, userId);
 
 		if (!result.success) {
-			return NextResponse.json(
-				{ error: result.error },
-				{ status: result.status }
+			return apiError(
+				serviceErrorToAppError(result.error || "Operation failed")
 			);
 		}
 
-		return NextResponse.json(
-			{ message: "Identifiers reset successfully" },
-			{ status: 200 }
-		);
+		return apiSuccess({ message: "Identifiers reset successfully" });
 	} catch (error) {
-		console.error("Error resetting identifiers:", error);
-		return NextResponse.json(
-			{ error: "Failed to reset identifiers" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

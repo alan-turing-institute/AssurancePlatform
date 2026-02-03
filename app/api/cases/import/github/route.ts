@@ -1,6 +1,12 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { AppError, forbidden, validationError } from "@/lib/errors";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	fetchFileFromGitHub,
@@ -8,6 +14,7 @@ import {
 	hasGitHubToken,
 	parseGitHubUrl,
 } from "@/lib/services/github-api-service";
+import type { ErrorCode } from "@/types/domain";
 
 /**
  * Request body schema for GitHub import
@@ -47,99 +54,59 @@ type GitHubLocation = {
 };
 
 /**
- * Maps GitHubServiceError codes to HTTP status codes
+ * Maps GitHub service error codes to application error codes.
  */
-const ERROR_STATUS_MAP: Record<string, number> = {
-	NO_TOKEN: 403,
-	TOKEN_EXPIRED: 401,
-	NOT_FOUND: 404,
-	FORBIDDEN: 403,
-	RATE_LIMITED: 429,
-	API_ERROR: 500,
+const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	RATE_LIMITED: "RATE_LIMITED",
+	API_ERROR: "INTERNAL",
 };
 
 /**
- * Parses and validates the request body
+ * Parses and validates the request body.
+ * Returns the parsed data or throws a validation AppError.
  */
-async function parseRequestBody(
-	request: Request
-): Promise<
-	| { success: true; data: GitHubImportInput }
-	| { success: false; response: Response }
-> {
+async function parseRequestBody(request: Request): Promise<GitHubImportInput> {
 	try {
 		const json = await request.json();
-		const data = GitHubImportSchema.parse(json);
-		return { success: true, data };
+		return GitHubImportSchema.parse(json);
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			return {
-				success: false,
-				response: NextResponse.json(
-					{
-						error: "Invalid request body",
-						validationErrors: error.errors.map((e) => ({
-							path: e.path.join("."),
-							message: e.message,
-						})),
-					},
-					{ status: 400 }
-				),
-			};
+			throw validationError("Invalid request body");
 		}
-		return {
-			success: false,
-			response: NextResponse.json(
-				{ error: "Invalid JSON in request body" },
-				{ status: 400 }
-			),
-		};
+		throw validationError("Invalid JSON in request body");
 	}
 }
 
 /**
- * Resolves GitHub location from request body
+ * Resolves GitHub location from request body.
+ * Returns the location or throws a validation AppError.
  */
-function resolveGitHubLocation(
-	body: GitHubImportInput
-):
-	| { success: true; location: GitHubLocation }
-	| { success: false; response: Response } {
+function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
 	if (body.owner && body.repo && body.path) {
 		return {
-			success: true,
-			location: {
-				owner: body.owner,
-				repo: body.repo,
-				path: body.path,
-				branch: body.branch,
-			},
+			owner: body.owner,
+			repo: body.repo,
+			path: body.path,
+			branch: body.branch,
 		};
 	}
 
 	const parsed = parseGitHubUrl(body.url);
 	if (!parsed) {
-		return {
-			success: false,
-			response: NextResponse.json(
-				{
-					error: "Invalid GitHub URL",
-					message:
-						"Could not parse the GitHub URL. Supported formats: github.com/owner/repo/blob/branch/path, raw.githubusercontent.com URLs, or owner/repo/path shorthand.",
-				},
-				{ status: 400 }
-			),
-		};
+		throw validationError(
+			"Could not parse the GitHub URL. Supported formats: github.com/owner/repo/blob/branch/path, raw.githubusercontent.com URLs, or owner/repo/path shorthand."
+		);
 	}
 
 	return {
-		success: true,
-		location: {
-			owner: parsed.owner,
-			repo: parsed.repo,
-			path: parsed.path,
-			branch: body.branch || parsed.branch,
-		},
+		owner: parsed.owner,
+		repo: parsed.repo,
+		path: parsed.path,
+		branch: body.branch || parsed.branch,
 	};
 }
 
@@ -155,102 +122,75 @@ function resolveGitHubLocation(
  * @tag Cases
  */
 export async function POST(request: Request) {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	// Check if user has GitHub connected
-	const hasToken = await hasGitHubToken(validated.userId);
-	if (!hasToken) {
-		return NextResponse.json(
-			{
-				error: "GitHub not connected",
-				code: "NO_TOKEN",
-				message:
-					"Please sign in with GitHub to connect your account before importing from GitHub.",
-			},
-			{ status: 403 }
-		);
-	}
-
-	// Parse request body
-	const bodyResult = await parseRequestBody(request);
-	if (!bodyResult.success) {
-		return bodyResult.response;
-	}
-
-	// Resolve GitHub location
-	const locationResult = resolveGitHubLocation(bodyResult.data);
-	if (!locationResult.success) {
-		return locationResult.response;
-	}
-
-	const { owner, repo, path, branch } = locationResult.location;
-
-	// Fetch file from GitHub
-	let fileContent: string;
 	try {
-		const result = await fetchFileFromGitHub(
-			validated.userId,
-			owner,
-			repo,
-			path,
-			branch
-		);
-		fileContent = result.content;
+		const userId = await requireAuth();
+
+		// Check if user has GitHub connected
+		const hasToken = await hasGitHubToken(userId);
+		if (!hasToken) {
+			return apiError(
+				forbidden(
+					"GitHub not connected. Please sign in with GitHub to connect your account before importing from GitHub."
+				)
+			);
+		}
+
+		// Parse request body
+		const body = await parseRequestBody(request);
+
+		// Resolve GitHub location
+		const { owner, repo, path, branch } = resolveGitHubLocation(body);
+
+		// Fetch file from GitHub
+		let fileContent: string;
+		try {
+			const result = await fetchFileFromGitHub(
+				userId,
+				owner,
+				repo,
+				path,
+				branch
+			);
+			fileContent = result.content;
+		} catch (error) {
+			const gitHubError = error as GitHubServiceError;
+			const code = GITHUB_ERROR_MAP[gitHubError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: gitHubError.message }));
+		}
+
+		// Parse JSON content
+		let jsonData: unknown;
+		try {
+			jsonData = JSON.parse(fileContent);
+		} catch {
+			return apiError(
+				validationError(`The file at ${path} is not valid JSON.`)
+			);
+		}
+
+		// Import the case
+		const importResult = await importCase(userId, jsonData);
+		if (!importResult.success) {
+			return apiError(serviceErrorToAppError(importResult.error));
+		}
+
+		return apiSuccess({
+			id: importResult.caseId,
+			name: importResult.caseName,
+			elementCount: importResult.elementCount,
+			evidenceLinkCount: importResult.evidenceLinkCount,
+			warnings: importResult.warnings,
+			source: {
+				type: "github",
+				owner,
+				repo,
+				path,
+				branch: branch || "default",
+			},
+		});
 	} catch (error) {
-		const gitHubError = error as GitHubServiceError;
-		return NextResponse.json(
-			{
-				error: "GitHub fetch failed",
-				code: gitHubError.code,
-				message: gitHubError.message,
-			},
-			{ status: ERROR_STATUS_MAP[gitHubError.code] || 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
-
-	// Parse JSON content
-	let jsonData: unknown;
-	try {
-		jsonData = JSON.parse(fileContent);
-	} catch {
-		return NextResponse.json(
-			{
-				error: "Invalid JSON file",
-				message: `The file at ${path} is not valid JSON.`,
-			},
-			{ status: 400 }
-		);
-	}
-
-	// Import the case
-	const importResult = await importCase(validated.userId, jsonData);
-	if (!importResult.success) {
-		return NextResponse.json(
-			{
-				error: importResult.error,
-				validationErrors: importResult.validationErrors,
-			},
-			{ status: 400 }
-		);
-	}
-
-	return NextResponse.json({
-		id: importResult.caseId,
-		name: importResult.caseName,
-		elementCount: importResult.elementCount,
-		evidenceLinkCount: importResult.evidenceLinkCount,
-		warnings: importResult.warnings,
-		source: {
-			type: "github",
-			owner,
-			repo,
-			path,
-			branch: branch || "default",
-		},
-	});
 }
 
 /**
@@ -263,11 +203,11 @@ export async function POST(request: Request) {
  * @tag Cases
  */
 export async function GET() {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+	try {
+		const userId = await requireAuth();
+		const connected = await hasGitHubToken(userId);
+		return apiSuccess({ connected });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const connected = await hasGitHubToken(validated.userId);
-	return NextResponse.json({ connected });
 }

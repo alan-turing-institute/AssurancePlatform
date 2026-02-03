@@ -1,6 +1,12 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import type { NextRequest } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { forbidden, notFound, validationError } from "@/lib/errors";
 import {
 	deleteCaseStudyImage,
 	getCaseStudyById,
@@ -16,49 +22,31 @@ type RouteParams = {
  * GET /api/case-studies/[id]/image
  * Fetch the feature image for a case study
  */
-export async function GET(
-	_request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
+export async function GET(_request: NextRequest, { params }: RouteParams) {
 	try {
+		await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		const caseStudy = await getCaseStudyById(caseStudyId);
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
 		if (!caseStudy.featureImage?.image) {
-			return NextResponse.json({ error: "No image" }, { status: 404 });
+			return apiError(notFound("Image"));
 		}
 
-		return NextResponse.json({
+		return apiSuccess({
 			image: caseStudy.featureImage.image,
 		});
 	} catch (error) {
-		console.error("Error fetching case study image:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch image" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -66,49 +54,32 @@ export async function GET(
  * POST /api/case-studies/[id]/image
  * Upload a feature image for a case study
  */
-export async function POST(
-	request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
+export async function POST(request: NextRequest, { params }: RouteParams) {
 	try {
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		// Verify ownership
 		const caseStudy = await getCaseStudyById(caseStudyId);
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
-		if (caseStudy.ownerId !== session.user.id) {
-			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		if (caseStudy.ownerId !== userId) {
+			return apiError(forbidden());
 		}
 
 		const formData = await request.formData();
 		const imageFile = formData.get("image") as File | null;
 
 		if (!imageFile || imageFile.size === 0) {
-			return NextResponse.json(
-				{ error: "No image file provided" },
-				{ status: 400 }
-			);
+			return apiError(validationError("No image file provided"));
 		}
 
 		// Delete old image if it exists
@@ -120,9 +91,8 @@ export async function POST(
 		const saveResult = await saveFile(imageFile, `case-studies/${caseStudyId}`);
 
 		if (!(saveResult.success && saveResult.path)) {
-			return NextResponse.json(
-				{ error: saveResult.error ?? "Failed to save image" },
-				{ status: 500 }
+			return apiError(
+				serviceErrorToAppError(saveResult.error ?? "Failed to save image")
 			);
 		}
 
@@ -132,22 +102,15 @@ export async function POST(
 		if (!success) {
 			// Clean up the saved file if database update fails
 			await deleteFile(saveResult.path);
-			return NextResponse.json(
-				{ error: "Failed to update image" },
-				{ status: 500 }
-			);
+			return apiError(serviceErrorToAppError("Failed to update image"));
 		}
 
-		return NextResponse.json({
+		return apiSuccess({
 			success: true,
 			image: saveResult.path,
 		});
 	} catch (error) {
-		console.error("Error uploading case study image:", error);
-		return NextResponse.json(
-			{ error: "Failed to upload image" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -155,39 +118,25 @@ export async function POST(
  * DELETE /api/case-studies/[id]/image
  * Delete the feature image for a case study
  */
-export async function DELETE(
-	_request: NextRequest,
-	{ params }: RouteParams
-): Promise<NextResponse> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 	try {
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
 		if (Number.isNaN(caseStudyId)) {
-			return NextResponse.json(
-				{ error: "Invalid case study ID" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Invalid case study ID"));
 		}
 
 		// Verify ownership
 		const caseStudy = await getCaseStudyById(caseStudyId);
 
 		if (!caseStudy) {
-			return NextResponse.json(
-				{ error: "Case study not found" },
-				{ status: 404 }
-			);
+			return apiError(notFound("Case study"));
 		}
 
-		if (caseStudy.ownerId !== session.user.id) {
-			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		if (caseStudy.ownerId !== userId) {
+			return apiError(forbidden());
 		}
 
 		// Delete the image file if it exists
@@ -199,18 +148,11 @@ export async function DELETE(
 		const success = await deleteCaseStudyImage(caseStudyId);
 
 		if (!success) {
-			return NextResponse.json(
-				{ error: "Failed to delete image" },
-				{ status: 500 }
-			);
+			return apiError(serviceErrorToAppError("Failed to delete image"));
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error deleting case study image:", error);
-		return NextResponse.json(
-			{ error: "Failed to delete image" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

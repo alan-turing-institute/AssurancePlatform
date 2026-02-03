@@ -247,19 +247,6 @@ export type ActionResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string; fieldErrors?: Record<string, string> };
 
-/**
- * Standard result type for service layer functions.
- * Includes an error code so API routes can derive HTTP status without string matching.
- */
-export type ServiceResult<T> =
-	| { success: true; data: T }
-	| {
-			success: false;
-			error: string;
-			code: ErrorCode;
-			fieldErrors?: Record<string, string>;
-	  };
-
 // Form-related types
 export type CaseStudyFormData = {
 	title: string;

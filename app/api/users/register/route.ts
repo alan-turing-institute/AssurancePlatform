@@ -1,6 +1,13 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import {
 	checkAndRecordRateLimit,
 	RATE_LIMIT_CONFIGS,
 } from "@/lib/services/rate-limit-service";
@@ -34,8 +41,11 @@ export async function POST(request: Request) {
 		);
 
 		if (!rateLimitResult.allowed) {
-			const response = NextResponse.json(
-				{ error: rateLimitResult.reason },
+			const response = new NextResponse(
+				JSON.stringify({
+					error: rateLimitResult.reason,
+					code: "RATE_LIMITED",
+				}),
 				{ status: 429 }
 			);
 
@@ -52,16 +62,16 @@ export async function POST(request: Request) {
 
 		// Validate passwords match if both provided
 		if (body.password1 && body.password2 && body.password1 !== body.password2) {
-			return NextResponse.json(
-				{ error: "Passwords do not match", field: "password2" },
-				{ status: 400 }
+			return apiError(
+				validationError("Passwords do not match", {
+					password2: "Passwords do not match",
+				})
 			);
 		}
 
 		if (!(body.username && body.email && password)) {
-			return NextResponse.json(
-				{ error: "Username, email, and password are required" },
-				{ status: 400 }
+			return apiError(
+				validationError("Username, email, and password are required")
 			);
 		}
 
@@ -72,18 +82,11 @@ export async function POST(request: Request) {
 		});
 
 		if (result.error) {
-			return NextResponse.json(
-				{ error: result.error, field: result.field },
-				{ status: 400 }
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json(result.data, { status: 201 });
+		return apiSuccess(result.data, 201);
 	} catch (error) {
-		console.error("Registration error:", error);
-		return NextResponse.json(
-			{ error: "Failed to process registration" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { ErrorCode } from "@/types/domain";
-import { validateSession } from "./auth/validate-session";
+import {
+	type ValidatedSession,
+	validateSession,
+} from "./auth/validate-session";
 import {
 	AppError,
 	forbidden,
@@ -44,7 +47,7 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Auth helper
+// Auth helpers
 // ---------------------------------------------------------------------------
 
 /**
@@ -52,11 +55,21 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
  * Throws `unauthorised()` if no valid session exists.
  */
 export async function requireAuth(): Promise<string> {
+	const session = await requireAuthSession();
+	return session.userId;
+}
+
+/**
+ * Validates the session and returns the full session object.
+ * Throws `unauthorised()` if no valid session exists.
+ * Use this when you need username/email (e.g. for SSE event payloads).
+ */
+export async function requireAuthSession(): Promise<ValidatedSession> {
 	const session = await validateSession();
 	if (!session) {
 		throw unauthorised();
 	}
-	return session.userId;
+	return session;
 }
 
 // ---------------------------------------------------------------------------

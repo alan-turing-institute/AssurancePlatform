@@ -1,20 +1,12 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import { attachElement } from "@/lib/services/element-service";
-
-/**
- * Maps error messages to HTTP status codes.
- */
-function getErrorStatus(error: string): number {
-	if (error === "Permission denied") {
-		return 403;
-	}
-	if (error === "Element not found") {
-		return 404;
-	}
-	return 400;
-}
 
 /**
  * Extracts parent ID from request body.
@@ -37,31 +29,21 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
+		const userId = await requireAuth();
+		const { id: elementId } = await params;
+
 		const body = await request.json();
 		const parentId = extractParentId(body);
 
 		if (!parentId) {
-			return NextResponse.json(
-				{ error: "Parent ID is required" },
-				{ status: 400 }
-			);
+			return apiError(validationError("Parent ID is required"));
 		}
 
-		const result = await attachElement(session.user.id, elementId, parentId);
+		const result = await attachElement(userId, elementId, parentId);
 
 		if (result.error) {
-			return NextResponse.json(
-				{ error: result.error },
-				{ status: getErrorStatus(result.error) }
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		// Emit SSE event for real-time updates
@@ -79,16 +61,12 @@ export async function POST(
 				"element:attached",
 				element.caseId,
 				{ elementId, parentId },
-				session.user.id
+				userId
 			);
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error attaching element:", error);
-		return NextResponse.json(
-			{ error: "Failed to attach element" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
