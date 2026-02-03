@@ -1,7 +1,9 @@
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
+import { FileTextIcon } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { fetchCaseStudies } from "@/actions/case-studies";
+import { EmptyState } from "@/components/ui/empty-state";
 import PageHeading from "@/components/ui/page-heading";
 import { Separator } from "@/components/ui/separator";
 import { validateSession } from "@/lib/auth/validate-session";
@@ -78,8 +80,12 @@ async function CaseStudiesPage() {
 						<tbody className="divide-y divide-foreground/10 bg-background">
 							{caseStudies.length === 0 && (
 								<tr>
-									<td className="py-4 text-muted-foreground" colSpan={5}>
-										No Case Studies Found.
+									<td className="py-4" colSpan={5}>
+										<EmptyState
+											icon={FileTextIcon}
+											message="Create your first case study to get started."
+											title="No case studies found"
+										/>
 									</td>
 								</tr>
 							)}

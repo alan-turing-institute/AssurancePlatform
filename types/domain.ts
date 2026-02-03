@@ -228,12 +228,37 @@ export type ApiResponse<T = unknown> = {
 };
 
 /**
+ * Classifies errors for consistent handling across API routes, server actions, and services.
+ */
+export type ErrorCode =
+	| "UNAUTHORISED"
+	| "FORBIDDEN"
+	| "NOT_FOUND"
+	| "VALIDATION"
+	| "CONFLICT"
+	| "RATE_LIMITED"
+	| "INTERNAL";
+
+/**
  * Standard result type for Server Actions
  * Use this for all mutation Server Actions to provide consistent error handling
  */
 export type ActionResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string; fieldErrors?: Record<string, string> };
+
+/**
+ * Standard result type for service layer functions.
+ * Includes an error code so API routes can derive HTTP status without string matching.
+ */
+export type ServiceResult<T> =
+	| { success: true; data: T }
+	| {
+			success: false;
+			error: string;
+			code: ErrorCode;
+			fieldErrors?: Record<string, string>;
+	  };
 
 // Form-related types
 export type CaseStudyFormData = {

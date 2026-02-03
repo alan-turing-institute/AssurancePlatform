@@ -1,7 +1,11 @@
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import type { CreateTeamInput } from "@/lib/services/team-service";
 import { createTeam, listUserTeams } from "@/lib/services/team-service";
 
@@ -10,18 +14,18 @@ import { createTeam, listUserTeams } from "@/lib/services/team-service";
  * Lists all teams the authenticated user is a member of.
  */
 export async function GET() {
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+	try {
+		const userId = await requireAuth();
+		const result = await listUserTeams(userId);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await listUserTeams(session.user.id);
-
-	if (result.error) {
-		return NextResponse.json({ error: result.error }, { status: 400 });
-	}
-
-	return NextResponse.json(result.data);
 }
 
 /**
@@ -29,12 +33,8 @@ export async function GET() {
  * Creates a new team with the authenticated user as ADMIN.
  */
 export async function POST(request: Request) {
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
+		const userId = await requireAuth();
 		const body = await request.json();
 
 		const input: CreateTeamInput = {
@@ -42,21 +42,15 @@ export async function POST(request: Request) {
 			description: body.description,
 		};
 
-		const result = await createTeam(session.user.id, input);
+		const result = await createTeam(userId, input);
 
 		if (result.error) {
-			return NextResponse.json({ error: result.error }, { status: 400 });
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		// Revalidate the teams page cache so the new team appears when navigating back
 		revalidatePath("/dashboard/teams");
-
-		return NextResponse.json(result.data, { status: 201 });
+		return apiSuccess(result.data, 201);
 	} catch (error) {
-		console.error("Error creating team:", error);
-		return NextResponse.json(
-			{ error: "Failed to create team" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

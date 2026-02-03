@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import type {
 	ShareByEmailInput,
 	ShareWithTeamInput,
@@ -19,26 +23,19 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
+		const result = await listCasePermissions(userId, caseId);
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const result = await listCasePermissions(session.user.id, caseId);
-
-	if (result.error) {
-		let status = 400;
-		if (result.error === "Permission denied") {
-			status = 403;
-		} else if (result.error === "Case not found") {
-			status = 404;
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-		return NextResponse.json({ error: result.error }, { status });
-	}
 
-	return NextResponse.json(result.data);
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }
 
 /**
@@ -53,14 +50,9 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
 		const body = await request.json();
 
 		if (body.type === "team") {
@@ -69,20 +61,13 @@ export async function POST(
 				permission: body.permission,
 			};
 
-			const result = await shareWithTeam(session.user.id, caseId, input);
+			const result = await shareWithTeam(userId, caseId, input);
 
 			if (result.error) {
-				const status =
-					result.error === "Permission denied"
-						? 403
-						: result.error === "Case not found" ||
-								result.error === "Team not found"
-							? 404
-							: 400;
-				return NextResponse.json({ error: result.error }, { status });
+				return apiError(serviceErrorToAppError(result.error));
 			}
 
-			return NextResponse.json(result.data, { status: 201 });
+			return apiSuccess(result.data, 201);
 		}
 
 		// Default to user share (by email)
@@ -91,45 +76,28 @@ export async function POST(
 			permission: body.permission,
 		};
 
-		const result = await shareByEmail(session.user.id, caseId, input);
+		const result = await shareByEmail(userId, caseId, input);
 
 		if (result.error) {
-			const status =
-				result.error === "Permission denied"
-					? 403
-					: result.error === "Case not found"
-						? 404
-						: 400;
-			return NextResponse.json({ error: result.error }, { status });
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		// Return appropriate response based on result
 		if (result.data?.already_shared) {
-			return NextResponse.json(
+			return apiSuccess(
 				{ message: "User already has access to this case" },
-				{ status: 200 }
+				200
 			);
 		}
 
 		if (result.data?.invite_created) {
-			// Return invite link for the user to share
 			const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 			const inviteUrl = `${baseUrl}/invites/${result.data.invite_token}`;
-			return NextResponse.json(
-				{
-					message: "Invite created",
-					invite_url: inviteUrl,
-				},
-				{ status: 201 }
-			);
+			return apiSuccess({ message: "Invite created", invite_url: inviteUrl }, 201);
 		}
 
-		return NextResponse.json(result.data?.permission, { status: 201 });
+		return apiSuccess(result.data?.permission, 201);
 	} catch (error) {
-		console.error("Error sharing case:", error);
-		return NextResponse.json(
-			{ error: "Failed to share case" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,5 +1,11 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { forbidden } from "@/lib/errors";
 import { compareIdentifiers } from "@/lib/identifier-utils";
 
 // Type definitions for Prisma elements
@@ -29,7 +35,6 @@ type PrismaElement = {
 type CaseResult = {
 	data?: unknown;
 	error?: string;
-	status: number;
 };
 
 /**
@@ -68,7 +73,7 @@ async function fetchCaseFromPrisma(
 	});
 
 	if (!permissionResult.hasAccess) {
-		return { error: "Not found", status: 404 };
+		return { error: "Not found" };
 	}
 
 	// Fetch the case data (exclude soft-deleted cases)
@@ -104,7 +109,7 @@ async function fetchCaseFromPrisma(
 	});
 
 	if (!caseData) {
-		return { error: "Not found", status: 404 };
+		return { error: "Not found" };
 	}
 
 	// Transform Prisma data to the expected format
@@ -143,7 +148,6 @@ async function fetchCaseFromPrisma(
 			hasPublicCaseStudy,
 			linkedCaseStudyCount,
 		},
-		status: 200,
 	};
 }
 
@@ -288,24 +292,19 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
+		const result: CaseResult = await fetchCaseFromPrisma(id, userId);
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const { id } = await params;
-
-	const result: CaseResult = await fetchCaseFromPrisma(id, validated.userId);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: result.status }
-		);
-	}
-
-	return NextResponse.json(result.data);
 }
 
 /**
@@ -328,13 +327,14 @@ function buildCaseUpdateData(
 }
 
 /**
- * Handles Prisma-based case update
+ * Handles Prisma-based case update.
+ * Throws `AppError` on permission failure.
  */
 async function updateCaseWithPrisma(
 	id: string,
 	userId: string,
 	body: Record<string, unknown>
-): Promise<NextResponse> {
+): Promise<Record<string, unknown>> {
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
@@ -351,7 +351,7 @@ async function updateCaseWithPrisma(
 		hasPermissionLevel(permissionResult.permission, "EDIT");
 
 	if (!hasEditAccess) {
-		return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+		throw forbidden();
 	}
 
 	const updateData = buildCaseUpdateData(body);
@@ -360,13 +360,13 @@ async function updateCaseWithPrisma(
 		data: updateData,
 	});
 
-	return NextResponse.json({
+	return {
 		id: updated.id,
 		name: updated.name,
 		description: updated.description,
 		created_date: updated.createdAt.toISOString(),
 		color_profile: updated.colorProfile,
-	});
+	};
 }
 
 /**
@@ -387,23 +387,14 @@ export async function PUT(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
-
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { id } = await params;
-
 	try {
+		const userId = await requireAuth();
+		const { id } = await params;
 		const body = await request.json();
-		return await updateCaseWithPrisma(id, validated.userId, body);
+		const data = await updateCaseWithPrisma(id, userId, body);
+		return apiSuccess(data);
 	} catch (error) {
-		console.error("Error updating case:", error);
-		return NextResponse.json(
-			{ error: "Failed to update case" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -425,24 +416,21 @@ export async function DELETE(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
-
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { id } = await params;
-
-	const { softDeleteCase } = await import("@/lib/services/case-trash-service");
-
-	const result = await softDeleteCase(validated.userId, id);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: result.status ?? 500 }
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
 		);
-	}
 
-	return NextResponse.json({ success: true });
+		const result = await softDeleteCase(userId, id);
+
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }
