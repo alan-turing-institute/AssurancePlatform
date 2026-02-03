@@ -49,7 +49,7 @@ const DesktopNav = () => {
 
 	return (
 		<div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-			<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-sidebar px-6 pb-4">
+			<div className="flex grow flex-col gap-y-5 overflow-y-auto border-sidebar-border border-r bg-sidebar px-6 pb-4">
 				<div className="flex shrink-0 items-center">
 					<Link href={"/dashboard"}>
 						<Image
