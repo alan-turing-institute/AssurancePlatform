@@ -22,11 +22,13 @@ export type CaseCardData = {
 	name: string;
 	description?: string;
 	created_date?: string;
+	updated_date?: string;
 	permissions?: string | string[];
 };
 
 type CaseCardProps = {
 	assuranceCase: CaseCardData;
+	className?: string;
 };
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
@@ -140,6 +142,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			</Link>
 			{(permissions.includes("manage") || permissions.includes("owner")) && (
 				<button
+					aria-label="Delete case"
 					className="absolute top-4 right-4 z-50 hidden rounded-md bg-destructive p-2 text-destructive-foreground shadow-lg group-hover:block"
 					disabled={loading}
 					onClick={() => setOpen(true)}

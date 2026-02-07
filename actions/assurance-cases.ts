@@ -13,6 +13,7 @@ type AssuranceCase = {
 	name: string;
 	description?: string;
 	created_date?: string;
+	updated_date?: string;
 	owner?: number | string;
 };
 
@@ -46,6 +47,7 @@ export const fetchAssuranceCases = async (
 			name: true,
 			description: true,
 			createdAt: true,
+			updatedAt: true,
 			createdById: true,
 		},
 		orderBy: {
@@ -58,6 +60,7 @@ export const fetchAssuranceCases = async (
 		name: c.name,
 		description: c.description ?? undefined,
 		created_date: c.createdAt.toISOString(),
+		updated_date: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
 	}));
 };
@@ -117,6 +120,7 @@ export const fetchSharedAssuranceCases = async (
 			name: true,
 			description: true,
 			createdAt: true,
+			updatedAt: true,
 			createdById: true,
 		},
 		orderBy: {
@@ -129,6 +133,7 @@ export const fetchSharedAssuranceCases = async (
 		name: c.name,
 		description: c.description ?? undefined,
 		created_date: c.createdAt.toISOString(),
+		updated_date: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
 	}));
 };

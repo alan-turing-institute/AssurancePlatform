@@ -22,6 +22,31 @@ const SAFETY_CASE_REGEX = /safety case/i;
 const SECURITY_CASE_REGEX = /security case/i;
 const CASE_CARD_REGEX = /^case-card-/;
 
+// Provide a working localStorage mock (Node v22+ localStorage requires --localstorage-file)
+const storageMap = new Map<string, string>();
+const storageMock: Storage = {
+	getItem: (key: string) => storageMap.get(key) ?? null,
+	setItem: (key: string, value: string) => {
+		storageMap.set(key, value);
+	},
+	removeItem: (key: string) => {
+		storageMap.delete(key);
+	},
+	clear: () => {
+		storageMap.clear();
+	},
+	get length() {
+		return storageMap.size;
+	},
+	key: (index: number) => [...storageMap.keys()][index] ?? null,
+};
+
+Object.defineProperty(globalThis, "localStorage", {
+	value: storageMock,
+	writable: true,
+	configurable: true,
+});
+
 // Mock the modal hooks
 const mockCreateCaseModal = {
 	isOpen: false,
@@ -53,6 +78,7 @@ vi.mock("./case-card", () => ({
 			name: string;
 			description: string;
 			created_date: string;
+			updated_date?: string;
 		};
 	}) => (
 		<div data-testid={`case-card-${assuranceCase.id}`}>
@@ -73,24 +99,28 @@ describe("CaseList", () => {
 			name: "Test Case 1",
 			description: "First test case",
 			created_date: "2024-01-01T00:00:00Z",
+			updated_date: "2024-05-01T00:00:00Z",
 		}),
 		createMockAssuranceCase({
 			id: 2,
 			name: "Test Case 2",
 			description: "Second test case",
 			created_date: "2024-02-01T00:00:00Z",
+			updated_date: "2024-02-15T00:00:00Z",
 		}),
 		createMockAssuranceCase({
 			id: 3,
 			name: "Safety Case",
 			description: "Safety assurance case",
 			created_date: "2024-03-01T00:00:00Z",
+			updated_date: "2024-06-01T00:00:00Z",
 		}),
 		createMockAssuranceCase({
 			id: 4,
 			name: "Security Case",
 			description: "Security assurance case",
 			created_date: "2024-04-01T00:00:00Z",
+			updated_date: "2024-04-10T00:00:00Z",
 		}),
 	];
 
@@ -98,6 +128,7 @@ describe("CaseList", () => {
 		vi.clearAllMocks();
 		mockCreateCaseModal.onOpen.mockClear();
 		mockImportModal.onOpen.mockClear();
+		storageMap.clear();
 	});
 
 	describe("Rendering", () => {
@@ -117,7 +148,7 @@ describe("CaseList", () => {
 			expect(screen.getByText(SECURITY_CASE_REGEX)).toBeInTheDocument();
 		});
 
-		it("should render cases in descending order by creation date", () => {
+		it("should render cases in descending order by creation date by default", () => {
 			renderWithAuth(<CaseList assuranceCases={mockCases} />);
 
 			const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
@@ -135,6 +166,14 @@ describe("CaseList", () => {
 			const searchInput = screen.getByPlaceholderText(FILTER_BY_NAME_REGEX);
 			expect(searchInput).toBeInTheDocument();
 			expect(searchInput).toHaveAttribute("type", "text");
+		});
+
+		it("should render sort select", () => {
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const sortSelect = screen.getByTestId("sort-select");
+			expect(sortSelect).toBeInTheDocument();
+			expect(sortSelect).toHaveAttribute("aria-label", "Sort cases");
 		});
 
 		it("should render import button", () => {
@@ -270,6 +309,136 @@ describe("CaseList", () => {
 		});
 	});
 
+	describe("Sorting Functionality", () => {
+		it("should sort by oldest first when selected", async () => {
+			const user = userEvent.setup();
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			// Open the sort dropdown and select "Oldest first"
+			const sortTrigger = screen.getByTestId("sort-select");
+			await user.click(sortTrigger);
+
+			const oldestOption = screen.getByRole("option", {
+				name: /oldest first/i,
+			});
+			await user.click(oldestOption);
+
+			await waitFor(() => {
+				const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+				// Oldest case should be first
+				expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-1");
+				expect(caseCards[1]).toHaveAttribute("data-testid", "case-card-2");
+				expect(caseCards[2]).toHaveAttribute("data-testid", "case-card-3");
+				expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-4");
+			});
+		});
+
+		it("should sort by name A\u2013Z when selected", async () => {
+			const user = userEvent.setup();
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const sortTrigger = screen.getByTestId("sort-select");
+			await user.click(sortTrigger);
+
+			const nameAscOption = screen.getByRole("option", {
+				name: /name \(a/i,
+			});
+			await user.click(nameAscOption);
+
+			await waitFor(() => {
+				const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+				// Alphabetical: Safety(3), Security(4), Test 1(1), Test 2(2)
+				expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-3");
+				expect(caseCards[1]).toHaveAttribute("data-testid", "case-card-4");
+				expect(caseCards[2]).toHaveAttribute("data-testid", "case-card-1");
+				expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-2");
+			});
+		});
+
+		it("should sort by name Z\u2013A when selected", async () => {
+			const user = userEvent.setup();
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const sortTrigger = screen.getByTestId("sort-select");
+			await user.click(sortTrigger);
+
+			const nameDescOption = screen.getByRole("option", {
+				name: /name \(z/i,
+			});
+			await user.click(nameDescOption);
+
+			await waitFor(() => {
+				const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+				// Reverse alphabetical: Test 2(2), Test 1(1), Security(4), Safety(3)
+				expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-2");
+				expect(caseCards[1]).toHaveAttribute("data-testid", "case-card-1");
+				expect(caseCards[2]).toHaveAttribute("data-testid", "case-card-4");
+				expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-3");
+			});
+		});
+
+		it("should sort by last modified when selected", async () => {
+			const user = userEvent.setup();
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const sortTrigger = screen.getByTestId("sort-select");
+			await user.click(sortTrigger);
+
+			const updatedOption = screen.getByRole("option", {
+				name: /last modified/i,
+			});
+			await user.click(updatedOption);
+
+			await waitFor(() => {
+				const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+				// By updated_date desc: Safety(Jun), Test 1(May), Security(Apr 10), Test 2(Feb 15)
+				expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-3");
+				expect(caseCards[1]).toHaveAttribute("data-testid", "case-card-1");
+				expect(caseCards[2]).toHaveAttribute("data-testid", "case-card-4");
+				expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-2");
+			});
+		});
+
+		it("should persist sort preference to localStorage", async () => {
+			const user = userEvent.setup();
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const sortTrigger = screen.getByTestId("sort-select");
+			await user.click(sortTrigger);
+
+			const nameAscOption = screen.getByRole("option", {
+				name: /name \(a/i,
+			});
+			await user.click(nameAscOption);
+
+			expect(localStorage.getItem("tea-case-sort")).toBe("name-asc");
+		});
+
+		it("should restore sort preference from localStorage on mount", () => {
+			localStorage.setItem("tea-case-sort", "oldest");
+
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+			// Oldest first
+			expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-1");
+			expect(caseCards[1]).toHaveAttribute("data-testid", "case-card-2");
+			expect(caseCards[2]).toHaveAttribute("data-testid", "case-card-3");
+			expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-4");
+		});
+
+		it("should default to newest first for invalid localStorage value", () => {
+			localStorage.setItem("tea-case-sort", "invalid-value");
+
+			renderWithAuth(<CaseList assuranceCases={mockCases} />);
+
+			const caseCards = screen.getAllByTestId(CASE_CARD_REGEX);
+			// Newest first (default)
+			expect(caseCards[0]).toHaveAttribute("data-testid", "case-card-4");
+			expect(caseCards[3]).toHaveAttribute("data-testid", "case-card-1");
+		});
+	});
+
 	describe("Modal Triggers", () => {
 		it("should open create case modal when create button is clicked", async () => {
 			const user = userEvent.setup();
@@ -356,6 +525,9 @@ describe("CaseList", () => {
 				name: IMPORT_FILE_REGEX,
 			});
 			expect(importButton).toHaveAccessibleName();
+
+			const sortSelect = screen.getByTestId("sort-select");
+			expect(sortSelect).toHaveAttribute("aria-label", "Sort cases");
 		});
 
 		it("should be keyboard navigable", async () => {
@@ -366,6 +538,11 @@ describe("CaseList", () => {
 			await user.tab();
 			const searchInput = screen.getByPlaceholderText(FILTER_BY_NAME_REGEX);
 			expect(searchInput).toHaveFocus();
+
+			// Tab to sort select
+			await user.tab();
+			const sortSelect = screen.getByTestId("sort-select");
+			expect(sortSelect).toHaveFocus();
 
 			await user.tab();
 			const importButton = screen.getByRole("button", {

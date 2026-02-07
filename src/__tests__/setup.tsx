@@ -479,6 +479,28 @@ vi.mock("@radix-ui/react-radio-group", async () => {
 	};
 });
 
+// Mock Radix UI Select components
+vi.mock("@radix-ui/react-select", async () => {
+	const mocks = await import("./mocks/radix-ui-mocks");
+	return {
+		Root: mocks.MockSelectRoot,
+		Trigger: mocks.MockSelectTrigger,
+		Value: mocks.MockSelectValue,
+		Icon: mocks.MockSelectIcon,
+		Portal: mocks.MockSelectPortal,
+		Content: mocks.MockSelectContent,
+		Viewport: mocks.MockSelectViewport,
+		Item: mocks.MockSelectItem,
+		ItemText: mocks.MockSelectItemText,
+		ItemIndicator: mocks.MockSelectItemIndicator,
+		Group: mocks.MockSelectGroup,
+		Label: mocks.MockSelectLabel,
+		Separator: mocks.MockSelectSeparator,
+		ScrollUpButton: mocks.MockSelectScrollUpButton,
+		ScrollDownButton: mocks.MockSelectScrollDownButton,
+	};
+});
+
 // Mock Radix UI DropdownMenu components to prevent focus errors
 vi.mock("@radix-ui/react-dropdown-menu", async () => {
 	const mocks = await import("./mocks/radix-ui-mocks");
