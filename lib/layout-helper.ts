@@ -55,9 +55,13 @@ function getDomDimensions(
 		return null;
 	}
 
-	const rect = nodeElement.getBoundingClientRect();
-	if (rect.width > 0 && rect.height > 0) {
-		return { width: rect.width, height: rect.height };
+	// Use offsetWidth/offsetHeight instead of getBoundingClientRect() because
+	// React Flow applies a CSS scale() transform to the viewport. getBoundingClientRect()
+	// returns the scaled dimensions, causing ELK to think nodes are smaller than they are.
+	const width = nodeElement.offsetWidth;
+	const height = nodeElement.offsetHeight;
+	if (width > 0 && height > 0) {
+		return { width, height };
 	}
 
 	return null;
