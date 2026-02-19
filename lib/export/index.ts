@@ -53,10 +53,7 @@ export {
 	ExporterRegistry,
 	exporterRegistry,
 	MarkdownExporter,
-	PDFDocumentComponent,
-	type PDFDocumentProps,
 	PDFExporter,
-	renderBlock,
 	WordExporter,
 } from "./exporters";
 

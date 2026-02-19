@@ -13,7 +13,7 @@
  * - Expand/collapse chevron in bottom-right
  */
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -133,104 +133,109 @@ export default function BaseNode({
 				<Handle id="target" position={Position.Top} type="target" />
 			)}
 
-			{/* Header: Icon + Name + Top-right Actions */}
-			<div className={buildNodeHeaderClasses()}>
-				<div className="flex min-w-0 flex-1 items-center gap-2">
-					<Icon aria-hidden="true" className={buildNodeIconClasses(nodeType)} />
-					<span className={buildNodeTitleClasses()}>{name}</span>
+			<LazyMotion features={domAnimation} strict>
+				{/* Header: Icon + Name + Top-right Actions */}
+				<div className={buildNodeHeaderClasses()}>
+					<div className="flex min-w-0 flex-1 items-center gap-2">
+						<Icon
+							aria-hidden="true"
+							className={buildNodeIconClasses(nodeType)}
+						/>
+						<span className={buildNodeTitleClasses()}>{name}</span>
+					</div>
+					{topRightActions && (
+						<div className="flex items-center">{topRightActions}</div>
+					)}
 				</div>
-				{topRightActions && (
-					<div className="flex items-center">{topRightActions}</div>
-				)}
-			</div>
 
-			{/* Collapsed state: Show description preview */}
-			{!isExpanded && (
-				<motion.div
-					animate={{ opacity: 1 }}
-					className="px-4 pb-3"
-					exit={{ opacity: 0 }}
-					initial={{ opacity: 0 }}
-					onAnimationComplete={handleAnimationComplete}
-					transition={{ duration: 0.2 }}
-				>
-					<p className={buildPreviewTextClasses()}>
-						{truncateText(descriptionText)}
-					</p>
-				</motion.div>
-			)}
-
-			{/* Expanded state: Full content */}
-			<AnimatePresence>
-				{isExpanded && (
-					<motion.div
-						animate="expanded"
-						className="overflow-hidden"
-						exit="collapsed"
-						initial="collapsed"
+				{/* Collapsed state: Show description preview */}
+				{!isExpanded && (
+					<m.div
+						animate={{ opacity: 1 }}
+						className="px-4 pb-3"
+						exit={{ opacity: 0 }}
+						initial={{ opacity: 0 }}
 						onAnimationComplete={handleAnimationComplete}
-						variants={collapseVariants as import("framer-motion").Variants}
-					>
-						<div className={buildNodeContentClasses(true)}>
-							{/* Full description */}
-							<p className={buildDescriptionClasses()}>{descriptionText}</p>
-
-							{/* Attributes section */}
-							{hasAttributes && (
-								<>
-									<div className={buildSeparatorClasses()} />
-									<AttributeSection
-										assumption={assumption}
-										context={context}
-										justification={justification}
-										nodeType={nodeType}
-									/>
-								</>
-							)}
-
-							{/* Additional children content */}
-							{children && (
-								<>
-									<div className={buildSeparatorClasses()} />
-									<div className="space-y-2">{children}</div>
-								</>
-							)}
-
-							{/* Footer with type label and ID */}
-							<div className={buildSeparatorClasses()} />
-							<div className="flex items-center justify-between">
-								<span className={buildFooterLabelClasses()}>
-									{config.label}
-								</span>
-								<span className={buildFooterIdClasses()}>{name}</span>
-							</div>
-						</div>
-					</motion.div>
-				)}
-			</AnimatePresence>
-
-			{/* Bottom row: Actions left, Expand/Collapse right */}
-			<div className="flex items-center justify-between px-2 pb-2">
-				{/* Bottom-left actions (e.g., toggle children) */}
-				<div className="flex items-center">{bottomLeftActions}</div>
-				<motion.button
-					aria-label={isExpanded ? "Collapse node" : "Expand node"}
-					className="cursor-pointer rounded p-0.5 transition-colors hover:bg-foreground/5"
-					onClick={handleExpandToggle}
-					onMouseDown={(e) => e.stopPropagation()}
-					type="button"
-				>
-					<motion.div
-						animate={{ rotate: isExpanded ? 180 : 0 }}
 						transition={{ duration: 0.2 }}
 					>
-						<ChevronDown
-							aria-hidden="true"
-							className="h-4 w-4 shrink-0 text-muted-foreground"
-						/>
-					</motion.div>
-				</motion.button>
-			</div>
+						<p className={buildPreviewTextClasses()}>
+							{truncateText(descriptionText)}
+						</p>
+					</m.div>
+				)}
+
+				{/* Expanded state: Full content */}
+				<AnimatePresence>
+					{isExpanded && (
+						<m.div
+							animate="expanded"
+							className="overflow-hidden"
+							exit="collapsed"
+							initial="collapsed"
+							onAnimationComplete={handleAnimationComplete}
+							variants={collapseVariants as import("framer-motion").Variants}
+						>
+							<div className={buildNodeContentClasses(true)}>
+								{/* Full description */}
+								<p className={buildDescriptionClasses()}>{descriptionText}</p>
+
+								{/* Attributes section */}
+								{hasAttributes && (
+									<>
+										<div className={buildSeparatorClasses()} />
+										<AttributeSection
+											assumption={assumption}
+											context={context}
+											justification={justification}
+											nodeType={nodeType}
+										/>
+									</>
+								)}
+
+								{/* Additional children content */}
+								{children && (
+									<>
+										<div className={buildSeparatorClasses()} />
+										<div className="space-y-2">{children}</div>
+									</>
+								)}
+
+								{/* Footer with type label and ID */}
+								<div className={buildSeparatorClasses()} />
+								<div className="flex items-center justify-between">
+									<span className={buildFooterLabelClasses()}>
+										{config.label}
+									</span>
+									<span className={buildFooterIdClasses()}>{name}</span>
+								</div>
+							</div>
+						</m.div>
+					)}
+				</AnimatePresence>
+
+				{/* Bottom row: Actions left, Expand/Collapse right */}
+				<div className="flex items-center justify-between px-2 pb-2">
+					{/* Bottom-left actions (e.g., toggle children) */}
+					<div className="flex items-center">{bottomLeftActions}</div>
+					<m.button
+						aria-label={isExpanded ? "Collapse node" : "Expand node"}
+						className="cursor-pointer rounded p-0.5 transition-colors hover:bg-foreground/5"
+						onClick={handleExpandToggle}
+						onMouseDown={(e) => e.stopPropagation()}
+						type="button"
+					>
+						<m.div
+							animate={{ rotate: isExpanded ? 180 : 0 }}
+							transition={{ duration: 0.2 }}
+						>
+							<ChevronDown
+								aria-hidden="true"
+								className="h-4 w-4 shrink-0 text-muted-foreground"
+							/>
+						</m.div>
+					</m.button>
+				</div>
+			</LazyMotion>
 
 			{/* Source Handle (bottom) */}
 			{config.showSourceHandle && (
