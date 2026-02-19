@@ -1,37 +1,15 @@
 "use client";
 
-// import { useLoginToken } from '.*/use-auth'
-import {
-	BookOpenText,
-	Database,
-	FolderOpenDot,
-	Loader2,
-	Route,
-	Trash2,
-} from "lucide-react";
-import React, {
-	type Dispatch,
-	type SetStateAction,
-	useEffect,
-	useState,
-} from "react";
+import { Loader2, Trash2 } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import type { Node } from "reactflow";
-import useStore from "@/data/store";
-import { attachCaseElement, deleteAssuranceCaseNode } from "@/lib/case";
-import type {
-	AssuranceCase,
-	Context,
-	Evidence,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
 import { AlertModal } from "../modals/alert-modal";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
+import { OrphanElementItem } from "./_orphan-elements/orphan-element-item";
+import { useOrphanActions } from "./_orphan-elements/use-orphan-actions";
 
-type OrphanElement = Context | Evidence | PropertyClaim | Strategy;
-
-type OrphanElementsProps = {
+export type OrphanElementsProps = {
 	node: Node;
 	handleClose: () => void;
 	loadingState: {
@@ -39,219 +17,24 @@ type OrphanElementsProps = {
 		setLoading: Dispatch<SetStateAction<boolean>>;
 	};
 	setAction: Dispatch<SetStateAction<string | null>>;
+	className?: string;
 };
 
-const OrphanElements = ({
+export function OrphanElements({
 	node,
 	handleClose,
 	loadingState,
 	setAction,
-}: OrphanElementsProps) => {
-	const { loading, setLoading } = loadingState;
+}: OrphanElementsProps) {
 	const {
-		orphanedElements,
-		setOrphanedElements,
-		assuranceCase,
-		setAssuranceCase,
-	} = useStore();
-	const [filteredOrphanElements, setFilteredOrphanElements] = useState<
-		OrphanElement[]
-	>([]);
-	const [deleteOpen, setDeleteOpen] = useState(false);
-
-	// Refetch case and orphaned elements from server to get fresh data with children
-	const refetchCaseData = async () => {
-		if (!assuranceCase?.id) {
-			return;
-		}
-
-		try {
-			// Fetch fresh case data
-			const caseResponse = await fetch(`/api/cases/${assuranceCase.id}`);
-			if (caseResponse.ok) {
-				const freshCase = await caseResponse.json();
-				setAssuranceCase(freshCase as AssuranceCase);
-			}
-
-			// Fetch fresh orphaned elements
-			const orphanResponse = await fetch(
-				`/api/cases/${assuranceCase.id}/sandbox`
-			);
-			if (orphanResponse.ok) {
-				const freshOrphans = await orphanResponse.json();
-				setOrphanedElements(freshOrphans || []);
-			}
-		} catch {
-			// Silently fail - SSE will eventually sync the data
-		}
-	};
-
-	const filterOrphanElements = React.useCallback(
-		(currentNodeType: string): OrphanElement[] => {
-			// Convert orphanedElements to OrphanElement[] by mapping to proper types
-			const convertedElements = orphanedElements
-				.map((item): OrphanElement | null => {
-					switch (item.type?.toLowerCase()) {
-						case "context":
-							return item as unknown as Context;
-						case "evidence":
-							return item as unknown as Evidence;
-						case "propertyclaim":
-							return item as unknown as PropertyClaim;
-						case "strategy":
-							return item as unknown as Strategy;
-						default:
-							return null;
-					}
-				})
-				.filter((item): item is OrphanElement => item !== null);
-
-			switch (currentNodeType.toLowerCase()) {
-				case "goal":
-					return convertedElements;
-				case "strategy":
-					return convertedElements.filter(
-						(item) => item.type?.toLowerCase() === "propertyclaim"
-					);
-				case "property":
-					return convertedElements.filter(
-						(item) =>
-							item.type?.toLowerCase() === "evidence" ||
-							item.type?.toLowerCase() === "propertyclaim"
-					);
-				default:
-					return convertedElements;
-			}
-		},
-		[orphanedElements]
-	);
-
-	// Helper function to convert OrphanElement to ReactFlowNode format
-	const convertToReactFlowNode = (orphan: OrphanElement) => ({
-		id: orphan.id.toString(),
-		type: orphan.type || "",
-		position: { x: 0, y: 0 },
-		data: {
-			id: orphan.id,
-			name: orphan.name,
-			type: orphan.type || "",
-			short_description:
-				"short_description" in orphan ? orphan.short_description : "",
-			long_description:
-				"long_description" in orphan ? orphan.long_description : "",
-			goal_id: "goal_id" in orphan ? orphan.goal_id : null,
-			strategy_id: "strategy_id" in orphan ? orphan.strategy_id : null,
-			property_claim_id:
-				"property_claim_id" in orphan ? orphan.property_claim_id : null,
-		},
-	});
-
-	const handleOrphanSelection = async (orphan: OrphanElement) => {
-		setLoading(true);
-
-		const orphanAsReactFlowNode = convertToReactFlowNode(orphan);
-
-		const result = await attachCaseElement(
-			orphanAsReactFlowNode,
-			orphan.id,
-			"",
-			{
-				id: node.id,
-				type: node.type || "",
-				position: { x: 0, y: 0 },
-				data: node.data,
-			}
-		);
-
-		if ("error" in result && result.error) {
-			setLoading(false);
-			return;
-		}
-
-		if ("attached" in result && !result.attached) {
-			setLoading(false);
-			return;
-		}
-
-		// Refetch fresh case data from server to get the attached element with its children
-		await refetchCaseData();
-		setLoading(false);
-		handleClose();
-	};
-
-	const handleDelete = async () => {
-		setLoading(true);
-
-		try {
-			// Collect all deletion promises
-			const deletionPromises = filteredOrphanElements.map(async (orphan) => {
-				const deleted = await deleteAssuranceCaseNode(
-					orphan.type ?? "",
-					orphan.id,
-					""
-				);
-
-				return { deleted, orphanId: orphan.id };
-			});
-
-			// Wait for all deletion promises to resolve
-			const deletedResults = await Promise.all(deletionPromises);
-
-			// Extract the ids of the deleted orphans
-			const deletedIds = deletedResults
-				.filter((result) => result.deleted)
-				.map((result) => result.orphanId);
-
-			// Filter out the orphaned elements whose ids are in the deletedIds array
-			const updatedOrphanedElements = orphanedElements.filter(
-				(item) => !deletedIds.includes(item.id)
-			);
-
-			// Update state with the filtered orphaned elements
-			setOrphanedElements(updatedOrphanedElements);
-
-			setDeleteOpen(false);
-			handleClose();
-		} catch (_error) {
-			// Handle error silently
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleDeleteSingle = async (orphan: OrphanElement) => {
-		setLoading(true);
-
-		try {
-			const deleted = await deleteAssuranceCaseNode(
-				orphan.type ?? "",
-				orphan.id,
-				""
-			);
-
-			if (deleted) {
-				// Remove this orphan from the list
-				const updatedOrphanedElements = orphanedElements.filter(
-					(item) => item.id !== orphan.id
-				);
-				setOrphanedElements(updatedOrphanedElements);
-
-				// Update filtered list
-				setFilteredOrphanElements((prev) =>
-					prev.filter((item) => item.id !== orphan.id)
-				);
-			}
-		} catch (_error) {
-			// Handle error silently
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		const result = filterOrphanElements(node.type || "");
-		setFilteredOrphanElements(result);
-	}, [node.type, filterOrphanElements]);
+		filteredOrphanElements,
+		loading,
+		deleteOpen,
+		setDeleteOpen,
+		handleOrphanSelection,
+		handleDelete,
+		handleDeleteSingle,
+	} = useOrphanActions({ node, handleClose, loadingState, setAction });
 
 	return (
 		<div className="mt-8 flex flex-col items-start justify-start">
@@ -266,62 +49,13 @@ const OrphanElements = ({
 						</div>
 					)}
 					{filteredOrphanElements.map((el) => (
-						<div className="group flex items-center gap-1" key={el.id}>
-							<button
-								aria-label={
-									el.short_description || el.name || `${el.type} element`
-								}
-								className="flex flex-1 items-center rounded-md p-2 text-sm hover:cursor-pointer hover:bg-primary/80"
-								onClick={() => handleOrphanSelection(el)}
-								type="button"
-							>
-								{el.type === "Evidence" && (
-									<Database className="h-5 w-5 shrink-0" />
-								)}
-								{el.type === "Strategy" && (
-									<Route className="h-5 w-5 shrink-0" />
-								)}
-								{el.type === "PropertyClaim" && (
-									<FolderOpenDot className="h-5 w-5 shrink-0" />
-								)}
-								{el.type === "Context" && (
-									<BookOpenText className="h-5 w-5 shrink-0" />
-								)}
-								{/* Show identifier (name) */}
-								{el.name && (
-									<span className="ml-2 font-semibold text-primary">
-										{el.name}
-									</span>
-								)}
-								{/* Separator dot */}
-								<svg
-									aria-hidden="true"
-									className="mx-2 inline h-0.5 w-0.5 shrink-0 fill-current"
-									viewBox="0 0 2 2"
-								>
-									<circle cx={1} cy={1} r={1} />
-								</svg>
-								{/* Show description */}
-								<span className="truncate text-left">
-									{"short_description" in el && el.short_description
-										? el.short_description
-										: "No description"}
-								</span>
-							</button>
-							{/* Individual delete button */}
-							<button
-								aria-label={`Delete ${el.name || el.type}`}
-								className="rounded-md p-2 text-rose-500 opacity-0 transition-opacity hover:bg-rose-500/10 group-hover:opacity-100"
-								disabled={loading}
-								onClick={(e) => {
-									e.stopPropagation();
-									handleDeleteSingle(el);
-								}}
-								type="button"
-							>
-								<Trash2 className="h-4 w-4" />
-							</button>
-						</div>
+						<OrphanElementItem
+							key={el.id}
+							loading={loading}
+							onDelete={handleDeleteSingle}
+							onSelect={handleOrphanSelection}
+							orphan={el}
+						/>
 					))}
 				</div>
 			</ScrollArea>
@@ -361,6 +95,6 @@ const OrphanElements = ({
 			/>
 		</div>
 	);
-};
+}
 
 export default OrphanElements;

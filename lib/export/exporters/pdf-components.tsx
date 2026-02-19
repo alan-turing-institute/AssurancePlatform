@@ -8,8 +8,6 @@
  * content is never reordered or mutated after render.
  */
 
-/* biome-ignore-all lint/suspicious/noArrayIndexKey: Static PDF content is never reordered */
-
 import {
 	Document,
 	Image,
@@ -384,6 +382,7 @@ function PDFList({
 	return (
 		<View style={styles.list}>
 			{items.map((item, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] items with possible duplicates
 				<View key={`list-item-${index}`} style={styles.listItem}>
 					<Text style={styles.listBullet}>
 						{ordered ? `${index + 1}.` : "\u2022"}
@@ -414,15 +413,18 @@ function PDFTable({
 		<View style={styles.table}>
 			<View style={styles.tableHeaderRow}>
 				{headers.map((header, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] headers with possible duplicates
 					<Text key={`header-${index}`} style={styles.tableHeaderCell}>
 						{header}
 					</Text>
 				))}
 			</View>
 			{rows.map((row, rowIndex) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[][] rows with no unique identifiers
 				<View key={`row-${rowIndex}`} style={styles.tableRow}>
 					{headers.map((_, cellIndex) => (
 						<Text
+							// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[][] cells with no unique identifiers
 							key={`cell-${rowIndex}-${cellIndex}`}
 							style={styles.tableCell}
 						>
@@ -466,6 +468,24 @@ function formatImageSrc(src: string): string {
 
 	// Unknown format, return as-is
 	return src;
+}
+
+/**
+ * Get a stable key for a content block, using the best available identifier per type.
+ */
+function getBlockKey(block: ContentBlock, index: number): string {
+	switch (block.type) {
+		case "element":
+			return `element-${block.node.id}`;
+		case "heading":
+			return `heading-${block.level}-${index}`;
+		case "metadata":
+			return `metadata-${block.key}`;
+		case "image":
+			return `image-${block.alt}`;
+		default:
+			return `${block.type}-${index}`;
+	}
 }
 
 /**
@@ -537,6 +557,7 @@ function PDFContextList({
 		<View style={styles.elementField}>
 			<Text style={styles.elementFieldLabel}>Context:</Text>
 			{context.map((ctx, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] context items with possible duplicates
 				<Text key={`ctx-${index}`} style={styles.elementFieldValue}>
 					{"\u2022"} {ctx}
 				</Text>
@@ -558,8 +579,11 @@ function PDFCommentsList({
 	return (
 		<View style={styles.elementField}>
 			<Text style={styles.elementFieldLabel}>Comments:</Text>
-			{comments.map((comment, index) => (
-				<View key={`comment-${index}`} style={styles.comment}>
+			{comments.map((comment) => (
+				<View
+					key={`comment-${comment.author}-${comment.createdAt}`}
+					style={styles.comment}
+				>
 					<Text style={styles.commentAuthor}>
 						{comment.author}
 						{comment.createdAt &&
@@ -659,7 +683,13 @@ function PDFElement({
 /**
  * Render a content block to PDF components.
  */
-export function renderBlock(block: ContentBlock, styles: PDFStyles) {
+function PDFBlock({
+	block,
+	styles,
+}: {
+	block: ContentBlock;
+	styles: PDFStyles;
+}) {
 	switch (block.type) {
 		case "heading":
 			return (
@@ -735,10 +765,12 @@ function PDFSection({
 			{section.type !== "title-page" && section.title && (
 				<Text style={styles.h2}>{section.title}</Text>
 			)}
-			{section.blocks.map((block, index) => (
-				<View key={`block-${section.type}-${index}`}>
-					{renderBlock(block, styles)}
-				</View>
+			{section.blocks.map((block, blockIndex) => (
+				<PDFBlock
+					block={block}
+					key={getBlockKey(block, blockIndex)}
+					styles={styles}
+				/>
 			))}
 		</View>
 	);
@@ -849,10 +881,10 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 			<PDFTitlePage document={document} styles={styles} />
 
 			{/* Diagram Pages (landscape, one per diagram) */}
-			{diagramSections.map((section, index) => (
+			{diagramSections.map((section) => (
 				<PDFDiagramPage
 					branding={document.branding}
-					key={`diagram-${index}`}
+					key={`diagram-${section.title}`}
 					section={section}
 					styles={styles}
 				/>
@@ -860,9 +892,9 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 
 			{/* Content Pages (portrait) */}
 			<Page size="A4" style={styles.page}>
-				{contentSections.map((section, index) => (
+				{contentSections.map((section) => (
 					<PDFSection
-						key={`section-${section.type}-${index}`}
+						key={`section-${section.type}`}
 						section={section}
 						styles={styles}
 					/>
