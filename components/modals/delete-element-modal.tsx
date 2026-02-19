@@ -25,12 +25,7 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 	childCount = 0,
 	onSkipPreferenceChange,
 }) => {
-	const [isMounted, setIsMounted] = useState(false);
 	const [dontAskAgain, setDontAskAgain] = useState(false);
-
-	useEffect(() => {
-		setIsMounted(true);
-	}, []);
 
 	// Reset state when modal closes
 	useEffect(() => {
@@ -38,10 +33,6 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 			setDontAskAgain(false);
 		}
 	}, [isOpen]);
-
-	if (!isMounted) {
-		return null;
-	}
 
 	const handleDelete = async () => {
 		if (dontAskAgain && onSkipPreferenceChange) {
