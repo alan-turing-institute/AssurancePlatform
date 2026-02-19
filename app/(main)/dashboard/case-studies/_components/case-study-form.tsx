@@ -43,7 +43,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	);
 	const [loading, setLoading] = useState(false);
 
-	// 1. Define your form.
 	const form = useForm<CaseStudyFormValues>({
 		resolver: zodResolver(caseStudyFormSchema),
 		defaultValues: getDefaultFormValues(caseStudy),
@@ -64,67 +63,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		uploadCaseStudyFeatureImage,
 		deleteCaseStudyFeatureImage,
 	} = useCaseStudyImage({ caseStudyId: caseStudy?.id, toast });
-
-	// 2. Define a submit handler.
-	// async function onSubmit(values: CaseStudyFormValues) {
-	//   if (!caseStudy) {
-	//     let newCaseStudy = {
-	//       title: values.title,
-	//       description: values.description,
-	//       authors: values.authors,
-	//       category: values.category,
-	//       // published_date: values.publishedDate?.toISOString(),
-	//       last_modified_on: new Date().toISOString(),
-	//       created_on: new Date().toISOString(),
-	//       sector: values.sector,
-	//       contact: values.contact,
-	//       // assurance_cases": [2, 5],
-	//       // "image": "https://example.com/path-to-image.jpg",
-	//     }
-
-	//     const createdCaseStudy = await createCaseStudy(data?.key!!, newCaseStudy)
-
-	//     if(createdCaseStudy) {
-	//       toast({
-	//         title: 'Successfully created',
-	//         description: 'You have created a case study!',
-	//       });
-	//       router.back()
-	//     }
-
-	//   } else {
-	//     let newCaseStudy = {
-	//       id: caseStudy.id,
-	//       title: values.title,
-	//       description: values.description,
-	//       authors: values.authors,
-	//       category: values.category,
-	//       // published_date: values.publishedDate?.toISOString(),
-	//       last_modified_on: new Date().toISOString(),
-	//       sector: values.sector,
-	//       contact: values.contact,
-	//       // assurance_cases": [2, 5],
-	//       // "image": "https://example.com/path-to-image.jpg",
-	//     }
-
-	//     console.log(newCaseStudy)
-
-	//     const updated = await updateCaseStudy(data?.key, newCaseStudy)
-
-	//     if(updated) {
-	//       toast({
-	//         title: 'Successfully Updated',
-	//         description: 'You have updated a case study!',
-	//       });
-	//     } else {
-	//       toast({
-	//         variant: "destructive",
-	//         title: 'Failed to Update',
-	//         description: 'Something went wrong!',
-	//       });
-	//     }
-	//   }
-	// }
 
 	async function onSubmit(values: CaseStudyFormValues) {
 		if (caseStudy?.published) {
@@ -304,13 +242,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 								</p>
 							</div>
 
-							{/* <button
-                  onClick={() => importModal.onOpen()}
-                  className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500/40 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  <ArrowUpTrayIcon className="-ml-0.5 md:mr-1.5 size-4" aria-hidden="true" />
-                  <span className='hidden md:block'>Import</span>
-                </button> */}
 							<RelatedAssuranceCaseList
 								selectedAssuranceCases={selectedAssuranceCases}
 								setSelectedAssuranceCases={setSelectedAssuranceCases}
