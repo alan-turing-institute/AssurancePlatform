@@ -14,6 +14,11 @@ import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
 import type { CaseStudy } from "@/types/domain";
 import CaseStudyForm from "../case-study-form";
 
+// Mock the server action used by RelatedAssuranceCaseList
+vi.mock("@/actions/assurance-cases", () => ({
+	fetchPublishedCasesForStudy: vi.fn().mockResolvedValue([]),
+}));
+
 // Top-level regex patterns for performance
 const TITLE_REGEX = /title/i;
 const CORRESPONDING_AUTHOR_EMAIL_REGEX = /corresponding author email/i;

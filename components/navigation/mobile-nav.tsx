@@ -6,13 +6,7 @@ import { ExternalLink, PlusCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-	type Dispatch,
-	Fragment,
-	type SetStateAction,
-	useEffect,
-	useState,
-} from "react";
+import { type Dispatch, Fragment, type SetStateAction } from "react";
 import { externalNavigation, navigation } from "@/config";
 import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
 import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
@@ -28,37 +22,21 @@ type Team = {
 type MobileNavProps = {
 	sidebarOpen: boolean;
 	setSidebarOpen: Dispatch<SetStateAction<boolean>>;
+	teams: Team[];
 };
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
-export const MobileNav = ({ sidebarOpen, setSidebarOpen }: MobileNavProps) => {
+export const MobileNav = ({
+	sidebarOpen,
+	setSidebarOpen,
+	teams,
+}: MobileNavProps) => {
 	const pathname = usePathname();
 	const createTeamModal = useCreateTeamModal();
-	const [teams, setTeams] = useState<Team[]>([]);
 	const sidebarLogo = useSidebarLogo();
-
-	// Page name determined from pathname
-	const _pageName =
-		pathname === "/" ? "assurance cases" : pathname.split("/")[1];
-
-	useEffect(() => {
-		const fetchTeams = async () => {
-			try {
-				const response = await fetch("/api/teams");
-				if (response.ok) {
-					const data = await response.json();
-					setTeams(data);
-				}
-			} catch (error) {
-				console.error("Failed to fetch teams:", error);
-			}
-		};
-
-		fetchTeams();
-	}, []);
 
 	return (
 		<Transition.Root as={Fragment} show={sidebarOpen}>

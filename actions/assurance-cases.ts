@@ -185,3 +185,42 @@ export const fetchPublishedAssuranceCases = async (
 	// This function is retained for backwards compatibility but returns empty array
 	return await Promise.resolve([]);
 };
+
+type PublishedCaseForStudy = {
+	id: string;
+	name: string;
+	description: string;
+	publish_status: string;
+	published_at: string | null;
+	marked_ready_at: string | null;
+	published_version_id: string | null;
+};
+
+/**
+ * Fetches the current user's cases that are available for linking to case studies
+ * (those with READY_TO_PUBLISH or PUBLISHED status).
+ */
+export async function fetchPublishedCasesForStudy(): Promise<
+	PublishedCaseForStudy[]
+> {
+	const validated = await validateSession();
+	if (!validated) {
+		return [];
+	}
+
+	const { getCasesAvailableForCaseStudy } = await import(
+		"@/lib/services/publish-service"
+	);
+
+	const cases = await getCasesAvailableForCaseStudy(validated.userId);
+
+	return cases.map((c) => ({
+		id: c.id,
+		name: c.name,
+		description: c.description,
+		publish_status: c.publishStatus,
+		published_at: c.publishedAt?.toISOString() ?? null,
+		marked_ready_at: c.markedReadyAt?.toISOString() ?? null,
+		published_version_id: c.publishedVersionId,
+	}));
+}

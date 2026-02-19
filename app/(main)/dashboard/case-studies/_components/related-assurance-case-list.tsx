@@ -3,6 +3,7 @@
 import { InfoIcon, MoveRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { fetchPublishedCasesForStudy } from "@/actions/assurance-cases";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,14 +25,8 @@ const RelatedAssuranceCaseList = ({
 		const getCases = async () => {
 			setIsLoading(true);
 			try {
-				// Fetch cases available for case study linking (owner's READY_TO_PUBLISH/PUBLISHED cases)
-				const response = await fetch(
-					"/api/published-assurance-cases?forCaseStudy=true"
-				);
-				if (response.ok) {
-					const allCases = await response.json();
-					setAssuranceCasesList(allCases);
-				}
+				const cases = await fetchPublishedCasesForStudy();
+				setAssuranceCasesList(cases as unknown as AssuranceCase[]);
 			} finally {
 				setIsLoading(false);
 			}

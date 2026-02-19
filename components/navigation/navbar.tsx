@@ -9,7 +9,18 @@ import DesktopNav from "./desktop-nav";
 import MenuToggleButton from "./menu-toggle";
 import { MobileNav } from "./mobile-nav";
 
-export const Navbar = ({ children }: { children: React.ReactNode }) => {
+type Team = {
+	id: string;
+	name: string;
+	slug: string;
+};
+
+type NavbarProps = {
+	children: React.ReactNode;
+	teams: Team[];
+};
+
+export const Navbar = ({ children, teams }: NavbarProps) => {
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = usePathname();
 	const getPageName = (path: string): string => {
@@ -29,10 +40,14 @@ export const Navbar = ({ children }: { children: React.ReactNode }) => {
 
 	return (
 		<div>
-			<MobileNav setSidebarOpen={setSidebarOpen} sidebarOpen={sidebarOpen} />
+			<MobileNav
+				setSidebarOpen={setSidebarOpen}
+				sidebarOpen={sidebarOpen}
+				teams={teams}
+			/>
 
 			{/* Static sidebar for desktop */}
-			<DesktopNav />
+			<DesktopNav teams={teams} />
 
 			<div className="lg:pl-72">
 				<div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-border border-b bg-background px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">

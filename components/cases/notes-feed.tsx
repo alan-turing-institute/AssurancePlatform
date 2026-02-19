@@ -1,12 +1,13 @@
 "use client";
 
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
+import { fetchCaseComments } from "@/actions/cases";
 import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
 import { useToast } from "@/lib/toast";
-import type { Comment, User } from "@/types";
+import type { Comment } from "@/types";
 import { Button } from "../ui/button";
 import NotesEditForm from "./notes-edit-form";
 
@@ -14,9 +15,8 @@ export default function NotesFeed() {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
 	const [edit, setEdit] = useState<boolean>();
 	const [editId, setEditId] = useState<number | string>();
-	const [user, setUser] = useState<User | undefined>();
+	const { data: session } = useSession();
 	const { toast } = useToast();
-	const router = useRouter();
 
 	// Sort notes by created_at (newest first) - useMemo to avoid mutation
 	const sortedNotes = useMemo(
@@ -30,65 +30,16 @@ export default function NotesFeed() {
 
 	// Fetch case notes/comments
 	useEffect(() => {
-		const fetchCaseNotes = async () => {
-			if (!assuranceCase) {
-				return [];
-			}
+		if (!assuranceCase) {
+			return;
+		}
 
-			// Use Next.js API route which handles both Prisma and Django auth
-			const response = await fetch(`/api/cases/${assuranceCase.id}/comments`);
-
-			if (response.status === 404 || response.status === 403) {
-				// Return empty array if case not found or forbidden
-				return [];
-			}
-
-			if (response.status === 401) {
-				// Handle unauthorized access
-				router.replace("/login");
-				return [];
-			}
-
-			const comments = await response.json();
-			return comments;
-		};
-
-		fetchCaseNotes()
+		fetchCaseComments(assuranceCase.id)
 			.then((comments) => setCaseNotes(comments || []))
 			.catch(() => {
-				// Handle error silently
 				setCaseNotes([]);
 			});
-	}, [assuranceCase, setCaseNotes, router]);
-
-	// Fetch current user
-	useEffect(() => {
-		const fetchCurrentUser = async () => {
-			// Use Next.js API route which handles both Prisma and Django auth
-			const response = await fetch("/api/users/me");
-
-			if (response.status === 404 || response.status === 403) {
-				// Return undefined if user not found or forbidden
-				return;
-			}
-
-			if (response.status === 401) {
-				// Handle unauthorized access
-				router.replace("/login");
-				return;
-			}
-
-			const result = await response.json();
-			return result;
-		};
-
-		fetchCurrentUser()
-			.then((result) => setUser(result))
-			.catch(() => {
-				// Handle error silently
-				setUser(undefined);
-			});
-	}, [router]);
+	}, [assuranceCase, setCaseNotes]);
 
 	const handleNoteDelete = async (id: number | string) => {
 		try {
@@ -168,7 +119,7 @@ export default function NotesFeed() {
 								</div>
 								{!edit &&
 									assuranceCase?.permissions !== "view" &&
-									user?.username === note.author && (
+									session?.user?.name === note.author && (
 										<div className="hidden items-center justify-center gap-2 group-hover:flex">
 											<Button
 												aria-label="Edit note"

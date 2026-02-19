@@ -65,12 +65,14 @@ const CaseViewerWrapper = ({
 	useEffect(() => {
 		const loadCaseData = async () => {
 			try {
-				const response = await fetch(`/data/${caseFile}`);
-				if (!response.ok) {
-					throw new Error(`Failed to load case data: ${response.statusText}`);
+				const { loadStaticCaseData } = await import("@/actions/case-data");
+				const result = await loadStaticCaseData(caseFile);
+
+				if ("error" in result) {
+					throw new Error(result.error);
 				}
-				const rawData: unknown = await response.json();
-				const validatedData = parseCaseData(rawData);
+
+				const validatedData = parseCaseData(result.data);
 				setCaseData(validatedData);
 				setError(null);
 			} catch (err) {

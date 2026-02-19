@@ -212,9 +212,9 @@ export const ShareModal = () => {
 	// Check Google connection status when modal opens
 	useEffect(() => {
 		if (exportModal.isOpen && googleConnected === null) {
-			fetch("/api/cases/backup/gdrive")
-				.then((res) => res.json())
-				.then((data) => setGoogleConnected(data.connected ?? false))
+			import("@/actions/integrations")
+				.then(({ checkGoogleDriveAccess }) => checkGoogleDriveAccess())
+				.then((result) => setGoogleConnected(result.connected))
 				.catch(() => setGoogleConnected(false));
 		}
 	}, [exportModal.isOpen, googleConnected]);

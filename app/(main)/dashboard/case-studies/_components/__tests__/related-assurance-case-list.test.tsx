@@ -1,18 +1,21 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { useSession } from "next-auth/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/src/__tests__/mocks/server";
-import { setupEnvVars } from "@/src/__tests__/utils/env-test-utils";
 import { renderWithAuth } from "@/src/__tests__/utils/test-utils";
 import type { AssuranceCase } from "@/types/domain";
 import RelatedAssuranceCaseList from "../related-assurance-case-list";
 
 // Top-level regex patterns for performance
-const SEE_CASES_REGEX = /see cases/i;
 const CASE_ID_REGEX = /^case-\d+$/;
 const ASSURANCE_CASE_REGEX = /Assurance Case/;
+
+// Mock the server action
+const mockFetchPublishedCasesForStudy = vi.fn();
+vi.mock("@/actions/assurance-cases", () => ({
+	fetchPublishedCasesForStudy: (...args: unknown[]) =>
+		mockFetchPublishedCasesForStudy(...args),
+}));
 
 // Mock next-auth
 vi.mock("next-auth/react", () => ({
@@ -39,9 +42,6 @@ vi.mock("next/link", () => ({
 		</a>
 	),
 }));
-
-const _API_BASE_URL =
-	process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const mockUser = {
 	id: 1,
@@ -137,7 +137,6 @@ const mockAssuranceCases: AssuranceCase[] = [
 describe("RelatedAssuranceCaseList Component", () => {
 	const user = userEvent.setup();
 	const mockSetSelectedAssuranceCases = vi.fn();
-	let cleanupEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -146,30 +145,12 @@ describe("RelatedAssuranceCaseList Component", () => {
 			status: "authenticated",
 		});
 
-		// Set up environment variables
-		cleanupEnv = setupEnvVars({
-			NEXT_PUBLIC_API_URL: "http://localhost:8000",
-		});
-
-		// Reset server handlers
-		server.resetHandlers();
-	});
-
-	afterEach(() => {
-		if (cleanupEnv) {
-			cleanupEnv();
-		}
+		// Default: return mock cases from server action
+		mockFetchPublishedCasesForStudy.mockResolvedValue(mockAssuranceCases);
 	});
 
 	describe("Component Rendering with Data", () => {
 		it("should render list of published assurance cases", async () => {
-			// Mock API response - Note: using relative URL as the component uses relative URL
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[]}
@@ -197,12 +178,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 		});
 
 		it("should render checkboxes for each assurance case", async () => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[]}
@@ -229,12 +204,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 		});
 
 		it("should show selected state for pre-selected cases", async () => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[1, 3]}
@@ -258,12 +227,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 		});
 
 		it("should sort selected cases to the top", async () => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[2, 3]} // Security (id: 2) and Performance (id: 3)
@@ -307,10 +270,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 	describe("Component Rendering without Data", () => {
 		it("should show empty state when no published cases exist", async () => {
-			// Mock empty response
-			server.use(
-				http.get("/api/published-assurance-cases", () => HttpResponse.json([]))
-			);
+			mockFetchPublishedCasesForStudy.mockResolvedValue([]);
 
 			renderWithAuth(
 				<RelatedAssuranceCaseList
@@ -322,29 +282,13 @@ describe("RelatedAssuranceCaseList Component", () => {
 			// Wait for empty state to appear
 			await waitFor(() => {
 				expect(
-					screen.getByText("No Published Assurance Cases Found")
+					screen.getByText("No Assurance Cases Ready to Link")
 				).toBeInTheDocument();
 			});
-
-			expect(
-				screen.getByText("You need to publish an assurance case first.")
-			).toBeInTheDocument();
-
-			// Check for "See Cases" link
-			const seeLink = screen.getByRole("link", { name: SEE_CASES_REGEX });
-			expect(seeLink).toBeInTheDocument();
-			expect(seeLink).toHaveAttribute("href", "/dashboard");
 		});
 	});
 
 	describe("Case Selection Functionality", () => {
-		beforeEach(() => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-		});
 
 		it("should select a case when checkbox is clicked", async () => {
 			renderWithAuth(
@@ -499,11 +443,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 				description: `Description for case ${i + 1}`,
 			}));
 
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(manyCases)
-				)
-			);
+			mockFetchPublishedCasesForStudy.mockResolvedValue(manyCases);
 
 			renderWithAuth(
 				<RelatedAssuranceCaseList
@@ -524,13 +464,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 		});
 
 		it("should show auto height when 4 or fewer cases", async () => {
-			// Use original 3 cases
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[]}
@@ -552,18 +485,8 @@ describe("RelatedAssuranceCaseList Component", () => {
 		});
 	});
 
-	describe("API Integration", () => {
-		it("should make correct API call", async () => {
-			let requestMade = false;
-			server.use(
-				http.get("/api/published-assurance-cases", ({ request }) => {
-					requestMade = true;
-					// Check authorization header (session key is no longer used)
-					expect(request.headers.get("Authorization")).toBe("Token");
-					return HttpResponse.json(mockAssuranceCases);
-				})
-			);
-
+	describe("Server Action Integration", () => {
+		it("should call fetchPublishedCasesForStudy on mount", async () => {
 			renderWithAuth(
 				<RelatedAssuranceCaseList
 					selectedAssuranceCases={[]}
@@ -572,15 +495,13 @@ describe("RelatedAssuranceCaseList Component", () => {
 			);
 
 			await waitFor(() => {
-				expect(requestMade).toBe(true);
+				expect(mockFetchPublishedCasesForStudy).toHaveBeenCalledTimes(1);
 			});
 		});
 
-		it("should handle API errors gracefully", async () => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json({ error: "Internal server error" }, { status: 500 })
-				)
+		it("should handle server action errors gracefully", async () => {
+			mockFetchPublishedCasesForStudy.mockRejectedValue(
+				new Error("Server error")
 			);
 
 			renderWithAuth(
@@ -590,54 +511,11 @@ describe("RelatedAssuranceCaseList Component", () => {
 				/>
 			);
 
-			// Should still show empty state on error
+			// Should show empty state on error
 			await waitFor(() => {
 				expect(
-					screen.getByText("No Published Assurance Cases Found")
+					screen.getByText("No Assurance Cases Ready to Link")
 				).toBeInTheDocument();
-			});
-		});
-
-		it("should handle network errors gracefully", async () => {
-			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					throw new Error("Network error");
-				})
-			);
-
-			renderWithAuth(
-				<RelatedAssuranceCaseList
-					selectedAssuranceCases={[]}
-					setSelectedAssuranceCases={mockSetSelectedAssuranceCases}
-				/>
-			);
-
-			// Should show empty state on network error
-			await waitFor(() => {
-				expect(
-					screen.getByText("No Published Assurance Cases Found")
-				).toBeInTheDocument();
-			});
-		});
-
-		it("should make request with empty token (session key no longer used)", async () => {
-			let requestCount = 0;
-			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					requestCount++;
-					return HttpResponse.json(mockAssuranceCases);
-				})
-			);
-
-			renderWithAuth(
-				<RelatedAssuranceCaseList
-					selectedAssuranceCases={[]}
-					setSelectedAssuranceCases={mockSetSelectedAssuranceCases}
-				/>
-			);
-
-			await waitFor(() => {
-				expect(requestCount).toBe(1);
 			});
 		});
 	});
@@ -649,12 +527,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 				status: "unauthenticated",
 			});
 
-			server.use(
-				http.get("/api/published-assurance-cases", () => {
-					// Session key is no longer used - requests use empty token
-					return HttpResponse.json([]);
-				})
-			);
+			mockFetchPublishedCasesForStudy.mockResolvedValue([]);
 
 			renderWithAuth(
 				<RelatedAssuranceCaseList
@@ -665,7 +538,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 
 			await waitFor(() => {
 				expect(
-					screen.getByText("No Published Assurance Cases Found")
+					screen.getByText("No Assurance Cases Ready to Link")
 				).toBeInTheDocument();
 			});
 		});
@@ -681,11 +554,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 				description: `Description for case ${i + 1}`,
 			}));
 
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(largeCaseList)
-				)
-			);
+			mockFetchPublishedCasesForStudy.mockResolvedValue(largeCaseList);
 
 			renderWithAuth(
 				<RelatedAssuranceCaseList
@@ -733,11 +602,7 @@ describe("RelatedAssuranceCaseList Component", () => {
 				},
 			];
 
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(edgeCases)
-				)
-			);
+			mockFetchPublishedCasesForStudy.mockResolvedValue(edgeCases);
 
 			renderWithAuth(
 				<RelatedAssuranceCaseList
@@ -767,13 +632,6 @@ describe("RelatedAssuranceCaseList Component", () => {
 	});
 
 	describe("Accessibility", () => {
-		beforeEach(() => {
-			server.use(
-				http.get("/api/published-assurance-cases", () =>
-					HttpResponse.json(mockAssuranceCases)
-				)
-			);
-		});
 
 		it("should have proper accessibility attributes", async () => {
 			renderWithAuth(

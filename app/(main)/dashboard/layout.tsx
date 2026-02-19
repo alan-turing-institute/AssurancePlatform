@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/navigation/navbar";
 import { validateSession } from "@/lib/auth/validate-session";
+import { listUserTeams } from "@/lib/services/team-service";
 
 export default async function DashboardLayout({
 	children,
@@ -12,5 +13,7 @@ export default async function DashboardLayout({
 		redirect("/login");
 	}
 
-	return <Navbar>{children}</Navbar>;
+	const teamsResult = await listUserTeams(session.userId);
+
+	return <Navbar teams={teamsResult.data ?? []}>{children}</Navbar>;
 }

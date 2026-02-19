@@ -24,10 +24,10 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
 	useEffect(() => {
-		fetch("/api/cases/import/gdrive")
-			.then((res) => res.json())
-			.then((data) => {
-				setFiles(data.files ?? []);
+		import("@/actions/integrations")
+			.then(({ fetchGoogleDriveFiles }) => fetchGoogleDriveFiles())
+			.then((result) => {
+				setFiles(result.files ?? []);
 				setLoading(false);
 			})
 			.catch(() => setLoading(false));

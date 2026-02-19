@@ -71,15 +71,13 @@ const ResetPasswordForm = () => {
 			}
 
 			try {
-				const response = await fetch(
-					`/api/auth/reset-password?token=${encodeURIComponent(token)}`
-				);
-				const data = await response.json();
+				const { validatePasswordResetToken } = await import("@/actions/auth");
+				const result = await validatePasswordResetToken(token);
 
-				if (response.ok && data.valid) {
+				if (result.valid) {
 					setTokenState("valid");
-					setEmail(data.email);
-				} else if (data.error?.includes("expired")) {
+					setEmail(result.email ?? null);
+				} else if (result.error?.includes("expired")) {
 					setTokenState("expired");
 				} else {
 					setTokenState("invalid");

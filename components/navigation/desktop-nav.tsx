@@ -4,7 +4,6 @@ import { ExternalLink, PlusCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { externalNavigation, navigation } from "@/config";
 import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
 import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
@@ -21,31 +20,14 @@ function classNames(...classes: (string | boolean | undefined | null)[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
-const DesktopNav = () => {
+type DesktopNavProps = {
+	teams: Team[];
+};
+
+const DesktopNav = ({ teams }: DesktopNavProps) => {
 	const pathname = usePathname();
 	const createTeamModal = useCreateTeamModal();
-	const [teams, setTeams] = useState<Team[]>([]);
 	const sidebarLogo = useSidebarLogo();
-
-	// Page name determined from pathname
-	const _pageName =
-		pathname === "/" ? "assurance cases" : pathname.split("/")[1];
-
-	useEffect(() => {
-		const fetchTeams = async () => {
-			try {
-				const response = await fetch("/api/teams");
-				if (response.ok) {
-					const data = await response.json();
-					setTeams(data);
-				}
-			} catch (error) {
-				console.error("Failed to fetch teams:", error);
-			}
-		};
-
-		fetchTeams();
-	}, []);
 
 	return (
 		<div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">

@@ -205,9 +205,9 @@ export const ImportModal = () => {
 	// Check GitHub connection status when modal opens
 	useEffect(() => {
 		if (importModal.isOpen && githubConnected === null) {
-			fetch("/api/cases/import/github")
-				.then((res) => res.json())
-				.then((data) => setGithubConnected(data.connected ?? false))
+			import("@/actions/integrations")
+				.then(({ checkGitHubAccess }) => checkGitHubAccess())
+				.then((result) => setGithubConnected(result.connected))
 				.catch(() => setGithubConnected(false));
 		}
 	}, [importModal.isOpen, githubConnected]);
@@ -215,9 +215,9 @@ export const ImportModal = () => {
 	// Check Google connection status when modal opens
 	useEffect(() => {
 		if (importModal.isOpen && googleConnected === null) {
-			fetch("/api/cases/import/gdrive")
-				.then((res) => res.json())
-				.then((data) => setGoogleConnected(data.connected ?? false))
+			import("@/actions/integrations")
+				.then(({ checkGoogleDriveAccess }) => checkGoogleDriveAccess())
+				.then((result) => setGoogleConnected(result.connected))
 				.catch(() => setGoogleConnected(false));
 		}
 	}, [importModal.isOpen, googleConnected]);
