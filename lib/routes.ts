@@ -26,6 +26,22 @@ export const PUBLIC_ROUTES = [
 export type PublicRoute = (typeof PUBLIC_ROUTES)[number];
 
 /**
+ * Auth routes where authenticated users should be redirected away.
+ * These are login/register pages that only make sense for unauthenticated users.
+ */
+export const AUTH_ROUTES = ["/login", "/register"] as const;
+
+/**
+ * Checks if a pathname is an auth route (login/register).
+ * Used by middleware to redirect authenticated users to the dashboard.
+ */
+export function isAuthRoute(pathname: string): boolean {
+	return AUTH_ROUTES.some(
+		(route) => pathname === route || pathname.startsWith(`${route}/`)
+	);
+}
+
+/**
  * Checks if a pathname is a public route.
  * Matches exact routes and routes that start with a public route prefix.
  *

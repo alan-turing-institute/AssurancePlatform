@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
-import { isPublicRoute } from "./lib/routes";
+import { isAuthRoute, isPublicRoute } from "./lib/routes";
 
 export default withAuth(
 	function middleware(req) {
 		const pathname = req.nextUrl.pathname;
+		const token = req.nextauth.token;
+
+		// Redirect authenticated users away from auth pages (login/register)
+		if (token?.id != null && isAuthRoute(pathname)) {
+			const redirectTo =
+				req.nextUrl.searchParams.get("redirect") || "/dashboard";
+			return NextResponse.redirect(new URL(redirectTo, req.url));
+		}
 
 		// Check redirect loop protection
 		const redirectCount = Number.parseInt(

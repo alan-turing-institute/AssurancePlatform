@@ -4,8 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -47,8 +46,6 @@ const RegisterForm = () => {
 	const [errors, setErrors] = useState<string[]>([]);
 	const [showPassword1, setShowPassword1] = useState(false);
 	const [showPassword2, setShowPassword2] = useState(false);
-	const { data: session } = useSession();
-
 	const router = useRouter();
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -165,13 +162,6 @@ const RegisterForm = () => {
 			setErrors(["Registration failed. Please try again."]);
 		}
 	}
-
-	useEffect(() => {
-		// Redirect to dashboard if already logged in (check user.id for JWT-only mode compatibility)
-		if (session?.user?.id) {
-			router.push("/dashboard");
-		}
-	}, [session?.user?.id, router]);
 
 	return (
 		<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">

@@ -5,7 +5,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 // import { useLoginToken } from '.*/use-auth';
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -37,9 +37,6 @@ const SignInForm = () => {
 
 	const router = useRouter();
 	const searchParams = useSearchParams();
-
-	// const [token, setToken] = useLoginToken();
-	const { data: session } = useSession();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -137,14 +134,7 @@ const SignInForm = () => {
 				"Password reset successful! Please log in with your new password."
 			);
 		}
-
-		// Only redirect if we have a valid session
-		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
-		if (session?.user?.id) {
-			const redirectTo = searchParams.get("redirect") || "/dashboard";
-			router.push(redirectTo);
-		}
-	}, [session, router, searchParams]);
+	}, [searchParams]);
 
 	return (
 		<div className="mx-auto w-full max-w-sm lg:w-96">
