@@ -295,10 +295,12 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 	const { resolvedTheme } = useTheme();
 	const { toast } = useToast();
 
-	// Server content (original from database)
-	const [serverContent, setServerContent] = useState<string>("");
-	const [serverData, setServerData] = useState<CaseExportNested | null>(null);
-	const [serverVersion, setServerVersion] = useState<string>("");
+	// Server state (original from database)
+	const [server, setServer] = useState<{
+		content: string;
+		data: CaseExportNested | null;
+		version: string;
+	}>({ content: "", data: null, version: "" });
 
 	// Draft content (user's edits)
 	const [draftContent, setDraftContent] = useState<string>("");
@@ -317,14 +319,14 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 
 	// Compute diff when validation passes
 	const diffResult: TreeDiffResult | null = useMemo(() => {
-		if (!(validation.isValid && validation.parsedData && serverData)) {
+		if (!(validation.isValid && validation.parsedData && server.data)) {
 			return null;
 		}
-		return computeTreeDiff(serverData, validation.parsedData);
-	}, [validation.isValid, validation.parsedData, serverData]);
+		return computeTreeDiff(server.data, validation.parsedData);
+	}, [validation.isValid, validation.parsedData, server.data]);
 
 	// Is the content different from server?
-	const isDirty = draftContent !== serverContent;
+	const isDirty = draftContent !== server.content;
 
 	// Create lint extension from validation diagnostics
 	const lintExtension = useMemo(
@@ -354,9 +356,11 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 			}
 
 			const formatted = formatJson(result.data);
-			setServerContent(formatted);
-			setServerData(result.data);
-			setServerVersion(result.data.exportedAt);
+			setServer({
+				content: formatted,
+				data: result.data,
+				version: result.data.exportedAt,
+			});
 			setDraftContent(formatted);
 			setHasConflict(false);
 		} catch (error) {
@@ -407,9 +411,9 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 	}, [draftContent, toast]);
 
 	const handleDiscard = useCallback(() => {
-		setDraftContent(serverContent);
+		setDraftContent(server.content);
 		setHasConflict(false);
-	}, [serverContent]);
+	}, [server.content]);
 
 	const handleRefresh = useCallback(() => {
 		fetchJson();
@@ -429,7 +433,7 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 			const result = await sendBatchUpdate(
 				caseId,
 				diffResult.changes,
-				serverVersion
+				server.version
 			);
 
 			const success = handleBatchResult(result, {
@@ -450,13 +454,13 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 			// Record history for undo/redo (only if not applying undo/redo operation)
 			if (
 				!isUndoRedoApplying &&
-				serverData &&
+				server.data &&
 				validation.parsedData &&
 				result.success
 			) {
 				recordJsonEditorHistory(
 					diffResult.changes,
-					serverData,
+					server.data,
 					validation.parsedData,
 					result.summary,
 					recordOperation
@@ -481,12 +485,12 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 	}, [
 		assuranceCase?.id,
 		diffResult,
-		serverVersion,
+		server.version,
+		server.data,
 		toast,
 		fetchJson,
 		setAssuranceCase,
 		isUndoRedoApplying,
-		serverData,
 		recordOperation,
 		validation.parsedData,
 	]);

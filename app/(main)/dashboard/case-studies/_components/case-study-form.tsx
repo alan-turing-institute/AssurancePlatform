@@ -163,12 +163,10 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	const [selectedAssuranceCases, setSelectedAssuranceCases] = useState<
 		string[]
 	>([]);
-	const [_imageLoading, setImageLoading] = useState<boolean>(true);
 	const [previewImage, setPreviewImage] = useState("");
 	const [featuredImage, setFeaturedImage] = useState("");
 
 	const [alertOpen, setAlertOpen] = useState(false);
-	const [_alertLoading, _setAlertLoading] = useState<boolean>(false);
 	const [formValues, setFormValues] = useState<z.infer<
 		typeof caseStudyFormSchema
 	> | null>(null);
@@ -317,8 +315,6 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 			setFeaturedImage(result.image || "");
 		} catch (_error) {
 			// Silently handle error
-		} finally {
-			setImageLoading(false);
 		}
 	}, [caseStudy?.id]);
 

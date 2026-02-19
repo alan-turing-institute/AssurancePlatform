@@ -14,9 +14,10 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 	const { toast } = useToast();
 
 	const [alertOpen, setAlertOpen] = useState(false);
-	const [alertLoading, _setAlertLoading] = useState<boolean>(false);
+	const [alertLoading, setAlertLoading] = useState<boolean>(false);
 
 	const handleUnpublish = async () => {
+		setAlertLoading(true);
 		try {
 			const formData = new FormData();
 			formData.append("id", caseStudyId.toString());
@@ -46,6 +47,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 				description: "Sorry something went wrong!",
 			});
 		} finally {
+			setAlertLoading(false);
 			setAlertOpen(false);
 		}
 	};

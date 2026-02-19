@@ -26,10 +26,7 @@ const formSchema = z.object({
 });
 
 const SignInForm = () => {
-	const [_usernameError, _setUsernameError] = useState<string>("");
-	const [_passwordError, _setPasswordError] = useState<string>("");
 	const [errors, setErrors] = useState<string[]>([]);
-	const [_dirty, _setDirty] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [loadingProvider, setLoadingProvider] = useState(false);
 	const [successMessage, setSuccessMessage] = useState<string>("");
@@ -45,36 +42,6 @@ const SignInForm = () => {
 			password: "",
 		},
 	});
-
-	// async function onSubmit(values: z.infer<typeof formSchema>) {
-	//   setLoading(true);
-
-	//   const user = {
-	//     username: values.username,
-	//     password: values.password,
-	//   };
-
-	//   const requestOptions: RequestInit = {
-	//     method: "POST",
-	//     headers: {
-	//       "Content-Type": "application/json",
-	//     },
-	//     body: JSON.stringify(user),
-	//   }
-
-	//   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
-	//   const result = await response.json()
-
-	//   if (result.key) {
-	//     setToken(result.key);
-	//     router.push('/dashboard')
-	//     return
-	//   } else {
-	//     setLoading(false);
-	//     setToken(null);
-	//     setErrors(["Cannot log in with provided credentials"]);
-	//   }
-	// }
 
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		setLoading(true);

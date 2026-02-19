@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
@@ -25,18 +25,13 @@ type TeamListProps = {
 export function TeamList({ teams }: TeamListProps) {
 	const createTeamModal = useCreateTeamModal();
 	const [searchTerm, setSearchTerm] = useState("");
-	const [filteredTeams, setFilteredTeams] = useState(teams);
 
-	useEffect(() => {
-		const searchTermLowerCase = searchTerm.toLowerCase();
+	const filteredTeams = useMemo(() => {
 		if (searchTerm.trim() === "") {
-			setFilteredTeams(teams);
-		} else {
-			const filtered = teams.filter((team) =>
-				team.name.toLowerCase().includes(searchTermLowerCase)
-			);
-			setFilteredTeams(filtered);
+			return teams;
 		}
+		const lower = searchTerm.toLowerCase();
+		return teams.filter((team) => team.name.toLowerCase().includes(lower));
 	}, [searchTerm, teams]);
 
 	return (
