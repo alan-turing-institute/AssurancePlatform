@@ -1,4 +1,9 @@
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Cookie Policy | TEA Platform",
+};
 
 const CookiePolicyPage = () => {
 	return (

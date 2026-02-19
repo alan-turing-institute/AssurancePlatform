@@ -114,6 +114,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 									<Image
 										alt={`Assurance Case ${assuranceCase.name} screenshot`}
 										fill
+										sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 										src={imgSrc}
 									/>
 								)}

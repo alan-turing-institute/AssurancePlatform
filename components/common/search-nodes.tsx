@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Node } from "reactflow";
 import {
 	Dialog,
@@ -23,37 +23,29 @@ type SearchNodesProps = {
 const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 	const [value, setValue] = useState("");
 	const [searchOpen, setSearchOpen] = useState(false);
-	const [filteredNodes, setFilteredNodes] = useState(nodes);
+
+	const filteredNodes = useMemo(() => {
+		if (value === "") {
+			return nodes;
+		}
+		return nodes.filter((node) =>
+			node.data.short_description.toLowerCase().includes(value.toLowerCase())
+		);
+	}, [nodes, value]);
 
 	const handleSearch = (searchValue: string) => {
 		setValue(searchValue);
-
-		if (searchValue !== "") {
-			const result = nodes.filter((node) =>
-				node.data.short_description
-					.toLowerCase()
-					.includes(searchValue.toLowerCase())
-			);
-			setFilteredNodes(result);
-		} else {
-			setFilteredNodes(nodes);
-		}
 	};
 
 	const handleSearchClose = () => {
 		setValue("");
 		setSearchOpen(false);
-		setFilteredNodes(nodes);
 	};
 
 	const handleSelection = (nodeId: string) => {
 		focusNode(nodeId);
 		setSearchOpen(false);
 	};
-
-	useEffect(() => {
-		setFilteredNodes(nodes);
-	}, [nodes]);
 
 	return (
 		<>

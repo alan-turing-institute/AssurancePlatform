@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { fetchPublishedCaseStudies } from "@/actions/case-studies";
 import CaseStudies from "../_components/case-studies";
+
+export const metadata: Metadata = {
+	title: "Community Case Studies | TEA Platform",
+};
 
 const DiscoverPage = async () => {
 	const publishedCaseStudies = await fetchPublishedCaseStudies();

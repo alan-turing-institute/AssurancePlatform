@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function CTA() {
 	return (
 		<div className="bg-primary dark:bg-primary-foreground">
@@ -14,12 +16,12 @@ export default function CTA() {
 						get in touch!
 					</p>
 					<div className="mt-10 flex items-center justify-center gap-x-6">
-						<a
+						<Link
 							className="rounded-md bg-primary-foreground px-3.5 py-2.5 font-semibold text-primary text-sm shadow-xs hover:bg-primary-foreground/90 focus-visible:outline-2 focus-visible:outline-primary-foreground focus-visible:outline-solid focus-visible:outline-offset-2 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
 							href="/docs/curriculum/quick-reference/01-platform-basics"
 						>
 							See it in action
-						</a>
+						</Link>
 						{/* <a href="#" className="text-sm font-semibold leading-6 text-white">
               Learn more <span aria-hidden="true">→</span>
             </a> */}

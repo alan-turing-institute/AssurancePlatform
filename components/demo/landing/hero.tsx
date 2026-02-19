@@ -69,12 +69,12 @@ export default function Hero() {
 										>
 											{session?.user?.id ? "Go to Dashboard" : "Get started"}
 										</Link>
-										<a
+										<Link
 											className="font-semibold text-foreground text-sm leading-6"
 											href="/docs/curriculum"
 										>
 											Learn more <span aria-hidden="true">→</span>
-										</a>
+										</Link>
 									</div>
 								</div>
 								{/* sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0 */}

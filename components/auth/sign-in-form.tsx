@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 // import { useLoginToken } from '.*/use-auth';
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -153,12 +154,12 @@ const SignInForm = () => {
 				</h2>
 				<p className="mt-2 text-foreground text-sm leading-6">
 					Not a member?{" "}
-					<a
+					<Link
 						className="font-semibold text-primary hover:text-primary/80"
 						href="/register"
 					>
 						Sign up today!
-					</a>
+					</Link>
 				</p>
 			</div>
 
@@ -236,12 +237,12 @@ const SignInForm = () => {
 							)}
 						/>
 						<div className="flex items-center justify-end">
-							<a
+							<Link
 								className="font-semibold text-primary text-sm hover:text-primary/80"
 								href="/forgot-password"
 							>
 								Forgot password?
-							</a>
+							</Link>
 						</div>
 						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Logging in" : "Login"}

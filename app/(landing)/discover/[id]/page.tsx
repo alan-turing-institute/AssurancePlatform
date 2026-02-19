@@ -1,4 +1,5 @@
 import { MailIcon, MoveLeftIcon, Users2Icon } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
@@ -6,6 +7,18 @@ import { SanitizedHtml } from "@/components/common/sanitized-html";
 import { formatShortDate } from "@/lib/date";
 import { normalizeImageUrl } from "@/lib/utils";
 import CaseStudyCases from "../../_components/case-study-cases";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+	const { id } = await params;
+	const caseStudy = await fetchPublishedCaseStudyById(Number.parseInt(id, 10));
+	return {
+		title: `${caseStudy.title} | TEA Platform`,
+	};
+}
 
 const DiscoverCaseStudyPage = async ({
 	params,

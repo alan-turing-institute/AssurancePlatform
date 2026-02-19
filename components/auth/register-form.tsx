@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -297,12 +298,12 @@ const RegisterForm = () => {
 
 			<p className="mt-10 text-center text-foreground text-sm">
 				Already a member?{" "}
-				<a
+				<Link
 					className="font-semibold text-primary leading-6 hover:text-primary/80"
-					href={"/login"}
+					href="/login"
 				>
 					Login here
-				</a>
+				</Link>
 			</p>
 		</div>
 	);

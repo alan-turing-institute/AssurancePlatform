@@ -35,6 +35,9 @@ function parseCaseData(data: unknown): CaseExportNested {
 	);
 }
 
+const EMPTY_GUIDED_PATH: string[] = [];
+const EMPTY_HIGHLIGHTED_NODES: string[] = [];
+
 type CaseViewerWrapperProps = {
 	caseFile?: string;
 	onNodeClick?: ((node: Node<ReactFlowNodeData>) => void) | null;
@@ -51,8 +54,8 @@ type CaseViewerWrapperProps = {
 const CaseViewerWrapper = ({
 	caseFile = "demo-case.json",
 	onNodeClick = null,
-	guidedPath = [],
-	highlightedNodes = [],
+	guidedPath = EMPTY_GUIDED_PATH,
+	highlightedNodes = EMPTY_HIGHLIGHTED_NODES,
 	editable = false,
 }: CaseViewerWrapperProps) => {
 	const [caseData, setCaseData] = useState<CaseExportNested | null>(null);
