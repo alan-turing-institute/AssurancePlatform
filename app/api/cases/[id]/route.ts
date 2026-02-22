@@ -147,6 +147,8 @@ async function fetchCaseFromPrisma(
 			// Case study integration
 			hasPublicCaseStudy,
 			linkedCaseStudyCount,
+			// Demo/tutorial flag
+			isDemo: caseData.isDemo,
 		},
 	};
 }

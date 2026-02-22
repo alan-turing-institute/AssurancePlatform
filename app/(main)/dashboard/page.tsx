@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { fetchAssuranceCases } from "@/actions/assurance-cases";
+import { ensureUserHasDemoCase } from "@/actions/demo-case";
 import { fetchCurrentUser } from "@/actions/users";
 import CaseList from "@/components/cases/case-list";
 import NoCasesFound from "@/components/cases/no-cases-found";
@@ -20,6 +21,9 @@ const Dashboard = async () => {
 	if (currentUser == null) {
 		redirect("/login");
 	}
+
+	// Ensure demo case exists (idempotent, runs before fetching cases)
+	await ensureUserHasDemoCase("");
 
 	// Fetch cases for current logged in user
 	const assuranceCases = await fetchAssuranceCases("");

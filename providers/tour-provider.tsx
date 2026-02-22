@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import TourCard from "@/components/common/tour-card";
 import { caseCanvasTour } from "@/lib/tours/case-canvas-tour";
 import { dashboardTour } from "@/lib/tours/dashboard-tour";
+import { demoCaseTour } from "@/lib/tours/demo-case-tour";
 
-const tours = [dashboardTour, caseCanvasTour];
+const tours = [dashboardTour, caseCanvasTour, demoCaseTour];
 
 type TourProviderProps = {
 	children: ReactNode;

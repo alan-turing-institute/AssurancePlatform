@@ -41,10 +41,17 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 	// Create nodes for each child array item
 	const goals = assuranceCase.goals;
 
+	// Propagate isDemo flag from case to each goal (and recursively to descendants)
+	const isDemo = !!(assuranceCase as Record<string, unknown>).isDemo;
+
 	// Create nodes recursively for goals and their children
 	caseNodes = createNodesRecursively(
 		goals as unknown as ConvertibleItem[],
-		"goal"
+		"goal",
+		null,
+		undefined,
+		undefined,
+		isDemo
 	);
 
 	// Create edges for every node
@@ -74,7 +81,8 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 const createNode = (
 	item: ConvertibleItem,
 	nodeType: string,
-	parentNode: Node | null
+	parentNode: Node | null,
+	isDemo = false
 ): Node => {
 	const nodeId = `${nodeType}-${item.id}`;
 	const node: Node = {
@@ -89,6 +97,7 @@ const createNode = (
 			elementId: item.id, // Add elementId for test compatibility
 			elementType: nodeType, // Add elementType for identification
 			label: item.name, // Add label for compatibility
+			isDemo,
 		},
 		position: { x: 0, y: 50 },
 		hidden: item.hidden,
@@ -108,7 +117,8 @@ const processChildNodes = (
 	item: ConvertibleItem,
 	node: Node,
 	processedItems: Set<ConvertibleItem>,
-	effectiveDepth: number
+	effectiveDepth: number,
+	isDemo = false
 ): Node[] => {
 	const childNodes: Node[] = [];
 
@@ -123,7 +133,8 @@ const processChildNodes = (
 			"strategy",
 			node,
 			processedItems,
-			effectiveDepth - 1
+			effectiveDepth - 1,
+			isDemo
 		);
 		childNodes.push(...strategyNodes);
 	}
@@ -139,7 +150,8 @@ const processChildNodes = (
 			"property",
 			node,
 			processedItems,
-			effectiveDepth - 1
+			effectiveDepth - 1,
+			isDemo
 		);
 		childNodes.push(...propertyClaimNodes);
 	}
@@ -155,7 +167,8 @@ const processChildNodes = (
 			"evidence",
 			node,
 			processedItems,
-			effectiveDepth - 1
+			effectiveDepth - 1,
+			isDemo
 		);
 		childNodes.push(...evidenceNodes);
 	}
@@ -168,7 +181,8 @@ export const createNodesRecursively = (
 	nodeType: string,
 	parentNode: Node | null = null,
 	processedItems = new Set<ConvertibleItem>(),
-	depth = 10
+	depth = 10,
+	isDemo = false
 ): Node[] => {
 	const nodes: Node[] = [];
 
@@ -192,7 +206,7 @@ export const createNodesRecursively = (
 		}
 
 		// Create node
-		const node = createNode(item, nodeType, parentNode);
+		const node = createNode(item, nodeType, parentNode, isDemo);
 		nodes.push(node);
 
 		// Add the current item to the set of processed items
@@ -203,7 +217,8 @@ export const createNodesRecursively = (
 			item,
 			node,
 			processedItems,
-			effectiveDepth
+			effectiveDepth,
+			isDemo
 		);
 		nodes.push(...childNodes);
 	}

@@ -7,7 +7,7 @@ import {
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 
-const KNOWN_TOUR_IDS = ["dashboard", "case-canvas"] as const;
+const KNOWN_TOUR_IDS = ["dashboard", "case-canvas", "demo-case"] as const;
 
 const tourCompletionSchema = z.object({
 	tourId: z.enum(KNOWN_TOUR_IDS),

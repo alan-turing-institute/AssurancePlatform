@@ -60,6 +60,8 @@ export type BaseNodeProps = {
 	children?: ReactNode;
 	/** Additional class names */
 	className?: string;
+	/** Optional data-tour attribute for onboarding tours */
+	dataTour?: string;
 };
 
 /**
@@ -85,6 +87,7 @@ export default function BaseNode({
 	bottomLeftActions,
 	children,
 	className,
+	dataTour,
 }: BaseNodeProps) {
 	const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 	const { layoutNodes } = useStore();
@@ -127,7 +130,7 @@ export default function BaseNode({
 	});
 
 	return (
-		<div className={containerClasses}>
+		<div className={containerClasses} data-tour={dataTour}>
 			{/* Target Handle (top) */}
 			{config.showTargetHandle && (
 				<Handle id="target" position={Position.Top} type="target" />

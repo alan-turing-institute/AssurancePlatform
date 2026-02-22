@@ -13,6 +13,9 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 	const url = data.URL || data.url;
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
+	const dataTour =
+		data.isDemo && data.name === "E1" ? "demo-evidence-1" : undefined;
+
 	return (
 		<>
 			<BaseNode
@@ -25,6 +28,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 						showToggle={false}
 					/>
 				}
+				dataTour={dataTour}
 				description={data.description}
 				name={data.name}
 				nodeType="evidence"

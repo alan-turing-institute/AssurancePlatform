@@ -40,6 +40,8 @@ function GoalNode({ data, ...props }: NodeProps) {
 		</NodeAddPopover>
 	);
 
+	const dataTour = data.isDemo && data.name === "G1" ? "demo-goal" : undefined;
+
 	return (
 		<>
 			<BaseNode
@@ -54,6 +56,7 @@ function GoalNode({ data, ...props }: NodeProps) {
 					/>
 				}
 				context={data.context}
+				dataTour={dataTour}
 				description={data.description}
 				justification={data.justification}
 				name={data.name}

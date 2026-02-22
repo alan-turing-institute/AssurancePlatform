@@ -40,6 +40,9 @@ function StrategyNode({ data, ...props }: NodeProps) {
 		</NodeAddPopover>
 	);
 
+	const dataTour =
+		data.isDemo && data.name === "S1" ? "demo-strategy-1" : undefined;
+
 	return (
 		<>
 			<BaseNode
@@ -54,6 +57,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 					/>
 				}
 				context={data.context}
+				dataTour={dataTour}
 				description={data.description}
 				justification={data.justification}
 				name={data.name}

@@ -203,6 +203,8 @@ export type AssuranceCase = {
 	hasPublicCaseStudy?: boolean;
 	/** Number of linked case studies */
 	linkedCaseStudyCount?: number;
+	/** True for auto-generated tutorial cases */
+	isDemo?: boolean;
 };
 
 export type User = {

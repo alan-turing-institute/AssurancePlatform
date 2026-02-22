@@ -137,7 +137,7 @@ export const dashboardTour: Tour = {
 			icon: "🚀",
 			title: "You're Ready!",
 			content:
-				"You now know the essentials. Create your first assurance case to get started, or explore the documentation for more details.",
+				"You now know the essentials. Open the 'Tutorial: Safe Chatbot Deployment' case to learn how assurance cases are structured, or create your own to get started.",
 			side: "top",
 			showControls: true,
 			showSkip: false,

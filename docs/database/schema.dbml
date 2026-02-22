@@ -129,6 +129,7 @@ Table assurance_cases {
   createdById String [not null, note: 'User who created the case (for audit trail)']
   mode CaseMode [not null, default: 'STANDARD', note: 'STANDARD (simplified UI) or ADVANCED (full GSN notation)']
   colorProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
+  isDemo Boolean [not null, default: false, note: 'True for auto-generated tutorial cases']
   sourcePatternId String [note: 'If created from a pattern, the source pattern ID']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]

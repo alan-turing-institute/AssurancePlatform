@@ -230,6 +230,9 @@ model AssuranceCase {
   // Visual settings
   colorProfile    String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
 
+  // Demo/tutorial flag
+  isDemo          Boolean               @default(false) @map("is_demo") /// True for auto-generated tutorial cases
+
   // Pattern tracking
   sourcePatternId String?               @map("source_pattern_id") /// If created from a pattern, the source pattern ID
 

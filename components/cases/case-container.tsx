@@ -256,7 +256,10 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				if (assuranceCase) {
 					return (
 						<ReactFlowProvider>
-							<CheckTourClient enabled={!loading} tourId="case-canvas" />
+							<CheckTourClient
+								enabled={!loading}
+								tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
+							/>
 							<Header setOpen={setOpen} />
 							<ErrorBoundary
 								fallback={

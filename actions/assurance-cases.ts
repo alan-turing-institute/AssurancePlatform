@@ -15,6 +15,7 @@ type AssuranceCase = {
 	created_date?: string;
 	updated_date?: string;
 	owner?: number | string;
+	isDemo?: boolean;
 };
 
 export const fetchAssuranceCases = async (
@@ -49,6 +50,7 @@ export const fetchAssuranceCases = async (
 			createdAt: true,
 			updatedAt: true,
 			createdById: true,
+			isDemo: true,
 		},
 		orderBy: {
 			createdAt: "desc",
@@ -62,6 +64,7 @@ export const fetchAssuranceCases = async (
 		created_date: c.createdAt.toISOString(),
 		updated_date: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
+		isDemo: c.isDemo,
 	}));
 };
 

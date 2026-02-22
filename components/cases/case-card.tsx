@@ -1,6 +1,12 @@
 "use client";
 
-import { Eye, MessageCircleMore, PencilRuler, Trash2 } from "lucide-react";
+import {
+	BookOpen,
+	Eye,
+	MessageCircleMore,
+	PencilRuler,
+	Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +20,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { formatShortDate } from "@/lib/date";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 
 // Flexible type for case data - compatible with both actions and domain types
@@ -24,6 +31,7 @@ export type CaseCardData = {
 	created_date?: string;
 	updated_date?: string;
 	permissions?: string | string[];
+	isDemo?: boolean;
 };
 
 type CaseCardProps = {
@@ -32,7 +40,7 @@ type CaseCardProps = {
 };
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
-	const { id, name, description, created_date } = assuranceCase;
+	const { id, name, description, created_date, isDemo } = assuranceCase;
 	const router = useRouter();
 
 	const [open, setOpen] = useState(false);
@@ -104,7 +112,12 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	return (
 		<div className="group relative min-h-[420px]">
 			<Link href={`/case/${assuranceCase.id}`}>
-				<Card className="flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5">
+				<Card
+					className={cn(
+						"flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5",
+						isDemo && "ring-2 ring-primary/20"
+					)}
+				>
 					<CardHeader className="w-full flex-1">
 						{imageLoading ? (
 							<Skeleton className="relative mb-4 flex aspect-video overflow-hidden rounded-md" />
@@ -117,6 +130,12 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 										sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 										src={imgSrc}
 									/>
+								)}
+								{isDemo && (
+									<div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground text-xs">
+										<BookOpen aria-hidden="true" className="h-3 w-3" />
+										Tutorial
+									</div>
 								)}
 							</div>
 						)}

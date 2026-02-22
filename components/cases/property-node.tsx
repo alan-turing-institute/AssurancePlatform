@@ -40,6 +40,9 @@ function PropertyNode({ data, ...props }: NodeProps) {
 		</NodeAddPopover>
 	);
 
+	const dataTour =
+		data.isDemo && data.name === "C1" ? "demo-claim-1" : undefined;
+
 	return (
 		<>
 			<BaseNode
@@ -54,6 +57,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 					/>
 				}
 				context={data.context}
+				dataTour={dataTour}
 				description={data.description}
 				justification={data.justification}
 				name={data.name}

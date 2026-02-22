@@ -149,6 +149,7 @@ export type AssuranceCase = {
 	published: boolean;
 	published_date: string | null;
 	publishedAt: string | null;
+	isDemo?: boolean;
 };
 
 export type User = {
