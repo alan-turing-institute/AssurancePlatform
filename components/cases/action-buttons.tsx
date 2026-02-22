@@ -123,6 +123,7 @@ const ActionButtons = ({
 				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-white shadow-lg dark:bg-primary/20"
 				data-show-create-goal={showCreateGoal}
 				data-testid="action-buttons"
+				data-tour="toolbar"
 			>
 				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2 dark:border-r-primary/30">
 					{showCreateGoal &&
@@ -147,6 +148,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Focus">
 						<Button
 							className="rounded-full p-3 disabled:opacity-50"
+							data-tour="toolbar-focus"
 							disabled={isLayouting}
 							id="FocusBtn"
 							onClick={handleFocus}
@@ -179,6 +181,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Resources">
 						<Button
 							className="rounded-full p-3"
+							data-tour="toolbar-resources"
 							onClick={() => resourcesModal.onOpen()}
 							size="icon"
 							type="button"
@@ -193,6 +196,7 @@ const ActionButtons = ({
 						<ActionTooltip label="Share">
 							<Button
 								className="rounded-full p-3"
+								data-tour="toolbar-share"
 								onClick={() =>
 									caseSharingModal.onOpen(assuranceCase?.id?.toString() ?? "")
 								}
@@ -208,6 +212,7 @@ const ActionButtons = ({
 						<ActionTooltip label="Export">
 							<Button
 								className="rounded-full p-3"
+								data-tour="toolbar-export"
 								onClick={() => exportModal.onOpen()}
 								size="icon"
 								type="button"
@@ -220,6 +225,7 @@ const ActionButtons = ({
 					<ActionTooltip label="JSON View">
 						<Button
 							className="rounded-full p-3"
+							data-tour="toolbar-json"
 							onClick={() => setJsonViewOpen(true)}
 							size="icon"
 							type="button"
@@ -231,6 +237,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Notes">
 						<Button
 							className="rounded-full p-3"
+							data-tour="toolbar-notes"
 							onClick={() => setNotesOpen(true)}
 							size="icon"
 							type="button"
@@ -239,7 +246,9 @@ const ActionButtons = ({
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
-					<CaseSettingsPopover />
+					<span data-tour="toolbar-settings">
+						<CaseSettingsPopover />
+					</span>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
 							<Button

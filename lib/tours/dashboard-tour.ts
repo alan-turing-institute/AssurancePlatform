@@ -1,0 +1,148 @@
+import type { Tour } from "nextstepjs";
+
+export const dashboardTour: Tour = {
+	tour: "dashboard",
+	steps: [
+		{
+			icon: "👋",
+			title: "Welcome to the TEA Platform",
+			content:
+				"The Trustworthy and Ethical Assurance Platform helps you create, manage, and share structured assurance cases. Let us show you around.",
+			side: "top",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 0,
+			pointerRadius: 0,
+		},
+		{
+			icon: "🔍",
+			title: "Search Your Cases",
+			content: "Quickly find cases by filtering by name.",
+			selector: "[data-tour='case-filter']",
+			side: "bottom",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "📊",
+			title: "Sort Your Cases",
+			content:
+				"Organise your cases by date created, name, or last modified to find what you need.",
+			selector: "[data-tour='case-sort']",
+			side: "left",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "📂",
+			title: "Import an Existing Case",
+			content:
+				"Already have an assurance case? Upload a JSON file to import it into the platform.",
+			selector: "[data-tour='import-case']",
+			side: "left",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "➕",
+			title: "Create a New Case",
+			content:
+				"Start building an assurance case from scratch. You'll be guided through setting up your first goal and structuring your argument.",
+			selector: "[data-tour='create-case']",
+			side: "top",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "🤝",
+			title: "Shared With Me",
+			content:
+				"View assurance cases that others have shared with you for collaboration or review.",
+			selector: "[data-tour='sidebar-shared']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "📚",
+			title: "Case Studies",
+			content:
+				"Browse published case studies for guidance and inspiration on building your own assurance cases.",
+			selector: "[data-tour='sidebar-case-studies']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "👥",
+			title: "Teams",
+			content:
+				"Create or join teams to collaborate on assurance cases with colleagues.",
+			selector: "[data-tour='sidebar-teams']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "🌐",
+			title: "Discover Public Projects",
+			content:
+				"Explore assurance cases shared by the community to learn from real-world examples.",
+			selector: "[data-tour='sidebar-discover']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "🗑️",
+			title: "Trash",
+			content:
+				"Deleted cases are kept here for 30 days. You can restore them or permanently remove them.",
+			selector: "[data-tour='sidebar-trash']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "📖",
+			title: "Documentation",
+			content:
+				"Access guides, tutorials, and reference material to help you get the most out of the platform.",
+			selector: "[data-tour='sidebar-docs']",
+			side: "right",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
+			icon: "🚀",
+			title: "You're Ready!",
+			content:
+				"You now know the essentials. Create your first assurance case to get started, or explore the documentation for more details.",
+			side: "top",
+			showControls: true,
+			showSkip: false,
+			pointerPadding: 0,
+			pointerRadius: 0,
+		},
+	],
+};

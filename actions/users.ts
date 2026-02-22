@@ -11,6 +11,7 @@ type CurrentUser = {
 	avatar?: string | null;
 	groups?: Array<{ id: number | string; name: string }>;
 	hasSeenMigrationNotice?: boolean;
+	completedTours?: string[];
 };
 
 export const fetchCurrentUser = async (
@@ -33,6 +34,7 @@ export const fetchCurrentUser = async (
 			lastName: true,
 			avatarUrl: true,
 			hasSeenMigrationNotice: true,
+			completedTours: true,
 			teamMemberships: {
 				select: {
 					team: {
@@ -62,5 +64,6 @@ export const fetchCurrentUser = async (
 			name: m.team.name,
 		})),
 		hasSeenMigrationNotice: user.hasSeenMigrationNotice,
+		completedTours: user.completedTours,
 	};
 };

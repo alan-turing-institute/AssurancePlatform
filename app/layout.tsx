@@ -9,6 +9,7 @@ import { ModalProvider } from "@/providers/modal-provider";
 import SessionProvider from "@/providers/session-provider";
 import { ThemePresetProvider } from "@/providers/theme-preset-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { TourProvider } from "@/providers/tour-provider";
 
 const fontSans = FontSans({
 	subsets: ["latin"],
@@ -44,7 +45,7 @@ export default async function RootLayout({
 						enableSystem
 					>
 						<ThemePresetProvider>
-							{children}
+							<TourProvider>{children}</TourProvider>
 							<ModalProvider />
 							<Toaster />
 						</ThemePresetProvider>

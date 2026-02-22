@@ -155,7 +155,7 @@ function Flow() {
 					<Loader2 className="h-8 w-8 animate-spin" />
 				</div>
 			) : (
-				<div id="ChartFlow" ref={reactFlowWrapper}>
+				<div data-tour="canvas" id="ChartFlow" ref={reactFlowWrapper}>
 					<ReactFlow
 						className="min-h-screen"
 						edges={edges}

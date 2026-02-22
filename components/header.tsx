@@ -184,6 +184,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					<Button
 						aria-label="Back to dashboard"
 						className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+						data-tour="case-back"
 						onClick={() => router.push("/dashboard")}
 						size={"icon"}
 						title="Back to dashboard"
@@ -193,6 +194,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					</Button>
 					<button
 						className="border-none bg-transparent p-0 font-semibold text-sidebar-foreground hover:cursor-pointer"
+						data-tour="case-header"
 						onClick={() => setOpen(true)}
 						type="button"
 					>
@@ -204,14 +206,16 @@ const Header = ({ setOpen }: HeaderProps) => {
 					<ActiveUsersList />
 					<SearchNodes focusNode={focusNode} nodes={nodes} />
 					<LogoutButton />
-					<StatusButton
-						disabled={!canEditCase}
-						hasChanges={hasChanges}
-						loading={statusLoading}
-						onClick={handleStatusButtonClick}
-						publishedAt={publishedAt}
-						status={currentStatus}
-					/>
+					<span data-tour="case-status">
+						<StatusButton
+							disabled={!canEditCase}
+							hasChanges={hasChanges}
+							loading={statusLoading}
+							onClick={handleStatusButtonClick}
+							publishedAt={publishedAt}
+							status={currentStatus}
+						/>
+					</span>
 				</div>
 			</div>
 		</div>

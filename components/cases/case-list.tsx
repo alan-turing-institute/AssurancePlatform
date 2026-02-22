@@ -111,7 +111,11 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 	return (
 		<div className="flex min-h-screen flex-col items-start justify-start px-4 pb-16 sm:px-6 lg:px-8">
 			<div className="flex w-full items-start justify-between gap-6 py-6">
-				<div className="w-2/3 md:w-1/3" data-testid="search-container">
+				<div
+					className="w-2/3 md:w-1/3"
+					data-testid="search-container"
+					data-tour="case-filter"
+				>
 					<Input
 						className="w-full"
 						onChange={(e) => setSearchTerm(e.target.value)}
@@ -126,6 +130,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 							aria-label="Sort cases"
 							className="w-[160px]"
 							data-testid="sort-select"
+							data-tour="case-sort"
 						>
 							<SelectValue placeholder="Sort by" />
 						</SelectTrigger>
@@ -139,7 +144,11 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 							)}
 						</SelectContent>
 					</Select>
-					<Button onClick={() => importModal.onOpen()} size="sm">
+					<Button
+						data-tour="import-case"
+						onClick={() => importModal.onOpen()}
+						size="sm"
+					>
 						<ArrowUpTrayIcon
 							aria-hidden="true"
 							className="-ml-0.5 h-5 w-5 md:mr-1.5"
@@ -155,6 +164,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 				{showCreate && (
 					<Button
 						className="group h-auto min-h-[420px] p-0"
+						data-tour="create-case"
 						onClick={() => createCaseModal.onOpen()}
 						variant="ghost"
 					>

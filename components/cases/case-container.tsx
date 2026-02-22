@@ -12,6 +12,7 @@ import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import { addHiddenProp } from "@/lib/case";
 import type { AssuranceCase } from "@/types";
+import CheckTourClient from "../common/check-tour-client";
 import Header from "../header";
 import { ErrorBoundary } from "../ui/error-boundary";
 import CaseDetails from "./case-details";
@@ -255,6 +256,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				if (assuranceCase) {
 					return (
 						<ReactFlowProvider>
+							<CheckTourClient enabled={!loading} tourId="case-canvas" />
 							<Header setOpen={setOpen} />
 							<ErrorBoundary
 								fallback={

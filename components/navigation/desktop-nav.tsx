@@ -59,6 +59,7 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 													: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
 												"group flex items-center gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
 											)}
+											data-tour={item.tourId}
 											href={item.href}
 											target={item.externalLink ? "_blank" : "_self"}
 										>
@@ -128,6 +129,7 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 									<li key={item.name}>
 										<a
 											className="group flex items-center gap-x-3 rounded-md p-2 font-semibold text-sidebar-foreground text-sm leading-6 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+											data-tour={item.tourId}
 											href={item.href}
 											rel="noopener"
 											target="_blank"

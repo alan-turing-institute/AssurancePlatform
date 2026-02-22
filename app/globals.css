@@ -603,3 +603,24 @@
 		background-color: transparent;
 	}
 }
+
+/* ========================================================================
+   NextStepjs Tour Overlay Fix
+   NextStepjs uses position:absolute + overflow:hidden on its overlay,
+   which breaks highlighting for elements inside position:fixed containers
+   (header, toolbar). Override to position:fixed so the overlay coordinates
+   match getBoundingClientRect() viewport-relative values.
+   The overlay must cover the full viewport with overflow:hidden preserved
+   so the SVG spotlight mask clips correctly.
+   ======================================================================== */
+[data-name="nextstep-overlay"] {
+	position: fixed !important;
+	width: 100vw !important;
+	height: 100vh !important;
+}
+
+[data-name="nextstep-prevent-click-overlay"] {
+	position: fixed !important;
+	width: 100vw !important;
+	height: 100vh !important;
+}

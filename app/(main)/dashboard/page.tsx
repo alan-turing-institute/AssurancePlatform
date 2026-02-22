@@ -5,6 +5,7 @@ import CaseList from "@/components/cases/case-list";
 import NoCasesFound from "@/components/cases/no-cases-found";
 import CheckMigrationNotice from "@/components/check-migration-notice";
 import CheckUserEmail from "@/components/check-user-email";
+import CheckTour from "@/components/common/check-tour";
 import { validateSession } from "@/lib/auth/validate-session";
 
 const Dashboard = async () => {
@@ -30,6 +31,10 @@ const Dashboard = async () => {
 		<>
 			<CheckMigrationNotice user={currentUser} />
 			<CheckUserEmail user={currentUser} />
+			<CheckTour
+				completedTours={currentUser.completedTours ?? []}
+				tourId="dashboard"
+			/>
 			{assuranceCases.length === 0 ? (
 				<NoCasesFound
 					message={"Get started by creating your own assurance case."}

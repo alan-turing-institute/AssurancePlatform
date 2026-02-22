@@ -24,6 +24,7 @@ export const navigation = [
 		icon: FolderIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-my-cases",
 	},
 	{
 		name: "Shared With Me",
@@ -31,6 +32,7 @@ export const navigation = [
 		icon: UsersIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-shared",
 	},
 	{
 		name: "Case Studies",
@@ -38,6 +40,7 @@ export const navigation = [
 		icon: Blocks,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-case-studies",
 	},
 	{
 		name: "Teams",
@@ -45,6 +48,7 @@ export const navigation = [
 		icon: UserGroupIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-teams",
 	},
 	{
 		name: "Trash",
@@ -52,6 +56,7 @@ export const navigation = [
 		icon: TrashIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-trash",
 	},
 	{
 		name: "Discover Public Projects",
@@ -59,6 +64,7 @@ export const navigation = [
 		icon: GlobeAltIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-discover",
 	},
 	// { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
 ];
@@ -70,6 +76,7 @@ export const externalNavigation = [
 		icon: GitHubLogoIcon,
 		current: false,
 		externalLink: true,
+		tourId: "sidebar-github",
 	},
 	{
 		name: "Documentation",
@@ -77,6 +84,7 @@ export const externalNavigation = [
 		icon: DocumentDuplicateIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-docs",
 	},
 ];
 

@@ -31,6 +31,7 @@ Table users {
   passwordResetExpires DateTime
   defaultCaseMode CaseMode [not null, default: 'STANDARD', note: 'Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)']
   hasSeenMigrationNotice Boolean [not null, default: false, note: 'Whether user has dismissed the Django-to-Next.js migration notice']
+  completedTours String[] [not null, note: 'IDs of onboarding tours the user has completed']
   isSystemUser Boolean [not null, default: false, note: 'True for system/bot accounts (e.g., automated imports)']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]

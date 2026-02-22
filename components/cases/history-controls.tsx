@@ -13,7 +13,7 @@ export function HistoryControls() {
 	const { undo, redo, canUndo, canRedo, isApplying } = useHistory();
 
 	return (
-		<>
+		<div className="flex items-center gap-2" data-tour="toolbar-undo-redo">
 			<ActionTooltip label="Undo (Cmd+Z)">
 				<Button
 					className="rounded-full p-3"
@@ -38,6 +38,6 @@ export function HistoryControls() {
 					<span className="sr-only">Redo</span>
 				</Button>
 			</ActionTooltip>
-		</>
+		</div>
 	);
 }
