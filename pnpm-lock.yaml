@@ -13,6 +13,11 @@ overrides:
   '@babel/runtime': '>=7.26.10'
   js-yaml: '>=4.1.1'
 
+patchedDependencies:
+  nextstepjs:
+    hash: 9e764e823443ef1ca282fa3590cceec0f3ab65937051609a08b9638c72146cd7
+    path: patches/nextstepjs.patch
+
 importers:
 
   .:
@@ -223,7 +228,7 @@ importers:
         version: 4.6.1(@types/react@18.3.23)(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(nextra@4.6.1(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.8.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
       nextstepjs:
         specifier: ^2.2.0
-        version: 2.2.0(motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 2.2.0(patch_hash=9e764e823443ef1ca282fa3590cceec0f3ab65937051609a08b9638c72146cd7)(motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -15319,7 +15324,7 @@ snapshots:
       - supports-color
       - typescript
 
-  nextstepjs@2.2.0(motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  nextstepjs@2.2.0(patch_hash=9e764e823443ef1ca282fa3590cceec0f3ab65937051609a08b9638c72146cd7)(motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(next@15.5.7(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       motion: 12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1

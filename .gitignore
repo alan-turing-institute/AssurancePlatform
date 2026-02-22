@@ -244,3 +244,4 @@ docker-compose.prod-test.yml
 
 # Database backups
 backups/
+.patches/

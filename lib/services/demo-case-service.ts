@@ -2,7 +2,7 @@
  * Demo case creation service
  *
  * Creates a pre-built "Tutorial: Safe Chatbot Deployment" case for new users
- * to demonstrate GSN methodology. Idempotent — only creates if no demo case
+ * to demonstrate TEA methodology. Idempotent — only creates if no demo case
  * exists and user hasn't dismissed it.
  */
 
@@ -60,7 +60,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 			data: {
 				name: "Tutorial: Safe Chatbot Deployment",
 				description:
-					"A walkthrough of Goal Structuring Notation (GSN) methodology using a customer support chatbot safety case. This demo case shows how goals decompose into strategies, claims, and evidence.",
+					"A walkthrough of Trustworthy and Ethical Assurance (TEA) methodology using a customer support chatbot safety case. This demo case shows how goals decompose into strategies, claims, and evidence.",
 				createdById: userId,
 				mode: "STANDARD",
 				isDemo: true,

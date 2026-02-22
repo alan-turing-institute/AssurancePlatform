@@ -7,12 +7,13 @@ export const demoCaseTour: Tour = {
 			icon: "👋",
 			title: "Welcome to Your Tutorial Case",
 			content:
-				"This is a pre-built assurance case that demonstrates how Goal Structuring Notation (GSN) works. We'll walk through each element type so you understand the methodology.",
-			side: "top",
+				"This is a pre-built assurance case that demonstrates how Trustworthy and Ethical Assurance (TEA) works. We'll walk through each element type so you understand the methodology.",
+			selector: "[data-tour='case-header']",
+			side: "bottom",
 			showControls: true,
 			showSkip: true,
-			pointerPadding: 0,
-			pointerRadius: 0,
+			pointerPadding: 10,
+			pointerRadius: 8,
 		},
 		{
 			icon: "🎯",
@@ -20,7 +21,7 @@ export const demoCaseTour: Tour = {
 			content:
 				"Every assurance case starts with a top-level Goal — the overall claim you want to demonstrate. This one argues that a chatbot is safe and trustworthy for deployment.",
 			selector: "[data-tour='demo-goal']",
-			side: "right",
+			side: "bottom",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -32,7 +33,7 @@ export const demoCaseTour: Tour = {
 			content:
 				"A Strategy explains how you break a goal into smaller, arguable parts. This strategy decomposes safety into response quality and content safety.",
 			selector: "[data-tour='demo-strategy-1']",
-			side: "right",
+			side: "bottom",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -44,7 +45,7 @@ export const demoCaseTour: Tour = {
 			content:
 				"Claims are specific, testable assertions that support a strategy. Each claim should be precise enough to verify with evidence.",
 			selector: "[data-tour='demo-claim-1']",
-			side: "right",
+			side: "top",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -56,7 +57,7 @@ export const demoCaseTour: Tour = {
 			content:
 				"Evidence is the proof that backs up a claim — test reports, assessments, audits, or policy documents. Each piece of evidence links to one or more claims.",
 			selector: "[data-tour='demo-evidence-1']",
-			side: "right",
+			side: "top",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -66,9 +67,9 @@ export const demoCaseTour: Tour = {
 			icon: "🌳",
 			title: "The Tree Structure",
 			content:
-				"Together, these elements form a tree: Goals at the top decompose through Strategies into Claims, which are supported by Evidence at the leaves. This is the core of GSN.",
-			selector: "[data-tour='canvas']",
-			side: "top",
+				"Together, these elements form a tree: Goals at the top decompose through Strategies into Claims, which are supported by Evidence at the leaves. This is the core of TEA.",
+			selector: "[data-tour='demo-goal']",
+			side: "bottom",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -80,7 +81,7 @@ export const demoCaseTour: Tour = {
 			content:
 				"Click the + button on any node to add child elements. Goals can have Strategies and Claims, Strategies can have Claims, and Claims can have Evidence.",
 			selector: "[data-tour='demo-goal']",
-			side: "right",
+			side: "bottom",
 			showControls: true,
 			showSkip: true,
 			pointerPadding: 10,
@@ -102,12 +103,13 @@ export const demoCaseTour: Tour = {
 			icon: "🚀",
 			title: "Start Building!",
 			content:
-				"You've learned the fundamentals of GSN. Go back to the dashboard to create your own assurance case, or continue exploring this tutorial case.",
-			side: "top",
+				"You've learned the fundamentals of TEA. Go back to the dashboard to create your own assurance case, or continue exploring this tutorial case.",
+			selector: "[data-tour='case-header']",
+			side: "bottom",
 			showControls: true,
 			showSkip: false,
-			pointerPadding: 0,
-			pointerRadius: 0,
+			pointerPadding: 10,
+			pointerRadius: 8,
 		},
 	],
 };
