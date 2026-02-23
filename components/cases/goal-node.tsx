@@ -40,7 +40,8 @@ function GoalNode({ data, ...props }: NodeProps) {
 		</NodeAddPopover>
 	);
 
-	const dataTour = data.isDemo && data.name === "G1" ? "demo-goal" : undefined;
+	const isDemoGoal = data.isDemo && data.name === "G1";
+	const dataTour = isDemoGoal ? "demo-goal" : undefined;
 
 	return (
 		<>
@@ -57,7 +58,9 @@ function GoalNode({ data, ...props }: NodeProps) {
 				}
 				context={data.context}
 				dataTour={dataTour}
+				defaultExpanded={isDemoGoal}
 				description={data.description}
+				expandTour={isDemoGoal ? "demo-expand" : undefined}
 				justification={data.justification}
 				name={data.name}
 				nodeType="goal"

@@ -62,6 +62,8 @@ export type BaseNodeProps = {
 	className?: string;
 	/** Optional data-tour attribute for onboarding tours */
 	dataTour?: string;
+	/** Optional data-tour attribute for the expand/collapse chevron button */
+	expandTour?: string;
 };
 
 /**
@@ -88,6 +90,7 @@ export default function BaseNode({
 	children,
 	className,
 	dataTour,
+	expandTour,
 }: BaseNodeProps) {
 	const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 	const { layoutNodes } = useStore();
@@ -223,6 +226,7 @@ export default function BaseNode({
 					<m.button
 						aria-label={isExpanded ? "Collapse node" : "Expand node"}
 						className="cursor-pointer rounded p-0.5 transition-colors hover:bg-foreground/5"
+						data-tour={expandTour}
 						onClick={handleExpandToggle}
 						onMouseDown={(e) => e.stopPropagation()}
 						type="button"

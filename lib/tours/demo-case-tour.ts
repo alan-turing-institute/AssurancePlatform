@@ -28,10 +28,22 @@ export const demoCaseTour: Tour = {
 			pointerRadius: 8,
 		},
 		{
+			icon: "🔍",
+			title: "Node Details",
+			content:
+				"Click the chevron on any node to reveal more details. Goals have context statements that scope the claim. Strategies have justifications that explain the reasoning behind a decomposition.",
+			selector: "[data-tour='demo-expand']",
+			side: "top",
+			showControls: true,
+			showSkip: true,
+			pointerPadding: 10,
+			pointerRadius: 8,
+		},
+		{
 			icon: "🔀",
 			title: "Strategies",
 			content:
-				"A Strategy explains how you break a goal into smaller, arguable parts. This strategy decomposes safety into response quality and content safety.",
+				"A Strategy explains how you break a goal into smaller, arguable parts. This strategy decomposes the goal by considering response quality attributes separately.",
 			selector: "[data-tour='demo-strategy-1']",
 			side: "bottom",
 			showControls: true,
@@ -79,7 +91,7 @@ export const demoCaseTour: Tour = {
 			icon: "➕",
 			title: "Adding New Elements",
 			content:
-				"Click the + button on any node to add child elements. Goals can have Strategies and Claims, Strategies can have Claims, and Claims can have Evidence.",
+				"Click the + button on any node to add child elements. Goals can have Strategies, Strategies can have Property Claims, and Property Claims can have Evidence.",
 			selector: "[data-tour='demo-goal']",
 			side: "bottom",
 			showControls: true,
@@ -91,7 +103,7 @@ export const demoCaseTour: Tour = {
 			icon: "🛠️",
 			title: "Editing & Tools",
 			content:
-				"Double-click any node to edit its content. Use the toolbar for undo/redo, auto-layout, sharing, and exporting your case.",
+				"Click on the pencil icon to edit a node's content. Use the toolbar for undo/redo, auto-layout, sharing, and exporting your case.",
 			selector: "[data-tour='toolbar']",
 			side: "top",
 			showControls: true,

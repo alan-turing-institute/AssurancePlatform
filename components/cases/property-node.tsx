@@ -41,7 +41,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 	);
 
 	const dataTour =
-		data.isDemo && data.name === "C1" ? "demo-claim-1" : undefined;
+		data.isDemo && data.name === "P1" ? "demo-claim-1" : undefined;
 
 	return (
 		<>

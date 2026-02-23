@@ -76,7 +76,11 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				name: "G1",
 				description:
 					"The customer support chatbot is safe and trustworthy for deployment",
-				context: ["Customer support domain", "Cloud-hosted deployment"],
+				context: [
+					"Customer support domain",
+					"Cloud-hosted deployment",
+					"Public-facing users with no technical training",
+				],
 				createdById: userId,
 			},
 		});
@@ -89,9 +93,9 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				role: "SUPPORTING",
 				parentId: g1.id,
 				name: "S1",
-				description: "Argue over response quality and safety",
+				description: "Argument by considering response quality attributes",
 				justification:
-					"Decomposing safety into content quality and accuracy ensures both harmful outputs and factual errors are addressed separately.",
+					"Separating content safety from factual accuracy ensures harmful outputs and groundedness failures are each addressed with appropriate evidence.",
 				createdById: userId,
 			},
 		});
@@ -104,67 +108,68 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				role: "SUPPORTING",
 				parentId: g1.id,
 				name: "S2",
-				description: "Argue over data privacy and security",
+				description: "Argument by considering data handling practices",
 				justification:
 					"Privacy and security are distinct from functional safety — they require separate evidence from compliance and governance processes.",
 				createdById: userId,
 			},
 		});
 
-		// C1: Claim under S1
+		// P1: Claim under S1
 		const c1 = await tx.assuranceElement.create({
 			data: {
 				caseId: demoCase.id,
 				elementType: "PROPERTY_CLAIM",
 				role: "SUPPORTING",
 				parentId: s1.id,
-				name: "C1",
+				name: "P1",
 				description:
-					"The chatbot does not generate harmful or misleading content",
+					"Generated responses do not contain harmful, abusive, or misleading content",
 				level: 1,
 				createdById: userId,
 			},
 		});
 
-		// C2: Claim under S1
+		// P2: Claim under S1
 		const c2 = await tx.assuranceElement.create({
 			data: {
 				caseId: demoCase.id,
 				elementType: "PROPERTY_CLAIM",
 				role: "SUPPORTING",
 				parentId: s1.id,
-				name: "C2",
+				name: "P2",
 				description:
-					"Responses are accurate and grounded in approved knowledge",
+					"Responses are factually accurate and grounded in the approved knowledge base",
 				level: 1,
 				createdById: userId,
 			},
 		});
 
-		// C3: Claim under S2
+		// P3: Claim under S2
 		const c3 = await tx.assuranceElement.create({
 			data: {
 				caseId: demoCase.id,
 				elementType: "PROPERTY_CLAIM",
 				role: "SUPPORTING",
 				parentId: s2.id,
-				name: "C3",
+				name: "P3",
 				description:
-					"User data is handled in compliance with privacy regulations",
+					"Personal data is processed in compliance with GDPR requirements",
 				level: 1,
 				createdById: userId,
 			},
 		});
 
-		// C4: Claim under S2
+		// P4: Claim under S2
 		const c4 = await tx.assuranceElement.create({
 			data: {
 				caseId: demoCase.id,
 				elementType: "PROPERTY_CLAIM",
 				role: "SUPPORTING",
 				parentId: s2.id,
-				name: "C4",
-				description: "Conversations are not used for unauthorised purposes",
+				name: "P4",
+				description:
+					"Conversation logs are retained only for the stated purpose and duration",
 				level: 1,
 				createdById: userId,
 			},
@@ -177,7 +182,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				elementType: "EVIDENCE",
 				role: "SUPPORTING",
 				name: "E1",
-				description: "Content safety evaluation report",
+				description: "Content safety evaluation report (red-teaming exercise)",
 				url: "https://example.com/reports/content-safety-evaluation",
 				createdById: userId,
 			},
@@ -190,7 +195,8 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				elementType: "EVIDENCE",
 				role: "SUPPORTING",
 				name: "E2",
-				description: "Accuracy benchmark test results",
+				description:
+					"Retrieval accuracy benchmark results (internal test suite)",
 				url: "https://example.com/reports/accuracy-benchmarks",
 				createdById: userId,
 			},
@@ -203,7 +209,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				elementType: "EVIDENCE",
 				role: "SUPPORTING",
 				name: "E3",
-				description: "Data protection impact assessment",
+				description: "Data protection impact assessment (DPIA)",
 				url: "https://example.com/reports/dpia",
 				createdById: userId,
 			},
@@ -216,7 +222,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 				elementType: "EVIDENCE",
 				role: "SUPPORTING",
 				name: "E4",
-				description: "Data governance policy document",
+				description: "Data retention and access control policy",
 				url: "https://example.com/reports/data-governance-policy",
 				createdById: userId,
 			},
