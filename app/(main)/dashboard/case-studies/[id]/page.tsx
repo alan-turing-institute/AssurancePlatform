@@ -120,8 +120,8 @@ export default CaseStudyDetails;
 
 function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
 	return (
-		<div className="flex items-center gap-x-6 bg-emerald-500 px-6 py-2.5 sm:px-3.5 sm:before:flex-1 dark:bg-emerald-600">
-			<div className="w-full text-sm text-white leading-6">
+		<div className="flex items-center gap-x-6 bg-success px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
+			<div className="w-full text-sm text-success-foreground leading-6">
 				<div className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0">
 					<div className="flex items-center justify-start gap-2">
 						<strong className="font-semibold">Published Case Study</strong>

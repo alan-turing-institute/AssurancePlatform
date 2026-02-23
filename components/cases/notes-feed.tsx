@@ -91,7 +91,7 @@ export default function NotesFeed() {
                     alt=""
                   /> */}
 									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary ring-8 ring-background">
-										<User2Icon className="h-4 w-4 text-white" />
+										<User2Icon className="h-4 w-4 text-primary-foreground" />
 									</div>
 
 									{/* <span className="absolute -bottom-0.5 -right-1 rounded-tl bg-white px-0.5 py-px">

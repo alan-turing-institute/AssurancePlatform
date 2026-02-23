@@ -188,7 +188,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "EDIT")}
 								size={"icon"}
 								title="Remove edit access"
@@ -221,7 +221,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "COMMENT")}
 								size={"icon"}
 								title="Remove review access"
@@ -254,7 +254,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "VIEW")}
 								size={"icon"}
 								title="Remove view access"

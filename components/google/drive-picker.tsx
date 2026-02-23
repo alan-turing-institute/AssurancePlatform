@@ -62,14 +62,14 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 					className={`flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors ${
 						selectedFile === file.id
 							? "border-primary bg-primary/5"
-							: "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+							: "border-border hover:bg-muted"
 					}`}
 					disabled={disabled}
 					key={file.id}
 					onClick={() => handleSelect(file)}
 					type="button"
 				>
-					<FileIcon className="h-5 w-5 flex-shrink-0 text-gray-400" />
+					<FileIcon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
 					<div className="min-w-0 flex-1">
 						<p className="truncate font-medium text-sm">{file.name}</p>
 						<p className="text-muted-foreground text-xs">

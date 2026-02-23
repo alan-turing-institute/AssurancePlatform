@@ -191,7 +191,7 @@ export default function NodeOptionsMenu({
 							onMouseDown={(e) => e.stopPropagation()}
 							type="button"
 						>
-							<div className="inline-flex rounded-full p-1 hover:bg-slate-900/10">
+							<div className="inline-flex rounded-full p-1 hover:bg-foreground/10">
 								<MoreHorizontal aria-hidden="true" size={16} />
 							</div>
 						</button>

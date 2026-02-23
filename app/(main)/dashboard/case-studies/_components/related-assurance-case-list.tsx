@@ -101,7 +101,7 @@ const RelatedAssuranceCaseList = ({
 								})
 								.map((assuranceCase: AssuranceCase) => (
 									<div
-										className="mb-2 w-full rounded-md border transition-colors hover:bg-gray-50 dark:hover:bg-slate-900/50"
+										className="mb-2 w-full rounded-md border transition-colors hover:bg-muted"
 										key={assuranceCase.id}
 									>
 										<label

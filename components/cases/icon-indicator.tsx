@@ -55,7 +55,7 @@ const IconIndicator = ({ data }: IconIndicatorProps) => {
 		>
 			<div className="flex items-center justify-start gap-1">
 				{comments.length > 0 && (
-					<ChatBubbleBottomCenterTextIcon className="size-3 text-gray-600" />
+					<ChatBubbleBottomCenterTextIcon className="size-3 text-muted-foreground" />
 				)}
 			</div>
 		</div>

@@ -104,7 +104,7 @@ async function CaseStudiesPage() {
 												{extractTextFromHtml(caseStudy.description)}
 											</dd>
 											<dt className="sr-only sm:hidden">Published</dt>
-											<dd className="mt-1 truncate text-gray-500 sm:hidden">
+											<dd className="mt-1 truncate text-muted-foreground sm:hidden">
 												{formatShortDate(caseStudy.publishedDate)}
 											</dd>
 										</dl>
@@ -118,7 +118,7 @@ async function CaseStudiesPage() {
 										{caseStudy.authors}
 									</td>
 									{/* <td className="px-3 py-4 text-sm text-foreground/80">
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-100/10 px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-500 ring-1 ring-inset ring-indigo-700/10 dark:ring-indigo-500/20">
+                    <span className="inline-flex items-center rounded-full bg-info/10 px-2 py-1 text-xs font-medium text-info ring-1 ring-inset ring-info/10">
                       {caseStudy.sector}
                     </span>
                   </td> */}
@@ -127,7 +127,7 @@ async function CaseStudiesPage() {
 									</td>
 									<td className="px-3 py-4 text-foreground/80 text-sm">
 										{caseStudy.published && (
-											<CheckCircleIcon className="size-6 text-emerald-500" />
+											<CheckCircleIcon className="size-6 text-success" />
 										)}
 									</td>
 									<td className="py-4 pr-4 pl-3 text-right font-medium text-sm sm:pr-0">

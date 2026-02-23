@@ -86,7 +86,7 @@ export const MobileNav = ({
 										<span className="sr-only">Close sidebar</span>
 										<XMarkIcon
 											aria-hidden="true"
-											className="h-6 w-6 text-white"
+											className="h-6 w-6 text-background"
 										/>
 									</button>
 								</div>
@@ -174,7 +174,7 @@ export const MobileNav = ({
 																href={`/dashboard/teams/${team.id}`}
 																onClick={() => setSidebarOpen(false)}
 															>
-																<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sidebar-foreground/40 bg-sidebar-accent font-medium text-[0.625rem] text-white">
+																<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sidebar-foreground/40 bg-sidebar-accent font-medium text-[0.625rem] text-sidebar-accent-foreground">
 																	{team.name.charAt(0).toUpperCase()}
 																</span>
 																<span className="truncate">{team.name}</span>

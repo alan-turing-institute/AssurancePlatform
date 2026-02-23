@@ -272,7 +272,7 @@ describe("CaseStudyDetails", () => {
 			expect(publishedText).toBeInTheDocument();
 
 			// The date should be formatted by moment - check the parent container
-			const bannerContainer = publishedText.closest(".bg-emerald-500");
+			const bannerContainer = publishedText.closest(".bg-success");
 			expect(bannerContainer?.textContent).toContain("2024");
 		});
 
@@ -286,7 +286,7 @@ describe("CaseStudyDetails", () => {
 
 			const { container } = render(result);
 
-			const banner = container.querySelector(".bg-emerald-500");
+			const banner = container.querySelector(".bg-success");
 			expect(banner).toBeInTheDocument();
 		});
 	});

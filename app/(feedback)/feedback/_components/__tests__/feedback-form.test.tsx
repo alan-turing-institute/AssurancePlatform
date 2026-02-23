@@ -296,9 +296,9 @@ describe("FeedbackForm", () => {
 			});
 			expect(submitButton).toHaveAttribute("type", "submit");
 			expect(submitButton).toHaveClass(
-				"bg-indigo-600",
-				"text-white",
-				"hover:bg-indigo-700"
+				"bg-primary",
+				"text-primary-foreground",
+				"hover:bg-primary/90"
 			);
 		});
 

@@ -51,7 +51,7 @@ function ResolvedBanner({ comment }: { comment: Comment }) {
 	}
 
 	return (
-		<div className="mb-2 flex items-center gap-1 text-green-600 text-xs dark:text-green-400">
+		<div className="mb-2 flex items-center gap-1 text-success text-xs">
 			<CheckCircle className="h-3 w-3" />
 			<span>
 				Resolved by {comment.resolvedBy}
@@ -218,7 +218,7 @@ function CommentItem({
 	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
 
 	const cardClass = isResolved
-		? "bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30"
+		? "bg-success/10 hover:bg-success/15"
 		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (

@@ -186,7 +186,7 @@ function Flow() {
 										<p>You have orphaned elements for this assurance case.</p>
 									</div>
 									<Button
-										className="hover:bg-gray-400/10 dark:hover:bg-slate-900/10"
+										className="hover:bg-muted"
 										onClick={() => setShowOrphanMessage(false)}
 										size={"icon"}
 										title="Dismiss"

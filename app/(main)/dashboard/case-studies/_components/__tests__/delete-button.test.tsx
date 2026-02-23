@@ -97,7 +97,7 @@ describe("DeleteCaseButton Component", () => {
 				name: DELETE_BUTTON_REGEX,
 			});
 			expect(deleteButton).toBeInTheDocument();
-			expect(deleteButton).toHaveClass("bg-rose-500");
+			expect(deleteButton).toHaveClass("bg-destructive");
 
 			// Check for trash icon (using SVG selector)
 			const trashIcon = deleteButton.querySelector("svg");

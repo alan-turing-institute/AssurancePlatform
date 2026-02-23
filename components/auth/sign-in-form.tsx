@@ -121,14 +121,14 @@ const SignInForm = () => {
 			</div>
 
 			{successMessage && (
-				<div className="mt-4 rounded-md border border-green-700 bg-green-500/20 px-4 py-2 text-green-700">
+				<div className="mt-4 rounded-md border border-success bg-success/20 px-4 py-2 text-success-foreground">
 					<p>{successMessage}</p>
 				</div>
 			)}
 
 			{errors?.map((error) => (
 				<div
-					className="-mb-4 mt-4 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
+					className="-mb-4 mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
 					key={crypto.randomUUID()}
 				>
 					<p>{error}</p>

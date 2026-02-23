@@ -55,14 +55,14 @@ export const MigrationModal = () => {
 		>
 			<div className="space-y-4">
 				{/* What's new section */}
-				<div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+				<div className="rounded-lg border border-success/20 bg-success/10 p-4">
 					<div className="flex items-start gap-3">
-						<PartyPopperIcon className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+						<PartyPopperIcon className="mt-0.5 h-5 w-5 shrink-0 text-success" />
 						<div>
-							<h4 className="font-medium text-green-800 dark:text-green-200">
+							<h4 className="font-medium text-success-foreground">
 								What's new
 							</h4>
-							<ul className="mt-2 list-inside list-disc space-y-1 text-green-700 text-sm dark:text-green-300">
+							<ul className="mt-2 list-inside list-disc space-y-1 text-success text-sm">
 								<li>Improved performance and reliability</li>
 								<li>Enhanced collaboration features</li>
 								<li>New team management capabilities</li>
@@ -74,14 +74,14 @@ export const MigrationModal = () => {
 
 				{/* Action required section (conditional) */}
 				{migrationModal.isMissingEmail && (
-					<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+					<div className="rounded-lg border border-warning/20 bg-warning/10 p-4">
 						<div className="flex items-start gap-3">
-							<AlertTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+							<AlertTriangleIcon className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
 							<div>
-								<h4 className="font-medium text-amber-800 dark:text-amber-200">
+								<h4 className="font-medium text-warning-foreground">
 									Action required
 								</h4>
-								<p className="mt-1 text-amber-700 text-sm dark:text-amber-300">
+								<p className="mt-1 text-warning-foreground text-sm">
 									Please add your email address to continue using collaboration
 									features. This notice will appear until you update your
 									profile.

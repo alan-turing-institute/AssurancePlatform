@@ -168,7 +168,7 @@ const RegisterForm = () => {
 			<div className="bg-background px-6 py-12 shadow-sm sm:rounded-lg sm:px-12">
 				{errors?.map((error: string) => (
 					<div
-						className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
+						className="mb-6 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
 						key={crypto.randomUUID()}
 					>
 						<p>{error}</p>

@@ -117,7 +117,7 @@ export function InviteMemberDialog() {
 						</div>
 					)}
 					{success && (
-						<div className="rounded-md bg-amber-100 p-3 text-amber-800 text-sm dark:bg-amber-900/30 dark:text-amber-200">
+						<div className="rounded-md bg-warning/20 p-3 text-warning-foreground text-sm">
 							{success}
 						</div>
 					)}

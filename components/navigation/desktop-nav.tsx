@@ -114,7 +114,7 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 												)}
 												href={`/dashboard/teams/${team.id}`}
 											>
-												<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sidebar-foreground/40 bg-sidebar-accent font-medium text-[0.625rem] text-white">
+												<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sidebar-foreground/40 bg-sidebar-accent font-medium text-[0.625rem] text-sidebar-accent-foreground">
 													{team.name.charAt(0).toUpperCase()}
 												</span>
 												<span className="truncate">{team.name}</span>

@@ -59,7 +59,7 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>
 								Tracking your browsing activity across other websites.
@@ -68,14 +68,14 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>Marketing or advertising purposes.</span>
 						</li>
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>Analytics on anonymous users before login.</span>
 						</li>
@@ -94,7 +94,7 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
 								<strong className="font-semibold text-foreground">
@@ -122,7 +122,7 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
 								<strong className="font-semibold text-foreground">
@@ -150,7 +150,7 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
 								<strong className="font-semibold text-foreground">

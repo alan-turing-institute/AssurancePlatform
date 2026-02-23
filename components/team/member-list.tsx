@@ -156,7 +156,7 @@ export default function MemberList() {
 												</div>
 											</td>
 											<td className="whitespace-nowrap px-3 py-5 text-muted-foreground text-sm">
-												<span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700 text-xs ring-1 ring-emerald-600/20 ring-inset dark:bg-emerald-900/20">
+												<span className="inline-flex items-center rounded-md bg-success/10 px-2 py-1 font-medium text-success text-xs ring-1 ring-success/20 ring-inset">
 													Active
 												</span>
 											</td>

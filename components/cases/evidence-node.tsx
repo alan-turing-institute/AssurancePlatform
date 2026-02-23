@@ -37,11 +37,11 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 			>
 				{url && (
 					<div className="space-y-1">
-						<span className="font-medium text-gray-500 text-xs uppercase tracking-wider">
+						<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
 							Source
 						</span>
 						<a
-							className="flex items-center gap-1.5 text-blue-600 text-sm hover:text-blue-800 hover:underline"
+							className="flex items-center gap-1.5 text-info text-sm hover:text-info/80 hover:underline"
 							href={url}
 							onClick={(e) => e.stopPropagation()}
 							onMouseDown={(e) => e.stopPropagation()}

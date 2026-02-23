@@ -47,7 +47,7 @@ const AttributeTextField: React.FC<AttributeTextFieldProps> = ({
 					<FormLabel>{label}</FormLabel>
 					{!readOnly && (
 						<button
-							className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
+							className="rounded p-1 text-destructive hover:bg-destructive/10"
 							onClick={onClear}
 							title={`Remove ${label.toLowerCase()}`}
 							type="button"

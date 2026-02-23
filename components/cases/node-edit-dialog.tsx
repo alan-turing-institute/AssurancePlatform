@@ -175,7 +175,7 @@ function ContextSection({
 							<span className="flex-1 text-sm">{item.value}</span>
 							{!readOnly && (
 								<button
-									className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
+									className="rounded p-1 text-destructive hover:bg-destructive/10"
 									onClick={() => onRemoveContext(idx)}
 									title="Remove context"
 									type="button"

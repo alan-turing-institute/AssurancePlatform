@@ -19,21 +19,17 @@ export function DescriptionCard({
 	const isExternal = href.startsWith("http") || href.endsWith(".pdf");
 
 	const content = (
-		<div className="nextra-card group flex flex-col justify-start overflow-hidden rounded-lg border border-gray-200 text-current no-underline transition-all duration-200 hover:border-gray-300 hover:shadow-gray-100 hover:shadow-lg dark:border-neutral-700 dark:hover:border-neutral-500 dark:hover:shadow-none">
+		<div className="nextra-card group flex flex-col justify-start overflow-hidden rounded-lg border border-border text-current no-underline transition-all duration-200 hover:border-border hover:shadow-lg">
 			<div className="flex items-start gap-3 p-4">
-				{icon && (
-					<span className="text-gray-400 dark:text-neutral-500">{icon}</span>
-				)}
+				{icon && <span className="text-muted-foreground">{icon}</span>}
 				<div className="flex flex-col gap-1">
-					<span className="font-semibold text-gray-700 group-hover:text-gray-900 dark:text-neutral-200 dark:group-hover:text-neutral-50">
+					<span className="font-semibold text-foreground group-hover:text-foreground">
 						{title}
 						<span className="ml-1 inline-block transition-transform group-hover:translate-x-0.5">
 							→
 						</span>
 					</span>
-					<span className="text-gray-500 text-sm dark:text-neutral-400">
-						{description}
-					</span>
+					<span className="text-muted-foreground text-sm">{description}</span>
 				</div>
 			</div>
 		</div>

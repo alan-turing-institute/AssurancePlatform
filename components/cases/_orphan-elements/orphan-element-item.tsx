@@ -67,7 +67,7 @@ export function OrphanElementItem({
 			</button>
 			<button
 				aria-label={`Delete ${orphan.name || orphan.type}`}
-				className="rounded-md p-2 text-rose-500 opacity-0 transition-opacity hover:bg-rose-500/10 group-hover:opacity-100"
+				className="rounded-md p-2 text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
 				disabled={loading}
 				onClick={(e) => {
 					e.stopPropagation();

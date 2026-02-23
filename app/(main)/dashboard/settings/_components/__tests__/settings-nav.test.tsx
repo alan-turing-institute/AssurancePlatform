@@ -131,7 +131,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const accountLink = screen.getByRole("link", { name: "Account" });
-			expect(accountLink).toHaveClass("text-indigo-500");
+			expect(accountLink).toHaveClass("text-primary");
 		});
 
 		it("should highlight notifications link when on notifications page", () => {
@@ -141,7 +141,7 @@ describe("SettingsNav", () => {
 			const notificationsLink = screen.getByRole("link", {
 				name: "Notifications",
 			});
-			expect(notificationsLink).toHaveClass("text-indigo-500");
+			expect(notificationsLink).toHaveClass("text-primary");
 		});
 
 		it("should highlight billing link when on billing page", () => {
@@ -149,7 +149,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const billingLink = screen.getByRole("link", { name: "Billing" });
-			expect(billingLink).toHaveClass("text-indigo-500");
+			expect(billingLink).toHaveClass("text-primary");
 		});
 
 		it("should highlight teams link when on teams page", () => {
@@ -157,7 +157,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const teamsLink = screen.getByRole("link", { name: "Teams" });
-			expect(teamsLink).toHaveClass("text-indigo-500");
+			expect(teamsLink).toHaveClass("text-primary");
 		});
 
 		it("should highlight integrations link when on integrations page", () => {
@@ -167,7 +167,7 @@ describe("SettingsNav", () => {
 			const integrationsLink = screen.getByRole("link", {
 				name: "Integrations",
 			});
-			expect(integrationsLink).toHaveClass("text-indigo-500");
+			expect(integrationsLink).toHaveClass("text-primary");
 		});
 
 		it("should not highlight inactive links", () => {
@@ -183,10 +183,10 @@ describe("SettingsNav", () => {
 				name: "Integrations",
 			});
 
-			expect(notificationsLink).not.toHaveClass("text-indigo-500");
-			expect(billingLink).not.toHaveClass("text-indigo-500");
-			expect(teamsLink).not.toHaveClass("text-indigo-500");
-			expect(integrationsLink).not.toHaveClass("text-indigo-500");
+			expect(notificationsLink).not.toHaveClass("text-primary");
+			expect(billingLink).not.toHaveClass("text-primary");
+			expect(teamsLink).not.toHaveClass("text-primary");
+			expect(integrationsLink).not.toHaveClass("text-primary");
 		});
 
 		it("should handle unknown pathnames gracefully", () => {
@@ -196,7 +196,7 @@ describe("SettingsNav", () => {
 			// No links should be highlighted for unknown paths
 			const links = screen.getAllByRole("link");
 			for (const link of links) {
-				expect(link).not.toHaveClass("text-indigo-500");
+				expect(link).not.toHaveClass("text-primary");
 			}
 		});
 	});
@@ -207,7 +207,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const billingLink = screen.getByRole("link", { name: "Billing" });
-			expect(billingLink).toHaveClass("text-indigo-500");
+			expect(billingLink).toHaveClass("text-primary");
 		});
 
 		it("should handle root settings path", () => {
@@ -215,7 +215,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const accountLink = screen.getByRole("link", { name: "Account" });
-			expect(accountLink).toHaveClass("text-indigo-500");
+			expect(accountLink).toHaveClass("text-primary");
 		});
 
 		it("should handle nested settings paths", () => {
@@ -223,7 +223,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const teamsLink = screen.getByRole("link", { name: "Teams" });
-			expect(teamsLink).toHaveClass("text-indigo-500");
+			expect(teamsLink).toHaveClass("text-primary");
 		});
 
 		it("should be case sensitive", () => {
@@ -232,7 +232,7 @@ describe("SettingsNav", () => {
 
 			// Should not match due to case sensitivity
 			const accountLink = screen.getByRole("link", { name: "Account" });
-			expect(accountLink).not.toHaveClass("text-indigo-500");
+			expect(accountLink).not.toHaveClass("text-primary");
 		});
 	});
 
@@ -298,7 +298,7 @@ describe("SettingsNav", () => {
 			render(<SettingsNav />);
 
 			const activeLink = screen.getByRole("link", { name: "Notifications" });
-			expect(activeLink).toHaveClass("text-indigo-500");
+			expect(activeLink).toHaveClass("text-primary");
 		});
 	});
 
@@ -410,7 +410,7 @@ describe("SettingsNav", () => {
 			rerender(<SettingsNav />);
 
 			let accountLink = screen.getByRole("link", { name: "Account" });
-			expect(accountLink).toHaveClass("text-indigo-500");
+			expect(accountLink).toHaveClass("text-primary");
 
 			// Change to /settings/billing
 			mockUsePathname.mockReturnValue("/settings/billing");
@@ -419,8 +419,8 @@ describe("SettingsNav", () => {
 			accountLink = screen.getByRole("link", { name: "Account" });
 			const billingLink = screen.getByRole("link", { name: "Billing" });
 
-			expect(accountLink).not.toHaveClass("text-indigo-500");
-			expect(billingLink).toHaveClass("text-indigo-500");
+			expect(accountLink).not.toHaveClass("text-primary");
+			expect(billingLink).toHaveClass("text-primary");
 		});
 
 		it("should handle rapid pathname changes", () => {

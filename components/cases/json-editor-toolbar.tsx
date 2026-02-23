@@ -103,9 +103,9 @@ function getStatusContent(
 ): { icon: ReactNode; text: string; className: string } {
 	if (hasConflict) {
 		return {
-			icon: <AlertTriangle className="h-4 w-4 text-amber-500" />,
+			icon: <AlertTriangle className="h-4 w-4 text-warning" />,
 			text: "Case modified externally",
-			className: "text-amber-600 dark:text-amber-400",
+			className: "text-warning",
 		};
 	}
 
@@ -127,7 +127,7 @@ function getStatusContent(
 
 	if (isDirty && hasChanges) {
 		return {
-			icon: <Check className="h-4 w-4 text-blue-500" />,
+			icon: <Check className="h-4 w-4 text-info" />,
 			text: changeSummary,
 			className: "text-muted-foreground",
 		};
@@ -142,7 +142,7 @@ function getStatusContent(
 	}
 
 	return {
-		icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+		icon: <CheckCircle2 className="h-4 w-4 text-success" />,
 		text: "No changes",
 		className: "text-muted-foreground",
 	};

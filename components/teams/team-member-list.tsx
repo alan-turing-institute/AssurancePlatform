@@ -155,7 +155,7 @@ export function TeamMemberList({
 										className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${
 											member.role === "ADMIN" || member.role === "OWNER"
 												? "bg-primary/10 text-primary"
-												: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+												: "bg-muted text-muted-foreground"
 										}`}
 									>
 										{member.role === "ADMIN" || member.role === "OWNER" ? (

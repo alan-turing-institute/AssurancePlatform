@@ -25,8 +25,8 @@ function SuccessContent({ caseId }: { caseId?: string }) {
 	return (
 		<>
 			<CardHeader className="text-center">
-				<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
-					<CheckCircle className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+				<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/20">
+					<CheckCircle className="h-10 w-10 text-success" />
 				</div>
 				<CardTitle>Invite Accepted!</CardTitle>
 				<CardDescription>

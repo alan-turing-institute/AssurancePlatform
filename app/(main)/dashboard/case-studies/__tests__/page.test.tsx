@@ -243,7 +243,7 @@ describe("CaseStudiesPage", () => {
 			const { container } = render(result);
 
 			// Look for CheckCircleIcon by its class
-			const publishedIcons = container.querySelectorAll(".text-emerald-500");
+			const publishedIcons = container.querySelectorAll(".text-success");
 			expect(publishedIcons).toHaveLength(1); // Only first case study is published
 		});
 

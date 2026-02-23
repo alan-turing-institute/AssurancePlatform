@@ -47,10 +47,10 @@ export const ImportModal = () => {
 			title="Import Case"
 		>
 			{error && (
-				<div className="pb-2 font-semibold text-rose-500 text-sm">{error}</div>
+				<div className="pb-2 font-semibold text-destructive text-sm">{error}</div>
 			)}
 			{warnings.length > 0 && (
-				<div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-800 text-sm">
+				<div className="mb-2 rounded-md border border-warning/30 bg-warning/10 p-2 text-warning-foreground text-sm">
 					<p className="font-semibold">Import warnings:</p>
 					<ul className="list-inside list-disc">
 						{warnings.map((w) => (

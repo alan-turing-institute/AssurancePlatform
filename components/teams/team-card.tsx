@@ -59,7 +59,7 @@ export function TeamCard({ team }: TeamCardProps) {
 			</Link>
 			{isAdmin && (
 				<Link
-					className="absolute top-4 right-4 z-50 hidden rounded-md bg-slate-200 p-2 shadow-lg group-hover:block dark:bg-slate-700"
+					className="absolute top-4 right-4 z-50 hidden rounded-md bg-muted p-2 shadow-lg group-hover:block"
 					href={`/dashboard/teams/${team.id}/settings`}
 				>
 					<Settings className="h-4 w-4" />

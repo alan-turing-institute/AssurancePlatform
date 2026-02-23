@@ -171,13 +171,13 @@ export const PublishModal = () => {
 
 	const renderPublishContent = () => (
 		<div className="space-y-4">
-			<div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
-				<Globe className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
+			<div className="flex items-start gap-3 rounded-lg border border-info/20 bg-info/10 p-3">
+				<Globe className="mt-0.5 h-5 w-5 text-info" />
 				<div className="text-sm">
-					<p className="font-medium text-blue-800 dark:text-blue-200">
+					<p className="font-medium text-info-foreground">
 						Make this case publicly available
 					</p>
-					<p className="text-blue-600 dark:text-blue-400">
+					<p className="text-info">
 						A snapshot of your assurance case will be created and visible on the
 						Discover page.
 					</p>
@@ -223,13 +223,13 @@ export const PublishModal = () => {
 		return (
 			<div className="space-y-4">
 				{hasLinkedCaseStudies ? (
-					<div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-						<AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+						<AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
 						<div className="text-sm">
-							<p className="font-medium text-amber-800 dark:text-amber-200">
+							<p className="font-medium text-warning-foreground">
 								Warning: Linked to case studies
 							</p>
-							<p className="text-amber-600 dark:text-amber-400">
+							<p className="text-warning-foreground">
 								This case is linked to {publishModal.linkedCaseStudyCount} case{" "}
 								{publishModal.linkedCaseStudyCount === 1 ? "study" : "studies"}.
 								Unpublishing will break those links.

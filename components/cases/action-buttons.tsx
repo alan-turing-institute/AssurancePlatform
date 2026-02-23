@@ -120,12 +120,12 @@ const ActionButtons = ({
 	return (
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
 			<div
-				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-white shadow-lg dark:bg-primary/20"
+				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg"
 				data-show-create-goal={showCreateGoal}
 				data-testid="action-buttons"
 				data-tour="toolbar"
 			>
-				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2 dark:border-r-primary/30">
+				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
 					{showCreateGoal &&
 						assuranceCase &&
 						assuranceCase.permissions !== "view" &&

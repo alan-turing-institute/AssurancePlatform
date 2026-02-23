@@ -140,7 +140,7 @@ describe("CookiePolicyPage", () => {
 			const { container } = render(<CookiePolicyPage />);
 
 			// Look for CheckCircleIcons by their class and SVG element
-			const checkIcons = container.querySelectorAll("svg.text-emerald-600");
+			const checkIcons = container.querySelectorAll("svg.text-success");
 
 			// Should have 3 check icons for the 3 essential cookies
 			expect(checkIcons).toHaveLength(3);
@@ -150,7 +150,7 @@ describe("CookiePolicyPage", () => {
 			const { container } = render(<CookiePolicyPage />);
 
 			// Look for XCircleIcons by their class and SVG element
-			const xIcons = container.querySelectorAll("svg.text-rose-600");
+			const xIcons = container.querySelectorAll("svg.text-destructive");
 
 			// Should have 3 X icons for the 3 things cookies are NOT used for
 			expect(xIcons).toHaveLength(3);
