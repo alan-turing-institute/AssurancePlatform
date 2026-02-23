@@ -149,6 +149,8 @@ async function fetchCaseFromPrisma(
 			linkedCaseStudyCount,
 			// Demo/tutorial flag
 			isDemo: caseData.isDemo,
+			// Layout preference
+			layoutDirection: caseData.layoutDirection,
 		},
 	};
 }
@@ -325,6 +327,12 @@ function buildCaseUpdateData(
 	if (body.color_profile !== undefined) {
 		updateData.colorProfile = body.color_profile;
 	}
+	if (
+		body.layout_direction !== undefined &&
+		(body.layout_direction === "TB" || body.layout_direction === "LR")
+	) {
+		updateData.layoutDirection = body.layout_direction;
+	}
 	return updateData;
 }
 
@@ -368,6 +376,7 @@ async function updateCaseWithPrisma(
 		description: updated.description,
 		created_date: updated.createdAt.toISOString(),
 		color_profile: updated.colorProfile,
+		layoutDirection: updated.layoutDirection,
 	};
 }
 

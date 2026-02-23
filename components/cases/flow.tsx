@@ -39,6 +39,8 @@ function Flow() {
 		layoutNodes,
 		assuranceCase,
 		orphanedElements,
+		layoutDirection,
+		setLayoutDirection,
 	} = useStore();
 
 	const [loading, setLoading] = useState(true);
@@ -62,7 +64,9 @@ function Flow() {
 		debounceMs: 5000,
 	});
 
-	const onLayout = async (direction: "LR" | "TB" | "RL" | "BT") => {
+	const onLayout = async (
+		direction: "LR" | "TB" | "RL" | "BT" = layoutDirection
+	) => {
 		const layouted = await getLayoutedElements(nodes, edges, { direction });
 
 		setNodes(layouted.nodes);
@@ -76,6 +80,14 @@ function Flow() {
 	const convert = useCallback(async () => {
 		try {
 			if (assuranceCase) {
+				// Sync layout direction from persisted case data
+				if (
+					assuranceCase.layoutDirection &&
+					assuranceCase.layoutDirection !== layoutDirection
+				) {
+					setLayoutDirection(assuranceCase.layoutDirection);
+				}
+
 				const result = await convertAssuranceCase({
 					...assuranceCase,
 					goals: assuranceCase.goals || [],
@@ -96,7 +108,7 @@ function Flow() {
 			});
 			setLoading(false);
 		}
-	}, [assuranceCase, layoutNodes, toast]);
+	}, [assuranceCase, layoutNodes, layoutDirection, setLayoutDirection, toast]);
 
 	// intial conversion of the assurance case on component render
 	useEffect(() => {

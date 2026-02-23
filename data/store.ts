@@ -57,6 +57,8 @@ type Store = {
 	) => void;
 	setNodes: (nodes: Node[]) => void;
 	setEdges: (edges: Edge[]) => void;
+	layoutDirection: "TB" | "LR";
+	setLayoutDirection: (dir: "TB" | "LR") => void;
 	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
 	triggerLayout: () => Promise<void>;
 	fitView: () => void;
@@ -152,22 +154,27 @@ const useStore = create<Store>((set, get) => ({
 	setEdges: (edges: Edge[]) => {
 		set({ edges });
 	},
+	layoutDirection: "TB",
+	setLayoutDirection: (dir: "TB" | "LR") => {
+		set({ layoutDirection: dir });
+	},
 	fitView: () => {
 		// Placeholder function for fitView - to be implemented when needed
 	},
 	layoutNodes: async (nodes: Node[], edges: Edge[]) => {
 		// Layout nodes using ELK
+		const direction = get().layoutDirection;
 		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			await getLayoutedElements(nodes, edges, { direction: "TB" });
+			await getLayoutedElements(nodes, edges, { direction });
 
 		// Set the layouted nodes and edges
 		set({ nodes: layoutedNodes, edges: layoutedEdges });
 	},
 	triggerLayout: async () => {
 		// Re-layout current nodes and edges (used when node sizes change)
-		const { nodes, edges } = get();
+		const { nodes, edges, layoutDirection } = get();
 		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			await getLayoutedElements(nodes, edges, { direction: "TB" });
+			await getLayoutedElements(nodes, edges, { direction: layoutDirection });
 		set({ nodes: layoutedNodes, edges: layoutedEdges });
 	},
 	viewMembers: [],

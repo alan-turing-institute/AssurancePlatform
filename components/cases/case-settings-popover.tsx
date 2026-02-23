@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, Monitor, Moon, Settings, Sun } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowRight,
+	Check,
+	Monitor,
+	Moon,
+	Settings,
+	Sun,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +20,7 @@ import {
 import { PresetSwatch } from "@/components/ui/preset-swatch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import useStore from "@/data/store";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";
 import ActionTooltip from "../ui/action-tooltip";
@@ -22,10 +31,42 @@ const modeOptions = [
 	{ id: "system", label: "System", icon: Monitor },
 ] as const;
 
+const directionOptions = [
+	{ id: "TB", label: "Top-down", icon: ArrowDown },
+	{ id: "LR", label: "Left-right", icon: ArrowRight },
+] as const;
+
 export function CaseSettingsPopover() {
 	const { theme, setTheme, resolvedTheme } = useTheme();
 	const { preset, setPreset, availablePresets } = useThemePreset();
+	const { assuranceCase, layoutDirection, setLayoutDirection, triggerLayout } =
+		useStore();
 	const [mounted, setMounted] = useState(false);
+
+	const handleDirectionChange = async (dir: "TB" | "LR") => {
+		if (dir === layoutDirection) {
+			return;
+		}
+		setLayoutDirection(dir);
+
+		// Re-layout with new direction (triggerLayout reads from store)
+		// Small delay to allow state to settle before layout
+		await new Promise<void>((resolve) => {
+			setTimeout(async () => {
+				await triggerLayout();
+				resolve();
+			}, 0);
+		});
+
+		// Persist to API
+		if (assuranceCase?.id) {
+			fetch(`/api/cases/${assuranceCase.id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ layout_direction: dir }),
+			});
+		}
+	};
 
 	useEffect(() => {
 		setMounted(true);
@@ -69,6 +110,35 @@ export function CaseSettingsPopover() {
 									onClick={() => setTheme(option.id)}
 									size="sm"
 									variant={theme === option.id ? "default" : "outline"}
+								>
+									<option.icon className="h-3.5 w-3.5" />
+									{option.label}
+								</Button>
+							))}
+						</div>
+					</section>
+
+					<Separator />
+
+					{/* Layout direction */}
+					<section>
+						<h4 className="mb-2 font-medium text-foreground text-sm">
+							Layout direction
+						</h4>
+						<div className="flex gap-2">
+							{directionOptions.map((option) => (
+								<Button
+									className={cn(
+										"flex items-center gap-1.5",
+										layoutDirection === option.id &&
+											"ring-2 ring-primary ring-offset-2 ring-offset-background"
+									)}
+									key={option.id}
+									onClick={() => handleDirectionChange(option.id)}
+									size="sm"
+									variant={
+										layoutDirection === option.id ? "default" : "outline"
+									}
 								>
 									<option.icon className="h-3.5 w-3.5" />
 									{option.label}

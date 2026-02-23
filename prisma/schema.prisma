@@ -233,6 +233,9 @@ model AssuranceCase {
   // Demo/tutorial flag
   isDemo          Boolean               @default(false) @map("is_demo") /// True for auto-generated tutorial cases
 
+  // Layout preference
+  layoutDirection String                @default("TB") @map("layout_direction") /// ELK layout direction: TB (top-bottom) or LR (left-right)
+
   // Pattern tracking
   sourcePatternId String?               @map("source_pattern_id") /// If created from a pattern, the source pattern ID
 

@@ -50,7 +50,7 @@ const ActionButtons = ({
 	const [loading, setLoading] = useState(false);
 	const [isLayouting, setIsLayouting] = useState(false);
 
-	const { assuranceCase } = useStore();
+	const { assuranceCase, layoutDirection } = useStore();
 	const router = useRouter();
 	const { data: session } = useSession();
 
@@ -58,7 +58,7 @@ const ActionButtons = ({
 
 	const handleFocus = async () => {
 		setIsLayouting(true);
-		await onLayout("TB");
+		await onLayout(layoutDirection);
 		setIsLayouting(false);
 	};
 

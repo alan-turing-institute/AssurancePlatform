@@ -205,6 +205,8 @@ export type AssuranceCase = {
 	linkedCaseStudyCount?: number;
 	/** True for auto-generated tutorial cases */
 	isDemo?: boolean;
+	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
+	layoutDirection?: "TB" | "LR";
 };
 
 export type User = {
