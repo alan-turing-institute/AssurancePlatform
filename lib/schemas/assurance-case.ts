@@ -21,3 +21,20 @@ export type CreateAssuranceCaseInput = z.input<
 export type CreateAssuranceCaseData = z.output<
 	typeof createAssuranceCaseSchema
 >;
+
+/**
+ * Schema for updating an assurance case (PUT /api/cases/[id])
+ * All fields are optional — only provided fields are updated.
+ */
+export const updateAssuranceCaseSchema = z
+	.object({
+		name: z.string().min(1).max(255).optional(),
+		description: z.string().min(1).max(5000).optional(),
+		color_profile: z.string().optional(),
+		layout_direction: z.enum(["TB", "LR"]).optional(),
+	})
+	.describe("Input schema for updating an assurance case");
+
+export type UpdateAssuranceCaseInput = z.input<
+	typeof updateAssuranceCaseSchema
+>;

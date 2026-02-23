@@ -87,6 +87,8 @@ const mockStore = {
 	layoutNodes: vi.fn(),
 	assuranceCase: mockAssuranceCase as AssuranceCase | null,
 	orphanedElements: [] as OrphanedElement[],
+	layoutDirection: "TB" as "TB" | "LR",
+	setLayoutDirection: vi.fn(),
 };
 
 vi.mock("@/data/store", () => ({
@@ -192,6 +194,8 @@ describe("Flow", () => {
 			} as Goal,
 		];
 		mockStore.orphanedElements = [];
+		mockStore.layoutDirection = "TB";
+		mockStore.setLayoutDirection.mockClear();
 		mockFitView.mockClear();
 
 		// Default mock implementation for convertAssuranceCase - make it resolve immediately

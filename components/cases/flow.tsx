@@ -77,17 +77,19 @@ function Flow() {
 		});
 	};
 
+	// Sync layout direction from persisted case data
+	useEffect(() => {
+		if (
+			assuranceCase?.layoutDirection &&
+			assuranceCase.layoutDirection !== layoutDirection
+		) {
+			setLayoutDirection(assuranceCase.layoutDirection);
+		}
+	}, [assuranceCase?.layoutDirection, layoutDirection, setLayoutDirection]);
+
 	const convert = useCallback(async () => {
 		try {
 			if (assuranceCase) {
-				// Sync layout direction from persisted case data
-				if (
-					assuranceCase.layoutDirection &&
-					assuranceCase.layoutDirection !== layoutDirection
-				) {
-					setLayoutDirection(assuranceCase.layoutDirection);
-				}
-
 				const result = await convertAssuranceCase({
 					...assuranceCase,
 					goals: assuranceCase.goals || [],
@@ -108,7 +110,7 @@ function Flow() {
 			});
 			setLoading(false);
 		}
-	}, [assuranceCase, layoutNodes, layoutDirection, setLayoutDirection, toast]);
+	}, [assuranceCase, layoutNodes, toast]);
 
 	// intial conversion of the assurance case on component render
 	useEffect(() => {

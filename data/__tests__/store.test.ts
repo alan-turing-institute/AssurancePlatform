@@ -89,6 +89,7 @@ describe("useStore", () => {
 			result.current.setEditMembers([]);
 			result.current.setReviewMembers([]);
 			result.current.setOrphanedElements([]);
+			result.current.setLayoutDirection("TB");
 		});
 	});
 
@@ -106,6 +107,7 @@ describe("useStore", () => {
 			expect(result.current.viewMembers).toEqual([]);
 			expect(result.current.editMembers).toEqual([]);
 			expect(result.current.reviewMembers).toEqual([]);
+			expect(result.current.layoutDirection).toBe("TB");
 		});
 	});
 

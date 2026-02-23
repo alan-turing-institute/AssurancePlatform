@@ -21,6 +21,7 @@ import { PresetSwatch } from "@/components/ui/preset-swatch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import useStore from "@/data/store";
+import { useToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";
 import ActionTooltip from "../ui/action-tooltip";
@@ -41,6 +42,7 @@ export function CaseSettingsPopover() {
 	const { preset, setPreset, availablePresets } = useThemePreset();
 	const { assuranceCase, layoutDirection, setLayoutDirection, triggerLayout } =
 		useStore();
+	const { toast } = useToast();
 	const [mounted, setMounted] = useState(false);
 
 	const handleDirectionChange = async (dir: "TB" | "LR") => {
@@ -64,6 +66,12 @@ export function CaseSettingsPopover() {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ layout_direction: dir }),
+			}).catch(() => {
+				toast({
+					variant: "destructive",
+					title: "Error",
+					description: "Failed to save layout direction",
+				});
 			});
 		}
 	};

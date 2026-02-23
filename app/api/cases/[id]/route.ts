@@ -5,8 +5,12 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { forbidden } from "@/lib/errors";
+import { forbidden, validationError } from "@/lib/errors";
 import { compareIdentifiers } from "@/lib/identifier-utils";
+import {
+	type UpdateAssuranceCaseInput,
+	updateAssuranceCaseSchema,
+} from "@/lib/schemas/assurance-case";
 
 // Type definitions for Prisma elements
 type PrismaElement = {
@@ -312,10 +316,10 @@ export async function GET(
 }
 
 /**
- * Builds update data from request body
+ * Builds Prisma update data from validated input
  */
 function buildCaseUpdateData(
-	body: Record<string, unknown>
+	body: UpdateAssuranceCaseInput
 ): Record<string, unknown> {
 	const updateData: Record<string, unknown> = {};
 	if (body.name !== undefined) {
@@ -327,10 +331,7 @@ function buildCaseUpdateData(
 	if (body.color_profile !== undefined) {
 		updateData.colorProfile = body.color_profile;
 	}
-	if (
-		body.layout_direction !== undefined &&
-		(body.layout_direction === "TB" || body.layout_direction === "LR")
-	) {
+	if (body.layout_direction !== undefined) {
 		updateData.layoutDirection = body.layout_direction;
 	}
 	return updateData;
@@ -343,7 +344,7 @@ function buildCaseUpdateData(
 async function updateCaseWithPrisma(
 	id: string,
 	userId: string,
-	body: Record<string, unknown>
+	body: UpdateAssuranceCaseInput
 ): Promise<Record<string, unknown>> {
 	const { prismaNew } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
@@ -387,8 +388,9 @@ async function updateCaseWithPrisma(
  * Requires EDIT permission on the case.
  *
  * @pathParam id - Case ID (UUID)
- * @body { name?, description?, color_profile? }
+ * @body { name?, description?, color_profile?, layout_direction? }
  * @response 200 - Updated case data
+ * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @auth bearer
@@ -401,8 +403,14 @@ export async function PUT(
 	try {
 		const userId = await requireAuth();
 		const { id } = await params;
-		const body = await request.json();
-		const data = await updateCaseWithPrisma(id, userId, body);
+		const raw = await request.json();
+		const parsed = updateAssuranceCaseSchema.safeParse(raw);
+		if (!parsed.success) {
+			throw validationError(
+				parsed.error.errors[0]?.message ?? "Invalid input"
+			);
+		}
+		const data = await updateCaseWithPrisma(id, userId, parsed.data);
 		return apiSuccess(data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
