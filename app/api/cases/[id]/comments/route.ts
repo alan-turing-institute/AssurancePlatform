@@ -1,10 +1,10 @@
 import {
-	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { createCommentSchema } from "@/lib/schemas/comment";
 import {
 	createCaseComment,
 	fetchCaseComments,
@@ -41,16 +41,17 @@ export async function POST(
 		const { id: caseId } = await params;
 
 		const body = await request.json();
-		const { content, parentId } = body;
-
-		if (!content || typeof content !== "string" || content.trim() === "") {
-			return apiError(validationError("Content is required"));
+		const parsed = createCommentSchema.safeParse(body);
+		if (!parsed.success) {
+			throw validationError(
+				parsed.error.errors[0]?.message ?? "Invalid input"
+			);
 		}
 
 		const comment = await createCaseComment(
 			caseId,
-			content,
-			parentId ?? null,
+			parsed.data.content,
+			parsed.data.parentId ?? null,
 			userId
 		);
 		return apiSuccess(comment, 201);

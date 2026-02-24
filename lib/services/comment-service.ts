@@ -6,6 +6,7 @@ import {
 	hasPermissionLevel,
 } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -157,7 +158,7 @@ async function getCommentWithPermission(
 	const hasEditAccess = await canAccessCase({ userId, caseId }, "EDIT");
 
 	if (!(isAuthor || hasEditAccess)) {
-		throw forbidden();
+		throw notFound("Comment");
 	}
 
 	const elementName = comment.element?.name || comment.element?.description;
@@ -231,9 +232,6 @@ export async function createCaseComment(
 	const response = toCommentResponse(comment);
 
 	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	emitSSEEvent("comment:created", caseId, { comment: response }, userId);
 
 	return response;
@@ -269,7 +267,7 @@ export async function fetchElementComments(
 	);
 
 	if (!hasAccess) {
-		throw forbidden();
+		throw notFound("Element");
 	}
 
 	// Fetch all comments for this element (sorted ascending for tree building)
@@ -314,7 +312,7 @@ export async function createElementComment(
 	);
 
 	if (!hasAccess) {
-		throw forbidden();
+		throw notFound("Element");
 	}
 
 	// If replying to a parent comment, verify it exists and belongs to this element
@@ -346,9 +344,6 @@ export async function createElementComment(
 	const response = toCommentResponse(comment);
 
 	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	const username = session.username || session.email || "Someone";
 	emitSSEEvent(
 		"comment:created",
@@ -385,9 +380,6 @@ export async function deleteComment(
 	await prisma.comment.delete({ where: { id: commentId } });
 
 	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	const username = session.username || session.email || "Someone";
 	emitSSEEvent(
 		"comment:deleted",
@@ -438,9 +430,6 @@ export async function updateComment(
 	};
 
 	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	const username = session.username || session.email || "Someone";
 	emitSSEEvent(
 		"comment:updated",
@@ -506,9 +495,6 @@ export async function resolveComment(
 	};
 
 	// Emit SSE event for real-time updates
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	const username = session.username || session.email || "Someone";
 	emitSSEEvent(
 		"comment:updated",

@@ -8,7 +8,6 @@ import {
 import { validationError } from "@/lib/errors";
 import { updateAssuranceCaseSchema } from "@/lib/schemas/assurance-case";
 import {
-	type CaseResult,
 	fetchCaseFromPrisma,
 	updateCaseWithPrisma,
 } from "@/lib/services/case-fetch-service";
@@ -33,13 +32,8 @@ export async function GET(
 	try {
 		const userId = await requireAuth();
 		const { id } = await params;
-		const result: CaseResult = await fetchCaseFromPrisma(id, userId);
-
-		if (result.error) {
-			return apiError(serviceErrorToAppError(result.error));
-		}
-
-		return apiSuccess(result.data);
+		const data = await fetchCaseFromPrisma(id, userId);
+		return apiSuccess(data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

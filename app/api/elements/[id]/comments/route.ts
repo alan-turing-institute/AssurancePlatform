@@ -1,10 +1,10 @@
 import {
-	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuthSession,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { createElementCommentSchema } from "@/lib/schemas/comment";
 import {
 	createElementComment,
 	fetchElementComments,
@@ -41,17 +41,17 @@ export async function POST(
 		const { id: elementId } = await params;
 
 		const body = await request.json();
-		const content = body.content || body.comment;
-		const parentId = body.parentId || null;
-
-		if (!content || typeof content !== "string" || !content.trim()) {
-			return apiError(validationError("Comment content is required"));
+		const parsed = createElementCommentSchema.safeParse(body);
+		if (!parsed.success) {
+			throw validationError(
+				parsed.error.errors[0]?.message ?? "Invalid input"
+			);
 		}
 
 		const comment = await createElementComment(
 			elementId,
-			content,
-			parentId,
+			parsed.data.content,
+			parsed.data.parentId,
 			session
 		);
 		return apiSuccess(comment, 201);

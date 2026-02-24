@@ -1,6 +1,7 @@
 import { compareIdentifiers } from "@/lib/identifier-utils";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 // ---------------------------------------------------------------------------
 // Constants & types
@@ -297,9 +298,6 @@ export async function resetIdentifiers(
 	// Emit SSE event for real-time updates
 	// Note: Don't pass userId to ensure the triggering user also receives the event
 	// (the frontend doesn't update optimistically for reset identifiers)
-	const { emitSSEEvent } = await import(
-		"@/lib/services/sse-connection-manager"
-	);
 	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
 
 	return { success: true };

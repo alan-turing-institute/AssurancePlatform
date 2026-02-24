@@ -1,10 +1,13 @@
 import {
-	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuthSession,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import {
+	resolveCommentSchema,
+	updateCommentSchema,
+} from "@/lib/schemas/comment";
 import {
 	deleteComment,
 	resolveComment,
@@ -41,15 +44,14 @@ export async function PUT(
 		const session = await requireAuthSession();
 		const { id: commentId } = await params;
 		const body = await request.json();
-		const { content } = body;
-
-		const isValidContent =
-			content && typeof content === "string" && content.trim() !== "";
-		if (!isValidContent) {
-			return apiError(validationError("Content is required"));
+		const parsed = updateCommentSchema.safeParse(body);
+		if (!parsed.success) {
+			throw validationError(
+				parsed.error.errors[0]?.message ?? "Invalid input"
+			);
 		}
 
-		const result = await updateComment(commentId, content, session);
+		const result = await updateComment(commentId, parsed.data.content, session);
 		return apiSuccess(result);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -68,13 +70,18 @@ export async function PATCH(
 		const session = await requireAuthSession();
 		const { id: commentId } = await params;
 		const body = await request.json();
-		const { resolved } = body;
-
-		if (typeof resolved !== "boolean") {
-			return apiError(validationError("resolved must be a boolean"));
+		const parsed = resolveCommentSchema.safeParse(body);
+		if (!parsed.success) {
+			throw validationError(
+				parsed.error.errors[0]?.message ?? "Invalid input"
+			);
 		}
 
-		const result = await resolveComment(commentId, resolved, session);
+		const result = await resolveComment(
+			commentId,
+			parsed.data.resolved,
+			session
+		);
 		return apiSuccess(result);
 	} catch (error) {
 		return apiErrorFromUnknown(error);

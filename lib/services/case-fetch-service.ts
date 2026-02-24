@@ -1,41 +1,33 @@
-import { forbidden } from "@/lib/errors";
+import { forbidden, notFound } from "@/lib/errors";
 import { compareIdentifiers } from "@/lib/identifier-utils";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
+import type { Prisma } from "@/src/generated/prisma";
 
 // ---------------------------------------------------------------------------
-// Types
+// Types (derived from Prisma query shape)
 // ---------------------------------------------------------------------------
 
-type PrismaElement = {
-	id: string;
-	elementType: string;
-	parentId: string | null;
-	name: string | null;
-	description: string;
-	assumption: string | null;
-	justification: string | null;
-	context: string[];
-	url: string | null;
-	urls: string[];
-	level: number | null;
-	claimType: string | null;
-	keywords: string | null;
-	caseId: string;
-	createdAt: Date;
-	inSandbox: boolean;
-	comments: unknown[];
-	// Evidence links TO this element (when this is a claim)
-	evidenceLinksTo?: Array<{
-		evidence: PrismaElement;
-	}>;
-};
+const CASE_INCLUDE = {
+	elements: {
+		where: { deletedAt: null },
+		include: {
+			children: { where: { deletedAt: null } },
+			comments: true,
+			evidenceLinksTo: {
+				where: { evidence: { deletedAt: null } },
+				include: { evidence: { include: { comments: true } } },
+			},
+		},
+	},
+	createdBy: { select: { id: true, username: true } },
+} satisfies Prisma.AssuranceCaseInclude;
 
-export type CaseResult = {
-	data?: unknown;
-	error?: string;
-};
+type CaseWithIncludes = Prisma.AssuranceCaseGetPayload<{
+	include: typeof CASE_INCLUDE;
+}>;
+type CaseElement = CaseWithIncludes["elements"][number];
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -64,8 +56,8 @@ function mapPermissionToFrontend(
 }
 
 function buildGoalStructure(
-	goal: PrismaElement,
-	allElements: PrismaElement[]
+	goal: CaseElement,
+	allElements: CaseElement[]
 ): Record<string, unknown> {
 	const children = allElements.filter((el) => el.parentId === goal.id);
 
@@ -87,7 +79,7 @@ function buildGoalStructure(
 		name: goal.name,
 		short_description: goal.description || "",
 		long_description: goal.description || "",
-		keywords: goal.keywords || "",
+		keywords: "",
 		created_date: goal.createdAt.toISOString(),
 		assurance_case_id: goal.caseId,
 		context: goal.context || [],
@@ -101,8 +93,8 @@ function buildGoalStructure(
 }
 
 function buildStrategyStructure(
-	strategy: PrismaElement,
-	allElements: PrismaElement[],
+	strategy: CaseElement,
+	allElements: CaseElement[],
 	goalId: string
 ): Record<string, unknown> {
 	const children = allElements.filter((el) => el.parentId === strategy.id);
@@ -132,8 +124,8 @@ function buildStrategyStructure(
 }
 
 function buildPropertyClaimStructure(
-	claim: PrismaElement,
-	allElements: PrismaElement[],
+	claim: CaseElement,
+	allElements: CaseElement[],
 	goalId: string | null,
 	strategyId: string | null
 ): Record<string, unknown> {
@@ -177,7 +169,7 @@ function buildPropertyClaimStructure(
 		strategy_id: strategyId,
 		property_claim_id: claim.parentId,
 		level: claim.level || 1,
-		claim_type: claim.claimType || "Project claim",
+		claim_type: "Project claim",
 		property_claims: nestedClaims,
 		evidence,
 		comments: claim.comments || [],
@@ -217,7 +209,7 @@ function buildCaseUpdateData(
 export async function fetchCaseFromPrisma(
 	caseId: string,
 	userId: string
-): Promise<CaseResult> {
+): Promise<Record<string, unknown>> {
 	// Check if user has access to this case (handles owner, direct, and team permissions)
 	const permissionResult = await getCasePermission({
 		userId,
@@ -225,7 +217,7 @@ export async function fetchCaseFromPrisma(
 	});
 
 	if (!permissionResult.hasAccess) {
-		return { error: "Not found" };
+		throw notFound("Case");
 	}
 
 	// Fetch the case data (exclude soft-deleted cases)
@@ -234,42 +226,18 @@ export async function fetchCaseFromPrisma(
 	// For case study integration, use the Release model instead.
 	const caseData = await prisma.assuranceCase.findUnique({
 		where: { id: caseId, deletedAt: null },
-		include: {
-			elements: {
-				where: { deletedAt: null },
-				include: {
-					children: {
-						where: { deletedAt: null },
-					},
-					comments: true,
-					// Include evidence linked TO this element (for claims)
-					evidenceLinksTo: {
-						where: { evidence: { deletedAt: null } },
-						include: {
-							evidence: true,
-						},
-					},
-				},
-			},
-			createdBy: {
-				select: {
-					id: true,
-					username: true,
-				},
-			},
-		},
+		include: CASE_INCLUDE,
 	});
 
 	if (!caseData) {
-		return { error: "Not found" };
+		throw notFound("Case");
 	}
 
 	// Transform Prisma data to the expected format
 	// Build the nested structure from flat elements
-	const elements = caseData.elements as unknown as PrismaElement[];
-	const goals = elements
+	const goals = caseData.elements
 		.filter((el) => el.elementType === "GOAL" && el.parentId === null)
-		.map((goal) => buildGoalStructure(goal, elements));
+		.map((goal) => buildGoalStructure(goal, caseData.elements));
 
 	const permissions = mapPermissionToFrontend(
 		permissionResult.permission,
@@ -282,28 +250,26 @@ export async function fetchCaseFromPrisma(
 	const linkedCaseStudyCount = 0;
 
 	return {
-		data: {
-			id: caseData.id,
-			name: caseData.name,
-			description: caseData.description,
-			created_date: caseData.createdAt.toISOString(),
-			color_profile: caseData.colorProfile,
-			owner: caseData.createdById,
-			goals,
-			permissions,
-			// Publish status fields
-			published: caseData.publishStatus === "PUBLISHED",
-			publishStatus: caseData.publishStatus,
-			publishedAt: caseData.publishedAt?.toISOString() ?? null,
-			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
-			// Case study integration
-			hasPublicCaseStudy,
-			linkedCaseStudyCount,
-			// Demo/tutorial flag
-			isDemo: caseData.isDemo,
-			// Layout preference
-			layoutDirection: caseData.layoutDirection,
-		},
+		id: caseData.id,
+		name: caseData.name,
+		description: caseData.description,
+		created_date: caseData.createdAt.toISOString(),
+		color_profile: caseData.colorProfile,
+		owner: caseData.createdById,
+		goals,
+		permissions,
+		// Publish status fields
+		published: caseData.publishStatus === "PUBLISHED",
+		publishStatus: caseData.publishStatus,
+		publishedAt: caseData.publishedAt?.toISOString() ?? null,
+		markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
+		// Case study integration
+		hasPublicCaseStudy,
+		linkedCaseStudyCount,
+		// Demo/tutorial flag
+		isDemo: caseData.isDemo,
+		// Layout preference
+		layoutDirection: caseData.layoutDirection,
 	};
 }
 
