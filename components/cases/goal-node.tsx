@@ -5,7 +5,6 @@ import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
 import ActionTooltip from "@/components/ui/action-tooltip";
-import IconIndicator from "./icon-indicator";
 import NodeAddPopover from "./node-add-popover";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
@@ -50,6 +49,9 @@ function GoalNode({ data, ...props }: NodeProps) {
 				bottomLeftActions={
 					<NodeActionGroup
 						addPopover={addPopover}
+						commentCount={
+							Array.isArray(data.comments) ? data.comments.length : 0
+						}
 						node={node}
 						nodeType="goal"
 						onEditClick={() => setEditDialogOpen(true)}
@@ -65,7 +67,6 @@ function GoalNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="goal"
 				selected={props.selected}
-				topRightActions={<IconIndicator data={data} />}
 			/>
 
 			{/* Edit Dialog */}

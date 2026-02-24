@@ -26,22 +26,6 @@ vi.mock("reactflow", async () => {
 	};
 });
 
-// Mock child components
-vi.mock("./icon-indicator", () => ({
-	default: ({
-		data,
-	}: {
-		data: { comments?: Array<{ id: number; content: string }> };
-	}) => (
-		<div
-			data-has-comments={data.comments && data.comments.length > 0}
-			data-testid="icon-indicator"
-		>
-			Icon Indicator
-		</div>
-	),
-}));
-
 describe("EvidenceNode", () => {
 	// Helper function to create mock props
 	const createMockProps = (data: {
@@ -226,37 +210,6 @@ describe("EvidenceNode", () => {
 	});
 
 	describe("Child Components", () => {
-		it("should render IconIndicator component", () => {
-			const data = {
-				name: "Test Evidence",
-				description: "Test description",
-				comments: [{ id: 1, content: "Test comment" }],
-			};
-
-			renderWithReactFlowAndAuth(<EvidenceNode {...createMockProps(data)} />);
-
-			expect(screen.getByTestId("icon-indicator")).toBeInTheDocument();
-			expect(screen.getByTestId("icon-indicator")).toHaveAttribute(
-				"data-has-comments",
-				"true"
-			);
-		});
-
-		it("should pass data to IconIndicator", () => {
-			const data = {
-				name: "Test Evidence",
-				description: "Test description",
-				comments: [],
-			};
-
-			renderWithReactFlowAndAuth(<EvidenceNode {...createMockProps(data)} />);
-
-			expect(screen.getByTestId("icon-indicator")).toHaveAttribute(
-				"data-has-comments",
-				"false"
-			);
-		});
-
 		it("should not render ToggleButton (unlike other nodes)", () => {
 			const data = {
 				name: "Test Evidence",
@@ -397,7 +350,7 @@ describe("EvidenceNode", () => {
 			renderWithReactFlowAndAuth(<EvidenceNode {...createMockProps(data)} />);
 
 			// Should render without crashing
-			expect(screen.getByTestId("icon-indicator")).toBeInTheDocument();
+			expect(screen.getByText("No description available.")).toBeInTheDocument();
 		});
 
 		it("should handle undefined data properties", () => {

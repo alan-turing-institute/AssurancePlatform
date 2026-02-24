@@ -4,7 +4,6 @@ import { ExternalLink } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
-import IconIndicator from "./icon-indicator";
 import NodeEditDialog from "./node-edit-dialog";
 
 function EvidenceNode({ data, ...props }: NodeProps) {
@@ -23,6 +22,9 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 			<BaseNode
 				bottomLeftActions={
 					<NodeActionGroup
+						commentCount={
+							Array.isArray(data.comments) ? data.comments.length : 0
+						}
 						node={node}
 						nodeType="evidence"
 						onEditClick={() => setEditDialogOpen(true)}
@@ -35,7 +37,6 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="evidence"
 				selected={props.selected}
-				topRightActions={<IconIndicator data={data} />}
 			>
 				{urls.length > 0 && (
 					<div className="space-y-1">

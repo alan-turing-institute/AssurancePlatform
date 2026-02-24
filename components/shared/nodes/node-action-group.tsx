@@ -22,13 +22,15 @@ type NodeActionGroupProps = {
 	onEditClick: () => void;
 	/** The Add popover component to wrap around the Add button */
 	addPopover?: React.ReactNode;
+	/** Number of comments on this node */
+	commentCount?: number;
 };
 
 /**
  * NodeActionGroup - Horizontal icon group for node actions
  *
  * Displayed in the bottom-left corner of each node.
- * Contains Edit, Add (optional), Comment, and Toggle (optional) buttons.
+ * Contains Add (optional), Edit, Toggle (optional), More Options, and Comment buttons.
  */
 export default function NodeActionGroup({
 	node,
@@ -38,6 +40,7 @@ export default function NodeActionGroup({
 	toggleButton,
 	onEditClick,
 	addPopover,
+	commentCount = 0,
 }: NodeActionGroupProps) {
 	const { setCommentsSheetOpen, setCommentsSheetNode, assuranceCase } =
 		useStore();
@@ -60,6 +63,9 @@ export default function NodeActionGroup({
 
 	return (
 		<div className="flex items-center gap-0.5">
+			{/* Add Button with Popover (not shown for evidence or when read-only) */}
+			{showAdd && nodeType !== "evidence" && !readOnly && addPopover}
+
 			{/* Edit Button */}
 			<ActionTooltip label={readOnly ? "View details" : "Edit element"}>
 				<button
@@ -73,27 +79,33 @@ export default function NodeActionGroup({
 				</button>
 			</ActionTooltip>
 
-			{/* Add Button with Popover (not shown for evidence or when read-only) */}
-			{showAdd && nodeType !== "evidence" && !readOnly && addPopover}
+			{/* Toggle Button (show/hide children) */}
+			{showToggle && toggleButton}
+
+			{/* More Options (Detach/Delete) - not shown when read-only */}
+			{!readOnly && <NodeOptionsMenu node={node} nodeType={nodeType} />}
 
 			{/* Comment Button */}
-			<ActionTooltip label="View comments">
+			<ActionTooltip
+				label={
+					commentCount > 0 ? `View comments (${commentCount})` : "View comments"
+				}
+			>
 				<button
 					onClick={handleCommentClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
 				>
-					<div className="inline-flex rounded-full p-1 hover:bg-foreground/10">
+					<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
 						<MessageCircle aria-hidden="true" size={16} />
+						{commentCount > 0 && (
+							<span className="-top-1 -right-1 absolute flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-[9px] text-info-foreground">
+								{commentCount}
+							</span>
+						)}
 					</div>
 				</button>
 			</ActionTooltip>
-
-			{/* More Options (Detach/Delete) - not shown when read-only */}
-			{!readOnly && <NodeOptionsMenu node={node} nodeType={nodeType} />}
-
-			{/* Toggle Button (existing, passed as child) */}
-			{showToggle && toggleButton}
 		</div>
 	);
 }

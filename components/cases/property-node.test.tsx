@@ -48,21 +48,6 @@ vi.mock("./toggle-button", () => ({
 	),
 }));
 
-vi.mock("./icon-indicator", () => ({
-	default: ({
-		data,
-	}: {
-		data: { comments?: Array<{ id: number; content: string }> };
-	}) => (
-		<div
-			data-has-comments={(data.comments?.length ?? 0) > 0}
-			data-testid="icon-indicator"
-		>
-			Icon Indicator
-		</div>
-	),
-}));
-
 describe("PropertyNode", () => {
 	const mockNodeProps = {
 		id: "property-1",
@@ -229,24 +214,6 @@ describe("PropertyNode", () => {
 	});
 
 	describe("Child Components", () => {
-		it("should render IconIndicator component", () => {
-			const data = {
-				name: "Test Property",
-				description: "Test description",
-				comments: [{ id: 1, content: "Test comment" }],
-			};
-
-			renderWithReactFlowAndAuth(
-				<PropertyNode data={data} {...mockNodeProps} />
-			);
-
-			expect(screen.getByTestId("icon-indicator")).toBeInTheDocument();
-			expect(screen.getByTestId("icon-indicator")).toHaveAttribute(
-				"data-has-comments",
-				"true"
-			);
-		});
-
 		it("should render ToggleButton component", () => {
 			const data = {
 				name: "Test Property",
@@ -283,22 +250,6 @@ describe("PropertyNode", () => {
 			);
 		});
 
-		it("should pass data to IconIndicator", () => {
-			const data = {
-				name: "Test Property",
-				description: "Test description",
-				comments: [],
-			};
-
-			renderWithReactFlowAndAuth(
-				<PropertyNode data={data} {...mockNodeProps} />
-			);
-
-			expect(screen.getByTestId("icon-indicator")).toHaveAttribute(
-				"data-has-comments",
-				"false"
-			);
-		});
 	});
 
 	describe("ReactFlow Handles", () => {
