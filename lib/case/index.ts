@@ -49,5 +49,7 @@ export {
 	toggleHiddenForChildren,
 	toggleHiddenForParent,
 } from "./tree-utils";
+// Fetch + transform
+export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
 // Types
 export type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";

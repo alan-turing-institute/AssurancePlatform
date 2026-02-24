@@ -7,9 +7,12 @@ import {
 } from "react";
 import type { Node } from "reactflow";
 import useStore from "@/data/store";
-import { attachCaseElement, deleteAssuranceCaseNode } from "@/lib/case";
+import {
+	attachCaseElement,
+	deleteAssuranceCaseNode,
+	fetchAndRefreshCase,
+} from "@/lib/case";
 import type {
-	AssuranceCase,
 	Context,
 	Evidence,
 	PropertyClaim,
@@ -65,10 +68,9 @@ export function useOrphanActions({
 		}
 
 		try {
-			const caseResponse = await fetch(`/api/cases/${assuranceCase.id}`);
-			if (caseResponse.ok) {
-				const freshCase = await caseResponse.json();
-				setAssuranceCase(freshCase as AssuranceCase);
+			const freshCase = await fetchAndRefreshCase(assuranceCase.id);
+			if (freshCase) {
+				setAssuranceCase(freshCase);
 			}
 
 			const orphanResponse = await fetch(

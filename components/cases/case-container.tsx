@@ -10,7 +10,7 @@ import useHistoryStore from "@/data/history-store";
 import useStore from "@/data/store";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
-import { addHiddenProp } from "@/lib/case";
+import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
 import type { AssuranceCase } from "@/types";
 import CheckTourClient from "../common/check-tour-client";
 import Header from "../header";
@@ -125,18 +125,17 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			try {
 				const response = await fetch(`/api/cases/${id}`);
 
-				if (response.status === 404 || response.status === 403) {
-					return;
-				}
-
 				if (response.status === 401) {
 					router.replace("/login");
 					return null;
 				}
 
+				if (!response.ok) {
+					return null;
+				}
+
 				const result = await response.json();
-				const formattedAssuranceCase = await addHiddenProp(result);
-				return formattedAssuranceCase;
+				return addHiddenProp(result) as AssuranceCase;
 			} catch (_error) {
 				toast.error("Failed to load case data");
 				return null;
@@ -191,12 +190,12 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		if (!effectiveCaseId) {
 			return;
 		}
-		fetchSingleCase(effectiveCaseId).then((result) => {
+		fetchAndRefreshCase(effectiveCaseId).then((result) => {
 			if (result) {
-				setAssuranceCase(result as AssuranceCase);
+				setAssuranceCase(result);
 			}
 		});
-	}, [effectiveCaseId, fetchSingleCase, setAssuranceCase]);
+	}, [effectiveCaseId, setAssuranceCase]);
 
 	// Subscribe to real-time case events via SSE
 	useCaseEvents({

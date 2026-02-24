@@ -83,15 +83,18 @@ function Flow() {
 		});
 	};
 
-	// Sync layout direction from persisted case data
+	// Sync layout direction from persisted case data (only on case load, not on user toggle)
+	const syncedCaseIdRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (
-			assuranceCase?.layoutDirection &&
-			assuranceCase.layoutDirection !== layoutDirection
+			assuranceCase?.id &&
+			assuranceCase.layoutDirection &&
+			syncedCaseIdRef.current !== assuranceCase.id
 		) {
+			syncedCaseIdRef.current = assuranceCase.id;
 			setLayoutDirection(assuranceCase.layoutDirection);
 		}
-	}, [assuranceCase?.layoutDirection, layoutDirection, setLayoutDirection]);
+	}, [assuranceCase?.id, assuranceCase?.layoutDirection, setLayoutDirection]);
 
 	// When layout direction changes, tell ReactFlow to re-read handle positions
 	// so edge paths recalculate to connect at the correct sides of nodes

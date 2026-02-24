@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import useHistoryStore from "@/data/history-store";
 import useStore from "@/data/store";
 import { useJsonValidation } from "@/hooks/use-json-validation";
-import { addHiddenProp } from "@/lib/case";
+import { fetchAndRefreshCase } from "@/lib/case";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 import { createSnapshot } from "@/lib/services/history-service";
@@ -26,7 +26,6 @@ import {
 	type TreeDiffResult,
 } from "@/lib/services/json-diff-service";
 import { useToast } from "@/lib/toast";
-import type { AssuranceCase } from "@/types";
 import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
 
@@ -48,20 +47,6 @@ type BatchUpdateResult =
  */
 function formatJson(data: unknown): string {
 	return JSON.stringify(data, null, 2);
-}
-
-/**
- * Fetches the updated case data and transforms it for the Zustand store.
- */
-async function fetchAndTransformCase(
-	caseId: string
-): Promise<AssuranceCase | null> {
-	const response = await fetch(`/api/cases/${caseId}`);
-	if (!response.ok) {
-		return null;
-	}
-	const caseData = await response.json();
-	return (await addHiddenProp(caseData)) as AssuranceCase;
 }
 
 /**
@@ -89,19 +74,6 @@ async function sendBatchUpdate(
 	}
 
 	return { success: true, summary: result.summary };
-}
-
-/**
- * Refreshes the case data in the store after batch update.
- */
-async function refreshCaseData(
-	caseId: string,
-	setAssuranceCase: (c: AssuranceCase) => void
-): Promise<void> {
-	const updatedCase = await fetchAndTransformCase(caseId);
-	if (updatedCase) {
-		setAssuranceCase(updatedCase);
-	}
 }
 
 /**
@@ -468,7 +440,10 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 			}
 
 			// Refetch the case data to update the diagram immediately
-			await refreshCaseData(caseId, setAssuranceCase);
+			const updatedCase = await fetchAndRefreshCase(caseId);
+			if (updatedCase) {
+				setAssuranceCase(updatedCase);
+			}
 
 			// Refresh JSON editor to sync with server state
 			await fetchJson();
