@@ -92,7 +92,7 @@ export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 			<div className="space-y-4">
 				<div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
 					<AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-					<p className="text-warning-foreground text-sm">
+					<p className="text-sm text-warning-foreground">
 						This will also delete {childCount} child element
 						{childCount !== 1 ? "s" : ""}. You can undo this action during the
 						current session.

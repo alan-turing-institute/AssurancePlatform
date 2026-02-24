@@ -183,7 +183,7 @@ export default function TeamSettingsPage() {
 					</div>
 				)}
 				{success && (
-					<div className="rounded-md bg-success/20 p-3 text-success-foreground text-sm">
+					<div className="rounded-md bg-success/20 p-3 text-sm text-success-foreground">
 						{success}
 					</div>
 				)}

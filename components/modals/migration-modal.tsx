@@ -62,7 +62,7 @@ export const MigrationModal = () => {
 							<h4 className="font-medium text-success-foreground">
 								What's new
 							</h4>
-							<ul className="mt-2 list-inside list-disc space-y-1 text-success text-sm">
+							<ul className="mt-2 list-inside list-disc space-y-1 text-sm text-success">
 								<li>Improved performance and reliability</li>
 								<li>Enhanced collaboration features</li>
 								<li>New team management capabilities</li>
@@ -81,7 +81,7 @@ export const MigrationModal = () => {
 								<h4 className="font-medium text-warning-foreground">
 									Action required
 								</h4>
-								<p className="mt-1 text-warning-foreground text-sm">
+								<p className="mt-1 text-sm text-warning-foreground">
 									Please add your email address to continue using collaboration
 									features. This notice will appear until you update your
 									profile.

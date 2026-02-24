@@ -221,6 +221,52 @@ function convertChangesToHistoryCommands(
 /**
  * Records history entry from JSON editor changes
  */
+/** Handle post-apply sync: record history and refetch case data */
+async function syncAfterApply(opts: {
+	result: BatchUpdateResult;
+	changes: ElementChange[];
+	serverData: CaseExportNested | null;
+	parsedData: CaseExportNested | null;
+	isUndoRedo: boolean;
+	recordOperation: (entry: HistoryEntry) => void;
+	caseId: string;
+	setAssuranceCase: (
+		c: ReturnType<typeof fetchAndRefreshCase> extends Promise<infer T>
+			? T
+			: never
+	) => void;
+	fetchJson: () => Promise<void>;
+}): Promise<void> {
+	const {
+		result,
+		changes,
+		serverData,
+		parsedData,
+		isUndoRedo,
+		recordOperation,
+		caseId,
+		setAssuranceCase,
+		fetchJson,
+	} = opts;
+
+	if (!isUndoRedo && serverData && parsedData && result.success) {
+		recordJsonEditorHistory(
+			changes,
+			serverData,
+			parsedData,
+			result.summary,
+			recordOperation
+		);
+	}
+
+	const updatedCase = await fetchAndRefreshCase(caseId);
+	if (updatedCase) {
+		setAssuranceCase(updatedCase);
+	}
+
+	await fetchJson();
+}
+
 function recordJsonEditorHistory(
 	changes: ElementChange[],
 	serverData: CaseExportNested,
@@ -423,30 +469,17 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 				return;
 			}
 
-			// Record history for undo/redo (only if not applying undo/redo operation)
-			if (
-				!isUndoRedoApplying &&
-				server.data &&
-				validation.parsedData &&
-				result.success
-			) {
-				recordJsonEditorHistory(
-					diffResult.changes,
-					server.data,
-					validation.parsedData,
-					result.summary,
-					recordOperation
-				);
-			}
-
-			// Refetch the case data to update the diagram immediately
-			const updatedCase = await fetchAndRefreshCase(caseId);
-			if (updatedCase) {
-				setAssuranceCase(updatedCase);
-			}
-
-			// Refresh JSON editor to sync with server state
-			await fetchJson();
+			await syncAfterApply({
+				result,
+				changes: diffResult.changes,
+				serverData: server.data,
+				parsedData: validation.parsedData,
+				isUndoRedo: isUndoRedoApplying,
+				recordOperation,
+				caseId,
+				setAssuranceCase,
+				fetchJson,
+			});
 		} catch (error) {
 			toast({
 				variant: "destructive",

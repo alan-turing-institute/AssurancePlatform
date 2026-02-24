@@ -12,7 +12,7 @@ export default function FeedbackBanner() {
 
 	return (
 		<div className="flex items-center gap-x-6 bg-primary px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
-			<div className="w-full text-sm text-primary-foreground leading-6">
+			<div className="w-full text-primary-foreground text-sm leading-6">
 				<Link
 					className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0"
 					href="/docs/community/community-support"
