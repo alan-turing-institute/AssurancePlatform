@@ -61,7 +61,9 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 											)}
 											data-tour={item.tourId}
 											href={item.href}
-											rel={item.externalLink ? "noopener noreferrer" : undefined}
+											rel={
+												item.externalLink ? "noopener noreferrer" : undefined
+											}
 											target={item.externalLink ? "_blank" : "_self"}
 										>
 											<item.icon
@@ -76,7 +78,10 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 											{item.name}
 											{item.externalLink && (
 												<>
-													<ExternalLink aria-hidden="true" className="ml-auto h-4 w-4 shrink-0" />
+													<ExternalLink
+														aria-hidden="true"
+														className="ml-auto h-4 w-4 shrink-0"
+													/>
 													<span className="sr-only">(opens in new tab)</span>
 												</>
 											)}
@@ -143,7 +148,10 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 												className="h-6 w-6 shrink-0 text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
 											/>
 											{item.name}
-											<ExternalLink aria-hidden="true" className="ml-auto h-4 w-4 shrink-0" />
+											<ExternalLink
+												aria-hidden="true"
+												className="ml-auto h-4 w-4 shrink-0"
+											/>
 											<span className="sr-only">(opens in new tab)</span>
 										</a>
 									</li>

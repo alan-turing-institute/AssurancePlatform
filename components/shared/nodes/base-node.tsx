@@ -76,6 +76,59 @@ function truncateText(text: string, maxLength = 180): string {
 	return `${text.slice(0, maxLength).trim()}...`;
 }
 
+function ExpandedContent({
+	descriptionText,
+	hasAttributes,
+	assumption,
+	context,
+	justification,
+	nodeType,
+	children,
+	name,
+	config,
+}: {
+	descriptionText: string;
+	hasAttributes: boolean;
+	assumption?: string;
+	context?: string[];
+	justification?: string;
+	nodeType: NodeType;
+	children?: ReactNode;
+	name: string;
+	config: ReturnType<typeof getNodeConfig>;
+}) {
+	return (
+		<div className={buildNodeContentClasses(true)}>
+			<p className={buildDescriptionClasses()}>{descriptionText}</p>
+
+			{hasAttributes && (
+				<>
+					<div className={buildSeparatorClasses()} />
+					<AttributeSection
+						assumption={assumption}
+						context={context}
+						justification={justification}
+						nodeType={nodeType}
+					/>
+				</>
+			)}
+
+			{children && (
+				<>
+					<div className={buildSeparatorClasses()} />
+					<div className="space-y-2">{children}</div>
+				</>
+			)}
+
+			<div className={buildSeparatorClasses()} />
+			<div className="flex items-center justify-between">
+				<span className={buildFooterLabelClasses()}>{config.label}</span>
+				<span className={buildFooterIdClasses()}>{name}</span>
+			</div>
+		</div>
+	);
+}
+
 export default function BaseNode({
 	nodeType,
 	name,
@@ -105,10 +158,11 @@ export default function BaseNode({
 	const Icon = config.icon;
 	const collapseVariants = withReducedMotion(contentCollapseVariants);
 
-	const hasAttributes =
+	const hasAttributes = !!(
 		(context && context.length > 0) ||
 		(assumption && assumption.trim() !== "") ||
-		(justification && justification.trim() !== "");
+		(justification && justification.trim() !== "")
+	);
 
 	const descriptionText = description || "No description available";
 
@@ -186,40 +240,18 @@ export default function BaseNode({
 							onAnimationComplete={handleAnimationComplete}
 							variants={collapseVariants as import("framer-motion").Variants}
 						>
-							<div className={buildNodeContentClasses(true)}>
-								{/* Full description */}
-								<p className={buildDescriptionClasses()}>{descriptionText}</p>
-
-								{/* Attributes section */}
-								{hasAttributes && (
-									<>
-										<div className={buildSeparatorClasses()} />
-										<AttributeSection
-											assumption={assumption}
-											context={context}
-											justification={justification}
-											nodeType={nodeType}
-										/>
-									</>
-								)}
-
-								{/* Additional children content */}
-								{children && (
-									<>
-										<div className={buildSeparatorClasses()} />
-										<div className="space-y-2">{children}</div>
-									</>
-								)}
-
-								{/* Footer with type label and ID */}
-								<div className={buildSeparatorClasses()} />
-								<div className="flex items-center justify-between">
-									<span className={buildFooterLabelClasses()}>
-										{config.label}
-									</span>
-									<span className={buildFooterIdClasses()}>{name}</span>
-								</div>
-							</div>
+							<ExpandedContent
+								assumption={assumption}
+								config={config}
+								context={context}
+								descriptionText={descriptionText}
+								hasAttributes={hasAttributes}
+								justification={justification}
+								name={name}
+								nodeType={nodeType}
+							>
+								{children}
+							</ExpandedContent>
 						</m.div>
 					)}
 				</AnimatePresence>
