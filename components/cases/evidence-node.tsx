@@ -11,6 +11,8 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 
 	const url = data.URL || data.url;
+	const fallback = url ? [url] : [];
+	const urls: string[] = data.urls?.length ? data.urls : fallback;
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
 	const dataTour =
@@ -35,25 +37,30 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				selected={props.selected}
 				topRightActions={<IconIndicator data={data} />}
 			>
-				{url && (
+				{urls.length > 0 && (
 					<div className="space-y-1">
 						<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-							Source
+							{urls.length > 1 ? `Sources (${urls.length})` : "Source"}
 						</span>
-						<a
-							className="flex items-center gap-1.5 text-info text-sm hover:text-info/80 hover:underline"
-							href={url}
-							onClick={(e) => e.stopPropagation()}
-							onMouseDown={(e) => e.stopPropagation()}
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							<ExternalLink
-								aria-hidden="true"
-								className="h-3.5 w-3.5 shrink-0"
-							/>
-							<span className="truncate">{url}</span>
-						</a>
+						<div className="space-y-1">
+							{urls.map((u) => (
+								<a
+									className="flex items-center gap-1.5 text-info text-sm hover:text-info/80 hover:underline"
+									href={u}
+									key={u}
+									onClick={(e) => e.stopPropagation()}
+									onMouseDown={(e) => e.stopPropagation()}
+									rel="noopener noreferrer"
+									target="_blank"
+								>
+									<ExternalLink
+										aria-hidden="true"
+										className="h-3.5 w-3.5 shrink-0"
+									/>
+									<span className="truncate">{u}</span>
+								</a>
+							))}
+						</div>
 					</div>
 				)}
 			</BaseNode>

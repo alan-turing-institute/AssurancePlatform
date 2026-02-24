@@ -25,6 +25,8 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 		return null;
 	}
 
+	const isMultiItem = Array.isArray(value) && value.length > 1;
+
 	return (
 		<div className="space-y-1">
 			<div className="flex items-center gap-1.5">
@@ -33,9 +35,22 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 					{label}
 				</span>
 			</div>
-			<p className="pl-5 text-foreground text-xs leading-relaxed">
-				{displayValue}
-			</p>
+			{isMultiItem ? (
+				<ul className="list-disc space-y-1.5 pl-5">
+					{(value as string[]).map((item) => (
+						<li
+							className="text-foreground text-xs leading-relaxed"
+							key={`${label}-${item}`}
+						>
+							{item}
+						</li>
+					))}
+				</ul>
+			) : (
+				<p className="pl-5 text-foreground text-xs leading-relaxed">
+					{displayValue}
+				</p>
+			)}
 		</div>
 	);
 }

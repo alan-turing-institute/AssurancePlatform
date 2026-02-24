@@ -23,6 +23,7 @@ type PrismaElement = {
 	justification: string | null;
 	context: string[];
 	url: string | null;
+	urls: string[];
 	level: number | null;
 	claimType: string | null;
 	keywords: string | null;
@@ -249,6 +250,7 @@ function buildPropertyClaimStructure(
 			long_description: ev.description || "",
 			created_date: ev.createdAt.toISOString(),
 			URL: ev.url || "",
+			urls: ev.urls || [],
 			property_claim_id: [claim.id],
 			comments: ev.comments || [],
 			in_sandbox: ev.inSandbox,
@@ -406,9 +408,7 @@ export async function PUT(
 		const raw = await request.json();
 		const parsed = updateAssuranceCaseSchema.safeParse(raw);
 		if (!parsed.success) {
-			throw validationError(
-				parsed.error.errors[0]?.message ?? "Invalid input"
-			);
+			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
 		}
 		const data = await updateCaseWithPrisma(id, userId, parsed.data);
 		return apiSuccess(data);
