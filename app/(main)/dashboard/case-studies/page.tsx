@@ -18,7 +18,7 @@ async function CaseStudiesPage() {
 		redirect("/login");
 	}
 
-	const caseStudies = await fetchCaseStudies("");
+	const caseStudies = await fetchCaseStudies();
 
 	return (
 		<div className="min-h-screen space-y-4 p-8">

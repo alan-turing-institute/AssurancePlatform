@@ -10,7 +10,7 @@ const SharedWithMePage = async () => {
 		redirect("/login");
 	}
 
-	const sharedAssuranceCases = await fetchSharedAssuranceCases("");
+	const sharedAssuranceCases = await fetchSharedAssuranceCases();
 
 	// Handle null or empty array
 	const cases = sharedAssuranceCases ?? [];

@@ -5,6 +5,7 @@ import { linter } from "@codemirror/lint";
 import CodeMirror from "@uiw/react-codemirror";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { exportCase } from "@/actions/export-case";
 import {
 	Sheet,
 	SheetContent,
@@ -18,7 +19,6 @@ import useStore from "@/data/store";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { fetchAndRefreshCase } from "@/lib/case";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
-import { exportCase } from "@/lib/services/case-export-service";
 import { createSnapshot } from "@/lib/services/history-service";
 import {
 	computeTreeDiff,
@@ -360,7 +360,7 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 		setLoading(true);
 
 		try {
-			const result = await exportCase(userId, assuranceCase.id, {
+			const result = await exportCase(assuranceCase.id, {
 				includeComments: true,
 			});
 

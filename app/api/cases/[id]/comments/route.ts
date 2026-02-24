@@ -96,7 +96,7 @@ async function fetchPrismaComments(
 	caseId: string,
 	userId: string
 ): Promise<NextResponse> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const permissionResult = await getCasePermission({
@@ -108,7 +108,7 @@ async function fetchPrismaComments(
 		return apiError(notFound());
 	}
 
-	const allComments = await prismaNew.comment.findMany({
+	const allComments = await prisma.comment.findMany({
 		where: { caseId, elementId: null },
 		include: {
 			author: { select: { username: true } },
@@ -147,7 +147,7 @@ async function createPrismaComment(
 	parentId: string | null,
 	userId: string
 ): Promise<NextResponse> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);
@@ -166,7 +166,7 @@ async function createPrismaComment(
 		return apiError(forbidden());
 	}
 
-	const comment = await prismaNew.comment.create({
+	const comment = await prisma.comment.create({
 		data: {
 			caseId,
 			authorId: userId,

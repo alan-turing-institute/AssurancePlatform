@@ -83,7 +83,7 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 		}
 
 		// Send the formData to the API
-		const response = await updateCaseStudy("", formData);
+		const response = await updateCaseStudy(formData);
 
 		if (response) {
 			toast({

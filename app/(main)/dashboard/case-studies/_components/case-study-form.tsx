@@ -104,7 +104,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		formData.append("id", caseStudy.id.toString());
-		const result = await updateCaseStudy("", formData);
+		const result = await updateCaseStudy(formData);
 
 		if (values.image) {
 			await uploadCaseStudyFeatureImage(caseStudy.id, values.image);
@@ -128,7 +128,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		values: CaseStudyFormValues,
 		formData: FormData
 	) {
-		const result = await createCaseStudy("", formData);
+		const result = await createCaseStudy(formData);
 
 		if (!result.success) {
 			toast({
@@ -188,7 +188,7 @@ const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 		}
 
 		// Send the formData to the API
-		const result = await updateCaseStudy("", formData);
+		const result = await updateCaseStudy(formData);
 
 		if (result.success) {
 			toast({

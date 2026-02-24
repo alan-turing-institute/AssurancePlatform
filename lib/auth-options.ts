@@ -42,13 +42,13 @@ async function authenticateWithPrisma(
 	email: string;
 } | null> {
 	// Dynamic imports to avoid loading Prisma when not using this auth method
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { verifyPassword, hashPassword } = await import(
 		"@/lib/auth/password-service"
 	);
 	type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
 
-	const user = await prismaNew.user.findFirst({
+	const user = await prisma.user.findFirst({
 		where: {
 			OR: [{ username }, { email: username }],
 		},
@@ -78,7 +78,7 @@ async function authenticateWithPrisma(
 	// Upgrade password hash to argon2id if using legacy algorithm
 	if (needsUpgrade) {
 		const newHash = await hashPassword(password);
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: user.id },
 			data: {
 				passwordHash: newHash,
@@ -113,7 +113,7 @@ async function authenticateGitHubWithPrisma(
 	expiresAt?: number,
 	linkToUserId?: string
 ): Promise<{ id: string } | null> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	const githubId = String(profile?.id ?? "");
 	const githubUsername = profile?.login ?? "";
@@ -128,7 +128,7 @@ async function authenticateGitHubWithPrisma(
 	const tokenExpiresAt = expiresAt ? new Date(expiresAt * 1000) : null;
 
 	// Check if this GitHub account is already linked to another user
-	const githubLinkedUser = await prismaNew.user.findUnique({
+	const githubLinkedUser = await prisma.user.findUnique({
 		where: { githubId },
 		select: { id: true },
 	});
@@ -141,7 +141,7 @@ async function authenticateGitHubWithPrisma(
 		}
 
 		// Link GitHub to the specified user
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: linkToUserId },
 			data: {
 				githubId,
@@ -156,7 +156,7 @@ async function authenticateGitHubWithPrisma(
 	}
 
 	// Standard flow: Find existing user by GitHub ID or email
-	const existingUser = await prismaNew.user.findFirst({
+	const existingUser = await prisma.user.findFirst({
 		where: {
 			OR: [{ githubId }, { email }],
 		},
@@ -165,7 +165,7 @@ async function authenticateGitHubWithPrisma(
 	let userId: string;
 	if (existingUser) {
 		userId = existingUser.id;
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: userId },
 			data: {
 				githubId,
@@ -177,7 +177,7 @@ async function authenticateGitHubWithPrisma(
 			},
 		});
 	} else {
-		const newUser = await prismaNew.user.create({
+		const newUser = await prisma.user.create({
 			data: {
 				email,
 				username: githubUsername || email,
@@ -204,10 +204,10 @@ async function linkGoogleToUser(
 	email: string,
 	tokenData: ReturnType<typeof buildGoogleTokenData>
 ): Promise<{ id: string } | null> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	// Check if this Google account is already linked to another user
-	const googleLinkedUser = await prismaNew.user.findUnique({
+	const googleLinkedUser = await prisma.user.findUnique({
 		where: { googleId },
 		select: { id: true },
 	});
@@ -217,7 +217,7 @@ async function linkGoogleToUser(
 		return null;
 	}
 
-	await prismaNew.user.update({
+	await prisma.user.update({
 		where: { id: linkToUserId },
 		data: {
 			googleId,
@@ -250,7 +250,7 @@ async function authenticateGoogleWithPrisma(
 	expiresAt?: number,
 	linkToUserId?: string
 ): Promise<{ id: string } | null> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	const googleId = profile?.sub ?? "";
 	const email = profile?.email;
@@ -273,12 +273,12 @@ async function authenticateGoogleWithPrisma(
 	}
 
 	// Standard flow: Find existing user by Google ID or email
-	const existingUser = await prismaNew.user.findFirst({
+	const existingUser = await prisma.user.findFirst({
 		where: { OR: [{ googleId }, { email }] },
 	});
 
 	if (existingUser) {
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: existingUser.id },
 			data: { googleId, googleEmail: email, ...tokenData },
 		});
@@ -287,7 +287,7 @@ async function authenticateGoogleWithPrisma(
 
 	// Create new user for Google login
 	const username = email.split("@")[0] || email;
-	const newUser = await prismaNew.user.create({
+	const newUser = await prisma.user.create({
 		data: {
 			email,
 			username,

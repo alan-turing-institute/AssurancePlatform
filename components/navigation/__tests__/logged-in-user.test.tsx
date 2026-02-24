@@ -208,9 +208,8 @@ describe("LoggedInUser", () => {
 			expect(usernameElement).toHaveClass(
 				"font-medium",
 				"text-sm",
-				"text-sidebar-accent-foreground",
+				"text-sidebar-foreground",
 				"capitalize",
-				"group-hover:text-sidebar-accent-foreground"
 			);
 
 			const emailElement = screen.getByText("test@example.com");
@@ -218,7 +217,6 @@ describe("LoggedInUser", () => {
 				"font-medium",
 				"text-sidebar-foreground/70",
 				"text-xs",
-				"group-hover:text-sidebar-accent-foreground"
 			);
 		});
 
@@ -359,7 +357,7 @@ describe("LoggedInUser", () => {
 			});
 		});
 
-		it("should call fetchCurrentUser with empty string (no session key needed)", async () => {
+		it("should call fetchCurrentUser with no arguments", async () => {
 			// Reset to use promise-based mock
 			vi.mocked(fetchCurrentUser).mockImplementation(
 				() =>
@@ -370,8 +368,8 @@ describe("LoggedInUser", () => {
 
 			render(<LoggedInUser />);
 
-			// Should call fetchCurrentUser with empty string (session key no longer used)
-			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith("");
+			// Token parameter has been removed
+			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith();
 
 			// Resolve the promise
 			await act(async () => {
@@ -505,7 +503,7 @@ describe("LoggedInUser", () => {
 			});
 		});
 
-		it("should call fetchCurrentUser with empty string", async () => {
+		it("should call fetchCurrentUser with no arguments", async () => {
 			// Reset to use promise-based mock
 			vi.mocked(fetchCurrentUser).mockImplementation(
 				() =>
@@ -516,8 +514,8 @@ describe("LoggedInUser", () => {
 
 			render(<LoggedInUser />);
 
-			// Session key is no longer used - always called with empty string
-			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith("");
+			// Token parameter has been removed
+			expect(vi.mocked(fetchCurrentUser)).toHaveBeenCalledWith();
 
 			// Resolve the promise
 			await act(async () => {

@@ -4,7 +4,7 @@
  */
 
 import { hashPassword } from "../lib/auth/password-service";
-import { prismaNew } from "../lib/prisma";
+import { prisma } from "../lib/prisma";
 
 async function main() {
 	const username = "testuser";
@@ -12,7 +12,7 @@ async function main() {
 	const password = "testpassword123";
 
 	// Check if user already exists
-	const existing = await prismaNew.user.findFirst({
+	const existing = await prisma.user.findFirst({
 		where: {
 			OR: [{ username }, { email }],
 		},
@@ -29,7 +29,7 @@ async function main() {
 	const passwordHash = await hashPassword(password);
 
 	// Create the user
-	const user = await prismaNew.user.create({
+	const user = await prisma.user.create({
 		data: {
 			username,
 			email,
@@ -49,4 +49,4 @@ async function main() {
 
 main()
 	.catch(console.error)
-	.finally(() => prismaNew.$disconnect());
+	.finally(() => prisma.$disconnect());

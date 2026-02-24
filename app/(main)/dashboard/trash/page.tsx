@@ -6,9 +6,9 @@ import { validateSession } from "@/lib/auth/validate-session";
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
 
 async function fetchTrashedCases(userId: string): Promise<TrashedCase[]> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
-	const trashedCases = await prismaNew.assuranceCase.findMany({
+	const trashedCases = await prisma.assuranceCase.findMany({
 		where: {
 			createdById: userId,
 			deletedAt: { not: null },

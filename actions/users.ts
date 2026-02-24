@@ -14,17 +14,17 @@ type CurrentUser = {
 	completedTours?: string[];
 };
 
-export const fetchCurrentUser = async (
-	_token: string
-): Promise<CurrentUser | null | undefined> => {
-	const { prismaNew } = await import("@/lib/prisma");
+export const fetchCurrentUser = async (): Promise<
+	CurrentUser | null | undefined
+> => {
+	const { prisma } = await import("@/lib/prisma");
 
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: validated.userId },
 		select: {
 			id: true,

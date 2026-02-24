@@ -1,5 +1,3 @@
-"use server";
-
 /**
  * Case Batch Update Service
  *
@@ -7,7 +5,7 @@
  * Used by the JSON editor to apply multiple changes in a single transaction.
  */
 
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type {
 	ElementRole,
 	Prisma,
@@ -52,7 +50,7 @@ type LinkEvidenceChange = ElementChange & { type: "link_evidence" };
 type UnlinkEvidenceChange = ElementChange & { type: "unlink_evidence" };
 
 // Using Parameters to extract the transaction callback argument type
-type TransactionCallback = Parameters<typeof prismaNew.$transaction>[0];
+type TransactionCallback = Parameters<typeof prisma.$transaction>[0];
 type TransactionClient = TransactionCallback extends (
 	tx: infer T
 ) => Promise<unknown>
@@ -77,7 +75,7 @@ async function checkForConflict(
 	caseId: string,
 	expectedVersion: string
 ): Promise<boolean> {
-	const caseData = await prismaNew.assuranceCase.findUnique({
+	const caseData = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: { updatedAt: true },
 	});
@@ -109,7 +107,7 @@ async function validateNoCircularReference(
  * Gets all descendant IDs for an element
  */
 async function getDescendantIds(elementId: string): Promise<string[]> {
-	const children = await prismaNew.assuranceElement.findMany({
+	const children = await prisma.assuranceElement.findMany({
 		where: { parentId: elementId },
 		select: { id: true },
 	});
@@ -149,7 +147,7 @@ async function validateCreateParents(
 			continue;
 		}
 
-		const parentExists = await prismaNew.assuranceElement.findUnique({
+		const parentExists = await prisma.assuranceElement.findUnique({
 			where: { id: change.parentId },
 			select: { id: true },
 		});
@@ -481,7 +479,7 @@ export async function applyBatchUpdate(
 	}
 
 	try {
-		await prismaNew.$transaction(async (tx) => {
+		await prisma.$transaction(async (tx) => {
 			// Order: unlinks first, then deletes, creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
 			await applyDeletes(tx, deletes);

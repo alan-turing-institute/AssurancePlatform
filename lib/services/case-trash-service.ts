@@ -1,8 +1,6 @@
-"use server";
-
 import { timingSafeEqual } from "node:crypto";
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // ============================================
 // OUTPUT INTERFACES
@@ -40,7 +38,7 @@ async function validateCaseOwner(
 	| { valid: true; deletedAt: Date | null }
 	| { valid: false; error: string; status: number }
 > {
-	const existingCase = await prismaNew.assuranceCase.findUnique({
+	const existingCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			createdById: true,
@@ -88,7 +86,7 @@ export async function listTrashedCases(
 	userId: string
 ): Promise<{ data?: TrashListResponse; error?: string }> {
 	try {
-		const trashedCases = await prismaNew.assuranceCase.findMany({
+		const trashedCases = await prisma.assuranceCase.findMany({
 			where: {
 				createdById: userId,
 				deletedAt: { not: null },
@@ -154,7 +152,7 @@ export async function softDeleteCase(
 
 	try {
 		// Check if case exists and is not already deleted
-		const existingCase = await prismaNew.assuranceCase.findUnique({
+		const existingCase = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			select: { deletedAt: true },
 		});
@@ -168,7 +166,7 @@ export async function softDeleteCase(
 		}
 
 		// Soft-delete: set deletedAt and deletedBy
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				deletedAt: new Date(),
@@ -202,7 +200,7 @@ export async function restoreCase(
 	}
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				deletedAt: null,
@@ -239,7 +237,7 @@ export async function purgeCase(
 	}
 
 	try {
-		await prismaNew.assuranceCase.delete({
+		await prisma.assuranceCase.delete({
 			where: { id: caseId },
 		});
 
@@ -272,7 +270,7 @@ export async function purgeExpiredCases(
 		const cutoffDate = new Date();
 		cutoffDate.setDate(cutoffDate.getDate() - TRASH_RETENTION_DAYS);
 
-		const result = await prismaNew.assuranceCase.deleteMany({
+		const result = await prisma.assuranceCase.deleteMany({
 			where: {
 				deletedAt: {
 					not: null,

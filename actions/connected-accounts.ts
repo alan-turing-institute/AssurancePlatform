@@ -45,14 +45,14 @@ export type ConnectedAccountsData = {
  * Returns data about which providers are connected and their status.
  */
 export async function fetchConnectedAccounts(): Promise<ConnectedAccountsData | null> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: validated.userId },
 		select: {
 			authProvider: true,
@@ -167,7 +167,7 @@ export async function unlinkProvider(
 	}
 	const provider = parseResult.data;
 
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	const validated = await validateSession();
 	if (!validated) {
@@ -177,7 +177,7 @@ export async function unlinkProvider(
 		};
 	}
 
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: validated.userId },
 		select: {
 			authProvider: true,
@@ -232,7 +232,7 @@ export async function unlinkProvider(
 					authProvider: newAuthProvider,
 				};
 
-	await prismaNew.user.update({
+	await prisma.user.update({
 		where: { id: validated.userId },
 		data: updateData,
 	});

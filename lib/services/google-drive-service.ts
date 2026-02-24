@@ -6,7 +6,7 @@
  */
 
 import { google } from "googleapis";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";
@@ -65,7 +65,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 	accessToken: string;
 	refreshToken: string | null;
 } | null> {
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			googleAccessToken: true,
@@ -105,7 +105,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 			}
 
 			// Update stored tokens
-			await prismaNew.user.update({
+			await prisma.user.update({
 				where: { id: userId },
 				data: {
 					googleAccessToken: credentials.access_token,

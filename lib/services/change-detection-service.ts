@@ -1,7 +1,5 @@
-"use server";
-
 import { canAccessCase } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -47,7 +45,7 @@ export async function detectChanges(
 	}
 
 	// Get the case with its latest published version
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,

@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type {
 	CaseExportNested,
 	ElementRole,
@@ -45,7 +43,7 @@ async function fetchCommentsForElements(
 		return commentsMap;
 	}
 
-	const comments = await prismaNew.comment.findMany({
+	const comments = await prisma.comment.findMany({
 		where: {
 			elementId: { in: elementIds },
 		},
@@ -114,7 +112,7 @@ export async function exportCase(
 	try {
 		// Fetch case with elements and their evidence links (for claims)
 		// Exclude soft-deleted elements from export
-		const caseData = await prismaNew.assuranceCase.findUnique({
+		const caseData = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			include: {
 				elements: {

@@ -19,7 +19,7 @@ async function CaseStudyDetails({
 
 	const { id } = await params;
 
-	const caseStudy = await fetchCaseStudyById("", Number.parseInt(id, 10));
+	const caseStudy = await fetchCaseStudyById(Number.parseInt(id, 10));
 
 	return (
 		<>

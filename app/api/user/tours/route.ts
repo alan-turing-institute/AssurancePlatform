@@ -20,9 +20,9 @@ const tourCompletionSchema = z.object({
 export async function GET() {
 	try {
 		const userId = await requireAuth();
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: { completedTours: true },
 		});
@@ -54,9 +54,9 @@ export async function PATCH(req: Request) {
 		}
 
 		const { tourId } = parsed.data;
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: { completedTours: true },
 		});
@@ -70,7 +70,7 @@ export async function PATCH(req: Request) {
 			return apiSuccess({ completedTours: user.completedTours });
 		}
 
-		const updated = await prismaNew.user.update({
+		const updated = await prisma.user.update({
 			where: { id: userId },
 			data: {
 				completedTours: {

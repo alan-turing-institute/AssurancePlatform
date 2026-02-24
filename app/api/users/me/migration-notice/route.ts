@@ -15,10 +15,10 @@ export async function POST() {
 	try {
 		const userId = await requireAuth();
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 
 		// Fetch user to check if they have a valid email
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: { email: true },
 		});
@@ -37,7 +37,7 @@ export async function POST() {
 		}
 
 		// Update user to mark migration notice as seen
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: userId },
 			data: { hasSeenMigrationNotice: true },
 		});

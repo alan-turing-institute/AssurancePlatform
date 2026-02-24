@@ -3,7 +3,6 @@
 // Domain schemas for Server Actions
 export * from "./assurance-case";
 export * from "./base";
-export * from "./capture";
 export * from "./case-study";
 
 // Note: case-export.ts, element-validation.ts, and version-detection.ts

@@ -6,7 +6,7 @@
  */
 
 import { Octokit } from "@octokit/rest";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)
@@ -43,7 +43,7 @@ export type GitHubServiceError = {
  * Returns null if the user doesn't have a GitHub token stored.
  */
 async function getUserGitHubToken(userId: string): Promise<string | null> {
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			githubAccessToken: true,

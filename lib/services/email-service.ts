@@ -1,5 +1,3 @@
-"use server";
-
 import { EmailClient } from "@azure/communication-email";
 
 // Configuration

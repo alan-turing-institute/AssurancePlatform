@@ -1,7 +1,6 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -21,13 +20,13 @@ export async function getDocumentExportData(
 	caseId: string,
 	options: DocumentExportOptions
 ): Promise<DocumentExportResult> {
-	const session = await getServerSession(authOptions);
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
+	if (!session) {
 		return { success: false, error: "Not authenticated" };
 	}
 
-	const result = await exportCase(session.user.id, caseId, {
+	const result = await exportCase(session.userId, caseId, {
 		includeComments: options.includeComments,
 	});
 

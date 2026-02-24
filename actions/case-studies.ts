@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
 import {
 	caseStudyIdSchema,
 	createCaseStudySchema,
@@ -34,16 +33,15 @@ type CaseStudyResponse = ReturnType<typeof transformCaseStudyForApi>;
 
 /**
  * Fetch all case studies owned by the current user
- * @deprecated The token parameter is no longer used - session is used instead
  */
-export const fetchCaseStudies = async (_token?: string) => {
-	const session = await getServerSession(authOptions);
+export const fetchCaseStudies = async () => {
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
+	if (!session) {
 		throw new Error("Unauthorised");
 	}
 
-	const caseStudies = await getCaseStudiesByOwner(session.user.id);
+	const caseStudies = await getCaseStudiesByOwner(session.userId);
 	return transformCaseStudiesForApi(caseStudies);
 };
 
@@ -76,12 +74,11 @@ export const fetchPublishedCaseStudyById = async (id: number) => {
 
 /**
  * Fetch a specific case study by ID (requires authentication)
- * @deprecated The token parameter is no longer used - session is used instead
  */
-export const fetchCaseStudyById = async (_token: string, id: number) => {
-	const session = await getServerSession(authOptions);
+export const fetchCaseStudyById = async (id: number) => {
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
+	if (!session) {
 		throw new Error("Unauthorised");
 	}
 
@@ -98,7 +95,7 @@ export const fetchCaseStudyById = async (_token: string, id: number) => {
 	}
 
 	// Verify ownership
-	if (caseStudy.ownerId !== session.user.id) {
+	if (caseStudy.ownerId !== session.userId) {
 		throw new Error("Forbidden");
 	}
 
@@ -107,15 +104,13 @@ export const fetchCaseStudyById = async (_token: string, id: number) => {
 
 /**
  * Create a new case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const createCaseStudy = async (
-	_token: string,
 	formData: FormData
 ): Promise<ActionResult<CaseStudyResponse>> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -132,7 +127,7 @@ export const createCaseStudy = async (
 	// 3. Business logic
 	try {
 		const caseStudy = await createCaseStudyWithLinks(
-			session.user.id,
+			session.userId,
 			{
 				title: validation.data.title,
 				description: validation.data.description,
@@ -156,15 +151,13 @@ export const createCaseStudy = async (
 
 /**
  * Update an existing case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const updateCaseStudy = async (
-	_token: string | undefined,
 	formData: FormData
 ): Promise<ActionResult<boolean>> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -184,7 +177,7 @@ export const updateCaseStudy = async (
 
 		const caseStudy = await updateCaseStudyWithLinks(
 			id,
-			session.user.id,
+			session.userId,
 			{
 				title: updateData.title,
 				description: updateData.description,
@@ -214,15 +207,13 @@ export const updateCaseStudy = async (
 
 /**
  * Delete a case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const deleteCaseStudy = async (
-	_token: string,
 	caseStudyId: number
 ): Promise<ActionResult<boolean>> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -236,7 +227,7 @@ export const deleteCaseStudy = async (
 	try {
 		const deleted = await deleteCaseStudyService(
 			validation.data,
-			session.user.id
+			session.userId
 		);
 
 		if (!deleted) {

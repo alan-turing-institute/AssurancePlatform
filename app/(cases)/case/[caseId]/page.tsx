@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import CaseContainer from "@/components/cases/case-container";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export async function generateMetadata({
 	params,
@@ -9,7 +9,7 @@ export async function generateMetadata({
 	params: Promise<{ caseId: string }>;
 }): Promise<Metadata> {
 	const { caseId } = await params;
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: { name: true },
 	});

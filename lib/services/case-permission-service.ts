@@ -1,7 +1,5 @@
-"use server";
-
 import { randomBytes } from "node:crypto";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { PermissionLevel } from "@/src/generated/prisma";
 
 // ============================================
@@ -130,7 +128,7 @@ async function logInviteSecurityEvent(params: {
 	userAgent: string | null;
 	metadata?: Record<string, unknown>;
 }): Promise<void> {
-	await prismaNew.securityAuditLog.create({
+	await prisma.securityAuditLog.create({
 		data: {
 			userId: params.userId,
 			eventType: params.eventType,
@@ -168,7 +166,7 @@ export async function listCasePermissions(
 
 	try {
 		// Get case with owner info
-		const assuranceCase = await prismaNew.assuranceCase.findUnique({
+		const assuranceCase = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			select: {
 				createdById: true,
@@ -187,7 +185,7 @@ export async function listCasePermissions(
 		}
 
 		// Get user permissions
-		const userPermissions = await prismaNew.casePermission.findMany({
+		const userPermissions = await prisma.casePermission.findMany({
 			where: { caseId },
 			include: {
 				user: {
@@ -209,7 +207,7 @@ export async function listCasePermissions(
 		});
 
 		// Get team permissions
-		const teamPermissions = await prismaNew.caseTeamPermission.findMany({
+		const teamPermissions = await prisma.caseTeamPermission.findMany({
 			where: { caseId },
 			include: {
 				team: {
@@ -295,14 +293,14 @@ export async function shareByEmail(
 
 	try {
 		// Find user by email
-		const targetUser = await prismaNew.user.findUnique({
+		const targetUser = await prisma.user.findUnique({
 			where: { email },
 			select: { id: true, username: true, avatarUrl: true },
 		});
 
 		if (targetUser) {
 			// Check if user is the case owner (can't add permission to owner)
-			const assuranceCase = await prismaNew.assuranceCase.findUnique({
+			const assuranceCase = await prisma.assuranceCase.findUnique({
 				where: { id: caseId },
 				select: { createdById: true },
 			});
@@ -312,7 +310,7 @@ export async function shareByEmail(
 			}
 
 			// Check if already has permission
-			const existingPermission = await prismaNew.casePermission.findUnique({
+			const existingPermission = await prisma.casePermission.findUnique({
 				where: {
 					caseId_userId: { caseId, userId: targetUser.id },
 				},
@@ -323,7 +321,7 @@ export async function shareByEmail(
 			}
 
 			// Grant permission
-			const permission = await prismaNew.casePermission.create({
+			const permission = await prisma.casePermission.create({
 				data: {
 					caseId,
 					userId: targetUser.id,
@@ -375,7 +373,7 @@ export async function shareByEmail(
 		const expiresAt = new Date();
 		expiresAt.setDate(expiresAt.getDate() + 7); // 7 day expiry
 
-		await prismaNew.caseInvite.create({
+		await prisma.caseInvite.create({
 			data: {
 				caseId,
 				email,
@@ -427,7 +425,7 @@ export async function shareWithTeam(
 		}
 
 		// Check if already shared with team
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: {
 				caseId_teamId: { caseId, teamId: input.teamId },
 			},
@@ -438,7 +436,7 @@ export async function shareWithTeam(
 		}
 
 		// Grant permission
-		const permission = await prismaNew.caseTeamPermission.create({
+		const permission = await prisma.caseTeamPermission.create({
 			data: {
 				caseId,
 				teamId: input.teamId,
@@ -497,7 +495,7 @@ export async function updateUserPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.casePermission.findUnique({
+		const existingPermission = await prisma.casePermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -506,7 +504,7 @@ export async function updateUserPermission(
 		}
 
 		// Update permission
-		const permission = await prismaNew.casePermission.update({
+		const permission = await prisma.casePermission.update({
 			where: { id: permissionId },
 			data: { permission: input.permission },
 			include: {
@@ -573,7 +571,7 @@ export async function updateTeamPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -582,7 +580,7 @@ export async function updateTeamPermission(
 		}
 
 		// Update permission
-		const permission = await prismaNew.caseTeamPermission.update({
+		const permission = await prisma.caseTeamPermission.update({
 			where: { id: permissionId },
 			data: { permission: input.permission },
 			include: {
@@ -631,7 +629,7 @@ export async function revokeUserPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.casePermission.findUnique({
+		const existingPermission = await prisma.casePermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -640,7 +638,7 @@ export async function revokeUserPermission(
 		}
 
 		// Delete permission
-		await prismaNew.casePermission.delete({
+		await prisma.casePermission.delete({
 			where: { id: permissionId },
 		});
 
@@ -667,7 +665,7 @@ export async function revokeTeamPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -676,7 +674,7 @@ export async function revokeTeamPermission(
 		}
 
 		// Delete permission
-		await prismaNew.caseTeamPermission.delete({
+		await prisma.caseTeamPermission.delete({
 			where: { id: permissionId },
 		});
 
@@ -699,7 +697,7 @@ export async function acceptInvite(
 
 	try {
 		// Validate user exists first (explicit null check)
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: { email: true },
 		});
@@ -716,7 +714,7 @@ export async function acceptInvite(
 		}
 
 		// Atomic transaction for invite acceptance (prevents race conditions)
-		const result: InviteTransactionResult = await prismaNew.$transaction(
+		const result: InviteTransactionResult = await prisma.$transaction(
 			async (tx) => {
 				// Find invite with implicit row lock
 				const invite = await tx.caseInvite.findUnique({

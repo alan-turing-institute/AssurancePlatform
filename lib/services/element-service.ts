@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
@@ -304,7 +302,7 @@ async function generateElementName(
 		parentInfo.name
 	) {
 		// Count existing siblings under the same parent (efficient indexed query)
-		const siblingCount = await prismaNew.assuranceElement.count({
+		const siblingCount = await prisma.assuranceElement.count({
 			where: {
 				parentId,
 				elementType: "PROPERTY_CLAIM",
@@ -321,7 +319,7 @@ async function generateElementName(
 		parentId &&
 		parentInfo?.elementType !== "PROPERTY_CLAIM"
 	) {
-		const caseWideCount = await prismaNew.assuranceElement.count({
+		const caseWideCount = await prisma.assuranceElement.count({
 			where: {
 				caseId,
 				elementType: "PROPERTY_CLAIM",
@@ -334,7 +332,7 @@ async function generateElementName(
 
 	// All other element types (Strategy, Evidence, Context) - count case-wide
 	// This ensures unique identifiers across the entire case (S1, S2, E1, E2, C1, C2...)
-	const caseWideCount = await prismaNew.assuranceElement.count({
+	const caseWideCount = await prisma.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: elementType as PrismaElementType,
@@ -351,7 +349,7 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
 	parentInfo: { name: string | null; elementType: string };
 }> {
-	const parent = await prismaNew.assuranceElement.findFirst({
+	const parent = await prisma.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null },
 		select: { level: true, elementType: true, name: true },
 	});
@@ -375,7 +373,7 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
  * Returns true if a goal exists, false otherwise.
  */
 async function caseHasGoal(caseId: string): Promise<boolean> {
-	const existingGoal = await prismaNew.assuranceElement.findFirst({
+	const existingGoal = await prisma.assuranceElement.findFirst({
 		where: {
 			caseId,
 			elementType: "GOAL",
@@ -393,7 +391,7 @@ async function createEvidenceLink(
 	evidenceId: string,
 	claimId: string
 ): Promise<void> {
-	await prismaNew.evidenceLink.create({
+	await prisma.evidenceLink.create({
 		data: {
 			evidenceId,
 			claimId,
@@ -423,7 +421,7 @@ async function createElementInDatabase(
 	userId: string,
 	intendedParentId: string | null
 ): Promise<{ data?: ElementResponse; error?: string }> {
-	const element = await prismaNew.assuranceElement.create({
+	const element = await prisma.assuranceElement.create({
 		data: {
 			caseId,
 			elementType: elementType as
@@ -530,7 +528,7 @@ export async function getElement(
 	elementId: string
 ): Promise<{ data?: ElementResponse; error?: string }> {
 	try {
-		const element = await prismaNew.assuranceElement.findFirst({
+		const element = await prisma.assuranceElement.findFirst({
 			where: { id: elementId, deletedAt: null },
 			include: {
 				parent: {
@@ -595,7 +593,7 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
  * Calculates the new level for a property claim based on its new parent
  */
 async function calculateNewLevel(newParentId: string): Promise<number> {
-	const newParent = await prismaNew.assuranceElement.findFirst({
+	const newParent = await prisma.assuranceElement.findFirst({
 		where: { id: newParentId, deletedAt: null },
 		select: { level: true, elementType: true },
 	});
@@ -615,7 +613,7 @@ export async function updateElement(
 ): Promise<{ data?: ElementResponse; error?: string }> {
 	try {
 		// Get existing element to check permissions (include deleted to give proper error message)
-		const existing = await prismaNew.assuranceElement.findUnique({
+		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true, elementType: true, level: true, deletedAt: true },
 		});
@@ -660,7 +658,7 @@ export async function updateElement(
 			updateData.parentId = null;
 		}
 
-		const element = await prismaNew.assuranceElement.update({
+		const element = await prisma.assuranceElement.update({
 			where: { id: elementId },
 			data: updateData,
 			include: {
@@ -686,7 +684,7 @@ export async function deleteElement(
 ): Promise<{ success?: boolean; error?: string }> {
 	try {
 		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
+		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true, deletedAt: true },
 		});
@@ -710,7 +708,7 @@ export async function deleteElement(
 		const allIds = [elementId, ...descendantIds];
 
 		// Soft delete all
-		await prismaNew.assuranceElement.updateMany({
+		await prisma.assuranceElement.updateMany({
 			where: { id: { in: allIds } },
 			data: { deletedAt: new Date(), deletedById: userId },
 		});
@@ -731,7 +729,7 @@ export async function detachElement(
 ): Promise<{ success?: boolean; error?: string }> {
 	try {
 		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
+		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true, deletedAt: true },
 		});
@@ -751,7 +749,7 @@ export async function detachElement(
 		}
 
 		// Move to sandbox by clearing parent and setting inSandbox
-		await prismaNew.assuranceElement.update({
+		await prisma.assuranceElement.update({
 			where: { id: elementId },
 			data: {
 				parentId: null,
@@ -770,7 +768,7 @@ export async function detachElement(
  * Recursively gets all descendant element IDs for a given parent (excludes deleted)
  */
 async function getDescendantIds(parentId: string): Promise<string[]> {
-	const children = await prismaNew.assuranceElement.findMany({
+	const children = await prisma.assuranceElement.findMany({
 		where: { parentId, deletedAt: null },
 		select: { id: true },
 	});
@@ -789,7 +787,7 @@ async function getDescendantIds(parentId: string): Promise<string[]> {
  * Recursively gets all soft-deleted descendant element IDs for restore operation
  */
 async function getDeletedDescendantIds(parentId: string): Promise<string[]> {
-	const children = await prismaNew.assuranceElement.findMany({
+	const children = await prisma.assuranceElement.findMany({
 		where: { parentId, deletedAt: { not: null } },
 		select: { id: true },
 	});
@@ -837,7 +835,7 @@ export async function attachElement(
 ): Promise<{ success?: boolean; error?: string }> {
 	try {
 		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
+		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true, elementType: true, deletedAt: true },
 		});
@@ -865,7 +863,7 @@ export async function attachElement(
 		// Calculate level if property claim
 		let level: number | undefined;
 		if (existing.elementType === "PROPERTY_CLAIM") {
-			const parent = await prismaNew.assuranceElement.findFirst({
+			const parent = await prisma.assuranceElement.findFirst({
 				where: { id: parentId, deletedAt: null },
 				select: { level: true, elementType: true },
 			});
@@ -877,7 +875,7 @@ export async function attachElement(
 		}
 
 		// Attach to parent and remove from sandbox
-		await prismaNew.assuranceElement.update({
+		await prisma.assuranceElement.update({
 			where: { id: elementId },
 			data: {
 				parentId,
@@ -889,7 +887,7 @@ export async function attachElement(
 		// Cascade: remove all descendants from sandbox as well
 		const descendantIds = await getDescendantIds(elementId);
 		if (descendantIds.length > 0) {
-			await prismaNew.assuranceElement.updateMany({
+			await prisma.assuranceElement.updateMany({
 				where: {
 					id: { in: descendantIds },
 				},
@@ -920,7 +918,7 @@ export async function getSandboxElements(
 	}
 
 	try {
-		const elements = await prismaNew.assuranceElement.findMany({
+		const elements = await prisma.assuranceElement.findMany({
 			where: {
 				caseId,
 				inSandbox: true,
@@ -950,7 +948,7 @@ export async function restoreElement(
 ): Promise<{ success?: boolean; error?: string }> {
 	try {
 		// Get the element (including deleted ones)
-		const element = await prismaNew.assuranceElement.findUnique({
+		const element = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { parentId: true, caseId: true, deletedAt: true },
 		});
@@ -971,7 +969,7 @@ export async function restoreElement(
 
 		// Verify parent is not deleted (if exists)
 		if (element.parentId) {
-			const parent = await prismaNew.assuranceElement.findUnique({
+			const parent = await prisma.assuranceElement.findUnique({
 				where: { id: element.parentId },
 				select: { deletedAt: true },
 			});
@@ -985,7 +983,7 @@ export async function restoreElement(
 		const allIds = [elementId, ...descendantIds];
 
 		// Restore all
-		await prismaNew.assuranceElement.updateMany({
+		await prisma.assuranceElement.updateMany({
 			where: { id: { in: allIds } },
 			data: { deletedAt: null, deletedById: null },
 		});

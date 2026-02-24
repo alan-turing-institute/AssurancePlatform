@@ -15,7 +15,7 @@ const SettingsPage = async () => {
 	}
 
 	const [currentUser, connectedAccounts] = await Promise.all([
-		fetchCurrentUser(""),
+		fetchCurrentUser(),
 		fetchConnectedAccounts(),
 	]);
 

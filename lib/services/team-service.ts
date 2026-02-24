@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { TeamRole } from "@/src/generated/prisma";
 
 // ============================================
@@ -180,7 +178,7 @@ export async function createTeam(
 	try {
 		const slug = generateSlug(input.name.trim());
 
-		const team = await prismaNew.team.create({
+		const team = await prisma.team.create({
 			data: {
 				name: input.name.trim(),
 				slug,
@@ -226,7 +224,7 @@ export async function getTeam(
 ): Promise<{ data?: TeamResponse; error?: string }> {
 	try {
 		// Get team with membership check
-		const team = await prismaNew.team.findUnique({
+		const team = await prisma.team.findUnique({
 			where: { id: teamId },
 			include: {
 				members: {
@@ -270,7 +268,7 @@ export async function listUserTeams(
 	userId: string
 ): Promise<{ data?: TeamListResponse[]; error?: string }> {
 	try {
-		const memberships = await prismaNew.teamMember.findMany({
+		const memberships = await prisma.teamMember.findMany({
 			where: { userId },
 			include: {
 				team: {
@@ -324,7 +322,7 @@ export async function updateTeam(
 	}
 
 	try {
-		const team = await prismaNew.team.update({
+		const team = await prisma.team.update({
 			where: { id: teamId },
 			data: {
 				...(input.name !== undefined && { name: input.name.trim() }),
@@ -374,7 +372,7 @@ export async function deleteTeam(
 
 	try {
 		// Delete team (cascade deletes members and permissions)
-		await prismaNew.team.delete({
+		await prisma.team.delete({
 			where: { id: teamId },
 		});
 
@@ -393,7 +391,7 @@ export async function getTeamBySlug(
 	slug: string
 ): Promise<{ data?: TeamResponse; error?: string }> {
 	try {
-		const team = await prismaNew.team.findUnique({
+		const team = await prisma.team.findUnique({
 			where: { slug },
 			include: {
 				members: {

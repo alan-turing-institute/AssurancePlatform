@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { topologicalSort, transformV1ToV2 } from "@/lib/transforms/v1-to-v2";
@@ -93,7 +91,7 @@ async function createCaseWithPermission(
 	caseData: CaseExportV2["case"],
 	userId: string
 ): Promise<string> {
-	const newCase = await prismaNew.assuranceCase.create({
+	const newCase = await prisma.assuranceCase.create({
 		data: {
 			name: caseData.name,
 			description: caseData.description,
@@ -131,7 +129,7 @@ async function createElements(
 			parentId = idMap.get(el.parentId) ?? null;
 		}
 
-		await prismaNew.assuranceElement.create({
+		await prisma.assuranceElement.create({
 			data: {
 				id: newId,
 				caseId,
@@ -171,7 +169,7 @@ async function createEvidenceLinks(
 		const claimId = idMap.get(link.claimId);
 
 		if (evidenceId && claimId) {
-			await prismaNew.evidenceLink.create({
+			await prisma.evidenceLink.create({
 				data: {
 					evidenceId,
 					claimId,
@@ -216,7 +214,7 @@ async function createComments(
 				createdAt = new Date();
 			}
 
-			await prismaNew.comment.create({
+			await prisma.comment.create({
 				data: {
 					elementId,
 					authorId: userId, // Import user becomes comment author
@@ -261,7 +259,7 @@ export async function importCase(
 		const idMap = buildIdMap(v2Data.elements);
 
 		// Use a transaction to ensure atomicity
-		const result = await prismaNew.$transaction(async () => {
+		const result = await prisma.$transaction(async () => {
 			// Create case
 			const caseId = await createCaseWithPermission(v2Data.case, userId);
 

@@ -100,11 +100,11 @@ export async function GET(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
 		// Get the element to find its case (exclude deleted elements)
-		const element = await prismaNew.assuranceElement.findFirst({
+		const element = await prisma.assuranceElement.findFirst({
 			where: { id: elementId, deletedAt: null },
 			select: { caseId: true },
 		});
@@ -124,7 +124,7 @@ export async function GET(
 		}
 
 		// Fetch all comments for this element (sorted ascending for tree building)
-		const comments = await prismaNew.comment.findMany({
+		const comments = await prisma.comment.findMany({
 			where: { elementId },
 			include: {
 				author: { select: { username: true } },
@@ -160,11 +160,11 @@ export async function POST(
 			return apiError(validationError("Comment content is required"));
 		}
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 		const { canAccessCase } = await import("@/lib/permissions");
 
 		// Get the element to find its case and name (exclude deleted elements)
-		const element = await prismaNew.assuranceElement.findFirst({
+		const element = await prisma.assuranceElement.findFirst({
 			where: { id: elementId, deletedAt: null },
 			select: { caseId: true, name: true, description: true },
 		});
@@ -185,7 +185,7 @@ export async function POST(
 
 		// If replying to a parent comment, verify it exists and belongs to this element
 		if (parentId) {
-			const parentComment = await prismaNew.comment.findUnique({
+			const parentComment = await prisma.comment.findUnique({
 				where: { id: parentId },
 				select: { elementId: true },
 			});
@@ -196,7 +196,7 @@ export async function POST(
 		}
 
 		// Create the comment
-		const comment = await prismaNew.comment.create({
+		const comment = await prisma.comment.create({
 			data: {
 				elementId,
 				content: content.trim(),

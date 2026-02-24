@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import {
 	deleteDirectory,
 	deleteFile,
@@ -52,7 +50,7 @@ export async function getCaseStudiesByOwner(
 	ownerId: string
 ): Promise<CaseStudyWithRelations[]> {
 	try {
-		const caseStudies = await prismaNew.caseStudy.findMany({
+		const caseStudies = await prisma.caseStudy.findMany({
 			where: {
 				ownerId,
 			},
@@ -91,7 +89,7 @@ export async function getCaseStudiesByOwner(
 export async function getPublishedCaseStudies(): Promise<
 	CaseStudyWithRelations[]
 > {
-	const caseStudies = await prismaNew.caseStudy.findMany({
+	const caseStudies = await prisma.caseStudy.findMany({
 		where: {
 			published: true,
 		},
@@ -117,7 +115,7 @@ export async function getPublishedCaseStudies(): Promise<
 export async function getCaseStudyById(
 	id: number
 ): Promise<CaseStudyWithRelations | null> {
-	const caseStudy = await prismaNew.caseStudy.findUnique({
+	const caseStudy = await prisma.caseStudy.findUnique({
 		where: { id },
 		include: {
 			publishedCases: {
@@ -138,7 +136,7 @@ export async function getCaseStudyById(
 export async function getPublishedCaseStudyById(
 	id: number
 ): Promise<CaseStudyWithRelations | null> {
-	const caseStudy = await prismaNew.caseStudy.findFirst({
+	const caseStudy = await prisma.caseStudy.findFirst({
 		where: {
 			id,
 			published: true,
@@ -165,7 +163,7 @@ export async function createCaseStudy(
 ): Promise<CaseStudyWithRelations> {
 	const now = new Date();
 
-	const caseStudy = await prismaNew.caseStudy.create({
+	const caseStudy = await prisma.caseStudy.create({
 		data: {
 			title: data.title,
 			description: data.description ?? null,
@@ -203,7 +201,7 @@ export async function updateCaseStudy(
 	data: Partial<CaseStudyCreateInput>
 ): Promise<CaseStudyWithRelations | null> {
 	// Verify ownership
-	const existing = await prismaNew.caseStudy.findUnique({
+	const existing = await prisma.caseStudy.findUnique({
 		where: { id },
 	});
 
@@ -215,7 +213,7 @@ export async function updateCaseStudy(
 	const wasPublished = existing.published;
 	const isNowPublished = data.published ?? existing.published;
 
-	const caseStudy = await prismaNew.caseStudy.update({
+	const caseStudy = await prisma.caseStudy.update({
 		where: { id },
 		data: {
 			title: data.title,
@@ -253,7 +251,7 @@ export async function deleteCaseStudy(
 	ownerId: string
 ): Promise<boolean> {
 	// Verify ownership and get feature image info
-	const existing = await prismaNew.caseStudy.findUnique({
+	const existing = await prisma.caseStudy.findUnique({
 		where: { id },
 		include: { featureImage: true },
 	});
@@ -271,15 +269,15 @@ export async function deleteCaseStudy(
 	await deleteDirectory(`case-studies/${id}`);
 
 	// Delete associated records first
-	await prismaNew.caseStudyPublishedCase.deleteMany({
+	await prisma.caseStudyPublishedCase.deleteMany({
 		where: { caseStudyId: id },
 	});
 
-	await prismaNew.caseStudyImage.deleteMany({
+	await prisma.caseStudyImage.deleteMany({
 		where: { caseStudyId: id },
 	});
 
-	await prismaNew.caseStudy.delete({
+	await prisma.caseStudy.delete({
 		where: { id },
 	});
 
@@ -292,7 +290,7 @@ export async function deleteCaseStudy(
 export async function getPublishedAssuranceCaseById(
 	id: string
 ): Promise<PublishedAssuranceCase | null> {
-	return await prismaNew.publishedAssuranceCase.findUnique({
+	return await prisma.publishedAssuranceCase.findUnique({
 		where: { id },
 	});
 }
@@ -303,7 +301,7 @@ export async function getPublishedAssuranceCaseById(
 export async function getPublishedAssuranceCaseByCaseId(
 	assuranceCaseId: string
 ): Promise<PublishedAssuranceCase | null> {
-	return await prismaNew.publishedAssuranceCase.findFirst({
+	return await prisma.publishedAssuranceCase.findFirst({
 		where: { assuranceCaseId },
 		orderBy: { createdAt: "desc" },
 	});
@@ -317,7 +315,7 @@ export async function linkPublishedCaseToCaseStudy(
 	publishedAssuranceCaseId: string
 ): Promise<boolean> {
 	try {
-		await prismaNew.caseStudyPublishedCase.create({
+		await prisma.caseStudyPublishedCase.create({
 			data: {
 				caseStudyId,
 				publishedAssuranceCaseId,
@@ -337,7 +335,7 @@ export async function unlinkPublishedCaseFromCaseStudy(
 	caseStudyId: number,
 	publishedAssuranceCaseId: string
 ): Promise<boolean> {
-	const result = await prismaNew.caseStudyPublishedCase.deleteMany({
+	const result = await prisma.caseStudyPublishedCase.deleteMany({
 		where: {
 			caseStudyId,
 			publishedAssuranceCaseId,
@@ -355,7 +353,7 @@ export async function updateCaseStudyImage(
 	imagePath: string
 ): Promise<boolean> {
 	try {
-		await prismaNew.caseStudyImage.upsert({
+		await prisma.caseStudyImage.upsert({
 			where: { caseStudyId },
 			create: {
 				caseStudyId,
@@ -379,7 +377,7 @@ export async function updateCaseStudyImage(
 export async function deleteCaseStudyImage(
 	caseStudyId: number
 ): Promise<boolean> {
-	const result = await prismaNew.caseStudyImage.deleteMany({
+	const result = await prisma.caseStudyImage.deleteMany({
 		where: { caseStudyId },
 	});
 
@@ -398,7 +396,7 @@ async function getLatestPublishedVersionId(
 	caseId: string
 ): Promise<string | null> {
 	try {
-		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+		const publishedVersions = await prisma.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: caseId },
 			select: { id: true },
 			orderBy: { createdAt: "desc" },
@@ -458,7 +456,7 @@ export async function resolvePublishedCaseIds(
 	}
 
 	// Get the source cases with their publish status
-	const sourceCases = await prismaNew.assuranceCase.findMany({
+	const sourceCases = await prisma.assuranceCase.findMany({
 		where: { id: { in: sourceCaseIds } },
 		select: { id: true, publishStatus: true, createdById: true },
 	});
@@ -510,7 +508,7 @@ async function syncPublishStatusIfNeeded(sourceCase: {
 	publishStatus: string;
 }): Promise<void> {
 	if (sourceCase.publishStatus !== "PUBLISHED") {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: sourceCase.id },
 			data: { publishStatus: "PUBLISHED", published: true },
 		});
@@ -539,7 +537,7 @@ export async function createCaseStudyWithLinks(
 	);
 
 	// Create case study and links in a transaction
-	const caseStudy = await prismaNew.$transaction(async (tx) => {
+	const caseStudy = await prisma.$transaction(async (tx) => {
 		// Create the case study
 		const created = await tx.caseStudy.create({
 			data: {
@@ -606,7 +604,7 @@ export async function updateCaseStudyWithLinks(
 	sourceCaseIds?: string[]
 ): Promise<CaseStudyWithRelations | null> {
 	// Verify ownership
-	const existing = await prismaNew.caseStudy.findUnique({
+	const existing = await prisma.caseStudy.findUnique({
 		where: { id },
 	});
 
@@ -625,7 +623,7 @@ export async function updateCaseStudyWithLinks(
 			: undefined;
 
 	// Update case study and links in a transaction
-	const caseStudy = await prismaNew.$transaction(async (tx) => {
+	const caseStudy = await prisma.$transaction(async (tx) => {
 		// Update the case study
 		await tx.caseStudy.update({
 			where: { id },

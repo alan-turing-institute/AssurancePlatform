@@ -18,10 +18,10 @@ type AssuranceCase = {
 	isDemo?: boolean;
 };
 
-export const fetchAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[] | null> => {
-	const { prismaNew } = await import("@/lib/prisma");
+export const fetchAssuranceCases = async (): Promise<
+	AssuranceCase[] | null
+> => {
+	const { prisma } = await import("@/lib/prisma");
 
 	const validated = await validateSession();
 	if (!validated) {
@@ -29,7 +29,7 @@ export const fetchAssuranceCases = async (
 	}
 
 	// Get cases where user is creator OR has explicit permission (exclude soft-deleted)
-	const cases = await prismaNew.assuranceCase.findMany({
+	const cases = await prisma.assuranceCase.findMany({
 		where: {
 			deletedAt: null,
 			OR: [
@@ -68,10 +68,10 @@ export const fetchAssuranceCases = async (
 	}));
 };
 
-export const fetchSharedAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[] | null> => {
-	const { prismaNew } = await import("@/lib/prisma");
+export const fetchSharedAssuranceCases = async (): Promise<
+	AssuranceCase[] | null
+> => {
+	const { prisma } = await import("@/lib/prisma");
 
 	const validated = await validateSession();
 	if (!validated) {
@@ -79,7 +79,7 @@ export const fetchSharedAssuranceCases = async (
 	}
 
 	// Get cases where user has permission (direct or via team) but is NOT the creator (exclude soft-deleted)
-	const cases = await prismaNew.assuranceCase.findMany({
+	const cases = await prisma.assuranceCase.findMany({
 		where: {
 			deletedAt: null,
 			AND: [
@@ -142,7 +142,6 @@ export const fetchSharedAssuranceCases = async (
 };
 
 export const createAssuranceCase = async (
-	_token: string,
 	input: CreateAssuranceCaseInput
 ): Promise<ActionResult<{ id: string }>> => {
 	// 1. Validate input
@@ -162,10 +161,10 @@ export const createAssuranceCase = async (
 	}
 
 	// 3. Business logic
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	try {
-		const newCase = await prismaNew.assuranceCase.create({
+		const newCase = await prisma.assuranceCase.create({
 			data: {
 				name: validation.data.name,
 				description: validation.data.description,
@@ -181,9 +180,9 @@ export const createAssuranceCase = async (
 	}
 };
 
-export const fetchPublishedAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[]> => {
+export const fetchPublishedAssuranceCases = async (): Promise<
+	AssuranceCase[]
+> => {
 	// Note: Published cases feature not yet implemented in Prisma schema
 	// This function is retained for backwards compatibility but returns empty array
 	return await Promise.resolve([]);

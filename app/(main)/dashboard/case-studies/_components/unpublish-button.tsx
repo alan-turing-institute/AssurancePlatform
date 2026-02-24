@@ -26,7 +26,7 @@ const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 			formData.append("published_date", ""); // Clear the published date
 
 			// Send the formData to the API
-			const result = await updateCaseStudy("", formData);
+			const result = await updateCaseStudy(formData);
 
 			if (result.success) {
 				toast({

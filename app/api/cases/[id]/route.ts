@@ -68,7 +68,7 @@ async function fetchCaseFromPrisma(
 	caseId: string,
 	userId: string
 ): Promise<CaseResult> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	// Check if user has access to this case (handles owner, direct, and team permissions)
@@ -85,7 +85,7 @@ async function fetchCaseFromPrisma(
 	// Note: We exclude publishedVersions query because it uses the legacy Django
 	// table with bigint foreign keys that don't match new UUID case IDs.
 	// For case study integration, use the Release model instead.
-	const caseData = await prismaNew.assuranceCase.findUnique({
+	const caseData = await prisma.assuranceCase.findUnique({
 		where: { id: caseId, deletedAt: null },
 		include: {
 			elements: {
@@ -348,7 +348,7 @@ async function updateCaseWithPrisma(
 	userId: string,
 	body: UpdateAssuranceCaseInput
 ): Promise<Record<string, unknown>> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { getCasePermission, hasPermissionLevel } = await import(
 		"@/lib/permissions"
 	);
@@ -368,7 +368,7 @@ async function updateCaseWithPrisma(
 	}
 
 	const updateData = buildCaseUpdateData(body);
-	const updated = await prismaNew.assuranceCase.update({
+	const updated = await prisma.assuranceCase.update({
 		where: { id },
 		data: updateData,
 	});

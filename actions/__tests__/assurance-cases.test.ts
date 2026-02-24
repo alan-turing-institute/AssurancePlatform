@@ -6,14 +6,14 @@ vi.mock("@/lib/auth/validate-session", () => ({
 }));
 
 // Mock Prisma (must use vi.hoisted for dynamic imports)
-const mockPrismaNew = vi.hoisted(() => ({
+const mockPrisma = vi.hoisted(() => ({
 	assuranceCase: {
 		findMany: vi.fn(),
 	},
 }));
 
 vi.mock("@/lib/prisma", () => ({
-	prismaNew: mockPrismaNew,
+	prisma: mockPrisma,
 }));
 
 import { validateSession } from "@/lib/auth/validate-session";
@@ -37,11 +37,11 @@ describe("Assurance Cases Actions", () => {
 		it("returns null when session is invalid", async () => {
 			mockValidateSession.mockResolvedValue(null);
 
-			const result = await fetchAssuranceCases("mock-token");
+			const result = await fetchAssuranceCases();
 
 			expect(result).toBeNull();
 			expect(mockValidateSession).toHaveBeenCalledTimes(1);
-			expect(mockPrismaNew.assuranceCase.findMany).not.toHaveBeenCalled();
+			expect(mockPrisma.assuranceCase.findMany).not.toHaveBeenCalled();
 		});
 
 		it("returns mapped cases with created_date and updated_date fields", async () => {
@@ -70,9 +70,9 @@ describe("Assurance Cases Actions", () => {
 				},
 			];
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue(mockCases);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue(mockCases);
 
-			const result = await fetchAssuranceCases("mock-token");
+			const result = await fetchAssuranceCases();
 
 			expect(result).toEqual([
 				{
@@ -101,11 +101,11 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([]);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([]);
 
-			await fetchAssuranceCases("mock-token");
+			await fetchAssuranceCases();
 
-			expect(mockPrismaNew.assuranceCase.findMany).toHaveBeenCalledWith({
+			expect(mockPrisma.assuranceCase.findMany).toHaveBeenCalledWith({
 				where: {
 					deletedAt: null,
 					OR: [
@@ -126,6 +126,7 @@ describe("Assurance Cases Actions", () => {
 					createdAt: true,
 					updatedAt: true,
 					createdById: true,
+					isDemo: true,
 				},
 				orderBy: {
 					createdAt: "desc",
@@ -142,7 +143,7 @@ describe("Assurance Cases Actions", () => {
 
 			const testDate = new Date("2024-06-15T14:23:45.678Z");
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([
 				{
 					id: "case-1",
 					name: "Test Case",
@@ -153,7 +154,7 @@ describe("Assurance Cases Actions", () => {
 				},
 			]);
 
-			const result = await fetchAssuranceCases("mock-token");
+			const result = await fetchAssuranceCases();
 
 			expect(result?.[0]?.updated_date).toBe("2024-06-15T14:23:45.678Z");
 			expect(typeof result?.[0]?.updated_date).toBe("string");
@@ -166,11 +167,11 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([]);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([]);
 
-			await fetchAssuranceCases("mock-token");
+			await fetchAssuranceCases();
 
-			const callArgs = mockPrismaNew.assuranceCase.findMany.mock.calls[0][0];
+			const callArgs = mockPrisma.assuranceCase.findMany.mock.calls[0][0];
 			expect(callArgs.where).toMatchObject({
 				deletedAt: null,
 				OR: [
@@ -193,7 +194,7 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([
 				{
 					id: "case-1",
 					name: "Test Case",
@@ -204,7 +205,7 @@ describe("Assurance Cases Actions", () => {
 				},
 			]);
 
-			const result = await fetchAssuranceCases("mock-token");
+			const result = await fetchAssuranceCases();
 
 			expect(result?.[0]?.description).toBeUndefined();
 		});
@@ -214,11 +215,11 @@ describe("Assurance Cases Actions", () => {
 		it("returns null when session is invalid", async () => {
 			mockValidateSession.mockResolvedValue(null);
 
-			const result = await fetchSharedAssuranceCases("mock-token");
+			const result = await fetchSharedAssuranceCases();
 
 			expect(result).toBeNull();
 			expect(mockValidateSession).toHaveBeenCalledTimes(1);
-			expect(mockPrismaNew.assuranceCase.findMany).not.toHaveBeenCalled();
+			expect(mockPrisma.assuranceCase.findMany).not.toHaveBeenCalled();
 		});
 
 		it("returns shared cases with correct field mapping", async () => {
@@ -239,9 +240,9 @@ describe("Assurance Cases Actions", () => {
 				},
 			];
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue(mockSharedCases);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue(mockSharedCases);
 
-			const result = await fetchSharedAssuranceCases("mock-token");
+			const result = await fetchSharedAssuranceCases();
 
 			expect(result).toEqual([
 				{
@@ -262,11 +263,11 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([]);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([]);
 
-			await fetchSharedAssuranceCases("mock-token");
+			await fetchSharedAssuranceCases();
 
-			const callArgs = mockPrismaNew.assuranceCase.findMany.mock.calls[0][0];
+			const callArgs = mockPrisma.assuranceCase.findMany.mock.calls[0][0];
 			expect(callArgs.where.AND).toContainEqual({
 				NOT: {
 					createdById: "user-123",
@@ -281,11 +282,11 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([]);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([]);
 
-			await fetchSharedAssuranceCases("mock-token");
+			await fetchSharedAssuranceCases();
 
-			const callArgs = mockPrismaNew.assuranceCase.findMany.mock.calls[0][0];
+			const callArgs = mockPrisma.assuranceCase.findMany.mock.calls[0][0];
 			expect(callArgs.where).toMatchObject({
 				deletedAt: null,
 				AND: [
@@ -331,7 +332,7 @@ describe("Assurance Cases Actions", () => {
 
 			const testDate = new Date("2024-07-20T11:30:15.999Z");
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([
 				{
 					id: "shared-1",
 					name: "Shared",
@@ -342,7 +343,7 @@ describe("Assurance Cases Actions", () => {
 				},
 			]);
 
-			const result = await fetchSharedAssuranceCases("mock-token");
+			const result = await fetchSharedAssuranceCases();
 
 			expect(result?.[0]?.updated_date).toBe("2024-07-20T11:30:15.999Z");
 			expect(typeof result?.[0]?.updated_date).toBe("string");
@@ -355,11 +356,11 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([]);
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([]);
 
-			await fetchSharedAssuranceCases("mock-token");
+			await fetchSharedAssuranceCases();
 
-			const callArgs = mockPrismaNew.assuranceCase.findMany.mock.calls[0][0];
+			const callArgs = mockPrisma.assuranceCase.findMany.mock.calls[0][0];
 			expect(callArgs.where.deletedAt).toBeNull();
 		});
 
@@ -370,7 +371,7 @@ describe("Assurance Cases Actions", () => {
 				email: "test@example.com",
 			});
 
-			mockPrismaNew.assuranceCase.findMany.mockResolvedValue([
+			mockPrisma.assuranceCase.findMany.mockResolvedValue([
 				{
 					id: "shared-1",
 					name: "Shared Case",
@@ -381,7 +382,7 @@ describe("Assurance Cases Actions", () => {
 				},
 			]);
 
-			const result = await fetchSharedAssuranceCases("mock-token");
+			const result = await fetchSharedAssuranceCases();
 
 			expect(result?.[0]?.description).toBeUndefined();
 		});

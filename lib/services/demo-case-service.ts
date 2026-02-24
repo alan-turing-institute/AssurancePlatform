@@ -6,7 +6,7 @@
  * exists and user hasn't dismissed it.
  */
 
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Ensures a demo assurance case exists for the given user.
@@ -17,7 +17,7 @@ import { prismaNew } from "@/lib/prisma";
  */
 export async function ensureDemoCaseExists(userId: string): Promise<void> {
 	// Check if user already has an active demo case
-	const existingDemo = await prismaNew.assuranceCase.findFirst({
+	const existingDemo = await prisma.assuranceCase.findFirst({
 		where: {
 			createdById: userId,
 			isDemo: true,
@@ -31,7 +31,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 	}
 
 	// Check if user has already seen/dismissed the demo
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { completedTours: true },
 	});
@@ -41,7 +41,7 @@ export async function ensureDemoCaseExists(userId: string): Promise<void> {
 	}
 
 	// Create the demo case with all elements in a single transaction
-	await prismaNew.$transaction(async (tx) => {
+	await prisma.$transaction(async (tx) => {
 		// Double-check inside transaction to prevent races
 		const raceCheck = await tx.assuranceCase.findFirst({
 			where: {

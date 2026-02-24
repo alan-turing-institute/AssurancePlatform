@@ -202,7 +202,7 @@ describe("CaseStudyDetails", () => {
 				params: Promise.resolve({ id: "123" }),
 			});
 
-			expect(fetchCaseStudyById).toHaveBeenCalledWith("", 123);
+			expect(fetchCaseStudyById).toHaveBeenCalledWith(123);
 		});
 
 		it("should pass case study to form component", async () => {
@@ -357,7 +357,7 @@ describe("CaseStudyDetails", () => {
 			});
 
 			// Should attempt to parse the ID
-			expect(fetchCaseStudyById).toHaveBeenCalledWith("", Number.NaN);
+			expect(fetchCaseStudyById).toHaveBeenCalledWith(Number.NaN);
 		});
 	});
 });

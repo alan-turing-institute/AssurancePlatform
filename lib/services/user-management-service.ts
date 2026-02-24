@@ -1,11 +1,9 @@
-"use server";
-
 import {
 	hashPassword,
 	type PasswordAlgorithm,
 	verifyPassword,
 } from "@/lib/auth/password-service";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // ============================================
 // Types
@@ -135,7 +133,7 @@ async function validateAndCheckUsername(
 		};
 	}
 
-	const existingUser = await prismaNew.user.findFirst({
+	const existingUser = await prisma.user.findFirst({
 		where: {
 			username: { equals: username, mode: "insensitive" },
 			id: { not: userId },
@@ -170,7 +168,7 @@ async function validateAndCheckEmail(
 		};
 	}
 
-	const existingUser = await prismaNew.user.findFirst({
+	const existingUser = await prisma.user.findFirst({
 		where: {
 			email: { equals: email, mode: "insensitive" },
 			id: { not: userId },
@@ -239,7 +237,7 @@ export async function updateUserProfile(
 			return { success: true };
 		}
 
-		const user = await prismaNew.user.update({
+		const user = await prisma.user.update({
 			where: { id: userId },
 			data: updateData,
 			select: {
@@ -287,7 +285,7 @@ export async function changePassword(
 		}
 
 		// Get user's current password hash
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				passwordHash: true,
@@ -331,7 +329,7 @@ export async function changePassword(
 		const newHash = await hashPassword(input.newPassword);
 
 		// Update password
-		await prismaNew.user.update({
+		await prisma.user.update({
 			where: { id: userId },
 			data: {
 				passwordHash: newHash,
@@ -360,7 +358,7 @@ const SYSTEM_USER_USERNAME = "system";
  * Gets or creates the system user for ownership transfer.
  */
 async function getOrCreateSystemUser(
-	tx: Parameters<Parameters<typeof prismaNew.$transaction>[0]>[0]
+	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 ): Promise<string> {
 	let systemUser = await tx.user.findFirst({
 		where: { isSystemUser: true },
@@ -394,7 +392,7 @@ export async function deleteAccount(
 ): ServiceResult {
 	try {
 		// Get user info
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				id: true,
@@ -438,7 +436,7 @@ export async function deleteAccount(
 		}
 
 		// Perform deletion in transaction
-		await prismaNew.$transaction(async (tx) => {
+		await prisma.$transaction(async (tx) => {
 			const systemUserId = await getOrCreateSystemUser(tx);
 
 			// Transfer owned cases to system user

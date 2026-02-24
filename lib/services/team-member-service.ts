@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { TeamRole } from "@/src/generated/prisma";
 
 // ============================================
@@ -120,7 +118,7 @@ export async function getTeamMembers(
 	}
 
 	try {
-		const members = await prismaNew.teamMember.findMany({
+		const members = await prisma.teamMember.findMany({
 			where: { teamId },
 			include: {
 				user: {
@@ -173,7 +171,7 @@ export async function addTeamMember(
 
 	try {
 		// Find user by email
-		const targetUser = await prismaNew.user.findUnique({
+		const targetUser = await prisma.user.findUnique({
 			where: { email },
 			select: { id: true },
 		});
@@ -184,7 +182,7 @@ export async function addTeamMember(
 		}
 
 		// Check if already a member
-		const existingMembership = await prismaNew.teamMember.findUnique({
+		const existingMembership = await prisma.teamMember.findUnique({
 			where: {
 				teamId_userId: { teamId, userId: targetUser.id },
 			},
@@ -195,7 +193,7 @@ export async function addTeamMember(
 		}
 
 		// Add member
-		const member = await prismaNew.teamMember.create({
+		const member = await prisma.teamMember.create({
 			data: {
 				teamId,
 				userId: targetUser.id,
@@ -249,7 +247,7 @@ export async function updateMemberRole(
 
 	try {
 		// Check target is a member
-		const targetMembership = await prismaNew.teamMember.findUnique({
+		const targetMembership = await prisma.teamMember.findUnique({
 			where: {
 				teamId_userId: { teamId, userId: targetUserId },
 			},
@@ -260,7 +258,7 @@ export async function updateMemberRole(
 		}
 
 		// Update role
-		const member = await prismaNew.teamMember.update({
+		const member = await prisma.teamMember.update({
 			where: {
 				teamId_userId: { teamId, userId: targetUserId },
 			},
@@ -306,7 +304,7 @@ export async function removeMember(
 
 	try {
 		// Check target is a member
-		const targetMembership = await prismaNew.teamMember.findUnique({
+		const targetMembership = await prisma.teamMember.findUnique({
 			where: {
 				teamId_userId: { teamId, userId: targetUserId },
 			},
@@ -317,7 +315,7 @@ export async function removeMember(
 		}
 
 		// Remove member
-		await prismaNew.teamMember.delete({
+		await prisma.teamMember.delete({
 			where: {
 				teamId_userId: { teamId, userId: targetUserId },
 			},
@@ -340,7 +338,7 @@ export async function leaveTeam(
 ): Promise<{ success?: boolean; error?: string }> {
 	try {
 		// Check membership
-		const membership = await prismaNew.teamMember.findUnique({
+		const membership = await prisma.teamMember.findUnique({
 			where: {
 				teamId_userId: { teamId, userId },
 			},
@@ -361,7 +359,7 @@ export async function leaveTeam(
 		}
 
 		// Remove membership
-		await prismaNew.teamMember.delete({
+		await prisma.teamMember.delete({
 			where: {
 				teamId_userId: { teamId, userId },
 			},

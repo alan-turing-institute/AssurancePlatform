@@ -17,16 +17,16 @@ const Dashboard = async () => {
 	}
 
 	// Fetch current logged in user
-	const currentUser = await fetchCurrentUser("");
+	const currentUser = await fetchCurrentUser();
 	if (currentUser == null) {
 		redirect("/login");
 	}
 
 	// Ensure demo case exists (idempotent, runs before fetching cases)
-	await ensureUserHasDemoCase("");
+	await ensureUserHasDemoCase();
 
 	// Fetch cases for current logged in user
-	const assuranceCases = await fetchAssuranceCases("");
+	const assuranceCases = await fetchAssuranceCases();
 	if (assuranceCases == null) {
 		redirect("/login");
 	}

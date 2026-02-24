@@ -60,8 +60,7 @@ export const CaseCreateModal = () => {
 			setLoading(true);
 
 			try {
-				// Pass empty string - server action uses validateSession() internally
-				const result = await createAssuranceCase("", {
+				const result = await createAssuranceCase({
 					name,
 					description,
 				});

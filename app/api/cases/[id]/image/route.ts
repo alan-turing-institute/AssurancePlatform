@@ -22,7 +22,7 @@ export async function GET(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 		const { getCasePermission } = await import("@/lib/permissions");
 
 		// Check user has permission to view the case
@@ -35,7 +35,7 @@ export async function GET(
 		}
 
 		// Fetch the case image
-		const caseImage = await prismaNew.caseImage.findUnique({
+		const caseImage = await prisma.caseImage.findUnique({
 			where: { caseId },
 			select: { imageUrl: true, uploadedAt: true },
 		});
@@ -65,7 +65,7 @@ export async function POST(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 		const { getCasePermission } = await import("@/lib/permissions");
 		const { uploadToBlob, generateScreenshotBlobPath } = await import(
 			"@/lib/services/blob-storage-service"
@@ -87,7 +87,7 @@ export async function POST(
 		}
 
 		// Check throttle - only capture if last screenshot is old enough
-		const existingImage = await prismaNew.caseImage.findUnique({
+		const existingImage = await prisma.caseImage.findUnique({
 			where: { caseId },
 			select: { uploadedAt: true },
 		});
@@ -134,7 +134,7 @@ export async function POST(
 
 		// Upsert the case image record
 		const now = new Date();
-		await prismaNew.caseImage.upsert({
+		await prisma.caseImage.upsert({
 			where: { caseId },
 			create: {
 				caseId,

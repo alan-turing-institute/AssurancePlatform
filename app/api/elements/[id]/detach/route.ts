@@ -20,8 +20,8 @@ export async function POST(
 		const { id: elementId } = await params;
 
 		// Get caseId before detaching for SSE event
-		const { prismaNew } = await import("@/lib/prisma");
-		const element = await prismaNew.assuranceElement.findUnique({
+		const { prisma } = await import("@/lib/prisma");
+		const element = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true },
 		});

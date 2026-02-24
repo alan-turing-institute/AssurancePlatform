@@ -35,10 +35,10 @@ async function getCommentWithPermission(
 	commentId: string,
 	userId: string
 ): Promise<CommentPermissionResult> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { canAccessCase } = await import("@/lib/permissions");
 
-	const comment = await prismaNew.comment.findUnique({
+	const comment = await prisma.comment.findUnique({
 		where: { id: commentId },
 		include: {
 			element: { select: { caseId: true, name: true, description: true } },
@@ -84,8 +84,8 @@ export async function DELETE(
 			session.userId
 		);
 
-		const { prismaNew } = await import("@/lib/prisma");
-		await prismaNew.comment.delete({ where: { id: commentId } });
+		const { prisma } = await import("@/lib/prisma");
+		await prisma.comment.delete({ where: { id: commentId } });
 
 		// Emit SSE event for real-time updates
 		const { emitSSEEvent } = await import(
@@ -136,8 +136,8 @@ export async function PUT(
 			session.userId
 		);
 
-		const { prismaNew } = await import("@/lib/prisma");
-		const updatedComment = await prismaNew.comment.update({
+		const { prisma } = await import("@/lib/prisma");
+		const updatedComment = await prisma.comment.update({
 			where: { id: commentId },
 			data: { content: content.trim() },
 			include: { author: { select: { username: true } } },
@@ -197,7 +197,7 @@ export async function PATCH(
 			session.userId
 		);
 
-		const { prismaNew } = await import("@/lib/prisma");
+		const { prisma } = await import("@/lib/prisma");
 
 		const updateData = resolved
 			? {
@@ -211,7 +211,7 @@ export async function PATCH(
 					resolvedAt: null,
 				};
 
-		const updatedComment = await prismaNew.comment.update({
+		const updatedComment = await prisma.comment.update({
 			where: { id: commentId },
 			data: updateData,
 			include: {

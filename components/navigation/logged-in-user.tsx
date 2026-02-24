@@ -19,7 +19,7 @@ const LoggedInUser = () => {
 	useEffect(() => {
 		const loadUser = async () => {
 			try {
-				const result = await fetchCurrentUser("");
+				const result = await fetchCurrentUser();
 				if (result) {
 					setCurrentUser({
 						username: result.username,

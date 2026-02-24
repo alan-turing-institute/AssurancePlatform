@@ -1,7 +1,5 @@
-"use server";
-
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
 import type {
@@ -34,7 +32,7 @@ export async function getPublishStatus(
 	}
 
 	// Get the case with its published status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			published: true,
@@ -102,7 +100,7 @@ export async function publishAssuranceCase(
 	}
 
 	// Get the case to check if it exists
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -128,8 +126,8 @@ export async function publishAssuranceCase(
 
 	try {
 		// Create the published version and update the case in a transaction
-		const [publishedCase] = await prismaNew.$transaction([
-			prismaNew.publishedAssuranceCase.create({
+		const [publishedCase] = await prisma.$transaction([
+			prisma.publishedAssuranceCase.create({
 				data: {
 					title: assuranceCase.name,
 					content: exportResult.data,
@@ -138,7 +136,7 @@ export async function publishAssuranceCase(
 					createdAt: now,
 				},
 			}),
-			prismaNew.assuranceCase.update({
+			prisma.assuranceCase.update({
 				where: { id: caseId },
 				data: {
 					published: true,
@@ -182,7 +180,7 @@ export async function unpublishAssuranceCase(
 	}
 
 	// Get the case with its published versions and linked case studies
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -238,7 +236,7 @@ export async function unpublishAssuranceCase(
 
 	try {
 		// Delete all published versions and their links, then update the case
-		await prismaNew.$transaction(async (tx) => {
+		await prisma.$transaction(async (tx) => {
 			// Get all published version IDs
 			const publishedVersionIds = assuranceCase.publishedVersions.map(
 				(pv) => pv.id
@@ -289,7 +287,7 @@ export async function getPublishedCasesByUser(
 ): Promise<
 	{ id: string; title: string; description: string | null; createdAt: Date }[]
 > {
-	const publishedCases = await prismaNew.publishedAssuranceCase.findMany({
+	const publishedCases = await prisma.publishedAssuranceCase.findMany({
 		where: {
 			assuranceCase: {
 				createdById: userId,
@@ -332,7 +330,7 @@ export async function getFullPublishStatus(
 	}
 
 	// Get the case with its publish status (excluding publishedVersions to avoid legacy table issues)
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			published: true,
@@ -354,7 +352,7 @@ export async function getFullPublishStatus(
 	let linkedCaseStudyCount = 0;
 
 	try {
-		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+		const publishedVersions = await prisma.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: caseId },
 			select: {
 				id: true,
@@ -434,7 +432,7 @@ export async function markCaseAsReady(
 	}
 
 	// Get the case to check its current status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -457,7 +455,7 @@ export async function markCaseAsReady(
 	const now = new Date();
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				publishStatus: "READY_TO_PUBLISH",
@@ -495,7 +493,7 @@ export async function unmarkCaseAsReady(
 	}
 
 	// Get the case to check its current status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -516,7 +514,7 @@ export async function unmarkCaseAsReady(
 	}
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				publishStatus: "DRAFT",
@@ -544,7 +542,7 @@ export async function getReadyToPublishCases(userId: string): Promise<
 		markedReadyAt: Date | null;
 	}[]
 > {
-	const cases = await prismaNew.assuranceCase.findMany({
+	const cases = await prisma.assuranceCase.findMany({
 		where: {
 			createdById: userId,
 			publishStatus: "READY_TO_PUBLISH",
@@ -582,7 +580,7 @@ export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 	}[]
 > {
 	// Query cases without publishedVersions to avoid legacy table issues
-	const cases = await prismaNew.assuranceCase.findMany({
+	const cases = await prisma.assuranceCase.findMany({
 		where: {
 			createdById: userId,
 			publishStatus: {
@@ -607,7 +605,7 @@ export async function getCasesAvailableForCaseStudy(userId: string): Promise<
 	let publishedVersionsMap = new Map<string, string>();
 
 	try {
-		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+		const publishedVersions = await prisma.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: { in: caseIds } },
 			select: { id: true, assuranceCaseId: true, createdAt: true },
 			orderBy: { createdAt: "desc" },
@@ -660,7 +658,7 @@ export async function updatePublishedCase(
 	}
 
 	// Get the case and current published version
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -710,7 +708,7 @@ export async function updatePublishedCase(
 
 	try {
 		// Create new version and migrate links in a transaction
-		const newPublished = await prismaNew.$transaction(async (tx) => {
+		const newPublished = await prisma.$transaction(async (tx) => {
 			// Create new published version
 			const published = await tx.publishedAssuranceCase.create({
 				data: {

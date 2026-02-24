@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { TeamMemberList } from "@/components/teams";
 import { Button } from "@/components/ui/button";
 import { authOptions } from "@/lib/auth-options";
-import { prismaNew as prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/src/generated/prisma";
 
 type TeamDetailPageProps = {

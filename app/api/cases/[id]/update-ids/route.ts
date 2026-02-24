@@ -7,7 +7,7 @@ import {
 } from "@/lib/api-response";
 import { compareIdentifiers } from "@/lib/identifier-utils";
 import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 const TYPE_PREFIXES: Record<string, string> = {
 	GOAL: "G",
@@ -220,7 +220,7 @@ async function resetIdentifiersWithPrisma(
 	}
 
 	// Get all elements for this case (excluding deleted), ordered by creation date
-	const elements = await prismaNew.assuranceElement.findMany({
+	const elements = await prisma.assuranceElement.findMany({
 		where: { caseId, deletedAt: null },
 		orderBy: { createdAt: "asc" },
 		select: {
@@ -233,7 +233,7 @@ async function resetIdentifiersWithPrisma(
 	});
 
 	// Get evidence links (evidence linked to claims via many-to-many)
-	const evidenceLinks = await prismaNew.evidenceLink.findMany({
+	const evidenceLinks = await prisma.evidenceLink.findMany({
 		where: {
 			evidence: { caseId, deletedAt: null },
 			claim: { caseId, deletedAt: null },
@@ -280,7 +280,7 @@ async function resetIdentifiersWithPrisma(
 	// Update all elements with new names
 	const updates = elements.map((element) => {
 		const newName = nameMap.get(element.id) || element.name || "X";
-		return prismaNew.assuranceElement.update({
+		return prisma.assuranceElement.update({
 			where: { id: element.id },
 			data: { name: newName },
 		});

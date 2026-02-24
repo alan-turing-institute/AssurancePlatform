@@ -1,8 +1,6 @@
-"use server";
-
 import crypto from "node:crypto";
 import { hashPassword } from "@/lib/auth/password-service";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 
 // Configuration
@@ -53,7 +51,7 @@ async function checkRateLimit(
 	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
 	// Check email-based rate limit
-	const emailAttempts = await prismaNew.passwordResetAttempt.count({
+	const emailAttempts = await prisma.passwordResetAttempt.count({
 		where: {
 			email: email.toLowerCase(),
 			attemptedAt: { gte: oneHourAgo },
@@ -69,7 +67,7 @@ async function checkRateLimit(
 	}
 
 	// Check IP-based rate limit
-	const ipAttempts = await prismaNew.passwordResetAttempt.count({
+	const ipAttempts = await prisma.passwordResetAttempt.count({
 		where: {
 			ipAddress,
 			attemptedAt: { gte: oneHourAgo },
@@ -95,7 +93,7 @@ async function recordAttempt(
 	ipAddress: string,
 	successful: boolean
 ): Promise<void> {
-	await prismaNew.passwordResetAttempt.create({
+	await prisma.passwordResetAttempt.create({
 		data: {
 			email: email.toLowerCase(),
 			ipAddress,
@@ -108,7 +106,7 @@ async function recordAttempt(
  * Log a security event for audit purposes.
  */
 async function logSecurityEvent(params: SecurityEventParams): Promise<void> {
-	await prismaNew.securityAuditLog.create({
+	await prisma.securityAuditLog.create({
 		data: {
 			userId: params.userId,
 			eventType: params.eventType,
@@ -153,7 +151,7 @@ export async function requestPasswordReset(
 	await recordAttempt(normalizedEmail, ipAddress, false);
 
 	// Look up the user
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { email: normalizedEmail },
 		select: { id: true, username: true, authProvider: true },
 	});
@@ -181,7 +179,7 @@ export async function requestPasswordReset(
 	);
 
 	// Store the token
-	await prismaNew.user.update({
+	await prisma.user.update({
 		where: { id: user.id },
 		data: {
 			passwordResetToken: resetToken,
@@ -230,7 +228,7 @@ export async function validateResetToken(
 		return { success: false, error: "Invalid reset token" };
 	}
 
-	const user = await prismaNew.user.findFirst({
+	const user = await prisma.user.findFirst({
 		where: {
 			passwordResetToken: token,
 			passwordResetExpires: { gt: new Date() },
@@ -294,7 +292,7 @@ export async function resetPassword(
 	const passwordHash = await hashPassword(newPassword);
 
 	// Update the user's password and clear the reset token
-	await prismaNew.user.update({
+	await prisma.user.update({
 		where: { id: validation.userId },
 		data: {
 			passwordHash,
@@ -305,7 +303,7 @@ export async function resetPassword(
 	});
 
 	// Update the attempt record to mark as successful
-	await prismaNew.passwordResetAttempt.updateMany({
+	await prisma.passwordResetAttempt.updateMany({
 		where: {
 			email: validation.email.toLowerCase(),
 			successful: false,
@@ -334,7 +332,7 @@ export async function cleanupExpiredTokens(): Promise<{
 	clearedAttempts: number;
 }> {
 	// Clear expired reset tokens
-	const tokenResult = await prismaNew.user.updateMany({
+	const tokenResult = await prisma.user.updateMany({
 		where: {
 			passwordResetExpires: { lt: new Date() },
 			passwordResetToken: { not: null },
@@ -347,7 +345,7 @@ export async function cleanupExpiredTokens(): Promise<{
 
 	// Clear old attempt records (older than 24 hours)
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-	const attemptResult = await prismaNew.passwordResetAttempt.deleteMany({
+	const attemptResult = await prisma.passwordResetAttempt.deleteMany({
 		where: {
 			attemptedAt: { lt: oneDayAgo },
 		},

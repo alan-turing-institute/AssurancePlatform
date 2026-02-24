@@ -28,7 +28,7 @@ export async function fetchCaseComments(
 		return null;
 	}
 
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 	const { getCasePermission } = await import("@/lib/permissions");
 
 	const permissionResult = await getCasePermission({
@@ -40,7 +40,7 @@ export async function fetchCaseComments(
 		return null;
 	}
 
-	const allComments = await prismaNew.comment.findMany({
+	const allComments = await prisma.comment.findMany({
 		where: { caseId, elementId: null },
 		include: {
 			author: { select: { username: true } },

@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // ============================================
 // VALIDATION REGEX PATTERNS (top-level for performance)
@@ -121,7 +119,7 @@ export async function registerUser(
 
 	try {
 		// Check if email already exists
-		const existingEmail = await prismaNew.user.findUnique({
+		const existingEmail = await prisma.user.findUnique({
 			where: { email },
 			select: { id: true },
 		});
@@ -134,7 +132,7 @@ export async function registerUser(
 		}
 
 		// Check if username already exists
-		const existingUsername = await prismaNew.user.findUnique({
+		const existingUsername = await prisma.user.findUnique({
 			where: { username },
 			select: { id: true },
 		});
@@ -148,7 +146,7 @@ export async function registerUser(
 		const passwordHash = await hashPassword(input.password);
 
 		// Create user
-		const user = await prismaNew.user.create({
+		const user = await prisma.user.create({
 			data: {
 				username,
 				email,
@@ -184,7 +182,7 @@ export async function getUserById(
 	userId: string
 ): Promise<{ data?: UserResponse; error?: string }> {
 	try {
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				id: true,

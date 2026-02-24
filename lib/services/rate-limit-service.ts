@@ -1,4 +1,4 @@
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 // ============================================
 // TYPES
@@ -80,7 +80,7 @@ export const RATE_LIMIT_CONFIGS = {
  * Log a security event for audit purposes.
  */
 async function logSecurityEvent(params: SecurityEventParams): Promise<void> {
-	await prismaNew.securityAuditLog.create({
+	await prisma.securityAuditLog.create({
 		data: {
 			userId: params.userId,
 			eventType: params.eventType,
@@ -149,7 +149,7 @@ export async function checkRateLimit(
 
 		const windowStart = new Date(Date.now() - limit.windowMs);
 
-		const attemptCount = await prismaNew.rateLimitAttempt.count({
+		const attemptCount = await prisma.rateLimitAttempt.count({
 			where: {
 				endpoint: config.endpoint,
 				identifier,
@@ -160,7 +160,7 @@ export async function checkRateLimit(
 
 		if (attemptCount >= limit.maxAttempts) {
 			// Find oldest attempt to calculate retry time
-			const oldestAttempt = await prismaNew.rateLimitAttempt.findFirst({
+			const oldestAttempt = await prisma.rateLimitAttempt.findFirst({
 				where: {
 					endpoint: config.endpoint,
 					identifier,
@@ -221,7 +221,7 @@ export async function recordAttempt(
 	}
 
 	if (records.length > 0) {
-		await prismaNew.rateLimitAttempt.createMany({ data: records });
+		await prisma.rateLimitAttempt.createMany({ data: records });
 	}
 }
 
@@ -278,7 +278,7 @@ export async function cleanupRateLimitAttempts(
 ): Promise<number> {
 	const cutoffDate = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
 
-	const result = await prismaNew.rateLimitAttempt.deleteMany({
+	const result = await prisma.rateLimitAttempt.deleteMany({
 		where: {
 			attemptedAt: { lt: cutoffDate },
 		},

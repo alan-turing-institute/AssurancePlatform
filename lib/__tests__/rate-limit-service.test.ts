@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Prisma before importing the service
 vi.mock("@/lib/prisma", () => ({
-	prismaNew: {
+	prisma: {
 		rateLimitAttempt: {
 			count: vi.fn(),
 			findFirst: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock("@/lib/prisma", () => ({
 	},
 }));
 
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import {
 	checkAndRecordRateLimit,
 	checkRateLimit,
@@ -26,7 +26,7 @@ import {
 } from "../services/rate-limit-service";
 
 describe("rate-limit-service", () => {
-	const mockPrisma = vi.mocked(prismaNew);
+	const mockPrisma = vi.mocked(prisma);
 
 	beforeEach(() => {
 		vi.clearAllMocks();

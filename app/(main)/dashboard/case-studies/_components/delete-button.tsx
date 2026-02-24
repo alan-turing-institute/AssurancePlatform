@@ -26,7 +26,7 @@ const DeleteCaseButton = ({
 	const [deleteLoading] = useState<boolean>(false);
 
 	const handleDelete = async () => {
-		const result = await deleteCaseStudy("", caseStudyId);
+		const result = await deleteCaseStudy(caseStudyId);
 
 		if (result.success) {
 			toast({

@@ -6,7 +6,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { notFound } from "@/lib/errors";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 type UserResponse = {
 	id: string;
@@ -25,7 +25,7 @@ type UserResponse = {
  * Fetches the current user from Prisma.
  */
 async function getUserFromPrisma(userId: string): Promise<UserResponse | null> {
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			id: true,
