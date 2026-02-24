@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -23,11 +24,18 @@ export function DescriptionCard({
 			<div className="flex items-start gap-3 p-4">
 				{icon && <span className="text-muted-foreground">{icon}</span>}
 				<div className="flex flex-col gap-1">
-					<span className="font-semibold text-foreground group-hover:text-foreground">
+					<span className="flex items-center gap-1 font-semibold text-foreground group-hover:text-foreground">
 						{title}
-						<span className="ml-1 inline-block transition-transform group-hover:translate-x-0.5">
-							→
-						</span>
+						{isExternal ? (
+							<>
+								<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+								<span className="sr-only">(opens in new tab)</span>
+							</>
+						) : (
+							<span className="inline-block transition-transform group-hover:translate-x-0.5">
+								→
+							</span>
+						)}
 					</span>
 					<span className="text-muted-foreground text-sm">{description}</span>
 				</div>

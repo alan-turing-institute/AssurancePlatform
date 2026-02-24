@@ -97,6 +97,7 @@ const ListItem = React.forwardRef<
 				className
 			)}
 			ref={ref}
+			rel="noopener noreferrer"
 			{...props}
 		>
 			<div className="font-medium text-sm leading-none group-hover:text-primary-foreground">
@@ -105,6 +106,9 @@ const ListItem = React.forwardRef<
 			<div className="text-muted-foreground text-sm leading-snug group-hover:text-primary-foreground">
 				{children}
 			</div>
+			{props.target === "_blank" && (
+				<span className="sr-only">(opens in new tab)</span>
+			)}
 		</a>
 	</li>
 ));

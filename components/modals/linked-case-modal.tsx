@@ -37,6 +37,7 @@ export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
 						>
 							<Blocks className="size-4" />
 							{caseStudy.title}
+							<span className="sr-only">(opens in new tab)</span>
 						</Link>
 					</li>
 				))}

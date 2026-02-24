@@ -105,10 +105,14 @@ const ListItem = React.forwardRef<
 					className
 				)}
 				ref={ref}
+				rel="noopener noreferrer"
 				{...props}
 			>
 				<div className="font-medium text-sm leading-none">{title}</div>
 				<p className="text-muted-foreground text-sm leading-snug">{children}</p>
+				{props.target === "_blank" && (
+					<span className="sr-only">(opens in new tab)</span>
+				)}
 			</a>
 		</NavigationMenuLink>
 	</li>

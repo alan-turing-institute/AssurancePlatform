@@ -2,6 +2,7 @@
 
 import { Dialog } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -79,12 +80,19 @@ function Header() {
 				<div className="hidden lg:flex lg:gap-x-12">
 					{navigation.map((item) => (
 						<a
-							className="font-semibold text-foreground text-sm leading-6"
+							className="inline-flex items-center gap-1 font-semibold text-foreground text-sm leading-6"
 							href={item.href}
 							key={item.name}
+							rel={item.external ? "noopener noreferrer" : undefined}
 							target={item.external ? "_blank" : "_self"}
 						>
 							{item.name}
+							{item.external && (
+								<>
+									<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+									<span className="sr-only">(opens in new tab)</span>
+								</>
+							)}
 						</a>
 					))}
 				</div>
@@ -151,12 +159,19 @@ function Header() {
 							<div className="space-y-2 py-6">
 								{navigation.map((item) => (
 									<a
-										className="-mx-3 block rounded-lg px-3 py-2 font-semibold text-base text-foreground leading-7 hover:bg-accent"
+										className="-mx-3 flex items-center gap-1 rounded-lg px-3 py-2 font-semibold text-base text-foreground leading-7 hover:bg-accent"
 										href={item.href}
 										key={item.name}
-										target="_blank"
+										rel={item.external ? "noopener noreferrer" : undefined}
+										target={item.external ? "_blank" : "_self"}
 									>
 										{item.name}
+										{item.external && (
+											<>
+												<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+												<span className="sr-only">(opens in new tab)</span>
+											</>
+										)}
 									</a>
 								))}
 							</div>
