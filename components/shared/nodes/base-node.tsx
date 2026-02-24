@@ -93,8 +93,13 @@ export default function BaseNode({
 	expandTour,
 }: BaseNodeProps) {
 	const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-	const { layoutNodes } = useStore();
+	const { layoutNodes, layoutDirection } = useStore();
 	const { fitView, getNodes, getEdges } = useReactFlow();
+
+	const targetPosition =
+		layoutDirection === "LR" ? Position.Left : Position.Top;
+	const sourcePosition =
+		layoutDirection === "LR" ? Position.Right : Position.Bottom;
 
 	const config = getNodeConfig(nodeType);
 	const Icon = config.icon;
@@ -136,7 +141,7 @@ export default function BaseNode({
 		<div className={containerClasses} data-tour={dataTour}>
 			{/* Target Handle (top) */}
 			{config.showTargetHandle && (
-				<Handle id="target" position={Position.Top} type="target" />
+				<Handle id="target" position={targetPosition} type="target" />
 			)}
 
 			<LazyMotion features={domAnimation} strict>
@@ -246,7 +251,7 @@ export default function BaseNode({
 
 			{/* Source Handle (bottom) */}
 			{config.showSourceHandle && (
-				<Handle id="c" position={Position.Bottom} type="source" />
+				<Handle id="c" position={sourcePosition} type="source" />
 			)}
 		</div>
 	);

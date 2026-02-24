@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import ReactFlow, { Background, Controls, useReactFlow } from "reactflow";
+import ReactFlow, {
+	Background,
+	Controls,
+	useReactFlow,
+	useUpdateNodeInternals,
+} from "reactflow";
 
 import "reactflow/dist/style.css";
 import { Loader2, Unplug, X } from "lucide-react";
@@ -30,6 +35,7 @@ const nodeTypes = {
 
 function Flow() {
 	const { fitView } = useReactFlow();
+	const updateNodeInternals = useUpdateNodeInternals();
 	const {
 		nodes,
 		edges,
@@ -86,6 +92,18 @@ function Flow() {
 			setLayoutDirection(assuranceCase.layoutDirection);
 		}
 	}, [assuranceCase?.layoutDirection, layoutDirection, setLayoutDirection]);
+
+	// When layout direction changes, tell ReactFlow to re-read handle positions
+	// so edge paths recalculate to connect at the correct sides of nodes
+	const prevDirectionRef = useRef(layoutDirection);
+	useEffect(() => {
+		if (prevDirectionRef.current !== layoutDirection) {
+			prevDirectionRef.current = layoutDirection;
+			for (const node of nodes) {
+				updateNodeInternals(node.id);
+			}
+		}
+	}, [layoutDirection, nodes, updateNodeInternals]);
 
 	const convert = useCallback(async () => {
 		try {
