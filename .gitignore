@@ -200,6 +200,7 @@ TASKS/
 
 # beads issue tracking
 .beads/last-touched
+.beads/.migration-hint-ts
 
 # IDE and editor files
 .idea/
