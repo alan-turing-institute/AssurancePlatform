@@ -121,7 +121,11 @@ export const MobileNav = ({
 																"group flex gap-x-3 rounded-md p-2 font-semibold text-sm leading-6"
 															)}
 															href={item.href}
-															rel={item.externalLink ? "noopener noreferrer" : undefined}
+															rel={
+																item.externalLink
+																	? "noopener noreferrer"
+																	: undefined
+															}
 															target={item.externalLink ? "_blank" : "_self"}
 														>
 															<item.icon
@@ -136,8 +140,13 @@ export const MobileNav = ({
 															{item.name}
 															{item.externalLink && (
 																<>
-																	<ExternalLink aria-hidden="true" className="ml-auto h-4 w-4 shrink-0" />
-																	<span className="sr-only">(opens in new tab)</span>
+																	<ExternalLink
+																		aria-hidden="true"
+																		className="ml-auto h-4 w-4 shrink-0"
+																	/>
+																	<span className="sr-only">
+																		(opens in new tab)
+																	</span>
 																</>
 															)}
 														</a>
@@ -205,8 +214,13 @@ export const MobileNav = ({
 																className="h-6 w-6 shrink-0 text-sidebar-foreground group-hover:text-sidebar-accent-foreground"
 															/>
 															{item.name}
-															<ExternalLink aria-hidden="true" className="ml-auto h-4 w-4 shrink-0" />
-															<span className="sr-only">(opens in new tab)</span>
+															<ExternalLink
+																aria-hidden="true"
+																className="ml-auto h-4 w-4 shrink-0"
+															/>
+															<span className="sr-only">
+																(opens in new tab)
+															</span>
 														</a>
 													</li>
 												))}

@@ -28,7 +28,10 @@ export function DescriptionCard({
 						{title}
 						{isExternal ? (
 							<>
-								<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+								<ExternalLink
+									aria-hidden="true"
+									className="h-3.5 w-3.5 shrink-0"
+								/>
 								<span className="sr-only">(opens in new tab)</span>
 							</>
 						) : (

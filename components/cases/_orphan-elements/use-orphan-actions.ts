@@ -12,12 +12,7 @@ import {
 	deleteAssuranceCaseNode,
 	fetchAndRefreshCase,
 } from "@/lib/case";
-import type {
-	Context,
-	Evidence,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
+import type { Context, Evidence, PropertyClaim, Strategy } from "@/types";
 
 export type OrphanElement = Context | Evidence | PropertyClaim | Strategy;
 

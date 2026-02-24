@@ -89,7 +89,10 @@ function Header() {
 							{item.name}
 							{item.external && (
 								<>
-									<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+									<ExternalLink
+										aria-hidden="true"
+										className="h-3.5 w-3.5 shrink-0"
+									/>
 									<span className="sr-only">(opens in new tab)</span>
 								</>
 							)}
@@ -168,7 +171,10 @@ function Header() {
 										{item.name}
 										{item.external && (
 											<>
-												<ExternalLink aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+												<ExternalLink
+													aria-hidden="true"
+													className="h-3.5 w-3.5 shrink-0"
+												/>
 												<span className="sr-only">(opens in new tab)</span>
 											</>
 										)}
