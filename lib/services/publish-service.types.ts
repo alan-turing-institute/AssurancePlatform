@@ -34,9 +34,7 @@ export type MarkReadyResult =
 	| { data: { markedReadyAt: Date } }
 	| { error: string };
 
-export type UnmarkReadyResult =
-	| { data: { success: true } }
-	| { error: string };
+export type UnmarkReadyResult = { data: { success: true } } | { error: string };
 
 export type StatusTransitionResult =
 	| {

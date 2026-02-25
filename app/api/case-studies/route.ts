@@ -6,6 +6,7 @@ import {
 	requireAuth,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { createCaseStudySchema } from "@/lib/schemas/case-study";
 import {
 	createCaseStudy,
 	getCaseStudiesByOwner,
@@ -39,11 +40,11 @@ export async function POST(request: NextRequest) {
 
 		const contentType = request.headers.get("content-type") ?? "";
 
-		let data: Record<string, unknown>;
+		let rawData: Record<string, unknown>;
 
 		if (contentType.includes("multipart/form-data")) {
 			const formData = await request.formData();
-			data = {
+			rawData = {
 				title: formData.get("title") as string,
 				description: formData.get("description") as string | null,
 				authors: formData.get("authors") as string | null,
@@ -51,33 +52,36 @@ export async function POST(request: NextRequest) {
 				sector: formData.get("sector") as string | null,
 				contact: formData.get("contact") as string | null,
 				type: formData.get("type") as string | null,
-				published: formData.get("published") === "true",
+				published: formData.get("published") as string | null,
 			};
 
 			// Handle image file if provided
 			const imageFile = formData.get("image") as File | null;
 			if (imageFile && imageFile.size > 0) {
-				// For now, store a placeholder - image handling would need file storage setup
-				data.image = imageFile.name;
+				rawData.image = imageFile.name;
 			}
 		} else {
-			data = await request.json();
+			rawData = await request.json();
 		}
 
-		if (!data.title || typeof data.title !== "string") {
-			return apiError(validationError("Title is required"));
+		const parsed = createCaseStudySchema.safeParse(rawData);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
 		}
 
+		const data = parsed.data;
 		const caseStudy = await createCaseStudy(userId, {
 			title: data.title,
-			description: data.description as string | undefined,
-			authors: data.authors as string | undefined,
-			category: data.category as string | undefined,
-			sector: data.sector as string | undefined,
-			contact: data.contact as string | undefined,
-			type: data.type as string | undefined,
-			published: data.published as boolean | undefined,
-			image: data.image as string | undefined,
+			description: data.description,
+			authors: data.authors,
+			category: data.category,
+			sector: data.sector,
+			contact: data.contact,
+			type: data.type,
+			published: data.published,
+			image: rawData.image as string | undefined,
 		});
 
 		return apiSuccess(transformCaseStudyForApi(caseStudy), 201);

@@ -6,7 +6,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { CreateTeamInput } from "@/lib/services/team-service";
+import { validationError } from "@/lib/errors";
+import { createTeamSchema } from "@/lib/schemas/team";
 import { createTeam, listUserTeams } from "@/lib/services/team-service";
 
 /**
@@ -35,14 +36,17 @@ export async function GET() {
 export async function POST(request: Request) {
 	try {
 		const userId = await requireAuth();
-		const body = await request.json();
 
-		const input: CreateTeamInput = {
-			name: body.name,
-			description: body.description,
-		};
+		const parsed = createTeamSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
 
-		const result = await createTeam(userId, input);
+		const result = await createTeam(userId, parsed.data);
 
 		if (result.error) {
 			return apiError(serviceErrorToAppError(result.error));

@@ -5,7 +5,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { AddTeamMemberInput } from "@/lib/services/team-member-service";
+import { validationError } from "@/lib/errors";
+import { addTeamMemberSchema } from "@/lib/schemas/team";
 import {
 	addTeamMember,
 	getTeamMembers,
@@ -46,14 +47,17 @@ export async function POST(
 	try {
 		const userId = await requireAuth();
 		const { id: teamId } = await params;
-		const body = await request.json();
 
-		const input: AddTeamMemberInput = {
-			email: body.email,
-			role: body.role,
-		};
+		const parsed = addTeamMemberSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
 
-		const result = await addTeamMember(userId, teamId, input);
+		const result = await addTeamMember(userId, teamId, parsed.data);
 
 		if (result.error) {
 			return apiError(serviceErrorToAppError(result.error));

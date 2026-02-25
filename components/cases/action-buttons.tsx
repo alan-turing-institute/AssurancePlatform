@@ -13,7 +13,6 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,6 @@ const ActionButtons = ({
 
 	const { assuranceCase, layoutDirection } = useStore();
 	const router = useRouter();
-	const { data: session } = useSession();
 
 	const { onLayout } = actions;
 
@@ -65,8 +63,6 @@ const ActionButtons = ({
 	const caseSharingModal = useCaseSharingModal();
 	const exportModal = useExportModal();
 	const resourcesModal = useResourcesModal();
-
-	const userId = session?.user?.id ?? "";
 
 	const onDelete = async () => {
 		if (!assuranceCase) {
@@ -276,7 +272,6 @@ const ActionButtons = ({
 					<JsonViewPanel
 						isOpen={jsonViewOpen}
 						onClose={() => setJsonViewOpen(false)}
-						userId={userId}
 					/>
 				</ErrorBoundary>
 				<AlertModal

@@ -7,6 +7,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { updateCaseStatusSchema } from "@/lib/schemas/status";
 import {
 	getFullPublishStatus,
 	transitionStatus,
@@ -69,24 +70,16 @@ export async function PATCH(
 		const userId = await requireAuth();
 		const { id } = await params;
 
-		let body: { targetStatus?: string; description?: string };
-		try {
-			body = await request.json();
-		} catch {
-			return apiError(validationError("Invalid request body"));
-		}
-
-		const { targetStatus, description } = body;
-
-		// Validate targetStatus
-		const validStatuses = ["DRAFT", "READY_TO_PUBLISH", "PUBLISHED"];
-		if (!(targetStatus && validStatuses.includes(targetStatus))) {
+		const parsed = updateCaseStatusSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
 			return apiError(
-				validationError(
-					`Invalid targetStatus. Must be one of: ${validStatuses.join(", ")}`
-				)
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
 			);
 		}
+
+		const { targetStatus, description } = parsed.data;
 
 		const result = await transitionStatus(
 			userId,

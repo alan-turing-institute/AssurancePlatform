@@ -703,14 +703,14 @@ export async function deleteElement(
 			return { error: "Permission denied" };
 		}
 
-		// Get all descendant IDs first
-		const descendantIds = await getDescendantIds(elementId);
-		const allIds = [elementId, ...descendantIds];
-
-		// Soft delete all
-		await prisma.assuranceElement.updateMany({
-			where: { id: { in: allIds } },
-			data: { deletedAt: new Date(), deletedById: userId },
+		// Gather descendants and soft-delete atomically
+		await prisma.$transaction(async (tx) => {
+			const descendantIds = await getDescendantIds(elementId, tx);
+			const allIds = [elementId, ...descendantIds];
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: allIds } },
+				data: { deletedAt: new Date(), deletedById: userId },
+			});
 		});
 
 		return { success: true };
@@ -764,11 +764,18 @@ export async function detachElement(
 	}
 }
 
+/** Prisma transaction client type for passing to helpers */
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /**
  * Recursively gets all descendant element IDs for a given parent (excludes deleted)
  */
-async function getDescendantIds(parentId: string): Promise<string[]> {
-	const children = await prisma.assuranceElement.findMany({
+async function getDescendantIds(
+	parentId: string,
+	tx?: TxClient
+): Promise<string[]> {
+	const db = tx ?? prisma;
+	const children = await db.assuranceElement.findMany({
 		where: { parentId, deletedAt: null },
 		select: { id: true },
 	});
@@ -776,7 +783,7 @@ async function getDescendantIds(parentId: string): Promise<string[]> {
 	const descendantIds: string[] = [];
 	for (const child of children) {
 		descendantIds.push(child.id);
-		const grandchildren = await getDescendantIds(child.id);
+		const grandchildren = await getDescendantIds(child.id, tx);
 		descendantIds.push(...grandchildren);
 	}
 
@@ -786,8 +793,12 @@ async function getDescendantIds(parentId: string): Promise<string[]> {
 /**
  * Recursively gets all soft-deleted descendant element IDs for restore operation
  */
-async function getDeletedDescendantIds(parentId: string): Promise<string[]> {
-	const children = await prisma.assuranceElement.findMany({
+async function getDeletedDescendantIds(
+	parentId: string,
+	tx?: TxClient
+): Promise<string[]> {
+	const db = tx ?? prisma;
+	const children = await db.assuranceElement.findMany({
 		where: { parentId, deletedAt: { not: null } },
 		select: { id: true },
 	});
@@ -795,7 +806,7 @@ async function getDeletedDescendantIds(parentId: string): Promise<string[]> {
 	const descendantIds: string[] = [];
 	for (const child of children) {
 		descendantIds.push(child.id);
-		const grandchildren = await getDeletedDescendantIds(child.id);
+		const grandchildren = await getDeletedDescendantIds(child.id, tx);
 		descendantIds.push(...grandchildren);
 	}
 
@@ -860,42 +871,38 @@ export async function attachElement(
 			return { error: validationError };
 		}
 
-		// Calculate level if property claim
-		let level: number | undefined;
-		if (existing.elementType === "PROPERTY_CLAIM") {
-			const parent = await prisma.assuranceElement.findFirst({
-				where: { id: parentId, deletedAt: null },
-				select: { level: true, elementType: true },
-			});
-			if (parent?.elementType === "PROPERTY_CLAIM") {
-				level = (parent.level || 1) + 1;
-			} else {
-				level = 1;
+		// Calculate level, attach, and cascade sandbox removal atomically
+		await prisma.$transaction(async (tx) => {
+			let level: number | undefined;
+			if (existing.elementType === "PROPERTY_CLAIM") {
+				const parent = await tx.assuranceElement.findFirst({
+					where: { id: parentId, deletedAt: null },
+					select: { level: true, elementType: true },
+				});
+				if (parent?.elementType === "PROPERTY_CLAIM") {
+					level = (parent.level || 1) + 1;
+				} else {
+					level = 1;
+				}
 			}
-		}
 
-		// Attach to parent and remove from sandbox
-		await prisma.assuranceElement.update({
-			where: { id: elementId },
-			data: {
-				parentId,
-				inSandbox: false,
-				...(level !== undefined ? { level } : {}),
-			},
-		});
-
-		// Cascade: remove all descendants from sandbox as well
-		const descendantIds = await getDescendantIds(elementId);
-		if (descendantIds.length > 0) {
-			await prisma.assuranceElement.updateMany({
-				where: {
-					id: { in: descendantIds },
-				},
+			await tx.assuranceElement.update({
+				where: { id: elementId },
 				data: {
+					parentId,
 					inSandbox: false,
+					...(level !== undefined ? { level } : {}),
 				},
 			});
-		}
+
+			const descendantIds = await getDescendantIds(elementId, tx);
+			if (descendantIds.length > 0) {
+				await tx.assuranceElement.updateMany({
+					where: { id: { in: descendantIds } },
+					data: { inSandbox: false },
+				});
+			}
+		});
 
 		return { success: true };
 	} catch (error) {
@@ -978,14 +985,14 @@ export async function restoreElement(
 			}
 		}
 
-		// Get all deleted descendants
-		const descendantIds = await getDeletedDescendantIds(elementId);
-		const allIds = [elementId, ...descendantIds];
-
-		// Restore all
-		await prisma.assuranceElement.updateMany({
-			where: { id: { in: allIds } },
-			data: { deletedAt: null, deletedById: null },
+		// Gather deleted descendants and restore atomically
+		await prisma.$transaction(async (tx) => {
+			const descendantIds = await getDeletedDescendantIds(elementId, tx);
+			const allIds = [elementId, ...descendantIds];
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: allIds } },
+				data: { deletedAt: null, deletedById: null },
+			});
 		});
 
 		return { success: true };

@@ -5,7 +5,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { UpdatePermissionInput } from "@/lib/services/case-permission-service";
+import { validationError } from "@/lib/errors";
+import { updatePermissionSchema } from "@/lib/schemas/permission";
 import {
 	revokeTeamPermission,
 	revokeUserPermission,
@@ -26,18 +27,28 @@ export async function PATCH(
 	try {
 		const userId = await requireAuth();
 		const { id: caseId, permissionId } = await params;
-		const body = await request.json();
 
-		const input: UpdatePermissionInput = {
-			permission: body.permission,
-		};
+		const parsed = updatePermissionSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(
+					parsed.error.errors[0]?.message ?? "Invalid input"
+				)
+			);
+		}
 
 		// Determine if this is a user or team permission
-		const isTeamPermission = body.type === "team";
+		const isTeamPermission = parsed.data.type === "team";
 
 		const result = isTeamPermission
-			? await updateTeamPermission(userId, caseId, permissionId, input)
-			: await updateUserPermission(userId, caseId, permissionId, input);
+			? await updateTeamPermission(userId, caseId, permissionId, {
+					permission: parsed.data.permission,
+				})
+			: await updateUserPermission(userId, caseId, permissionId, {
+					permission: parsed.data.permission,
+				});
 
 		if (result.error) {
 			return apiError(serviceErrorToAppError(result.error));

@@ -5,10 +5,11 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type {
-	ShareByEmailInput,
-	ShareWithTeamInput,
-} from "@/lib/services/case-permission-service";
+import { validationError } from "@/lib/errors";
+import {
+	shareByEmailSchema,
+	shareWithTeamSchema,
+} from "@/lib/schemas/permission";
 import {
 	listCasePermissions,
 	shareByEmail,
@@ -53,15 +54,22 @@ export async function POST(
 	try {
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
-		const body = await request.json();
+		const body = await request.json().catch(() => null);
 
-		if (body.type === "team") {
-			const input: ShareWithTeamInput = {
-				teamId: body.teamId,
-				permission: body.permission,
-			};
+		if (body?.type === "team") {
+			const parsed = shareWithTeamSchema.safeParse(body);
+			if (!parsed.success) {
+				return apiError(
+					validationError(
+						parsed.error.errors[0]?.message ?? "Invalid input"
+					)
+				);
+			}
 
-			const result = await shareWithTeam(userId, caseId, input);
+			const result = await shareWithTeam(userId, caseId, {
+				teamId: parsed.data.teamId,
+				permission: parsed.data.permission,
+			});
 
 			if (result.error) {
 				return apiError(serviceErrorToAppError(result.error));
@@ -71,12 +79,19 @@ export async function POST(
 		}
 
 		// Default to user share (by email)
-		const input: ShareByEmailInput = {
-			email: body.email,
-			permission: body.permission,
-		};
+		const parsed = shareByEmailSchema.safeParse(body);
+		if (!parsed.success) {
+			return apiError(
+				validationError(
+					parsed.error.errors[0]?.message ?? "Invalid input"
+				)
+			);
+		}
 
-		const result = await shareByEmail(userId, caseId, input);
+		const result = await shareByEmail(userId, caseId, {
+			email: parsed.data.email,
+			permission: parsed.data.permission,
+		});
 
 		if (result.error) {
 			return apiError(serviceErrorToAppError(result.error));

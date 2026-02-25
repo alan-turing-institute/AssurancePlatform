@@ -70,15 +70,20 @@ const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
  * Returns the parsed data or throws a validation AppError.
  */
 async function parseRequestBody(request: Request): Promise<GitHubImportInput> {
+	let json: unknown;
 	try {
-		const json = await request.json();
-		return GitHubImportSchema.parse(json);
-	} catch (error) {
-		if (error instanceof z.ZodError) {
-			throw validationError("Invalid request body");
-		}
+		json = await request.json();
+	} catch {
 		throw validationError("Invalid JSON in request body");
 	}
+
+	const parsed = GitHubImportSchema.safeParse(json);
+	if (!parsed.success) {
+		throw validationError(
+			parsed.error.errors[0]?.message ?? "Invalid request body"
+		);
+	}
+	return parsed.data;
 }
 
 /**

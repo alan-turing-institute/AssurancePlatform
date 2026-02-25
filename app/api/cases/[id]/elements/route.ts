@@ -5,11 +5,13 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { createElementSchema } from "@/lib/schemas/element";
 import type { CreateElementInput } from "@/lib/services/element-service";
 import { createElement } from "@/lib/services/element-service";
 
 /**
- * Builds element creation input from request body.
+ * Builds element creation input from validated body.
  */
 function buildCreateInput(
 	caseId: string,
@@ -22,8 +24,12 @@ function buildCreateInput(
 		description: (body.description || body.short_description) as
 			| string
 			| undefined,
-		shortDescription: body.short_description as string | undefined,
-		longDescription: body.long_description as string | undefined,
+		shortDescription: (body.shortDescription || body.short_description) as
+			| string
+			| undefined,
+		longDescription: (body.longDescription || body.long_description) as
+			| string
+			| undefined,
 		parentId: body.parentId as string | undefined,
 		goal_id: body.goal_id as string | undefined,
 		strategy_id: body.strategy_id as string | undefined,
@@ -58,9 +64,20 @@ export async function POST(
 	try {
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
-		const body = await request.json();
 
-		const input = buildCreateInput(caseId, body);
+		const parsed = createElementSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
+
+		const input = buildCreateInput(
+			caseId,
+			parsed.data as unknown as Record<string, unknown>
+		);
 		const result = await createElement(session.userId, input);
 
 		if (result.error) {

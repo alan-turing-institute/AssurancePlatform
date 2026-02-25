@@ -5,6 +5,8 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { updateElementSchema } from "@/lib/schemas/element";
 import type { UpdateElementInput } from "@/lib/services/element-service";
 import {
 	deleteElement,
@@ -37,7 +39,7 @@ export async function GET(
 }
 
 /**
- * Builds update input from request body.
+ * Builds update input from validated body.
  */
 function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 	return {
@@ -45,14 +47,18 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		description: (body.description || body.short_description) as
 			| string
 			| undefined,
-		shortDescription: body.short_description as string | undefined,
-		longDescription: body.long_description as string | undefined,
+		shortDescription: (body.shortDescription || body.short_description) as
+			| string
+			| undefined,
+		longDescription: (body.longDescription || body.long_description) as
+			| string
+			| undefined,
 		parentId: body.parentId as string | undefined,
 		url: (body.url || body.URL) as string | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
 		context: body.context as string[] | undefined,
-		inSandbox: body.in_sandbox as boolean | undefined,
+		inSandbox: (body.inSandbox ?? body.in_sandbox) as boolean | undefined,
 		// Django-style parent references
 		goal_id: body.goal_id as string | undefined,
 		strategy_id: body.strategy_id as string | undefined,
@@ -77,8 +83,18 @@ export async function PUT(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const body = await request.json();
-		const input = buildUpdateInput(body);
+		const parsed = updateElementSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
+
+		const input = buildUpdateInput(
+			parsed.data as unknown as Record<string, unknown>
+		);
 		const result = await updateElement(session.userId, elementId, input);
 
 		if (result.error) {

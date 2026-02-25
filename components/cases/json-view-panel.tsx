@@ -32,7 +32,6 @@ import { JsonEditorToolbar } from "./json-editor-toolbar";
 type JsonViewPanelProps = {
 	isOpen: boolean;
 	onClose: () => void;
-	userId: string;
 };
 
 type BatchUpdateResult =
@@ -306,7 +305,7 @@ function JsonLoadingSkeleton() {
 	);
 }
 
-const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
+const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const { recordOperation, isApplying: isUndoRedoApplying } = useHistoryStore();
 	const { resolvedTheme } = useTheme();
@@ -390,7 +389,7 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 		} finally {
 			setLoading(false);
 		}
-	}, [assuranceCase?.id, userId, toast]);
+	}, [assuranceCase?.id, toast]);
 
 	// Fetch JSON when panel opens
 	useEffect(() => {

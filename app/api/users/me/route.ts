@@ -5,8 +5,9 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { notFound } from "@/lib/errors";
+import { notFound, validationError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { updateUserProfileSchema } from "@/lib/schemas/user";
 
 type UserResponse = {
 	id: string;
@@ -65,13 +66,6 @@ async function getUserFromPrisma(userId: string): Promise<UserResponse | null> {
 	};
 }
 
-type ProfileUpdateRequest = {
-	username?: string;
-	firstName?: string;
-	lastName?: string;
-	email?: string;
-};
-
 type DeleteAccountRequest = {
 	password?: string;
 };
@@ -104,20 +98,21 @@ export async function PATCH(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		// Parse request body
-		const body = (await request.json()) as ProfileUpdateRequest;
+		const parsed = updateUserProfileSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
 
 		// Call service to update profile
 		const { updateUserProfile } = await import(
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await updateUserProfile(userId, {
-			username: body.username,
-			firstName: body.firstName,
-			lastName: body.lastName,
-			email: body.email,
-		});
+		const result = await updateUserProfile(userId, parsed.data);
 
 		if (!result.success) {
 			return apiError(serviceErrorToAppError(result.error));

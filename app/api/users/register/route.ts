@@ -7,6 +7,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
 	RATE_LIMIT_CONFIGS,
@@ -19,7 +20,16 @@ import { registerUser } from "@/lib/services/user-service";
  */
 export async function POST(request: Request) {
 	try {
-		const body = await request.json();
+		const parsed = registerUserSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
+
+		const { username, email, password } = parsed.data;
 
 		// Extract IP address and user agent for rate limiting
 		const headersList = await headers();
@@ -28,10 +38,6 @@ export async function POST(request: Request) {
 			? forwarded.split(",")[0].trim()
 			: (headersList.get("x-real-ip") ?? "unknown");
 		const userAgent = headersList.get("user-agent") ?? undefined;
-
-		// Support both password formats (password1/password2 from form, or password directly)
-		const password = body.password || body.password1;
-		const email = body.email?.toLowerCase().trim();
 
 		// Check rate limit before processing
 		const rateLimitResult = await checkAndRecordRateLimit(
@@ -60,25 +66,10 @@ export async function POST(request: Request) {
 			return response;
 		}
 
-		// Validate passwords match if both provided
-		if (body.password1 && body.password2 && body.password1 !== body.password2) {
-			return apiError(
-				validationError("Passwords do not match", {
-					password2: "Passwords do not match",
-				})
-			);
-		}
-
-		if (!(body.username && body.email && password)) {
-			return apiError(
-				validationError("Username, email, and password are required")
-			);
-		}
-
 		const result = await registerUser({
-			username: body.username,
-			email: body.email,
-			password,
+			username,
+			email,
+			password: password ?? "",
 		});
 
 		if (result.error) {
