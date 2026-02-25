@@ -51,7 +51,7 @@ export type BaseNodeProps = {
 	/** Justification text */
 	justification?: string;
 	/** Whether to start in expanded state */
-	defaultExpanded?: boolean;
+	initialExpanded?: boolean;
 	/** Actions to display in the top-right (e.g., comment indicators) */
 	topRightActions?: ReactNode;
 	/** Actions to display in the bottom-left (e.g., toggle children button) */
@@ -137,7 +137,7 @@ export default function BaseNode({
 	context,
 	assumption,
 	justification,
-	defaultExpanded = false,
+	initialExpanded = false,
 	topRightActions,
 	bottomLeftActions,
 	children,
@@ -145,7 +145,7 @@ export default function BaseNode({
 	dataTour,
 	expandTour,
 }: BaseNodeProps) {
-	const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { layoutNodes, layoutDirection } = useStore();
 	const { fitView, getNodes, getEdges } = useReactFlow();
 

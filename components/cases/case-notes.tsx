@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import useStore from "@/store/store";
 import NotesSheet from "../ui/notes-sheet";
 import NotesFeed from "./notes-feed";
@@ -20,7 +21,20 @@ const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
 	}, []);
 
 	if (!(isMounted && assuranceCase)) {
-		return null;
+		return (
+			<NotesSheet
+				description="Loading notes..."
+				isOpen={isOpen}
+				onClose={onClose}
+				title="Case Notes"
+			>
+				<div className="space-y-4">
+					<Skeleton className="h-24 w-full" />
+					<Skeleton className="h-16 w-full" />
+					<Skeleton className="h-16 w-full" />
+				</div>
+			</NotesSheet>
+		);
 	}
 
 	return (

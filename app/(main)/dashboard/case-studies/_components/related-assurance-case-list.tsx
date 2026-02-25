@@ -23,7 +23,6 @@ const RelatedAssuranceCaseList = ({
 
 	useEffect(() => {
 		const getCases = async () => {
-			setIsLoading(true);
 			try {
 				const cases = await fetchPublishedCasesForStudy();
 				setAssuranceCasesList(cases as unknown as AssuranceCase[]);

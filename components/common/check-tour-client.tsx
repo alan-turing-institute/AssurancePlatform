@@ -26,13 +26,10 @@ const CheckTourClient = ({ tourId, enabled }: CheckTourClientProps) => {
 		isCompletedRef.current = true;
 
 		try {
-			await fetch("/api/user/tours", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ tourId }),
-			});
+			const { markTourCompleted } = await import("@/actions/tours");
+			await markTourCompleted(tourId);
 		} catch {
-			// Silently fail — tour will re-show next visit if PATCH fails
+			// Silently fail — tour will re-show next visit if action fails
 		}
 	}, [tourId]);
 
@@ -43,13 +40,8 @@ const CheckTourClient = ({ tourId, enabled }: CheckTourClientProps) => {
 
 		const checkAndStartTour = async () => {
 			try {
-				const response = await fetch("/api/user/tours");
-				if (!response.ok) {
-					return;
-				}
-
-				const data = await response.json();
-				const completedTours: string[] = data.completedTours ?? [];
+				const { fetchCompletedTours } = await import("@/actions/tours");
+				const completedTours = await fetchCompletedTours();
 
 				if (completedTours.includes(tourId)) {
 					isCompletedRef.current = true;

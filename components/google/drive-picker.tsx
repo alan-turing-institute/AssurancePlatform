@@ -15,22 +15,25 @@ type DrivePickerProps = {
 	disabled?: boolean;
 };
 
+type DriveState = {
+	files: DriveFile[];
+	loading: boolean;
+};
+
 /**
  * Component to display and select files from Google Drive backup folder.
  */
 export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
-	const [files, setFiles] = useState<DriveFile[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [state, setState] = useState<DriveState>({ files: [], loading: true });
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
 	useEffect(() => {
 		import("@/actions/integrations")
 			.then(({ fetchGoogleDriveFiles }) => fetchGoogleDriveFiles())
 			.then((result) => {
-				setFiles(result.files ?? []);
-				setLoading(false);
+				setState({ files: result.files ?? [], loading: false });
 			})
-			.catch(() => setLoading(false));
+			.catch(() => setState({ files: [], loading: false }));
 	}, []);
 
 	const handleSelect = (file: DriveFile) => {
@@ -38,7 +41,7 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 		onFileSelect(file.id, file.name);
 	};
 
-	if (loading) {
+	if (state.loading) {
 		return (
 			<div className="flex items-center justify-center py-8">
 				<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -46,7 +49,7 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 		);
 	}
 
-	if (files.length === 0) {
+	if (state.files.length === 0) {
 		return (
 			<div className="py-8 text-center text-muted-foreground">
 				<p>No backup files found in your Google Drive.</p>
@@ -57,7 +60,7 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 
 	return (
 		<div className="max-h-64 space-y-2 overflow-y-auto">
-			{files.map((file) => (
+			{state.files.map((file) => (
 				<button
 					className={`flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors ${
 						selectedFile === file.id

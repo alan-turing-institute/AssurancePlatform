@@ -791,6 +791,7 @@ export const MockDropdownMenuRadioGroup = ({ children, ...props }: MockComponent
 type DropdownMenuRadioItemProps = {
 	children?: ReactNode;
 	value: string;
+	checked?: boolean;
 	onSelect?: (value: string) => void;
 	disabled?: boolean;
 	[key: string]: unknown;
@@ -799,6 +800,7 @@ type DropdownMenuRadioItemProps = {
 export const MockDropdownMenuRadioItem = ({
 	children,
 	value,
+	checked,
 	onSelect,
 	disabled,
 	...props
@@ -813,9 +815,15 @@ export const MockDropdownMenuRadioItem = ({
 
 	return (
 		<div
+			aria-checked={checked}
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) return;
+				e.preventDefault();
+				onSelect?.(value);
+			}}
 			role="menuitemradio"
 			tabIndex={disabled ? -1 : 0}
 			{...props}
@@ -854,6 +862,11 @@ export const MockDropdownMenuCheckboxItem = ({
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) return;
+				e.preventDefault();
+				onCheckedChange?.(!checked);
+			}}
 			role="menuitemcheckbox"
 			tabIndex={disabled ? -1 : 0}
 			{...props}
@@ -928,7 +941,9 @@ export const MockSelectTrigger = ({ children, asChild, ...props }: MockTriggerPr
 
 	return (
 		<button
+			aria-controls="mock-select-listbox"
 			aria-expanded={context?.open}
+			aria-haspopup="listbox"
 			data-state={context?.open ? "open" : "closed"}
 			onClick={handleClick}
 			role="combobox"
@@ -999,6 +1014,11 @@ export const MockSelectItem = ({ children, value, disabled, ...props }: MockSele
 			data-state={isSelected ? "checked" : "unchecked"}
 			data-value={value}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) return;
+				e.preventDefault();
+				context?.setValue(value);
+			}}
 			role="option"
 			{...props}
 		>

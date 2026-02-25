@@ -35,6 +35,12 @@ function parseCaseData(data: unknown): CaseExportNested {
 	);
 }
 
+type ViewerState = {
+	data: CaseExportNested | null;
+	error: string | null;
+	loading: boolean;
+};
+
 const EMPTY_GUIDED_PATH: string[] = [];
 const EMPTY_HIGHLIGHTED_NODES: string[] = [];
 
@@ -58,9 +64,11 @@ const CaseViewerWrapper = ({
 	highlightedNodes = EMPTY_HIGHLIGHTED_NODES,
 	editable = false,
 }: CaseViewerWrapperProps) => {
-	const [caseData, setCaseData] = useState<CaseExportNested | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const [state, setState] = useState<ViewerState>({
+		data: null,
+		error: null,
+		loading: true,
+	});
 
 	useEffect(() => {
 		const loadCaseData = async () => {
@@ -73,22 +81,19 @@ const CaseViewerWrapper = ({
 				}
 
 				const validatedData = parseCaseData(result.data);
-				setCaseData(validatedData);
-				setError(null);
+				setState({ data: validatedData, error: null, loading: false });
 			} catch (err) {
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error occurred";
 				console.error(`Error loading case file '${caseFile}':`, err);
-				setError(errorMessage);
-			} finally {
-				setIsLoading(false);
+				setState({ data: null, error: errorMessage, loading: false });
 			}
 		};
 
 		loadCaseData();
 	}, [caseFile]);
 
-	if (isLoading) {
+	if (state.loading) {
 		return (
 			<div className="flex h-96 w-full items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
 				<div className="text-center">
@@ -103,13 +108,13 @@ const CaseViewerWrapper = ({
 		);
 	}
 
-	if (error) {
+	if (state.error) {
 		return (
 			<div className="w-full rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
 				<h3 className="mb-2 font-bold text-red-700 dark:text-red-400">
 					Error Loading Case Data
 				</h3>
-				<p className="text-red-600 text-sm dark:text-red-300">{error}</p>
+				<p className="text-red-600 text-sm dark:text-red-300">{state.error}</p>
 				<p className="mt-2 text-red-500 text-xs dark:text-red-400">
 					Tried to load: /data/{caseFile}
 				</p>
@@ -117,7 +122,7 @@ const CaseViewerWrapper = ({
 		);
 	}
 
-	if (!caseData) {
+	if (!state.data) {
 		return (
 			<div className="w-full rounded-lg border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
 				<h3 className="font-bold text-yellow-700 dark:text-yellow-400">
@@ -153,7 +158,7 @@ const CaseViewerWrapper = ({
 				}
 			>
 				<EnhancedInteractiveCaseViewer
-					caseData={caseData}
+					caseData={state.data}
 					editable={editable}
 					guidedPath={guidedPath}
 					highlightedNodes={highlightedNodes}

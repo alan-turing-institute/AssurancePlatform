@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PresetSwatch } from "@/components/ui/preset-swatch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";
 
@@ -24,7 +25,34 @@ export function AppearanceForm() {
 	}, []);
 
 	if (!mounted) {
-		return null;
+		return (
+			<div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
+				<div>
+					<Skeleton className="h-5 w-28" />
+					<Skeleton className="mt-2 h-4 w-48" />
+				</div>
+				<div className="space-y-8 md:col-span-2">
+					<div>
+						<Skeleton className="mb-3 h-4 w-12" />
+						<div className="flex gap-3">
+							<Skeleton className="h-8 w-20" />
+							<Skeleton className="h-8 w-20" />
+							<Skeleton className="h-8 w-20" />
+						</div>
+					</div>
+					<div>
+						<Skeleton className="mb-3 h-4 w-28" />
+						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+							{["skel-1", "skel-2", "skel-3", "skel-4", "skel-5", "skel-6"].map(
+								(id) => (
+									<Skeleton className="h-14 rounded-lg" key={id} />
+								)
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+		);
 	}
 
 	return (

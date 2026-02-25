@@ -12,29 +12,34 @@ type UserData = {
 	lastName?: string;
 };
 
+type UserState = {
+	user: UserData | null;
+	loading: boolean;
+};
+
 const LoggedInUser = () => {
-	const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-	const [loading, setLoading] = useState<boolean>(true);
+	const [state, setState] = useState<UserState>({ user: null, loading: true });
 
 	useEffect(() => {
 		const loadUser = async () => {
 			try {
 				const result = await fetchCurrentUser();
 				if (result) {
-					setCurrentUser({
-						username: result.username,
-						email: result.email,
-						firstName: result.firstName ?? undefined,
-						lastName: result.lastName ?? undefined,
+					setState({
+						user: {
+							username: result.username,
+							email: result.email,
+							firstName: result.firstName ?? undefined,
+							lastName: result.lastName ?? undefined,
+						},
+						loading: false,
 					});
 				} else {
-					setCurrentUser(null);
+					setState({ user: null, loading: false });
 				}
-				setLoading(false);
 			} catch {
 				// Handle error silently - user will see loading state
-				setCurrentUser(null);
-				setLoading(false);
+				setState({ user: null, loading: false });
 			}
 		};
 
@@ -42,13 +47,13 @@ const LoggedInUser = () => {
 	}, []);
 
 	const displayName =
-		[currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") ||
-		currentUser?.username ||
+		[state.user?.firstName, state.user?.lastName].filter(Boolean).join(" ") ||
+		state.user?.username ||
 		"";
 
 	return (
 		<>
-			{loading ? (
+			{state.loading ? (
 				<div className="p-4">
 					<div className="flex items-center gap-3">
 						<Skeleton className="aspect-square h-10 w-10 rounded-full" />
@@ -74,7 +79,7 @@ const LoggedInUser = () => {
 								{displayName}
 							</p>
 							<p className="font-medium text-sidebar-foreground/70 text-xs">
-								{currentUser?.email}
+								{state.user?.email}
 							</p>
 						</div>
 					</div>

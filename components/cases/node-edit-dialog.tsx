@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
@@ -362,23 +362,37 @@ export default function NodeEditDialog({
 		);
 	};
 
-	// Reset form when dialog opens
-	useEffect(() => {
-		if (open) {
-			const contextData = (node.data?.context as string[]) ?? [];
+	const resetFormToNode = useCallback(
+		(n: Node) => {
+			const contextData = (n.data?.context as string[]) ?? [];
 			form.reset({
-				description: (node.data?.short_description as string) ?? "",
-				assumption: (node.data?.assumption as string) ?? "",
-				justification: (node.data?.justification as string) ?? "",
+				description: (n.data?.short_description as string) ?? "",
+				assumption: (n.data?.assumption as string) ?? "",
+				justification: (n.data?.justification as string) ?? "",
 				context: contextData,
-				urls: getInitialUrls(node.data as Record<string, unknown>),
+				urls: getInitialUrls(n.data as Record<string, unknown>),
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
-		}
-	}, [open, node, form, componentId]);
+		},
+		[form, componentId]
+	);
 
-	const handleClose = () => onOpenChange(false);
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) {
+			resetFormToNode(node);
+		}
+		onOpenChange(nextOpen);
+	};
+
+	// Re-reset when node changes while dialog is already open
+	useEffect(() => {
+		if (open) {
+			resetFormToNode(node);
+		}
+	}, [node, open, resetFormToNode]);
+
+	const handleClose = () => handleOpenChange(false);
 
 	const handleSubmit = async (values: FormValues) => {
 		setLoading(true);
@@ -420,7 +434,7 @@ export default function NodeEditDialog({
 	const nodeTypeLabel = nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
 
 	return (
-		<Dialog onOpenChange={onOpenChange} open={open}>
+		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>
