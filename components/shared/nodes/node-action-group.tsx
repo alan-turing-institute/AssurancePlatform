@@ -3,7 +3,7 @@
 import { MessageCircle, Pencil } from "lucide-react";
 import type { Node } from "reactflow";
 import ActionTooltip from "@/components/ui/action-tooltip";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
 import NodeOptionsMenu from "./node-options-menu";
 

@@ -11,7 +11,7 @@ import {
 } from "reactflow";
 
 import ActionTooltip from "@/components/ui/action-tooltip";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { toggleHiddenForChildren } from "@/lib/case";
 
 type ToggleButtonProps = {

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { updateAssuranceCase, updateAssuranceCaseNode } from "@/lib/case";
 import { AssuranceCaseFactory } from "@/src/__tests__/utils/test-factories";
 import NodeAttributes from "../node-attributes";
@@ -18,7 +18,7 @@ vi.mock("next-auth/react", () => ({
 }));
 
 // Mock store
-vi.mock("@/data/store", () => ({
+vi.mock("@/store/store", () => ({
 	default: vi.fn(),
 }));
 

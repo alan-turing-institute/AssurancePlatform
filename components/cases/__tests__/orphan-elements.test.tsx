@@ -9,7 +9,7 @@ import type { Session } from "next-auth";
 import { useSession } from "next-auth/react";
 import type { Node } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { attachCaseElement, deleteAssuranceCaseNode } from "@/lib/case";
 import type {
 	AssuranceCase,
@@ -23,7 +23,7 @@ import OrphanElements from "../orphan-elements";
 
 // Mock dependencies
 vi.mock("next-auth/react");
-vi.mock("@/data/store");
+vi.mock("@/store/store");
 vi.mock("@/lib/case");
 
 // Define mock store type that extends the partial store interface

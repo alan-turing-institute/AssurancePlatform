@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import NotesSheet from "../ui/notes-sheet";
 import NotesFeed from "./notes-feed";
 import NotesForm from "./notes-form";

@@ -4,7 +4,7 @@ import { PencilLine, Trash2, User2Icon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { fetchCaseComments } from "@/actions/cases";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { formatShortDate } from "@/lib/date";
 import { toast } from "@/lib/toast";
 import type { Comment } from "@/types";

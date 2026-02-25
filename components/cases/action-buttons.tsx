@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import NodeCreate from "@/components/common/node-create";
 import { Button } from "@/components/ui/button";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useExportModal } from "@/hooks/use-export-modal";
 import { useResourcesModal } from "@/hooks/use-resources-modal";

@@ -15,7 +15,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";

@@ -1,6 +1,6 @@
 "use client";
 
-import useHistoryStore from "@/data/history-store";
+import useHistoryStore from "@/store/history-store";
 import type { ElementSnapshot, HistoryCommand } from "@/types/history";
 
 /**

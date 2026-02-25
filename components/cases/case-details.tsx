@@ -2,7 +2,7 @@
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import CaseSheet from "../ui/case-sheet";
 import CaseEditForm from "./case-edit-form";
 

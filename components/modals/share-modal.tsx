@@ -2,7 +2,7 @@
 
 import { Cloud, FileIcon, FileText, ImageIcon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useExportModal } from "@/hooks/use-export-modal";
 import { toast } from "@/lib/toast";
 import { Separator } from "../ui/separator";

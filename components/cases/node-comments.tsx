@@ -8,7 +8,7 @@ import {
 	useState,
 } from "react";
 import type { Node } from "reactflow";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import { Skeleton } from "../ui/skeleton";
 import CommentsForm from "./comment-form";

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { formatShortDate } from "@/lib/date";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";

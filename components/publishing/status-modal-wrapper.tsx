@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { toast } from "@/lib/toast";

@@ -9,7 +9,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import NodeComment from "./node-comments";
 
 type NodeWithData = Node & {

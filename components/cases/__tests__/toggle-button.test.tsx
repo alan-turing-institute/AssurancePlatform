@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { Edge, Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { AssuranceCaseFactory } from "@/src/__tests__/utils/test-factories";
 import ToggleButton from "../toggle-button";
 
@@ -17,7 +17,7 @@ vi.mock("reactflow", () => ({
 }));
 
 // Mock the store
-vi.mock("@/data/store", () => ({
+vi.mock("@/store/store", () => ({
 	default: vi.fn(),
 }));
 

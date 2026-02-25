@@ -21,7 +21,7 @@ const mockStore = {
 	assuranceCase: mockAssuranceCase as AssuranceCase | null,
 };
 
-vi.mock("@/data/store", () => ({
+vi.mock("@/store/store", () => ({
 	default: () => mockStore,
 }));
 

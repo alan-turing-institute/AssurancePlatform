@@ -2,8 +2,8 @@
 
 import { useCallback } from "react";
 import { toast } from "sonner";
-import useHistoryStore from "@/data/history-store";
-import useStore from "@/data/store";
+import useHistoryStore from "@/store/history-store";
+import useStore from "@/store/store";
 import { applyRedo, applyUndo } from "@/lib/services/history-service";
 
 /**

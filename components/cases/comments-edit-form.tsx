@@ -19,7 +19,7 @@ import {
 	FormItem,
 	FormMessage,
 } from "@/components/ui/form";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { toast } from "@/lib/toast";
 import type { Comment as CaseComment } from "@/types";
 import { Textarea } from "../ui/textarea";

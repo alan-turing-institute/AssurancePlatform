@@ -14,8 +14,8 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import useHistoryStore from "@/data/history-store";
-import useStore from "@/data/store";
+import useHistoryStore from "@/store/history-store";
+import useStore from "@/store/store";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { fetchAndRefreshCase } from "@/lib/case";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";

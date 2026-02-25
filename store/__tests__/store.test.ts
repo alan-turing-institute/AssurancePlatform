@@ -6,7 +6,7 @@ import useStore from "../store";
 
 // Clear the store mock from setup.tsx
 beforeAll(() => {
-	vi.unmock("@/data/store");
+	vi.unmock("@/store/store");
 });
 
 // Mock layout-helper (ELK)

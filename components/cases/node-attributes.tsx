@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
 import { Form } from "@/components/ui/form";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,

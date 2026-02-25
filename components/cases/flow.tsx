@@ -14,7 +14,7 @@ import EvidenceNode from "@/components/cases/evidence-node";
 import GoalNode from "@/components/cases/goal-node";
 import PropertyNode from "@/components/cases/property-node";
 import StrategyNode from "@/components/cases/strategy-node";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/convert-case";

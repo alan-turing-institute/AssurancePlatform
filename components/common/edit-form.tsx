@@ -16,7 +16,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,

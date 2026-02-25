@@ -18,7 +18,7 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
 import { type DiagramNodeType, getNodeConfig } from "./node-config";

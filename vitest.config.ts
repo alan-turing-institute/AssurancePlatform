@@ -82,7 +82,7 @@ export default defineConfig({
 			"@/providers": path.resolve(__dirname, "./providers"),
 			"@/app": path.resolve(__dirname, "./app"),
 			"@/config": path.resolve(__dirname, "./config"),
-			"@/data": path.resolve(__dirname, "./data"),
+			"@/store": path.resolve(__dirname, "./store"),
 			"@/public": path.resolve(__dirname, "./public"),
 			"@/src": path.resolve(__dirname, "./src"),
 		},

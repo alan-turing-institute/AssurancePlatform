@@ -23,8 +23,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import useHistoryStore from "@/data/history-store";
-import useStore from "@/data/store";
+import useHistoryStore from "@/store/history-store";
+import useStore from "@/store/store";
 import type { ReactFlowNode } from "@/lib/case";
 import {
 	caseItemDescription,

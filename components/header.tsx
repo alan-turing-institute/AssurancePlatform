@@ -5,7 +5,7 @@ import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import { toast } from "sonner";
 import SearchNodes from "@/components/common/search-nodes";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { type ReactFlowNode, toggleHiddenForParent } from "@/lib/case";

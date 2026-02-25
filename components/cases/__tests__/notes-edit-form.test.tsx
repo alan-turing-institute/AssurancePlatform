@@ -18,7 +18,7 @@ const mockStore = {
 	setCaseNotes: vi.fn(),
 };
 
-vi.mock("@/data/store", () => ({
+vi.mock("@/store/store", () => ({
 	default: () => mockStore,
 }));
 

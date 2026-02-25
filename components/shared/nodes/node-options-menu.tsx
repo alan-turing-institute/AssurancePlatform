@@ -21,7 +21,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,

@@ -20,7 +20,7 @@ import {
 import { PresetSwatch } from "@/components/ui/preset-swatch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";

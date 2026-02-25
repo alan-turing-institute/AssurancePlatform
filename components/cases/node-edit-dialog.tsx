@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,

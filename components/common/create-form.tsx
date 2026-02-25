@@ -13,7 +13,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import type { ReactFlowNode } from "@/lib/case";
 import {
 	addHiddenProp,

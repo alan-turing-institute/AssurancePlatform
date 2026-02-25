@@ -1,6 +1,6 @@
 "use client";
 
-import useStore from "@/data/store";
+import useStore from "@/store/store";
 import { cn } from "@/lib/utils";
 import ActionTooltip from "../ui/action-tooltip";
 
