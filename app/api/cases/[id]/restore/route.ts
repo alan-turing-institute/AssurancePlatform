@@ -10,7 +10,7 @@ import { restoreCase } from "@/lib/services/case-trash-service";
 /**
  * Restore a case from trash
  *
- * @description Restores a soft-deleted case, clearing deletedAt and deletedBy fields.
+ * @description Restores a soft-deleted case, clearing deletedAt and deletedById fields.
  * Only the case owner can restore their deleted cases.
  *
  * @pathParam id - Case ID (UUID)

@@ -228,7 +228,7 @@ model AssuranceCase {
   mode            CaseMode              @default(STANDARD) /// STANDARD (simplified UI) or ADVANCED (full GSN notation)
 
   // Visual settings
-  colorProfile    String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
+  colourProfile   String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
 
   // Demo/tutorial flag
   isDemo          Boolean               @default(false) @map("is_demo") /// True for auto-generated tutorial cases
@@ -254,12 +254,12 @@ model AssuranceCase {
 
   // Soft delete (recycle bin)
   deletedAt         DateTime?             @map("deleted_at") /// When the case was moved to trash (null = not deleted)
-  deletedBy         String?               @map("deleted_by_id") /// User ID who deleted the case
+  deletedById       String?               @map("deleted_by_id") /// User ID who deleted the case
 
   // Relations
   createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
   markedReadyBy   User?                 @relation("CaseMarkedReady", fields: [markedReadyById], references: [id])
-  deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedBy], references: [id])
+  deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedById], references: [id])
   sourcePattern   ArgumentPattern?      @relation(fields: [sourcePatternId], references: [id])
   elements        AssuranceElement[]
   userPermissions CasePermission[]

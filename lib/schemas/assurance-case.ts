@@ -8,7 +8,7 @@ export const createAssuranceCaseSchema = z
 	.object({
 		name: requiredString("Case name", 1, 255),
 		description: requiredString("Description", 1, 5000),
-		colorProfile: z
+		colourProfile: z
 			.string()
 			.default("default")
 			.describe("Colour scheme for case visualisation"),

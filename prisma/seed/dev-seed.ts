@@ -92,11 +92,7 @@ async function main() {
 
 	const credentials = loadCredentials();
 
-	// ============================================
-	// 1. CREATE USERS
-	// ============================================
-	console.log("Creating users...");
-
+	// Hash passwords outside the transaction (CPU-bound, not DB)
 	const [chrisHash, aliceHash, bobHash, charlieHash] = await Promise.all([
 		hashPassword(credentials.chris),
 		hashPassword(credentials.alice),
@@ -104,7 +100,13 @@ async function main() {
 		hashPassword(credentials.charlie),
 	]);
 
-	const chris = await prisma.user.create({
+	await prisma.$transaction(async (tx) => {
+	// ============================================
+	// 1. CREATE USERS
+	// ============================================
+	console.log("Creating users...");
+
+	const chris = await tx.user.create({
 		data: {
 			email: "chris@example.com",
 			username: "chris",
@@ -117,7 +119,7 @@ async function main() {
 		},
 	});
 
-	const alice = await prisma.user.create({
+	const alice = await tx.user.create({
 		data: {
 			email: "alice@example.com",
 			username: "alice",
@@ -130,7 +132,7 @@ async function main() {
 		},
 	});
 
-	const bob = await prisma.user.create({
+	const bob = await tx.user.create({
 		data: {
 			email: "bob@example.com",
 			username: "bob",
@@ -143,7 +145,7 @@ async function main() {
 		},
 	});
 
-	const charlie = await prisma.user.create({
+	const charlie = await tx.user.create({
 		data: {
 			email: "charlie@example.com",
 			username: "charlie",
@@ -163,7 +165,7 @@ async function main() {
 	// ============================================
 	console.log("Creating team...");
 
-	const team = await prisma.team.create({
+	const team = await tx.team.create({
 		data: {
 			name: "Test Team",
 			slug: "test-team",
@@ -173,7 +175,7 @@ async function main() {
 	});
 
 	// Add team members: alice as ADMIN, bob as MEMBER
-	await prisma.teamMember.createMany({
+	await tx.teamMember.createMany({
 		data: [
 			{
 				teamId: team.id,
@@ -198,7 +200,7 @@ async function main() {
 	console.log("Creating assurance cases...");
 
 	// 3a. Simple Case (chris) - Draft, no sharing
-	const simpleCase = await prisma.assuranceCase.create({
+	const simpleCase = await tx.assuranceCase.create({
 		data: {
 			name: "Simple Case",
 			description: "A simple assurance case for basic testing",
@@ -209,7 +211,7 @@ async function main() {
 	});
 
 	// Simple case elements: 1 goal -> 2 claims -> 2 evidence
-	const simpleGoal = await prisma.assuranceElement.create({
+	const simpleGoal = await tx.assuranceElement.create({
 		data: {
 			caseId: simpleCase.id,
 			elementType: "GOAL",
@@ -220,7 +222,7 @@ async function main() {
 		},
 	});
 
-	const simpleClaim1 = await prisma.assuranceElement.create({
+	const simpleClaim1 = await tx.assuranceElement.create({
 		data: {
 			caseId: simpleCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -232,7 +234,7 @@ async function main() {
 		},
 	});
 
-	const simpleClaim2 = await prisma.assuranceElement.create({
+	const simpleClaim2 = await tx.assuranceElement.create({
 		data: {
 			caseId: simpleCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -244,7 +246,7 @@ async function main() {
 		},
 	});
 
-	const simpleEvidence1 = await prisma.assuranceElement.create({
+	const simpleEvidence1 = await tx.assuranceElement.create({
 		data: {
 			caseId: simpleCase.id,
 			elementType: "EVIDENCE",
@@ -256,7 +258,7 @@ async function main() {
 		},
 	});
 
-	const simpleEvidence2 = await prisma.assuranceElement.create({
+	const simpleEvidence2 = await tx.assuranceElement.create({
 		data: {
 			caseId: simpleCase.id,
 			elementType: "EVIDENCE",
@@ -269,7 +271,7 @@ async function main() {
 	});
 
 	// Link evidence to claims
-	await prisma.evidenceLink.createMany({
+	await tx.evidenceLink.createMany({
 		data: [
 			{ evidenceId: simpleEvidence1.id, claimId: simpleClaim1.id },
 			{ evidenceId: simpleEvidence2.id, claimId: simpleClaim2.id },
@@ -279,7 +281,7 @@ async function main() {
 	console.log("Created: Simple Case (Draft, chris)");
 
 	// 3b. Medium Case (chris) - Published, shared with alice
-	const mediumCase = await prisma.assuranceCase.create({
+	const mediumCase = await tx.assuranceCase.create({
 		data: {
 			name: "Medium Case",
 			description: "A more complex assurance case with strategies",
@@ -292,7 +294,7 @@ async function main() {
 	});
 
 	// Medium case: 1 goal -> 2 strategies -> 4 claims -> 4 evidence
-	const mediumGoal = await prisma.assuranceElement.create({
+	const mediumGoal = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "GOAL",
@@ -304,7 +306,7 @@ async function main() {
 		},
 	});
 
-	const strategy1 = await prisma.assuranceElement.create({
+	const strategy1 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "STRATEGY",
@@ -318,7 +320,7 @@ async function main() {
 		},
 	});
 
-	const strategy2 = await prisma.assuranceElement.create({
+	const strategy2 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "STRATEGY",
@@ -332,7 +334,7 @@ async function main() {
 	});
 
 	// Claims under strategies
-	const mediumClaim1 = await prisma.assuranceElement.create({
+	const mediumClaim1 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -344,7 +346,7 @@ async function main() {
 		},
 	});
 
-	const mediumClaim2 = await prisma.assuranceElement.create({
+	const mediumClaim2 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -356,7 +358,7 @@ async function main() {
 		},
 	});
 
-	const mediumClaim3 = await prisma.assuranceElement.create({
+	const mediumClaim3 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -368,7 +370,7 @@ async function main() {
 		},
 	});
 
-	const mediumClaim4 = await prisma.assuranceElement.create({
+	const mediumClaim4 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -381,7 +383,7 @@ async function main() {
 	});
 
 	// Evidence for medium case
-	const mediumEvidence1 = await prisma.assuranceElement.create({
+	const mediumEvidence1 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "EVIDENCE",
@@ -393,7 +395,7 @@ async function main() {
 		},
 	});
 
-	const mediumEvidence2 = await prisma.assuranceElement.create({
+	const mediumEvidence2 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "EVIDENCE",
@@ -405,7 +407,7 @@ async function main() {
 		},
 	});
 
-	const mediumEvidence3 = await prisma.assuranceElement.create({
+	const mediumEvidence3 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "EVIDENCE",
@@ -417,7 +419,7 @@ async function main() {
 		},
 	});
 
-	const mediumEvidence4 = await prisma.assuranceElement.create({
+	const mediumEvidence4 = await tx.assuranceElement.create({
 		data: {
 			caseId: mediumCase.id,
 			elementType: "EVIDENCE",
@@ -430,7 +432,7 @@ async function main() {
 	});
 
 	// Link evidence to claims
-	await prisma.evidenceLink.createMany({
+	await tx.evidenceLink.createMany({
 		data: [
 			{ evidenceId: mediumEvidence1.id, claimId: mediumClaim1.id },
 			{ evidenceId: mediumEvidence2.id, claimId: mediumClaim2.id },
@@ -440,7 +442,7 @@ async function main() {
 	});
 
 	// Share with alice (EDIT permission)
-	await prisma.casePermission.create({
+	await tx.casePermission.create({
 		data: {
 			caseId: mediumCase.id,
 			userId: alice.id,
@@ -452,7 +454,7 @@ async function main() {
 	console.log("Created: Medium Case (Published, chris, shared with alice)");
 
 	// 3c. Alice's Case - Draft, team shared
-	const aliceCase = await prisma.assuranceCase.create({
+	const aliceCase = await tx.assuranceCase.create({
 		data: {
 			name: "Alice's Case",
 			description: "A case owned by Alice with team sharing",
@@ -463,7 +465,7 @@ async function main() {
 	});
 
 	// Simple structure for Alice's case
-	const aliceGoal = await prisma.assuranceElement.create({
+	const aliceGoal = await tx.assuranceElement.create({
 		data: {
 			caseId: aliceCase.id,
 			elementType: "GOAL",
@@ -474,7 +476,7 @@ async function main() {
 		},
 	});
 
-	const aliceClaim = await prisma.assuranceElement.create({
+	const aliceClaim = await tx.assuranceElement.create({
 		data: {
 			caseId: aliceCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -486,7 +488,7 @@ async function main() {
 		},
 	});
 
-	const aliceEvidence = await prisma.assuranceElement.create({
+	const aliceEvidence = await tx.assuranceElement.create({
 		data: {
 			caseId: aliceCase.id,
 			elementType: "EVIDENCE",
@@ -498,12 +500,12 @@ async function main() {
 		},
 	});
 
-	await prisma.evidenceLink.create({
+	await tx.evidenceLink.create({
 		data: { evidenceId: aliceEvidence.id, claimId: aliceClaim.id },
 	});
 
 	// Share with team
-	await prisma.caseTeamPermission.create({
+	await tx.caseTeamPermission.create({
 		data: {
 			caseId: aliceCase.id,
 			teamId: team.id,
@@ -515,7 +517,7 @@ async function main() {
 	console.log(`Created: Alice's Case (Draft, alice, team shared)`);
 
 	// 3d. Bob's Case - Draft, shared with charlie (external)
-	const bobCase = await prisma.assuranceCase.create({
+	const bobCase = await tx.assuranceCase.create({
 		data: {
 			name: "Bob's Case",
 			description: "A case owned by Bob shared with external user",
@@ -525,7 +527,7 @@ async function main() {
 		},
 	});
 
-	const bobGoal = await prisma.assuranceElement.create({
+	const bobGoal = await tx.assuranceElement.create({
 		data: {
 			caseId: bobCase.id,
 			elementType: "GOAL",
@@ -536,7 +538,7 @@ async function main() {
 		},
 	});
 
-	const bobClaim = await prisma.assuranceElement.create({
+	const bobClaim = await tx.assuranceElement.create({
 		data: {
 			caseId: bobCase.id,
 			elementType: "PROPERTY_CLAIM",
@@ -548,7 +550,7 @@ async function main() {
 		},
 	});
 
-	const bobEvidence = await prisma.assuranceElement.create({
+	const bobEvidence = await tx.assuranceElement.create({
 		data: {
 			caseId: bobCase.id,
 			elementType: "EVIDENCE",
@@ -560,12 +562,12 @@ async function main() {
 		},
 	});
 
-	await prisma.evidenceLink.create({
+	await tx.evidenceLink.create({
 		data: { evidenceId: bobEvidence.id, claimId: bobClaim.id },
 	});
 
 	// Share with charlie (VIEW permission)
-	await prisma.casePermission.create({
+	await tx.casePermission.create({
 		data: {
 			caseId: bobCase.id,
 			userId: charlie.id,
@@ -582,7 +584,7 @@ async function main() {
 	console.log("Creating comments...");
 
 	// Comments on Medium Case from alice
-	await prisma.comment.create({
+	await tx.comment.create({
 		data: {
 			caseId: mediumCase.id,
 			content:
@@ -591,7 +593,7 @@ async function main() {
 		},
 	});
 
-	await prisma.comment.create({
+	await tx.comment.create({
 		data: {
 			elementId: mediumClaim3.id,
 			content:
@@ -601,6 +603,7 @@ async function main() {
 	});
 
 	console.log("Created: 2 comments on Medium Case from alice");
+	}); // end $transaction
 
 	// ============================================
 	// SUMMARY

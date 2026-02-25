@@ -128,7 +128,7 @@ Table assurance_cases {
   description String [not null, note: 'Summary describing the case\'s purpose and scope']
   createdById String [not null, note: 'User who created the case (for audit trail)']
   mode CaseMode [not null, default: 'STANDARD', note: 'STANDARD (simplified UI) or ADVANCED (full GSN notation)']
-  colorProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
+  colourProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
   isDemo Boolean [not null, default: false, note: 'True for auto-generated tutorial cases']
   layoutDirection String [not null, default: 'TB', note: 'ELK layout direction: TB (top-bottom) or LR (left-right)']
   sourcePatternId String [note: 'If created from a pattern, the source pattern ID']
@@ -140,7 +140,7 @@ Table assurance_cases {
   markedReadyAt DateTime [note: 'When owner marked case as ready to publish']
   markedReadyById String [note: 'Who marked the case as ready']
   deletedAt DateTime [note: 'When the case was moved to trash (null = not deleted)']
-  deletedBy String [note: 'User ID who deleted the case']
+  deletedById String [note: 'User ID who deleted the case']
   createdBy users [not null]
   markedReadyBy users
   deletedByUser users
@@ -640,7 +640,7 @@ Ref: assurance_cases.createdById > users.id
 
 Ref: assurance_cases.markedReadyById > users.id
 
-Ref: assurance_cases.deletedBy > users.id
+Ref: assurance_cases.deletedById > users.id
 
 Ref: assurance_cases.sourcePatternId > argument_patterns.id
 

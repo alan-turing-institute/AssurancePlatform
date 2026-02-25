@@ -152,12 +152,12 @@ export async function softDeleteCase(
 			return { error: "Case is already in trash" };
 		}
 
-		// Soft-delete: set deletedAt and deletedBy
+		// Soft-delete: set deletedAt and deletedById
 		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				deletedAt: new Date(),
-				deletedBy: userId,
+				deletedById: userId,
 			},
 		});
 
@@ -191,7 +191,7 @@ export async function restoreCase(
 			where: { id: caseId },
 			data: {
 				deletedAt: null,
-				deletedBy: null,
+				deletedById: null,
 			},
 		});
 

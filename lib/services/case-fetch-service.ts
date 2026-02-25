@@ -194,7 +194,7 @@ function buildCaseUpdateData(
 		updateData.description = body.description;
 	}
 	if (body.color_profile !== undefined) {
-		updateData.colorProfile = body.color_profile;
+		updateData.colourProfile = body.color_profile;
 	}
 	if (body.layout_direction !== undefined) {
 		updateData.layoutDirection = body.layout_direction;
@@ -254,7 +254,7 @@ export async function fetchCaseFromPrisma(
 		name: caseData.name,
 		description: caseData.description,
 		created_date: caseData.createdAt.toISOString(),
-		color_profile: caseData.colorProfile,
+		color_profile: caseData.colourProfile,
 		owner: caseData.createdById,
 		goals,
 		permissions,
@@ -298,7 +298,7 @@ export async function updateCaseWithPrisma(
 		name: updated.name,
 		description: updated.description,
 		created_date: updated.createdAt.toISOString(),
-		color_profile: updated.colorProfile,
+		color_profile: updated.colourProfile,
 		layoutDirection: updated.layoutDirection,
 	};
 }

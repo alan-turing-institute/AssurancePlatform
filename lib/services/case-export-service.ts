@@ -84,7 +84,7 @@ async function fetchCommentsForElements(
  * Fetches and exports a case in nested tree format.
  *
  * Export includes:
- * - Case metadata (name, description, colorProfile)
+ * - Case metadata (name, description, colourProfile)
  * - Nested tree structure with evidence inline under claims
  * - Comments (when includeComments option is true, default)
  *

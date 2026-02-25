@@ -168,7 +168,7 @@ export const createAssuranceCase = async (
 			data: {
 				name: validation.data.name,
 				description: validation.data.description,
-				colorProfile: validation.data.colorProfile,
+				colourProfile: validation.data.colourProfile,
 				createdById: validated.userId,
 			},
 		});
