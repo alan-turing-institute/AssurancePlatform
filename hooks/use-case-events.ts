@@ -141,8 +141,7 @@ export function useCaseEvents({
 		// Listen for the connected event
 		eventSource.addEventListener("connected", (e) => {
 			try {
-				const data = JSON.parse(e.data);
-				console.log("[SSE] Connected:", data);
+				JSON.parse(e.data);
 			} catch {
 				// Ignore parsing errors for connection event
 			}

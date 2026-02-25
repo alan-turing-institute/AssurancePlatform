@@ -3,6 +3,7 @@
 import { Loader2, Trash2 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Node } from "reactflow";
+import { cn } from "@/lib/utils";
 import { AlertModal } from "../modals/alert-modal";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
@@ -40,7 +41,10 @@ export function OrphanElements({
 		<div className="mt-8 flex flex-col items-start justify-start">
 			<h3 className="mb-2 font-semibold text-lg">Existing Elements</h3>
 			<ScrollArea
-				className={`${filteredOrphanElements.length > 3 ? "h-80" : "h-auto"} w-full rounded-md border`}
+				className={cn(
+					filteredOrphanElements.length > 3 ? "h-80" : "h-auto",
+					"w-full rounded-md border"
+				)}
 			>
 				<div className="p-1">
 					{filteredOrphanElements.length === 0 && (

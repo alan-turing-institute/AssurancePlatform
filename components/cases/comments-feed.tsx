@@ -15,6 +15,7 @@ import { useState } from "react";
 import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
 import CommentsForm from "./comment-form";
@@ -82,7 +83,10 @@ function CommentMeta({
 
 	return (
 		<div
-			className={`mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 ${hoverClass}`}
+			className={cn(
+				"mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300",
+				hoverClass
+			)}
 		>
 			<User2Icon className="h-3 w-3" />
 			<div>
@@ -222,9 +226,12 @@ function CommentItem({
 		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
-		<div className={`w-full ${nestedClass}`}>
+		<div className={cn("w-full", nestedClass)}>
 			<div
-				className={`group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer ${cardClass}`}
+				className={cn(
+					"group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer",
+					cardClass
+				)}
 			>
 				{edit ? (
 					<CommentsEditForm comment={comment} node={node} setEdit={setEdit} />
@@ -232,7 +239,10 @@ function CommentItem({
 					<>
 						<ResolvedBanner comment={comment} />
 						<p
-							className={`mb-1 whitespace-normal ${isResolved ? "text-foreground/70" : ""}`}
+							className={cn(
+								"mb-1 whitespace-normal",
+								isResolved && "text-foreground/70"
+							)}
 						>
 							{comment.content}
 						</p>

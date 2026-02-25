@@ -1,3 +1,3 @@
 import { createModalStore } from "./create-modal-store";
 
-export const useCreateTeamModal = createModalStore();
+export const useImportModal = createModalStore();
