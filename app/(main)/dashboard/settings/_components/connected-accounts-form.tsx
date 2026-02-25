@@ -2,7 +2,6 @@
 
 import { Github } from "lucide-react";
 import { useState } from "react";
-import type { ConnectedAccountsData } from "@/types/domain";
 import { unlinkProvider } from "@/actions/connected-accounts";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/lib/toast";
+import type { ConnectedAccountsData } from "@/types/domain";
 
 type ConnectedAccountsFormProps = {
 	data: ConnectedAccountsData | null;

@@ -26,7 +26,7 @@ export const updateTeamSchema = updateTeamBaseSchema.refine(
 	(data) => Object.values(data).some((v) => v !== undefined),
 	{
 		message: "At least one field to update must be provided",
-	},
+	}
 );
 
 export type UpdateTeamSchemaInput = z.input<typeof updateTeamSchema>;

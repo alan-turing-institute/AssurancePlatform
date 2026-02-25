@@ -8,9 +8,7 @@ type DocumentExportOptions = {
 	includeComments: boolean;
 };
 
-type DocumentExportResult =
-	| { data: CaseExportNested }
-	| { error: string };
+type DocumentExportResult = { data: CaseExportNested } | { error: string };
 
 /**
  * Server action to get case data for document export.
