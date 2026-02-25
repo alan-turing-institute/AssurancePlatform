@@ -36,7 +36,6 @@
       "!components/ui",
       "!prisma/scripts",
       "!components/common/node-edit.tsx",
-      "!lib/case-helper.ts",
       "!lib/case",
       "!.pnpm-store",
       "!TASKS",

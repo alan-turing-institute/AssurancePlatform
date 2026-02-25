@@ -911,20 +911,3 @@ model PublishedAssuranceCase {
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
   @@map("published_assurance_cases")
 }
-
-// ============================================
-// LEGACY MAPPING (for migration tracking)
-// ============================================
-
-/// Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.
-model LegacyMapping {
-  id          String   @id @default(uuid())
-  entityType  String   @map("entity_type") /// Entity type: 'user', 'case', 'element', 'team', etc.
-  legacyId    BigInt   @map("legacy_id") /// Old Django integer ID
-  newId       String   @map("new_id") /// New Prisma UUID
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@unique([entityType, legacyId])
-  @@index([entityType, newId])
-  @@map("legacy_mappings")
-}

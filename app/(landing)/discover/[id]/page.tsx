@@ -5,7 +5,6 @@ import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
 import { SanitizedHtml } from "@/components/common/sanitized-html";
 import { formatShortDate } from "@/lib/date";
-import { normalizeImageUrl } from "@/lib/utils";
 import CaseStudyCases from "../../_components/case-study-cases";
 
 export async function generateMetadata({
@@ -97,7 +96,7 @@ const DiscoverCaseStudyPage = async ({
 									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
 									height={1376}
 									src={
-										normalizeImageUrl(caseStudy.feature_image_url) ??
+										caseStudy.feature_image_url ??
 										"https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 									}
 									width={1184}

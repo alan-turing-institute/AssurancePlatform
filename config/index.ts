@@ -66,7 +66,6 @@ export const navigation = [
 		externalLink: false,
 		tourId: "sidebar-discover",
 	},
-	// { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
 ];
 
 export const externalNavigation = [
@@ -94,11 +93,7 @@ export const teams: Array<{
 	href: string;
 	initial: string;
 	current: boolean;
-}> = [
-	// { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
-	// { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
-	// { id: 3, name: 'General', href: '#', initial: 'G', current: false },
-];
+}> = [];
 
 export const userNavigation = [
 	{ name: "Your profile", href: "#" },
@@ -143,7 +138,6 @@ export const caseStudies = [
 			{ id: crypto.randomUUID(), name: "Assurance Case Title Example" },
 		],
 		image: "",
-		// image: 'https://images.unsplash.com/photo-1682685797743-3a7b6b8d8149?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 		published: true,
 	},
 	{

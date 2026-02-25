@@ -552,20 +552,6 @@ Table published_assurance_cases {
   Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
 }
 
-Table legacy_mappings {
-  id String [pk]
-  entityType String [not null, note: 'Entity type: \'user\', \'case\', \'element\', \'team\', etc.']
-  legacyId BigInt [not null, note: 'Old Django integer ID']
-  newId String [not null, note: 'New Prisma UUID']
-  createdAt DateTime [default: `now()`, not null]
-
-  indexes {
-    (entityType, legacyId) [unique]
-  }
-
-  Note: 'Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.'
-}
-
 Enum AuthProvider {
   LOCAL
   GITHUB
