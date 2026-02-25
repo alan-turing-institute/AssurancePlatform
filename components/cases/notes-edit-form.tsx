@@ -13,7 +13,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { Comment } from "@/types";
 import { Textarea } from "../ui/textarea";
 
@@ -29,8 +29,6 @@ const formSchema = z.object({
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 	const { caseNotes, setCaseNotes } = useStore();
 	const [loading, setLoading] = useState<boolean>(false);
-	const { toast } = useToast();
-
 	const { id, content } = note;
 
 	const form = useForm<z.infer<typeof formSchema>>({

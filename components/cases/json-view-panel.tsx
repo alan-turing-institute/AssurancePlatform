@@ -25,7 +25,7 @@ import {
 	type ElementChange,
 	type TreeDiffResult,
 } from "@/lib/services/json-diff-service";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
 
@@ -309,8 +309,6 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const { recordOperation, isApplying: isUndoRedoApplying } = useHistoryStore();
 	const { resolvedTheme } = useTheme();
-	const { toast } = useToast();
-
 	// Server state (original from database)
 	const [server, setServer] = useState<{
 		content: string;
@@ -389,7 +387,7 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		} finally {
 			setLoading(false);
 		}
-	}, [assuranceCase?.id, toast]);
+	}, [assuranceCase?.id]);
 
 	// Fetch JSON when panel opens
 	useEffect(() => {
@@ -424,7 +422,7 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 				description: "Could not copy to clipboard",
 			});
 		}
-	}, [draftContent, toast]);
+	}, [draftContent]);
 
 	const handleDiscard = useCallback(() => {
 		setDraftContent(server.content);
@@ -493,7 +491,6 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		diffResult,
 		server.version,
 		server.data,
-		toast,
 		fetchJson,
 		setAssuranceCase,
 		isUndoRedoApplying,

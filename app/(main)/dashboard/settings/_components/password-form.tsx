@@ -16,7 +16,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
 type UserData = {
@@ -60,7 +60,6 @@ type PasswordFormProps = {
 export function PasswordForm({ data }: PasswordFormProps) {
 	const [error, setError] = useState<string>("");
 	const [loading, setLoading] = useState<boolean>(false);
-	const { toast } = useToast();
 	const { data: session } = useSession();
 
 	const notify = (message: string) => {

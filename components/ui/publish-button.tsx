@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { CaseStudy } from "@/types/domain";
 
 type PublishButtonProps = {
@@ -13,7 +13,6 @@ type PublishButtonProps = {
 };
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
-	const { toast } = useToast();
 	const _router = useRouter();
 
 	// const handlePublish = async () => {

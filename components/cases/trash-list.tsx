@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 export type TrashedCase = {
@@ -56,7 +56,6 @@ function DaysRemainingBadge({ days }: { days: number }) {
 
 export function TrashList({ cases }: TrashListProps) {
 	const router = useRouter();
-	const { toast } = useToast();
 	const [isRestoring, setIsRestoring] = useState<string | null>(null);
 	const [isPurging, setIsPurging] = useState<string | null>(null);
 	const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);

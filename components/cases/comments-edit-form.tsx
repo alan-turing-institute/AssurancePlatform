@@ -20,7 +20,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { Comment as CaseComment } from "@/types";
 import { Textarea } from "../ui/textarea";
 
@@ -45,8 +45,6 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
 	const { id: commentId, content } = comment;
-	const { toast } = useToast();
-
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {

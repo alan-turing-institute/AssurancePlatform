@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
 import CommentsForm from "./comment-form";
@@ -299,8 +299,6 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const { assuranceCase, nodeComments, setNodeComments } = useStore();
 	const { data: session } = useSession();
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
-	const { toast } = useToast();
-
 	const currentUsername = session?.user?.name || session?.user?.email;
 	const canEdit = assuranceCase?.permissions !== "view";
 

@@ -8,7 +8,7 @@ import { createCaseStudy, updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Form } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { CaseStudyFormProps } from "@/types/domain";
 import { AuthorSection } from "./_form/author-section";
 import { BasicInformationSection } from "./_form/basic-information-section";
@@ -25,7 +25,6 @@ import { useCaseStudyImage } from "./_form/use-case-study-image";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
-	const { toast } = useToast();
 	const router = useRouter();
 
 	const [value, setValue] = useState("");

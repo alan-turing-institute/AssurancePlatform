@@ -7,13 +7,12 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import useStore from "@/data/store";
 import { usePublishModal } from "@/hooks/use-publish-modal";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 /**
  * Shows a toast notification based on the unpublish result.
  */
 function showUnpublishToast(
-	toast: ReturnType<typeof useToast>["toast"],
 	response: Response,
 	result: { error?: string },
 	linkedCaseStudyCount: number
@@ -53,8 +52,6 @@ function showUnpublishToast(
 export const PublishModal = () => {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const publishModal = usePublishModal();
-	const { toast } = useToast();
-
 	const [publishDescription, setPublishDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 
@@ -132,7 +129,6 @@ export const PublishModal = () => {
 			const result = await response.json();
 
 			const success = showUnpublishToast(
-				toast,
 				response,
 				result,
 				publishModal.linkedCaseStudyCount

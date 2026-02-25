@@ -20,7 +20,7 @@ type Member = {
 	permissionId?: string;
 };
 
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
@@ -42,8 +42,6 @@ export const PermissionsModal = () => {
 	const params = useParams();
 	const router = useRouter();
 	const { caseId } = params;
-
-	const { toast } = useToast();
 
 	const fetchCaseMembers = useCallback(async () => {
 		// Use Next.js API route which handles Prisma auth

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
@@ -43,8 +43,6 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 }) => {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
-	const { toast } = useToast();
-
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: assuranceCase || {

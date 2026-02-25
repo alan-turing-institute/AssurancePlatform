@@ -6,7 +6,7 @@ import { useState } from "react";
 import { deleteCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 type DeleteCaseButtonProps = {
 	caseStudyId: number;
@@ -19,7 +19,6 @@ const DeleteCaseButton = ({
 	variant,
 	redirect = false,
 }: DeleteCaseButtonProps) => {
-	const { toast } = useToast();
 	const router = useRouter();
 
 	const [deleteOpen, setDeleteOpen] = useState(false);

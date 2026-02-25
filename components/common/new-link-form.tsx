@@ -27,7 +27,7 @@ import {
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type {
 	AssuranceCase,
 	Evidence,
@@ -71,7 +71,6 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	const { nodes, assuranceCase, setAssuranceCase } = useStore();
 	// const [token] = useLoginToken();
 	const { data: session } = useSession();
-	const { toast } = useToast();
 	const [loading, setLoading] = useState<boolean>(false);
 
 	const { setSelectedLink, setLinkToCreate, handleClose } = actions;

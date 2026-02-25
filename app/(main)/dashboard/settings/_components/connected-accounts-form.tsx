@@ -12,7 +12,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 type ConnectedAccountsFormProps = {
 	data: ConnectedAccountsData | null;
@@ -139,8 +139,6 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 		isOpen: boolean;
 		provider: "github" | "google" | null;
 	}>({ isOpen: false, provider: null });
-	const { toast } = useToast();
-
 	if (!data) {
 		return null;
 	}

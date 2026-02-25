@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchCaseComments } from "@/actions/cases";
 import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import type { Comment } from "@/types";
 import { Button } from "../ui/button";
 import NotesEditForm from "./notes-edit-form";
@@ -16,8 +16,6 @@ export default function NotesFeed() {
 	const [edit, setEdit] = useState<boolean>();
 	const [editId, setEditId] = useState<number | string>();
 	const { data: session } = useSession();
-	const { toast } = useToast();
-
 	// Sort notes by created_at (newest first) - useMemo to avoid mutation
 	const sortedNotes = useMemo(
 		() =>

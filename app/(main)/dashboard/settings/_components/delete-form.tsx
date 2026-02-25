@@ -6,7 +6,7 @@ import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
 type UserData = {
@@ -21,8 +21,6 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 	const [password, setPassword] = useState<string>("");
-	const { toast } = useToast();
-
 	const notifyError = (message: string) => {
 		toast({
 			variant: "destructive",

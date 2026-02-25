@@ -4,7 +4,7 @@ import { useState } from "react";
 import useStore from "@/data/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { StatusModal } from "./status-modal";
 
 /**
@@ -16,7 +16,6 @@ import { StatusModal } from "./status-modal";
 export function StatusModalWrapper() {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const statusModal = useStatusModal();
-	const { toast } = useToast();
 	const [loading, setLoading] = useState(false);
 
 	// Use change detection when the modal is open and status is PUBLISHED

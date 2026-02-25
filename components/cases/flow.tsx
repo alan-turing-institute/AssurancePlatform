@@ -19,7 +19,7 @@ import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/convert-case";
 import { getLayoutedElements } from "@/lib/layout-helper";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import ActionButtons from "./action-buttons";
 import CommentsSheet from "./comments-sheet";
@@ -51,8 +51,6 @@ function Flow() {
 
 	const [loading, setLoading] = useState(true);
 	const [showOrphanMessage, setShowOrphanMessage] = useState<boolean>(true);
-
-	const { toast } = useToast();
 
 	// Keyboard shortcuts for undo/redo
 	useKeyboardShortcuts();
@@ -131,7 +129,7 @@ function Flow() {
 			});
 			setLoading(false);
 		}
-	}, [assuranceCase, layoutNodes, toast]);
+	}, [assuranceCase, layoutNodes]);
 
 	// intial conversion of the assurance case on component render
 	useEffect(() => {

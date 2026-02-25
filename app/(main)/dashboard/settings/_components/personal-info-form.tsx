@@ -16,7 +16,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
 type UserData = {
@@ -51,8 +51,6 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 	const [loading, setLoading] = useState<boolean>(false);
 
 	const { data: session } = useSession();
-	const { toast } = useToast();
-
 	const notify = (message: string) => {
 		toast({
 			description: message,

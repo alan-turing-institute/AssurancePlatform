@@ -4,15 +4,13 @@ import { CloudDownloadIcon } from "lucide-react";
 import { useState } from "react";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 type UnpublishCaseButtonProps = {
 	caseStudyId: number;
 };
 
 const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
-	const { toast } = useToast();
-
 	const [alertOpen, setAlertOpen] = useState(false);
 	const [alertLoading, setAlertLoading] = useState<boolean>(false);
 

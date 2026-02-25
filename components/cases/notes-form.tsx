@@ -11,7 +11,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
@@ -23,8 +23,6 @@ const formSchema = z.object({
 
 const NotesForm: React.FC = () => {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
-	const { toast } = useToast();
-
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
