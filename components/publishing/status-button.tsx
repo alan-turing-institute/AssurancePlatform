@@ -9,7 +9,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { PublishStatusType } from "./status-badge";
+import type { PublishStatusType } from "@/types/domain";
 
 type StatusButtonProps = {
 	status: PublishStatusType;

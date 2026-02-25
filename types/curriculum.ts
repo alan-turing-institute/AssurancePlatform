@@ -10,12 +10,17 @@
 
 /**
  * Node types for React Flow visualisation in curriculum components.
+ * Uses full element names (e.g. "propertyClaim") matching the export schema.
  *
  * Note on Context: The Prisma schema supports CONTEXT as an ElementType, but in
  * the current design context is stored as a string[] attribute on nodes
  * (see TreeNode.context), not as a separate node type.
  */
-export type NodeType = "goal" | "strategy" | "propertyClaim" | "evidence";
+export type CurriculumNodeType =
+	| "goal"
+	| "strategy"
+	| "propertyClaim"
+	| "evidence";
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 

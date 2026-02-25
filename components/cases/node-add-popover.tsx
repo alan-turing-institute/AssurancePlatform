@@ -3,7 +3,7 @@
 import { FileText, GitBranch, Scale } from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
-import type { NodeType } from "@/components/shared/nodes/node-config";
+import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import { Button } from "@/components/ui/button";
 import {
 	Popover,
@@ -16,7 +16,7 @@ type NodeAddPopoverProps = {
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	/** Whether the popover is open */
 	open: boolean;
 	/** Callback when open state changes */
@@ -34,7 +34,7 @@ type AddOption = {
 /**
  * Get the available add options based on node type
  */
-function getAddOptions(nodeType: NodeType): AddOption[] {
+function getAddOptions(nodeType: DiagramNodeType): AddOption[] {
 	switch (nodeType) {
 		case "goal":
 			return [

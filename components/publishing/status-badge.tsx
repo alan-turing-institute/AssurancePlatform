@@ -2,8 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-
-export type PublishStatusType = "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
+import type { PublishStatusType } from "@/types/domain";
 
 type StatusBadgeProps = {
 	status: PublishStatusType;

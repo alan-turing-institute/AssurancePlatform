@@ -30,13 +30,13 @@ import {
 } from "@/lib/case";
 import { recordDelete } from "@/lib/services/history-service";
 import type { AssuranceCase } from "@/types";
-import type { NodeType } from "./node-config";
+import type { DiagramNodeType } from "./node-config";
 
 type NodeOptionsMenuProps = {
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 };
 
 /** Map of React Flow node types to orphan element types */

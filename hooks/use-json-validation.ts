@@ -27,7 +27,7 @@ export type ValidationError = {
 /**
  * Result of JSON validation
  */
-export type ValidationResult = {
+export type JsonValidationResult = {
 	isValid: boolean;
 	errors: ValidationError[];
 	diagnostics: Diagnostic[];
@@ -189,10 +189,10 @@ function errorToDiagnostic(
 export function useJsonValidation(
 	content: string,
 	options: UseJsonValidationOptions = {}
-): ValidationResult {
+): JsonValidationResult {
 	const { debounceMs = 300 } = options;
 
-	const [result, setResult] = useState<ValidationResult>({
+	const [result, setResult] = useState<JsonValidationResult>({
 		isValid: false,
 		errors: [],
 		diagnostics: [],

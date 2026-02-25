@@ -3,7 +3,7 @@ import type { ZodError, ZodType, ZodTypeDef } from "zod";
 /**
  * Result of validating Server Action input
  */
-export type ValidationResult<T> =
+export type ServerActionValidationResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string; fieldErrors?: Record<string, string> };
 
@@ -14,7 +14,7 @@ export type ValidationResult<T> =
 export function validateInput<O, D extends ZodTypeDef, I>(
 	input: unknown,
 	schema: ZodType<O, D, I>
-): ValidationResult<O> {
+): ServerActionValidationResult<O> {
 	const result = schema.safeParse(input);
 
 	if (!result.success) {
@@ -38,7 +38,7 @@ export function validateInput<O, D extends ZodTypeDef, I>(
 export function validateFormData<O, D extends ZodTypeDef, I>(
 	formData: FormData,
 	schema: ZodType<O, D, I>
-): ValidationResult<O> {
+): ServerActionValidationResult<O> {
 	const data = Object.fromEntries(formData.entries());
 	return validateInput(data, schema);
 }

@@ -14,7 +14,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import type { PublishStatusType } from "./status-badge";
+import type { PublishStatusType } from "@/types/domain";
 
 type StatusModalProps = {
 	open: boolean;

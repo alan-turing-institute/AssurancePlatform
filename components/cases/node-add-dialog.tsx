@@ -4,7 +4,7 @@ import { FileText, GitBranch, Scale } from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
 import NewLinkForm from "@/components/common/new-link-form";
-import type { NodeType } from "@/components/shared/nodes/node-config";
+import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import {
 	Dialog,
 	DialogContent,
@@ -17,7 +17,7 @@ type NodeAddDialogProps = {
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	/** The type of element to create (strategy, claim, evidence) */
 	elementType: string | null;
 	/** Whether the dialog is open */
@@ -55,7 +55,7 @@ function getElementIcon(elementType: string): React.ReactNode {
 }
 
 /** Get display label for parent node type */
-function getParentLabel(nodeType: NodeType): string {
+function getParentLabel(nodeType: DiagramNodeType): string {
 	switch (nodeType) {
 		case "goal":
 			return "Goal";

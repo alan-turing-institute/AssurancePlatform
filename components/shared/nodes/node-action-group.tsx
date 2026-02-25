@@ -4,14 +4,14 @@ import { MessageCircle, Pencil } from "lucide-react";
 import type { Node } from "reactflow";
 import ActionTooltip from "@/components/ui/action-tooltip";
 import useStore from "@/data/store";
-import type { NodeType } from "./node-config";
+import type { DiagramNodeType } from "./node-config";
 import NodeOptionsMenu from "./node-options-menu";
 
 type NodeActionGroupProps = {
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node (goal, strategy, property, evidence) */
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	/** Whether to show the Add button (false for evidence nodes) */
 	showAdd?: boolean;
 	/** Whether to show the Toggle button */

@@ -6,10 +6,10 @@
  */
 
 import { cn } from "@/lib/utils";
-import { getNodeColours, type NodeType } from "./node-config";
+import { type DiagramNodeType, getNodeColours } from "./node-config";
 
 type NodeContainerOptions = {
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	isSelected?: boolean;
 	className?: string;
 };
@@ -63,7 +63,7 @@ export function buildNodeTitleClasses(): string {
 /**
  * Build node icon classes
  */
-export function buildNodeIconClasses(nodeType: NodeType): string {
+export function buildNodeIconClasses(nodeType: DiagramNodeType): string {
 	const colours = getNodeColours(nodeType);
 
 	return cn("w-5", "h-5", "shrink-0", colours.icon);

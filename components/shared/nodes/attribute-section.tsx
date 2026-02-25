@@ -10,7 +10,7 @@
 import { BookmarkCheck, Layers, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { getNodeColours, type NodeType } from "./node-config";
+import { type DiagramNodeType, getNodeColours } from "./node-config";
 
 type AttributeItemProps = {
 	icon: ReactNode;
@@ -56,7 +56,7 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 }
 
 type AttributeSectionProps = {
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	context?: string[];
 	assumption?: string;
 	justification?: string;

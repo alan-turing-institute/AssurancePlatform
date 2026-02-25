@@ -6,7 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { z } from "zod";
-import type { NodeType } from "@/components/shared/nodes/node-config";
+import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -47,7 +47,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 // Helper to check if element type supports attributes
-const supportsAttributes = (nodeType: NodeType): boolean =>
+const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
 
 /**
@@ -70,7 +70,7 @@ function getInitialUrls(
 /** Build update payload from form values */
 function buildUpdatePayload(
 	values: FormValues,
-	nodeType: NodeType
+	nodeType: DiagramNodeType
 ): Record<string, unknown> {
 	const updateItem: Record<string, unknown> = {
 		short_description: values.description,
@@ -290,7 +290,7 @@ function UrlsSection({
 
 type NodeEditDialogProps = {
 	node: Node;
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	readOnly?: boolean;

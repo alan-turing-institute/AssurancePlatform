@@ -10,7 +10,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle, FileText, GitBranch, Target } from "lucide-react";
 
-export type NodeType = "goal" | "strategy" | "property" | "evidence";
+export type DiagramNodeType = "goal" | "strategy" | "property" | "evidence";
 
 export type NodeColourScheme = {
 	/** Light mode background (e.g., bg-green-50) */
@@ -33,8 +33,8 @@ export type NodeColourScheme = {
 	textDark: string;
 };
 
-export type NodeTypeConfig = {
-	id: NodeType;
+export type DiagramNodeTypeConfig = {
+	id: DiagramNodeType;
 	label: string;
 	description: string;
 	icon: LucideIcon;
@@ -55,7 +55,7 @@ export type NodeTypeConfig = {
  * Uses light tinted backgrounds (bg-{color}-50) for light mode
  * and dark tinted backgrounds (bg-{color}-950) for dark mode.
  */
-export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
+export const nodeTypeConfigs: Record<DiagramNodeType, DiagramNodeTypeConfig> = {
 	goal: {
 		id: "goal",
 		label: "Goal",
@@ -137,20 +137,22 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
 /**
  * Get configuration for a specific node type
  */
-export function getNodeConfig(nodeType: NodeType): NodeTypeConfig {
+export function getNodeConfig(
+	nodeType: DiagramNodeType
+): DiagramNodeTypeConfig {
 	return nodeTypeConfigs[nodeType];
 }
 
 /**
  * Get the icon component for a node type
  */
-export function getNodeIcon(nodeType: NodeType): LucideIcon {
+export function getNodeIcon(nodeType: DiagramNodeType): LucideIcon {
 	return nodeTypeConfigs[nodeType].icon;
 }
 
 /**
  * Get the colour scheme for a node type
  */
-export function getNodeColours(nodeType: NodeType): NodeColourScheme {
+export function getNodeColours(nodeType: DiagramNodeType): NodeColourScheme {
 	return nodeTypeConfigs[nodeType].colours;
 }

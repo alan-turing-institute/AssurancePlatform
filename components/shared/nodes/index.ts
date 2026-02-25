@@ -18,12 +18,12 @@ export { default as BaseNode } from "./base-node";
 export { default as NodeActionGroup } from "./node-action-group";
 // Node configuration
 export {
+	type DiagramNodeType,
+	type DiagramNodeTypeConfig,
 	getNodeColours,
 	getNodeConfig,
 	getNodeIcon,
 	type NodeColourScheme,
-	type NodeType,
-	type NodeTypeConfig,
 	nodeTypeConfigs,
 } from "./node-config";
 export { default as NodeOptionsMenu } from "./node-options-menu";

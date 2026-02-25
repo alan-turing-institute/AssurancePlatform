@@ -9,9 +9,9 @@ import useStore from "@/data/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { type ReactFlowNode, toggleHiddenForParent } from "@/lib/case";
+import type { PublishStatusType } from "@/types/domain";
 import LogoutButton from "./auth/logout-button";
 import ActiveUsersList from "./cases/active-users-list";
-import type { PublishStatusType } from "./publishing/status-badge";
 import { StatusButton } from "./publishing/status-button";
 import { Button } from "./ui/button";
 

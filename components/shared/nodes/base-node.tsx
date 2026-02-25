@@ -21,7 +21,7 @@ import { Handle, Position, useReactFlow } from "reactflow";
 import useStore from "@/data/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
-import { getNodeConfig, type NodeType } from "./node-config";
+import { type DiagramNodeType, getNodeConfig } from "./node-config";
 import {
 	buildDescriptionClasses,
 	buildFooterIdClasses,
@@ -37,7 +37,7 @@ import {
 
 export type BaseNodeProps = {
 	/** The type of node (goal, strategy, property, evidence) */
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
 	name: string;
 	/** Short description of the node */
@@ -92,7 +92,7 @@ function ExpandedContent({
 	assumption?: string;
 	context?: string[];
 	justification?: string;
-	nodeType: NodeType;
+	nodeType: DiagramNodeType;
 	children?: ReactNode;
 	name: string;
 	config: ReturnType<typeof getNodeConfig>;
