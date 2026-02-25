@@ -4,11 +4,11 @@ import { validateSession } from "@/lib/auth/validate-session";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
-export type DocumentExportOptions = {
+type DocumentExportOptions = {
 	includeComments: boolean;
 };
 
-export type DocumentExportResult =
+type DocumentExportResult =
 	| { data: CaseExportNested }
 	| { error: string };
 

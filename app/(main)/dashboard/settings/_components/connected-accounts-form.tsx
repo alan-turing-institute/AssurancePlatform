@@ -2,7 +2,7 @@
 
 import { Github } from "lucide-react";
 import { useState } from "react";
-import type { ConnectedAccountsData } from "@/actions/connected-accounts";
+import type { ConnectedAccountsData } from "@/types/domain";
 import { unlinkProvider } from "@/actions/connected-accounts";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";

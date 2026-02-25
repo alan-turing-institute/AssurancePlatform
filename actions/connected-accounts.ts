@@ -3,42 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { validateSession } from "@/lib/auth/validate-session";
-import type { ActionResult } from "@/types/domain";
+import type { ActionResult, ConnectedAccountsData } from "@/types/domain";
 
 /**
  * Schema for validating provider input
  */
 const ProviderSchema = z.enum(["github", "google"]);
-
-/**
- * Data about a user's connected authentication providers
- */
-export type ConnectedAccountsData = {
-	/** Primary authentication provider used for sign-in */
-	primaryAuthProvider: "LOCAL" | "GITHUB" | "GOOGLE" | "SYSTEM";
-	/** Whether the user has a password set (can use email/password login) */
-	hasPassword: boolean;
-
-	/** GitHub connection status */
-	github: {
-		connected: boolean;
-		username?: string;
-		tokenExpiry?: Date | null;
-	};
-
-	/** Google connection status */
-	google: {
-		connected: boolean;
-		email?: string;
-		tokenExpiry?: Date | null;
-		/** Whether user has granted Drive access (has refresh token) */
-		hasDriveAccess: boolean;
-	};
-
-	/** Safety flags - whether provider can be unlinked */
-	canUnlinkGitHub: boolean;
-	canUnlinkGoogle: boolean;
-};
 
 /**
  * Fetches the current user's connected accounts information.

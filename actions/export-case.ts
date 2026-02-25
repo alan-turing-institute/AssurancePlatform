@@ -3,11 +3,6 @@
 import { validateSession } from "@/lib/auth/validate-session";
 import { exportCase as exportCaseService } from "@/lib/services/case-export-service";
 
-export type {
-	ExportOptions,
-	ExportResult,
-} from "@/lib/services/case-export-service";
-
 export async function exportCase(
 	caseId: string,
 	options: Parameters<typeof exportCaseService>[2] = { includeComments: true }

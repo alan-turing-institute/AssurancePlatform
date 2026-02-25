@@ -303,3 +303,33 @@ export type PersonalInfoFormProps = {
 export type CaseStudiesProps = {
 	caseStudies: CaseStudy[];
 };
+
+/**
+ * Data about a user's connected authentication providers
+ */
+export type ConnectedAccountsData = {
+	/** Primary authentication provider used for sign-in */
+	primaryAuthProvider: "LOCAL" | "GITHUB" | "GOOGLE" | "SYSTEM";
+	/** Whether the user has a password set (can use email/password login) */
+	hasPassword: boolean;
+
+	/** GitHub connection status */
+	github: {
+		connected: boolean;
+		username?: string;
+		tokenExpiry?: Date | null;
+	};
+
+	/** Google connection status */
+	google: {
+		connected: boolean;
+		email?: string;
+		tokenExpiry?: Date | null;
+		/** Whether user has granted Drive access (has refresh token) */
+		hasDriveAccess: boolean;
+	};
+
+	/** Safety flags - whether provider can be unlinked */
+	canUnlinkGitHub: boolean;
+	canUnlinkGoogle: boolean;
+};
