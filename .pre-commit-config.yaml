@@ -54,8 +54,8 @@ repos:
       - id: debug-statements
         files: \.(js|jsx|ts|tsx)$
       - id: end-of-file-fixer
-        exclude: \.(svg|png|jpg|jpeg|gif)$|tsconfig\.tsbuildinfo$
+        exclude: \.(svg|png|jpg|jpeg|gif)$|tsconfig\.tsbuildinfo$|^\.beads/
       - id: mixed-line-ending
-        exclude: \.(svg|png|jpg|jpeg|gif)$
+        exclude: \.(svg|png|jpg|jpeg|gif)$|^\.beads/
       - id: trailing-whitespace
-        exclude: \.(svg|png|jpg|jpeg|gif|md)$
+        exclude: \.(svg|png|jpg|jpeg|gif|md)$|^\.beads/
