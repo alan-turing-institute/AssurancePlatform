@@ -21,6 +21,7 @@ export type MoveSectionProps = {
 	setSelectedEvidenceMove: (element: MoveElement | null) => void;
 	handleMove: () => Promise<void>;
 	setAction: Dispatch<SetStateAction<string | null>>;
+	className?: string;
 };
 
 export const MoveSection = ({
@@ -53,7 +54,7 @@ export const MoveSection = ({
 							<SelectContent>
 								{goal && (
 									<SelectItem
-										key={crypto.randomUUID()}
+										key={goal.id}
 										value={JSON.stringify({ id: goal.id, name: goal.name })}
 									>
 										<div className="flex flex-col items-start justify-start gap-1">
@@ -75,7 +76,7 @@ export const MoveSection = ({
 								)}
 								{strategies?.map((strategy) => (
 									<SelectItem
-										key={crypto.randomUUID()}
+										key={strategy.id}
 										value={JSON.stringify({
 											id: strategy.id,
 											name: strategy.name,
@@ -100,7 +101,7 @@ export const MoveSection = ({
 								))}
 								{claims?.map((claim) => (
 									<SelectItem
-										key={crypto.randomUUID()}
+										key={claim.id}
 										value={JSON.stringify({ id: claim.id, name: claim.name })}
 									>
 										<div className="flex flex-col items-start justify-start gap-1">
@@ -141,7 +142,7 @@ export const MoveSection = ({
 							<SelectContent>
 								{claims?.map((claim) => (
 									<SelectItem
-										key={crypto.randomUUID()}
+										key={claim.id}
 										value={JSON.stringify({ id: claim.id, name: claim.name })}
 									>
 										<div className="flex flex-col items-start justify-start gap-1">

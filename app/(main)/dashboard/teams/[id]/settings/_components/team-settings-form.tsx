@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,19 +26,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { createTeamSchema } from "@/lib/schemas/team";
 
-const formSchema = z.object({
-	name: z
-		.string()
-		.min(1, "Name is required")
-		.max(100, "Name must be 100 characters or less"),
-	description: z
-		.string()
-		.max(500, "Description must be 500 characters or less")
-		.optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof createTeamSchema>;
 
 type TeamSettingsFormProps = {
 	team: {
@@ -59,7 +49,7 @@ export function TeamSettingsForm({ team }: TeamSettingsFormProps) {
 	const [success, setSuccess] = useState<string | null>(null);
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(createTeamSchema),
 		defaultValues: {
 			name: team.name,
 			description: team.description || "",

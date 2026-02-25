@@ -17,6 +17,7 @@ export type ActionButtonsProps = {
 	node: AssuranceCaseNode;
 	readOnly: boolean;
 	setAction: (action: string) => void;
+	className?: string;
 };
 
 export const ActionButtons = ({
@@ -83,6 +84,7 @@ export type NewElementSectionProps = {
 	node: AssuranceCaseNode;
 	selectLink: (type: string) => void;
 	setAction: Dispatch<SetStateAction<string | null>>;
+	className?: string;
 };
 
 export const NewElementSection = ({
@@ -159,6 +161,7 @@ export type DeleteButtonsProps = {
 	readOnly: boolean;
 	handleDetach: () => Promise<void>;
 	onDeleteClick: () => void;
+	className?: string;
 };
 
 export const DeleteButtons = ({

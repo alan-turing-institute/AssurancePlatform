@@ -144,7 +144,13 @@ export const fetchSharedAssuranceCases = async (): Promise<
 export const createAssuranceCase = async (
 	input: CreateAssuranceCaseInput
 ): Promise<ActionResult<{ id: string }>> => {
-	// 1. Validate input
+	// 1. Authenticate
+	const validated = await validateSession();
+	if (!validated) {
+		return { success: false, error: "Invalid session" };
+	}
+
+	// 2. Validate input
 	const validation = validateInput(input, createAssuranceCaseSchema);
 	if (!validation.success) {
 		return {
@@ -152,12 +158,6 @@ export const createAssuranceCase = async (
 			error: validation.error,
 			fieldErrors: validation.fieldErrors,
 		};
-	}
-
-	// 2. Authenticate
-	const validated = await validateSession();
-	if (!validated) {
-		return { success: false, error: "Invalid session" };
 	}
 
 	// 3. Business logic

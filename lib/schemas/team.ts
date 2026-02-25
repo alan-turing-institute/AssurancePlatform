@@ -12,16 +12,22 @@ export const createTeamSchema = z.object({
 export type CreateTeamSchemaInput = z.input<typeof createTeamSchema>;
 
 /**
+ * Base object for update team — usable with zodResolver (no .refine())
+ */
+export const updateTeamBaseSchema = z.object({
+	name: requiredString("Team name", 1, 100).optional(),
+	description: optionalString(500),
+});
+
+/**
  * Update team input (all fields optional, but at least one required)
  */
-export const updateTeamSchema = z
-	.object({
-		name: requiredString("Team name", 1, 100).optional(),
-		description: optionalString(500),
-	})
-	.refine((data) => Object.values(data).some((v) => v !== undefined), {
+export const updateTeamSchema = updateTeamBaseSchema.refine(
+	(data) => Object.values(data).some((v) => v !== undefined),
+	{
 		message: "At least one field to update must be provided",
-	});
+	},
+);
 
 export type UpdateTeamSchemaInput = z.input<typeof updateTeamSchema>;
 

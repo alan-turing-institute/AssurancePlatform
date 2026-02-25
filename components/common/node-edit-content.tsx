@@ -26,21 +26,22 @@ export const ParentDescription = ({
 	<div className="mt-6 flex flex-col text-sm">
 		<div className="mb-2 flex items-center justify-start gap-2">
 			<p>Parent Description</p>
-			{toggleParentDescription ? (
-				<Eye
-					className="h-4 w-4"
-					onClick={() => setToggleParentDescription(!toggleParentDescription)}
-				/>
-			) : (
-				<EyeOff
-					className="h-4 w-4"
-					onClick={() => setToggleParentDescription(!toggleParentDescription)}
-				/>
-			)}
+			<button
+				aria-label="Toggle parent description"
+				className="inline-flex items-center justify-center rounded-sm hover:text-foreground"
+				onClick={() => setToggleParentDescription(!toggleParentDescription)}
+				type="button"
+			>
+				{toggleParentDescription ? (
+					<Eye className="h-4 w-4" />
+				) : (
+					<EyeOff className="h-4 w-4" />
+				)}
+			</button>
 		</div>
 		{toggleParentDescription && (
 			<>
-				<span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-white">
+				<span className="mb-2 font-medium text-muted-foreground text-xs uppercase group-hover:text-primary-foreground">
 					Identifier: {parentNode.data.name}
 				</span>
 				<p className="text-muted-foreground">
