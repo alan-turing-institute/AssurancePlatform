@@ -8,8 +8,8 @@ import {
 	useState,
 } from "react";
 import type { Node } from "reactflow";
-import useStore from "@/store/store";
 import { useCaseEvents } from "@/hooks/use-case-events";
+import useStore from "@/store/store";
 import { Skeleton } from "../ui/skeleton";
 import CommentsForm from "./comment-form";
 import CommentsFeed from "./comments-feed";

@@ -2,9 +2,9 @@
 
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { applyRedo, applyUndo } from "@/lib/services/history-service";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
-import { applyRedo, applyUndo } from "@/lib/services/history-service";
 
 /**
  * Hook for managing undo/redo operations in the diagram editor.

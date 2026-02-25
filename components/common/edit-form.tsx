@@ -16,13 +16,13 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useStore from "@/store/store";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
 import { recordUpdate } from "@/lib/services/history-service";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 

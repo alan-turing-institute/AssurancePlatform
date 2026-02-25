@@ -6,12 +6,12 @@ import {
 	useState,
 } from "react";
 import type { Node } from "reactflow";
-import useStore from "@/store/store";
 import {
 	attachCaseElement,
 	deleteAssuranceCaseNode,
 	fetchAndRefreshCase,
 } from "@/lib/case";
+import useStore from "@/store/store";
 import type { Context, Evidence, PropertyClaim, Strategy } from "@/types";
 
 export type OrphanElement = Context | Evidence | PropertyClaim | Strategy;

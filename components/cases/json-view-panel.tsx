@@ -14,8 +14,6 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import useHistoryStore from "@/store/history-store";
-import useStore from "@/store/store";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { fetchAndRefreshCase } from "@/lib/case";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
@@ -26,6 +24,8 @@ import {
 	type TreeDiffResult,
 } from "@/lib/services/json-diff-service";
 import { toast } from "@/lib/toast";
+import useHistoryStore from "@/store/history-store";
+import useStore from "@/store/store";
 import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
 

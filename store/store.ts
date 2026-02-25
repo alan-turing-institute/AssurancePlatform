@@ -13,8 +13,8 @@ import {
 	type OnNodesChange,
 } from "reactflow";
 import { create } from "zustand";
-import { nodeTypes } from "@/store/node-types";
 import { getLayoutedElements } from "@/lib/layout-helper";
+import { nodeTypes } from "@/store/node-types";
 import type { AssuranceCase, Comment as CaseComment, User } from "@/types";
 import { initEdges } from "./edges";
 import { initNodes } from "./nodes";

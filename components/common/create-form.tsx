@@ -13,7 +13,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import useStore from "@/store/store";
 import type { ReactFlowNode } from "@/lib/case";
 import {
 	addHiddenProp,
@@ -21,6 +20,7 @@ import {
 	setNodeIdentifier,
 } from "@/lib/case";
 import { recordCreate } from "@/lib/services/history-service";
+import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";

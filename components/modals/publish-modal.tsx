@@ -5,9 +5,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
-import useStore from "@/store/store";
 import { usePublishModal } from "@/hooks/use-publish-modal";
 import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 
 /**
  * Shows a toast notification based on the unpublish result.

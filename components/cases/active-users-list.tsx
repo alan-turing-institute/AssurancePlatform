@@ -1,7 +1,7 @@
 "use client";
 
-import useStore from "@/store/store";
 import { cn } from "@/lib/utils";
+import useStore from "@/store/store";
 import ActionTooltip from "../ui/action-tooltip";
 
 const ActiveUsersList = () => {

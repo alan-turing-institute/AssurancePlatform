@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import useStore from "@/store/store";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { StatusModal } from "./status-modal";
 
 /**

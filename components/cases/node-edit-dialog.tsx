@@ -26,13 +26,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import useStore from "@/store/store";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
 import { recordUpdate } from "@/lib/services/history-service";
+import useStore from "@/store/store";
 
 const formSchema = z.object({
 	description: z.string().min(2, {

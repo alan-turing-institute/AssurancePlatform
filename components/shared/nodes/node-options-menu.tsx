@@ -21,7 +21,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import useStore from "@/store/store";
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
@@ -29,6 +28,7 @@ import {
 	removeAssuranceCaseNode,
 } from "@/lib/case";
 import { recordDelete } from "@/lib/services/history-service";
+import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
 import type { DiagramNodeType } from "./node-config";
 

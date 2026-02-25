@@ -2,9 +2,9 @@
 
 import { Cloud, FileIcon, FileText, ImageIcon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import useStore from "@/store/store";
 import { useExportModal } from "@/hooks/use-export-modal";
 import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { Separator } from "../ui/separator";
 import { DocumentExportSection } from "./_share-modal/document-export-section";
 import { GoogleBackupSection } from "./_share-modal/google-backup-section";
