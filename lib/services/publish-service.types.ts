@@ -23,34 +23,30 @@ export type FullPublishStatus = {
 };
 
 export type PublishResult =
-	| { success: true; publishedId: string; publishedAt: Date }
-	| { success: false; error: string };
+	| { data: { publishedId: string; publishedAt: Date } }
+	| { error: string };
 
 export type UnpublishResult =
-	| { success: true }
-	| {
-			success: false;
-			error: string;
-			linkedCaseStudies?: { id: number; title: string }[];
-	  };
+	| { data: { success: true } }
+	| { error: string; linkedCaseStudies?: { id: number; title: string }[] };
 
 export type MarkReadyResult =
-	| { success: true; markedReadyAt: Date }
-	| { success: false; error: string };
+	| { data: { markedReadyAt: Date } }
+	| { error: string };
 
 export type UnmarkReadyResult =
-	| { success: true }
-	| { success: false; error: string };
+	| { data: { success: true } }
+	| { error: string };
 
 export type StatusTransitionResult =
 	| {
-			success: true;
-			newStatus: PrismaPublishStatus;
-			publishedId?: string;
-			publishedAt?: Date;
+			data: {
+				newStatus: PrismaPublishStatus;
+				publishedId?: string;
+				publishedAt?: Date;
+			};
 	  }
 	| {
-			success: false;
 			error: string;
 			linkedCaseStudies?: { id: number; title: string }[];
 	  };

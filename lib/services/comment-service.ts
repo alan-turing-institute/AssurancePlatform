@@ -1,10 +1,6 @@
 import type { ValidatedSession } from "@/lib/auth/validate-session";
 import { forbidden, notFound, validationError } from "@/lib/errors";
-import {
-	canAccessCase,
-	getCasePermission,
-	hasPermissionLevel,
-} from "@/lib/permissions";
+import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
@@ -177,9 +173,8 @@ export async function fetchCaseComments(
 	caseId: string,
 	userId: string
 ): Promise<CommentResponse[]> {
-	const permissionResult = await getCasePermission({ userId, caseId });
-
-	if (!permissionResult.hasAccess) {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
 		throw notFound();
 	}
 
@@ -205,14 +200,8 @@ export async function createCaseComment(
 	parentId: string | null,
 	userId: string
 ): Promise<CommentResponse> {
-	const permissionResult = await getCasePermission({ userId, caseId });
-
-	const canComment =
-		permissionResult.hasAccess &&
-		permissionResult.permission &&
-		hasPermissionLevel(permissionResult.permission, "COMMENT");
-
-	if (!canComment) {
+	const hasAccess = await canAccessCase({ userId, caseId }, "COMMENT");
+	if (!hasAccess) {
 		throw forbidden();
 	}
 

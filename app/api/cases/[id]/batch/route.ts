@@ -139,7 +139,7 @@ export async function POST(
 			options
 		);
 
-		if (!result.success) {
+		if ("error" in result) {
 			if (result.conflictDetected) {
 				return apiError(
 					new AppError({ code: "CONFLICT", message: result.error })
@@ -154,7 +154,7 @@ export async function POST(
 			"case:updated",
 			caseId,
 			{
-				summary: result.summary,
+				summary: result.data.summary,
 				username,
 				source: "json-editor",
 			},
@@ -163,7 +163,7 @@ export async function POST(
 
 		return apiSuccess({
 			success: true,
-			summary: result.summary,
+			summary: result.data.summary,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -1,4 +1,4 @@
-import { canAccessCase, getCasePermission } from "@/lib/permissions";
+import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
@@ -89,14 +89,9 @@ export async function publishAssuranceCase(
 	description?: string
 ): Promise<PublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check if it exists
@@ -110,7 +105,7 @@ export async function publishAssuranceCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Export case content as JSON
@@ -118,8 +113,8 @@ export async function publishAssuranceCase(
 		includeComments: true,
 	});
 
-	if (!exportResult.success) {
-		return { success: false, error: exportResult.error };
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
 	}
 
 	const now = new Date();
@@ -147,13 +142,11 @@ export async function publishAssuranceCase(
 		]);
 
 		return {
-			success: true,
-			publishedId: publishedCase.id,
-			publishedAt: now,
+			data: { publishedId: publishedCase.id, publishedAt: now },
 		};
 	} catch (error) {
 		console.error("Failed to publish case:", error);
-		return { success: false, error: "Failed to publish case" };
+		return { error: "Failed to publish case" };
 	}
 }
 
@@ -169,14 +162,9 @@ export async function unpublishAssuranceCase(
 	force = false
 ): Promise<UnpublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case with its published versions and linked case studies
@@ -204,11 +192,11 @@ export async function unpublishAssuranceCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	if (!assuranceCase.published) {
-		return { success: false, error: "Case is not published" };
+		return { error: "Case is not published" };
 	}
 
 	// Collect all linked case studies
@@ -228,7 +216,6 @@ export async function unpublishAssuranceCase(
 	// If linked to case studies and not forcing, return warning
 	if (linkedCaseStudies.length > 0 && !force) {
 		return {
-			success: false,
 			error: "Cannot unpublish: linked to case studies",
 			linkedCaseStudies,
 		};
@@ -271,10 +258,10 @@ export async function unpublishAssuranceCase(
 			});
 		});
 
-		return { success: true };
+		return { data: { success: true as const } };
 	} catch (error) {
 		console.error("Failed to unpublish case:", error);
-		return { success: false, error: "Failed to unpublish case" };
+		return { error: "Failed to unpublish case" };
 	}
 }
 
@@ -421,14 +408,9 @@ export async function markCaseAsReady(
 	caseId: string
 ): Promise<MarkReadyResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check its current status
@@ -441,13 +423,12 @@ export async function markCaseAsReady(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Only allow transition from DRAFT
 	if (assuranceCase.publishStatus !== "DRAFT") {
 		return {
-			success: false,
 			error: `Cannot mark as ready: case is currently ${assuranceCase.publishStatus}`,
 		};
 	}
@@ -464,10 +445,10 @@ export async function markCaseAsReady(
 			},
 		});
 
-		return { success: true, markedReadyAt: now };
+		return { data: { markedReadyAt: now } };
 	} catch (error) {
 		console.error("Failed to mark case as ready:", error);
-		return { success: false, error: "Failed to mark case as ready" };
+		return { error: "Failed to mark case as ready" };
 	}
 }
 
@@ -482,14 +463,9 @@ export async function unmarkCaseAsReady(
 	caseId: string
 ): Promise<UnmarkReadyResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check its current status
@@ -502,13 +478,12 @@ export async function unmarkCaseAsReady(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Only allow transition from READY_TO_PUBLISH
 	if (assuranceCase.publishStatus !== "READY_TO_PUBLISH") {
 		return {
-			success: false,
 			error: `Cannot unmark: case is currently ${assuranceCase.publishStatus}`,
 		};
 	}
@@ -523,10 +498,10 @@ export async function unmarkCaseAsReady(
 			},
 		});
 
-		return { success: true };
+		return { data: { success: true as const } };
 	} catch (error) {
 		console.error("Failed to unmark case as ready:", error);
-		return { success: false, error: "Failed to unmark case as ready" };
+		return { error: "Failed to unmark case as ready" };
 	}
 }
 
@@ -647,14 +622,9 @@ export async function updatePublishedCase(
 	description?: string
 ): Promise<PublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case and current published version
@@ -683,16 +653,16 @@ export async function updatePublishedCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	if (!assuranceCase.published || assuranceCase.publishStatus !== "PUBLISHED") {
-		return { success: false, error: "Case is not published" };
+		return { error: "Case is not published" };
 	}
 
 	const currentPublished = assuranceCase.publishedVersions[0];
 	if (!currentPublished) {
-		return { success: false, error: "No published version found" };
+		return { error: "No published version found" };
 	}
 
 	// Export current case content
@@ -700,8 +670,8 @@ export async function updatePublishedCase(
 		includeComments: true,
 	});
 
-	if (!exportResult.success) {
-		return { success: false, error: exportResult.error };
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
 	}
 
 	const now = new Date();
@@ -753,13 +723,11 @@ export async function updatePublishedCase(
 		});
 
 		return {
-			success: true,
-			publishedId: newPublished.id,
-			publishedAt: now,
+			data: { publishedId: newPublished.id, publishedAt: now },
 		};
 	} catch (error) {
 		console.error("Failed to update published case:", error);
-		return { success: false, error: "Failed to update published case" };
+		return { error: "Failed to update published case" };
 	}
 }
 
@@ -777,7 +745,6 @@ export async function transitionStatus(
 	const statusResult = await getFullPublishStatus(userId, caseId);
 	if (statusResult.error || !statusResult.data) {
 		return {
-			success: false,
 			error: statusResult.error ?? "Failed to get status",
 		};
 	}
@@ -816,7 +783,6 @@ function executeStatusTransition(
 
 		default:
 			return Promise.resolve({
-				success: false,
 				error: `Invalid status transition: ${transitionKey.replace("->", " to ")}`,
 			});
 	}
@@ -827,10 +793,10 @@ async function handleMarkAsReady(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await markCaseAsReady(userId, caseId);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
-	return { success: true, newStatus: "READY_TO_PUBLISH" };
+	return { data: { newStatus: "READY_TO_PUBLISH" } };
 }
 
 async function handleUnmarkAsReady(
@@ -838,10 +804,10 @@ async function handleUnmarkAsReady(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await unmarkCaseAsReady(userId, caseId);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
-	return { success: true, newStatus: "DRAFT" };
+	return { data: { newStatus: "DRAFT" } };
 }
 
 async function handlePublish(
@@ -850,14 +816,15 @@ async function handlePublish(
 	description?: string
 ): Promise<StatusTransitionResult> {
 	const result = await publishAssuranceCase(userId, caseId, description);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
 	return {
-		success: true,
-		newStatus: "PUBLISHED",
-		publishedId: result.publishedId,
-		publishedAt: result.publishedAt,
+		data: {
+			newStatus: "PUBLISHED",
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
+		},
 	};
 }
 
@@ -866,14 +833,13 @@ async function handleUnpublish(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await unpublishAssuranceCase(userId, caseId);
-	if (!result.success) {
+	if ("error" in result) {
 		return {
-			success: false,
 			error: result.error,
 			linkedCaseStudies: result.linkedCaseStudies,
 		};
 	}
-	return { success: true, newStatus: "DRAFT" };
+	return { data: { newStatus: "DRAFT" } };
 }
 
 async function handleUpdatePublished(
@@ -882,13 +848,14 @@ async function handleUpdatePublished(
 	description?: string
 ): Promise<StatusTransitionResult> {
 	const result = await updatePublishedCase(userId, caseId, description);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
 	return {
-		success: true,
-		newStatus: "PUBLISHED",
-		publishedId: result.publishedId,
-		publishedAt: result.publishedAt,
+		data: {
+			newStatus: "PUBLISHED",
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
+		},
 	};
 }

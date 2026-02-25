@@ -5,15 +5,16 @@ import { topologicalSort, transformV1ToV2 } from "@/lib/transforms/v1-to-v2";
 
 export type ImportResult =
 	| {
-			success: true;
-			caseId: string;
-			caseName: string;
-			elementCount: number;
-			evidenceLinkCount: number;
-			commentCount: number;
-			warnings: string[];
+			data: {
+				caseId: string;
+				caseName: string;
+				elementCount: number;
+				evidenceLinkCount: number;
+				commentCount: number;
+				warnings: string[];
+			};
 	  }
-	| { success: false; error: string; validationErrors?: string[] };
+	| { error: string; validationErrors?: string[] };
 
 /**
  * Validates and transforms imported JSON data.
@@ -246,7 +247,6 @@ export async function importCase(
 
 	if (!(processed.success && processed.data)) {
 		return {
-			success: false,
 			error: "Invalid import data",
 			validationErrors: processed.errors,
 		};
@@ -290,13 +290,14 @@ export async function importCase(
 		});
 
 		return {
-			success: true,
-			...result,
-			warnings: processed.warnings,
+			data: {
+				...result,
+				warnings: processed.warnings,
+			},
 		};
 	} catch (error) {
 		console.error("Failed to import case:", error);
-		return { success: false, error: "Failed to import case" };
+		return { error: "Failed to import case" };
 	}
 }
 

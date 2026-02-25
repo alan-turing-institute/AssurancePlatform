@@ -14,7 +14,7 @@ export async function exportCase(
 ): Promise<ReturnType<typeof exportCaseService>> {
 	const session = await validateSession();
 	if (!session) {
-		return { success: false, error: "Not authenticated" };
+		return { error: "Not authenticated" };
 	}
 	return exportCaseService(session.userId, caseId, options);
 }

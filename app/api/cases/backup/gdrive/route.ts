@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 			includeComments,
 		});
 
-		if (!exportResult.success) {
+		if ("error" in exportResult) {
 			return apiError(serviceErrorToAppError(exportResult.error));
 		}
 

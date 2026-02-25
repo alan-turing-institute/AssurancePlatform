@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
 		const result = await importCase(userId, jsonData);
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(
 				validationError(result.error, {
 					...(result.validationErrors && {
@@ -45,11 +45,11 @@ export async function POST(request: Request) {
 		}
 
 		return apiSuccess({
-			id: result.caseId,
-			name: result.caseName,
-			elementCount: result.elementCount,
-			evidenceLinkCount: result.evidenceLinkCount,
-			warnings: result.warnings,
+			id: result.data.caseId,
+			name: result.data.caseName,
+			elementCount: result.data.elementCount,
+			evidenceLinkCount: result.data.evidenceLinkCount,
+			warnings: result.data.warnings,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

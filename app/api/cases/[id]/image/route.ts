@@ -23,14 +23,11 @@ export async function GET(
 		const { id: caseId } = await params;
 
 		const { prisma } = await import("@/lib/prisma");
-		const { getCasePermission } = await import("@/lib/permissions");
+		const { canAccessCase } = await import("@/lib/permissions");
 
 		// Check user has permission to view the case
-		const permissionResult = await getCasePermission({
-			userId,
-			caseId,
-		});
-		if (!permissionResult.hasAccess) {
+		const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+		if (!hasAccess) {
 			return apiError(notFound());
 		}
 
@@ -66,23 +63,14 @@ export async function POST(
 		const { id: caseId } = await params;
 
 		const { prisma } = await import("@/lib/prisma");
-		const { getCasePermission } = await import("@/lib/permissions");
+		const { canAccessCase } = await import("@/lib/permissions");
 		const { uploadToBlob, generateScreenshotBlobPath } = await import(
 			"@/lib/services/blob-storage-service"
 		);
 
 		// Check user has edit permission
-		const permissionResult = await getCasePermission({
-			userId,
-			caseId,
-		});
-		if (
-			!(
-				permissionResult.hasAccess &&
-				permissionResult.permission &&
-				["ADMIN", "EDIT"].includes(permissionResult.permission)
-			)
-		) {
+		const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+		if (!hasAccess) {
 			return apiError(forbidden());
 		}
 

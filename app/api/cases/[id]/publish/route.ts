@@ -70,13 +70,13 @@ export async function POST(
 
 		const result = await publishAssuranceCase(userId, caseId, description);
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({
-			published_id: result.publishedId,
-			published_at: result.publishedAt.toISOString(),
+			published_id: result.data.publishedId,
+			published_at: result.data.publishedAt.toISOString(),
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -99,7 +99,7 @@ export async function DELETE(
 
 		const result = await unpublishAssuranceCase(userId, caseId, force);
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

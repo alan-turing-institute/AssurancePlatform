@@ -21,10 +21,8 @@ export async function POST(
 
 		const result = await resetIdentifiers(caseId, userId);
 
-		if (!result.success) {
-			return apiError(
-				serviceErrorToAppError(result.error || "Operation failed")
-			);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({ message: "Identifiers reset successfully" });

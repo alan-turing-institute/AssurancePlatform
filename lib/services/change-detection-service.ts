@@ -85,7 +85,7 @@ export async function detectChanges(
 		includeComments: false,
 	});
 
-	if (!exportResult.success) {
+	if ("error" in exportResult) {
 		// If export fails, we can't detect changes - assume no changes
 		return {
 			hasChanges: false,

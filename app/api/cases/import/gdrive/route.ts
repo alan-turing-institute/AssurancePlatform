@@ -88,16 +88,16 @@ export async function POST(request: Request) {
 
 		// Import the case
 		const importResult = await importCase(userId, jsonData);
-		if (!importResult.success) {
+		if ("error" in importResult) {
 			return apiError(serviceErrorToAppError(importResult.error));
 		}
 
 		return apiSuccess({
-			id: importResult.caseId,
-			name: importResult.caseName,
-			elementCount: importResult.elementCount,
-			evidenceLinkCount: importResult.evidenceLinkCount,
-			warnings: importResult.warnings,
+			id: importResult.data.caseId,
+			name: importResult.data.caseName,
+			elementCount: importResult.data.elementCount,
+			evidenceLinkCount: importResult.data.evidenceLinkCount,
+			warnings: importResult.data.warnings,
 			source: { type: "gdrive", fileId, fileName },
 		});
 	} catch (error) {

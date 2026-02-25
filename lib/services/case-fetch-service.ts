@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "@/lib/errors";
 import { compareIdentifiers } from "@/lib/identifier-utils";
-import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
+import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
 import type { Prisma } from "@/src/generated/prisma";
@@ -282,16 +282,8 @@ export async function updateCaseWithPrisma(
 	body: UpdateAssuranceCaseInput
 ): Promise<Record<string, unknown>> {
 	// Check permission
-	const permissionResult = await getCasePermission({
-		userId,
-		caseId: id,
-	});
-	const hasEditAccess =
-		permissionResult.hasAccess &&
-		permissionResult.permission &&
-		hasPermissionLevel(permissionResult.permission, "EDIT");
-
-	if (!hasEditAccess) {
+	const hasAccess = await canAccessCase({ userId, caseId: id }, "EDIT");
+	if (!hasAccess) {
 		throw forbidden();
 	}
 

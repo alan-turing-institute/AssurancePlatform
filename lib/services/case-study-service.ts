@@ -426,7 +426,7 @@ async function tryPublishCase(
 
 	try {
 		const result = await publishAssuranceCase(ownerId, caseId);
-		return result.success ? result.publishedId : null;
+		return "error" in result ? null : result.data.publishedId;
 	} catch (error) {
 		console.warn(
 			`Failed to publish case ${caseId} (legacy table issue):`,

@@ -195,7 +195,7 @@ export function DocumentExportSection({
 				includeComments: docSections.comments,
 			});
 
-			if (!result.success) {
+			if ("error" in result) {
 				toast({
 					variant: "destructive",
 					title: "Export failed",

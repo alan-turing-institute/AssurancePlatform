@@ -22,15 +22,15 @@ import type {
  */
 export type BatchUpdateResult =
 	| {
-			success: true;
-			summary: {
-				created: number;
-				updated: number;
-				deleted: number;
+			data: {
+				summary: {
+					created: number;
+					updated: number;
+					deleted: number;
+				};
 			};
 	  }
 	| {
-			success: false;
 			error: string;
 			conflictDetected?: boolean;
 	  };
@@ -441,7 +441,7 @@ export async function applyBatchUpdate(
 	// Validate user has EDIT permission
 	const hasAccess = await validateEditAccess(userId, caseId);
 	if (!hasAccess) {
-		return { success: false, error: "Permission denied" };
+		return { error: "Permission denied" };
 	}
 
 	// Check for conflict if expectedVersion is provided
@@ -449,7 +449,6 @@ export async function applyBatchUpdate(
 		const hasConflict = await checkForConflict(caseId, options.expectedVersion);
 		if (hasConflict) {
 			return {
-				success: false,
 				error: "Case has been modified by another user",
 				conflictDetected: true,
 			};
@@ -470,12 +469,12 @@ export async function applyBatchUpdate(
 	// Validate parent references
 	const createParentError = await validateCreateParents(creates, deletes);
 	if (createParentError) {
-		return { success: false, error: createParentError };
+		return { error: createParentError };
 	}
 
 	const updateParentError = await validateUpdateParents(updates);
 	if (updateParentError) {
-		return { success: false, error: updateParentError };
+		return { error: updateParentError };
 	}
 
 	try {
@@ -495,17 +494,17 @@ export async function applyBatchUpdate(
 		});
 
 		return {
-			success: true,
-			summary: {
-				created: creates.length,
-				updated: updates.length,
-				deleted: deletes.length,
+			data: {
+				summary: {
+					created: creates.length,
+					updated: updates.length,
+					deleted: deletes.length,
+				},
 			},
 		};
 	} catch (error) {
 		console.error("Batch update failed:", error);
 		return {
-			success: false,
 			error:
 				error instanceof Error ? error.message : "Failed to apply batch update",
 		};

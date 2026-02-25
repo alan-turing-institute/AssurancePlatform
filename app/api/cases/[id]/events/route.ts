@@ -24,10 +24,8 @@ async function validateCaseAccess(
 	userId: string,
 	caseId: string
 ): Promise<boolean> {
-	const { getCasePermission } = await import("@/lib/permissions");
-
-	const permission = await getCasePermission({ userId, caseId });
-	return permission.hasAccess;
+	const { canAccessCase } = await import("@/lib/permissions");
+	return canAccessCase({ userId, caseId }, "VIEW");
 }
 
 /**

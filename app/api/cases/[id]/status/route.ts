@@ -95,7 +95,7 @@ export async function PATCH(
 			description
 		);
 
-		if (!result.success) {
+		if ("error" in result) {
 			// Check for specific error types
 			if (result.error === "Permission denied") {
 				return apiError(serviceErrorToAppError(result.error));
@@ -113,16 +113,14 @@ export async function PATCH(
 				);
 			}
 
-			return apiError(
-				serviceErrorToAppError(result.error || "Operation failed")
-			);
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({
 			success: true,
-			newStatus: result.newStatus,
-			publishedId: result.publishedId,
-			publishedAt: result.publishedAt,
+			newStatus: result.data.newStatus,
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

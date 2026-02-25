@@ -15,9 +15,7 @@ export type ExportOptions = {
 	includeComments?: boolean;
 };
 
-export type ExportResult =
-	| { success: true; data: CaseExportNested }
-	| { success: false; error: string };
+export type ExportResult = { data: CaseExportNested } | { error: string };
 
 /**
  * Validates user has VIEW permission on the case.
@@ -106,7 +104,7 @@ export async function exportCase(
 	// Validate user has VIEW permission
 	const hasAccess = await validateViewAccess(userId, caseId);
 	if (!hasAccess) {
-		return { success: false, error: "Permission denied" };
+		return { error: "Permission denied" };
 	}
 
 	try {
@@ -182,11 +180,11 @@ export async function exportCase(
 		});
 
 		if (!caseData) {
-			return { success: false, error: "Case not found" };
+			return { error: "Case not found" };
 		}
 
 		if (caseData.elements.length === 0) {
-			return { success: false, error: "Case has no elements to export" };
+			return { error: "Case has no elements to export" };
 		}
 
 		// Fetch comments if requested
@@ -279,9 +277,9 @@ export async function exportCase(
 			tree,
 		};
 
-		return { success: true, data: exportData };
+		return { data: exportData };
 	} catch (error) {
 		console.error("Failed to export case:", error);
-		return { success: false, error: "Failed to export case" };
+		return { error: "Failed to export case" };
 	}
 }

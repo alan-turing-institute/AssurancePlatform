@@ -9,8 +9,8 @@ export type DocumentExportOptions = {
 };
 
 export type DocumentExportResult =
-	| { success: true; data: CaseExportNested }
-	| { success: false; error: string };
+	| { data: CaseExportNested }
+	| { error: string };
 
 /**
  * Server action to get case data for document export.
@@ -23,12 +23,16 @@ export async function getDocumentExportData(
 	const session = await validateSession();
 
 	if (!session) {
-		return { success: false, error: "Not authenticated" };
+		return { error: "Not authenticated" };
 	}
 
 	const result = await exportCase(session.userId, caseId, {
 		includeComments: options.includeComments,
 	});
 
-	return result;
+	if ("error" in result) {
+		return { error: result.error };
+	}
+
+	return { data: result.data };
 }

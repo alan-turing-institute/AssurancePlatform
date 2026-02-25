@@ -1,5 +1,5 @@
 import { compareIdentifiers } from "@/lib/identifier-utils";
-import { getCasePermission, hasPermissionLevel } from "@/lib/permissions";
+import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
@@ -213,17 +213,11 @@ function generateHierarchicalNames(
 export async function resetIdentifiers(
 	caseId: string,
 	userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ data: { success: true } } | { error: string }> {
 	// Check user has edit permission on this case (includes creator check)
-	const permissionResult = await getCasePermission({ userId, caseId });
-
-	const hasEditAccess =
-		permissionResult.hasAccess &&
-		permissionResult.permission &&
-		hasPermissionLevel(permissionResult.permission, "EDIT");
-
-	if (!hasEditAccess) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get all elements for this case (excluding deleted), ordered by creation date
@@ -300,5 +294,5 @@ export async function resetIdentifiers(
 	// (the frontend doesn't update optimistically for reset identifiers)
 	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
 
-	return { success: true };
+	return { data: { success: true } };
 }

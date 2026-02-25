@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 		if (result.error) {
 			return apiError(
 				new AppError({
-					code: result.status === 401 ? "UNAUTHORISED" : "INTERNAL",
+					code: result.error === "Unauthorised" ? "UNAUTHORISED" : "INTERNAL",
 					message: result.error,
 				})
 			);

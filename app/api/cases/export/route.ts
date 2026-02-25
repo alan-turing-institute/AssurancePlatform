@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 			includeComments,
 		});
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

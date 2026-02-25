@@ -37,10 +37,11 @@ type JsonViewPanelProps = {
 
 type BatchUpdateResult =
 	| {
-			success: true;
-			summary: { created: number; updated: number; deleted: number };
+			data: {
+				summary: { created: number; updated: number; deleted: number };
+			};
 	  }
-	| { success: false; error: string; conflictDetected?: boolean };
+	| { error: string; conflictDetected?: boolean };
 
 /**
  * Formats JSON with 2-space indentation for readability.
@@ -67,13 +68,12 @@ async function sendBatchUpdate(
 
 	if (!response.ok) {
 		return {
-			success: false,
 			error: result.error || "An error occurred",
 			conflictDetected: result.conflictDetected,
 		};
 	}
 
-	return { success: true, summary: result.summary };
+	return { data: { summary: result.summary } };
 }
 
 /**
@@ -95,21 +95,20 @@ function handleBatchResult(
 		}) => void;
 	}
 ): boolean {
-	if (!result.success) {
-		if (result.conflictDetected) {
+	if ("error" in result) {
+		const isConflict = "conflictDetected" in result && result.conflictDetected;
+		if (isConflict) {
 			callbacks.onConflict();
 		}
-		const title = result.conflictDetected
-			? "Conflict detected"
-			: "Failed to apply changes";
-		const description = result.conflictDetected
+		const title = isConflict ? "Conflict detected" : "Failed to apply changes";
+		const description = isConflict
 			? "The case was modified by another user. Refresh to see the latest changes."
 			: result.error;
 		callbacks.showToast({ variant: "destructive", title, description });
 		return false;
 	}
 
-	callbacks.onSuccess(result.summary);
+	callbacks.onSuccess(result.data.summary);
 	return true;
 }
 
@@ -249,12 +248,12 @@ async function syncAfterApply(opts: {
 		fetchJson,
 	} = opts;
 
-	if (!isUndoRedo && serverData && parsedData && result.success) {
+	if (!isUndoRedo && serverData && parsedData && "data" in result) {
 		recordJsonEditorHistory(
 			changes,
 			serverData,
 			parsedData,
-			result.summary,
+			result.data.summary,
 			recordOperation
 		);
 	}
@@ -364,7 +363,7 @@ const JsonViewPanel = ({ isOpen, onClose, userId }: JsonViewPanelProps) => {
 				includeComments: true,
 			});
 
-			if (!result.success) {
+			if ("error" in result) {
 				toast({
 					variant: "destructive",
 					title: "Failed to load JSON",
