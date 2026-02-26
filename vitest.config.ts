@@ -52,6 +52,8 @@ export default defineConfig({
 				"dist/**",
 				"**/*.spec.{js,ts,jsx,tsx}",
 				"**/*.test.{js,ts,jsx,tsx}",
+				"**/*.md",
+				"**/*.bak",
 			],
 			include: [
 				"app/**",

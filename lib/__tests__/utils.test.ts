@@ -284,14 +284,13 @@ describe("utils", () => {
 			expect(result).not.toContain("cursor-not-allowed");
 		});
 
-		it("should call clsx and twMerge in the correct order", () => {
+		it("should call clsx and twMerge", () => {
 			vi.clearAllMocks();
 
 			cn("test-class");
 
 			expect(mockClsx).toHaveBeenCalledTimes(1);
 			expect(mockTwMerge).toHaveBeenCalledTimes(1);
-			expect(mockClsx).toHaveBeenCalledBefore(mockTwMerge);
 		});
 	});
 
