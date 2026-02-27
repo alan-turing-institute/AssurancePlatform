@@ -25,6 +25,7 @@ export default defineConfig({
 			".cache",
 			"tea-docs/**",
 			".claude/**",
+			"e2e/**",
 			"src/__tests__/integration/**",
 		],
 		testTimeout: 15_000,

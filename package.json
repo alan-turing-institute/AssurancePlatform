@@ -16,6 +16,9 @@
     "test:quick": "COVERAGE=false vitest --run --reporter=dot",
     "test:integration": "vitest run --config vitest.workspace.ts --project integration",
     "test:integration:watch": "vitest --config vitest.workspace.ts --project integration",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
     "docs:generate": "next-openapi-gen generate"
   },
   "dependencies": {
@@ -105,6 +108,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.7",
+    "@playwright/test": "^1.58.2",
     "@semantic-release/changelog": "^6.0.0",
     "@semantic-release/commit-analyzer": "^13.0.0",
     "@semantic-release/git": "^10.0.0",

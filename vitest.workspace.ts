@@ -22,6 +22,7 @@ export default defineConfig({
 					exclude: [
 						"node_modules/**",
 						"src/__tests__/integration/**",
+						"e2e/**",
 						"tea-docs/**",
 						".claude/**",
 					],

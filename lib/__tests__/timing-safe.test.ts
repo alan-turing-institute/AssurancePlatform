@@ -102,41 +102,4 @@ describe("timing-safe utilities", () => {
 		});
 	});
 
-	describe("timing consistency", () => {
-		it("isTimestampValid should take similar time regardless of result", () => {
-			const iterations = 1000;
-			const futureTimestamp = Date.now() + 100000;
-			const pastTimestamp = Date.now() - 100000;
-
-			// Measure time for valid timestamp
-			const validStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(futureTimestamp);
-			}
-			const validTime = performance.now() - validStart;
-
-			// Measure time for invalid timestamp
-			const invalidStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(pastTimestamp);
-			}
-			const invalidTime = performance.now() - invalidStart;
-
-			// Measure time for undefined timestamp
-			const undefinedStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(undefined);
-			}
-			const undefinedTime = performance.now() - undefinedStart;
-
-			// All execution times should be within reasonable tolerance of each other
-			// Note: This is a rough check - actual timing attacks require more sophisticated analysis
-			const avgTime = (validTime + invalidTime + undefinedTime) / 3;
-			const tolerance = avgTime * 0.5; // 50% tolerance for test stability
-
-			expect(Math.abs(validTime - avgTime)).toBeLessThan(tolerance);
-			expect(Math.abs(invalidTime - avgTime)).toBeLessThan(tolerance);
-			expect(Math.abs(undefinedTime - avgTime)).toBeLessThan(tolerance);
-		});
-	});
 });

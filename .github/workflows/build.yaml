@@ -12,8 +12,13 @@ on:
       - "prisma/**"
       - "scripts/**"
       - "content/**"
+      - "e2e/**"
+      - "src/__tests__/**"
       - "theme.config.tsx"
       - "mdx-components.tsx"
+      - "playwright.config.ts"
+      - "vitest.config.ts"
+      - "vitest.workspace.ts"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -31,8 +36,13 @@ on:
       - "prisma/**"
       - "scripts/**"
       - "content/**"
+      - "e2e/**"
+      - "src/__tests__/**"
       - "theme.config.tsx"
       - "mdx-components.tsx"
+      - "playwright.config.ts"
+      - "vitest.config.ts"
+      - "vitest.workspace.ts"
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
@@ -75,10 +85,103 @@ jobs:
       - name: Run type check
         run: npx tsc --noEmit
 
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tea_user
+          POSTGRES_PASSWORD: tea_password
+          POSTGRES_DB: tea_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_test
+      NEXTAUTH_SECRET: test-secret-for-ci-only
+      NEXTAUTH_URL: http://localhost:3000
+      SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
+      USE_LOCAL_STORAGE: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Create tea_dev database
+        run: |
+          # Integration test globalSetup connects to tea_dev to create tea_test.
+          # In CI, tea_test already exists (from service container), but tea_dev must exist too.
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SELECT 1 FROM pg_database WHERE datname = 'tea_dev'" | grep -q 1 \
+            || PGPASSWORD=tea_password createdb -h localhost -U tea_user tea_dev
+
+      - name: Run migrations
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+
+      - name: Seed database
+        run: npx tsx prisma/seed/dev-seed.ts
+
+      - name: Run unit tests
+        run: pnpm exec vitest run --config vitest.workspace.ts --project unit
+
+      - name: Run integration tests
+        run: pnpm exec vitest run --config vitest.workspace.ts --project integration
+
+      - name: Re-seed database for E2E
+        run: |
+          npx prisma migrate reset --force --schema=prisma/schema.prisma
+          npx tsx prisma/seed/dev-seed.ts
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, test]
     permissions:
       contents: read
       packages: write

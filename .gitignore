@@ -184,6 +184,10 @@ pnpm-debug.log*
 
 # testing
 coverage/
+e2e/.auth/
+test-results/
+playwright-report/
+blob-report/
 
 # documentation builds - all generated documentation files
 public/documentation/
