@@ -583,7 +583,7 @@ describe("ImageUpload", () => {
 			const { container } = render(<ImageUpload onChange={mockOnChange} />);
 
 			const dropzone = container.querySelector(
-				".focus\\:outline-none.focus\\:ring-2"
+				".focus\\:outline-hidden.focus\\:ring-2"
 			);
 			expect(dropzone).toBeInTheDocument();
 		});
