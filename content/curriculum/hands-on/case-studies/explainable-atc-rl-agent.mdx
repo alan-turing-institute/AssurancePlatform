@@ -1,0 +1,191 @@
+---
+title: "Explainable Reinforcement Learning Agent for Air Traffic Control"
+description: "A case study exploring how to assure the explainability of a reinforcement learning agent trained to manage en route air traffic, using the Project Bluebird Digital Twin"
+sidebar_label: "ATC RL Agent"
+sidebar_position: 7
+tags:
+  - case-studies
+  - aviation
+  - explainability
+  - AI
+  - reinforcement-learning
+---
+
+# Explainable Reinforcement Learning Agent for Air Traffic Control
+
+![ATC RL Agent Hero Image](/images/case-studies/explainable-atc-rl-agent.jpeg)
+
+| Field              | Details          |
+| ------------------ | ---------------- |
+| **Domain**         | Aviation         |
+| **Assurance Goal** | Explainability   |
+
+## Overview
+
+Project Bluebird is an EPSRC Prosperity Partnership between the Alan Turing Institute, NATS (the UK's en route air navigation service provider), and the University of Exeter. The programme is investigating the use of reinforcement learning (RL) agents to assist air traffic controllers (ATCOs) in managing en route airspace — the high-altitude phase of flight between departure and arrival airports. The research uses BluebirdDT, a probabilistic Digital Twin of the London Area Control Centre (LACC) that integrates over 20 million flights of NATS operational data.
+
+An RL agent has been trained using Proximal Policy Optimisation (PPO) to manage aircraft within the X-Plus Sector of UK en route airspace. The agent learns to issue clearances — instructions to aircraft to turn or change altitude — in order to maintain safe separation between aircraft while keeping them close to their planned routes. A novel technique called *online action-stacking* allows the agent to combine primitive actions (small heading and altitude changes) into compound clearances at inference time, producing instructions that more closely resemble those issued by human controllers.
+
+Because RL agents learn policies through trial-and-error interaction with a simulated environment rather than being explicitly programmed with rules, their decision-making is inherently opaque. An ATCO supervising such an agent would need to understand *why* it issued a particular clearance in order to judge whether the action was safe and appropriate. Equally, a developer investigating a failure would need to understand the internal factors driving a decision. A regulator reviewing the system for certification would need evidence that the agent's behaviour is explainable in terms that map to established operational standards. This case study explores the challenge of assuring explainability across these different audiences and needs.
+
+## System Description
+
+### What the System Does
+
+The RL agent manages en route air traffic by:
+
+- Monitoring the positions, headings, altitudes, and flight plan routes of all aircraft in the sector
+- Deciding when to intervene by issuing clearances to individual aircraft
+- Issuing heading changes (turn left or right) and altitude changes (climb or descend) to maintain safe separation
+- Compiling sequences of small primitive actions into compound clearances through online action-stacking (e.g., combining "turn left 10°" three times into a single "turn left 30°" instruction)
+- Returning aircraft to their planned routes once the conflict has been resolved
+
+### How It Works
+
+1. **State Observation**: At each time step, the agent receives a state vector containing information about aircraft in the sector — relative bearings, distances, vertical separations, time since last action, and each aircraft's deviation from its planned route
+2. **Policy Evaluation**: A neural network (the "policy") maps the current state to a probability distribution over possible actions. The agent samples from this distribution to select an action
+3. **Action Stacking**: Rather than issuing a single primitive action (e.g., "turn left 10°"), the agent evaluates and stacks multiple actions in sequence within a single decision step, producing compound clearances that are more operationally natural
+4. **Value Estimation**: A separate value function (the "critic" network) estimates how much future reward the agent expects from the current state. This provides a measure of how confident the agent is in the current situation
+5. **Clearance Execution**: The selected clearance is issued to the relevant aircraft in the simulation, which then updates its trajectory accordingly
+6. **Reward Feedback**: The agent receives reward signals reflecting multiple objectives — maintaining safe separation, minimising route deviation, and avoiding excessive or oscillatory commands
+
+### Key Technical Details
+
+| Aspect                      | Details |
+| --------------------------- | ------- |
+| **Model Architecture**      | Fully-connected neural network with two hidden layers of 64 neurons each (approximately 8,320 parameters). Separate policy (actor) and value (critic) networks |
+| **Training Algorithm**      | Proximal Policy Optimisation (PPO) — a policy gradient method that updates the policy in small, stable steps to avoid catastrophic performance changes |
+| **Training Environment**    | BluebirdDT simulation of the X-Plus Sector, using probabilistic trajectory prediction informed by over 20 million flights of NATS operational data |
+| **State Representation**    | Relative bearings, distances, vertical separations, time since last action, route deviation — a compact vector representation rather than raw radar imagery |
+| **Action Space**            | Primitive actions: turn left/right 10°, climb/descend 10 flight levels. These are combined via online action-stacking into compound clearances |
+| **Reward Function**         | Multi-objective: centreline tracking (route adherence), separation maintenance (safety), action damping (avoiding excessive or oscillatory commands) |
+| **Explainability Methods**  | Under investigation — this is a central challenge of the case study. Candidate approaches include reward-component attribution, value function analysis, policy entropy (a measure of how certain the agent is about what to do), and saliency methods |
+| **Validation**              | BluebirdDT includes a Machine Basic Training (MBT) curriculum of 31 formative exercises adapted from NATS' ATCO assessment course, along with automated safety, efficiency, and procedural metrics |
+
+### Deployment Context
+
+- **Scope**: Research system evaluated in simulation; not yet deployed in live airspace
+- **Environment**: BluebirdDT Digital Twin of the LACC X-Plus Sector
+- **Users**: Researchers and ATCOs participating in human-in-the-loop (HITL) assessment trials
+- **Human Oversight**: All simulated scenarios are supervised; the agent does not operate autonomously in live airspace
+- **Validation Framework**: HITL assessment using operational radar displays, automated metrics (safety, efficiency, procedural compliance), and MBT exercises drawn from NATS' ATCO competency assessment course
+- **Current Status**: Research and evaluation phase. The MBT assessment curriculum has been trialled with rules-based agents; RL agent evaluation is in progress
+
+## Stakeholders
+
+| Stakeholder                                         | Interest                                                                                       | Concern                                                                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Air Traffic Controllers (ATCOs)**                  | Understanding agent actions well enough to supervise effectively and intervene when necessary   | Cannot build situational awareness if the agent's reasoning is opaque; fear of skill degradation from passive monitoring               |
+| **ATCO Examiners and Training Assessors**            | Assessing whether the agent meets the same competency standards applied to human trainees       | No established methodology for examining a non-human agent against CAP493 standards                                                   |
+| **RL Agent Developers**                              | Debugging failures, understanding generalisation gaps, improving reward design                  | Policy networks are opaque; reward-driven behaviour may satisfy metrics without genuinely safe reasoning                               |
+| **NATS (Air Navigation Service Provider)**           | Safe, efficient, and operationally acceptable agent behaviour in en route airspace              | Reputational and safety risk if agents produce unexplainable actions that erode controller trust                                       |
+| **Civil Aviation Authority (CAA)**                   | Evidence that the system meets safety and explainability requirements for any future deployment | No established certification pathway for RL agents in safety-critical ATC roles                                                       |
+| **Airline Operators and Pilots**                     | Safe and predictable handling of their aircraft in controlled airspace                          | Clearances from an AI system may be unexpected or inconsistent with pilot expectations; no voice communication loop with the agent     |
+| **Passengers and Public**                            | Confidence that AI involvement in ATC does not compromise safety                               | Difficulty understanding what role AI plays and what safeguards exist                                                                  |
+| **Academic Research Community**                      | Advancing understanding of explainable RL in safety-critical domains                           | Publication pressure may incentivise overstating agent capability relative to published evidence                                       |
+
+## Regulatory Context
+
+- **CAA CAP493 (Manual of Air Traffic Services)**: The primary operational standard for ATC in the UK. Defines controller responsibilities, separation standards, and the clearances that controllers may issue. Any RL agent must produce actions that are consistent with CAP493 procedures, and any explanation of those actions must be interpretable in CAP493 terms
+- **CAA CAP2970 (Artificial Intelligence in Aviation)**: Emerging CAA guidance on the use of AI in aviation systems. Addresses requirements for transparency, explainability, and human oversight of AI-based decision support
+- **EASA AI Concept Paper**: The European Union Aviation Safety Agency's framework for certifying AI in aviation. Distinguishes between Level 1 (human-assisted AI) and Level 2 (human-AI collaboration), with increasing explainability requirements at higher levels. Relevant as a benchmark even outside EU jurisdiction
+- **EU AI Act**: Classifies AI systems by risk level. ATC applications are likely to be classified as high-risk, requiring conformity assessments, documentation of training data, and ongoing monitoring. Relevant for any future European deployment
+- **UK GDPR and Data Protection Act 2018**: Relevant to the extent that NATS operational data (including flight tracks and controller actions) is used for training, and that HITL assessment may involve processing of participant data
+- **FAA Roadmap for Artificial Intelligence Safety Assurance**: The US Federal Aviation Administration's framework for AI assurance in aviation. While not directly applicable in the UK, it provides a comparative benchmark for international alignment
+- **NATS Internal Safety Management System**: NATS' own safety governance framework, which any operational deployment would need to satisfy before reaching the regulator
+
+## Explainability Considerations
+
+### Explanation for Whom? The Audience Problem
+
+A central challenge for explainability in this context is that different audiences need fundamentally different kinds of explanation. An ATCO supervising the agent in real time needs rapid, operationally grounded justifications — why was this aircraft turned, why now, why by this amount? A developer debugging a failure needs access to internal model states — which reward components dominated, what the value function estimated, where the policy was uncertain. A regulator needs structured evidence linking the agent's behaviour to established competency standards. These are not variations of the same explanation; they may require entirely different methods and representations. A key question for the assurance case is whether a unified explanation framework can serve all audiences, or whether layered, audience-specific approaches are necessary.
+
+### Action Stacking Opacity
+
+The online action-stacking mechanism introduces a distinctive explainability challenge. The policy network selects primitive actions (turn left/right 10°, climb/descend 10 flight levels), but the controller and pilot experience compound clearances (e.g., "turn left 30°"). The stacking process — which repeatedly queries the policy and accumulates actions until a termination condition is met — is not itself a learned behaviour but an inference-time algorithm. This means the agent does not "decide" to issue a 30° turn; it decides three times to turn left 10°. Explaining the compound clearance requires explaining the sequence of primitive decisions and why the stacking terminated when it did. The gap between what the agent internally decides and what the human externally observes is a fundamental obstacle to transparency.
+
+### Reward Function Transparency
+
+The agent's behaviour is shaped by a multi-objective reward function combining centreline tracking, separation maintenance, and action damping. Different weightings of these objectives produce qualitatively different agent behaviours. If the agent issues what appears to be an unnecessarily aggressive turn, the explanation may lie not in the current state but in the reward function's relative weighting of route adherence versus safety margin. Understanding *why the agent learned to behave this way* — not just *what it decided in this instance* — requires transparency about the reward function design. This is a developer-facing concern that also has regulatory implications: can an authority be satisfied that the reward function encodes the right priorities?
+
+### Value Function as Confidence Signal
+
+The value function (critic network) estimates the expected future reward from any given state. A sudden drop in the value estimate may signal that the agent perceives a deteriorating situation — effectively, a loss of confidence. This could be a useful real-time signal for controllers and monitoring systems, but it requires careful interpretation. A low value estimate does not mean the agent will fail; it means the agent expects less reward. The relationship between value estimates and operationally meaningful concepts like "safety margin" or "sector complexity" is not straightforward and would need empirical validation before it could be relied upon for operational oversight.
+
+### Undertrained versus Overtrained Agents
+
+Training quality creates a distinctive explainability paradox. An *undertrained* agent may generalise to novel traffic scenarios but cannot articulate why its generalisation works — it has learned patterns without having consolidated them into stable, interpretable strategies. An *overtrained* agent produces consistent, predictable behaviour within its training distribution but fails unpredictably when encountering traffic patterns it has not seen before. Both failure modes are difficult to explain: the undertrained agent's explanations are unreliable because its policy is still shifting; the overtrained agent has no meaningful explanation for out-of-distribution failures because it was never exposed to such situations. Assuring explainability requires understanding where a given agent sits on this spectrum and what kinds of explanation are trustworthy at that point in training.
+
+### Monitoring versus Controlling: The Automation Paradox
+
+If an RL agent manages traffic effectively, ATCOs shift from an active controlling role to a passive monitoring role. Decades of human factors research in aviation and other safety-critical domains shows that passive monitoring degrades situational awareness: controllers may not maintain the mental model of traffic that would enable them to intervene quickly and correctly if the agent fails. Explanations are sometimes proposed as a solution — the agent narrates its reasoning, keeping the controller in the loop. But explanations themselves impose a cognitive load, and processing them competes with the monitoring task. There is a genuine tension between providing enough explanation to maintain situational awareness and providing so much that it becomes a distraction. This tension is particularly acute in ATC, where decision timescales are measured in seconds and the operational tempo is high.
+
+### Communicability and the Voice Loop
+
+Air traffic control relies on voice communication between controllers and pilots. Every clearance is read back by the pilot and confirmed by the controller. This communication loop serves multiple functions: it ensures the pilot has correctly understood the instruction, it provides a record for other controllers monitoring the frequency, and it supports the controller's own situational awareness. An RL agent cannot participate in this voice loop in the way a human controller does. How should clearances generated by an AI agent be communicated to pilots? How should the absence of a human voice — with its intonation, emphasis, and implicit reassurance — be addressed? The communicability of agent decisions is not only a technical challenge but a human factors and procedural one.
+
+## Assurance Focus
+
+The assurance case should demonstrate that:
+
+> **The RL agent's behaviour within the BluebirdDT simulation environment is explainable to the degree necessary for operational supervision by ATCOs, developmental debugging by researchers, and regulatory evaluation by aviation authorities — with clear acknowledgement of the boundaries of current explainability methods and the limitations of simulation-based evidence.**
+
+### Deliberative Prompts
+
+1. An ATCO supervising a human trainee can ask "why did you do that?" and receive an answer in operational language. What would the equivalent interaction look like with an RL agent, and is it achievable with current explainability methods — or is this a false analogy?
+
+2. The RL agent's neural network has approximately 8,320 parameters — small enough that exhaustive behavioural testing may be tractable. Does the small network size make explainability easier, harder, or simply different compared to large-scale models? What forms of exhaustive analysis does it enable?
+
+3. If the agent consistently performs well on safety and efficiency metrics but its developers cannot fully explain *why* it makes specific decisions, should it be considered safe? How should the assurance case handle the gap between performance evidence and explanatory evidence?
+
+4. Explanations that satisfy a developer (reward-component attribution, policy entropy, saliency maps) may be meaningless to a controller who thinks in terms of traffic flows, separation standards, and sector workload. Can a single explanation framework serve both audiences, or does explainability necessarily require audience-specific methods?
+
+5. The agent is trained in a Digital Twin that models real airspace with high fidelity — but it is still a simulation. How should the assurance case address the gap between explainability demonstrated in simulation and the explainability that would be required for live operational deployment?
+
+6. If the agent's reward function encodes incorrect or incomplete priorities (e.g., underweighting a rare but critical safety scenario), the agent's behaviour will be consistently wrong in ways that are difficult to detect through explainability methods alone. How should the assurance case address the trustworthiness of the reward function itself?
+
+7. Human controllers undergo a structured competency assessment (MBT) where they must demonstrate and explain their decision-making. The MBT curriculum has been adapted for use in BluebirdDT. Should the RL agent be assessed against the same competency framework — and if so, what counts as an "explanation" from a non-human agent?
+
+## Suggested Strategies
+
+### Reward-Component Attribution
+
+**Decompose the agent's multi-objective reward into its constituent components (centreline tracking, separation maintenance, action damping) and attribute each decision to the relative contribution of each component.** This provides a developer-facing explanation of *why* the agent learned a particular behaviour and supports regulatory review of whether the reward function encodes appropriate priorities. It does not directly produce operationally meaningful explanations for controllers, but it provides the foundation upon which higher-level explanations can be built.
+
+### Operational Envelope Characterisation
+
+**Systematically map the state-space regions where the agent behaves competently and where it does not, using the MBT curriculum and structured probe scenarios to identify boundaries of reliable performance.** Rather than explaining individual decisions, this strategy characterises the agent's overall competency — where it can be trusted and where human intervention is needed. This is the most technically tractable approach given current RL explainability methods and aligns with how human controller competency is assessed.
+
+### Value-Function Monitoring
+
+**Use the critic network's value estimates as a real-time confidence signal, flagging states where the agent's expected reward drops below empirically calibrated thresholds.** This does not explain what the agent will do, but it provides an early warning of states where the agent is uncertain or expects poor outcomes. Validation is required to establish the relationship between value estimates and operationally meaningful concepts (e.g., conflict proximity, sector complexity).
+
+### Layered Explanation Architecture
+
+**Design separate explanation interfaces for different audiences: a simplified operational layer for controllers (natural language summaries of what the agent is doing and why), a technical layer for developers (reward decomposition, policy entropy, saliency), and a structured evidence layer for regulators (GSN-formatted claims, MBT assessment results, and behavioural testing outcomes).** This acknowledges that a single explanation cannot serve all audiences and builds the explanation system as a deliberate multi-layered architecture.
+
+### Reversion and Handover Protocol
+
+**Define clear protocols for when and how control should be transferred from the agent back to a human controller, and ensure these protocols are themselves explainable.** In safety-critical systems, the ability to revert to human control is as important as the system's normal operation. The reversion protocol should include what information the agent provides to the incoming controller (traffic state, active clearances, perceived conflicts), how quickly the handover must occur, and what the controller needs to maintain situational awareness during the transition.
+
+### Comparative Baseline Testing
+
+**Evaluate the RL agent against a rules-based agent on the same MBT scenarios, using the difference in behaviour as a tool for understanding what the RL agent has learned.** Where the RL agent and rules-based agent agree, the RL agent's decision can be explained by reference to the rule. Where they disagree, the divergence itself becomes an object of investigation — potentially revealing novel strategies learned by the RL agent or edge cases where the RL agent's behaviour needs scrutiny.
+
+## Recommended Techniques for Evidence
+
+The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
+
+- [Integrated Gradients](https://alan-turing-institute.github.io/tea-techniques/techniques/integrated-gradients/) — Attribute the agent's output to specific input features (e.g., which aircraft's relative position most influenced a turn decision). Particularly tractable given the small, fully-connected network architecture and the compact state vector representation
+- [Contrastive Explanation Method](https://alan-turing-institute.github.io/tea-techniques/techniques/contrastive-explanation-method/) — Generate contrastive explanations of the form "the agent turned aircraft A left because aircraft B was closing from the right; had aircraft B been 5 nautical miles further away, no turn would have been issued". Aligns with how ATCOs reason about traffic conflicts
+- [Partial Dependence Plots](https://alan-turing-institute.github.io/tea-techniques/techniques/partial-dependence-plots/) — Visualise how the agent's policy responds to changes in individual input features (e.g., how turn probability varies with separation distance), supporting developer understanding of learned behaviours and identification of unexpected sensitivities
+- [Out-of-Distribution Detector for Neural Networks](https://alan-turing-institute.github.io/tea-techniques/techniques/out-of-distribution-detector-for-neural-networks/) — Detect traffic scenarios that fall outside the agent's training distribution, providing a direct signal for when explanations (and the agent's behaviour itself) should not be trusted. Critical for addressing the undertrained/overtrained spectrum
+- [Permutation Importance](https://alan-turing-institute.github.io/tea-techniques/techniques/permutation-importance/) — Assess which input features the agent relies on most by measuring performance degradation when each feature is randomly shuffled. Validates that the agent uses operationally meaningful features (e.g., separation distance) rather than spurious correlations
+
+## Further Reading
+
+- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
+- [Carvell, O. et al. (2025). "Online Action-Stacking Improves RL Performance for ATC"](./rl-agent.pdf) — The technical paper describing the RL agent and online action-stacking mechanism used in this case study
+- [Pepper, N. et al. (2025). "A Probabilistic Digital Twin of UK En Route Airspace"](./bluebird-dt.pdf) — The technical paper describing the BluebirdDT platform, including the MBT assessment curriculum and HITL framework
+- [CAA CAP2970 — Artificial Intelligence in Aviation](https://www.caa.co.uk/cap2970) — The UK Civil Aviation Authority's emerging guidance on AI in aviation
+- [EASA AI Concept Paper](https://www.easa.europa.eu/en/document-library/general-publications/easa-artificial-intelligence-concept-paper) — The European framework for certifying AI in aviation systems
