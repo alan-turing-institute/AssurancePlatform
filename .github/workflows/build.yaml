@@ -101,7 +101,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U tea_user"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -155,6 +155,9 @@ jobs:
         run: |
           npx prisma migrate reset --force --schema=prisma/schema.prisma
           npx tsx prisma/seed/dev-seed.ts
+
+      - name: Build application for E2E
+        run: pnpm build
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
