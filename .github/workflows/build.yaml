@@ -157,7 +157,10 @@ jobs:
           npx tsx prisma/seed/dev-seed.ts
 
       - name: Build application for E2E
-        run: pnpm build
+        run: |
+          pnpm build
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium

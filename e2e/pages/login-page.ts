@@ -11,7 +11,7 @@ export class LoginPage {
 	constructor(page: Page) {
 		this.page = page;
 		this.identifier = page.getByLabel("Email or Username");
-		this.password = page.getByLabel("Password");
+		this.password = page.getByLabel("Password", { exact: true });
 		this.submitButton = page.getByRole("button", { name: "Login" });
 		this.successMessage = page.getByText("Account created successfully");
 		this.errorMessage = page.getByText("Invalid credentials");
