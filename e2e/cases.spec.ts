@@ -1,7 +1,7 @@
 import { expect, test } from "./helpers/auth";
 import { DashboardPage } from "./pages/dashboard-page";
 
-const CASE_URL_PATTERN = /\/case\/\d+/;
+const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
 const STATUS_BUTTON_PATTERN = /Draft|Ready to Publish|Published/;
 
 test.describe("Case management", () => {

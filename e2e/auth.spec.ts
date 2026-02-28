@@ -11,8 +11,8 @@ test.describe("Authentication lifecycle", () => {
 		await page.goto("/register");
 		await page.getByLabel("Username").fill(uniqueUsername);
 		await page.getByLabel("Email Address").fill(`${uniqueUsername}@test.com`);
-		await page.getByLabel("Password", { exact: true }).fill(seedPassword);
-		await page.getByLabel("Confirm Password").fill(seedPassword);
+		await page.locator('input[type="password"]').first().fill(seedPassword);
+		await page.locator('input[type="password"]').last().fill(seedPassword);
 		await page.getByRole("button", { name: "Submit" }).click();
 
 		// Redirects to login with success query param
@@ -45,7 +45,7 @@ test.describe("Authentication lifecycle", () => {
 		page,
 	}) => {
 		await page.goto("/dashboard");
-		await page.waitForURL("**/login");
+		await page.waitForURL("**/login*");
 	});
 
 	test("invalid credentials show error message", async ({ page }) => {

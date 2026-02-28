@@ -65,6 +65,7 @@ export const fetchAssuranceCases = async (): Promise<
 		updated_date: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
 		isDemo: c.isDemo,
+		permissions: c.createdById === validated.userId ? "owner" : "view",
 	}));
 };
 

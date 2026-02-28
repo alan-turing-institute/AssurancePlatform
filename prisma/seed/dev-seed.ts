@@ -107,6 +107,9 @@ async function main() {
 			// ============================================
 			console.log("Creating users...");
 
+			// Skip onboarding tours and migration notice for seeded users so E2E tests aren't blocked
+			const allToursCompleted = ["dashboard", "case-canvas", "demo-case"];
+
 			const chris = await tx.user.create({
 				data: {
 					email: "chris@example.com",
@@ -117,6 +120,8 @@ async function main() {
 					lastName: "Developer",
 					authProvider: "LOCAL",
 					emailVerified: true,
+					completedTours: allToursCompleted,
+					hasSeenMigrationNotice: true,
 				},
 			});
 
@@ -130,6 +135,8 @@ async function main() {
 					lastName: "Admin",
 					authProvider: "LOCAL",
 					emailVerified: true,
+					completedTours: allToursCompleted,
+					hasSeenMigrationNotice: true,
 				},
 			});
 
@@ -143,6 +150,8 @@ async function main() {
 					lastName: "Member",
 					authProvider: "LOCAL",
 					emailVerified: true,
+					completedTours: allToursCompleted,
+					hasSeenMigrationNotice: true,
 				},
 			});
 
@@ -156,6 +165,8 @@ async function main() {
 					lastName: "External",
 					authProvider: "LOCAL",
 					emailVerified: true,
+					completedTours: allToursCompleted,
+					hasSeenMigrationNotice: true,
 				},
 			});
 

@@ -54,6 +54,9 @@ export default withAuth(
 				return token?.id != null;
 			},
 		},
+		pages: {
+			signIn: "/login",
+		},
 	}
 );
 

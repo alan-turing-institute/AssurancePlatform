@@ -1,6 +1,6 @@
 import { expect, signIn, test } from "./helpers/auth";
 
-const CASE_URL_PATTERN = /\/case\/\d+/;
+const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
 
 // Sharing tests use different user sessions — no pre-saved state
 test.use({ storageState: { cookies: [], origins: [] } });

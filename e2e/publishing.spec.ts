@@ -1,7 +1,7 @@
 import { expect, test } from "./helpers/auth";
 import { CaseEditorPage } from "./pages/case-editor-page";
 
-const CASE_URL_PATTERN = /\/case\/\d+/;
+const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
 const LOGIN_PATTERN = /\/login/;
 
 test.describe("Publishing", () => {
