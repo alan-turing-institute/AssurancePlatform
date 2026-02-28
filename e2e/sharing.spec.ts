@@ -13,7 +13,10 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "alice", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		await expect(page.getByText("Medium Case")).toBeVisible();
+		const sharedGrid = page.getByTestId("case-list-grid");
+		await expect(
+			sharedGrid.getByRole("heading", { name: "Medium Case" })
+		).toBeVisible();
 	});
 
 	test("charlie cannot see chris's cases on dashboard", async ({
@@ -23,8 +26,13 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "charlie", seedPassword);
 
 		await page.goto("/dashboard");
-		await expect(page.getByText("Simple Case")).not.toBeVisible();
-		await expect(page.getByText("Medium Case")).not.toBeVisible();
+		const caseGrid = page.getByTestId("case-list-grid");
+		await expect(
+			caseGrid.getByRole("heading", { name: "Simple Case" })
+		).not.toBeVisible();
+		await expect(
+			caseGrid.getByRole("heading", { name: "Medium Case" })
+		).not.toBeVisible();
 	});
 
 	test("charlie sees Bob's Case on shared page", async ({
@@ -34,7 +42,10 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "charlie", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		await expect(page.getByText("Bob's Case")).toBeVisible();
+		const sharedGrid = page.getByTestId("case-list-grid");
+		await expect(
+			sharedGrid.getByRole("heading", { name: "Bob's Case" })
+		).toBeVisible();
 	});
 
 	test("bob sees Alice's Case via team on shared page", async ({
@@ -44,7 +55,10 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "bob", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		await expect(page.getByText("Alice's Case")).toBeVisible();
+		const sharedGrid = page.getByTestId("case-list-grid");
+		await expect(
+			sharedGrid.getByRole("heading", { name: "Alice's Case" })
+		).toBeVisible();
 	});
 
 	test("share dialog opens for case owner", async ({ page, seedPassword }) => {
