@@ -13,7 +13,7 @@ export async function signIn(
 ): Promise<void> {
 	await page.goto("/login");
 	await page.getByLabel("Email or Username").fill(username);
-	await page.getByLabel("Password", { exact: true }).fill(password);
+	await page.locator('input[type="password"]').fill(password);
 	await page.getByRole("button", { name: "Login" }).click();
 	await page.waitForURL("**/dashboard");
 }
