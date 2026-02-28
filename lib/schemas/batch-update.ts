@@ -77,3 +77,6 @@ export const batchUpdateRequestSchema = z.object({
 export type BatchUpdateRequestSchemaInput = z.input<
 	typeof batchUpdateRequestSchema
 >;
+export type BatchUpdateRequestSchemaOutput = z.output<
+	typeof batchUpdateRequestSchema
+>;

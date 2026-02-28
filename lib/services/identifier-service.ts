@@ -213,7 +213,7 @@ function generateHierarchicalNames(
 export async function resetIdentifiers(
 	caseId: string,
 	userId: string
-): Promise<{ data: { success: true } } | { error: string }> {
+): Promise<{ data: null } | { error: string }> {
 	// Check user has edit permission on this case (includes creator check)
 	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
 	if (!hasAccess) {
@@ -294,5 +294,5 @@ export async function resetIdentifiers(
 	// (the frontend doesn't update optimistically for reset identifiers)
 	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
 
-	return { data: { success: true } };
+	return { data: null };
 }

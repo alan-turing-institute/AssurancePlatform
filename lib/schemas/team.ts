@@ -10,6 +10,7 @@ export const createTeamSchema = z.object({
 });
 
 export type CreateTeamSchemaInput = z.input<typeof createTeamSchema>;
+export type CreateTeamSchemaOutput = z.output<typeof createTeamSchema>;
 
 /**
  * Base object for update team — usable with zodResolver (no .refine())
@@ -30,6 +31,7 @@ export const updateTeamSchema = updateTeamBaseSchema.refine(
 );
 
 export type UpdateTeamSchemaInput = z.input<typeof updateTeamSchema>;
+export type UpdateTeamSchemaOutput = z.output<typeof updateTeamSchema>;
 
 /**
  * Add team member input
@@ -49,3 +51,4 @@ export const addTeamMemberSchema = z.object({
 });
 
 export type AddTeamMemberSchemaInput = z.input<typeof addTeamMemberSchema>;
+export type AddTeamMemberSchemaOutput = z.output<typeof addTeamMemberSchema>;

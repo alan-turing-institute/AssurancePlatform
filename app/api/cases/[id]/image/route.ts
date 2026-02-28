@@ -114,7 +114,7 @@ export async function POST(
 		const blobPath = generateScreenshotBlobPath(caseId);
 		const uploadResult = await uploadToBlob(buffer, blobPath);
 
-		if (!uploadResult.success) {
+		if ("error" in uploadResult) {
 			return apiError(
 				new AppError({ code: "INTERNAL", message: uploadResult.error })
 			);
@@ -126,12 +126,12 @@ export async function POST(
 			where: { caseId },
 			create: {
 				caseId,
-				imageUrl: uploadResult.url,
+				imageUrl: uploadResult.data.url,
 				uploadedAt: now,
 				uploadedById: userId,
 			},
 			update: {
-				imageUrl: uploadResult.url,
+				imageUrl: uploadResult.data.url,
 				uploadedAt: now,
 				uploadedById: userId,
 			},
@@ -139,7 +139,7 @@ export async function POST(
 
 		return apiSuccess({
 			success: true,
-			image: uploadResult.url,
+			image: uploadResult.data.url,
 			uploadedAt: now.toISOString(),
 		});
 	} catch (error) {

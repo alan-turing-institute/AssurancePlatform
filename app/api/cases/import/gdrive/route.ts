@@ -10,7 +10,6 @@ import { AppError, forbidden, validationError } from "@/lib/errors";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	downloadFileFromDrive,
-	type GoogleDriveError,
 	type GoogleDriveErrorCode,
 	hasGoogleToken,
 	listBackupFiles,
@@ -66,17 +65,16 @@ export async function POST(request: Request) {
 		const { fileId } = parseResult.data;
 
 		// Download file from Drive
-		let fileContent: string;
-		let fileName: string;
-		try {
-			const result = await downloadFileFromDrive(userId, fileId);
-			fileContent = result.content;
-			fileName = result.name;
-		} catch (error) {
-			const driveError = error as GoogleDriveError;
-			const code = DRIVE_ERROR_MAP[driveError.code] ?? "INTERNAL";
-			return apiError(new AppError({ code, message: driveError.message }));
+		const downloadResult = await downloadFileFromDrive(userId, fileId);
+
+		if ("error" in downloadResult) {
+			const code =
+				DRIVE_ERROR_MAP[downloadResult.driveError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: downloadResult.error }));
 		}
+
+		const fileContent = downloadResult.data.content;
+		const fileName = downloadResult.data.name;
 
 		// Parse JSON
 		let jsonData: unknown;

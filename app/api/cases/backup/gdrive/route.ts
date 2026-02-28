@@ -9,7 +9,6 @@ import {
 import { AppError, forbidden, validationError } from "@/lib/errors";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
-	type GoogleDriveError,
 	type GoogleDriveErrorCode,
 	hasGoogleToken,
 	uploadBackupToDrive,
@@ -73,24 +72,23 @@ export async function POST(request: Request) {
 			return apiError(serviceErrorToAppError(exportResult.error));
 		}
 
-		try {
-			const result = await uploadBackupToDrive(
-				userId,
-				exportResult.data.case.name,
-				JSON.stringify(exportResult.data, null, 2)
-			);
+		const result = await uploadBackupToDrive(
+			userId,
+			exportResult.data.case.name,
+			JSON.stringify(exportResult.data, null, 2)
+		);
 
-			return apiSuccess({
-				success: true,
-				fileId: result.fileId,
-				fileName: result.fileName,
-				webViewLink: result.webViewLink,
-			});
-		} catch (error) {
-			const driveError = error as GoogleDriveError;
-			const code = DRIVE_ERROR_MAP[driveError.code] ?? "INTERNAL";
-			return apiError(new AppError({ code, message: driveError.message }));
+		if ("error" in result) {
+			const code = DRIVE_ERROR_MAP[result.driveError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: result.error }));
 		}
+
+		return apiSuccess({
+			success: true,
+			fileId: result.data.fileId,
+			fileName: result.data.fileName,
+			webViewLink: result.data.webViewLink,
+		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

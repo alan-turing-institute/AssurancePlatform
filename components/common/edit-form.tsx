@@ -6,7 +6,6 @@ import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
-import { z } from "zod";
 import {
 	Form,
 	FormControl,
@@ -21,21 +20,14 @@ import {
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import {
+	type NodeEditFormInput,
+	nodeEditFormSchema,
+} from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-const formSchema = z.object({
-	urls: z.array(
-		z.object({
-			value: z.string(),
-		})
-	),
-	description: z.string().min(2, {
-		message: "Description must be at least 2 characters",
-	}),
-});
 
 type EditFormProps = {
 	node: Node;
@@ -70,8 +62,8 @@ const EditForm: React.FC<EditFormProps> = ({
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<NodeEditFormInput>({
+		resolver: zodResolver(nodeEditFormSchema),
 		defaultValues: {
 			urls: getInitialUrls(node.data as Record<string, unknown>),
 			description: (node.data?.short_description as string) ?? "",
@@ -83,7 +75,7 @@ const EditForm: React.FC<EditFormProps> = ({
 		name: "urls",
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: NodeEditFormInput) {
 		setLoading(true);
 
 		// Capture before state for history

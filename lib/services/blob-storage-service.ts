@@ -30,6 +30,11 @@ export type UploadResult =
 	  };
 
 /**
+ * Service-layer upload result using the canonical `{ data } | { error }` discriminated union.
+ */
+export type BlobUploadResult = { data: { url: string } } | { error: string };
+
+/**
  * Checks if Azure Blob Storage is configured.
  */
 export function isAzureStorageConfigured(): boolean {
@@ -100,13 +105,13 @@ export function uploadToLocalStorage(
  * @param buffer - The file data as a Buffer
  * @param blobPath - The path within the container (e.g., 'images/screenshot.png')
  * @param contentType - MIME type of the file (default: image/png)
- * @returns The URL of the uploaded file or an error
+ * @returns `{ data: { url } }` on success, `{ error }` on failure
  */
 export async function uploadToBlob(
 	buffer: Buffer,
 	blobPath: string,
 	contentType = "image/png"
-): Promise<UploadResult> {
+): Promise<BlobUploadResult> {
 	const blobServiceClient = getBlobServiceClient();
 	const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
 
@@ -116,13 +121,14 @@ export async function uploadToBlob(
 			console.log(
 				"[Dev] Azure Blob Storage not configured, using local file storage"
 			);
-			return uploadToLocalStorage(buffer, blobPath);
+			const localResult = uploadToLocalStorage(buffer, blobPath);
+			if (!localResult.success) {
+				return { error: localResult.error };
+			}
+			return { data: { url: localResult.url } };
 		}
 		console.error("Azure Blob Storage credentials not configured");
-		return {
-			success: false,
-			error: "Storage not configured",
-		};
+		return { error: "Storage not configured" };
 	}
 
 	try {
@@ -135,11 +141,10 @@ export async function uploadToBlob(
 		});
 
 		const imageUrl = `https://${accountName}.blob.core.windows.net/${CONTAINER_NAME}/${blobPath}`;
-		return { success: true, url: imageUrl };
+		return { data: { url: imageUrl } };
 	} catch (error) {
 		console.error("Failed to upload to Azure Blob Storage:", error);
 		return {
-			success: false,
 			error: error instanceof Error ? error.message : "Upload failed",
 		};
 	}

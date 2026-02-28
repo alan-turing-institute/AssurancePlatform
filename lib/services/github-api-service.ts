@@ -7,6 +7,7 @@
 
 import { Octokit } from "@octokit/rest";
 import { prisma } from "@/lib/prisma";
+import type { ErrorCode } from "@/types/domain";
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)
@@ -64,21 +65,38 @@ async function getUserGitHubToken(userId: string): Promise<string | null> {
 }
 
 /**
- * Creates an authenticated Octokit client for the specified user.
- * Throws if the user doesn't have a valid GitHub token.
+ * Maps GitHub service error codes to application error codes.
+ * Moved here from the route layer so callers can use it without coupling to the route.
  */
-async function createOctokitClient(userId: string): Promise<Octokit> {
+export const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	RATE_LIMITED: "RATE_LIMITED",
+	API_ERROR: "INTERNAL",
+};
+
+/**
+ * Creates an authenticated Octokit client for the specified user.
+ * Returns null if the user doesn't have a valid GitHub token.
+ */
+async function createOctokitClient(
+	userId: string
+): Promise<{ client: Octokit } | { serviceError: GitHubServiceError }> {
 	const token = await getUserGitHubToken(userId);
 
 	if (!token) {
-		throw {
-			code: "NO_TOKEN",
-			message:
-				"No GitHub token found. Please sign in with GitHub to connect your account.",
-		} as GitHubServiceError;
+		return {
+			serviceError: {
+				code: "NO_TOKEN",
+				message:
+					"No GitHub token found. Please sign in with GitHub to connect your account.",
+			},
+		};
 	}
 
-	return new Octokit({ auth: token });
+	return { client: new Octokit({ auth: token }) };
 }
 
 /**
@@ -139,8 +157,7 @@ function handleOctokitError(
  * @param repo - Repository name
  * @param path - Path to the file within the repository
  * @param branch - Branch name (optional, defaults to repo's default branch)
- * @returns The file content and metadata
- * @throws GitHubServiceError if the request fails
+ * @returns `{ data: GitHubFileResult }` on success, `{ error: string, serviceError: GitHubServiceError }` on failure
  */
 export async function fetchFileFromGitHub(
 	userId: string,
@@ -148,8 +165,20 @@ export async function fetchFileFromGitHub(
 	repo: string,
 	path: string,
 	branch?: string
-): Promise<GitHubFileResult> {
-	const octokit = await createOctokitClient(userId);
+): Promise<
+	| { data: GitHubFileResult }
+	| { error: string; serviceError: GitHubServiceError }
+> {
+	const octokitResult = await createOctokitClient(userId);
+
+	if ("serviceError" in octokitResult) {
+		return {
+			error: octokitResult.serviceError.message,
+			serviceError: octokitResult.serviceError,
+		};
+	}
+
+	const octokit = octokitResult.client;
 
 	try {
 		const response = await octokit.repos.getContent({
@@ -163,48 +192,48 @@ export async function fetchFileFromGitHub(
 		const data = response.data;
 
 		if (Array.isArray(data)) {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: `Path "${path}" is a directory, not a file.`,
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		if (data.type !== "file") {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: `Path "${path}" is not a regular file (type: ${data.type}).`,
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		// File content is base64 encoded
 		if (!data.content) {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: "File has no content.",
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		const content = Buffer.from(data.content, "base64").toString("utf-8");
 
 		return {
-			content,
-			sha: data.sha,
-			path: data.path,
-			size: data.size,
+			data: {
+				content,
+				sha: data.sha,
+				path: data.path,
+				size: data.size,
+			},
 		};
 	} catch (error) {
-		// Re-throw our custom errors
-		if ((error as GitHubServiceError).code) {
-			throw error;
-		}
-
-		// Handle Octokit errors
-		throw handleOctokitError(
+		const serviceError = handleOctokitError(
 			error as { status?: number; message?: string },
 			path,
 			owner,
 			repo
 		);
+		return { error: serviceError.message, serviceError };
 	}
 }
 

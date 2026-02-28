@@ -10,7 +10,6 @@ import { AppError, forbidden, validationError } from "@/lib/errors";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	fetchFileFromGitHub,
-	type GitHubServiceError,
 	hasGitHubToken,
 	parseGitHubUrl,
 } from "@/lib/services/github-api-service";
@@ -147,21 +146,21 @@ export async function POST(request: Request) {
 		const { owner, repo, path, branch } = resolveGitHubLocation(body);
 
 		// Fetch file from GitHub
-		let fileContent: string;
-		try {
-			const result = await fetchFileFromGitHub(
-				userId,
-				owner,
-				repo,
-				path,
-				branch
-			);
-			fileContent = result.content;
-		} catch (error) {
-			const gitHubError = error as GitHubServiceError;
-			const code = GITHUB_ERROR_MAP[gitHubError.code] ?? "INTERNAL";
-			return apiError(new AppError({ code, message: gitHubError.message }));
+		const fetchResult = await fetchFileFromGitHub(
+			userId,
+			owner,
+			repo,
+			path,
+			branch
+		);
+
+		if ("error" in fetchResult) {
+			const code =
+				GITHUB_ERROR_MAP[fetchResult.serviceError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: fetchResult.error }));
 		}
+
+		const fileContent = fetchResult.data.content;
 
 		// Parse JSON content
 		let jsonData: unknown;

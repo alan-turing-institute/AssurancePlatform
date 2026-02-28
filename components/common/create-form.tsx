@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import {
 	Form,
 	FormControl,
@@ -19,6 +18,10 @@ import {
 	createAssuranceCaseNode,
 	setNodeIdentifier,
 } from "@/lib/case";
+import {
+	type ElementDescriptionFormInput,
+	elementDescriptionFormSchema,
+} from "@/lib/schemas/element";
 import { recordCreate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
@@ -26,15 +29,6 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
 // import { useLoginToken } from '.*/use-auth'
-
-const formSchema = z.object({
-	// name: z.string().min(2, {
-	//   message: "Name must be at least 2 characters.",
-	// }),
-	description: z.string().min(2, {
-		message: "Description must be atleast 2 characters",
-	}),
-});
 
 type CreateFormProps = {
 	onClose: () => void;
@@ -48,8 +42,8 @@ const CreateForm: React.FC<CreateFormProps> = ({
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const [loading, setLoading] = useState<boolean>(false);
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<ElementDescriptionFormInput>({
+		resolver: zodResolver(elementDescriptionFormSchema),
 		defaultValues: {
 			// name: '',
 			description: "",
@@ -64,7 +58,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
 		});
 	}, [form, setUnresolvedChanges]);
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: ElementDescriptionFormInput) {
 		// Prevent double-submission
 		if (loading) {
 			return;

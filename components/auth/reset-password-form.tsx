@@ -6,7 +6,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import {
+	type ResetPasswordFormInput,
+	resetPasswordFormSchema,
+} from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -19,25 +22,7 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z
-	.object({
-		password: z
-			.string()
-			.min(8, "Password must be at least 8 characters")
-			.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-			.regex(/\d/, "Password must contain at least one number")
-			.regex(
-				/[!@#$%^&*()_,.?":{}|<>]/,
-				"Password must contain at least one special character"
-			),
-		confirmPassword: z.string(),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: "Passwords do not match",
-		path: ["confirmPassword"],
-	});
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = ResetPasswordFormInput;
 
 type TokenState = "loading" | "valid" | "invalid" | "expired";
 
@@ -55,7 +40,7 @@ const ResetPasswordForm = () => {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(resetPasswordFormSchema),
 		defaultValues: {
 			password: "",
 			confirmPassword: "",

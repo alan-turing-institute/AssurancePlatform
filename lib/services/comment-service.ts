@@ -1,5 +1,4 @@
 import type { ValidatedSession } from "@/lib/auth/validate-session";
-import { forbidden, notFound, validationError } from "@/lib/errors";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
@@ -125,13 +124,12 @@ export function buildCommentTree(comments: PrismaComment[]): CommentResponse[] {
 
 /**
  * Fetches a comment and validates the user has permission to modify it.
- * Throws `notFound()` if comment doesn't exist or isn't associated with a case.
- * Throws `forbidden()` if the user is neither the author nor has EDIT access.
+ * Returns "Permission denied" for not-found and forbidden to prevent enumeration.
  */
 async function getCommentWithPermission(
 	commentId: string,
 	userId: string
-): Promise<CommentPermissionResult> {
+): Promise<{ data: CommentPermissionResult } | { error: string }> {
 	const comment = await prisma.comment.findUnique({
 		where: { id: commentId },
 		include: {
@@ -141,24 +139,24 @@ async function getCommentWithPermission(
 	});
 
 	if (!comment) {
-		throw notFound("Comment");
+		return { error: "Permission denied" };
 	}
 
 	const caseId = comment.element?.caseId ?? comment.caseId;
 
 	if (!caseId) {
-		throw validationError("Comment not associated with a case");
+		return { error: "Comment not associated with a case" };
 	}
 
 	const isAuthor = comment.authorId === userId;
 	const hasEditAccess = await canAccessCase({ userId, caseId }, "EDIT");
 
 	if (!(isAuthor || hasEditAccess)) {
-		throw notFound("Comment");
+		return { error: "Permission denied" };
 	}
 
 	const elementName = comment.element?.name || comment.element?.description;
-	return { comment, caseId, elementName: elementName ?? null };
+	return { data: { comment, caseId, elementName: elementName ?? null } };
 }
 
 // ---------------------------------------------------------------------------
@@ -167,15 +165,15 @@ async function getCommentWithPermission(
 
 /**
  * Fetches all case-level comments for a case as a threaded tree.
- * Throws `notFound()` if the user has no access to the case.
+ * Returns "Permission denied" if the user has no access to the case.
  */
 export async function fetchCaseComments(
 	caseId: string,
 	userId: string
-): Promise<CommentResponse[]> {
+): Promise<{ data: CommentResponse[] } | { error: string }> {
 	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
 	if (!hasAccess) {
-		throw notFound();
+		return { error: "Permission denied" };
 	}
 
 	const allComments = await prisma.comment.findMany({
@@ -187,22 +185,22 @@ export async function fetchCaseComments(
 		orderBy: { createdAt: "asc" },
 	});
 
-	return buildCommentTree(allComments);
+	return { data: buildCommentTree(allComments) };
 }
 
 /**
  * Creates a new case-level comment (note).
- * Throws `forbidden()` if the user lacks COMMENT permission.
+ * Returns "Permission denied" if the user lacks COMMENT permission.
  */
 export async function createCaseComment(
 	caseId: string,
 	content: string,
 	parentId: string | null,
 	userId: string
-): Promise<CommentResponse> {
+): Promise<{ data: CommentResponse } | { error: string }> {
 	const hasAccess = await canAccessCase({ userId, caseId }, "COMMENT");
 	if (!hasAccess) {
-		throw forbidden();
+		return { error: "Permission denied" };
 	}
 
 	const comment = await prisma.comment.create({
@@ -223,7 +221,7 @@ export async function createCaseComment(
 	// Emit SSE event for real-time updates
 	emitSSEEvent("comment:created", caseId, { comment: response }, userId);
 
-	return response;
+	return { data: response };
 }
 
 // ---------------------------------------------------------------------------
@@ -232,13 +230,12 @@ export async function createCaseComment(
 
 /**
  * Fetches all comments for an element as a threaded tree.
- * Throws `notFound("Element")` if element doesn't exist.
- * Throws `forbidden()` if the user has no VIEW access to the case.
+ * Returns "Permission denied" for not-found and forbidden to prevent enumeration.
  */
 export async function fetchElementComments(
 	elementId: string,
 	userId: string
-): Promise<CommentResponse[]> {
+): Promise<{ data: CommentResponse[] } | { error: string }> {
 	// Get the element to find its case (exclude deleted elements)
 	const element = await prisma.assuranceElement.findFirst({
 		where: { id: elementId, deletedAt: null },
@@ -246,7 +243,7 @@ export async function fetchElementComments(
 	});
 
 	if (!element) {
-		throw notFound("Element");
+		return { error: "Permission denied" };
 	}
 
 	// Check user has at least VIEW access to the case
@@ -256,7 +253,7 @@ export async function fetchElementComments(
 	);
 
 	if (!hasAccess) {
-		throw notFound("Element");
+		return { error: "Permission denied" };
 	}
 
 	// Fetch all comments for this element (sorted ascending for tree building)
@@ -269,21 +266,20 @@ export async function fetchElementComments(
 		orderBy: { createdAt: "asc" },
 	});
 
-	return buildCommentTree(comments);
+	return { data: buildCommentTree(comments) };
 }
 
 /**
  * Creates a new comment on an element (supports threading via parentId).
- * Throws `notFound("Element")` if element doesn't exist.
- * Throws `forbidden()` if the user lacks COMMENT access to the case.
- * Throws `validationError("Parent comment not found")` if parentId is invalid.
+ * Returns "Permission denied" for not-found and forbidden to prevent enumeration.
+ * Returns an error if the parentId does not exist on the element.
  */
 export async function createElementComment(
 	elementId: string,
 	content: string,
 	parentId: string | null,
 	session: { userId: string; username: string | null; email: string | null }
-): Promise<CommentResponse> {
+): Promise<{ data: CommentResponse } | { error: string }> {
 	// Get the element to find its case and name (exclude deleted elements)
 	const element = await prisma.assuranceElement.findFirst({
 		where: { id: elementId, deletedAt: null },
@@ -291,7 +287,7 @@ export async function createElementComment(
 	});
 
 	if (!element) {
-		throw notFound("Element");
+		return { error: "Permission denied" };
 	}
 
 	// Check user has at least COMMENT access to the case
@@ -301,7 +297,7 @@ export async function createElementComment(
 	);
 
 	if (!hasAccess) {
-		throw notFound("Element");
+		return { error: "Permission denied" };
 	}
 
 	// If replying to a parent comment, verify it exists and belongs to this element
@@ -312,7 +308,7 @@ export async function createElementComment(
 		});
 
 		if (!parentComment || parentComment.elementId !== elementId) {
-			throw validationError("Parent comment not found");
+			return { error: "Parent comment not found" };
 		}
 	}
 
@@ -346,7 +342,7 @@ export async function createElementComment(
 		session.userId
 	);
 
-	return response;
+	return { data: response };
 }
 
 // ---------------------------------------------------------------------------
@@ -355,16 +351,22 @@ export async function createElementComment(
 
 /**
  * Deletes a comment by ID.
- * Throws `notFound("Comment")` or `forbidden()` if unauthorised.
+ * Returns "Permission denied" if the user is not the author and lacks EDIT access.
  */
 export async function deleteComment(
 	commentId: string,
 	session: ValidatedSession
-): Promise<{ success: true }> {
-	const { comment, caseId, elementName } = await getCommentWithPermission(
+): Promise<{ data: null } | { error: string }> {
+	const permissionResult = await getCommentWithPermission(
 		commentId,
 		session.userId
 	);
+
+	if ("error" in permissionResult) {
+		return permissionResult;
+	}
+
+	const { comment, caseId, elementName } = permissionResult.data;
 
 	await prisma.comment.delete({ where: { id: commentId } });
 
@@ -382,28 +384,39 @@ export async function deleteComment(
 		session.userId
 	);
 
-	return { success: true };
+	return { data: null };
 }
+
+type UpdatedCommentData = {
+	id: string;
+	content: string;
+	author: string;
+	created_at: string;
+};
 
 /**
  * Updates the content of a comment by ID.
- * Throws `notFound("Comment")` or `forbidden()` if unauthorised.
+ * Returns "Permission denied" if the user is not the author and lacks EDIT access.
  */
 export async function updateComment(
 	commentId: string,
 	content: string,
 	session: ValidatedSession
-): Promise<{
-	id: string;
-	content: string;
-	author: string;
-	created_at: string;
-}> {
+): Promise<{ data: UpdatedCommentData } | { error: string }> {
+	const permissionResult = await getCommentWithPermission(
+		commentId,
+		session.userId
+	);
+
+	if ("error" in permissionResult) {
+		return permissionResult;
+	}
+
 	const {
 		comment: existingComment,
 		caseId,
 		elementName,
-	} = await getCommentWithPermission(commentId, session.userId);
+	} = permissionResult.data;
 
 	const updatedComment = await prisma.comment.update({
 		where: { id: commentId },
@@ -411,7 +424,7 @@ export async function updateComment(
 		include: { author: { select: { username: true } } },
 	});
 
-	const response = {
+	const response: UpdatedCommentData = {
 		id: updatedComment.id,
 		content: updatedComment.content,
 		author: updatedComment.author.username,
@@ -432,23 +445,32 @@ export async function updateComment(
 		session.userId
 	);
 
-	return response;
+	return { data: response };
 }
 
 /**
  * Resolves or unresolves a comment thread.
- * Throws `notFound("Comment")` or `forbidden()` if unauthorised.
+ * Returns "Permission denied" if the user is not the author and lacks EDIT access.
  */
 export async function resolveComment(
 	commentId: string,
 	resolved: boolean,
 	session: ValidatedSession
-): Promise<CommentResponse> {
+): Promise<{ data: CommentResponse } | { error: string }> {
+	const permissionResult = await getCommentWithPermission(
+		commentId,
+		session.userId
+	);
+
+	if ("error" in permissionResult) {
+		return permissionResult;
+	}
+
 	const {
 		comment: existingComment,
 		caseId,
 		elementName,
-	} = await getCommentWithPermission(commentId, session.userId);
+	} = permissionResult.data;
 
 	const updateData = resolved
 		? {
@@ -497,5 +519,5 @@ export async function resolveComment(
 		session.userId
 	);
 
-	return response;
+	return { data: response };
 }

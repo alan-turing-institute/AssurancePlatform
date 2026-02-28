@@ -17,3 +17,6 @@ export const updateCaseStatusSchema = z.object({
 export type UpdateCaseStatusSchemaInput = z.input<
 	typeof updateCaseStatusSchema
 >;
+export type UpdateCaseStatusSchemaOutput = z.output<
+	typeof updateCaseStatusSchema
+>;

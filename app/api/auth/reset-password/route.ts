@@ -31,13 +31,13 @@ export async function GET(request: Request) {
 
 		const result = await validateResetToken(token);
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({
 			valid: true,
-			email: result.email,
+			email: result.data.email,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 			userAgent
 		);
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

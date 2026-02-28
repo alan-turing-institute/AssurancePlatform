@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -16,6 +15,10 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+	type PersonalInfoFormInput,
+	personalInfoFormSchema,
+} from "@/lib/schemas/user";
 import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
@@ -26,22 +29,6 @@ type UserData = {
 	firstName?: string | null;
 	lastName?: string | null;
 };
-
-const FormSchema = z.object({
-	firstName: z.string().optional(),
-	lastName: z.string().optional(),
-	username: z
-		.string()
-		.min(3, {
-			message: "Username must be at least 3 characters.",
-		})
-		.regex(/^[a-zA-Z0-9_]+$/, {
-			message: "Username can only contain letters, numbers, and underscores.",
-		}),
-	email: z.string().email({
-		message: "Please enter a valid email address.",
-	}),
-});
 
 type PersonalInfoFormProps = {
 	data: UserData | null | undefined;
@@ -65,8 +52,8 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 		});
 	};
 
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
+	const form = useForm<PersonalInfoFormInput>({
+		resolver: zodResolver(personalInfoFormSchema),
 		defaultValues: {
 			firstName: data?.firstName ?? "",
 			lastName: data?.lastName ?? "",
@@ -75,7 +62,7 @@ export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof FormSchema>) {
+	async function onSubmit(values: PersonalInfoFormInput) {
 		if (!data) {
 			return;
 		}

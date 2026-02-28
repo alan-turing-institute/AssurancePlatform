@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import {
+	type ForgotPasswordFormInput,
+	forgotPasswordFormSchema,
+} from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -16,28 +19,19 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	email: z
-		.string()
-		.min(1, "Email is required")
-		.email("Please enter a valid email address"),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 const ForgotPasswordForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
 
-	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<ForgotPasswordFormInput>({
+		resolver: zodResolver(forgotPasswordFormSchema),
 		defaultValues: {
 			email: "",
 		},
 	});
 
-	async function onSubmit(values: FormValues) {
+	async function onSubmit(values: ForgotPasswordFormInput) {
 		setLoading(true);
 		setError(null);
 

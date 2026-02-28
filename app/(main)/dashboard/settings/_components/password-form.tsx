@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -16,6 +15,10 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+	type ChangePasswordFormInput,
+	changePasswordFormSchema,
+} from "@/lib/schemas/user";
 import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
@@ -24,34 +27,6 @@ type UserData = {
 };
 
 const _ACCEPTED_FILE_TYPES = ["jpg"];
-
-const FormSchema = z
-	.object({
-		currentPassword: z.string().min(2, {
-			message: "Current password must be at least 2 characters.",
-		}),
-		newPassword: z
-			.string()
-			.min(8, {
-				message: "New password must be at least 8 characters long.",
-			})
-			.regex(/[A-Z]/, {
-				message: "New password must contain at least one uppercase letter.",
-			})
-			.regex(/\d/, {
-				message: "New password must contain at least one number.",
-			})
-			.regex(/[!@#$%^&*()_,.?":{}|<>]/, {
-				message: "New password must contain at least one special character.",
-			}),
-		confirmPassword: z.string().min(2, {
-			message: "Confirm password must be at least 2 characters.",
-		}),
-	})
-	.refine((data) => data.newPassword === data.confirmPassword, {
-		path: ["confirmPassword"], // Field to which the error is attached
-		message: "Passwords do not match.",
-	});
 
 type PasswordFormProps = {
 	data: UserData | null | undefined;
@@ -68,8 +43,8 @@ export function PasswordForm({ data }: PasswordFormProps) {
 		});
 	};
 
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
+	const form = useForm<ChangePasswordFormInput>({
+		resolver: zodResolver(changePasswordFormSchema),
 		defaultValues: {
 			currentPassword: "",
 			newPassword: "",
@@ -77,7 +52,7 @@ export function PasswordForm({ data }: PasswordFormProps) {
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof FormSchema>) {
+	async function onSubmit(values: ChangePasswordFormInput) {
 		if (!data) {
 			return;
 		}

@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import {
 	Form,
 	FormControl,
@@ -11,16 +10,14 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import {
+	type CommentFormInput,
+	commentFormSchema,
+} from "@/lib/schemas/comment";
 import useStore from "@/store/store";
 import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-const formSchema = z.object({
-	comment: z.string().min(2, {
-		message: "Comment must be at least 2 characters",
-	}),
-});
 
 type CommentsFormProps = {
 	node: {
@@ -43,14 +40,14 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 
 	const submitButtonText = parentId ? "Reply" : "Add Comment";
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CommentFormInput>({
+		resolver: zodResolver(commentFormSchema),
 		defaultValues: {
 			comment: "",
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: CommentFormInput) {
 		setLoading(true);
 
 		try {

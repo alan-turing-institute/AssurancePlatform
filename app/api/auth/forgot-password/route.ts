@@ -1,6 +1,10 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
-import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiRateLimited,
+	apiSuccess,
+} from "@/lib/api-response";
 import { AppError, validationError } from "@/lib/errors";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
 
@@ -31,12 +35,9 @@ export async function POST(request: Request) {
 
 		const result = await requestPasswordReset(body.email, ipAddress, userAgent);
 
-		if (!result.success) {
+		if ("error" in result) {
 			if (result.rateLimited) {
-				return new NextResponse(
-					JSON.stringify({ error: result.error, code: "RATE_LIMITED" }),
-					{ status: 429, headers: { "Retry-After": "60" } }
-				);
+				return apiRateLimited(result.error, 60 * 1000);
 			}
 			return apiError(
 				new AppError({ code: "VALIDATION", message: result.error })

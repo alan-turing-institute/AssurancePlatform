@@ -15,16 +15,14 @@ const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_,.?":{}|<>]/;
 
 // Types
 type RequestResetResult =
-	| { success: true }
-	| { success: false; error: string; rateLimited?: boolean };
+	| { data: null }
+	| { error: string; rateLimited?: true };
 
 type ValidateTokenResult =
-	| { success: true; userId: string; email: string }
-	| { success: false; error: string };
+	| { data: { userId: string; email: string } }
+	| { error: string };
 
-type ResetPasswordResult =
-	| { success: true }
-	| { success: false; error: string };
+type ResetPasswordResult = { data: null } | { error: string };
 
 type SecurityEventParams = {
 	eventType: string;
@@ -141,7 +139,6 @@ export async function requestPasswordReset(
 			metadata: { email: normalizedEmail, reason: rateLimitCheck.reason },
 		});
 		return {
-			success: false,
 			error: rateLimitCheck.reason ?? "Rate limit exceeded",
 			rateLimited: true,
 		};
@@ -169,7 +166,7 @@ export async function requestPasswordReset(
 			},
 		});
 		// Return success to prevent user enumeration
-		return { success: true };
+		return { data: null };
 	}
 
 	// Generate reset token and expiry
@@ -195,7 +192,7 @@ export async function requestPasswordReset(
 		expiresInMinutes: RESET_TOKEN_EXPIRY_MINUTES,
 	});
 
-	if (!emailResult.success) {
+	if ("error" in emailResult) {
 		await logSecurityEvent({
 			eventType: "password_reset_email_failed",
 			userId: user.id,
@@ -204,7 +201,7 @@ export async function requestPasswordReset(
 			metadata: { error: emailResult.error },
 		});
 		// Still return success to prevent enumeration
-		return { success: true };
+		return { data: null };
 	}
 
 	await logSecurityEvent({
@@ -215,7 +212,7 @@ export async function requestPasswordReset(
 		metadata: { emailSent: true },
 	});
 
-	return { success: true };
+	return { data: null };
 }
 
 /**
@@ -225,7 +222,7 @@ export async function validateResetToken(
 	token: string
 ): Promise<ValidateTokenResult> {
 	if (!token || token.length !== 64) {
-		return { success: false, error: "Invalid reset token" };
+		return { error: "Invalid reset token" };
 	}
 
 	const user = await prisma.user.findFirst({
@@ -237,10 +234,10 @@ export async function validateResetToken(
 	});
 
 	if (!user) {
-		return { success: false, error: "Invalid or expired reset token" };
+		return { error: "Invalid or expired reset token" };
 	}
 
-	return { success: true, userId: user.id, email: user.email };
+	return { data: { userId: user.id, email: user.email } };
 }
 
 /**
@@ -254,7 +251,7 @@ export async function resetPassword(
 ): Promise<ResetPasswordResult> {
 	// Validate the token first
 	const validation = await validateResetToken(token);
-	if (!validation.success) {
+	if ("error" in validation) {
 		await logSecurityEvent({
 			eventType: "password_reset_invalid_token",
 			userId: null,
@@ -262,28 +259,27 @@ export async function resetPassword(
 			userAgent: userAgent ?? null,
 			metadata: { tokenLength: token?.length },
 		});
-		return { success: false, error: validation.error };
+		return { error: validation.error };
 	}
+
+	const { userId, email } = validation.data;
 
 	// Validate password strength
 	if (newPassword.length < 8) {
-		return { success: false, error: "Password must be at least 8 characters" };
+		return { error: "Password must be at least 8 characters" };
 	}
 	if (!UPPERCASE_REGEX.test(newPassword)) {
 		return {
-			success: false,
 			error: "Password must contain at least one uppercase letter",
 		};
 	}
 	if (!DIGIT_REGEX.test(newPassword)) {
 		return {
-			success: false,
 			error: "Password must contain at least one number",
 		};
 	}
 	if (!SPECIAL_CHAR_REGEX.test(newPassword)) {
 		return {
-			success: false,
 			error: "Password must contain at least one special character",
 		};
 	}
@@ -293,7 +289,7 @@ export async function resetPassword(
 
 	// Update the user's password and clear the reset token
 	await prisma.user.update({
-		where: { id: validation.userId },
+		where: { id: userId },
 		data: {
 			passwordHash,
 			passwordAlgorithm: "argon2id",
@@ -305,7 +301,7 @@ export async function resetPassword(
 	// Update the attempt record to mark as successful
 	await prisma.passwordResetAttempt.updateMany({
 		where: {
-			email: validation.email.toLowerCase(),
+			email: email.toLowerCase(),
 			successful: false,
 		},
 		data: {
@@ -315,12 +311,12 @@ export async function resetPassword(
 
 	await logSecurityEvent({
 		eventType: "password_reset_completed",
-		userId: validation.userId,
+		userId,
 		ipAddress,
 		userAgent: userAgent ?? null,
 	});
 
-	return { success: true };
+	return { data: null };
 }
 
 /**

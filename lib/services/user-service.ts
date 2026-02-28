@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { ConnectedAccountsData } from "@/types/domain";
 
 // ============================================
 // VALIDATION REGEX PATTERNS (top-level for performance)
@@ -207,5 +208,79 @@ export async function getUserById(
 	} catch (error) {
 		console.error("Failed to get user:", error);
 		return { error: "Failed to get user" };
+	}
+}
+
+// ============================================
+// Current User
+// ============================================
+
+export type CurrentUserData = {
+	id: string;
+	username: string;
+	email: string;
+	firstName?: string;
+	lastName?: string;
+	avatar?: string | null;
+	groups: Array<{ id: string; name: string }>;
+	hasSeenMigrationNotice: boolean;
+	completedTours: string[];
+	connectedAccounts?: ConnectedAccountsData;
+};
+
+/**
+ * Fetches the current user's full profile including team memberships.
+ */
+export async function getCurrentUser(
+	userId: string
+): Promise<{ data: CurrentUserData } | { error: string }> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				firstName: true,
+				lastName: true,
+				avatarUrl: true,
+				hasSeenMigrationNotice: true,
+				completedTours: true,
+				teamMemberships: {
+					select: {
+						team: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		return {
+			data: {
+				id: user.id,
+				username: user.username,
+				email: user.email,
+				firstName: user.firstName ?? undefined,
+				lastName: user.lastName ?? undefined,
+				avatar: user.avatarUrl,
+				groups: user.teamMemberships.map((m) => ({
+					id: m.team.id,
+					name: m.team.name,
+				})),
+				hasSeenMigrationNotice: user.hasSeenMigrationNotice,
+				completedTours: user.completedTours,
+			},
+		};
+	} catch (error) {
+		console.error("[getCurrentUser]", { userId, error });
+		return { error: "Failed to fetch user" };
 	}
 }

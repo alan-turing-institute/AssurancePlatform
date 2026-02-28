@@ -1,21 +1,17 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
+import type { ShareByEmailSchemaInput } from "@/lib/schemas/permission";
 import type {
 	Team,
 	TeamPermission,
 	UserPermission,
 } from "./permission-components";
 
+export { shareByEmailSchema as shareFormSchema } from "@/lib/schemas/permission";
+export type ShareFormValues = ShareByEmailSchemaInput;
+
 export const PERMISSION_LEVELS = ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const;
-
-export const shareFormSchema = z.object({
-	email: z.string().email("Please enter a valid email address"),
-	permission: z.enum(PERMISSION_LEVELS),
-});
-
-export type ShareFormValues = z.infer<typeof shareFormSchema>;
 
 export type PermissionsData = {
 	userPermissions: UserPermission[];

@@ -5,7 +5,6 @@ import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
-import { z } from "zod";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,20 +30,14 @@ import {
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import {
+	type NodeEditFormInput,
+	nodeEditFormSchema,
+} from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 
-const formSchema = z.object({
-	description: z.string().min(2, {
-		message: "Description must be at least 2 characters",
-	}),
-	assumption: z.string().optional(),
-	justification: z.string().optional(),
-	context: z.array(z.string()).optional(),
-	urls: z.array(z.object({ value: z.string() })),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = NodeEditFormInput;
 
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
@@ -310,7 +303,7 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(nodeEditFormSchema),
 		defaultValues: {
 			description: (node.data?.short_description as string) ?? "",
 			assumption: (node.data?.assumption as string) ?? "",

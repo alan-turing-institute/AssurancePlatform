@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	Form,
@@ -20,13 +19,11 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
+import {
+	type CreateAssuranceCaseInput,
+	createAssuranceCaseSchema,
+} from "@/lib/schemas/assurance-case";
 import { Button } from "../ui/button";
-
-const formSchema = z.object({
-	name: z.string().min(1),
-	description: z.string().min(1),
-	// template: z.string().min(1)
-});
 
 export const CaseCreateModal = () => {
 	const createCaseModal = useCreateCaseModal();
@@ -40,8 +37,8 @@ export const CaseCreateModal = () => {
 	// const [defaultValue, setDefaultValue] = useState(0);
 	const [_errors, setErrors] = useState<string[]>([]);
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CreateAssuranceCaseInput>({
+		resolver: zodResolver(createAssuranceCaseSchema),
 		defaultValues: {
 			name: "",
 			description: "",
@@ -89,7 +86,7 @@ export const CaseCreateModal = () => {
 		createCaseModal.onClose();
 	};
 
-	const onSubmit = (values: z.infer<typeof formSchema>) => {
+	const onSubmit = (values: CreateAssuranceCaseInput) => {
 		CreateCase(values.name, values.description);
 	};
 

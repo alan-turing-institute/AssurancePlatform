@@ -90,24 +90,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		// Save the new image to local storage
 		const saveResult = await saveFile(imageFile, `case-studies/${caseStudyId}`);
 
-		if (!(saveResult.success && saveResult.path)) {
-			return apiError(
-				serviceErrorToAppError(saveResult.error ?? "Failed to save image")
-			);
+		if ("error" in saveResult) {
+			return apiError(serviceErrorToAppError(saveResult.error));
 		}
 
 		// Update the database with the new image path
-		const success = await updateCaseStudyImage(caseStudyId, saveResult.path);
+		const success = await updateCaseStudyImage(
+			caseStudyId,
+			saveResult.data.path
+		);
 
 		if (!success) {
 			// Clean up the saved file if database update fails
-			await deleteFile(saveResult.path);
+			await deleteFile(saveResult.data.path);
 			return apiError(serviceErrorToAppError("Failed to update image"));
 		}
 
 		return apiSuccess({
 			success: true,
-			image: saveResult.path,
+			image: saveResult.data.path,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -20,11 +20,6 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	identifier: z.string().min(2, "Please enter your email or username"),
-	password: z.string().min(8),
-});
-
 const SignInForm = () => {
 	const [errors, setErrors] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -35,15 +30,15 @@ const SignInForm = () => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<SignInFormInput>({
+		resolver: zodResolver(signInFormSchema),
 		defaultValues: {
 			identifier: "",
 			password: "",
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: SignInFormInput) {
 		setLoading(true);
 		setErrors([]); // Clear any previous errors
 

@@ -4,11 +4,13 @@
 export * from "./assurance-case";
 export * from "./base";
 export * from "./case-study";
+export * from "./comment";
 export * from "./element";
 export * from "./permission";
 export * from "./status";
 // Domain schemas for API routes
 export * from "./team";
+export * from "./tour";
 export * from "./user";
 
 // Note: batch-update.ts, case-export.ts, element-validation.ts, and version-detection.ts

@@ -7,7 +7,6 @@ import type React from "react";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
-import { z } from "zod";
 import {
 	Form,
 	FormControl,
@@ -26,6 +25,10 @@ import {
 	findParentNode,
 	findSiblingHiddenState,
 } from "@/lib/case";
+import {
+	type NodeEditFormInput,
+	nodeEditFormSchema,
+} from "@/lib/schemas/element";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import type {
@@ -37,17 +40,6 @@ import type {
 } from "@/types";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-const formSchema = z.object({
-	description: z.string().min(2, {
-		message: "Description must be at least 2 characters",
-	}),
-	urls: z.array(
-		z.object({
-			value: z.string(),
-		})
-	),
-});
 
 type NodeActions = {
 	setSelectedLink: (value: boolean) => void;
@@ -561,8 +553,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		setLoading(false);
 	};
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<NodeEditFormInput>({
+		resolver: zodResolver(nodeEditFormSchema),
 		defaultValues: {
 			description: "",
 			urls: [{ value: "" }],
@@ -574,7 +566,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		name: "urls",
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
+	function onSubmit(values: NodeEditFormInput) {
 		setLoading(true);
 		const description = values.description as string;
 

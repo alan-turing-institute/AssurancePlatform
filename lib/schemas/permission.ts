@@ -11,6 +11,7 @@ export const shareByEmailSchema = z.object({
 });
 
 export type ShareByEmailSchemaInput = z.input<typeof shareByEmailSchema>;
+export type ShareByEmailSchemaOutput = z.output<typeof shareByEmailSchema>;
 
 /**
  * Share case with team
@@ -22,6 +23,7 @@ export const shareWithTeamSchema = z.object({
 });
 
 export type ShareWithTeamSchemaInput = z.input<typeof shareWithTeamSchema>;
+export type ShareWithTeamSchemaOutput = z.output<typeof shareWithTeamSchema>;
 
 /**
  * Discriminated union for sharing — either by email or with team
@@ -32,6 +34,9 @@ export const sharePermissionSchema = z.discriminatedUnion("type", [
 ]);
 
 export type SharePermissionSchemaInput = z.input<typeof sharePermissionSchema>;
+export type SharePermissionSchemaOutput = z.output<
+	typeof sharePermissionSchema
+>;
 
 /**
  * Update an existing permission
@@ -42,5 +47,8 @@ export const updatePermissionSchema = z.object({
 });
 
 export type UpdatePermissionSchemaInput = z.input<
+	typeof updatePermissionSchema
+>;
+export type UpdatePermissionSchemaOutput = z.output<
 	typeof updatePermissionSchema
 >;

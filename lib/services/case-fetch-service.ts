@@ -1,4 +1,3 @@
-import { forbidden, notFound } from "@/lib/errors";
 import { compareIdentifiers } from "@/lib/identifier-utils";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -206,10 +205,15 @@ function buildCaseUpdateData(
 // Exported service functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Fetches case data for the given user.
+ * Returns the same "Permission denied" error for not-found and forbidden
+ * to prevent case existence enumeration.
+ */
 export async function fetchCaseFromPrisma(
 	caseId: string,
 	userId: string
-): Promise<Record<string, unknown>> {
+): Promise<{ data: Record<string, unknown> } | { error: string }> {
 	// Check if user has access to this case (handles owner, direct, and team permissions)
 	const permissionResult = await getCasePermission({
 		userId,
@@ -217,7 +221,7 @@ export async function fetchCaseFromPrisma(
 	});
 
 	if (!permissionResult.hasAccess) {
-		throw notFound("Case");
+		return { error: "Permission denied" };
 	}
 
 	// Fetch the case data (exclude soft-deleted cases)
@@ -230,7 +234,7 @@ export async function fetchCaseFromPrisma(
 	});
 
 	if (!caseData) {
-		throw notFound("Case");
+		return { error: "Permission denied" };
 	}
 
 	// Transform Prisma data to the expected format
@@ -250,41 +254,44 @@ export async function fetchCaseFromPrisma(
 	const linkedCaseStudyCount = 0;
 
 	return {
-		id: caseData.id,
-		name: caseData.name,
-		description: caseData.description,
-		created_date: caseData.createdAt.toISOString(),
-		color_profile: caseData.colourProfile,
-		owner: caseData.createdById,
-		goals,
-		permissions,
-		// Publish status fields
-		published: caseData.publishStatus === "PUBLISHED",
-		publishStatus: caseData.publishStatus,
-		publishedAt: caseData.publishedAt?.toISOString() ?? null,
-		markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
-		// Case study integration
-		hasPublicCaseStudy,
-		linkedCaseStudyCount,
-		// Demo/tutorial flag
-		isDemo: caseData.isDemo,
-		// Layout preference
-		layoutDirection: caseData.layoutDirection,
+		data: {
+			id: caseData.id,
+			name: caseData.name,
+			description: caseData.description,
+			created_date: caseData.createdAt.toISOString(),
+			color_profile: caseData.colourProfile,
+			owner: caseData.createdById,
+			goals,
+			permissions,
+			// Publish status fields
+			published: caseData.publishStatus === "PUBLISHED",
+			publishStatus: caseData.publishStatus,
+			publishedAt: caseData.publishedAt?.toISOString() ?? null,
+			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
+			// Case study integration
+			hasPublicCaseStudy,
+			linkedCaseStudyCount,
+			// Demo/tutorial flag
+			isDemo: caseData.isDemo,
+			// Layout preference
+			layoutDirection: caseData.layoutDirection,
+		},
 	};
 }
 
 /**
- * Updates case metadata. Throws `AppError` on permission failure.
+ * Updates case metadata.
+ * Returns "Permission denied" if the user lacks EDIT access.
  */
 export async function updateCaseWithPrisma(
 	id: string,
 	userId: string,
 	body: UpdateAssuranceCaseInput
-): Promise<Record<string, unknown>> {
+): Promise<{ data: Record<string, unknown> } | { error: string }> {
 	// Check permission
 	const hasAccess = await canAccessCase({ userId, caseId: id }, "EDIT");
 	if (!hasAccess) {
-		throw forbidden();
+		return { error: "Permission denied" };
 	}
 
 	const updateData = buildCaseUpdateData(body);
@@ -294,11 +301,13 @@ export async function updateCaseWithPrisma(
 	});
 
 	return {
-		id: updated.id,
-		name: updated.name,
-		description: updated.description,
-		created_date: updated.createdAt.toISOString(),
-		color_profile: updated.colourProfile,
-		layoutDirection: updated.layoutDirection,
+		data: {
+			id: updated.id,
+			name: updated.name,
+			description: updated.description,
+			created_date: updated.createdAt.toISOString(),
+			color_profile: updated.colourProfile,
+			layoutDirection: updated.layoutDirection,
+		},
 	};
 }

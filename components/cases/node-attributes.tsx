@@ -6,25 +6,22 @@ import type React from "react";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { Node } from "reactflow";
-import { z } from "zod";
 import { Form } from "@/components/ui/form";
 import {
 	type ReactFlowNode,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import {
+	type ElementAttributesFormInput,
+	elementAttributesFormSchema,
+} from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import AddAttributeButtons from "./add-attribute-buttons";
 import AttributeTextField from "./attribute-text-field";
 import ContextEditor from "./context-editor";
-
-const formSchema = z.object({
-	assumption: z.string().optional(),
-	justification: z.string().optional(),
-	context: z.array(z.string()).optional(),
-});
 
 type NodeWithData = Node & {
 	data: {
@@ -69,8 +66,8 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 
 	const { setSelectedLink, setAction } = actions;
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<ElementAttributesFormInput>({
+		resolver: zodResolver(elementAttributesFormSchema),
 		defaultValues: {
 			assumption: node.data?.assumption || "",
 			justification: node.data?.justification || "",
@@ -84,7 +81,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 		setAction("");
 	};
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: ElementAttributesFormInput) {
 		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
 		if (!(assuranceCase && session?.user?.id && node.type)) {
 			return;

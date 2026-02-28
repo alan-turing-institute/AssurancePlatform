@@ -14,9 +14,9 @@ export async function validatePasswordResetToken(token: string): Promise<{
 
 	const result = await validateResetToken(token);
 
-	if (result.success) {
-		return { valid: true, email: result.email };
+	if ("error" in result) {
+		return { valid: false, error: result.error };
 	}
 
-	return { valid: false, error: result.error };
+	return { valid: true, email: result.data.email };
 }

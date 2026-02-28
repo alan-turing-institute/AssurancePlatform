@@ -46,6 +46,23 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 	return NextResponse.json(data, { status });
 }
 
+/**
+ * Create a 429 Too Many Requests response.
+ * Optionally sets the `Retry-After` header in seconds.
+ */
+export function apiRateLimited(
+	reason: string,
+	retryAfterMs?: number
+): NextResponse<ApiErrorBody> {
+	const response = apiError(
+		new AppError({ code: "RATE_LIMITED", message: reason })
+	);
+	if (retryAfterMs) {
+		response.headers.set("Retry-After", String(Math.ceil(retryAfterMs / 1000)));
+	}
+	return response;
+}
+
 // ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { type RegisterFormInput, registerFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -18,29 +18,6 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	username: z
-		.string()
-		.min(2)
-		.max(250)
-		.regex(/^\S*$/, "Username cannot contain spaces"),
-	email: z.string().min(2).email(),
-	password1: z
-		.string()
-		.min(8)
-		.regex(
-			/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
-			"Password must contain at least one uppercase letter, one number, and one special character"
-		),
-	password2: z
-		.string()
-		.min(8)
-		.regex(
-			/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
-			"Password must contain at least one uppercase letter, one number, and one special character"
-		),
-});
-
 const RegisterForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [errors, setErrors] = useState<string[]>([]);
@@ -48,8 +25,8 @@ const RegisterForm = () => {
 	const [showPassword2, setShowPassword2] = useState(false);
 	const router = useRouter();
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<RegisterFormInput>({
+		resolver: zodResolver(registerFormSchema),
 		defaultValues: {
 			username: "",
 			email: "",
@@ -58,7 +35,7 @@ const RegisterForm = () => {
 		},
 	});
 
-	function validatePasswords(values: z.infer<typeof formSchema>) {
+	function validatePasswords(values: RegisterFormInput) {
 		if (values.password1 !== values.password2) {
 			setErrors(["Your passwords must match, please try again."]);
 			return false;
@@ -111,14 +88,14 @@ const RegisterForm = () => {
 
 	function handleSuccessfulRegistration(
 		_response: Response,
-		_values: z.infer<typeof formSchema>
+		_values: RegisterFormInput
 	) {
 		// Registration successful - redirect to login
 		setLoading(false);
 		redirectToLoginWithSuccess();
 	}
 
-	function registerUser(values: z.infer<typeof formSchema>) {
+	function registerUser(values: RegisterFormInput) {
 		const user = {
 			username: values.username,
 			email: values.email,
@@ -140,7 +117,7 @@ const RegisterForm = () => {
 		return fetch(apiUrl, requestOptions);
 	}
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: RegisterFormInput) {
 		if (!validatePasswords(values)) {
 			return;
 		}

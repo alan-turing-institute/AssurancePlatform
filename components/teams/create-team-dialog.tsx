@@ -5,7 +5,6 @@ import { Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -19,19 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
-
-const formSchema = z.object({
-	name: z
-		.string()
-		.min(1, "Name is required")
-		.max(100, "Name must be 100 characters or less"),
-	description: z
-		.string()
-		.max(500, "Description must be 500 characters or less")
-		.optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import {
+	type CreateTeamSchemaInput,
+	createTeamSchema,
+} from "@/lib/schemas/team";
 
 export function CreateTeamDialog() {
 	const createTeamModal = useCreateTeamModal();
@@ -39,15 +29,15 @@ export function CreateTeamDialog() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CreateTeamSchemaInput>({
+		resolver: zodResolver(createTeamSchema),
 		defaultValues: {
 			name: "",
 			description: "",
 		},
 	});
 
-	const onSubmit = async (values: FormValues) => {
+	const onSubmit = async (values: CreateTeamSchemaInput) => {
 		setLoading(true);
 		setError(null);
 
@@ -133,6 +123,7 @@ export function CreateTeamDialog() {
 												placeholder="What is this team for?"
 												rows={3}
 												{...field}
+												value={field.value ?? ""}
 											/>
 										</FormControl>
 										<FormMessage />

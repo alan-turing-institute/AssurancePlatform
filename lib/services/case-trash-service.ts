@@ -46,7 +46,7 @@ async function validateCaseOwner(
 	});
 
 	if (!existingCase) {
-		return { valid: false, error: "Case not found" };
+		return { valid: false, error: "Permission denied" };
 	}
 
 	if (existingCase.createdById !== userId) {

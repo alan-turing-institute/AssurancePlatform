@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,12 +5,7 @@ import {
 	requireAuth,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
-
-const KNOWN_TOUR_IDS = ["dashboard", "case-canvas", "demo-case"] as const;
-
-const tourCompletionSchema = z.object({
-	tourId: z.enum(KNOWN_TOUR_IDS),
-});
+import { KNOWN_TOUR_IDS, tourCompletionSchema } from "@/lib/schemas/tour";
 
 /**
  * GET /api/user/tours

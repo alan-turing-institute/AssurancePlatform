@@ -10,7 +10,6 @@ import {
 	useState,
 } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -19,6 +18,10 @@ import {
 	FormItem,
 	FormMessage,
 } from "@/components/ui/form";
+import {
+	type CommentFormInput,
+	commentFormSchema,
+} from "@/lib/schemas/comment";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import type { Comment as CaseComment } from "@/types";
@@ -35,24 +38,20 @@ type CommentsEditFormProps = {
 	setEdit: Dispatch<SetStateAction<boolean>>;
 };
 
-const formSchema = z.object({
-	comment: z.string().min(2).max(500),
-});
-
 const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 	const { nodeComments, setNodeComments } = useStore();
 	const [loading, setLoading] = useState<boolean>(false);
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
 	const { id: commentId, content } = comment;
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CommentFormInput>({
+		resolver: zodResolver(commentFormSchema),
 		defaultValues: {
 			comment: content,
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: CommentFormInput) {
 		setLoading(true);
 
 		try {

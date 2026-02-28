@@ -19,7 +19,11 @@ export async function fetchCaseComments(
 		const { fetchCaseComments: fetchComments } = await import(
 			"@/lib/services/comment-service"
 		);
-		return await fetchComments(caseId, session.userId);
+		const result = await fetchComments(caseId, session.userId);
+		if ("error" in result) {
+			return null;
+		}
+		return result.data;
 	} catch {
 		return null;
 	}
