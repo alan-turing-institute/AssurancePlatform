@@ -74,7 +74,7 @@ describe("convert-case utilities", () => {
 							property_claims: [],
 						} as Strategy,
 					],
-				} as Goal,
+				} as unknown as Goal,
 			],
 		};
 

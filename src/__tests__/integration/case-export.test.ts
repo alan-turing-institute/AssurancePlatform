@@ -27,7 +27,9 @@ describe("exportCase", () => {
 		const result = await exportCase(owner.id, testCase.id);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		expect(result.data.version).toBe("1.0");
 		expect(result.data.case.name).toBe(testCase.name);
@@ -52,7 +54,9 @@ describe("exportCase", () => {
 		const result = await exportCase(viewer.id, testCase.id);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.case.name).toBe(testCase.name);
 	});
 
@@ -70,7 +74,9 @@ describe("exportCase", () => {
 		const result = await exportCase(stranger.id, testCase.id);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 
@@ -82,7 +88,9 @@ describe("exportCase", () => {
 		const result = await exportCase(user.id, fakeId);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		// Should return the same permission-denied error
 		expect(result.error).toBe("Permission denied");
 	});
@@ -96,7 +104,9 @@ describe("exportCase", () => {
 		const result = await exportCase(owner.id, testCase.id);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Case has no elements to export");
 	});
 
@@ -140,13 +150,17 @@ describe("exportCase", () => {
 		const result = await exportCase(owner.id, testCase.id);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		const tree = result.data.tree;
 		expect(tree.type).toBe("GOAL");
 		expect(tree.children.length).toBeGreaterThanOrEqual(1);
 
-		const strategyNode = tree.children.find((c) => c.type === "STRATEGY");
+		const strategyNode = tree.children.find(
+			(c: { type: string }) => c.type === "STRATEGY"
+		);
 		expect(strategyNode).toBeDefined();
 	});
 
@@ -172,7 +186,9 @@ describe("exportCase", () => {
 		});
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		const rootNode = result.data.tree;
 		expect(rootNode.comments).toBeDefined();
@@ -201,7 +217,9 @@ describe("exportCase", () => {
 		});
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		const rootNode = result.data.tree;
 		// Comments should be undefined when not requested

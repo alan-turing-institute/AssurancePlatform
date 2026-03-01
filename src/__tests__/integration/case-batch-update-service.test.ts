@@ -51,7 +51,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(user.id, testCase.id, changes);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.summary.created).toBe(1);
 		expect(result.data.summary.updated).toBe(0);
 		expect(result.data.summary.deleted).toBe(0);
@@ -87,7 +89,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(user.id, testCase.id, changes);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.summary.updated).toBe(1);
 
 		const updated = await prisma.assuranceElement.findUnique({
@@ -119,7 +123,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(user.id, testCase.id, changes);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.summary.deleted).toBe(1);
 
 		const found = await prisma.assuranceElement.findUnique({
@@ -181,7 +187,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(user.id, testCase.id, changes);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.summary.created).toBe(1);
 		expect(result.data.summary.updated).toBe(1);
 		expect(result.data.summary.deleted).toBe(1);
@@ -215,7 +223,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(stranger.id, testCase.id, []);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 
@@ -232,7 +242,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(viewer.id, testCase.id, []);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 
@@ -243,14 +255,12 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(
-			user.id,
-			"non-existent-case-id",
-			[]
-		);
+		const result = await applyBatchUpdate(user.id, "non-existent-case-id", []);
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		// Same error as no-permission — prevents enumeration
 		expect(result.error).toBe("Permission denied");
 	});
@@ -270,7 +280,9 @@ describe("applyBatchUpdate", () => {
 		});
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Case has been modified by another user");
 		expect(result.conflictDetected).toBe(true);
 	});
@@ -284,7 +296,7 @@ describe("applyBatchUpdate", () => {
 			where: { id: testCase.id },
 			select: { updatedAt: true },
 		});
-		const expectedVersion = fresh!.updatedAt.toISOString();
+		const expectedVersion = fresh?.updatedAt.toISOString();
 
 		const { applyBatchUpdate } = await import(
 			"@/lib/services/case-batch-update-service"
@@ -308,7 +320,9 @@ describe("applyBatchUpdate", () => {
 		const result = await applyBatchUpdate(user.id, testCase.id, []);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.summary.created).toBe(0);
 		expect(result.data.summary.updated).toBe(0);
 		expect(result.data.summary.deleted).toBe(0);

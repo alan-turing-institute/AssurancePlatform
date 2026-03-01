@@ -1,13 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
-	addTeamMember,
 	createTestCase,
 	createTestPermission,
 	createTestTeam,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -33,9 +32,7 @@ describe("GET /api/cases/[id]/permissions", () => {
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { GET } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { GET } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`
 		);
@@ -59,9 +56,7 @@ describe("GET /api/cases/[id]/permissions", () => {
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 		await mockAuth(editor.id, editor.username, editor.email);
 
-		const { GET } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { GET } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`
 		);
@@ -78,9 +73,7 @@ describe("GET /api/cases/[id]/permissions", () => {
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(stranger.id, stranger.username, stranger.email);
 
-		const { GET } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { GET } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`
 		);
@@ -92,9 +85,7 @@ describe("GET /api/cases/[id]/permissions", () => {
 	});
 
 	it("returns 401 when the request is not authenticated", async () => {
-		const { GET } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { GET } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			"http://localhost:3000/api/cases/00000000-0000-0000-0000-000000000000/permissions"
 		);
@@ -121,9 +112,7 @@ describe("GET /api/cases/[id]/permissions", () => {
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { GET } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { GET } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`
 		);
@@ -151,9 +140,7 @@ describe("POST /api/cases/[id]/permissions — share by email", () => {
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{
@@ -180,9 +167,7 @@ describe("POST /api/cases/[id]/permissions — share by email", () => {
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{
@@ -211,9 +196,7 @@ describe("POST /api/cases/[id]/permissions — share by email", () => {
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{
@@ -237,9 +220,7 @@ describe("POST /api/cases/[id]/permissions — share by email", () => {
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{
@@ -259,9 +240,7 @@ describe("POST /api/cases/[id]/permissions — share by email", () => {
 	});
 
 	it("returns 401 when the request is not authenticated", async () => {
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			"http://localhost:3000/api/cases/00000000-0000-0000-0000-000000000000/permissions",
 			{
@@ -294,9 +273,7 @@ describe("POST /api/cases/[id]/permissions — share with team", () => {
 		const team = await createTestTeam(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{
@@ -324,9 +301,7 @@ describe("POST /api/cases/[id]/permissions — share with team", () => {
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
 
-		const { POST } = await import(
-			"@/app/api/cases/[id]/permissions/route"
-		);
+		const { POST } = await import("@/app/api/cases/[id]/permissions/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/permissions`,
 			{

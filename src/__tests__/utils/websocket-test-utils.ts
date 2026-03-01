@@ -325,7 +325,6 @@ export class MessageQueue<T = unknown> {
 				continue;
 			}
 			// Sequential processing is required for message ordering
-			// biome-ignore lint/nursery/noAwaitInLoop: sequential processing needed
 			await this.processor(message);
 		}
 
@@ -598,7 +597,6 @@ export async function waitForConnection(
 		if (Date.now() - startTime > timeout) {
 			throw new Error("WebSocket connection timeout");
 		}
-		// biome-ignore lint/nursery/noAwaitInLoop: polling for connection state
 		await new Promise((resolve) => setTimeout(resolve, 50));
 	}
 }
@@ -714,7 +712,7 @@ export class ConcurrentUserSimulator {
 			const [userId, { ws }] = users[i % users.length];
 			const message = createAssuranceCaseUpdate(
 				{
-					id: 1,
+					id: "1",
 					name: `Updated by ${userId} - Edit ${i}`,
 					updatedOn: new Date().toISOString(),
 				},
@@ -728,7 +726,6 @@ export class ConcurrentUserSimulator {
 			this.server.broadcast(message, userId);
 
 			if (delay > 0) {
-				// biome-ignore lint/nursery/noAwaitInLoop: simulating delays between edits
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
@@ -1001,7 +998,6 @@ export class ReconnectionTester {
 		while (attempt < this.maxRetries) {
 			const delay = this.baseDelay * 2 ** attempt;
 			// Exponential backoff requires sequential delays
-			// biome-ignore lint/nursery/noAwaitInLoop: exponential backoff requires sequential timing
 			await new Promise((resolve) => setTimeout(resolve, delay));
 
 			try {

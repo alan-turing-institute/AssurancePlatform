@@ -1,17 +1,17 @@
 import { saveAs } from "file-saver";
 import { toPng, toSvg } from "html-to-image";
 import type { Options } from "html-to-image/lib/types";
-import { type Node, getNodesBounds, getViewportForBounds } from "reactflow";
+import { getNodesBounds, getViewportForBounds, type Node } from "reactflow";
 
 export type ImageFormat = "svg" | "png";
 export type ImageScale = 1 | 2 | 3;
 
-export interface ImageExportOptions {
+export type ImageExportOptions = {
 	format: ImageFormat;
 	scale?: ImageScale;
 	caseName: string;
 	nodes: Node[];
-}
+};
 
 /**
  * Generate a filename for the exported image.
@@ -74,7 +74,7 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 	const originalStyles: Map<Element, { stroke: string; strokeWidth: string }> =
 		new Map();
 
-	edgePaths.forEach((path) => {
+	for (const path of edgePaths) {
 		const svgPath = path as SVGElement;
 		originalStyles.set(path, {
 			stroke: svgPath.getAttribute("stroke") || "",
@@ -83,11 +83,11 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 		// Apply explicit stroke styles for export (light mode)
 		svgPath.setAttribute("stroke", "#666666");
 		svgPath.setAttribute("stroke-width", "2");
-	});
+	}
 
 	// Return cleanup function
 	return () => {
-		edgePaths.forEach((path) => {
+		for (const path of edgePaths) {
 			const svgPath = path as SVGElement;
 			const original = originalStyles.get(path);
 			if (original) {
@@ -102,7 +102,7 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 					svgPath.removeAttribute("stroke-width");
 				}
 			}
-		});
+		}
 	};
 }
 

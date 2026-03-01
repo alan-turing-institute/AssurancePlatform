@@ -37,6 +37,24 @@ async function getResetToken(userId: string): Promise<string | null> {
 	return user?.passwordResetToken ?? null;
 }
 
+type RequestResetResult = {
+	success: boolean;
+	rateLimited?: boolean;
+	error?: string;
+};
+
+type ValidateTokenResult = {
+	success: boolean;
+	userId?: string;
+	email?: string;
+	error?: string;
+};
+
+type ResetPasswordResult = {
+	success: boolean;
+	error?: string;
+};
+
 // ============================================
 // requestPasswordReset
 // ============================================
@@ -45,7 +63,10 @@ describe("requestPasswordReset", () => {
 	it("creates a reset token on the user record for a LOCAL user", async () => {
 		const user = await createTestUser({ authProvider: "LOCAL" });
 
-		const result = await requestPasswordReset(user.email, TEST_IP);
+		const result = (await requestPasswordReset(
+			user.email,
+			TEST_IP
+		)) as unknown as RequestResetResult;
 
 		expect(result.success).toBe(true);
 
@@ -56,10 +77,10 @@ describe("requestPasswordReset", () => {
 	});
 
 	it("returns success for a non-existent email (anti-enumeration)", async () => {
-		const result = await requestPasswordReset(
+		const result = (await requestPasswordReset(
 			"nobody@example.com",
 			TEST_IP
-		);
+		)) as unknown as RequestResetResult;
 
 		// Must succeed silently — must not reveal whether the address exists
 		expect(result.success).toBe(true);
@@ -68,7 +89,10 @@ describe("requestPasswordReset", () => {
 	it("returns success for an OAuth-only user (anti-enumeration)", async () => {
 		const user = await createTestUser({ authProvider: "GITHUB" });
 
-		const result = await requestPasswordReset(user.email, TEST_IP);
+		const result = (await requestPasswordReset(
+			user.email,
+			TEST_IP
+		)) as unknown as RequestResetResult;
 
 		// Must succeed silently — must not reveal that the account is OAuth-only
 		expect(result.success).toBe(true);
@@ -106,7 +130,10 @@ describe("requestPasswordReset", () => {
 		});
 
 		// Use a fresh IP that has not hit its own IP-level limit
-		const result = await requestPasswordReset(user.email, "10.1.1.1");
+		const result = (await requestPasswordReset(
+			user.email,
+			"10.1.1.1"
+		)) as unknown as RequestResetResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -127,7 +154,9 @@ describe("validateResetToken", () => {
 		const token = await getResetToken(user.id);
 		expect(token).not.toBeNull();
 
-		const result = await validateResetToken(token as string);
+		const result = (await validateResetToken(
+			token as string
+		)) as unknown as ValidateTokenResult;
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -150,7 +179,9 @@ describe("validateResetToken", () => {
 			},
 		});
 
-		const result = await validateResetToken(expiredToken);
+		const result = (await validateResetToken(
+			expiredToken
+		)) as unknown as ValidateTokenResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -159,7 +190,9 @@ describe("validateResetToken", () => {
 	});
 
 	it("returns invalid for a token with wrong format (not 64 hex chars)", async () => {
-		const result = await validateResetToken("short");
+		const result = (await validateResetToken(
+			"short"
+		)) as unknown as ValidateTokenResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -170,7 +203,9 @@ describe("validateResetToken", () => {
 	it("returns invalid for a well-formatted but non-existent token", async () => {
 		const nonExistentToken = "b".repeat(64);
 
-		const result = await validateResetToken(nonExistentToken);
+		const result = (await validateResetToken(
+			nonExistentToken
+		)) as unknown as ValidateTokenResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -196,14 +231,20 @@ describe("resetPassword", () => {
 		const user = await createTestUser({ authProvider: "LOCAL" });
 		await requestPasswordReset(user.email, TEST_IP);
 		const token = await getResetToken(user.id);
-		if (!token) throw new Error("Token was not created");
+		if (!token) {
+			throw new Error("Token was not created");
+		}
 		return { userId: user.id, email: user.email, token };
 	}
 
 	it("succeeds with a valid token and strong password", async () => {
 		const { token } = await createUserWithValidToken();
 
-		const result = await resetPassword(token, STRONG_PASSWORD, TEST_IP);
+		const result = (await resetPassword(
+			token,
+			STRONG_PASSWORD,
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(true);
 	});
@@ -224,7 +265,11 @@ describe("resetPassword", () => {
 	it("rejects a password that is too short (fewer than 8 characters)", async () => {
 		const { token } = await createUserWithValidToken();
 
-		const result = await resetPassword(token, "Ab1!", TEST_IP);
+		const result = (await resetPassword(
+			token,
+			"Ab1!",
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -235,7 +280,11 @@ describe("resetPassword", () => {
 	it("rejects a password with no uppercase letter", async () => {
 		const { token } = await createUserWithValidToken();
 
-		const result = await resetPassword(token, "alllower1!", TEST_IP);
+		const result = (await resetPassword(
+			token,
+			"alllower1!",
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -246,7 +295,11 @@ describe("resetPassword", () => {
 	it("rejects a password with no digit", async () => {
 		const { token } = await createUserWithValidToken();
 
-		const result = await resetPassword(token, "NoDigits!", TEST_IP);
+		const result = (await resetPassword(
+			token,
+			"NoDigits!",
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -257,7 +310,11 @@ describe("resetPassword", () => {
 	it("rejects a password with no special character", async () => {
 		const { token } = await createUserWithValidToken();
 
-		const result = await resetPassword(token, "NoSpecial1", TEST_IP);
+		const result = (await resetPassword(
+			token,
+			"NoSpecial1",
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -278,7 +335,11 @@ describe("resetPassword", () => {
 			},
 		});
 
-		const result = await resetPassword(expiredToken, STRONG_PASSWORD, TEST_IP);
+		const result = (await resetPassword(
+			expiredToken,
+			STRONG_PASSWORD,
+			TEST_IP
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -289,11 +350,11 @@ describe("resetPassword", () => {
 	it("rejects a non-existent token", async () => {
 		const nonExistentToken = "d".repeat(64);
 
-		const result = await resetPassword(
+		const result = (await resetPassword(
 			nonExistentToken,
 			STRONG_PASSWORD,
 			TEST_IP
-		);
+		)) as unknown as ResetPasswordResult;
 
 		expect(result.success).toBe(false);
 		if (!result.success) {

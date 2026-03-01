@@ -8,19 +8,19 @@ import {
 describe("extractPrimaryFontFamily", () => {
 	it("should extract unquoted font name", () => {
 		expect(extractPrimaryFontFamily("Montserrat, sans-serif")).toBe(
-			"Montserrat",
+			"Montserrat"
 		);
 	});
 
 	it("should extract double-quoted font name", () => {
-		expect(
-			extractPrimaryFontFamily('"Source Serif 4", Georgia, serif'),
-		).toBe("Source Serif 4");
+		expect(extractPrimaryFontFamily('"Source Serif 4", Georgia, serif')).toBe(
+			"Source Serif 4"
+		);
 	});
 
 	it("should extract single-quoted font name", () => {
 		expect(extractPrimaryFontFamily("'JetBrains Mono', monospace")).toBe(
-			"JetBrains Mono",
+			"JetBrains Mono"
 		);
 	});
 
@@ -34,7 +34,7 @@ describe("extractPrimaryFontFamily", () => {
 
 	it("should trim whitespace", () => {
 		expect(extractPrimaryFontFamily("  Quicksand , sans-serif")).toBe(
-			"Quicksand",
+			"Quicksand"
 		);
 	});
 });

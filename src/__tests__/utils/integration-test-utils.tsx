@@ -16,7 +16,7 @@ import { server } from "../mocks/server";
 import { render, renderWithAuth } from "./test-utils";
 
 // Re-export mock router and search params for backward compatibility
-export { mockRouter };
+export { mockRouter } from "../mocks/next-navigation-mocks";
 export const mockSearchParams = new URLSearchParams();
 
 // Regex constants for form field matching
@@ -95,6 +95,7 @@ export class AuthFlow {
 
 		// Wait for authentication to complete
 		await rtlWaitFor(() => {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: called from within test helper, will be invoked inside a test
 			expect(mockRouter.push).toHaveBeenCalledWith("/dashboard");
 		});
 
@@ -144,6 +145,7 @@ export class AuthFlow {
 
 		// Wait for registration to complete
 		await rtlWaitFor(() => {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: called from within test helper, will be invoked inside a test
 			expect(mockRouter.push).toHaveBeenCalledWith("/dashboard");
 		});
 
@@ -366,15 +368,32 @@ export class UserJourney {
 	}
 }
 
+// Mutable subset of WebSocket used by the test helper
+type MockWebSocket = {
+	send: ReturnType<typeof vi.fn>;
+	close: ReturnType<typeof vi.fn>;
+	addEventListener: ReturnType<typeof vi.fn>;
+	removeEventListener: ReturnType<typeof vi.fn>;
+	dispatchEvent: ReturnType<typeof vi.fn>;
+	readyState: number;
+	url: string;
+	CONNECTING: number;
+	OPEN: number;
+	CLOSING: number;
+	CLOSED: number;
+	onopen: null;
+	onclose: null;
+	onerror: null;
+	onmessage: null;
+	protocol: string;
+	extensions: string;
+	bufferedAmount: number;
+	binaryType: BinaryType;
+};
+
 // Helper for testing WebSocket connections
 export class WebSocketTestHelper {
-	private readonly mockSocket: Partial<WebSocket> & {
-		send: ReturnType<typeof vi.fn>;
-		close: ReturnType<typeof vi.fn>;
-		addEventListener: ReturnType<typeof vi.fn>;
-		removeEventListener: ReturnType<typeof vi.fn>;
-		dispatchEvent: ReturnType<typeof vi.fn>;
-	};
+	private readonly mockSocket: MockWebSocket;
 	private readonly handlers: Map<
 		string,
 		(event: Event | MessageEvent | CloseEvent) => void
@@ -465,7 +484,7 @@ export class WebSocketTestHelper {
 	getSentMessages() {
 		return this.mockSocket.send.mock.calls.map((call: unknown[]) => {
 			try {
-				return JSON.parse(call[0]);
+				return JSON.parse(call[0] as string);
 			} catch {
 				return call[0]; // Return raw if not JSON
 			}

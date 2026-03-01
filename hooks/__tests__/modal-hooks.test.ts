@@ -182,9 +182,9 @@ describe("Modal Hooks", () => {
 		];
 
 		// Reset each store to its initial state
-		stores.forEach((store) => {
+		for (const store of stores) {
 			store.setState({ isOpen: false });
-		});
+		}
 	});
 
 	// Test all modal hooks with the shared test suite

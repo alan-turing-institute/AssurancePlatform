@@ -10,7 +10,7 @@ import { addHiddenProp } from "./tree-utils";
  * and pushing the result into the store.
  */
 export async function fetchAndRefreshCase(
-	caseId: string,
+	caseId: string
 ): Promise<AssuranceCase | null> {
 	const response = await fetch(`/api/cases/${caseId}`);
 	if (!response.ok) {

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestComment,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -107,7 +107,9 @@ describe("loadStaticCaseData", () => {
 		const result = await loadStaticCaseData("../etc/passwd");
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Invalid case file name");
 	});
 
@@ -116,7 +118,9 @@ describe("loadStaticCaseData", () => {
 		const result = await loadStaticCaseData("subdir/file.json");
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Invalid case file name");
 	});
 
@@ -125,7 +129,9 @@ describe("loadStaticCaseData", () => {
 		const result = await loadStaticCaseData("nonexistent-file-xyz.json");
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toContain("Failed to load case data");
 	});
 
@@ -135,7 +141,9 @@ describe("loadStaticCaseData", () => {
 		const result = await loadStaticCaseData("design-reference-case.json");
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data).not.toBeNull();
 	});
 });

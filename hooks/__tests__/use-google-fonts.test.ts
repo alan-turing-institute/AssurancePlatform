@@ -90,10 +90,9 @@ describe("useGoogleFonts", () => {
 	});
 
 	it("should replace the link when switching presets", () => {
-		const { rerender } = renderHook(
-			({ preset }) => useGoogleFonts(preset),
-			{ initialProps: { preset: ghibliPreset } },
-		);
+		const { rerender } = renderHook(({ preset }) => useGoogleFonts(preset), {
+			initialProps: { preset: ghibliPreset },
+		});
 
 		expect(getManagedLinks()).toHaveLength(1);
 		const firstHref = (getManagedLinks()[0] as HTMLLinkElement).href;
@@ -109,10 +108,9 @@ describe("useGoogleFonts", () => {
 	});
 
 	it("should remove the link when switching to a preset with no custom fonts", () => {
-		const { rerender } = renderHook(
-			({ preset }) => useGoogleFonts(preset),
-			{ initialProps: { preset: ghibliPreset } },
-		);
+		const { rerender } = renderHook(({ preset }) => useGoogleFonts(preset), {
+			initialProps: { preset: ghibliPreset },
+		});
 
 		expect(getManagedLinks()).toHaveLength(1);
 
@@ -132,10 +130,9 @@ describe("useGoogleFonts", () => {
 	});
 
 	it("should not re-inject when rerendered with the same preset", () => {
-		const { rerender } = renderHook(
-			({ preset }) => useGoogleFonts(preset),
-			{ initialProps: { preset: ghibliPreset } },
-		);
+		const { rerender } = renderHook(({ preset }) => useGoogleFonts(preset), {
+			initialProps: { preset: ghibliPreset },
+		});
 
 		const link = getManagedLinks()[0];
 

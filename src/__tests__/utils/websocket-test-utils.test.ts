@@ -199,7 +199,7 @@ describe("WebSocket Testing Utilities", () => {
 		});
 
 		it("should create assurance case update messages", () => {
-			const assuranceCase = { id: 1, name: "Test Case" };
+			const assuranceCase = { id: "1", name: "Test Case" };
 			const message = createAssuranceCaseUpdate(assuranceCase, "user1");
 
 			expect(message.type).toBe(MessageType.CASE_MESSAGE);

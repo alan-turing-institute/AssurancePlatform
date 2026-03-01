@@ -341,9 +341,9 @@ describe("sanitize-html", () => {
 
 			// Security-focused tests
 			it("should not execute JavaScript during text extraction", () => {
-				const consoleSpy = vi
-					.spyOn(console, "log")
-					.mockImplementation(() => {});
+				const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
+					/* suppress */
+				});
 				const input =
 					'<script>console.log("Should not execute")</script><p>Safe content</p>';
 

@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	addTeamMember,
 	createTestTeam,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -139,9 +139,7 @@ describe("GET /api/teams/[id]", () => {
 		await mockAuth(user.id, user.username, user.email);
 
 		const { GET } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`);
 		const response = await GET(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -160,9 +158,7 @@ describe("GET /api/teams/[id]", () => {
 		await mockAuth(outsider.id, outsider.username, outsider.email);
 
 		const { GET } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`);
 		const response = await GET(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -199,14 +195,11 @@ describe("PATCH /api/teams/[id]", () => {
 		await mockAuth(user.id, user.username, user.email);
 
 		const { PATCH } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`,
-			{
-				method: "PATCH",
-				body: JSON.stringify({ name: "Renamed Team" }),
-				headers: { "Content-Type": "application/json" },
-			}
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "PATCH",
+			body: JSON.stringify({ name: "Renamed Team" }),
+			headers: { "Content-Type": "application/json" },
+		});
 		const response = await PATCH(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -228,14 +221,11 @@ describe("PATCH /api/teams/[id]", () => {
 		await mockAuth(member.id, member.username, member.email);
 
 		const { PATCH } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`,
-			{
-				method: "PATCH",
-				body: JSON.stringify({ name: "Sneaky Rename" }),
-				headers: { "Content-Type": "application/json" },
-			}
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "PATCH",
+			body: JSON.stringify({ name: "Sneaky Rename" }),
+			headers: { "Content-Type": "application/json" },
+		});
 		const response = await PATCH(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -255,10 +245,9 @@ describe("DELETE /api/teams/[id]", () => {
 		await mockAuth(user.id, user.username, user.email);
 
 		const { DELETE } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`,
-			{ method: "DELETE" }
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "DELETE",
+		});
 		const response = await DELETE(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -280,10 +269,9 @@ describe("DELETE /api/teams/[id]", () => {
 		await mockAuth(member.id, member.username, member.email);
 
 		const { DELETE } = await import("@/app/api/teams/[id]/route");
-		const req = new NextRequest(
-			`http://localhost:3000/api/teams/${team.id}`,
-			{ method: "DELETE" }
-		);
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "DELETE",
+		});
 		const response = await DELETE(req, {
 			params: Promise.resolve({ id: team.id }),
 		});
@@ -306,9 +294,7 @@ describe("GET /api/teams/[id]/members", () => {
 		await addTeamMember(team.id, member.id, "MEMBER");
 		await mockAuth(admin.id, admin.username, admin.email);
 
-		const { GET } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { GET } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`
 		);
@@ -329,9 +315,7 @@ describe("GET /api/teams/[id]/members", () => {
 		const team = await createTestTeam(owner.id, { name: "Exclusive Team" });
 		await mockAuth(outsider.id, outsider.username, outsider.email);
 
-		const { GET } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { GET } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`
 		);
@@ -356,9 +340,7 @@ describe("POST /api/teams/[id]/members", () => {
 		const team = await createTestTeam(admin.id, { name: "Growing Team" });
 		await mockAuth(admin.id, admin.username, admin.email);
 
-		const { POST } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { POST } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`,
 			{
@@ -382,9 +364,7 @@ describe("POST /api/teams/[id]/members", () => {
 		const team = await createTestTeam(admin.id, { name: "Invite Team" });
 		await mockAuth(admin.id, admin.username, admin.email);
 
-		const { POST } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { POST } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`,
 			{
@@ -409,9 +389,7 @@ describe("POST /api/teams/[id]/members", () => {
 		const team = await createTestTeam(admin.id, { name: "Strict Team" });
 		await mockAuth(admin.id, admin.username, admin.email);
 
-		const { POST } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { POST } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`,
 			{
@@ -430,16 +408,14 @@ describe("POST /api/teams/[id]/members", () => {
 	it("returns 403 when a non-admin member attempts to add a member", async () => {
 		const admin = await createTestUser();
 		const member = await createTestUser();
-		const target = await createTestUser({
+		const _target = await createTestUser({
 			email: "target-member@example.com",
 		});
 		const team = await createTestTeam(admin.id, { name: "Restricted Team" });
 		await addTeamMember(team.id, member.id, "MEMBER");
 		await mockAuth(member.id, member.username, member.email);
 
-		const { POST } = await import(
-			"@/app/api/teams/[id]/members/route"
-		);
+		const { POST } = await import("@/app/api/teams/[id]/members/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/teams/${team.id}/members`,
 			{

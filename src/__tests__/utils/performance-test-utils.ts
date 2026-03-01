@@ -341,7 +341,6 @@ export async function measureComponentRenderPerformance(
 		const { container, unmount } = render(component);
 
 		// Wait for any async rendering to complete
-		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await waitFor(() => {
 			// Component should be in the document
 			expect(container.firstChild).toBeTruthy();
@@ -402,7 +401,6 @@ export async function measureInteractionPerformance(
 	// Warm-up runs
 	for (let i = 0; i < warmupRuns; i++) {
 		const { container, unmount } = render(component);
-		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await interaction(container);
 		unmount();
 	}
@@ -418,7 +416,6 @@ export async function measureInteractionPerformance(
 		// Measure render time
 		timer.start();
 		const { container, unmount } = render(component);
-		// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 		await waitFor(() => {
 			expect(container.firstChild).toBeTruthy();
 		});
@@ -576,7 +573,6 @@ export async function measureApiPerformance(
 		const startTime = performance.now();
 
 		try {
-			// biome-ignore lint/nursery/noAwaitInLoop: Sequential execution required for performance measurement
 			const response = await apiCall();
 			const endTime = performance.now();
 
@@ -870,7 +866,7 @@ export function generateLargeDataset(
 							name: `Goal ${gi + 1} for Case ${i + 1}`,
 						})
 					),
-				} as Partial<AssuranceCase>);
+				} as unknown as Partial<AssuranceCase>);
 				break;
 
 			case "goals":

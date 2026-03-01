@@ -107,7 +107,7 @@ describe("case-trash-service", () => {
 			const result = await listTrashedCases(user.id);
 
 			expect(typeof result.data?.cases[0].daysRemaining).toBe("number");
-			expect(result.data!.cases[0].daysRemaining).toBeGreaterThan(0);
+			expect(result.data?.cases[0].daysRemaining).toBeGreaterThan(0);
 		});
 	});
 
@@ -198,7 +198,9 @@ describe("case-trash-service", () => {
 		it("cascades deletion to child elements, permissions, and comments", async () => {
 			const owner = await createTestUser();
 			const collaborator = await createTestUser();
-			const testCase = await createTestCase(owner.id, { name: "Cascade Purge" });
+			const testCase = await createTestCase(owner.id, {
+				name: "Cascade Purge",
+			});
 
 			// Create child data
 			const element = await createTestElement(testCase.id, owner.id);

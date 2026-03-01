@@ -95,7 +95,7 @@ describe("Test Factories", () => {
 			const assuranceCase = AssuranceCaseFactory.create();
 
 			expect(assuranceCase).toMatchObject({
-				id: expect.any(Number),
+				id: expect.any(String),
 				type: "AssuranceCase",
 				name: expect.stringContaining("Assurance Case"),
 				published: false,

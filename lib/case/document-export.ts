@@ -2,16 +2,19 @@ import { saveAs } from "file-saver";
 import { toPng } from "html-to-image";
 import type { Options } from "html-to-image/lib/types";
 import JSZip from "jszip";
-import { type Node, getNodesBounds, getViewportForBounds } from "reactflow";
+import { getNodesBounds, getViewportForBounds, type Node } from "reactflow";
 import {
-	createTemplateFromPreset,
-	exporterRegistry,
 	type BrandingConfig,
+	createTemplateFromPreset,
 	type DiagramImage,
 	type ExportFormat,
+	exporterRegistry,
 	type TemplatePreset,
 } from "@/lib/export";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
+
+const DATA_URL_PREFIX_REGEX = /^data:image\/png;base64,/;
+const MARKDOWN_EXTENSION_REGEX = /\.md$/;
 
 /**
  * TEA Platform brand colour (matches the application theme).
@@ -25,7 +28,7 @@ async function fetchImageAsBase64(url: string): Promise<string | undefined> {
 	try {
 		const response = await fetch(url);
 		if (!response.ok) {
-			return undefined;
+			return;
 		}
 		const blob = await response.blob();
 		return new Promise((resolve) => {
@@ -35,7 +38,7 @@ async function fetchImageAsBase64(url: string): Promise<string | undefined> {
 			reader.readAsDataURL(blob);
 		});
 	} catch {
-		return undefined;
+		return;
 	}
 }
 
@@ -126,7 +129,9 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 /**
  * Capture the diagram as a base64-encoded PNG for embedding in documents.
  */
-async function captureDiagramImage(nodes: Node[]): Promise<DiagramImage | null> {
+async function captureDiagramImage(
+	nodes: Node[]
+): Promise<DiagramImage | null> {
 	const viewport = document.querySelector(
 		".react-flow__viewport"
 	) as HTMLElement | null;
@@ -167,7 +172,7 @@ async function captureDiagramImage(nodes: Node[]): Promise<DiagramImage | null> 
 	try {
 		const dataUrl = await toPng(viewport, exportOptions);
 		// Extract base64 data from data URL (remove "data:image/png;base64," prefix)
-		const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+		const base64Data = dataUrl.replace(DATA_URL_PREFIX_REGEX, "");
 		return { data: base64Data, format: "png" };
 	} finally {
 		restoreStyles();
@@ -236,7 +241,12 @@ export async function exportDocument(
 	}
 
 	// Handle markdown with diagram - create ZIP archive
-	if (format === "markdown" && includeDiagram && diagramImage && "content" in result) {
+	if (
+		format === "markdown" &&
+		includeDiagram &&
+		diagramImage &&
+		"content" in result
+	) {
 		await exportMarkdownZip(result.content, result.filename, diagramImage);
 		return;
 	}
@@ -278,6 +288,9 @@ async function exportMarkdownZip(
 
 	// Generate and download ZIP
 	const zipBlob = await zip.generateAsync({ type: "blob" });
-	const zipFilename = markdownFilename.replace(/\.md$/, ".zip");
+	const zipFilename = markdownFilename.replace(
+		MARKDOWN_EXTENSION_REGEX,
+		".zip"
+	);
 	saveAs(zipBlob, zipFilename);
 }

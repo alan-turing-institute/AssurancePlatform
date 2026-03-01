@@ -43,11 +43,14 @@ describe("markCaseAsReady", () => {
 			publishStatus: "DRAFT",
 		});
 
-		const result = await markCaseAsReady(owner.id, testCase.id);
+		const result = (await markCaseAsReady(owner.id, testCase.id)) as {
+			data?: { markedReadyAt: Date };
+			error?: string;
+		};
 
 		expect(result.error).toBeUndefined();
 		if ("data" in result) {
-			expect(result.data.markedReadyAt).toBeInstanceOf(Date);
+			expect(result.data?.markedReadyAt).toBeInstanceOf(Date);
 		}
 
 		const updated = await prisma.assuranceCase.findUnique({
@@ -115,11 +118,14 @@ describe("unmarkCaseAsReady", () => {
 			publishStatus: "READY_TO_PUBLISH",
 		});
 
-		const result = await unmarkCaseAsReady(owner.id, testCase.id);
+		const result = (await unmarkCaseAsReady(owner.id, testCase.id)) as {
+			data?: { success: true };
+			error?: string;
+		};
 
 		expect(result.error).toBeUndefined();
 		if ("data" in result) {
-			expect(result.data.success).toBe(true);
+			expect(result.data?.success).toBe(true);
 		}
 
 		const updated = await prisma.assuranceCase.findUnique({
@@ -191,7 +197,11 @@ describe("publishAssuranceCase", () => {
 		const owner = await createTestUser();
 		const testCase = await createPublishableCase(owner.id, "My Published Case");
 
-		const result = await publishAssuranceCase(owner.id, testCase.id, "Initial release");
+		const result = await publishAssuranceCase(
+			owner.id,
+			testCase.id,
+			"Initial release"
+		);
 
 		expect("error" in result).toBe(false);
 		if ("data" in result) {
@@ -286,7 +296,9 @@ describe("unpublishAssuranceCase", () => {
 
 		if ("data" in publishResult) {
 			// Create a case study and link to the published version
-			const caseStudy = await createTestCaseStudy(owner.id, { published: true });
+			const caseStudy = await createTestCaseStudy(owner.id, {
+				published: true,
+			});
 			await prisma.caseStudyPublishedCase.create({
 				data: {
 					caseStudyId: caseStudy.id,
@@ -312,7 +324,9 @@ describe("unpublishAssuranceCase", () => {
 		expect("data" in publishResult).toBe(true);
 
 		if ("data" in publishResult) {
-			const caseStudy = await createTestCaseStudy(owner.id, { published: true });
+			const caseStudy = await createTestCaseStudy(owner.id, {
+				published: true,
+			});
 			await prisma.caseStudyPublishedCase.create({
 				data: {
 					caseStudyId: caseStudy.id,

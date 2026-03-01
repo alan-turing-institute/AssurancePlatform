@@ -10,6 +10,8 @@ import {
 } from "@/lib/services/team-service";
 import { createTestUser } from "../utils/prisma-factories";
 
+const TEAM_SLUG_PATTERN = /^my-new-team-/;
+
 describe("team-service", () => {
 	describe("createTeam", () => {
 		it("returns a team with a slug and the creator as ADMIN", async () => {
@@ -20,7 +22,7 @@ describe("team-service", () => {
 			expect(result.error).toBeUndefined();
 			expect(result.data).toBeDefined();
 			expect(result.data?.name).toBe("My New Team");
-			expect(result.data?.slug).toMatch(/^my-new-team-/);
+			expect(result.data!.slug).toMatch(TEAM_SLUG_PATTERN);
 			expect(result.data?.my_role).toBe("ADMIN");
 			expect(result.data?.member_count).toBe(1);
 		});
@@ -68,9 +70,9 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: "Persisted Team" });
 
-			expect(result.data?.id).toBeDefined();
+			expect(result.data!.id).toBeDefined();
 			const found = await prisma.team.findUnique({
-				where: { id: result.data?.id },
+				where: { id: result.data!.id },
 			});
 			expect(found).not.toBeNull();
 			expect(found?.name).toBe("Persisted Team");
@@ -103,7 +105,10 @@ describe("team-service", () => {
 		it("returns 'Team not found' for a non-existent team ID", async () => {
 			const user = await createTestUser();
 
-			const result = await getTeam(user.id, "00000000-0000-0000-0000-000000000000");
+			const result = await getTeam(
+				user.id,
+				"00000000-0000-0000-0000-000000000000"
+			);
 
 			expect(result.error).toBe("Team not found");
 		});
@@ -143,7 +148,10 @@ describe("team-service", () => {
 		it("returns 'Team not found' for a non-existent slug", async () => {
 			const user = await createTestUser();
 
-			const result = await getTeamBySlug(user.id, "this-slug-does-not-exist-xyz");
+			const result = await getTeamBySlug(
+				user.id,
+				"this-slug-does-not-exist-xyz"
+			);
 
 			expect(result.error).toBe("Team not found");
 		});
@@ -207,7 +215,9 @@ describe("team-service", () => {
 			expect(result.error).toBeUndefined();
 			expect(result.data?.name).toBe("New Name");
 
-			const inDb = await prisma.team.findUnique({ where: { id: created.data!.id } });
+			const inDb = await prisma.team.findUnique({
+				where: { id: created.data!.id },
+			});
 			expect(inDb?.name).toBe("New Name");
 		});
 
@@ -250,7 +260,9 @@ describe("team-service", () => {
 			expect(result.error).toBeUndefined();
 			expect(result.success).toBe(true);
 
-			const inDb = await prisma.team.findUnique({ where: { id: created.data!.id } });
+			const inDb = await prisma.team.findUnique({
+				where: { id: created.data!.id },
+			});
 			expect(inDb).toBeNull();
 		});
 

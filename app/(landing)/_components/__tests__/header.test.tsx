@@ -129,11 +129,17 @@ describe("Header", () => {
 			const logos = screen.getAllByAltText("TEA Platform Logo");
 			expect(logos).toHaveLength(2);
 			// Light mode logo
-			expect(logos[0]).toHaveAttribute("src", "/images/logos/tea-logo-full-light.png");
+			expect(logos[0]).toHaveAttribute(
+				"src",
+				"/images/logos/tea-logo-full-light.png"
+			);
 			expect(logos[0]).toHaveAttribute("width", "183");
 			expect(logos[0]).toHaveAttribute("height", "48");
 			// Dark mode logo
-			expect(logos[1]).toHaveAttribute("src", "/images/logos/tea-logo-full-dark.png");
+			expect(logos[1]).toHaveAttribute(
+				"src",
+				"/images/logos/tea-logo-full-dark.png"
+			);
 		});
 
 		it("should render navigation links", () => {
@@ -451,7 +457,9 @@ describe("Header", () => {
 
 			// Check desktop navigation links
 			const desktopNavLinks = navigationLinks.filter((link) =>
-				link.className.includes("font-semibold text-foreground text-sm leading-6")
+				link.className.includes(
+					"font-semibold text-foreground text-sm leading-6"
+				)
 			);
 			expect(desktopNavLinks.length).toBeGreaterThan(0);
 		});

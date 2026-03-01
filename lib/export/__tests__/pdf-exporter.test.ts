@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { PDFExporter } from "../exporters/pdf-exporter";
 import type { RenderedDocument, RenderedSection } from "../types";
 
+const DATE_STAMPED_PDF_REGEX = /^test-case-\d{4}-\d{2}-\d{2}\.pdf$/;
+const SANITISED_PDF_REGEX =
+	/^test-case-with-special-characters-\d{4}-\d{2}-\d{2}\.pdf$/;
+
 /**
  * Create a minimal rendered document for testing
  */
@@ -31,7 +35,7 @@ function createSampleDocument(): RenderedDocument {
  */
 function createSampleSection(): RenderedSection {
 	return {
-		type: "overview",
+		type: "executive-summary",
 		title: "Overview",
 		blocks: [
 			{ type: "heading", level: 1, text: "Test Heading" },
@@ -79,7 +83,7 @@ describe("PDFExporter", () => {
 			if (result.success && "blob" in result) {
 				expect(result.blob).toBeInstanceOf(Blob);
 				expect(result.blob.type).toBe("application/pdf");
-				expect(result.filename).toMatch(/^test-case-\d{4}-\d{2}-\d{2}\.pdf$/);
+				expect(result.filename).toMatch(DATE_STAMPED_PDF_REGEX);
 				expect(result.mimeType).toBe("application/pdf");
 			}
 		});
@@ -106,9 +110,7 @@ describe("PDFExporter", () => {
 
 			expect(result.success).toBe(true);
 			if (result.success && "filename" in result) {
-				expect(result.filename).toMatch(
-					/^test-case-with-special-characters-\d{4}-\d{2}-\d{2}\.pdf$/
-				);
+				expect(result.filename).toMatch(SANITISED_PDF_REGEX);
 			}
 		});
 
@@ -150,7 +152,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Empty Section",
 					blocks: [],
 				},
@@ -177,7 +179,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "heading", level: 1, text: "Heading 1" },
@@ -195,7 +197,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{
@@ -220,7 +222,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{
@@ -243,7 +245,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "paragraph", text: "Before divider" },
@@ -261,7 +263,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "metadata", key: "Author", value: "Test User" },

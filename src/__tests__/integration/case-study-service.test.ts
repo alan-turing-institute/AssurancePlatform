@@ -199,7 +199,9 @@ describe("getCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, { title: "Findable Study" });
+		const created = await createCaseStudy(owner.id, {
+			title: "Findable Study",
+		});
 
 		const result = await getCaseStudyById(created.id);
 
@@ -213,7 +215,7 @@ describe("getCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await getCaseStudyById(999999);
+		const result = await getCaseStudyById(999_999);
 
 		expect(result).toBeNull();
 	});

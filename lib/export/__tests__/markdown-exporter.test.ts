@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type { TreeNode } from "@/lib/schemas/case-export";
 import { MarkdownExporter } from "../exporters/markdown-exporter";
-import type { RenderedDocument, RenderedSection } from "../types";
+import type { RenderedDocument } from "../types";
+
+const MARKDOWN_FILENAME_PATTERN = /^test-case-\d{4}-\d{2}-\d{2}\.md$/;
 
 /**
  * Sample tree node for testing
@@ -86,7 +88,7 @@ describe("MarkdownExporter", () => {
 			expect(result.success).toBe(true);
 			if (result.success && "content" in result) {
 				expect(result.content).toContain("# Test Case");
-				expect(result.filename).toMatch(/^test-case-\d{4}-\d{2}-\d{2}\.md$/);
+				expect(result.filename).toMatch(MARKDOWN_FILENAME_PATTERN);
 				expect(result.mimeType).toBe("text/markdown");
 			}
 		});
@@ -99,12 +101,13 @@ describe("MarkdownExporter", () => {
 			if (result.success && "content" in result) {
 				expect(result.content).toContain("---");
 				expect(result.content).toContain('title: "Test Case"');
-				expect(result.content).toContain('description: "A test assurance case"');
+				expect(result.content).toContain(
+					'description: "A test assurance case"'
+				);
 				expect(result.content).toContain('generator: "TEA Platform"');
 				expect(result.content).toContain('organisation: "Test Organisation"');
 			}
 		});
-
 	});
 
 	describe("section rendering", () => {
@@ -450,9 +453,7 @@ describe("MarkdownExporter", () => {
 			expect(result.success).toBe(true);
 			if (result.success && "content" in result) {
 				expect(result.content).toContain("Goals \\*and\\* Strategies");
-				expect(result.content).toContain(
-					"Goal \\[1\\]: Test \\*emphasis\\*"
-				);
+				expect(result.content).toContain("Goal \\[1\\]: Test \\*emphasis\\*");
 			}
 		});
 
@@ -466,9 +467,7 @@ describe("MarkdownExporter", () => {
 			expect(result.success).toBe(true);
 			if (result.success && "content" in result) {
 				expect(result.content).toContain('title: "Case with \\"quotes\\""');
-				expect(result.content).toContain(
-					'description: "Line 1\\nLine 2"'
-				);
+				expect(result.content).toContain('description: "Line 1\\nLine 2"');
 			}
 		});
 	});

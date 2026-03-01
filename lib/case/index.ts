@@ -4,7 +4,6 @@
  */
 
 // API operations
-// biome-ignore lint/performance/noBarrelFile: Barrel file intentional for backward compatibility during migration
 export {
 	addElementComment,
 	attachCaseElement,
@@ -17,12 +16,31 @@ export {
 } from "./api";
 // Case update operations
 export { updateAssuranceCase } from "./case-updates";
+// Convert case utilities
+export type { AssuranceCaseWithGoals, ConvertibleItem } from "./convert-case";
+export {
+	convertAssuranceCase,
+	createEdgesFromNodes,
+	createNodesRecursively,
+} from "./convert-case";
 // Evidence operations
 export {
 	addEvidenceToClaim,
 	updateEvidenceNested,
 	updateEvidenceNestedMove,
 } from "./evidence";
+// Fetch + transform
+export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
+// Identifier utilities
+export { compareIdentifiers, parseIdentifier } from "./identifier-utils";
+// Layout helper
+export { getLayoutedElements } from "./layout-helper";
+// Node move operations
+export type { MoveElement } from "./node-move-operations";
+export { moveEvidence, movePropertyClaim } from "./node-move-operations";
+// Node operations
+export type { OrphanElementData } from "./node-operations";
+export { deleteNode, detachNode } from "./node-operations";
 // Node utilities
 export {
 	caseItemDescription,
@@ -49,24 +67,5 @@ export {
 	toggleHiddenForChildren,
 	toggleHiddenForParent,
 } from "./tree-utils";
-// Fetch + transform
-export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
 // Types
 export type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
-// Convert case utilities
-export type { AssuranceCaseWithGoals, ConvertibleItem } from "./convert-case";
-export {
-	convertAssuranceCase,
-	createEdgesFromNodes,
-	createNodesRecursively,
-} from "./convert-case";
-// Identifier utilities
-export { compareIdentifiers, parseIdentifier } from "./identifier-utils";
-// Layout helper
-export { getLayoutedElements } from "./layout-helper";
-// Node operations
-export type { OrphanElementData } from "./node-operations";
-export { deleteNode, detachNode } from "./node-operations";
-// Node move operations
-export type { MoveElement } from "./node-move-operations";
-export { moveEvidence, movePropertyClaim } from "./node-move-operations";

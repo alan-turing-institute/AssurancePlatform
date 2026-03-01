@@ -19,7 +19,8 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "docs:generate": "next-openapi-gen generate"
+    "docs:generate": "next-openapi-gen generate",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -133,7 +134,7 @@
     "jsdom": "^26.1.0",
     "msw": "^2.10.4",
     "postcss": "^8.5.1",
-    "prettier": "^3.6.2",
+
     "prisma": "^7.0.0",
     "prisma-dbml-generator": "^0.12.0",
     "semantic-release": "^24.2.0",

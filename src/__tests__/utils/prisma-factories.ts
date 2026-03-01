@@ -37,7 +37,7 @@ type UserOverrides = Partial<{
 	emailVerified: boolean;
 }>;
 
-export async function createTestUser(overrides: UserOverrides = {}): Promise<User> {
+export function createTestUser(overrides: UserOverrides = {}): Promise<User> {
 	const n = nextId();
 	return prisma.user.create({
 		data: {
@@ -63,7 +63,7 @@ type TeamOverrides = Partial<{
 	description: string;
 }>;
 
-export async function createTestTeam(
+export function createTestTeam(
 	createdById: string,
 	overrides: TeamOverrides = {}
 ): Promise<Team & { members: TeamMember[] }> {
@@ -85,7 +85,7 @@ export async function createTestTeam(
 	});
 }
 
-export async function addTeamMember(
+export function addTeamMember(
 	teamId: string,
 	userId: string,
 	role: "ADMIN" | "MEMBER" = "MEMBER",
@@ -114,7 +114,7 @@ type CaseOverrides = Partial<{
 	isDemo: boolean;
 }>;
 
-export async function createTestCase(
+export function createTestCase(
 	createdById: string,
 	overrides: CaseOverrides = {}
 ): Promise<AssuranceCase> {
@@ -156,7 +156,7 @@ type ElementOverrides = Partial<{
 	inSandbox: boolean;
 }>;
 
-export async function createTestElement(
+export function createTestElement(
 	caseId: string,
 	createdById: string,
 	overrides: ElementOverrides = {}
@@ -183,7 +183,7 @@ export async function createTestElement(
 
 type PermissionLevel = "VIEW" | "COMMENT" | "EDIT" | "ADMIN";
 
-export async function createTestPermission(
+export function createTestPermission(
 	caseId: string,
 	userId: string,
 	grantedById: string,
@@ -203,7 +203,7 @@ export async function createTestPermission(
 // CASE TEAM PERMISSION
 // ============================================
 
-export async function createTestTeamPermission(
+export function createTestTeamPermission(
 	caseId: string,
 	teamId: string,
 	grantedById: string,
@@ -230,7 +230,7 @@ type CommentOverrides = Partial<{
 	parentCommentId: string;
 }>;
 
-export async function createTestComment(
+export function createTestComment(
 	authorId: string,
 	overrides: CommentOverrides = {}
 ): Promise<Comment> {
@@ -259,7 +259,7 @@ type CaseStudyOverrides = Partial<{
 	published: boolean;
 }>;
 
-export async function createTestCaseStudy(
+export function createTestCaseStudy(
 	ownerId: string,
 	overrides: CaseStudyOverrides = {}
 ): Promise<CaseStudy> {

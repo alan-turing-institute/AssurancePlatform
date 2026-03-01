@@ -22,7 +22,11 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
-      - ".github/workflows/build.yaml"
+      - "types/**"
+      - "next.config.*"
+      - "tsconfig.json"
+      - "biome.json"
+      - ".github/workflows/**"
   push:
     branches:
       - main
@@ -46,7 +50,11 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "Dockerfile"
-      - ".github/workflows/build.yaml"
+      - "types/**"
+      - "next.config.*"
+      - "tsconfig.json"
+      - "biome.json"
+      - ".github/workflows/**"
 
 env:
   REGISTRY: ghcr.io
@@ -84,6 +92,9 @@ jobs:
 
       - name: Run type check
         run: npx tsc --noEmit
+
+      - name: Security audit
+        run: pnpm audit --audit-level=high
 
   test:
     name: Run Tests
@@ -322,10 +333,8 @@ jobs:
           done
 
           if [ "$HEALTH_SUCCESS" = "false" ]; then
-            echo "::warning::Application health check did not pass after deployment"
-            echo "DEPLOY_HEALTH=failed" >> $GITHUB_OUTPUT
-          else
-            echo "DEPLOY_HEALTH=success" >> $GITHUB_OUTPUT
+            echo "::error::Application health check did not pass after deployment"
+            exit 1
           fi
 
       - name: Build and push Docker image (Staging branch)
@@ -408,10 +417,8 @@ jobs:
           done
 
           if [ "$HEALTH_SUCCESS" = "false" ]; then
-            echo "::warning::Application health check did not pass after deployment"
-            echo "DEPLOY_HEALTH=failed" >> $GITHUB_OUTPUT
-          else
-            echo "DEPLOY_HEALTH=success" >> $GITHUB_OUTPUT
+            echo "::error::Application health check did not pass after deployment"
+            exit 1
           fi
 
       - name: Build and push Docker image (PR/other branches)
@@ -441,18 +448,10 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             ENV="Production"
-            HEALTH_STATUS="${{ steps.deploy-prod.outputs.DEPLOY_HEALTH }}"
             APP_URL="${{ env.PROD_APP_URL }}"
           else
             ENV="Staging"
-            HEALTH_STATUS="${{ steps.deploy-staging.outputs.DEPLOY_HEALTH }}"
             APP_URL="${{ env.STAGING_APP_URL }}"
-          fi
-
-          if [ "$HEALTH_STATUS" = "success" ]; then
-            HEALTH_ICON="✅"
-          else
-            HEALTH_ICON="⚠️"
           fi
 
           echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
@@ -460,7 +459,7 @@ jobs:
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Environment** | ${ENV} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Health Check** | ${HEALTH_ICON} ${HEALTH_STATUS} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Health Check** | ✅ passed |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Application** | [${APP_URL}](${APP_URL}) |" >> $GITHUB_STEP_SUMMARY

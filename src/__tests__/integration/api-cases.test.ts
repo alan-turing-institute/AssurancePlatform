@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),

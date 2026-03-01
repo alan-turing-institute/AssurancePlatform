@@ -167,7 +167,7 @@ export const TeamFactory = {
 // Advanced AssuranceCase Factory
 export const AssuranceCaseFactory = {
 	create(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
-		const id = overrides.id ?? getNextId();
+		const id = (overrides.id ?? String(getNextId())) as string;
 		const owner = overrides.owner ?? UserFactory.create().id;
 		const currentDate = new Date().toISOString();
 
@@ -215,8 +215,10 @@ export const AssuranceCaseFactory = {
 		const caseId = assuranceCase.id;
 
 		// Create hierarchical structure
+		// assurance_case_id expects number; cast string id for factory compat
+		const numericCaseId = Number(caseId);
 		const topGoal = GoalFactory.create({
-			assurance_case_id: caseId,
+			assurance_case_id: numericCaseId,
 			name: "Top-Level Safety Goal",
 		});
 
@@ -238,11 +240,11 @@ export const AssuranceCaseFactory = {
 
 		const subGoals = [
 			GoalFactory.create({
-				assurance_case_id: caseId,
+				assurance_case_id: numericCaseId,
 				name: "Component A Safety",
 			}),
 			GoalFactory.create({
-				assurance_case_id: caseId,
+				assurance_case_id: numericCaseId,
 				name: "Component B Safety",
 			}),
 		];
@@ -322,7 +324,7 @@ export const AssuranceCaseFactory = {
 		permissions.forEach((perm, _index) => {
 			const permission: CasePermission = {
 				id: getNextId(),
-				case: assuranceCase.id,
+				case: Number(assuranceCase.id),
 				permission_type: perm.type,
 				created_date: new Date().toISOString(),
 			};

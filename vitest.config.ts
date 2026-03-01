@@ -68,6 +68,12 @@ export default defineConfig({
 			all: true,
 			clean: true,
 			skipFull: false,
+			thresholds: {
+				statements: 20,
+				branches: 20,
+				functions: 20,
+				lines: 20,
+			},
 		},
 		maxConcurrency: 5,
 		passWithNoTests: false,

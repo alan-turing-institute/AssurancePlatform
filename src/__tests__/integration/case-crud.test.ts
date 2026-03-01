@@ -16,7 +16,10 @@ describe("case-fetch-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Owner Case" });
 
-			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				user.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(result.id).toBe(testCase.id);
 			expect(result.name).toBe("Owner Case");
@@ -32,7 +35,10 @@ describe("case-fetch-service", () => {
 			});
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			const result = await fetchCaseFromPrisma(testCase.id, viewer.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				viewer.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(result.id).toBe(testCase.id);
 			expect(result.permissions).toBe("view");
@@ -44,7 +50,10 @@ describe("case-fetch-service", () => {
 			const testCase = await createTestCase(owner.id, { name: "Edit Case" });
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const result = await fetchCaseFromPrisma(testCase.id, editor.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				editor.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(result.permissions).toBe("edit");
 		});
@@ -90,7 +99,10 @@ describe("case-fetch-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Goals Case" });
 
-			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				user.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(Array.isArray(result.goals)).toBe(true);
 		});
@@ -106,7 +118,10 @@ describe("case-fetch-service", () => {
 				"COMMENT"
 			);
 
-			const result = await fetchCaseFromPrisma(testCase.id, commenter.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				commenter.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(result.permissions).toBe("comment");
 		});
@@ -115,14 +130,12 @@ describe("case-fetch-service", () => {
 			const owner = await createTestUser();
 			const caseAdmin = await createTestUser();
 			const testCase = await createTestCase(owner.id, { name: "Admin Case" });
-			await createTestPermission(
-				testCase.id,
-				caseAdmin.id,
-				owner.id,
-				"ADMIN"
-			);
+			await createTestPermission(testCase.id, caseAdmin.id, owner.id, "ADMIN");
 
-			const result = await fetchCaseFromPrisma(testCase.id, caseAdmin.id);
+			const result = (await fetchCaseFromPrisma(
+				testCase.id,
+				caseAdmin.id
+			)) as unknown as Record<string, unknown>;
 
 			expect(result.permissions).toBe("manage");
 		});
@@ -133,9 +146,9 @@ describe("case-fetch-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Original Name" });
 
-			const result = await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
 				name: "Updated Name",
-			});
+			})) as unknown as Record<string, unknown>;
 
 			expect(result.name).toBe("Updated Name");
 		});
@@ -148,9 +161,9 @@ describe("case-fetch-service", () => {
 			});
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const result = await updateCaseWithPrisma(testCase.id, editor.id, {
+			const result = (await updateCaseWithPrisma(testCase.id, editor.id, {
 				description: "New description",
-			});
+			})) as unknown as Record<string, unknown>;
 
 			expect(result.description).toBe("New description");
 		});
@@ -184,9 +197,9 @@ describe("case-fetch-service", () => {
 				name: "Colour Case",
 			});
 
-			const result = await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
 				color_profile: "dark",
-			});
+			})) as unknown as Record<string, unknown>;
 
 			expect(result.color_profile).toBe("dark");
 		});
@@ -197,9 +210,9 @@ describe("case-fetch-service", () => {
 				name: "Layout Case",
 			});
 
-			const result = await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
 				layout_direction: "LR",
-			});
+			})) as unknown as Record<string, unknown>;
 
 			expect(result.layoutDirection).toBe("LR");
 		});

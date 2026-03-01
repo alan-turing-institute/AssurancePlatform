@@ -25,13 +25,27 @@ describe("AppError", () => {
 	});
 
 	it("maps error codes to HTTP status codes", () => {
-		expect(new AppError({ code: "UNAUTHORISED", message: "" }).statusCode).toBe(401);
-		expect(new AppError({ code: "FORBIDDEN", message: "" }).statusCode).toBe(403);
-		expect(new AppError({ code: "NOT_FOUND", message: "" }).statusCode).toBe(404);
-		expect(new AppError({ code: "VALIDATION", message: "" }).statusCode).toBe(400);
-		expect(new AppError({ code: "CONFLICT", message: "" }).statusCode).toBe(409);
-		expect(new AppError({ code: "RATE_LIMITED", message: "" }).statusCode).toBe(429);
-		expect(new AppError({ code: "INTERNAL", message: "" }).statusCode).toBe(500);
+		expect(new AppError({ code: "UNAUTHORISED", message: "" }).statusCode).toBe(
+			401
+		);
+		expect(new AppError({ code: "FORBIDDEN", message: "" }).statusCode).toBe(
+			403
+		);
+		expect(new AppError({ code: "NOT_FOUND", message: "" }).statusCode).toBe(
+			404
+		);
+		expect(new AppError({ code: "VALIDATION", message: "" }).statusCode).toBe(
+			400
+		);
+		expect(new AppError({ code: "CONFLICT", message: "" }).statusCode).toBe(
+			409
+		);
+		expect(new AppError({ code: "RATE_LIMITED", message: "" }).statusCode).toBe(
+			429
+		);
+		expect(new AppError({ code: "INTERNAL", message: "" }).statusCode).toBe(
+			500
+		);
 	});
 
 	it("preserves cause", () => {
@@ -89,7 +103,9 @@ describe("handleError", () => {
 	});
 
 	it("wraps a plain Error as INTERNAL", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+			/* suppress */
+		});
 		const original = new Error("something broke");
 		const result = handleError(original);
 
@@ -100,7 +116,9 @@ describe("handleError", () => {
 	});
 
 	it("wraps non-Error values as INTERNAL", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+			/* suppress */
+		});
 		const result = handleError("string error");
 
 		expect(result).toBeInstanceOf(AppError);

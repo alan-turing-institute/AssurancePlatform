@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -232,9 +232,7 @@ describe("DELETE /api/cases/[id]/publish", () => {
 		expect(publishResponse.status).toBe(200);
 
 		// Now unpublish it
-		const { DELETE } = await import(
-			"@/app/api/cases/[id]/publish/route"
-		);
+		const { DELETE } = await import("@/app/api/cases/[id]/publish/route");
 		const deleteReq = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/publish`,
 			{ method: "DELETE" }
@@ -267,9 +265,7 @@ describe("DELETE /api/cases/[id]/publish", () => {
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
-		const { DELETE } = await import(
-			"@/app/api/cases/[id]/publish/route"
-		);
+		const { DELETE } = await import("@/app/api/cases/[id]/publish/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/publish`,
 			{ method: "DELETE" }
@@ -282,9 +278,7 @@ describe("DELETE /api/cases/[id]/publish", () => {
 	});
 
 	it("returns 401 when the request is not authenticated", async () => {
-		const { DELETE } = await import(
-			"@/app/api/cases/[id]/publish/route"
-		);
+		const { DELETE } = await import("@/app/api/cases/[id]/publish/route");
 		const req = new NextRequest(
 			"http://localhost:3000/api/cases/00000000-0000-0000-0000-000000000000/publish",
 			{ method: "DELETE" }

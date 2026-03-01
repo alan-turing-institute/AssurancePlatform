@@ -12,15 +12,15 @@ describe("timing-safe utilities", () => {
 		});
 
 		it("should return true for future timestamp", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
-			expect(isTimestampValid(now + 10000)).toBe(true);
+			expect(isTimestampValid(now + 10_000)).toBe(true);
 		});
 
 		it("should return false for past timestamp", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
-			expect(isTimestampValid(now - 10000)).toBe(false);
+			expect(isTimestampValid(now - 10_000)).toBe(false);
 		});
 
 		it("should return true for undefined (no expiry)", () => {
@@ -28,16 +28,16 @@ describe("timing-safe utilities", () => {
 		});
 
 		it("should return true when timestamp equals current time", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
 			// now <= timestamp, so equal should be valid
 			expect(isTimestampValid(now, now)).toBe(true);
 		});
 
 		it("should accept custom now parameter", () => {
-			const customNow = 500000;
-			expect(isTimestampValid(600000, customNow)).toBe(true);
-			expect(isTimestampValid(400000, customNow)).toBe(false);
+			const customNow = 500_000;
+			expect(isTimestampValid(600_000, customNow)).toBe(true);
+			expect(isTimestampValid(400_000, customNow)).toBe(false);
 		});
 
 		it("should handle edge case with MAX_SAFE_INTEGER", () => {
@@ -101,5 +101,4 @@ describe("timing-safe utilities", () => {
 			expect(elapsed).toBeLessThan(10);
 		});
 	});
-
 });

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestCaseStudy,
@@ -7,7 +8,6 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 
 // Factory pattern prevents dotenv.config() from overwriting DATABASE_URL
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -44,9 +44,7 @@ beforeEach(async () => {
 // preventing afterEach DB truncations from racing with concurrent test setup.
 describe.sequential("fetchAssuranceCases", () => {
 	it("returns null when not authenticated", async () => {
-		const { fetchAssuranceCases } = await import(
-			"@/actions/assurance-cases"
-		);
+		const { fetchAssuranceCases } = await import("@/actions/assurance-cases");
 		const result = await fetchAssuranceCases();
 
 		expect(result).toBeNull();
@@ -58,9 +56,7 @@ describe.sequential("fetchAssuranceCases", () => {
 
 		await mockAuth(user.id, user.username, user.email);
 
-		const { fetchAssuranceCases } = await import(
-			"@/actions/assurance-cases"
-		);
+		const { fetchAssuranceCases } = await import("@/actions/assurance-cases");
 		const result = await fetchAssuranceCases();
 
 		expect(result).not.toBeNull();
@@ -78,9 +74,7 @@ describe.sequential("fetchAssuranceCases", () => {
 
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
-		const { fetchAssuranceCases } = await import(
-			"@/actions/assurance-cases"
-		);
+		const { fetchAssuranceCases } = await import("@/actions/assurance-cases");
 		const result = await fetchAssuranceCases();
 
 		expect(result).not.toBeNull();
@@ -136,16 +130,16 @@ describe.sequential("fetchSharedAssuranceCases", () => {
 
 describe.sequential("createAssuranceCase", () => {
 	it("returns an invalid session error when not authenticated", async () => {
-		const { createAssuranceCase } = await import(
-			"@/actions/assurance-cases"
-		);
+		const { createAssuranceCase } = await import("@/actions/assurance-cases");
 		const result = await createAssuranceCase({
 			name: "Unauthorised Case",
 			description: "Should not be created",
 		});
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toBeTruthy();
 	});
 
@@ -153,16 +147,16 @@ describe.sequential("createAssuranceCase", () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
-		const { createAssuranceCase } = await import(
-			"@/actions/assurance-cases"
-		);
+		const { createAssuranceCase } = await import("@/actions/assurance-cases");
 		const result = await createAssuranceCase({
 			name: "Brand New Case",
 			description: "A test case created via server action",
 		});
 
 		expect(result.success).toBe(true);
-		if (!result.success) return;
+		if (!result.success) {
+			return;
+		}
 		expect(result.data.id).toBeTruthy();
 
 		// Verify the DB record exists
@@ -267,7 +261,9 @@ describe.sequential("deleteCaseStudy", () => {
 		const result = await deleteCaseStudy(study.id);
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toBeTruthy();
 	});
 
@@ -478,13 +474,13 @@ describe.sequential("unlinkProvider", () => {
 		});
 		await mockAuth(user.id, user.username, user.email);
 
-		const { unlinkProvider } = await import(
-			"@/actions/connected-accounts"
-		);
+		const { unlinkProvider } = await import("@/actions/connected-accounts");
 		const result = await unlinkProvider("github");
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toContain("only way to sign in");
 	});
 
@@ -492,13 +488,13 @@ describe.sequential("unlinkProvider", () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
-		const { unlinkProvider } = await import(
-			"@/actions/connected-accounts"
-		);
+		const { unlinkProvider } = await import("@/actions/connected-accounts");
 		const result = await unlinkProvider("twitter");
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toBe("Invalid provider.");
 	});
 
@@ -507,13 +503,13 @@ describe.sequential("unlinkProvider", () => {
 		const user = await createTestUser({ authProvider: "LOCAL" });
 		await mockAuth(user.id, user.username, user.email);
 
-		const { unlinkProvider } = await import(
-			"@/actions/connected-accounts"
-		);
+		const { unlinkProvider } = await import("@/actions/connected-accounts");
 		const result = await unlinkProvider("github");
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toContain("not connected");
 	});
 });
@@ -528,7 +524,9 @@ describe.sequential("exportCase", () => {
 		const result = await exportCase("any-case-id");
 
 		expect("error" in result).toBe(true);
-		if (!("error" in result)) return;
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Not authenticated");
 	});
 
@@ -552,7 +550,9 @@ describe.sequential("exportCase", () => {
 
 		// Service returns { data } or { error }
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.case.name).toBe("Exportable Case");
 	});
 
@@ -645,7 +645,9 @@ describe.sequential("createCaseStudy", () => {
 		const result = await createCaseStudy(formData);
 
 		expect(result.success).toBe(false);
-		if (result.success) return;
+		if (result.success) {
+			return;
+		}
 		expect(result.error).toBe("Unauthorised");
 	});
 
@@ -661,7 +663,9 @@ describe.sequential("createCaseStudy", () => {
 		const result = await createCaseStudy(formData);
 
 		expect(result.success).toBe(true);
-		if (!result.success) return;
+		if (!result.success) {
+			return;
+		}
 		expect(result.data.title).toBe("Integration Test Study");
 
 		// Verify DB state

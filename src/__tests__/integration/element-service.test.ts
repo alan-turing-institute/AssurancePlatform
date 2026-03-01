@@ -16,6 +16,9 @@ import {
 	createTestUser,
 } from "../utils/prisma-factories";
 
+const GOAL_NAME_PATTERN = /^G\d+$/;
+const STRATEGY_NAME_PATTERN = /^S\d+$/;
+
 describe("element-service", () => {
 	describe("createElement", () => {
 		it("creates a GOAL element (top-level) for the case owner", async () => {
@@ -31,7 +34,7 @@ describe("element-service", () => {
 			expect(result.data).toBeDefined();
 			expect(result.data?.type).toBe("TopLevelNormativeGoal");
 			expect(result.data?.assurance_case_id).toBe(testCase.id);
-			expect(result.data?.name).toMatch(/^G\d+$/);
+			expect(result.data?.name).toMatch(GOAL_NAME_PATTERN);
 
 			// Verify the record exists in the database
 			const inDb = await prisma.assuranceElement.findUnique({
@@ -60,7 +63,7 @@ describe("element-service", () => {
 			expect(strategy.error).toBeUndefined();
 			expect(strategy.data?.type).toBe("Strategy");
 			expect(strategy.data?.goal_id).toBe(goal.data!.id);
-			expect(strategy.data?.name).toMatch(/^S\d+$/);
+			expect(strategy.data?.name).toMatch(STRATEGY_NAME_PATTERN);
 		});
 
 		it("creates a PROPERTY_CLAIM under a STRATEGY", async () => {
@@ -160,7 +163,7 @@ describe("element-service", () => {
 			const result = await getElement(user.id, created.data!.id);
 
 			expect(result.error).toBeUndefined();
-			expect(result.data?.id).toBe(created.data!.id);
+			expect(result.data!.id).toBe(created.data!.id);
 		});
 
 		it("returns 'Permission denied' for a non-member", async () => {
@@ -385,11 +388,7 @@ describe("element-service", () => {
 				elementType: "goal",
 			});
 
-			const result = await attachElement(
-				user.id,
-				goal.data!.id,
-				goal.data!.id
-			);
+			const result = await attachElement(user.id, goal.data!.id, goal.data!.id);
 
 			expect(result.error).toBe("Cannot set element as its own parent");
 		});

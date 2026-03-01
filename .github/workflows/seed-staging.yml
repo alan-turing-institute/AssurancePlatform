@@ -1,20 +1,16 @@
 name: Seed staging database
 
 on:
-  # Manual trigger
   workflow_dispatch:
-  # Trigger after staging deployment (adjust if you have a different deployment workflow)
-  push:
-    branches:
-      - staging
-    paths-ignore:
-      - ".beads/**"
-      - "*.md"
-      - "docs/**"
+  workflow_run:
+    workflows: ["Build"]
+    branches: [staging]
+    types: [completed]
 
 jobs:
   seed:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout code

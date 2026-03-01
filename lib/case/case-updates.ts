@@ -204,7 +204,6 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
  *
  * Note: Context is now a string[] attribute on elements, not a separate element type.
  */
-// biome-ignore lint/nursery/useMaxParams: Pre-existing function used across codebase, refactoring deferred
 export const updateAssuranceCase = (
 	type: string,
 	assuranceCase: AssuranceCase,

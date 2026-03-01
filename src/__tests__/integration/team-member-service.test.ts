@@ -214,7 +214,9 @@ describe("team-member-service", () => {
 
 			const result = await removeMember(admin.id, teamId, admin.id);
 
-			expect(result.error).toBe("Cannot remove yourself. Use leave team instead.");
+			expect(result.error).toBe(
+				"Cannot remove yourself. Use leave team instead."
+			);
 		});
 
 		it("returns 'Permission denied' when a MEMBER tries to remove someone", async () => {

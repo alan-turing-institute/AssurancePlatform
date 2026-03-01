@@ -98,9 +98,10 @@ describe("DownloadCaseButton", () => {
 
 		// Mock Blob constructor — use RealBlob so URL.createObjectURL receives a genuine Blob.
 		// Must use 'function' keyword (not arrow) for constructor mocks in Vitest.
+		// biome-ignore lint/complexity/useArrowFunction: constructor mock requires function keyword
 		global.Blob = vi.fn().mockImplementation(function (
 			parts: BlobPart[],
-			options: BlobPropertyBag,
+			options: BlobPropertyBag
 		) {
 			return new RealBlob(parts, options);
 		});

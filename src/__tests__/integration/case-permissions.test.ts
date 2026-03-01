@@ -120,7 +120,7 @@ describe("shareByEmail", () => {
 
 	it("grants EDIT permission to an existing user by email", async () => {
 		const owner = await createTestUser();
-		const target = await createTestUser({ email: "editor@example.com" });
+		const _target = await createTestUser({ email: "editor@example.com" });
 		const testCase = await createTestCase(owner.id);
 
 		const result = await shareByEmail(owner.id, testCase.id, {
@@ -319,12 +319,9 @@ describe("updateUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await updateUserPermission(
-			owner.id,
-			testCase.id,
-			perm.id,
-			{ permission: "EDIT" }
-		);
+		const result = await updateUserPermission(owner.id, testCase.id, perm.id, {
+			permission: "EDIT",
+		});
 
 		expect(result.error).toBeUndefined();
 		expect(result.data?.permission).toBe("EDIT");
@@ -362,12 +359,9 @@ describe("updateUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await updateUserPermission(
-			editor.id,
-			testCase.id,
-			perm.id,
-			{ permission: "EDIT" }
-		);
+		const result = await updateUserPermission(editor.id, testCase.id, perm.id, {
+			permission: "EDIT",
+		});
 
 		expect(result.error).toBe("Permission denied");
 	});
@@ -473,11 +467,7 @@ describe("revokeUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await revokeUserPermission(
-			editor.id,
-			testCase.id,
-			perm.id
-		);
+		const result = await revokeUserPermission(editor.id, testCase.id, perm.id);
 
 		expect(result.error).toBe("Permission denied");
 	});

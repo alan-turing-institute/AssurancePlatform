@@ -1,22 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import { validateTemplateConfig } from "../schemas";
 import {
 	createTemplateFromPreset,
-	FullReportTemplate,
-	SummaryTemplate,
 	EvidenceListTemplate,
+	FullReportTemplate,
 	getAvailablePresets,
-	FULL_REPORT_CONFIG,
+	SummaryTemplate,
 } from "../templates";
 import {
 	collectElementsByType,
 	countElementsByType,
-	shouldIncludeElement,
 	getTotalElementCount,
 	getTreeDepth,
+	shouldIncludeElement,
 } from "../templates/renderers/tree-renderer";
-import { validateTemplateConfig } from "../schemas";
-import type { TemplateConfig } from "../schemas";
 
 /**
  * Sample tree node for testing
@@ -102,13 +100,19 @@ describe("Template System", () => {
 			it("should exclude sandbox elements by default", () => {
 				const sandboxNode = tree.children?.[0]?.children?.[1];
 				expect(sandboxNode?.inSandbox).toBe(true);
-				expect(shouldIncludeElement(sandboxNode!, 2, {})).toBe(false);
+				if (!sandboxNode) {
+					throw new Error("sandboxNode not found in test tree");
+				}
+				expect(shouldIncludeElement(sandboxNode, 2, {})).toBe(false);
 			});
 
 			it("should include sandbox elements when includeSandbox is true", () => {
 				const sandboxNode = tree.children?.[0]?.children?.[1];
+				if (!sandboxNode) {
+					throw new Error("sandboxNode not found in test tree");
+				}
 				expect(
-					shouldIncludeElement(sandboxNode!, 2, { includeSandbox: true })
+					shouldIncludeElement(sandboxNode, 2, { includeSandbox: true })
 				).toBe(true);
 			});
 
@@ -119,9 +123,9 @@ describe("Template System", () => {
 			});
 
 			it("should respect includeTypes filter", () => {
-				expect(
-					shouldIncludeElement(tree, 0, { includeTypes: ["GOAL"] })
-				).toBe(true);
+				expect(shouldIncludeElement(tree, 0, { includeTypes: ["GOAL"] })).toBe(
+					true
+				);
 				expect(
 					shouldIncludeElement(tree, 0, { includeTypes: ["EVIDENCE"] })
 				).toBe(false);
@@ -131,9 +135,9 @@ describe("Template System", () => {
 				expect(
 					shouldIncludeElement(tree, 0, { excludeTypes: ["STRATEGY"] })
 				).toBe(true);
-				expect(
-					shouldIncludeElement(tree, 0, { excludeTypes: ["GOAL"] })
-				).toBe(false);
+				expect(shouldIncludeElement(tree, 0, { excludeTypes: ["GOAL"] })).toBe(
+					false
+				);
 			});
 		});
 

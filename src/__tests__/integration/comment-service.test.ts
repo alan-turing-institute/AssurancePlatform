@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { AppError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import {
 	createCaseComment,
 	createElementComment,
@@ -37,12 +37,12 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(user.id);
 
 			// Give user COMMENT permission (owner already has it)
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Hello, case!",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 
 			expect(comment.id).toBeDefined();
 			expect(comment.content).toBe("Hello, case!");
@@ -79,12 +79,12 @@ describe("comment-service", () => {
 			const element = await createTestElement(testCase.id, user.id);
 
 			const session = makeSession(user.id, user.username);
-			const comment = await createElementComment(
+			const comment = (await createElementComment(
 				element.id,
 				"Element note",
 				null,
 				session
-			);
+			)) as unknown as CommentResponse;
 
 			expect(comment.id).toBeDefined();
 			expect(comment.content).toBe("Element note");
@@ -108,18 +108,18 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const parent = await createCaseComment(
+			const parent = (await createCaseComment(
 				testCase.id,
 				"Parent comment",
 				null,
 				user.id
-			);
-			const reply = await createCaseComment(
+			)) as unknown as CommentResponse;
+			const reply = (await createCaseComment(
 				testCase.id,
 				"Reply here",
 				parent.id,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 
 			expect(reply.parentId).toBe(parent.id);
 		});
@@ -130,20 +130,23 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const parent = await createCaseComment(
+			const parent = (await createCaseComment(
 				testCase.id,
 				"Thread root",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			await createCaseComment(testCase.id, "Child", parent.id, user.id);
 
-			const result = await fetchCaseComments(testCase.id, user.id);
+			const result = (await fetchCaseComments(
+				testCase.id,
+				user.id
+			)) as unknown as CommentResponse[];
 
 			expect(result).toHaveLength(1);
 			expect(result[0].content).toBe("Thread root");
 			expect(result[0].replies).toHaveLength(1);
-			expect(result[0].replies![0].content).toBe("Child");
+			expect(result[0].replies?.[0].content).toBe("Child");
 		});
 
 		it("throws NOT_FOUND when user has no VIEW access", async () => {
@@ -164,9 +167,17 @@ describe("comment-service", () => {
 			const element = await createTestElement(testCase.id, user.id);
 
 			const session = makeSession(user.id, user.username);
-			await createElementComment(element.id, "An element comment", null, session);
+			await createElementComment(
+				element.id,
+				"An element comment",
+				null,
+				session
+			);
 
-			const result = await fetchElementComments(element.id, user.id);
+			const result = (await fetchElementComments(
+				element.id,
+				user.id
+			)) as unknown as CommentResponse[];
 
 			expect(result).toHaveLength(1);
 			expect(result[0].content).toBe("An element comment");
@@ -189,15 +200,19 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Original content",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const updated = await updateComment(comment.id, "Edited content", session);
+			const updated = (await updateComment(
+				comment.id,
+				"Edited content",
+				session
+			)) as unknown as CommentResponse;
 
 			expect(updated.content).toBe("Edited content");
 		});
@@ -208,19 +223,19 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Owner comment",
 				null,
 				owner.id
-			);
+			)) as unknown as CommentResponse;
 			const editorSession = makeSession(editor.id, editor.username);
 
-			const updated = await updateComment(
+			const updated = (await updateComment(
 				comment.id,
 				"Editor-modified",
 				editorSession
-			);
+			)) as unknown as CommentResponse;
 
 			expect(updated.content).toBe("Editor-modified");
 		});
@@ -231,12 +246,12 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, viewer.id, owner.id, "COMMENT");
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Owner only",
 				null,
 				owner.id
-			);
+			)) as unknown as CommentResponse;
 			const viewerSession = makeSession(viewer.id, viewer.username);
 
 			// NOT_FOUND is returned (not FORBIDDEN) to prevent comment enumeration
@@ -251,15 +266,17 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Delete me",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const result = await deleteComment(comment.id, session);
+			const result = (await deleteComment(comment.id, session)) as unknown as {
+				success: boolean;
+			};
 
 			expect(result.success).toBe(true);
 		});
@@ -279,15 +296,19 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Resolve me",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const resolved = await resolveComment(comment.id, true, session);
+			const resolved = (await resolveComment(
+				comment.id,
+				true,
+				session
+			)) as unknown as CommentResponse;
 
 			expect(resolved.resolved).toBe(true);
 			expect(resolved.resolvedBy).toBe(user.username);
@@ -298,12 +319,12 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Verify DB state",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
 			await resolveComment(comment.id, true, session);
@@ -323,16 +344,20 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Unresolve me",
 				null,
 				user.id
-			);
+			)) as unknown as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
 			await resolveComment(comment.id, true, session);
-			const unresolved = await resolveComment(comment.id, false, session);
+			const unresolved = (await resolveComment(
+				comment.id,
+				false,
+				session
+			)) as unknown as CommentResponse;
 
 			expect(unresolved.resolved).toBe(false);
 			expect(unresolved.resolvedBy).toBeNull();
@@ -345,12 +370,12 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			const comment = await createCaseComment(
+			const comment = (await createCaseComment(
 				testCase.id,
 				"Only editors can resolve",
 				null,
 				owner.id
-			);
+			)) as unknown as CommentResponse;
 			const viewerSession = makeSession(viewer.id, viewer.username);
 
 			// A VIEW-only user is not the author and does not have EDIT access,

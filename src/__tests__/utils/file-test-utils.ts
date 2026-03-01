@@ -95,68 +95,91 @@ export type DragDropOptions = {
 /**
  * File validation error types
  */
-export enum FileValidationError {
-	INVALID_TYPE = "INVALID_TYPE",
-	FILE_TOO_LARGE = "FILE_TOO_LARGE",
-	FILE_TOO_SMALL = "FILE_TOO_SMALL",
-	EMPTY_FILE = "EMPTY_FILE",
-	INVALID_NAME = "INVALID_NAME",
-	CORRUPTED_FILE = "CORRUPTED_FILE",
+export const FileValidationError = {
+	INVALID_TYPE: "INVALID_TYPE",
+	FILE_TOO_LARGE: "FILE_TOO_LARGE",
+	FILE_TOO_SMALL: "FILE_TOO_SMALL",
+	EMPTY_FILE: "EMPTY_FILE",
+	INVALID_NAME: "INVALID_NAME",
+	CORRUPTED_FILE: "CORRUPTED_FILE",
+} as const;
+export type FileValidationError =
+	(typeof FileValidationError)[keyof typeof FileValidationError];
+
+// ============================================
+// MockURL — module-level state + exported functions
+// ============================================
+
+const _mockObjectURLs: Map<string, Blob | MediaSource> = new Map();
+const _mockRevokedURLs: Set<string> = new Set();
+
+/**
+ * Mock implementation of URL.createObjectURL
+ */
+export const mockCreateObjectURL = vi.fn(
+	(object: Blob | MediaSource): string => {
+		const url = `blob:http://localhost:3000/${Math.random().toString(36).substr(2, 9)}`;
+		_mockObjectURLs.set(url, object);
+		return url;
+	}
+);
+
+/**
+ * Mock implementation of URL.revokeObjectURL
+ */
+export const mockRevokeObjectURL = vi.fn((url: string): void => {
+	_mockObjectURLs.delete(url);
+	_mockRevokedURLs.add(url);
+});
+
+/**
+ * Check if a URL has been created
+ */
+export function mockURLHasObjectURL(url: string): boolean {
+	return _mockObjectURLs.has(url);
 }
 
 /**
- * Mock URL object for testing file URLs
+ * Check if a URL has been revoked
  */
-export class MockURL {
-	static objectURLs: Map<string, Blob | MediaSource> = new Map();
-	static revokedURLs: Set<string> = new Set();
-
-	/**
-	 * Mock implementation of URL.createObjectURL
-	 */
-	static createObjectURL = vi.fn((object: Blob | MediaSource): string => {
-		const url = `blob:http://localhost:3000/${Math.random().toString(36).substr(2, 9)}`;
-		MockURL.objectURLs.set(url, object);
-		return url;
-	});
-
-	/**
-	 * Mock implementation of URL.revokeObjectURL
-	 */
-	static revokeObjectURL = vi.fn((url: string): void => {
-		MockURL.objectURLs.delete(url);
-		MockURL.revokedURLs.add(url);
-	});
-
-	/**
-	 * Check if a URL has been created
-	 */
-	static hasObjectURL(url: string): boolean {
-		return MockURL.objectURLs.has(url);
-	}
-
-	/**
-	 * Check if a URL has been revoked
-	 */
-	static isRevoked(url: string): boolean {
-		return MockURL.revokedURLs.has(url);
-	}
-
-	/**
-	 * Get the object associated with a URL
-	 */
-	static getObjectForURL(url: string): Blob | MediaSource | undefined {
-		return MockURL.objectURLs.get(url);
-	}
-
-	/**
-	 * Clear all object URLs (useful for test cleanup)
-	 */
-	static clearObjectURLs(): void {
-		MockURL.objectURLs.clear();
-		MockURL.revokedURLs.clear();
-	}
+export function mockURLIsRevoked(url: string): boolean {
+	return _mockRevokedURLs.has(url);
 }
+
+/**
+ * Get the object associated with a URL
+ */
+export function mockURLGetObjectForURL(
+	url: string
+): Blob | MediaSource | undefined {
+	return _mockObjectURLs.get(url);
+}
+
+/**
+ * Clear all object URLs (useful for test cleanup)
+ */
+export function mockURLClearObjectURLs(): void {
+	_mockObjectURLs.clear();
+	_mockRevokedURLs.clear();
+}
+
+/**
+ * Namespace alias for backward-compatible access
+ */
+export const MockURL = {
+	get objectURLs() {
+		return _mockObjectURLs;
+	},
+	get revokedURLs() {
+		return _mockRevokedURLs;
+	},
+	createObjectURL: mockCreateObjectURL,
+	revokeObjectURL: mockRevokeObjectURL,
+	hasObjectURL: mockURLHasObjectURL,
+	isRevoked: mockURLIsRevoked,
+	getObjectForURL: mockURLGetObjectForURL,
+	clearObjectURLs: mockURLClearObjectURLs,
+};
 
 /**
  * Creates a mock File object with specified properties
@@ -249,661 +272,722 @@ export function createMockFileList(files: File[]): FileList {
 	};
 
 	// Add indexed properties
-	files.forEach((file, index) => {
+	for (let index = 0; index < files.length; index++) {
 		Object.defineProperty(fileList, index, {
-			value: file,
+			value: files[index],
 			enumerable: true,
 		});
-	});
+	}
 
 	return fileList as FileList;
 }
 
+// ============================================
+// TestFileFactory — exported named functions
+// ============================================
+
 /**
- * Creates commonly used test files for different scenarios
+ * Create a valid image file for testing screenshot uploads
  */
-export class TestFileFactory {
-	/**
-	 * Create a valid image file for testing screenshot uploads
-	 */
-	static createImageFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "screenshot.png",
-			type: MIME_TYPES.PNG,
-			size: FILE_SIZES.MEDIUM,
-			content: "fake-png-data",
-			...options,
-		});
-	}
-
-	/**
-	 * Create a valid PDF file for testing document uploads
-	 */
-	static createPDFFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "document.pdf",
-			type: MIME_TYPES.PDF,
-			size: FILE_SIZES.LARGE,
-			content: "fake-pdf-data",
-			...options,
-		});
-	}
-
-	/**
-	 * Create a JSON file for testing case exports/imports
-	 */
-	static createJSONFile(options: Partial<MockFileOptions> = {}): File {
-		const defaultData = {
-			assuranceCase: {
-				id: 1,
-				name: "Test Case",
-				goals: [],
-				evidence: [],
-			},
-		};
-
-		return createMockFile({
-			name: "assurance-case.json",
-			type: MIME_TYPES.JSON,
-			size: FILE_SIZES.SMALL,
-			content: JSON.stringify(defaultData, null, 2),
-			...options,
-		});
-	}
-
-	/**
-	 * Create a text file for testing
-	 */
-	static createTextFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "document.txt",
-			type: MIME_TYPES.TXT,
-			size: FILE_SIZES.SMALL,
-			content: "This is a test text file.",
-			...options,
-		});
-	}
-
-	/**
-	 * Create an oversized file for testing size validation
-	 */
-	static createOversizedFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "large-file.pdf",
-			type: MIME_TYPES.PDF,
-			size: FILE_SIZES.TOO_LARGE,
-			content: "large-file-content",
-			...options,
-		});
-	}
-
-	/**
-	 * Create an empty file for testing empty file validation
-	 */
-	static createEmptyFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "empty.txt",
-			type: MIME_TYPES.TXT,
-			size: FILE_SIZES.EMPTY,
-			content: "",
-			...options,
-		});
-	}
-
-	/**
-	 * Create a file with an invalid type for testing type validation
-	 */
-	static createInvalidTypeFile(options: Partial<MockFileOptions> = {}): File {
-		return createMockFile({
-			name: "malicious.exe",
-			type: "application/x-msdownload",
-			size: FILE_SIZES.SMALL,
-			content: "executable-content",
-			...options,
-		});
-	}
-
-	/**
-	 * Create multiple files for batch testing
-	 */
-	static createMultipleFiles(count = 3): File[] {
-		return Array.from({ length: count }, (_, index) =>
-			createMockFile({
-				name: `file-${index + 1}.txt`,
-				type: MIME_TYPES.TXT,
-				size: FILE_SIZES.SMALL,
-				content: `Content of file ${index + 1}`,
-			})
-		);
-	}
+export function createImageFile(options: Partial<MockFileOptions> = {}): File {
+	return createMockFile({
+		name: "screenshot.png",
+		type: MIME_TYPES.PNG,
+		size: FILE_SIZES.MEDIUM,
+		content: "fake-png-data",
+		...options,
+	});
 }
 
 /**
- * Utilities for testing drag and drop functionality
+ * Create a valid PDF file for testing document uploads
  */
-export class DragDropTestUtils {
-	/**
-	 * Create a mock DataTransfer object for drag and drop events
-	 */
-	static createMockDataTransfer(files: File[] = []): DataTransfer {
-		const items: DataTransferItem[] = files.map((file) => ({
-			kind: "file" as const,
-			type: file.type,
-			getAsFile: () => file,
-			getAsString: (callback: (data: string) => void) => {
-				// For file items, this would typically not be used
-				callback("");
-			},
-			webkitGetAsEntry: () => null,
-		}));
+export function createPDFFile(options: Partial<MockFileOptions> = {}): File {
+	return createMockFile({
+		name: "document.pdf",
+		type: MIME_TYPES.PDF,
+		size: FILE_SIZES.LARGE,
+		content: "fake-pdf-data",
+		...options,
+	});
+}
 
-		const dataTransfer = {
-			dropEffect: "none" as DataTransfer["dropEffect"],
-			effectAllowed: "all" as DataTransfer["effectAllowed"],
-			files: createMockFileList(files),
-			items: {
-				length: items.length,
-				add: vi.fn(),
-				clear: vi.fn(),
-				remove: vi.fn(),
-				...items.reduce(
-					(acc, item, index) => {
-						acc[index] = item;
-						return acc;
-					},
-					{} as Record<number, DataTransferItem>
-				),
-				*[Symbol.iterator]() {
-					for (const item of items) {
-						yield item;
-					}
+/**
+ * Create a JSON file for testing case exports/imports
+ */
+export function createJSONFile(options: Partial<MockFileOptions> = {}): File {
+	const defaultData = {
+		assuranceCase: {
+			id: 1,
+			name: "Test Case",
+			goals: [],
+			evidence: [],
+		},
+	};
+
+	return createMockFile({
+		name: "assurance-case.json",
+		type: MIME_TYPES.JSON,
+		size: FILE_SIZES.SMALL,
+		content: JSON.stringify(defaultData, null, 2),
+		...options,
+	});
+}
+
+/**
+ * Create a text file for testing
+ */
+export function createTextFile(options: Partial<MockFileOptions> = {}): File {
+	return createMockFile({
+		name: "document.txt",
+		type: MIME_TYPES.TXT,
+		size: FILE_SIZES.SMALL,
+		content: "This is a test text file.",
+		...options,
+	});
+}
+
+/**
+ * Create an oversized file for testing size validation
+ */
+export function createOversizedFile(
+	options: Partial<MockFileOptions> = {}
+): File {
+	return createMockFile({
+		name: "large-file.pdf",
+		type: MIME_TYPES.PDF,
+		size: FILE_SIZES.TOO_LARGE,
+		content: "large-file-content",
+		...options,
+	});
+}
+
+/**
+ * Create an empty file for testing empty file validation
+ */
+export function createEmptyFile(options: Partial<MockFileOptions> = {}): File {
+	return createMockFile({
+		name: "empty.txt",
+		type: MIME_TYPES.TXT,
+		size: FILE_SIZES.EMPTY,
+		content: "",
+		...options,
+	});
+}
+
+/**
+ * Create a file with an invalid type for testing type validation
+ */
+export function createInvalidTypeFile(
+	options: Partial<MockFileOptions> = {}
+): File {
+	return createMockFile({
+		name: "malicious.exe",
+		type: "application/x-msdownload",
+		size: FILE_SIZES.SMALL,
+		content: "executable-content",
+		...options,
+	});
+}
+
+/**
+ * Create multiple files for batch testing
+ */
+export function createMultipleFiles(count = 3): File[] {
+	return Array.from({ length: count }, (_, index) =>
+		createMockFile({
+			name: `file-${index + 1}.txt`,
+			type: MIME_TYPES.TXT,
+			size: FILE_SIZES.SMALL,
+			content: `Content of file ${index + 1}`,
+		})
+	);
+}
+
+/**
+ * Namespace alias for backward-compatible access
+ */
+export const TestFileFactory = {
+	createImageFile,
+	createPDFFile,
+	createJSONFile,
+	createTextFile,
+	createOversizedFile,
+	createEmptyFile,
+	createInvalidTypeFile,
+	createMultipleFiles,
+};
+
+// ============================================
+// DragDropTestUtils — exported named functions
+// ============================================
+
+/**
+ * Create a mock DataTransfer object for drag and drop events
+ */
+export function createMockDataTransfer(files: File[] = []): DataTransfer {
+	const items: DataTransferItem[] = files.map((file) => ({
+		kind: "file" as const,
+		type: file.type,
+		getAsFile: () => file,
+		getAsString: (callback: (data: string) => void) => {
+			// For file items, this would typically not be used
+			callback("");
+		},
+		webkitGetAsEntry: () => null,
+	}));
+
+	const dataTransfer = {
+		dropEffect: "none" as DataTransfer["dropEffect"],
+		effectAllowed: "all" as DataTransfer["effectAllowed"],
+		files: createMockFileList(files),
+		items: {
+			length: items.length,
+			add: vi.fn(),
+			clear: vi.fn(),
+			remove: vi.fn(),
+			...items.reduce(
+				(acc, item, index) => {
+					acc[index] = item;
+					return acc;
 				},
-			} as DataTransferItemList,
-			types: files.map(() => "Files"),
-			clearData: vi.fn(),
-			getData: vi.fn(() => ""),
-			setData: vi.fn(),
-			setDragImage: vi.fn(),
+				{} as Record<number, DataTransferItem>
+			),
+			*[Symbol.iterator]() {
+				for (const item of items) {
+					yield item;
+				}
+			},
+		} as DataTransferItemList,
+		types: files.map(() => "Files"),
+		clearData: vi.fn(),
+		getData: vi.fn(() => ""),
+		setData: vi.fn(),
+		setDragImage: vi.fn(),
+	};
+
+	return dataTransfer as DataTransfer;
+}
+
+/**
+ * Create a drag enter event
+ */
+export function createDragEnterEvent(
+	files: File[] = [],
+	options: DragDropOptions = {}
+): DragEvent {
+	const dataTransfer = createMockDataTransfer(files);
+
+	return new DragEvent("dragenter", {
+		bubbles: true,
+		cancelable: true,
+		dataTransfer,
+		clientX: options.clientX,
+		clientY: options.clientY,
+		screenX: options.screenX,
+		screenY: options.screenY,
+		ctrlKey: options.ctrlKey,
+		shiftKey: options.shiftKey,
+		altKey: options.altKey,
+		metaKey: options.metaKey,
+	});
+}
+
+/**
+ * Create a drag over event
+ */
+export function createDragOverEvent(
+	files: File[] = [],
+	options: DragDropOptions = {}
+): DragEvent {
+	const dataTransfer = createMockDataTransfer(files);
+
+	return new DragEvent("dragover", {
+		bubbles: true,
+		cancelable: true,
+		dataTransfer,
+		clientX: options.clientX,
+		clientY: options.clientY,
+		screenX: options.screenX,
+		screenY: options.screenY,
+		ctrlKey: options.ctrlKey,
+		shiftKey: options.shiftKey,
+		altKey: options.altKey,
+		metaKey: options.metaKey,
+	});
+}
+
+/**
+ * Create a drop event
+ */
+export function createDropEvent(
+	files: File[] = [],
+	options: DragDropOptions = {}
+): DragEvent {
+	const dataTransfer = createMockDataTransfer(files);
+
+	return new DragEvent("drop", {
+		bubbles: true,
+		cancelable: true,
+		dataTransfer,
+		clientX: options.clientX,
+		clientY: options.clientY,
+		screenX: options.screenX,
+		screenY: options.screenY,
+		ctrlKey: options.ctrlKey,
+		shiftKey: options.shiftKey,
+		altKey: options.altKey,
+		metaKey: options.metaKey,
+	});
+}
+
+/**
+ * Create a drag leave event
+ */
+export function createDragLeaveEvent(options: DragDropOptions = {}): DragEvent {
+	return new DragEvent("dragleave", {
+		bubbles: true,
+		cancelable: true,
+		clientX: options.clientX,
+		clientY: options.clientY,
+		screenX: options.screenX,
+		screenY: options.screenY,
+		ctrlKey: options.ctrlKey,
+		shiftKey: options.shiftKey,
+		altKey: options.altKey,
+		metaKey: options.metaKey,
+	});
+}
+
+/**
+ * Simulate a complete drag and drop sequence
+ */
+export async function simulateDragAndDrop(
+	element: HTMLElement,
+	files: File[],
+	options: DragDropOptions = {}
+): Promise<void> {
+	// Simulate drag enter
+	const dragEnterEvent = createDragEnterEvent(files, options);
+	element.dispatchEvent(dragEnterEvent);
+
+	// Simulate drag over
+	const dragOverEvent = createDragOverEvent(files, options);
+	element.dispatchEvent(dragOverEvent);
+
+	// Small delay to simulate real drag and drop timing
+	await new Promise((resolve) => setTimeout(resolve, 10));
+
+	// Simulate drop
+	const dropEvent = createDropEvent(files, options);
+	element.dispatchEvent(dropEvent);
+}
+
+/**
+ * Namespace alias for backward-compatible access
+ */
+export const DragDropTestUtils = {
+	createMockDataTransfer,
+	createDragEnterEvent,
+	createDragOverEvent,
+	createDropEvent,
+	createDragLeaveEvent,
+	simulateDragAndDrop,
+};
+
+// ============================================
+// FileDownloadTestUtils — module-level state + exported functions
+// ============================================
+
+let _downloadLinks: HTMLAnchorElement[] = [];
+
+/**
+ * Mock the creation of download links
+ */
+export function mockDownloadLink(): Mock {
+	const originalCreateElement = document.createElement;
+
+	return vi.fn().mockImplementation((tagName: string) => {
+		if (tagName === "a") {
+			const link = originalCreateElement.call(
+				document,
+				"a"
+			) as HTMLAnchorElement;
+
+			// Override the click method to track downloads
+			const originalClick = link.click;
+			link.click = vi.fn(() => {
+				_downloadLinks.push(link);
+				originalClick.call(link);
+			});
+
+			return link;
+		}
+		return originalCreateElement.call(document, tagName);
+	});
+}
+
+/**
+ * Get all download links that were created
+ */
+export function getDownloadLinks(): HTMLAnchorElement[] {
+	return [..._downloadLinks];
+}
+
+/**
+ * Get the last download link that was created
+ */
+export function getLastDownloadLink(): HTMLAnchorElement | undefined {
+	return _downloadLinks.at(-1);
+}
+
+/**
+ * Clear the download links history
+ */
+export function clearDownloadHistory(): void {
+	_downloadLinks = [];
+}
+
+/**
+ * Assert that a download was triggered with specific properties
+ */
+export function assertDownloadTriggered(
+	expectedFilename?: string,
+	expectedHref?: string
+): void {
+	// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
+	expect(_downloadLinks.length).toBeGreaterThan(0);
+
+	const lastLink = getLastDownloadLink();
+
+	if (expectedFilename && lastLink) {
+		// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
+		expect(lastLink.download).toBe(expectedFilename);
+	}
+
+	if (expectedHref && lastLink) {
+		// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
+		expect(lastLink.href).toBe(expectedHref);
+	}
+}
+
+/**
+ * Create a mock blob for download testing
+ */
+export function createMockBlob(
+	content: string,
+	type: string = MIME_TYPES.JSON
+): Blob {
+	return new Blob([content], { type });
+}
+
+/**
+ * Namespace alias for backward-compatible access
+ */
+export const FileDownloadTestUtils = {
+	mockDownloadLink,
+	getDownloadLinks,
+	getLastDownloadLink,
+	clearDownloadHistory,
+	assertDownloadTriggered,
+	createMockBlob,
+};
+
+// ============================================
+// FileValidationTestUtils — exported named functions
+// ============================================
+
+/**
+ * Test file type validation
+ */
+export function validateFileType(
+	file: File,
+	allowedTypes: string[]
+): { isValid: boolean; error?: FileValidationError } {
+	if (!allowedTypes.includes(file.type)) {
+		return { isValid: false, error: FileValidationError.INVALID_TYPE };
+	}
+	return { isValid: true };
+}
+
+/**
+ * Test file size validation
+ */
+export function validateFileSize(
+	file: File,
+	maxSize: number,
+	minSize = 0
+): { isValid: boolean; error?: FileValidationError } {
+	if (file.size === 0) {
+		return { isValid: false, error: FileValidationError.EMPTY_FILE };
+	}
+
+	if (file.size < minSize) {
+		return { isValid: false, error: FileValidationError.FILE_TOO_SMALL };
+	}
+
+	if (file.size > maxSize) {
+		return { isValid: false, error: FileValidationError.FILE_TOO_LARGE };
+	}
+
+	return { isValid: true };
+}
+
+/**
+ * Test file name validation
+ */
+export function validateFileName(
+	file: File,
+	pattern?: RegExp
+): { isValid: boolean; error?: FileValidationError } {
+	if (!file.name || file.name.trim() === "") {
+		return { isValid: false, error: FileValidationError.INVALID_NAME };
+	}
+
+	if (pattern && !pattern.test(file.name)) {
+		return { isValid: false, error: FileValidationError.INVALID_NAME };
+	}
+
+	return { isValid: true };
+}
+
+/**
+ * Create a comprehensive validation function
+ */
+export function createValidator(options: {
+	allowedTypes?: string[];
+	maxSize?: number;
+	minSize?: number;
+	namePattern?: RegExp;
+}) {
+	return (file: File) => {
+		const results: { isValid: boolean; error?: FileValidationError }[] = [];
+
+		if (options.allowedTypes) {
+			results.push(validateFileType(file, options.allowedTypes));
+		}
+
+		if (options.maxSize !== undefined || options.minSize !== undefined) {
+			results.push(
+				validateFileSize(
+					file,
+					options.maxSize ?? Number.MAX_SAFE_INTEGER,
+					options.minSize
+				)
+			);
+		}
+
+		if (options.namePattern) {
+			results.push(validateFileName(file, options.namePattern));
+		}
+
+		const errors = results.filter((r) => !r.isValid).map((r) => r.error);
+
+		return {
+			isValid: errors.length === 0,
+			errors,
 		};
-
-		return dataTransfer as DataTransfer;
-	}
-
-	/**
-	 * Create a drag enter event
-	 */
-	static createDragEnterEvent(
-		files: File[] = [],
-		options: DragDropOptions = {}
-	): DragEvent {
-		const dataTransfer = DragDropTestUtils.createMockDataTransfer(files);
-
-		return new DragEvent("dragenter", {
-			bubbles: true,
-			cancelable: true,
-			dataTransfer,
-			clientX: options.clientX,
-			clientY: options.clientY,
-			screenX: options.screenX,
-			screenY: options.screenY,
-			ctrlKey: options.ctrlKey,
-			shiftKey: options.shiftKey,
-			altKey: options.altKey,
-			metaKey: options.metaKey,
-		});
-	}
-
-	/**
-	 * Create a drag over event
-	 */
-	static createDragOverEvent(
-		files: File[] = [],
-		options: DragDropOptions = {}
-	): DragEvent {
-		const dataTransfer = DragDropTestUtils.createMockDataTransfer(files);
-
-		return new DragEvent("dragover", {
-			bubbles: true,
-			cancelable: true,
-			dataTransfer,
-			clientX: options.clientX,
-			clientY: options.clientY,
-			screenX: options.screenX,
-			screenY: options.screenY,
-			ctrlKey: options.ctrlKey,
-			shiftKey: options.shiftKey,
-			altKey: options.altKey,
-			metaKey: options.metaKey,
-		});
-	}
-
-	/**
-	 * Create a drop event
-	 */
-	static createDropEvent(
-		files: File[] = [],
-		options: DragDropOptions = {}
-	): DragEvent {
-		const dataTransfer = DragDropTestUtils.createMockDataTransfer(files);
-
-		return new DragEvent("drop", {
-			bubbles: true,
-			cancelable: true,
-			dataTransfer,
-			clientX: options.clientX,
-			clientY: options.clientY,
-			screenX: options.screenX,
-			screenY: options.screenY,
-			ctrlKey: options.ctrlKey,
-			shiftKey: options.shiftKey,
-			altKey: options.altKey,
-			metaKey: options.metaKey,
-		});
-	}
-
-	/**
-	 * Create a drag leave event
-	 */
-	static createDragLeaveEvent(options: DragDropOptions = {}): DragEvent {
-		return new DragEvent("dragleave", {
-			bubbles: true,
-			cancelable: true,
-			clientX: options.clientX,
-			clientY: options.clientY,
-			screenX: options.screenX,
-			screenY: options.screenY,
-			ctrlKey: options.ctrlKey,
-			shiftKey: options.shiftKey,
-			altKey: options.altKey,
-			metaKey: options.metaKey,
-		});
-	}
-
-	/**
-	 * Simulate a complete drag and drop sequence
-	 */
-	static async simulateDragAndDrop(
-		element: HTMLElement,
-		files: File[],
-		options: DragDropOptions = {}
-	): Promise<void> {
-		// Simulate drag enter
-		const dragEnterEvent = DragDropTestUtils.createDragEnterEvent(
-			files,
-			options
-		);
-		element.dispatchEvent(dragEnterEvent);
-
-		// Simulate drag over
-		const dragOverEvent = DragDropTestUtils.createDragOverEvent(files, options);
-		element.dispatchEvent(dragOverEvent);
-
-		// Small delay to simulate real drag and drop timing
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		// Simulate drop
-		const dropEvent = DragDropTestUtils.createDropEvent(files, options);
-		element.dispatchEvent(dropEvent);
-	}
+	};
 }
 
 /**
- * Utilities for testing file download functionality
+ * Namespace alias for backward-compatible access
  */
-export class FileDownloadTestUtils {
-	private static downloadLinks: HTMLAnchorElement[] = [];
+export const FileValidationTestUtils = {
+	validateFileType,
+	validateFileSize,
+	validateFileName,
+	createValidator,
+};
 
-	/**
-	 * Mock the creation of download links
-	 */
-	static mockDownloadLink(): Mock {
-		const originalCreateElement = document.createElement;
+// ============================================
+// FileInputTestUtils — exported named functions
+// ============================================
 
-		return vi.fn().mockImplementation((tagName: string) => {
-			if (tagName === "a") {
-				const link = originalCreateElement.call(
-					document,
-					"a"
-				) as HTMLAnchorElement;
+/**
+ * Simulate file selection on a file input element
+ */
+export async function selectFiles(
+	input: HTMLInputElement,
+	files: File[]
+): Promise<void> {
+	// Create a mock FileList
+	const fileList = createMockFileList(files);
 
-				// Override the click method to track downloads
-				const originalClick = link.click;
-				link.click = vi.fn(() => {
-					FileDownloadTestUtils.downloadLinks.push(link);
-					originalClick.call(link);
-				});
+	// Set the files property
+	Object.defineProperty(input, "files", {
+		value: fileList,
+		configurable: true,
+	});
 
-				return link;
-			}
-			return originalCreateElement.call(document, tagName);
-		});
-	}
+	// Trigger the change event
+	const changeEvent = new Event("change", { bubbles: true });
+	input.dispatchEvent(changeEvent);
 
-	/**
-	 * Get all download links that were created
-	 */
-	static getDownloadLinks(): HTMLAnchorElement[] {
-		return [...FileDownloadTestUtils.downloadLinks];
-	}
-
-	/**
-	 * Get the last download link that was created
-	 */
-	static getLastDownloadLink(): HTMLAnchorElement | undefined {
-		return FileDownloadTestUtils.downloadLinks.at(-1);
-	}
-
-	/**
-	 * Clear the download links history
-	 */
-	static clearDownloadHistory(): void {
-		FileDownloadTestUtils.downloadLinks = [];
-	}
-
-	/**
-	 * Assert that a download was triggered with specific properties
-	 */
-	static assertDownloadTriggered(
-		expectedFilename?: string,
-		expectedHref?: string
-	): void {
-		expect(FileDownloadTestUtils.downloadLinks.length).toBeGreaterThan(0);
-
-		const lastLink = FileDownloadTestUtils.getLastDownloadLink()!;
-
-		if (expectedFilename) {
-			expect(lastLink.download).toBe(expectedFilename);
-		}
-
-		if (expectedHref) {
-			expect(lastLink.href).toBe(expectedHref);
-		}
-	}
-
-	/**
-	 * Create a mock blob for download testing
-	 */
-	static createMockBlob(content: string, type: string = MIME_TYPES.JSON): Blob {
-		return new Blob([content], { type });
-	}
+	// Small delay to allow for async processing
+	await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 /**
- * File validation testing utilities
+ * Create a file input element for testing
  */
-export class FileValidationTestUtils {
-	/**
-	 * Test file type validation
-	 */
-	static validateFileType(
-		file: File,
-		allowedTypes: string[]
-	): { isValid: boolean; error?: FileValidationError } {
-		if (!allowedTypes.includes(file.type)) {
-			return { isValid: false, error: FileValidationError.INVALID_TYPE };
-		}
-		return { isValid: true };
+export function createFileInput(
+	options: {
+		accept?: string;
+		multiple?: boolean;
+		name?: string;
+		id?: string;
+	} = {}
+): HTMLInputElement {
+	const input = document.createElement("input");
+	input.type = "file";
+
+	if (options.accept) {
+		input.accept = options.accept;
+	}
+	if (options.multiple) {
+		input.multiple = options.multiple;
+	}
+	if (options.name) {
+		input.name = options.name;
+	}
+	if (options.id) {
+		input.id = options.id;
 	}
 
-	/**
-	 * Test file size validation
-	 */
-	static validateFileSize(
-		file: File,
-		maxSize: number,
-		minSize = 0
-	): { isValid: boolean; error?: FileValidationError } {
-		if (file.size === 0) {
-			return { isValid: false, error: FileValidationError.EMPTY_FILE };
-		}
-
-		if (file.size < minSize) {
-			return { isValid: false, error: FileValidationError.FILE_TOO_SMALL };
-		}
-
-		if (file.size > maxSize) {
-			return { isValid: false, error: FileValidationError.FILE_TOO_LARGE };
-		}
-
-		return { isValid: true };
-	}
-
-	/**
-	 * Test file name validation
-	 */
-	static validateFileName(
-		file: File,
-		pattern?: RegExp
-	): { isValid: boolean; error?: FileValidationError } {
-		if (!file.name || file.name.trim() === "") {
-			return { isValid: false, error: FileValidationError.INVALID_NAME };
-		}
-
-		if (pattern && !pattern.test(file.name)) {
-			return { isValid: false, error: FileValidationError.INVALID_NAME };
-		}
-
-		return { isValid: true };
-	}
-
-	/**
-	 * Create a comprehensive validation function
-	 */
-	static createValidator(options: {
-		allowedTypes?: string[];
-		maxSize?: number;
-		minSize?: number;
-		namePattern?: RegExp;
-	}) {
-		return (file: File) => {
-			const results = [];
-
-			if (options.allowedTypes) {
-				results.push(
-					FileValidationTestUtils.validateFileType(file, options.allowedTypes)
-				);
-			}
-
-			if (options.maxSize !== undefined || options.minSize !== undefined) {
-				results.push(
-					FileValidationTestUtils.validateFileSize(
-						file,
-						options.maxSize ?? Number.MAX_SAFE_INTEGER,
-						options.minSize
-					)
-				);
-			}
-
-			if (options.namePattern) {
-				results.push(
-					FileValidationTestUtils.validateFileName(file, options.namePattern)
-				);
-			}
-
-			const errors = results.filter((r) => !r.isValid).map((r) => r.error);
-
-			return {
-				isValid: errors.length === 0,
-				errors,
-			};
-		};
-	}
+	return input;
 }
 
 /**
- * File input testing utilities
+ * Namespace alias for backward-compatible access
  */
-export class FileInputTestUtils {
-	/**
-	 * Simulate file selection on a file input element
-	 */
-	static async selectFiles(
-		input: HTMLInputElement,
-		files: File[]
-	): Promise<void> {
-		// Create a mock FileList
-		const fileList = createMockFileList(files);
+export const FileInputTestUtils = {
+	selectFiles,
+	createFileInput,
+};
 
-		// Set the files property
-		Object.defineProperty(input, "files", {
-			value: fileList,
-			configurable: true,
-		});
+// ============================================
+// FileTestSetup — module-level saved originals + exported functions
+// ============================================
 
-		// Trigger the change event
-		const changeEvent = new Event("change", { bubbles: true });
-		input.dispatchEvent(changeEvent);
-
-		// Small delay to allow for async processing
-		await new Promise((resolve) => setTimeout(resolve, 0));
-	}
-
-	/**
-	 * Create a file input element for testing
-	 */
-	static createFileInput(
-		options: {
-			accept?: string;
-			multiple?: boolean;
-			name?: string;
-			id?: string;
-		} = {}
-	): HTMLInputElement {
-		const input = document.createElement("input");
-		input.type = "file";
-
-		if (options.accept) {
-			input.accept = options.accept;
-		}
-		if (options.multiple) {
-			input.multiple = options.multiple;
-		}
-		if (options.name) {
-			input.name = options.name;
-		}
-		if (options.id) {
-			input.id = options.id;
-		}
-
-		return input;
-	}
-}
+let _savedCreateObjectURL: typeof URL.createObjectURL | undefined;
+let _savedRevokeObjectURL: typeof URL.revokeObjectURL | undefined;
+let _savedCreateElement: typeof document.createElement | undefined;
 
 /**
- * Setup and teardown utilities for file testing
+ * Setup mock implementations for file-related APIs
  */
-export class FileTestSetup {
-	private static originalCreateObjectURL: typeof URL.createObjectURL;
-	private static originalRevokeObjectURL: typeof URL.revokeObjectURL;
-	private static originalCreateElement: typeof document.createElement;
+export function setupFileTests(): void {
+	// Store original implementations
+	_savedCreateObjectURL = URL.createObjectURL;
+	_savedRevokeObjectURL = URL.revokeObjectURL;
+	_savedCreateElement = document.createElement;
 
-	/**
-	 * Setup mock implementations for file-related APIs
-	 */
-	static setup(): void {
-		// Store original implementations
-		FileTestSetup.originalCreateObjectURL = URL.createObjectURL;
-		FileTestSetup.originalRevokeObjectURL = URL.revokeObjectURL;
-		FileTestSetup.originalCreateElement = document.createElement;
+	// Replace with mocks
+	global.URL.createObjectURL = mockCreateObjectURL;
+	global.URL.revokeObjectURL = mockRevokeObjectURL;
 
-		// Replace with mocks
-		global.URL.createObjectURL = MockURL.createObjectURL;
-		global.URL.revokeObjectURL = MockURL.revokeObjectURL;
+	// Mock FileReader if needed
+	if (!global.FileReader) {
+		global.FileReader = class MockFileReader
+			extends EventTarget
+			implements FileReader
+		{
+			error: DOMException | null = null;
+			readyState: 0 | 1 | 2 = FileReader.EMPTY;
+			result: string | ArrayBuffer | null = null;
 
-		// Mock FileReader if needed
-		if (!global.FileReader) {
-			global.FileReader = class MockFileReader
-				extends EventTarget
-				implements FileReader
-			{
-				error: DOMException | null = null;
-				readyState: 0 | 1 | 2 = FileReader.EMPTY;
-				result: string | ArrayBuffer | null = null;
+			EMPTY = FileReader.EMPTY;
+			LOADING = FileReader.LOADING;
+			DONE = FileReader.DONE;
 
-				EMPTY = FileReader.EMPTY;
-				LOADING = FileReader.LOADING;
-				DONE = FileReader.DONE;
+			abort(): void {
+				this.readyState = FileReader.DONE;
+			}
 
-				abort(): void {
+			readAsArrayBuffer(_file: Blob): void {
+				setTimeout(() => {
 					this.readyState = FileReader.DONE;
-				}
+					this.result = new ArrayBuffer(0);
+					this.dispatchEvent(new Event("load"));
+				}, 0);
+			}
 
-				readAsArrayBuffer(_file: Blob): void {
-					setTimeout(() => {
-						this.readyState = FileReader.DONE;
-						this.result = new ArrayBuffer(0);
-						this.dispatchEvent(new Event("load"));
-					}, 0);
-				}
+			readAsBinaryString(_file: Blob): void {
+				setTimeout(() => {
+					this.readyState = FileReader.DONE;
+					this.result = "";
+					this.dispatchEvent(new Event("load"));
+				}, 0);
+			}
 
-				readAsBinaryString(_file: Blob): void {
-					setTimeout(() => {
-						this.readyState = FileReader.DONE;
-						this.result = "";
-						this.dispatchEvent(new Event("load"));
-					}, 0);
-				}
+			readAsDataURL(file: Blob): void {
+				setTimeout(() => {
+					this.readyState = FileReader.DONE;
+					this.result = `data:${file.type};base64,${btoa("mock-file-content")}`;
+					this.dispatchEvent(new Event("load"));
+				}, 0);
+			}
 
-				readAsDataURL(file: Blob): void {
-					setTimeout(() => {
-						this.readyState = FileReader.DONE;
-						this.result = `data:${file.type};base64,${btoa("mock-file-content")}`;
-						this.dispatchEvent(new Event("load"));
-					}, 0);
-				}
+			readAsText(_file: Blob, _encoding?: string): void {
+				setTimeout(() => {
+					this.readyState = FileReader.DONE;
+					this.result = "mock-file-content";
+					this.dispatchEvent(new Event("load"));
+				}, 0);
+			}
 
-				readAsText(_file: Blob, _encoding?: string): void {
-					setTimeout(() => {
-						this.readyState = FileReader.DONE;
-						this.result = "mock-file-content";
-						this.dispatchEvent(new Event("load"));
-					}, 0);
-				}
-
-				onabort:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-				onerror:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-				onload:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-				onloadend:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-				onloadstart:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-				onprogress:
-					| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
-					| null = null;
-			} as any;
-		}
-	}
-
-	/**
-	 * Cleanup and restore original implementations
-	 */
-	static cleanup(): void {
-		// Restore original implementations
-		if (FileTestSetup.originalCreateObjectURL) {
-			global.URL.createObjectURL = FileTestSetup.originalCreateObjectURL;
-		}
-
-		if (FileTestSetup.originalRevokeObjectURL) {
-			global.URL.revokeObjectURL = FileTestSetup.originalRevokeObjectURL;
-		}
-
-		if (FileTestSetup.originalCreateElement) {
-			global.document.createElement = FileTestSetup.originalCreateElement;
-		}
-
-		// Clear mock data
-		MockURL.clearObjectURLs();
-		FileDownloadTestUtils.clearDownloadHistory();
+			onabort:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+			onerror:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+			onload:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+			onloadend:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+			onloadstart:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+			onprogress:
+				| ((this: FileReader, ev: ProgressEvent<FileReader>) => any)
+				| null = null;
+		} as any;
 	}
 }
+
+/**
+ * Cleanup and restore original implementations
+ */
+export function cleanupFileTests(): void {
+	// Restore original implementations
+	if (_savedCreateObjectURL) {
+		global.URL.createObjectURL = _savedCreateObjectURL;
+	}
+
+	if (_savedRevokeObjectURL) {
+		global.URL.revokeObjectURL = _savedRevokeObjectURL;
+	}
+
+	if (_savedCreateElement) {
+		global.document.createElement = _savedCreateElement;
+	}
+
+	// Clear mock data
+	mockURLClearObjectURLs();
+	clearDownloadHistory();
+}
+
+/**
+ * Namespace alias for backward-compatible access
+ */
+export const FileTestSetup = {
+	setup: setupFileTests,
+	cleanup: cleanupFileTests,
+};
 
 /**
  * Common file testing assertions
@@ -917,15 +1001,19 @@ export const fileAssertions = {
 		expected: Partial<Pick<File, "name" | "type" | "size" | "lastModified">>
 	): void {
 		if (expected.name !== undefined) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 			expect(file.name).toBe(expected.name);
 		}
 		if (expected.type !== undefined) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 			expect(file.type).toBe(expected.type);
 		}
 		if (expected.size !== undefined) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 			expect(file.size).toBe(expected.size);
 		}
 		if (expected.lastModified !== undefined) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 			expect(file.lastModified).toBe(expected.lastModified);
 		}
 	},
@@ -934,9 +1022,11 @@ export const fileAssertions = {
 	 * Assert that a FileList contains expected files
 	 */
 	fileListContains(fileList: FileList, expectedFiles: File[]): void {
+		// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 		expect(fileList.length).toBe(expectedFiles.length);
 
 		for (let i = 0; i < expectedFiles.length; i++) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
 			expect(fileList[i]).toBe(expectedFiles[i]);
 		}
 	},
@@ -945,22 +1035,22 @@ export const fileAssertions = {
 	 * Assert that a download was triggered
 	 */
 	downloadTriggered(filename?: string, href?: string): void {
-		FileDownloadTestUtils.assertDownloadTriggered(filename, href);
+		assertDownloadTriggered(filename, href);
 	},
 
 	/**
 	 * Assert that an object URL was created
 	 */
 	objectURLCreated(url: string): void {
-		expect(MockURL.hasObjectURL(url)).toBe(true);
+		// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
+		expect(mockURLHasObjectURL(url)).toBe(true);
 	},
 
 	/**
 	 * Assert that an object URL was revoked
 	 */
 	objectURLRevoked(url: string): void {
-		expect(MockURL.isRevoked(url)).toBe(true);
+		// biome-ignore lint/suspicious/noMisplacedAssertion: assertion helper
+		expect(mockURLIsRevoked(url)).toBe(true);
 	},
 };
-
-// All exports are already declared above with their class/function definitions

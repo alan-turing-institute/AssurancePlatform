@@ -17,7 +17,7 @@ describe("Integration test infrastructure", () => {
 
 		const found = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(found).not.toBeNull();
-		expect(found!.email).toBe(user.email);
+		expect(found?.email).toBe(user.email);
 	});
 
 	it("truncates tables after each test (previous user should be gone)", async () => {

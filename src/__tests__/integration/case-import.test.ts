@@ -90,7 +90,9 @@ describe("importCase", () => {
 		const result = await importCase(user.id, json);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 		expect(result.data.caseId).toBeDefined();
 		expect(result.data.caseName).toBe("Test Import Case");
 	});
@@ -103,7 +105,9 @@ describe("importCase", () => {
 		const result = await importCase(user.id, json);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		const createdCase = await prisma.assuranceCase.findUnique({
 			where: { id: result.data.caseId },
@@ -120,7 +124,9 @@ describe("importCase", () => {
 		const result = await importCase(user.id, json);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		const elements = await prisma.assuranceElement.findMany({
 			where: { caseId: result.data.caseId },
@@ -148,7 +154,9 @@ describe("importCase", () => {
 		const result = await importCase(user.id, json);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		// Chain has: goal, strategy, claim, evidence = 4 elements
 		expect(result.data.elementCount).toBe(4);
@@ -162,7 +170,9 @@ describe("importCase", () => {
 		const result = await importCase(user.id, json);
 
 		expect("data" in result).toBe(true);
-		if (!("data" in result)) return;
+		if (!("data" in result)) {
+			return;
+		}
 
 		expect(result.data.evidenceLinkCount).toBeGreaterThanOrEqual(1);
 
@@ -258,12 +268,16 @@ describe("validateImportData", () => {
 		const importResult = await importCase(user.id, json);
 
 		expect("data" in importResult).toBe(true);
-		if (!("data" in importResult)) return;
+		if (!("data" in importResult)) {
+			return;
+		}
 
 		const exportResult = await exportCase(user.id, importResult.data.caseId);
 
 		expect("data" in exportResult).toBe(true);
-		if (!("data" in exportResult)) return;
+		if (!("data" in exportResult)) {
+			return;
+		}
 
 		expect(exportResult.data.case.name).toBe("Chained Case");
 

@@ -100,6 +100,7 @@ vi.mock("next/image", () => ({
 		} = props;
 		// eslint-disable-next-line @next/next/no-img-element
 		// biome-ignore lint/performance/noImgElement: This is a test mock for Next.js Image component
+		// biome-ignore lint/correctness/useImageSize: Test mock does not need explicit dimensions
 		return <img alt="" {...imgProps} />;
 	},
 }));
