@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
-import { SanitizedHtml } from "@/components/common/sanitized-html";
+import { SanitizedHtml } from "@/components/cases/sanitized-html";
 import { formatShortDate } from "@/lib/date";
 import CaseStudyCases from "../../_components/case-study-cases";
 

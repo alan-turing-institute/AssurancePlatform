@@ -6,17 +6,17 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 import { toast } from "sonner";
+import CheckTourClient from "@/components/tour/check-tour-client";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
-import CheckTourClient from "../common/check-tour-client";
-import Header from "../header";
 import { ErrorBoundary } from "../ui/error-boundary";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
+import Header from "./header";
 
 type CaseContainerProps = {
 	caseId?: string;

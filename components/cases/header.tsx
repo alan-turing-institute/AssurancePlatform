@@ -4,16 +4,16 @@ import type React from "react";
 import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import { toast } from "sonner";
-import SearchNodes from "@/components/common/search-nodes";
+import SearchNodes from "@/components/cases/search-nodes";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { type ReactFlowNode, toggleHiddenForParent } from "@/lib/case";
 import useStore from "@/store/store";
 import type { PublishStatusType } from "@/types/domain";
-import LogoutButton from "./auth/logout-button";
-import ActiveUsersList from "./cases/active-users-list";
-import { StatusButton } from "./publishing/status-button";
-import { Button } from "./ui/button";
+import LogoutButton from "../auth/logout-button";
+import { StatusButton } from "../publishing/status-button";
+import { Button } from "../ui/button";
+import ActiveUsersList from "./active-users-list";
 
 type HeaderProps = {
 	setOpen: Dispatch<SetStateAction<boolean>>;

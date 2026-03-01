@@ -240,6 +240,7 @@ docker-compose.prod-test.yml
 # Temporary files
 *.tmp
 *.temp
+*.bak
 .temp/
 .tmp/
 

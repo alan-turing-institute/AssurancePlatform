@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import NodeCreate from "@/components/common/node-create";
+import NodeCreate from "@/components/cases/node-create";
 import { Button } from "@/components/ui/button";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useExportModal } from "@/hooks/use-export-modal";

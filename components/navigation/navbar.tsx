@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import LogoutButton from "@/components/auth/logout-button";
-import FeedbackBanner from "@/components/feedback-banner";
+import FeedbackBanner from "@/components/navigation/feedback-banner";
 import { ModeToggle } from "@/components/ui/theme-toggle";
 import DesktopNav from "./desktop-nav";
 import MenuToggleButton from "./menu-toggle";

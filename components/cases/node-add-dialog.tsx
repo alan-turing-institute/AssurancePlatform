@@ -3,7 +3,7 @@
 import { FileText, GitBranch, Scale } from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
-import NewLinkForm from "@/components/common/new-link-form";
+import NewLinkForm from "@/components/cases/new-link-form";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import {
 	Dialog,

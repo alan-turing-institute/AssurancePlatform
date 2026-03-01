@@ -4,9 +4,9 @@ import { ensureUserHasDemoCase } from "@/actions/demo-case";
 import { fetchCurrentUser } from "@/actions/users";
 import CaseList from "@/components/cases/case-list";
 import NoCasesFound from "@/components/cases/no-cases-found";
-import CheckMigrationNotice from "@/components/check-migration-notice";
-import CheckUserEmail from "@/components/check-user-email";
-import CheckTour from "@/components/common/check-tour";
+import CheckMigrationNotice from "@/components/layout/check-migration-notice";
+import CheckUserEmail from "@/components/layout/check-user-email";
+import CheckTour from "@/components/tour/check-tour";
 import { validateSession } from "@/lib/auth/validate-session";
 
 const Dashboard = async () => {

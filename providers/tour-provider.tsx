@@ -2,7 +2,7 @@
 
 import { NextStep, NextStepProvider, useNextStep } from "nextstepjs";
 import { type ReactNode, useEffect, useRef } from "react";
-import TourCard from "@/components/common/tour-card";
+import TourCard from "@/components/tour/tour-card";
 import { caseCanvasTour } from "@/lib/tours/case-canvas-tour";
 import { dashboardTour } from "@/lib/tours/dashboard-tour";
 import { demoCaseTour } from "@/lib/tours/demo-case-tour";
