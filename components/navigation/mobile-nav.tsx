@@ -8,7 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type Dispatch, Fragment, type SetStateAction } from "react";
 import { externalNavigation, navigation } from "@/config";
-import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
+import { useCreateTeamModal } from "@/hooks/modal-hooks";
 import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
 import { Separator } from "../ui/separator";
 import LoggedInUser from "./logged-in-user";

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { InviteAcceptCard } from "./_components/invite-accept-card";
 
 export function generateMetadata(): Metadata {

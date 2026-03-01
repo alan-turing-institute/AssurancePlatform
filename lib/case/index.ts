@@ -53,3 +53,20 @@ export {
 export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
 // Types
 export type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
+// Convert case utilities
+export type { AssuranceCaseWithGoals, ConvertibleItem } from "./convert-case";
+export {
+	convertAssuranceCase,
+	createEdgesFromNodes,
+	createNodesRecursively,
+} from "./convert-case";
+// Identifier utilities
+export { compareIdentifiers, parseIdentifier } from "./identifier-utils";
+// Layout helper
+export { getLayoutedElements } from "./layout-helper";
+// Node operations
+export type { OrphanElementData } from "./node-operations";
+export { deleteNode, detachNode } from "./node-operations";
+// Node move operations
+export type { MoveElement } from "./node-move-operations";
+export { moveEvidence, movePropertyClaim } from "./node-move-operations";

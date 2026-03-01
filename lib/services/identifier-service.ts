@@ -1,4 +1,4 @@
-import { compareIdentifiers } from "@/lib/identifier-utils";
+import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";

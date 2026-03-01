@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
+import { useCreateCaseModal } from "@/hooks/modal-hooks";
 import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,

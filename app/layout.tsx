@@ -3,7 +3,7 @@ import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from "next-auth";
 import { Toaster } from "@/components/ui/sonner";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { cn } from "@/lib/utils";
 import { ModalProvider } from "@/providers/modal-provider";
 import SessionProvider from "@/providers/session-provider";

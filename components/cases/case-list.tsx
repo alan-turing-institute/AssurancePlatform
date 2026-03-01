@@ -12,8 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
-import { useImportModal } from "@/hooks/use-import-modal";
+import { useCreateCaseModal, useImportModal } from "@/hooks/modal-hooks";
 import { Input } from "../ui/input";
 import CaseCard, { type CaseCardData } from "./case-card";
 

@@ -4,7 +4,7 @@ import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
+import { useCreateTeamModal } from "@/hooks/modal-hooks";
 import { TeamCard } from "./team-card";
 
 type Team = {

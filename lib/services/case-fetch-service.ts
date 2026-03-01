@@ -1,4 +1,4 @@
-import { compareIdentifiers } from "@/lib/identifier-utils";
+import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";

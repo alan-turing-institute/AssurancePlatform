@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { TeamList } from "@/components/teams";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { prisma } from "@/lib/prisma";
 
 async function getTeamsForUser(userId: string) {

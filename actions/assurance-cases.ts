@@ -5,7 +5,7 @@ import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
-import { validateInput } from "@/lib/validation/server-action";
+import { validateInput } from "@/lib/validation/input-validation";
 import type { ActionResult } from "@/types";
 
 type AssuranceCase = {

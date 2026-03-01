@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { isTeamAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { TeamSettingsForm } from "./_components/team-settings-form";

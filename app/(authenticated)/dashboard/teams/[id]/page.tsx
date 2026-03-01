@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { TeamMemberList } from "@/components/teams";
 import { Button } from "@/components/ui/button";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/src/generated/prisma";
 

@@ -9,7 +9,7 @@
 
 import ELK from "elkjs/lib/elk.bundled.js";
 import type { Edge, Node } from "reactflow";
-import { compareIdentifiers } from "@/lib/identifier-utils";
+import { compareIdentifiers } from "@/lib/case/identifier-utils";
 
 const elk = new ELK();
 

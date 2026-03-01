@@ -5,8 +5,7 @@ import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
-import { useImportModal } from "@/hooks/use-import-modal";
+import { useCreateCaseModal, useImportModal } from "@/hooks/modal-hooks";
 
 type NoCasesFoundProps = {
 	message: string;

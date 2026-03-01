@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import { Modal } from "@/components/ui/modal";
-import { useResourcesModal } from "@/hooks/use-resources-modal";
+import { useResourcesModal } from "@/hooks/modal-hooks";
 import { cn } from "@/lib/utils";
 
 export const ResourcesModal = () => {

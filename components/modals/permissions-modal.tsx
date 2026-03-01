@@ -10,7 +10,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import { usePermissionsModal } from "@/hooks/use-permissions-modal";
+import { usePermissionsModal } from "@/hooks/modal-hooks";
 import useStore from "@/store/store";
 
 type Member = {

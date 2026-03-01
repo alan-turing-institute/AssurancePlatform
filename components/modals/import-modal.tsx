@@ -4,7 +4,7 @@ import { Cloud, Github, Upload } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useImportModal } from "@/hooks/use-import-modal";
+import { useImportModal } from "@/hooks/modal-hooks";
 import { FileImportTab } from "./_import-modal/file-import-tab";
 import { GitHubImportTab } from "./_import-modal/github-import-tab";
 import { GoogleDriveImportTab } from "./_import-modal/google-drive-import-tab";

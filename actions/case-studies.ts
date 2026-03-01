@@ -26,7 +26,7 @@ import {
 import {
 	validateFormData,
 	validateInput,
-} from "@/lib/validation/server-action";
+} from "@/lib/validation/input-validation";
 import type { ActionResult } from "@/types";
 
 type CaseStudyResponse = ReturnType<typeof transformCaseStudyForApi>;

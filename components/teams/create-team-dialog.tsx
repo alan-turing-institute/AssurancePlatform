@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
+import { useCreateTeamModal } from "@/hooks/modal-hooks";
 import {
 	type CreateTeamSchemaInput,
 	createTeamSchema,

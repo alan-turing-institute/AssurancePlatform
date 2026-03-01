@@ -267,53 +267,21 @@ vi.mock("@/lib/toast", () => ({
 
 // Note: Store mock removed from global setup to avoid conflicts with test-specific mocks
 
-// Mock all modal hooks to prevent modals from rendering in tests
-vi.mock("@/hooks/use-permissions-modal", () => ({
-	usePermissionsModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
-}));
+// Mock all basic modal hooks to prevent modals from rendering in tests
+const mockModalHook = () => ({
+	isOpen: false,
+	onOpen: vi.fn(),
+	onClose: vi.fn(),
+});
 
-vi.mock("@/hooks/use-case-create-modal", () => ({
-	useCaseCreateModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
-}));
-
-vi.mock("@/hooks/use-import-modal", () => ({
-	useImportModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
-}));
-
-vi.mock("@/hooks/use-export-modal", () => ({
-	useExportModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
-}));
-
-vi.mock("@/hooks/use-email-modal", () => ({
-	useEmailModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
-}));
-
-vi.mock("@/hooks/use-resources-modal", () => ({
-	useResourcesModal: () => ({
-		isOpen: false,
-		onOpen: vi.fn(),
-		onClose: vi.fn(),
-	}),
+vi.mock("@/hooks/modal-hooks", () => ({
+	useCreateCaseModal: mockModalHook,
+	useCreateTeamModal: mockModalHook,
+	useEmailModal: mockModalHook,
+	useExportModal: mockModalHook,
+	useImportModal: mockModalHook,
+	usePermissionsModal: mockModalHook,
+	useResourcesModal: mockModalHook,
 }));
 
 // Mock the entire ModalProvider to prevent modal rendering in tests
