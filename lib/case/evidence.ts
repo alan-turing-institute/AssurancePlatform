@@ -33,9 +33,9 @@ const searchInStrategiesForEvidence = (
 	newEvidence: Evidence
 ): boolean => {
 	for (const strategy of strategies) {
-		if (strategy.property_claims && strategy.property_claims.length > 0) {
+		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
 			const found = addEvidenceToClaim(
-				strategy.property_claims,
+				strategy.propertyClaims,
 				parentId,
 				newEvidence
 			);
@@ -65,11 +65,11 @@ export const addEvidenceToClaim = (
 
 		// If this property claim has nested property claims, recursively search within them
 		if (
-			propertyClaim.property_claims &&
-			propertyClaim.property_claims.length > 0
+			propertyClaim.propertyClaims &&
+			propertyClaim.propertyClaims.length > 0
 		) {
 			const found = searchInNestedClaimsForEvidence(
-				propertyClaim.property_claims,
+				propertyClaim.propertyClaims,
 				parentId,
 				newEvidence
 			);
@@ -102,17 +102,17 @@ const updateStrategiesWithEvidence = (
 ): { strategies: Strategy[]; found: boolean } => {
 	let found = false;
 	const result = strategies.map((strategy) => {
-		if (found || !strategy.property_claims?.length) {
+		if (found || !strategy.propertyClaims?.length) {
 			return strategy;
 		}
 		const updated = updateEvidenceNested(
-			strategy.property_claims,
+			strategy.propertyClaims,
 			id,
 			newEvidence
 		);
-		if (updated !== strategy.property_claims) {
+		if (updated !== strategy.propertyClaims) {
 			found = true;
-			return { ...strategy, property_claims: updated };
+			return { ...strategy, propertyClaims: updated };
 		}
 		return strategy;
 	});
@@ -145,11 +145,11 @@ const processClaimForEvidenceUpdate = (
 	}
 
 	// Check nested property claims
-	if (claim.property_claims?.length) {
-		const nested = updateEvidenceNested(claim.property_claims, id, newEvidence);
-		if (nested !== claim.property_claims) {
+	if (claim.propertyClaims?.length) {
+		const nested = updateEvidenceNested(claim.propertyClaims, id, newEvidence);
+		if (nested !== claim.propertyClaims) {
 			return {
-				claim: { ...claim, property_claims: nested },
+				claim: { ...claim, propertyClaims: nested },
 				found: true,
 			};
 		}
@@ -218,20 +218,20 @@ const removeEvidenceFromOldLocation = (
 			);
 		}
 
-		if (newItem.property_claims) {
-			newItem.property_claims = removeEvidenceFromOldLocation(
-				newItem.property_claims,
+		if (newItem.propertyClaims) {
+			newItem.propertyClaims = removeEvidenceFromOldLocation(
+				newItem.propertyClaims,
 				id
 			);
 		}
 
 		if (newItem.strategies) {
 			newItem.strategies = newItem.strategies.map((strategy) => {
-				if (strategy.property_claims) {
+				if (strategy.propertyClaims) {
 					return {
 						...strategy,
-						property_claims: removeEvidenceFromOldLocation(
-							strategy.property_claims,
+						propertyClaims: removeEvidenceFromOldLocation(
+							strategy.propertyClaims,
 							id
 						),
 					};
@@ -261,9 +261,9 @@ const addEvidenceToNewLocation = (
 			newItem.evidence = [...(newItem.evidence || []), evidence];
 		}
 
-		if (newItem.property_claims) {
-			newItem.property_claims = addEvidenceToNewLocation(
-				newItem.property_claims,
+		if (newItem.propertyClaims) {
+			newItem.propertyClaims = addEvidenceToNewLocation(
+				newItem.propertyClaims,
 				evidence,
 				newClaimId
 			);
@@ -271,11 +271,11 @@ const addEvidenceToNewLocation = (
 
 		if (newItem.strategies) {
 			newItem.strategies = newItem.strategies.map((strategy) => {
-				if (strategy.property_claims) {
+				if (strategy.propertyClaims) {
 					return {
 						...strategy,
-						property_claims: addEvidenceToNewLocation(
-							strategy.property_claims,
+						propertyClaims: addEvidenceToNewLocation(
+							strategy.propertyClaims,
 							evidence,
 							newClaimId
 						),
@@ -309,9 +309,9 @@ const searchInStrategyClaimsForEvidence = (
 	id: number
 ): Evidence | null => {
 	for (const strategy of strategies) {
-		if (strategy.property_claims) {
+		if (strategy.propertyClaims) {
 			const found = searchInNestedStructuresForEvidence(
-				strategy.property_claims,
+				strategy.propertyClaims,
 				id
 			);
 			if (found) {
@@ -332,9 +332,9 @@ const searchSinglePropertyClaimForEvidence = (
 		return found;
 	}
 
-	if (item.property_claims) {
+	if (item.propertyClaims) {
 		const nestedFound = searchInNestedStructuresForEvidence(
-			item.property_claims,
+			item.propertyClaims,
 			id
 		);
 		if (nestedFound) {
@@ -375,7 +375,7 @@ const searchInNestedStructuresForEvidence = (
 export const updateEvidenceNestedMove = (
 	array: PropertyClaim[],
 	id: number,
-	newEvidence: Partial<Evidence> & { property_claim_id: number[] }
+	newEvidence: Partial<Evidence> & { propertyClaimId: number[] }
 ): PropertyClaim[] => {
 	// Find the existing evidence item
 	const existingEvidence = searchInNestedStructuresForEvidence(array, id);
@@ -390,7 +390,7 @@ export const updateEvidenceNestedMove = (
 	} as Evidence;
 
 	// Add evidence to the new location
-	const newClaimId = newEvidence.property_claim_id[0];
+	const newClaimId = newEvidence.propertyClaimId[0];
 	const updatedArray = addEvidenceToNewLocation(
 		arrayWithoutOldEvidence,
 		updatedEvidence,

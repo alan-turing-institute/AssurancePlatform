@@ -14,9 +14,8 @@ export type OrphanElementData = {
 	id: number;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	property_claim_id?: number | null;
+	description: string;
+	propertyClaimId?: number | null;
 };
 
 type DeleteNodeOptions = {
@@ -59,17 +58,15 @@ const createEvidenceOrphan = (
 	ev: {
 		id: number;
 		name: string;
-		short_description?: string;
-		long_description?: string;
+		description?: string;
 	},
 	parentClaimId: number
 ): OrphanElementData => ({
 	id: ev.id,
 	type: TYPE_MAP.evidence ?? "Evidence",
 	name: ev.name,
-	short_description: ev.short_description ?? "",
-	long_description: ev.long_description ?? "",
-	property_claim_id: parentClaimId,
+	description: ev.description ?? "",
+	propertyClaimId: parentClaimId,
 });
 
 /**
@@ -83,9 +80,8 @@ const collectOrphanElements = (claim: PropertyClaim): OrphanElementData[] => {
 		id: claim.id,
 		type: TYPE_MAP.property ?? "PropertyClaim",
 		name: claim.name,
-		short_description: claim.short_description ?? "",
-		long_description: claim.long_description ?? "",
-		property_claim_id: claim.property_claim_id,
+		description: claim.description ?? "",
+		propertyClaimId: claim.propertyClaimId,
 	});
 
 	// Add evidence children
@@ -97,7 +93,7 @@ const collectOrphanElements = (claim: PropertyClaim): OrphanElementData[] => {
 	}
 
 	// Recursively add nested property claims
-	const nestedClaims = claim.property_claims;
+	const nestedClaims = claim.propertyClaims;
 	if (nestedClaims && Array.isArray(nestedClaims)) {
 		for (const nested of nestedClaims) {
 			elements.push(...collectOrphanElements(nested));
@@ -190,10 +186,7 @@ export const detachNode = async (options: DetachNodeOptions): Promise<void> => {
 					type: (TYPE_MAP[node.type ?? ""] ??
 						(node.data.type as string)) as string,
 					name: node.data.name as string,
-					short_description: ((node.data.short_description as string) ??
-						"") as string,
-					long_description: ((node.data.long_description as string) ??
-						"") as string,
+					description: ((node.data.description as string) ?? "") as string,
 				},
 			];
 		}

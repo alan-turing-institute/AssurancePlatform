@@ -60,8 +60,7 @@ function getElementName(event: SSEEvent): string | undefined {
 	return (
 		(event.payload?.elementName as string) ||
 		(event.payload?.element as { name?: string })?.name ||
-		(event.payload?.element as { short_description?: string })
-			?.short_description
+		(event.payload?.element as { description?: string })?.description
 	);
 }
 

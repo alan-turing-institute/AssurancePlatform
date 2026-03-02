@@ -71,12 +71,12 @@ const updatePropertyClaim = (
 	const goal = assuranceCase.goals[0];
 
 	// Try updating in goal's direct property claims first
-	const directClaims = goal.property_claims || [];
+	const directClaims = goal.propertyClaims || [];
 	const updatedDirectClaims = move
 		? updatePropertyClaimNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<PropertyClaim> & { property_claim_id?: number }
+				updatedItem as Partial<PropertyClaim> & { propertyClaimId?: number }
 			)
 		: updatePropertyClaimNested(directClaims, id, updatedItem);
 
@@ -86,7 +86,7 @@ const updatePropertyClaim = (
 	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
-			goals: [{ ...goal, property_claims: updatedDirectClaims }],
+			goals: [{ ...goal, propertyClaims: updatedDirectClaims }],
 		};
 	}
 
@@ -97,18 +97,18 @@ const updatePropertyClaim = (
 		if (foundInStrategies) {
 			return strategy;
 		}
-		const strategyClaims = strategy.property_claims || [];
+		const strategyClaims = strategy.propertyClaims || [];
 		const updatedStrategyClaims = move
 			? updatePropertyClaimNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<PropertyClaim> & { property_claim_id?: number }
+					updatedItem as Partial<PropertyClaim> & { propertyClaimId?: number }
 				)
 			: updatePropertyClaimNested(strategyClaims, id, updatedItem);
 
 		if (updatedStrategyClaims !== strategyClaims) {
 			foundInStrategies = true;
-			return { ...strategy, property_claims: updatedStrategyClaims };
+			return { ...strategy, propertyClaims: updatedStrategyClaims };
 		}
 		return strategy;
 	});
@@ -143,12 +143,12 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 	const goal = assuranceCase.goals[0];
 
 	// Try updating in goal's direct property claims first
-	const directClaims = goal.property_claims || [];
+	const directClaims = goal.propertyClaims || [];
 	const updatedDirectClaims = move
 		? updateEvidenceNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<Evidence> & { property_claim_id: number[] }
+				updatedItem as Partial<Evidence> & { propertyClaimId: number[] }
 			)
 		: updateEvidenceNested(directClaims, id, updatedItem);
 
@@ -158,7 +158,7 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
-			goals: [{ ...goal, property_claims: updatedDirectClaims }],
+			goals: [{ ...goal, propertyClaims: updatedDirectClaims }],
 		};
 	}
 
@@ -169,18 +169,18 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 		if (foundInStrategies) {
 			return strategy;
 		}
-		const strategyClaims = strategy.property_claims || [];
+		const strategyClaims = strategy.propertyClaims || [];
 		const updatedStrategyClaims = move
 			? updateEvidenceNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<Evidence> & { property_claim_id: number[] }
+					updatedItem as Partial<Evidence> & { propertyClaimId: number[] }
 				)
 			: updateEvidenceNested(strategyClaims, id, updatedItem);
 
 		if (updatedStrategyClaims !== strategyClaims) {
 			foundInStrategies = true;
-			return { ...strategy, property_claims: updatedStrategyClaims };
+			return { ...strategy, propertyClaims: updatedStrategyClaims };
 		}
 		return strategy;
 	});

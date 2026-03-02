@@ -129,12 +129,12 @@ function snapshotFromNode(node: TreeNode): ReturnType<typeof createSnapshot> {
 		id: node.id,
 		type: node.type,
 		name: node.name,
-		short_description: node.description,
+		description: node.description,
 		assumption: node.assumption,
 		justification: node.justification,
 		context: node.context,
 		URL: node.url,
-		in_sandbox: node.inSandbox,
+		inSandbox: node.inSandbox,
 	});
 }
 

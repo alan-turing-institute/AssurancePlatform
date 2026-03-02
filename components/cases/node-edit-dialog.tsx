@@ -66,7 +66,7 @@ function buildUpdatePayload(
 	nodeType: DiagramNodeType
 ): Record<string, unknown> {
 	const updateItem: Record<string, unknown> = {
-		short_description: values.description,
+		description: values.description,
 	};
 
 	if (supportsAttributes(nodeType)) {
@@ -305,7 +305,7 @@ export default function NodeEditDialog({
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
 		defaultValues: {
-			description: (node.data?.short_description as string) ?? "",
+			description: (node.data?.description as string) ?? "",
 			assumption: (node.data?.assumption as string) ?? "",
 			justification: (node.data?.justification as string) ?? "",
 			context: (node.data?.context as string[]) ?? [],
@@ -359,7 +359,7 @@ export default function NodeEditDialog({
 		(n: Node) => {
 			const contextData = (n.data?.context as string[]) ?? [];
 			form.reset({
-				description: (n.data?.short_description as string) ?? "",
+				description: (n.data?.description as string) ?? "",
 				assumption: (n.data?.assumption as string) ?? "",
 				justification: (n.data?.justification as string) ?? "",
 				context: contextData,

@@ -12,9 +12,9 @@ import {
 	fetchAndRefreshCase,
 } from "@/lib/case";
 import useStore from "@/store/store";
-import type { Context, Evidence, PropertyClaim, Strategy } from "@/types";
+import type { Evidence, PropertyClaim, Strategy } from "@/types";
 
-export type OrphanElement = Context | Evidence | PropertyClaim | Strategy;
+export type OrphanElement = Evidence | PropertyClaim | Strategy;
 
 type UseOrphanActionsParams = {
 	node: Node;
@@ -86,7 +86,7 @@ export function useOrphanActions({
 				.map((item): OrphanElement | null => {
 					switch (item.type?.toLowerCase()) {
 						case "context":
-							return item as unknown as Context;
+							return null;
 						case "evidence":
 							return item as unknown as Evidence;
 						case "propertyclaim":
@@ -127,14 +127,11 @@ export function useOrphanActions({
 			id: orphan.id,
 			name: orphan.name,
 			type: orphan.type || "",
-			short_description:
-				"short_description" in orphan ? orphan.short_description : "",
-			long_description:
-				"long_description" in orphan ? orphan.long_description : "",
-			goal_id: "goal_id" in orphan ? orphan.goal_id : null,
-			strategy_id: "strategy_id" in orphan ? orphan.strategy_id : null,
-			property_claim_id:
-				"property_claim_id" in orphan ? orphan.property_claim_id : null,
+			description: "description" in orphan ? orphan.description : "",
+			goalId: "goalId" in orphan ? orphan.goalId : null,
+			strategyId: "strategyId" in orphan ? orphan.strategyId : null,
+			propertyClaimId:
+				"propertyClaimId" in orphan ? orphan.propertyClaimId : null,
 		},
 	});
 

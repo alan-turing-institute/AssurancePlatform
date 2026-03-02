@@ -147,13 +147,13 @@ export function createSnapshot(data: Record<string, unknown>): ElementSnapshot {
 		id: String(data.id ?? ""),
 		elementType: String(data.type ?? data.elementType ?? ""),
 		name: String(data.name ?? ""),
-		description: String(data.short_description ?? data.description ?? ""),
+		description: String(data.description ?? ""),
 		url: data.URL as string | undefined,
 		urls: data.urls as string[] | undefined,
 		assumption: data.assumption as string | undefined,
 		justification: data.justification as string | undefined,
 		context: data.context as string[] | undefined,
-		inSandbox: data.in_sandbox as boolean | undefined,
+		inSandbox: data.inSandbox as boolean | undefined,
 	};
 }
 

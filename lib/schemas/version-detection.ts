@@ -2,7 +2,6 @@
  * Version detection for case import JSON files.
  *
  * Detects whether an imported JSON is:
- * - "legacy" (Django format, no version field)
  * - "flat" (internal V2 format with elements array)
  * - "nested" (tree format with version "1.0")
  *
@@ -12,18 +11,15 @@
 import {
 	type CaseExportNested,
 	CaseExportNestedSchema,
-	type CaseExportV1,
-	CaseExportV1Schema,
 	type CaseExportV2,
 	CaseExportV2Schema,
 	type ImportValidationResult,
 	type ValidationError,
 } from "./case-export";
 
-export type CaseFormatVersion = "legacy" | "flat" | "nested";
+export type CaseFormatVersion = "flat" | "nested";
 
 export type VersionDetectionResult =
-	| { version: "legacy"; data: CaseExportV1; isValid: true }
 	| { version: "flat"; data: CaseExportV2; isValid: true }
 	| { version: "nested"; data: CaseExportNested; isValid: true }
 	| { version: null; isValid: false; errors: ValidationError[] };
@@ -59,27 +55,11 @@ function isFlatFormat(obj: Record<string, unknown>): boolean {
 }
 
 /**
- * Check if data matches legacy format (Django nested structure).
- */
-function isLegacyFormat(obj: Record<string, unknown>): boolean {
-	// Has goals array
-	if ("goals" in obj && Array.isArray(obj.goals)) {
-		return true;
-	}
-	// Has AssuranceCase type marker
-	if (obj.type === "AssuranceCase") {
-		return true;
-	}
-	return false;
-}
-
-/**
  * Detects the format version of an imported case JSON.
  *
  * Detection strategy:
  * 1. Check for nested format (version: "1.0" or tree structure)
  * 2. Check for flat format (version: "2.0" or elements + evidenceLinks)
- * 3. Check for legacy format (goals array or AssuranceCase type)
  */
 export function detectVersion(data: unknown): CaseFormatVersion | null {
 	if (!data || typeof data !== "object") {
@@ -93,9 +73,6 @@ export function detectVersion(data: unknown): CaseFormatVersion | null {
 	}
 	if (isFlatFormat(obj)) {
 		return "flat";
-	}
-	if (isLegacyFormat(obj)) {
-		return "legacy";
 	}
 
 	return null;
@@ -132,21 +109,10 @@ function validateVersion(
 			errors: formatZodErrors(result.error),
 		};
 	}
-	if (version === "flat") {
-		const result = CaseExportV2Schema.safeParse(data);
-		if (result.success) {
-			return { version: "flat", data: result.data, isValid: true };
-		}
-		return {
-			version: null,
-			isValid: false,
-			errors: formatZodErrors(result.error),
-		};
-	}
-	// legacy
-	const result = CaseExportV1Schema.safeParse(data);
+	// flat
+	const result = CaseExportV2Schema.safeParse(data);
 	if (result.success) {
-		return { version: "legacy", data: result.data, isValid: true };
+		return { version: "flat", data: result.data, isValid: true };
 	}
 	return {
 		version: null,
@@ -182,8 +148,8 @@ export function detectAndValidate(data: unknown): VersionDetectionResult {
 		return validateVersion(data, detectedVersion);
 	}
 
-	// Unknown format - try each schema in order (nested -> flat -> legacy)
-	for (const version of ["nested", "flat", "legacy"] as CaseFormatVersion[]) {
+	// Unknown format - try each schema in order (nested -> flat)
+	for (const version of ["nested", "flat"] as CaseFormatVersion[]) {
 		const result = validateVersion(data, version);
 		if (result.isValid) {
 			return result;
@@ -198,7 +164,7 @@ export function detectAndValidate(data: unknown): VersionDetectionResult {
 			{
 				path: "root",
 				message:
-					"Could not parse import format. Ensure the JSON has a 'tree' object (nested), 'elements' array (flat), or 'goals' array (legacy).",
+					"Could not parse import format. Ensure the JSON has a 'tree' object (nested) or 'elements' array (flat).",
 				code: "invalid_format",
 			},
 		],
@@ -222,51 +188,10 @@ export function validateImport(data: unknown): ImportValidationResult {
 		};
 	}
 
-	const warnings: string[] = [];
-
-	// Generate warnings for legacy imports about ignored fields
-	if (result.version === "legacy") {
-		const legacyData = result.data as CaseExportV1;
-
-		if (legacyData.owner !== undefined) {
-			warnings.push(
-				"The 'owner' field will be ignored. You will become the owner of this case."
-			);
-		}
-
-		if (
-			legacyData.edit_groups?.length ||
-			legacyData.view_groups?.length ||
-			legacyData.review_groups?.length
-		) {
-			warnings.push(
-				"Permission groups will be ignored. Configure sharing after import."
-			);
-		}
-
-		if (legacyData.permissions !== undefined) {
-			warnings.push(
-				"The 'permissions' field will be ignored. You will have admin access."
-			);
-		}
-
-		// Check for deprecated fields in goals
-		if (legacyData.goals) {
-			const hasKeywords = legacyData.goals.some(
-				(g) => g.keywords && g.keywords !== "" && g.keywords !== "N/A"
-			);
-			if (hasKeywords) {
-				warnings.push(
-					"The 'keywords' field is deprecated and will be ignored."
-				);
-			}
-		}
-	}
-
 	return {
 		isValid: true,
 		version: result.version,
 		errors: [],
-		warnings,
+		warnings: [],
 	};
 }

@@ -11,8 +11,8 @@ import type { Node } from "reactflow";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import useStore from "@/store/store";
 import { Skeleton } from "../ui/skeleton";
-import CommentsForm from "./comment-form";
 import CommentsFeed from "./comments-feed";
+import CommentsForm from "./comments-form";
 
 /** Event types that trigger a comments refetch */
 const COMMENT_EVENTS = [

@@ -28,8 +28,8 @@ export type CaseCardData = {
 	id: number | string;
 	name: string;
 	description?: string;
-	created_date?: string;
-	updated_date?: string;
+	createdDate?: string;
+	updatedDate?: string;
 	permissions?: string | string[];
 	isDemo?: boolean;
 };
@@ -40,7 +40,7 @@ type CaseCardProps = {
 };
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
-	const { id, name, description, created_date, isDemo } = assuranceCase;
+	const { id, name, description, createdDate, isDemo } = assuranceCase;
 	const router = useRouter();
 
 	const [open, setOpen] = useState(false);
@@ -146,7 +146,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 					</CardHeader>
 					<CardFooter className="flex w-full items-center justify-between text-muted-foreground text-xs">
 						<p>
-							Created on: {created_date ? formatShortDate(created_date) : "N/A"}
+							Created on: {createdDate ? formatShortDate(createdDate) : "N/A"}
 						</p>
 						<div className="flex items-center justify-start gap-2">
 							{permissions.includes("view") && <Eye className="h-4 w-4" />}

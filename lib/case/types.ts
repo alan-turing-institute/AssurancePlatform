@@ -1,7 +1,7 @@
 /**
  * Shared types for case helper modules
  */
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 
 // Regular expressions
 export const NUMERIC_ID_PATTERN = /^\d+$/;
@@ -17,8 +17,8 @@ export type CaseNode = {
 	type: string;
 	name?: string;
 	goals?: Goal[];
-	context?: Context[];
-	property_claims?: PropertyClaim[];
+	context?: string[];
+	propertyClaims?: PropertyClaim[];
 	strategies?: Strategy[];
 	evidence?: Evidence[];
 	childrenHidden?: boolean;
@@ -34,11 +34,11 @@ export type ReactFlowNode = {
 		id: number;
 		name: string;
 		type: string;
-		goal_id?: number | null;
-		strategy_id?: number | null;
-		property_claim_id?: number | number[] | null;
-		context?: Context[];
-		property_claims?: PropertyClaim[];
+		goalId?: number | null;
+		strategyId?: number | null;
+		propertyClaimId?: number | number[] | null;
+		context?: string[];
+		propertyClaims?: PropertyClaim[];
 		strategies?: Strategy[];
 		evidence?: Evidence[];
 		[key: string]: unknown;
@@ -50,17 +50,16 @@ export type ReactFlowNode = {
 export type ApiNodeResponse = {
 	id: number;
 	name: string;
-	short_description: string;
-	long_description: string;
+	description: string;
 	type: string;
 	[key: string]: unknown;
 };
 
 // Payload types for API requests
 export type DetachPayload = {
-	goal_id: number | null;
-	strategy_id: number | null;
-	property_claim_id: number | null;
+	goalId: number | null;
+	strategyId: number | null;
+	propertyClaimId: number | null;
 };
 
 // Comment type for API operations
@@ -72,24 +71,18 @@ export type CommentPayload = {
 // Type for node creation payloads
 export type CreateNodePayload =
 	| Partial<Goal>
-	| Partial<Context>
 	| Partial<Strategy>
 	| Partial<PropertyClaim>
 	| Partial<Evidence>;
 
 // Type for nested array items that can contain various node types
-export type NestedArrayItem =
-	| Goal
-	| PropertyClaim
-	| Strategy
-	| Context
-	| Evidence;
+export type NestedArrayItem = Goal | PropertyClaim | Strategy | Evidence;
 
 // Type guards
 export function hasPropertyClaims(
 	obj: unknown
-): obj is { property_claims: PropertyClaim[] } {
-	return typeof obj === "object" && obj !== null && "property_claims" in obj;
+): obj is { propertyClaims: PropertyClaim[] } {
+	return typeof obj === "object" && obj !== null && "propertyClaims" in obj;
 }
 
 export function hasStrategies(obj: unknown): obj is { strategies: Strategy[] } {
@@ -100,7 +93,7 @@ export function hasEvidence(obj: unknown): obj is { evidence: Evidence[] } {
 	return typeof obj === "object" && obj !== null && "evidence" in obj;
 }
 
-export function hasContext(obj: unknown): obj is { context: Context[] } {
+export function hasContext(obj: unknown): obj is { context: string[] } {
 	return typeof obj === "object" && obj !== null && "context" in obj;
 }
 

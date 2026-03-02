@@ -16,12 +16,12 @@ export default function NotesFeed() {
 	const [edit, setEdit] = useState<boolean>();
 	const [editId, setEditId] = useState<number | string>();
 	const { data: session } = useSession();
-	// Sort notes by created_at (newest first) - useMemo to avoid mutation
+	// Sort notes by createdAt (newest first) - useMemo to avoid mutation
 	const sortedNotes = useMemo(
 		() =>
 			[...caseNotes].sort(
 				(a: Comment, b: Comment) =>
-					new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 			),
 		[caseNotes]
 	);
@@ -104,7 +104,7 @@ export default function NotesFeed() {
 											</p>
 										</div>
 										<p className="mt-0.5 text-foreground/70 text-sm">
-											Created On: {formatShortDate(new Date(note.created_at))}
+											Created On: {formatShortDate(new Date(note.createdAt))}
 										</p>
 									</div>
 									<div className="mt-2 text-foreground text-sm">

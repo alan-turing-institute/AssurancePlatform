@@ -15,9 +15,9 @@ export type MoveElement = {
 };
 
 type UpdateItem = {
-	goal_id?: number | null;
-	strategy_id?: number | null;
-	property_claim_id?: number | number[] | null;
+	goalId?: number | null;
+	strategyId?: number | null;
+	propertyClaimId?: number | number[] | null;
 	hidden?: boolean;
 };
 
@@ -127,9 +127,9 @@ const movePropertyClaimToGoal = async (
 	} = options;
 
 	const updateItem: UpdateItem = {
-		goal_id: goal ? goal.id : null,
-		strategy_id: null,
-		property_claim_id: null,
+		goalId: goal ? goal.id : null,
+		strategyId: null,
+		propertyClaimId: null,
 		hidden: false,
 	};
 
@@ -169,9 +169,9 @@ const movePropertyClaimToPropertyClaim = async (
 	)?.id;
 
 	const updateItem: UpdateItem = {
-		goal_id: null,
-		strategy_id: null,
-		property_claim_id: elementId,
+		goalId: null,
+		strategyId: null,
+		propertyClaimId: elementId,
 		hidden: false,
 	};
 
@@ -211,9 +211,9 @@ const movePropertyClaimToStrategy = async (
 	)?.id;
 
 	const updateItem: UpdateItem = {
-		goal_id: null,
-		strategy_id: elementId,
-		property_claim_id: null,
+		goalId: null,
+		strategyId: elementId,
+		propertyClaimId: null,
 		hidden: false,
 	};
 
@@ -248,7 +248,7 @@ export const moveEvidence = async (
 	} = options;
 
 	const updateItem: UpdateItem = {
-		property_claim_id: [selectedElement.id],
+		propertyClaimId: [selectedElement.id],
 		hidden: false,
 	};
 

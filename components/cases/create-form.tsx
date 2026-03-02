@@ -69,12 +69,11 @@ const CreateForm: React.FC<CreateFormProps> = ({
 
 		const newGoal = {
 			name: "G1",
-			short_description: values.description,
-			long_description: "N/A",
+			description: values.description,
 			keywords: "N/A",
-			assurance_case_id: assuranceCase?.id || 0,
+			assuranceCaseId: assuranceCase?.id || 0,
 			context: [],
-			property_claims: [],
+			propertyClaims: [],
 			strategies: [],
 			type: "TopLevelNormativeGoal",
 		};

@@ -7,7 +7,6 @@ import type {
 	AssuranceCase,
 	CaseStudy,
 	Comment,
-	Context,
 	Evidence,
 	Goal,
 	Member,
@@ -68,8 +67,7 @@ export type CaseTemplate = {
 	structure: {
 		goals: Partial<Goal>[];
 		strategies: Partial<Strategy>[];
-		property_claims: Partial<PropertyClaim>[];
-		contexts: Partial<Context>[];
+		propertyClaims: Partial<PropertyClaim>[];
 		evidence: Partial<Evidence>[];
 	};
 	category: string;
@@ -175,20 +173,12 @@ export const AssuranceCaseFactory = {
 			type: "AssuranceCase" as const,
 			name: `Assurance Case ${id}`,
 			description: `Comprehensive assurance case ${id} for testing`,
-			created_date: currentDate,
-			view_groups: [],
-			edit_groups: [],
-			review_groups: [],
-			color_profile: "default",
+			createdDate: currentDate,
+			colourProfile: "default",
 			published: false,
-			published_date: null,
 			permissions: "manage" as const,
 			comments: [],
 			goals: [],
-			property_claims: [],
-			evidence: [],
-			contexts: [],
-			strategies: [],
 			images: [],
 			viewMembers: [],
 			editMembers: [],
@@ -209,57 +199,44 @@ export const AssuranceCaseFactory = {
 		strategies: Strategy[];
 		propertyClaims: PropertyClaim[];
 		evidence: Evidence[];
-		contexts: Context[];
 	} {
 		const assuranceCase = this.create();
 		const caseId = assuranceCase.id;
 
 		// Create hierarchical structure
-		// assurance_case_id expects number; cast string id for factory compat
 		const numericCaseId = Number(caseId);
 		const topGoal = GoalFactory.create({
-			assurance_case_id: numericCaseId,
+			assuranceCaseId: numericCaseId,
 			name: "Top-Level Safety Goal",
 		});
 
-		const contexts = [
-			ContextFactory.create({
-				goal_id: topGoal.id,
-				name: "Operating Environment",
-			}),
-			ContextFactory.create({
-				goal_id: topGoal.id,
-				name: "System Boundaries",
-			}),
-		];
-
 		const strategy = StrategyFactory.create({
-			goal_id: topGoal.id,
+			goalId: topGoal.id,
 			name: "Argument by Component Safety",
 		});
 
 		const subGoals = [
 			GoalFactory.create({
-				assurance_case_id: numericCaseId,
+				assuranceCaseId: numericCaseId,
 				name: "Component A Safety",
 			}),
 			GoalFactory.create({
-				assurance_case_id: numericCaseId,
+				assuranceCaseId: numericCaseId,
 				name: "Component B Safety",
 			}),
 		];
 
 		const propertyClaims = [
 			PropertyClaimFactory.create({
-				goal_id: subGoals[0].id,
+				goalId: subGoals[0].id,
 				name: "Component A Reliability",
-				claim_type: "claim",
+				claimType: "claim",
 				level: 1,
 			}),
 			PropertyClaimFactory.create({
-				goal_id: subGoals[1].id,
+				goalId: subGoals[1].id,
 				name: "Component B Performance",
-				claim_type: "claim",
+				claimType: "claim",
 				level: 1,
 			}),
 		];
@@ -276,15 +253,11 @@ export const AssuranceCaseFactory = {
 		];
 
 		// Link evidence to property claims
-		evidence[0].property_claim_id = [propertyClaims[0].id];
-		evidence[1].property_claim_id = [propertyClaims[1].id];
+		evidence[0].propertyClaimId = [propertyClaims[0].id];
+		evidence[1].propertyClaimId = [propertyClaims[1].id];
 
-		// Update assurance case with all elements
+		// Update assurance case with top-level goals
 		assuranceCase.goals = [topGoal, ...subGoals];
-		assuranceCase.strategies = [strategy];
-		assuranceCase.property_claims = propertyClaims;
-		assuranceCase.evidence = evidence;
-		assuranceCase.contexts = contexts;
 
 		return {
 			assuranceCase,
@@ -292,7 +265,6 @@ export const AssuranceCaseFactory = {
 			strategies: [strategy],
 			propertyClaims,
 			evidence,
-			contexts,
 		};
 	},
 
@@ -300,7 +272,7 @@ export const AssuranceCaseFactory = {
 		return this.create({
 			...overrides,
 			published: true,
-			published_date: new Date().toISOString(),
+			publishedAt: new Date().toISOString(),
 		});
 	},
 
@@ -388,14 +360,11 @@ export const GoalFactory = {
 			id,
 			type: overrides.type ?? "Goal",
 			name: overrides.name ?? `Goal ${id}`,
-			short_description:
-				overrides.short_description ?? `Short description for goal ${id}`,
-			long_description:
-				overrides.long_description ?? `Detailed description for goal ${id}`,
+			description: overrides.description ?? `Description for goal ${id}`,
 			keywords: overrides.keywords ?? "safety, reliability, testing",
-			assurance_case_id: overrides.assurance_case_id ?? 1,
+			assuranceCaseId: overrides.assuranceCaseId ?? 1,
 			context: overrides.context ?? [],
-			property_claims: overrides.property_claims ?? [],
+			propertyClaims: overrides.propertyClaims ?? [],
 			strategies: overrides.strategies ?? [],
 		};
 	},
@@ -431,13 +400,9 @@ export const StrategyFactory = {
 			id,
 			type: overrides.type ?? "Strategy",
 			name: overrides.name ?? `Strategy ${id}`,
-			short_description:
-				overrides.short_description ?? `Strategy ${id} short description`,
-			long_description:
-				overrides.long_description ??
-				`Comprehensive strategy ${id} for achieving goals`,
-			goal_id: overrides.goal_id ?? 1,
-			property_claims: overrides.property_claims ?? [],
+			description: overrides.description ?? `Description for strategy ${id}`,
+			goalId: overrides.goalId ?? 1,
+			propertyClaims: overrides.propertyClaims ?? [],
 		};
 	},
 };
@@ -451,17 +416,14 @@ export const PropertyClaimFactory = {
 			id,
 			type: overrides.type ?? "PropertyClaim",
 			name: overrides.name ?? `Property Claim ${id}`,
-			short_description:
-				overrides.short_description ?? `Claim ${id} short description`,
-			long_description:
-				overrides.long_description ?? `Detailed property claim ${id}`,
-			goal_id: overrides.goal_id ?? null,
-			property_claim_id: overrides.property_claim_id ?? null,
+			description: overrides.description ?? `Description for claim ${id}`,
+			goalId: overrides.goalId ?? null,
+			propertyClaimId: overrides.propertyClaimId ?? null,
 			level: overrides.level ?? 1,
-			claim_type: overrides.claim_type ?? "claim",
-			property_claims: overrides.property_claims ?? [],
+			claimType: overrides.claimType ?? "claim",
+			propertyClaims: overrides.propertyClaims ?? [],
 			evidence: overrides.evidence ?? [],
-			strategy_id: overrides.strategy_id ?? null,
+			strategyId: overrides.strategyId ?? null,
 		};
 	},
 
@@ -473,7 +435,7 @@ export const PropertyClaimFactory = {
 			const claim = this.create({
 				name: `Level ${level} Claim`,
 				level,
-				property_claim_id: parentId,
+				propertyClaimId: parentId,
 			});
 			claims.push(claim);
 			parentId = claim.id;
@@ -492,13 +454,9 @@ export const EvidenceFactory = {
 			id,
 			type: overrides.type ?? "Evidence",
 			name: overrides.name ?? `Evidence ${id}`,
-			short_description:
-				overrides.short_description ?? `Evidence ${id} summary`,
-			long_description:
-				overrides.long_description ??
-				`Comprehensive evidence ${id} supporting claims`,
+			description: overrides.description ?? `Description for evidence ${id}`,
 			URL: overrides.URL ?? `https://example.com/evidence/${id}`,
-			property_claim_id: overrides.property_claim_id ?? [],
+			propertyClaimId: overrides.propertyClaimId ?? [],
 		};
 	},
 
@@ -506,27 +464,9 @@ export const EvidenceFactory = {
 		return Array.from({ length: count }, (_, i) =>
 			this.create({
 				name: `Evidence ${i + 1} for Claim ${claimId}`,
-				property_claim_id: [claimId],
+				propertyClaimId: [claimId],
 			})
 		);
-	},
-};
-
-// Context Factory
-export const ContextFactory = {
-	create(overrides: Partial<Context> = {}): Context {
-		const id = overrides.id ?? getNextId();
-
-		return {
-			id,
-			type: overrides.type ?? "Context",
-			name: overrides.name ?? `Context ${id}`,
-			short_description: overrides.short_description ?? `Context ${id} summary`,
-			long_description:
-				overrides.long_description ?? `Detailed context ${id} information`,
-			created_date: overrides.created_date ?? new Date().toISOString(),
-			goal_id: overrides.goal_id ?? 1,
-		};
 	},
 };
 
@@ -540,7 +480,7 @@ export const CommentFactory = {
 			id,
 			author,
 			content: overrides.content ?? `This is comment ${id}`,
-			created_at: overrides.created_at ?? new Date().toISOString(),
+			createdAt: overrides.createdAt ?? new Date().toISOString(),
 		};
 	},
 
@@ -552,7 +492,7 @@ export const CommentFactory = {
 			return this.create({
 				author: `${user.first_name} ${user.last_name}`,
 				content: `Thread comment ${i + 1} from ${user.username}`,
-				created_at: new Date(
+				createdAt: new Date(
 					Date.now() - (count - i) * 60 * 60 * 1000
 				).toISOString(),
 			});
@@ -575,7 +515,7 @@ export const CaseStudyFactory = {
 			publishedDate: overrides.publishedDate,
 			createdOn: overrides.createdOn ?? new Date().toISOString(),
 			authors: overrides.authors ?? "Research Team",
-			assurance_cases: overrides.assurance_cases ?? [],
+			assuranceCases: overrides.assuranceCases ?? [],
 			...overrides, // Include any other override properties
 		};
 	},
@@ -591,7 +531,6 @@ export const CaseStudyFactory = {
 		const caseStudy = this.create({
 			published: true,
 			publishedDate: new Date().toISOString(),
-			assurance_cases: assuranceCases.map((ac) => ac.id),
 			assuranceCases,
 		});
 
@@ -612,8 +551,7 @@ export const TemplateFactory = {
 			structure: overrides.structure ?? {
 				goals: [],
 				strategies: [],
-				property_claims: [],
-				contexts: [],
+				propertyClaims: [],
 				evidence: [],
 			},
 			category: overrides.category ?? "General",
@@ -631,36 +569,26 @@ export const TemplateFactory = {
 				goals: [
 					{
 						name: "System is acceptably safe",
-						short_description: "Top-level safety goal",
+						description: "Top-level safety goal",
 					},
 				],
 				strategies: [
 					{
 						name: "Argument over hazards",
-						short_description: "Address all identified hazards",
+						description: "Address all identified hazards",
 					},
 				],
-				contexts: [
-					{
-						name: "System Definition",
-						short_description: "Define system boundaries and interfaces",
-					},
-					{
-						name: "Operating Environment",
-						short_description: "Define operational context",
-					},
-				],
-				property_claims: [
+				propertyClaims: [
 					{
 						name: "Hazards identified",
-						short_description: "All hazards have been identified",
-						claim_type: "claim",
+						description: "All hazards have been identified",
+						claimType: "claim",
 					},
 				],
 				evidence: [
 					{
 						name: "Hazard Analysis Report",
-						short_description: "Comprehensive hazard analysis",
+						description: "Comprehensive hazard analysis",
 					},
 				],
 			},
@@ -740,7 +668,6 @@ export const BatchFactory = {
 				const claims = PropertyClaimFactory.createNested(3);
 
 				assuranceCase.goals = goals;
-				assuranceCase.property_claims = claims;
 
 				return { assuranceCase, goals, claims };
 			}
@@ -785,8 +712,6 @@ export const createPropertyClaim = (overrides?: Partial<PropertyClaim>) =>
 	PropertyClaimFactory.create(overrides);
 export const createEvidence = (overrides?: Partial<Evidence>) =>
 	EvidenceFactory.create(overrides);
-export const createContext = (overrides?: Partial<Context>) =>
-	ContextFactory.create(overrides);
 export const createComment = (overrides?: Partial<Comment>) =>
 	CommentFactory.create(overrides);
 export const createCaseStudy = (overrides?: Partial<CaseStudy>) =>

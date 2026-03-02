@@ -50,7 +50,7 @@ type Store = {
 			| OrphanedElement[]
 			| {
 					contexts?: OrphanedElement[];
-					property_claims?: OrphanedElement[];
+					propertyClaims?: OrphanedElement[];
 					strategies?: OrphanedElement[];
 					evidence?: OrphanedElement[];
 			  }
@@ -118,7 +118,7 @@ const useStore = create<Store>((set, get) => ({
 			| OrphanedElement[]
 			| {
 					contexts?: OrphanedElement[];
-					property_claims?: OrphanedElement[];
+					propertyClaims?: OrphanedElement[];
 					strategies?: OrphanedElement[];
 					evidence?: OrphanedElement[];
 			  }
@@ -142,7 +142,7 @@ const useStore = create<Store>((set, get) => ({
 		const newArray: OrphanedElement[] = [];
 
 		addElementsToArray(orphanedElements.contexts, newArray);
-		addElementsToArray(orphanedElements.property_claims, newArray);
+		addElementsToArray(orphanedElements.propertyClaims, newArray);
 		addElementsToArray(orphanedElements.strategies, newArray);
 		addElementsToArray(orphanedElements.evidence, newArray);
 
@@ -202,7 +202,7 @@ const useStore = create<Store>((set, get) => ({
 		}
 		const sortedComments = [...comments].sort(
 			(a, b) =>
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+				new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 		);
 		set({ nodeComments: sortedComments });
 	},
@@ -215,7 +215,7 @@ const useStore = create<Store>((set, get) => ({
 		}
 		const sortedComments = [...comments].sort(
 			(a, b) =>
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+				new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 		);
 		set({ caseNotes: sortedComments });
 	},

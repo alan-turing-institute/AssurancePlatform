@@ -1,24 +1,15 @@
 /**
  * Domain types for the TEA Platform
  * These types represent the core business entities
- *
- * TODO: Phase 2 - Consolidate short_description/long_description to single description field
- * See: TASKS/Phase2-DescriptionFieldConsolidation.md
  */
-
-// Supporting types for AssuranceCase
-export type Group = {
-	id: number;
-	name: string;
-};
 
 export type Comment = {
 	id: number | string;
 	author: string;
 	authorId?: string;
 	content: string;
-	created_at: string;
-	updated_at?: string;
+	createdAt: string;
+	updatedAt?: string;
 	parentId?: string | null;
 	replies?: Comment[];
 	resolved?: boolean;
@@ -30,38 +21,17 @@ export type Goal = {
 	id: number;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date?: string;
+	description: string;
+	createdDate?: string;
 	keywords: string;
-	assurance_case_id: number;
+	assuranceCaseId: number;
 	context?: string[];
-	property_claims: PropertyClaim[];
+	propertyClaims: PropertyClaim[];
 	strategies: Strategy[];
 	comments?: Comment[];
 	assumption?: string;
 	justification?: string;
-	in_sandbox?: boolean;
-	hidden?: boolean;
-	originalHidden?: boolean;
-};
-
-/**
- * @deprecated Context is no longer a separate element type.
- * Context is now stored as a string[] on Goal, Strategy, and PropertyClaim.
- * This type is kept for backwards compatibility with legacy imports.
- */
-export type Context = {
-	id: number;
-	type: string;
-	name: string;
-	short_description: string;
-	long_description: string;
-	created_date: string;
-	goal_id: number;
-	comments?: Comment[];
-	assumption?: string;
-	in_sandbox?: boolean;
+	inSandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
 };
@@ -70,16 +40,15 @@ export type Strategy = {
 	id: number;
 	type?: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date?: string;
-	goal_id: number;
-	property_claims: PropertyClaim[];
+	description: string;
+	createdDate?: string;
+	goalId: number;
+	propertyClaims: PropertyClaim[];
 	comments?: Comment[];
 	assumption?: string;
 	justification?: string;
 	context?: string[];
-	in_sandbox?: boolean;
+	inSandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
 };
@@ -88,22 +57,21 @@ export type PropertyClaim = {
 	id: number;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date?: string;
-	goal_id: number | null;
-	property_claim_id: number | null;
+	description: string;
+	createdDate?: string;
+	goalId: number | null;
+	propertyClaimId: number | null;
 	level: number;
-	claim_type: string;
-	property_claims: PropertyClaim[];
+	claimType: string;
+	propertyClaims: PropertyClaim[];
 	evidence: Evidence[];
-	strategy_id: number | null;
+	strategyId: number | null;
 	strategies?: Strategy[];
 	comments?: Comment[];
 	assumption?: string;
 	justification?: string;
 	context?: string[];
-	in_sandbox?: boolean;
+	inSandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
 };
@@ -112,14 +80,13 @@ export type Evidence = {
 	id: number;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date?: string;
+	description: string;
+	createdDate?: string;
 	URL: string;
 	urls?: string[];
-	property_claim_id: number[];
+	propertyClaimId: number[];
 	comments?: Comment[];
-	in_sandbox?: boolean;
+	inSandbox?: boolean;
 	hidden?: boolean;
 	originalHidden?: boolean;
 };
@@ -138,8 +105,6 @@ export type CaseStudy = {
 	authors: string;
 	image?: string;
 	featuredImage?: string;
-	feature_image_url?: string;
-	assurance_cases?: string[];
 	assuranceCases?: AssuranceCase[];
 };
 
@@ -177,18 +142,10 @@ export type AssuranceCase = {
 	type: string;
 	comments: Comment[];
 	permissions: string | string[];
-	created_date: string;
+	createdDate: string;
 	goals?: Goal[];
 	owner?: number;
-	edit_groups?: Group[];
-	view_groups?: Group[];
-	color_profile?: string;
-	published_date?: string | null;
-	review_groups?: Group[];
-	property_claims?: PropertyClaim[];
-	evidence?: Evidence[];
-	contexts?: Context[];
-	strategies?: Strategy[];
+	colourProfile?: string;
 	images?: CaseImage[];
 	viewMembers?: Member[];
 	editMembers?: Member[];

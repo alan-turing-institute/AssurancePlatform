@@ -12,8 +12,8 @@ export type CommentResponse = {
 	content: string;
 	author: string;
 	authorId?: string;
-	created_at: string;
-	updated_at?: string;
+	createdAt: string;
+	updatedAt?: string;
 	parentId?: string | null;
 	replies?: CommentResponse[];
 	resolved?: boolean;
@@ -72,8 +72,8 @@ export function toCommentResponse(comment: PrismaComment): CommentResponse {
 		content: comment.content,
 		author: comment.author.username,
 		authorId: comment.authorId,
-		created_at: comment.createdAt.toISOString(),
-		updated_at: comment.updatedAt.toISOString(),
+		createdAt: comment.createdAt.toISOString(),
+		updatedAt: comment.updatedAt.toISOString(),
 		parentId: comment.parentCommentId,
 		replies: [],
 		resolved: comment.resolved,
@@ -111,8 +111,7 @@ export function buildCommentTree(comments: PrismaComment[]): CommentResponse[] {
 
 	// Sort top-level comments newest first
 	topLevelComments.sort(
-		(a, b) =>
-			new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 	);
 
 	return topLevelComments;
@@ -391,7 +390,7 @@ type UpdatedCommentData = {
 	id: string;
 	content: string;
 	author: string;
-	created_at: string;
+	createdAt: string;
 };
 
 /**
@@ -428,7 +427,7 @@ export async function updateComment(
 		id: updatedComment.id,
 		content: updatedComment.content,
 		author: updatedComment.author.username,
-		created_at: updatedComment.createdAt.toISOString(),
+		createdAt: updatedComment.createdAt.toISOString(),
 	};
 
 	// Emit SSE event for real-time updates
@@ -498,8 +497,8 @@ export async function resolveComment(
 		content: updatedComment.content,
 		author: updatedComment.author.username,
 		authorId: updatedComment.authorId,
-		created_at: updatedComment.createdAt.toISOString(),
-		updated_at: updatedComment.updatedAt.toISOString(),
+		createdAt: updatedComment.createdAt.toISOString(),
+		updatedAt: updatedComment.updatedAt.toISOString(),
 		resolved: updatedComment.resolved,
 		resolvedBy: updatedComment.resolvedBy?.username ?? null,
 		resolvedAt: updatedComment.resolvedAt?.toISOString() ?? null,

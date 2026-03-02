@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
 import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
-import CommentsForm from "./comment-form";
 import CommentsEditForm from "./comments-edit-form";
+import CommentsForm from "./comments-form";
 
 type CommentsFeedProps = {
 	node: {
@@ -98,7 +98,7 @@ function CommentMeta({
 				>
 					<circle cx={1} cy={1} r={1} />
 				</svg>
-				{formatShortDate(new Date(comment.created_at))}
+				{formatShortDate(new Date(comment.createdAt))}
 			</div>
 
 			{hasReplies && (

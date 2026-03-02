@@ -10,7 +10,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import useStore from "@/store/store";
-import NodeComment from "./node-comments";
+import NodeComment from "./node-comment";
 
 type NodeWithData = Node & {
 	data: {

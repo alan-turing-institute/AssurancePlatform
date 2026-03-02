@@ -54,8 +54,7 @@ function createOrphanElement(node: Node) {
 		id: node.data.id as number,
 		type: TYPE_MAP[node.type ?? ""] ?? (node.data.type as string),
 		name: node.data.name as string,
-		short_description: (node.data.short_description as string) ?? "",
-		long_description: (node.data.long_description as string) ?? "",
+		description: (node.data.description as string) ?? "",
 	};
 }
 

@@ -25,9 +25,7 @@ import { CollapsibleNode, NodeStateControls, NodeStateManager } from "../nodes";
 
 type CaseElement = {
 	name: string;
-	short_description?: string;
 	description?: string;
-	long_description?: string;
 	evidence?: CaseElement[];
 };
 
@@ -36,7 +34,7 @@ type PropertyClaim = CaseElement & {
 };
 
 type Strategy = CaseElement & {
-	property_claims?: PropertyClaim[];
+	propertyClaims?: PropertyClaim[];
 };
 
 type Goal = CaseElement & {
@@ -52,7 +50,6 @@ type NodeDataType = {
 	id: string;
 	name: string;
 	description: string;
-	long_description: string;
 };
 
 /**
@@ -79,8 +76,7 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 			data: {
 				id: "goal-1",
 				name: goal.name,
-				description: goal.short_description || goal.description || "",
-				long_description: goal.long_description || goal.description || "",
+				description: goal.description || "",
 			},
 		});
 		yOffset += ySpacing;
@@ -97,10 +93,7 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 					data: {
 						id: strategyId,
 						name: strategy.name,
-						description:
-							strategy.short_description || strategy.description || "",
-						long_description:
-							strategy.long_description || strategy.description || "",
+						description: strategy.description || "",
 					},
 				});
 
@@ -113,8 +106,8 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 				});
 
 				// Process property claims
-				if (strategy.property_claims) {
-					strategy.property_claims.forEach((claim, claimIdx) => {
+				if (strategy.propertyClaims) {
+					strategy.propertyClaims.forEach((claim, claimIdx) => {
 						const claimId = `claim-${stratIdx}-${claimIdx + 1}`;
 
 						nodes.push({
@@ -127,9 +120,7 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 							data: {
 								id: claimId,
 								name: claim.name,
-								description: claim.short_description || claim.description || "",
-								long_description:
-									claim.long_description || claim.description || "",
+								description: claim.description || "",
 							},
 						});
 
@@ -156,10 +147,7 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 									data: {
 										id: evidId,
 										name: evid.name,
-										description:
-											evid.short_description || evid.description || "",
-										long_description:
-											evid.long_description || evid.description || "",
+										description: evid.description || "",
 									},
 								});
 
@@ -187,8 +175,7 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 					data: {
 						id: `context-${idx + 1}`,
 						name: ctx.name,
-						description: ctx.short_description || ctx.description || "",
-						long_description: ctx.long_description || ctx.description || "",
+						description: ctx.description || "",
 					},
 				});
 			});
@@ -298,31 +285,20 @@ const IntegrationExample = () => {
 		goals: [
 			{
 				name: "System Safety",
-				short_description: "System operates safely",
-				long_description:
-					"The system shall operate safely under all normal operating conditions.",
 				description:
 					"The system shall operate safely under all normal operating conditions.",
 				strategies: [
 					{
 						name: "Decomposition Strategy",
-						short_description: "Break down by subsystem",
-						long_description:
-							"Decompose safety argument into subsystem arguments.",
 						description: "Decompose safety argument into subsystem arguments.",
-						property_claims: [
+						propertyClaims: [
 							{
 								name: "Perception Safety",
-								short_description: "Perception is accurate",
-								long_description:
-									"Perception subsystem provides accurate environmental model.",
 								description:
 									"Perception subsystem provides accurate environmental model.",
 								evidence: [
 									{
 										name: "Test Results",
-										short_description: "99.9% accuracy",
-										long_description: "Test report showing 99.9% accuracy.",
 										description: "Test report showing 99.9% accuracy.",
 									},
 								],
@@ -333,9 +309,6 @@ const IntegrationExample = () => {
 				context: [
 					{
 						name: "Operating Environment",
-						short_description: "Urban roads, daylight",
-						long_description:
-							"System operates on urban roads during daylight hours.",
 						description:
 							"System operates on urban roads during daylight hours.",
 					},

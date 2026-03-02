@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
-import { topologicalSort, transformV1ToV2 } from "@/lib/transforms/v1-to-v2";
 
 export type ImportResult =
 	| {
@@ -15,6 +14,79 @@ export type ImportResult =
 			};
 	  }
 	| { error: string; validationErrors?: string[] };
+
+// ---------------------------------------------------------------------------
+// Topological sort (Kahn's algorithm) — ensures parents are created before children
+// ---------------------------------------------------------------------------
+
+type SortContext = {
+	inDegree: Map<string, number>;
+	children: Map<string, ElementV2[]>;
+};
+
+function initSortGraph(elements: ElementV2[]): SortContext {
+	const inDegree = new Map<string, number>();
+	const children = new Map<string, ElementV2[]>();
+
+	for (const el of elements) {
+		inDegree.set(el.id, 0);
+		children.set(el.id, []);
+	}
+
+	for (const el of elements) {
+		if (el.parentId && inDegree.has(el.parentId)) {
+			inDegree.set(el.id, (inDegree.get(el.id) ?? 0) + 1);
+			children.get(el.parentId)?.push(el);
+		}
+	}
+
+	return { inDegree, children };
+}
+
+function processSortQueue(queue: ElementV2[], ctx: SortContext): ElementV2[] {
+	const result: ElementV2[] = [];
+
+	while (queue.length > 0) {
+		const current = queue.shift();
+		if (!current) {
+			break;
+		}
+
+		result.push(current);
+
+		for (const child of ctx.children.get(current.id) ?? []) {
+			const newDegree = (ctx.inDegree.get(child.id) ?? 1) - 1;
+			ctx.inDegree.set(child.id, newDegree);
+			if (newDegree === 0) {
+				queue.push(child);
+			}
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Topologically sorts elements so parents come before children.
+ * Uses Kahn's algorithm.
+ */
+function topologicalSort(elements: ElementV2[]): ElementV2[] {
+	const ctx = initSortGraph(elements);
+
+	// Queue elements with no dependencies (roots)
+	const queue = elements.filter((el) => ctx.inDegree.get(el.id) === 0);
+	const result = processSortQueue(queue, ctx);
+
+	// Handle orphaned elements (parent not in import)
+	const resultIds = new Set(result.map((el) => el.id));
+	const orphans = elements.filter((el) => !resultIds.has(el.id));
+
+	return [...result, ...orphans];
+}
+
+// ---------------------------------------------------------------------------
+// Import pipeline
+// ---------------------------------------------------------------------------
 
 /**
  * Validates and transforms imported JSON data.
@@ -33,16 +105,6 @@ async function processImportData(data: unknown): Promise<{
 			success: false,
 			warnings: [],
 			errors: result.errors.map((e) => `${e.path}: ${e.message}`),
-		};
-	}
-
-	// If legacy, transform to flat format
-	if (result.version === "legacy") {
-		const transformed = transformV1ToV2(result.data);
-		return {
-			success: true,
-			data: transformed.case,
-			warnings: transformed.warnings,
 		};
 	}
 
@@ -233,9 +295,7 @@ async function createComments(
 /**
  * Imports a case from JSON data.
  *
- * Accepts both v1 (legacy Django) and v2 (Prisma) formats.
- * V1 data is automatically transformed to v2 format.
- *
+ * Accepts nested (v1.0) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
  */
 export async function importCase(
@@ -307,7 +367,7 @@ export async function importCase(
  */
 export async function validateImportData(jsonData: unknown): Promise<{
 	isValid: boolean;
-	version: "legacy" | "flat" | "nested" | null;
+	version: "flat" | "nested" | null;
 	caseName?: string;
 	elementCount?: number;
 	evidenceLinkCount?: number;

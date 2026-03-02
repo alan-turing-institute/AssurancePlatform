@@ -26,15 +26,15 @@ export function OrphanElementItem({
 	className,
 }: OrphanElementItemProps) {
 	const description =
-		"short_description" in orphan && orphan.short_description
-			? orphan.short_description
+		"description" in orphan && orphan.description
+			? orphan.description
 			: "No description";
 
 	return (
 		<div className={cn("group flex items-center gap-1", className)}>
 			<button
 				aria-label={
-					("short_description" in orphan && orphan.short_description) ||
+					("description" in orphan && orphan.description) ||
 					orphan.name ||
 					`${orphan.type} element`
 				}

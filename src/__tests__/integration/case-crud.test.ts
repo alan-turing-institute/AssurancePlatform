@@ -198,10 +198,10 @@ describe("case-fetch-service", () => {
 			});
 
 			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
-				color_profile: "dark",
+				colourProfile: "dark",
 			})) as unknown as Record<string, unknown>;
 
-			expect(result.color_profile).toBe("dark");
+			expect(result.colourProfile).toBe("dark");
 		});
 
 		it("updates the layout direction", async () => {
@@ -211,7 +211,7 @@ describe("case-fetch-service", () => {
 			});
 
 			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
-				layout_direction: "LR",
+				layoutDirection: "LR",
 			})) as unknown as Record<string, unknown>;
 
 			expect(result.layoutDirection).toBe("LR");

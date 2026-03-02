@@ -3,15 +3,14 @@
  * Handles CRUD operations and element attachment/detachment
  */
 
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 import type { ReactFlowNode } from "./types";
 
 // API Response types
 type ApiNodeResponse = {
 	id: number;
 	name: string;
-	short_description: string;
-	long_description: string;
+	description: string;
 	type: string;
 	[key: string]: unknown;
 };
@@ -25,7 +24,6 @@ type CommentPayload = {
 // Type for node creation payloads
 type CreateNodePayload =
 	| Partial<Goal>
-	| Partial<Context>
 	| Partial<Strategy>
 	| Partial<PropertyClaim>
 	| Partial<Evidence>;
@@ -40,8 +38,8 @@ export const createAssuranceCaseNode = async (
 	_token: string | null
 ): Promise<{ data?: ApiNodeResponse; error?: string | unknown }> => {
 	// Get case ID from the payload
-	const caseId = (newItem as { assurance_case_id?: number | string })
-		.assurance_case_id;
+	const caseId = (newItem as { assuranceCaseId?: number | string })
+		.assuranceCaseId;
 	if (!caseId) {
 		return { error: "Case ID is required" };
 	}
@@ -238,34 +236,34 @@ export const attachCaseElement = async (
 	// Build payload for attach operation
 	const payload: {
 		parentId?: string | number;
-		element_type?: string;
-		goal_id?: number | null;
-		strategy_id?: number | null;
-		property_claim_id?: number | null;
+		elementType?: string;
+		goalId?: number | null;
+		strategyId?: number | null;
+		propertyClaimId?: number | null;
 	} = {
 		parentId: parent.data.id,
-		element_type: orphan.type.toLowerCase(),
+		elementType: orphan.type.toLowerCase(),
 	};
 
-	// Also include Django-style parent references for fallback
+	// Include camelCase parent references
 	switch (orphan.type.toLowerCase()) {
 		case "context":
 		case "strategy":
-			payload.goal_id = parent.data.id;
+			payload.goalId = parent.data.id;
 			break;
 		case "propertyclaim":
 			if (parent.type === "property") {
-				payload.property_claim_id = parent.data.id;
+				payload.propertyClaimId = parent.data.id;
 			}
 			if (parent.type === "strategy") {
-				payload.strategy_id = parent.data.id;
+				payload.strategyId = parent.data.id;
 			}
 			if (parent.type === "goal") {
-				payload.goal_id = parent.data.id;
+				payload.goalId = parent.data.id;
 			}
 			break;
 		case "evidence":
-			payload.property_claim_id = parent.data.id;
+			payload.propertyClaimId = parent.data.id;
 			break;
 		default:
 			break;

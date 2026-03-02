@@ -14,9 +14,7 @@ import { getFeatureConfig } from "../config/feature-config";
 
 type CaseElement = {
 	name: string;
-	short_description?: string;
 	description?: string;
-	long_description?: string;
 	evidence?: CaseElement[];
 };
 
@@ -25,7 +23,7 @@ type PropertyClaim = CaseElement & {
 };
 
 type Strategy = CaseElement & {
-	property_claims?: PropertyClaim[];
+	propertyClaims?: PropertyClaim[];
 };
 
 type Goal = CaseElement & {
@@ -41,23 +39,19 @@ const sampleCaseData: CaseData = {
 	goals: [
 		{
 			name: "Autonomous Vehicle Safety",
-			short_description: "AV system operates safely in all conditions",
 			description:
 				"The autonomous vehicle system shall operate safely under all operating conditions.",
 			strategies: [
 				{
 					name: "Hazard-Based Decomposition",
-					short_description: "Decompose by hazard analysis",
 					description: "Decompose safety argument by hazard analysis",
-					property_claims: [
+					propertyClaims: [
 						{
 							name: "Perception Hazards Mitigated",
-							short_description: "All perception hazards addressed",
 							description: "All perception hazards are mitigated",
 							evidence: [
 								{
 									name: "FMEA Analysis",
-									short_description: "Failure modes analysis complete",
 									description: "FMEA analysis completed",
 								},
 							],
@@ -68,7 +62,6 @@ const sampleCaseData: CaseData = {
 			context: [
 				{
 					name: "Operational Design Domain",
-					short_description: "Urban roads, daylight, dry conditions",
 					description: "Urban roads, daylight, dry conditions",
 				},
 			],
@@ -168,7 +161,7 @@ const StatsDisplay = ({ caseData }: StatsDisplayProps) => {
 		let evidenceCount = 0;
 
 		for (const strategy of goal.strategies) {
-			const claims = strategy.property_claims || [];
+			const claims = strategy.propertyClaims || [];
 			claimCount += claims.length;
 
 			for (const claim of claims) {

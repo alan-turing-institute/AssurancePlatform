@@ -46,7 +46,7 @@ export async function GET(
  * Requires EDIT permission on the case.
  *
  * @pathParam id - Case ID (UUID)
- * @body { name?, description?, color_profile?, layout_direction? }
+ * @body { name?, description?, colourProfile?, layoutDirection? }
  * @response 200 - Updated case data
  * @response 400 - Validation error
  * @response 401 - Unauthorised

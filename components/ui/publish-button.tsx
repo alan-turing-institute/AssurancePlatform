@@ -68,17 +68,17 @@ const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
 		const formData = new FormData();
 		formData.append("id", caseStudy.id.toString());
 		formData.append(
-			"assurance_cases",
-			JSON.stringify(caseStudy.assurance_cases || [])
+			"assuranceCases",
+			JSON.stringify(caseStudy.assuranceCases || [])
 		);
 
 		// Set only the fields that need updating
 		if (published) {
 			formData.append("published", "false"); // Convert boolean to string
-			formData.append("published_date", ""); // Clear the published date
+			formData.append("publishedAt", ""); // Clear the published date
 		} else {
 			formData.append("published", "true"); // Convert boolean to string
-			formData.append("published_date", new Date().toISOString()); // Set new date
+			formData.append("publishedAt", new Date().toISOString()); // Set new date
 		}
 
 		// Send the formData to the API

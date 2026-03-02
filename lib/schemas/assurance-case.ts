@@ -30,8 +30,8 @@ export const updateAssuranceCaseSchema = z
 	.object({
 		name: z.string().min(1).max(255).optional(),
 		description: z.string().min(1).max(5000).optional(),
-		color_profile: z.string().optional(),
-		layout_direction: z.enum(["TB", "LR"]).optional(),
+		colourProfile: z.string().optional(),
+		layoutDirection: z.enum(["TB", "LR"]).optional(),
 	})
 	.describe("Input schema for updating an assurance case");
 

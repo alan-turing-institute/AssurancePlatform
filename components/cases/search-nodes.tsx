@@ -29,7 +29,9 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 			return nodes;
 		}
 		return nodes.filter((node) =>
-			node.data.short_description.toLowerCase().includes(value.toLowerCase())
+			String(node.data.description ?? "")
+				.toLowerCase()
+				.includes(value.toLowerCase())
 		);
 	}, [nodes, value]);
 
@@ -100,7 +102,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 											Identifier: {node.data.name}
 										</span>
 										<span className="line-clamp-2 w-full text-sm">
-											{node.data.short_description}
+											{node.data.description as string}
 										</span>
 									</div>
 								</button>

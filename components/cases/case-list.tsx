@@ -47,13 +47,13 @@ function compareCases(
 	switch (sortBy) {
 		case "newest":
 			return (
-				new Date(b.created_date ?? 0).getTime() -
-				new Date(a.created_date ?? 0).getTime()
+				new Date(b.createdDate ?? 0).getTime() -
+				new Date(a.createdDate ?? 0).getTime()
 			);
 		case "oldest":
 			return (
-				new Date(a.created_date ?? 0).getTime() -
-				new Date(b.created_date ?? 0).getTime()
+				new Date(a.createdDate ?? 0).getTime() -
+				new Date(b.createdDate ?? 0).getTime()
 			);
 		case "name-asc":
 			return a.name.localeCompare(b.name);
@@ -61,8 +61,8 @@ function compareCases(
 			return b.name.localeCompare(a.name);
 		case "updated":
 			return (
-				new Date(b.updated_date ?? b.created_date ?? 0).getTime() -
-				new Date(a.updated_date ?? a.created_date ?? 0).getTime()
+				new Date(b.updatedDate ?? b.createdDate ?? 0).getTime() -
+				new Date(a.updatedDate ?? a.createdDate ?? 0).getTime()
 			);
 		default:
 			return 0;

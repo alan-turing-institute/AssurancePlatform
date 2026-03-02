@@ -76,18 +76,17 @@ function buildGoalStructure(
 		id: goal.id,
 		type: "goal",
 		name: goal.name,
-		short_description: goal.description || "",
-		long_description: goal.description || "",
+		description: goal.description || "",
 		keywords: "",
-		created_date: goal.createdAt.toISOString(),
-		assurance_case_id: goal.caseId,
+		createdDate: goal.createdAt.toISOString(),
+		assuranceCaseId: goal.caseId,
 		context: goal.context || [],
 		strategies,
-		property_claims: propertyClaims,
+		propertyClaims,
 		comments: goal.comments || [],
 		assumption: goal.assumption || "",
 		justification: goal.justification || "",
-		in_sandbox: goal.inSandbox,
+		inSandbox: goal.inSandbox,
 	};
 }
 
@@ -109,16 +108,15 @@ function buildStrategyStructure(
 		id: strategy.id,
 		type: "strategy",
 		name: strategy.name,
-		short_description: strategy.description || "",
-		long_description: strategy.description || "",
-		created_date: strategy.createdAt.toISOString(),
-		goal_id: goalId,
-		property_claims: propertyClaims,
+		description: strategy.description || "",
+		createdDate: strategy.createdAt.toISOString(),
+		goalId,
+		propertyClaims,
 		comments: strategy.comments || [],
 		assumption: strategy.assumption || "",
 		justification: strategy.justification || "",
 		context: strategy.context || [],
-		in_sandbox: strategy.inSandbox,
+		inSandbox: strategy.inSandbox,
 	};
 }
 
@@ -140,14 +138,13 @@ function buildPropertyClaimStructure(
 			id: ev.id,
 			type: "evidence",
 			name: ev.name,
-			short_description: ev.description || "",
-			long_description: ev.description || "",
-			created_date: ev.createdAt.toISOString(),
+			description: ev.description || "",
+			createdDate: ev.createdAt.toISOString(),
 			URL: ev.url || "",
 			urls: ev.urls || [],
-			property_claim_id: [claim.id],
+			propertyClaimId: [claim.id],
 			comments: ev.comments || [],
-			in_sandbox: ev.inSandbox,
+			inSandbox: ev.inSandbox,
 		}));
 
 	const nestedClaims = children
@@ -161,21 +158,20 @@ function buildPropertyClaimStructure(
 		id: claim.id,
 		type: "property_claim",
 		name: claim.name,
-		short_description: claim.description || "",
-		long_description: claim.description || "",
-		created_date: claim.createdAt.toISOString(),
-		goal_id: goalId,
-		strategy_id: strategyId,
-		property_claim_id: claim.parentId,
+		description: claim.description || "",
+		createdDate: claim.createdAt.toISOString(),
+		goalId,
+		strategyId,
+		propertyClaimId: claim.parentId,
 		level: claim.level || 1,
-		claim_type: "Project claim",
-		property_claims: nestedClaims,
+		claimType: "Project claim",
+		propertyClaims: nestedClaims,
 		evidence,
 		comments: claim.comments || [],
 		assumption: claim.assumption || "",
 		justification: claim.justification || "",
 		context: claim.context || [],
-		in_sandbox: claim.inSandbox,
+		inSandbox: claim.inSandbox,
 	};
 }
 
@@ -192,11 +188,11 @@ function buildCaseUpdateData(
 	if (body.description !== undefined) {
 		updateData.description = body.description;
 	}
-	if (body.color_profile !== undefined) {
-		updateData.colourProfile = body.color_profile;
+	if (body.colourProfile !== undefined) {
+		updateData.colourProfile = body.colourProfile;
 	}
-	if (body.layout_direction !== undefined) {
-		updateData.layoutDirection = body.layout_direction;
+	if (body.layoutDirection !== undefined) {
+		updateData.layoutDirection = body.layoutDirection;
 	}
 	return updateData;
 }
@@ -258,8 +254,8 @@ export async function fetchCaseFromPrisma(
 			id: caseData.id,
 			name: caseData.name,
 			description: caseData.description,
-			created_date: caseData.createdAt.toISOString(),
-			color_profile: caseData.colourProfile,
+			createdDate: caseData.createdAt.toISOString(),
+			colourProfile: caseData.colourProfile,
 			owner: caseData.createdById,
 			goals,
 			permissions,
@@ -305,8 +301,8 @@ export async function updateCaseWithPrisma(
 			id: updated.id,
 			name: updated.name,
 			description: updated.description,
-			created_date: updated.createdAt.toISOString(),
-			color_profile: updated.colourProfile,
+			createdDate: updated.createdAt.toISOString(),
+			colourProfile: updated.colourProfile,
 			layoutDirection: updated.layoutDirection,
 		},
 	};

@@ -1,6 +1,6 @@
 import type { Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 import type { AssuranceCaseWithGoals, ConvertibleItem } from "../convert-case";
 import {
 	convertAssuranceCase,
@@ -22,45 +22,35 @@ describe("convert-case utilities", () => {
 					id: 1,
 					type: "Goal",
 					name: "Main Goal",
-					short_description: "Primary objective",
-					long_description: "Detailed objective description",
+					description: "Primary objective",
+
 					keywords: "test, goal",
-					assurance_case_id: 1,
-					context: [
-						{
-							id: 5,
-							type: "Context",
-							name: "Context",
-							short_description: "Background",
-							long_description: "Background information",
-							created_date: "2024-01-01",
-							goal_id: 1,
-						} as Context,
-					],
-					property_claims: [
+					assuranceCaseId: 1,
+					context: [],
+					propertyClaims: [
 						{
 							id: 2,
 							type: "PropertyClaim",
 							name: "Property Claim",
-							short_description: "Supporting claim",
-							long_description: "Detailed claim description",
-							goal_id: 1,
-							property_claim_id: null,
+							description: "Supporting claim",
+
+							goalId: 1,
+							propertyClaimId: null,
 							level: 1,
-							claim_type: "claim",
-							property_claims: [],
+							claimType: "claim",
+							propertyClaims: [],
 							evidence: [
 								{
 									id: 3,
 									type: "Evidence",
 									name: "Evidence Item",
-									short_description: "Supporting evidence",
-									long_description: "Detailed evidence description",
+									description: "Supporting evidence",
+
 									URL: "https://example.com/evidence",
-									property_claim_id: [2],
+									propertyClaimId: [2],
 								} as Evidence,
 							],
-							strategy_id: null,
+							strategyId: null,
 						} as PropertyClaim,
 					],
 					strategies: [
@@ -68,10 +58,10 @@ describe("convert-case utilities", () => {
 							id: 4,
 							type: "Strategy",
 							name: "Strategy",
-							short_description: "Approach",
-							long_description: "Detailed strategy description",
-							goal_id: 1,
-							property_claims: [],
+							description: "Approach",
+
+							goalId: 1,
+							propertyClaims: [],
 						} as Strategy,
 					],
 				} as unknown as Goal,
@@ -159,39 +149,39 @@ describe("convert-case utilities", () => {
 			id: 1,
 			type: "Goal",
 			name: "Test Goal",
-			short_description: "Test description",
+			description: "Test description",
 			context: [
 				{
 					id: 5,
 					type: "Context",
 					name: "Context",
-					short_description: "Context description",
+					description: "Context description",
 				},
 			],
-			property_claims: [
+			propertyClaims: [
 				{
 					id: 2,
 					type: "PropertyClaim",
 					name: "Child Claim",
-					short_description: "Child description",
-					long_description: "Detailed claim",
-					goal_id: 1,
-					property_claim_id: null,
+					description: "Child description",
+
+					goalId: 1,
+					propertyClaimId: null,
 					level: 1,
-					claim_type: "claim",
-					property_claims: [],
+					claimType: "claim",
+					propertyClaims: [],
 					evidence: [
 						{
 							id: 3,
 							type: "Evidence",
 							name: "Evidence",
-							short_description: "Evidence description",
-							long_description: "Detailed evidence",
+							description: "Evidence description",
+
 							URL: "https://example.com",
-							property_claim_id: [2],
+							propertyClaimId: [2],
 						} as Evidence,
 					],
-					strategy_id: null,
+					strategyId: null,
 				} as PropertyClaim,
 			],
 			strategies: [
@@ -199,10 +189,10 @@ describe("convert-case utilities", () => {
 					id: 4,
 					type: "Strategy",
 					name: "Strategy",
-					short_description: "Strategy description",
-					long_description: "Detailed strategy",
-					goal_id: 1,
-					property_claims: [],
+					description: "Strategy description",
+
+					goalId: 1,
+					propertyClaims: [],
 				} as Strategy,
 			],
 		};
@@ -247,22 +237,22 @@ describe("convert-case utilities", () => {
 				id: 1,
 				type: "ConvertibleItem",
 				name: "Level 0",
-				property_claims: [
+				propertyClaims: [
 					{
 						id: 2,
 						type: "PropertyClaim",
 						name: "Level 1",
-						property_claims: [
+						propertyClaims: [
 							{
 								id: 3,
 								type: "PropertyClaim",
 								name: "Level 2",
-								property_claims: [
+								propertyClaims: [
 									{
 										id: 4,
 										type: "PropertyClaim",
 										name: "Level 3",
-										property_claims: [],
+										propertyClaims: [],
 									},
 								],
 							},
@@ -526,45 +516,45 @@ describe("convert-case utilities", () => {
 						id: 1,
 						type: "Goal",
 						name: "Main Goal",
-						short_description: "Main goal description",
-						long_description: "Main goal long description",
+						description: "Main goal description",
+
 						keywords: "main, goal",
-						assurance_case_id: 1,
+						assuranceCaseId: 1,
 						context: [],
-						property_claims: [
+						propertyClaims: [
 							{
 								id: 2,
 								type: "PropertyClaim",
 								name: "Claim 1",
-								short_description: "Claim description",
-								long_description: "Claim long description",
-								goal_id: 1,
-								property_claim_id: null,
+								description: "Claim description",
+
+								goalId: 1,
+								propertyClaimId: null,
 								level: 1,
-								claim_type: "claim",
-								strategy_id: null,
-								property_claims: [
+								claimType: "claim",
+								strategyId: null,
+								propertyClaims: [
 									{
 										id: 3,
 										type: "PropertyClaim",
 										name: "Sub-claim",
-										short_description: "Sub-claim description",
-										long_description: "Sub-claim long description",
-										goal_id: 1,
-										property_claim_id: 2,
+										description: "Sub-claim description",
+
+										goalId: 1,
+										propertyClaimId: 2,
 										level: 2,
-										claim_type: "claim",
-										strategy_id: null,
-										property_claims: [],
+										claimType: "claim",
+										strategyId: null,
+										propertyClaims: [],
 										evidence: [
 											{
 												id: 4,
 												type: "Evidence",
 												name: "Evidence 1",
-												short_description: "Evidence description",
-												long_description: "Evidence long description",
+												description: "Evidence description",
+
 												URL: "https://example.com",
-												property_claim_id: [3],
+												propertyClaimId: [3],
 											},
 										],
 									},
@@ -577,10 +567,10 @@ describe("convert-case utilities", () => {
 								id: 5,
 								type: "Strategy",
 								name: "Strategy 1",
-								short_description: "Strategy description",
-								long_description: "Strategy long description",
-								goal_id: 1,
-								property_claims: [],
+								description: "Strategy description",
+
+								goalId: 1,
+								propertyClaims: [],
 							},
 						],
 					},
@@ -588,12 +578,12 @@ describe("convert-case utilities", () => {
 						id: 6,
 						type: "Goal",
 						name: "Secondary Goal",
-						short_description: "Secondary goal description",
-						long_description: "Secondary goal long description",
+						description: "Secondary goal description",
+
 						keywords: "secondary, goal",
-						assurance_case_id: 1,
+						assuranceCaseId: 1,
 						context: [],
-						property_claims: [],
+						propertyClaims: [],
 						strategies: [],
 					},
 				],
@@ -620,32 +610,29 @@ describe("convert-case utilities", () => {
 					id: i + 1,
 					type: "Goal",
 					name: `Goal ${i + 1}`,
-					short_description: `Goal ${i + 1} description`,
-					long_description: `Goal ${i + 1} long description`,
+					description: `Goal ${i + 1} description`,
 					keywords: `goal, ${i}`,
-					assurance_case_id: 1,
+					assuranceCaseId: 1,
 					context: [],
 					strategies: [],
-					property_claims: Array.from({ length: 5 }, (_j, j) => ({
+					propertyClaims: Array.from({ length: 5 }, (_j, j) => ({
 						id: i * 5 + j + 100,
 						type: "PropertyClaim",
 						name: `Claim ${i}-${j}`,
-						short_description: `Claim ${i}-${j} description`,
-						long_description: `Claim ${i}-${j} long description`,
-						goal_id: i + 1,
-						property_claim_id: null,
+						description: `Claim ${i}-${j} description`,
+						goalId: i + 1,
+						propertyClaimId: null,
 						level: 1,
-						claim_type: "claim",
-						strategy_id: null,
-						property_claims: [],
+						claimType: "claim",
+						strategyId: null,
+						propertyClaims: [],
 						evidence: Array.from({ length: 2 }, (_k, k) => ({
 							id: i * 10 + j * 2 + k + 1000,
 							type: "Evidence",
 							name: `Evidence ${i}-${j}-${k}`,
-							short_description: `Evidence ${i}-${j}-${k} description`,
-							long_description: `Evidence ${i}-${j}-${k} long description`,
+							description: `Evidence ${i}-${j}-${k} description`,
 							URL: `https://example.com/evidence-${i}-${j}-${k}`,
-							property_claim_id: [i * 5 + j + 100],
+							propertyClaimId: [i * 5 + j + 100],
 						})),
 					})),
 				})),
@@ -668,25 +655,25 @@ describe("convert-case utilities", () => {
 						id: 10,
 						type: "Goal",
 						name: "Test Goal",
-						short_description: "Goal description",
-						long_description: "Goal long description",
+						description: "Goal description",
+
 						keywords: "test, goal",
-						assurance_case_id: 1,
+						assuranceCaseId: 1,
 						context: [],
 						strategies: [],
-						property_claims: [
+						propertyClaims: [
 							{
 								id: 20,
 								type: "PropertyClaim",
 								name: "Test Claim",
-								short_description: "Claim description",
-								long_description: "Claim long description",
-								goal_id: 10,
-								property_claim_id: null,
+								description: "Claim description",
+
+								goalId: 10,
+								propertyClaimId: null,
 								level: 1,
-								claim_type: "claim",
-								strategy_id: null,
-								property_claims: [],
+								claimType: "claim",
+								strategyId: null,
+								propertyClaims: [],
 								evidence: [],
 							},
 						],
@@ -716,19 +703,19 @@ describe("convert-case utilities", () => {
 						id: 1,
 						type: "Goal",
 						name: "Circular Goal",
-						short_description: "Circular goal description",
-						long_description: "Circular goal long description",
+						description: "Circular goal description",
+
 						keywords: "circular, goal",
-						assurance_case_id: 1,
+						assuranceCaseId: 1,
 						context: [],
 						strategies: [],
-						property_claims: [],
+						propertyClaims: [],
 					},
 				],
 			};
 
 			// Create circular reference
-			circularCase.goals[0].property_claims.push(
+			circularCase.goals[0].propertyClaims.push(
 				circularCase.goals[0] as unknown as PropertyClaim
 			);
 
@@ -746,7 +733,7 @@ describe("convert-case utilities", () => {
 					{
 						id: undefined,
 						name: "",
-						property_claims: "not-an-array",
+						propertyClaims: "not-an-array",
 					},
 				],
 			};
@@ -767,13 +754,13 @@ describe("convert-case utilities", () => {
 						id: 1,
 						type: "Goal",
 						name: "Root Goal",
-						short_description: "Root goal description",
-						long_description: "Root goal long description",
+						description: "Root goal description",
+
 						keywords: "root, goal",
-						assurance_case_id: 1,
+						assuranceCaseId: 1,
 						context: [],
 						strategies: [],
-						property_claims: [] as PropertyClaim[],
+						propertyClaims: [] as PropertyClaim[],
 					},
 				],
 			};
@@ -785,17 +772,16 @@ describe("convert-case utilities", () => {
 					id: i + 2,
 					type: "PropertyClaim",
 					name: `Claim Level ${i}`,
-					short_description: `Claim level ${i} description`,
-					long_description: `Claim level ${i} long description`,
-					goal_id: 1,
-					property_claim_id: i > 0 ? i + 1 : null,
+					description: `Claim level ${i} description`,
+					goalId: 1,
+					propertyClaimId: i > 0 ? i + 1 : null,
 					level: i + 1,
-					claim_type: "claim",
-					strategy_id: null,
+					claimType: "claim",
+					strategyId: null,
 					evidence: [],
-					property_claims: [],
+					propertyClaims: [],
 				};
-				current.property_claims.push(claim);
+				current.propertyClaims.push(claim);
 				current = claim;
 			}
 

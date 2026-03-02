@@ -21,20 +21,10 @@ function buildCreateInput(
 		caseId,
 		elementType: (body.type || body.elementType) as string,
 		name: body.name as string | undefined,
-		description: (body.description || body.short_description) as
-			| string
-			| undefined,
-		shortDescription: (body.shortDescription || body.short_description) as
-			| string
-			| undefined,
-		longDescription: (body.longDescription || body.long_description) as
-			| string
-			| undefined,
+		description: body.description as string | undefined,
+		shortDescription: body.shortDescription as string | undefined,
+		longDescription: body.longDescription as string | undefined,
 		parentId: body.parentId as string | undefined,
-		goal_id: body.goal_id as string | undefined,
-		strategy_id: body.strategy_id as string | undefined,
-		property_claim_id: body.property_claim_id as string | undefined,
-		assurance_case_id: body.assurance_case_id as string | undefined,
 		url: (body.url || body.URL) as string | undefined,
 		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
@@ -94,7 +84,7 @@ export async function POST(
 			caseId,
 			{
 				element: result.data,
-				elementName: result.data?.name || result.data?.short_description,
+				elementName: result.data?.name,
 				username,
 			},
 			session.userId

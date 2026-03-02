@@ -82,10 +82,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	const handleContextAdd = async (description: string) => {
 		// Create a new context object to add - this should be created by calling the api
 		const newContextItem = {
-			short_description: description,
-			long_description: description,
-			goal_id: assuranceCase?.goals?.[0]?.id || 0,
-			assurance_case_id: assuranceCase?.id,
+			description,
+			goalId: assuranceCase?.goals?.[0]?.id || 0,
+			assuranceCaseId: assuranceCase?.id,
 			type: "Context",
 		};
 
@@ -152,10 +151,9 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
 		// Create a new strategy object to add
 		const newStrategyItem = {
-			short_description: description,
-			long_description: description,
-			goal_id: assuranceCase.goals[0].id,
-			assurance_case_id: assuranceCase.id,
+			description,
+			goalId: assuranceCase.goals[0].id,
+			assuranceCaseId: assuranceCase.id,
 		};
 
 		// Pass empty string - server action uses validateSession() internally
@@ -211,22 +209,21 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	/** Helper function to create property claim item */
 	const createPropertyClaimItem = (description: string) => {
 		const baseItem = {
-			short_description: description,
-			long_description: description,
-			claim_type: "Property Claim",
-			property_claims: [],
+			description,
+			claimType: "Property Claim",
+			propertyClaims: [],
 			evidence: [],
 			type: "PropertyClaim",
-			assurance_case_id: assuranceCase?.id,
+			assuranceCaseId: assuranceCase?.id,
 		};
 
 		switch (node.type) {
 			case "strategy":
-				return { ...baseItem, strategy_id: node.data.id };
+				return { ...baseItem, strategyId: node.data.id };
 			case "property":
-				return { ...baseItem, property_claim_id: node.data.id };
+				return { ...baseItem, propertyClaimId: node.data.id };
 			default:
-				return { ...baseItem, goal_id: assuranceCase?.goals?.[0]?.id || 0 };
+				return { ...baseItem, goalId: assuranceCase?.goals?.[0]?.id || 0 };
 		}
 	};
 
@@ -240,7 +237,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		}
 		const goalContainingStrategy = assuranceCase.goals.find((goal) =>
 			goal.strategies?.some(
-				(strategy) => strategy.id === result.data.strategy_id
+				(strategy) => strategy.id === result.data.strategyId
 			)
 		);
 
@@ -250,10 +247,10 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
 		const updatedStrategies = goalContainingStrategy.strategies.map(
 			(strategy) => {
-				if (strategy.id === result.data.strategy_id) {
+				if (strategy.id === result.data.strategyId) {
 					return {
 						...strategy,
-						property_claims: [...(strategy.property_claims || []), result.data],
+						propertyClaims: [...(strategy.propertyClaims || []), result.data],
 					};
 				}
 				return strategy;
@@ -282,7 +279,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	/** Helper function to handle goal claim updates */
 	const handleGoalClaimUpdate = (result: { data: PropertyClaim }) => {
 		const newPropertyClaim = [
-			...(assuranceCase?.goals?.[0]?.property_claims || []),
+			...(assuranceCase?.goals?.[0]?.propertyClaims || []),
 			result.data,
 		];
 
@@ -292,7 +289,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 					goals: [
 						{
 							...(assuranceCase.goals?.[0] || {}),
-							property_claims: newPropertyClaim,
+							propertyClaims: newPropertyClaim,
 						} as Goal,
 					],
 				}
@@ -326,7 +323,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		newClaim: PropertyClaim
 	): boolean => {
 		for (const strategy of strategies) {
-			const strategyPropertyClaims = strategy.property_claims || [];
+			const strategyPropertyClaims = strategy.propertyClaims || [];
 			const found = addPropertyClaimToNested(
 				strategyPropertyClaims,
 				parentId,
@@ -350,11 +347,11 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
 		// Deep clone the entire goals structure to ensure React detects the state change
 		const goalsClone: Goal[] = JSON.parse(JSON.stringify(assuranceCase.goals));
-		const parentId = (result.data as PropertyClaim)?.property_claim_id || 0;
+		const parentId = (result.data as PropertyClaim)?.propertyClaimId || 0;
 		const newClaim = (result.data as PropertyClaim) || ({} as PropertyClaim);
 
 		// First try goal's direct property claims, then strategies' property claims
-		const goalPropertyClaims = goalsClone[0]?.property_claims || [];
+		const goalPropertyClaims = goalsClone[0]?.propertyClaims || [];
 		const strategies = goalsClone[0]?.strategies || [];
 
 		const added =
@@ -412,13 +409,12 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
 	/** Helper function to create evidence data object */
 	const createEvidenceData = (description: string, urls: string[]) => ({
-		short_description: description,
-		long_description: description,
+		description,
 		urls,
 		URL: urls[0] || "", // Backward compatibility
-		property_claim_id: [node.data.id],
+		propertyClaimId: [node.data.id],
 		type: "Evidence",
-		assurance_case_id: assuranceCase?.id,
+		assuranceCaseId: assuranceCase?.id,
 	});
 
 	/** Helper function to check property claims in strategies */
@@ -433,8 +429,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 
 		return strategies.some(
 			(strategy) =>
-				strategy.property_claims &&
-				addEvidenceToClaim(strategy.property_claims, parentClaimId, evidence)
+				strategy.propertyClaims &&
+				addEvidenceToClaim(strategy.propertyClaims, parentClaimId, evidence)
 		);
 	};
 
@@ -446,8 +442,8 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	): boolean => {
 		// Check direct property claims
 		if (
-			goal.property_claims &&
-			addEvidenceToClaim(goal.property_claims, parentClaimId, evidence)
+			goal.propertyClaims &&
+			addEvidenceToClaim(goal.propertyClaims, parentClaimId, evidence)
 		) {
 			return true;
 		}
@@ -518,7 +514,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		}
 
 		const evidenceData = result.data as unknown as Evidence;
-		const parentClaimId = evidenceData?.property_claim_id?.[0] || 0;
+		const parentClaimId = evidenceData?.propertyClaimId?.[0] || 0;
 
 		// Debug logging - uncomment for troubleshooting
 		// const allPropertyClaims = assuranceCase?.goals

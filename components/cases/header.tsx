@@ -174,8 +174,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 		}
 	};
 
-	const publishedAt =
-		assuranceCase?.publishedAt ?? assuranceCase?.published_date;
+	const publishedAt = assuranceCase?.publishedAt;
 
 	return (
 		<div className="fixed top-0 left-0 z-50 w-full border-sidebar-border border-b bg-sidebar text-sidebar-foreground">

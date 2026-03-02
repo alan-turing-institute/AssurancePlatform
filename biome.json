@@ -99,7 +99,7 @@
       }
     },
     {
-      "includes": ["components/cases/sanitized-html.tsx"],
+      "includes": ["components/cases/sanitised-html.tsx"],
       "linter": {
         "rules": {
           "security": {

@@ -12,8 +12,8 @@ type AssuranceCase = {
 	id: number | string;
 	name: string;
 	description?: string;
-	created_date?: string;
-	updated_date?: string;
+	createdDate?: string;
+	updatedDate?: string;
 	owner?: number | string;
 	isDemo?: boolean;
 };
@@ -61,8 +61,8 @@ export const fetchAssuranceCases = async (): Promise<
 		id: c.id,
 		name: c.name,
 		description: c.description ?? undefined,
-		created_date: c.createdAt.toISOString(),
-		updated_date: c.updatedAt.toISOString(),
+		createdDate: c.createdAt.toISOString(),
+		updatedDate: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
 		isDemo: c.isDemo,
 		permissions: c.createdById === validated.userId ? "owner" : "view",
@@ -136,8 +136,8 @@ export const fetchSharedAssuranceCases = async (): Promise<
 		id: c.id,
 		name: c.name,
 		description: c.description ?? undefined,
-		created_date: c.createdAt.toISOString(),
-		updated_date: c.updatedAt.toISOString(),
+		createdDate: c.createdAt.toISOString(),
+		updatedDate: c.updatedAt.toISOString(),
 		owner: c.createdById ?? undefined,
 	}));
 };
@@ -193,10 +193,10 @@ type PublishedCaseForStudy = {
 	id: string;
 	name: string;
 	description: string;
-	publish_status: string;
-	published_at: string | null;
-	marked_ready_at: string | null;
-	published_version_id: string | null;
+	publishStatus: string;
+	publishedAt: string | null;
+	markedReadyAt: string | null;
+	publishedVersionId: string | null;
 };
 
 /**
@@ -221,9 +221,9 @@ export async function fetchPublishedCasesForStudy(): Promise<
 		id: c.id,
 		name: c.name,
 		description: c.description,
-		publish_status: c.publishStatus,
-		published_at: c.publishedAt?.toISOString() ?? null,
-		marked_ready_at: c.markedReadyAt?.toISOString() ?? null,
-		published_version_id: c.publishedVersionId,
+		publishStatus: c.publishStatus,
+		publishedAt: c.publishedAt?.toISOString() ?? null,
+		markedReadyAt: c.markedReadyAt?.toISOString() ?? null,
+		publishedVersionId: c.publishedVersionId,
 	}));
 }

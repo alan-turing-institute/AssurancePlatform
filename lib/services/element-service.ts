@@ -38,11 +38,6 @@ export type CreateElementInput = {
 	shortDescription?: string;
 	longDescription?: string;
 	parentId?: string | null;
-	// For compatibility with Django format
-	goal_id?: string | number | null;
-	strategy_id?: string | number | null;
-	property_claim_id?: string | number | number[] | null;
-	assurance_case_id?: string | number;
 	// Evidence-specific
 	url?: string;
 	URL?: string;
@@ -66,24 +61,19 @@ export type UpdateElementInput = {
 	justification?: string;
 	context?: string[];
 	inSandbox?: boolean;
-	// For compatibility with Django format
-	goal_id?: string | number | null;
-	strategy_id?: string | number | null;
-	property_claim_id?: string | number | number[] | null;
 };
 
 export type ElementResponse = {
 	id: string;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date: string;
-	in_sandbox: boolean;
-	assurance_case_id: string;
-	goal_id?: string | null;
-	strategy_id?: string | null;
-	property_claim_id?: string | string[] | null;
+	description: string;
+	createdDate: string;
+	inSandbox: boolean;
+	assuranceCaseId: string;
+	goalId?: string | null;
+	strategyId?: string | null;
+	propertyClaimId?: string | string[] | null;
 	URL?: string;
 	urls?: string[];
 	assumption?: string;
@@ -106,8 +96,8 @@ async function validateCaseAccess(
 }
 
 /**
- * Resolves parent ID from Django-style fields (goal_id, strategy_id, property_claim_id)
- * Returns undefined if no parent field is specified (to distinguish from explicitly setting null)
+ * Resolves parent ID from input.
+ * Returns undefined if no parent field is specified (to distinguish from explicitly setting null).
  */
 function resolveParentId(
 	input: CreateElementInput | UpdateElementInput
@@ -115,21 +105,6 @@ function resolveParentId(
 	// Direct parentId takes precedence - return exactly what's provided (including null)
 	if ("parentId" in input && input.parentId !== undefined) {
 		return input.parentId;
-	}
-
-	// Check Django-style parent references
-	if (input.goal_id) {
-		return String(input.goal_id);
-	}
-	if (input.strategy_id) {
-		return String(input.strategy_id);
-	}
-	if (input.property_claim_id) {
-		// Handle array format from evidence
-		if (Array.isArray(input.property_claim_id)) {
-			return String(input.property_claim_id[0]);
-		}
-		return String(input.property_claim_id);
 	}
 
 	// Return undefined to indicate no parent field was specified
@@ -182,7 +157,7 @@ function applyUrlUpdates(
 }
 
 /**
- * Adds parent reference to response in Django format
+ * Adds parent reference to response
  */
 function addParentReference(
 	response: ElementResponse,
@@ -191,18 +166,18 @@ function addParentReference(
 ): void {
 	switch (parent.elementType) {
 		case "GOAL":
-			response.goal_id = parent.id;
+			response.goalId = parent.id;
 			break;
 		case "STRATEGY":
-			response.strategy_id = parent.id;
+			response.strategyId = parent.id;
 			break;
 		case "PROPERTY_CLAIM":
-			// Evidence expects property_claim_id as an array (Django format)
+			// Evidence expects propertyClaimId as an array
 			// Other elements get it as a string
 			if (elementType === "EVIDENCE") {
-				response.property_claim_id = [parent.id];
+				response.propertyClaimId = [parent.id];
 			} else {
-				response.property_claim_id = parent.id;
+				response.propertyClaimId = parent.id;
 			}
 			break;
 		default:
@@ -238,11 +213,10 @@ function transformToResponse(element: {
 		id: element.id,
 		type: ELEMENT_TYPE_REVERSE_MAP[element.elementType] || element.elementType,
 		name: element.name || "",
-		short_description: element.description || "",
-		long_description: element.description || "",
-		created_date: element.createdAt.toISOString(),
-		in_sandbox: element.inSandbox,
-		assurance_case_id: element.caseId,
+		description: element.description || "",
+		createdDate: element.createdAt.toISOString(),
+		inSandbox: element.inSandbox,
+		assuranceCaseId: element.caseId,
 		comments: [],
 	};
 
@@ -451,10 +425,10 @@ async function createElementInDatabase(
 
 	const response = transformToResponse(element);
 
-	// Evidence has no parentId, so transformToResponse won't set property_claim_id.
+	// Evidence has no parentId, so transformToResponse won't set propertyClaimId.
 	// Add it from the evidence link we just created.
 	if (intendedParentId) {
-		response.property_claim_id = [intendedParentId];
+		response.propertyClaimId = [intendedParentId];
 	}
 
 	return { data: response };
@@ -467,7 +441,7 @@ export async function createElement(
 	userId: string,
 	input: CreateElementInput
 ): Promise<{ data?: ElementResponse; error?: string }> {
-	const caseId = input.caseId || String(input.assurance_case_id);
+	const caseId = input.caseId;
 	if (!caseId) {
 		return { error: "Case ID is required" };
 	}

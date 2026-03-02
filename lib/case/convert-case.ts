@@ -6,11 +6,11 @@ export type ConvertibleItem = {
 	id: number;
 	name: string;
 	type: string;
-	short_description?: string;
+	description?: string;
 	hidden?: boolean;
 	context?: ConvertibleItem[];
 	strategies?: Strategy[];
-	property_claims?: PropertyClaim[];
+	propertyClaims?: PropertyClaim[];
 	evidence?: Evidence[];
 	[key: string]: unknown;
 };
@@ -60,23 +60,6 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 	return { caseNodes, caseEdges };
 };
 
-/**
- * Recursively creates nodes from a hierarchical structure of items, with support for various child types.
- *
- * This function generates nodes from an array of items, each having potentially nested child elements such as
- * `context`, `property_claims`, `evidence`, or `strategies`. The nodes are structured with unique IDs and are
- * positioned in a graph-like format. The recursion depth is limited to prevent infinite loops, and processed
- * items are tracked to avoid duplicating nodes.
- *
- * @param {any[]} items - An array of items from which nodes will be created. Each item can have nested child elements.
- * @param {string} nodeType - The type of node to be created for the current set of items (e.g., 'goal', 'context', 'property').
- * @param {any|null} [parentNode=null] - The parent node to which the newly created nodes will be linked. Defaults to null for root nodes.
- * @param {Set<any>} [processedItems=new Set()] - A set to track already processed items to prevent duplicates.
- * @param {number} [depth=10] - The maximum recursion depth to avoid infinite recursion. Defaults to 10.
- * @returns {any[]} An array of created nodes with their hierarchical relationships preserved.
- *
- */
-
 // Helper function to create a single node
 const createNode = (
 	item: ConvertibleItem,
@@ -93,7 +76,7 @@ const createNode = (
 			id: item.id,
 			name: item.name,
 			type: item.type,
-			description: item.short_description,
+			description: item.description,
 			elementId: item.id, // Add elementId for test compatibility
 			elementType: nodeType, // Add elementType for identification
 			label: item.name, // Add label for compatibility
@@ -141,12 +124,12 @@ const processChildNodes = (
 
 	// Process property claims
 	if (
-		item.property_claims &&
-		Array.isArray(item.property_claims) &&
-		item.property_claims.length > 0
+		item.propertyClaims &&
+		Array.isArray(item.propertyClaims) &&
+		item.propertyClaims.length > 0
 	) {
 		const propertyClaimNodes = createNodesRecursively(
-			item.property_claims as unknown as ConvertibleItem[],
+			item.propertyClaims as unknown as ConvertibleItem[],
 			"property",
 			node,
 			processedItems,

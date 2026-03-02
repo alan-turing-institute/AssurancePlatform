@@ -15,17 +15,17 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 	}
 	if (caseNode.type === "TopLevelNormativeGoal") {
 		return ((caseNode.context || []) as unknown as CaseNode[]).concat(
-			(caseNode.property_claims || []) as unknown as CaseNode[],
+			(caseNode.propertyClaims || []) as unknown as CaseNode[],
 			(caseNode.strategies || []) as unknown as CaseNode[],
 			(caseNode.context || []) as unknown as CaseNode[]
 		);
 	}
 	if (caseNode.type === "Strategy") {
-		return (caseNode.property_claims || []) as unknown as CaseNode[];
+		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
 	}
 	// Handle both "PropertyClaim" (from Django API) and "property_claim" (legacy format)
 	if (caseNode.type === "PropertyClaim" || caseNode.type === "property_claim") {
-		return ((caseNode.property_claims || []) as unknown as CaseNode[]).concat(
+		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
 			(caseNode.evidence || []) as unknown as CaseNode[]
 		);
 	}
@@ -274,9 +274,9 @@ const getChildrenByKey = (
 			return "goals" in element ? (element as AssuranceCase).goals : undefined;
 		case "context":
 			return "context" in element ? (element as Goal).context : undefined;
-		case "property_claims":
-			return "property_claims" in element
-				? (element as Goal | PropertyClaim | Strategy).property_claims
+		case "propertyClaims":
+			return "propertyClaims" in element
+				? (element as Goal | PropertyClaim | Strategy).propertyClaims
 				: undefined;
 		case "strategies":
 			return "strategies" in element
@@ -359,7 +359,7 @@ export function findElementById(
 		const childrenKeys = [
 			"goals",
 			"context",
-			"property_claims",
+			"propertyClaims",
 			"strategies",
 			"evidence",
 			"comments",
@@ -389,7 +389,7 @@ const processChildrenForHiddenStatus = (
 			hiddenStatus.push((child as { hidden: boolean }).hidden);
 		}
 		// Recursively check nested property claims and strategies
-		if (key === "property_claims" || key === "strategies") {
+		if (key === "propertyClaims" || key === "strategies") {
 			const nestedStatus = getChildrenHiddenStatus(
 				child as NestedArrayItem | AssuranceCase
 			);
@@ -407,7 +407,7 @@ export function getChildrenHiddenStatus(
 	const hiddenStatus: boolean[] = [];
 	const childrenKeys = [
 		"context",
-		"property_claims",
+		"propertyClaims",
 		"strategies",
 		"evidence",
 		"comments",
@@ -449,31 +449,31 @@ export const findParentNode = (
 	nodes: ReactFlowNode[],
 	node: ReactFlowNode
 ): ReactFlowNode | null => {
-	if (node.data.goal_id) {
+	if (node.data.goalId) {
 		// search for goal
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.goal_id
+			(n: ReactFlowNode) => n.data.id === node.data.goalId
 		);
 		return parent ?? null;
 	}
-	if (node.data.property_claim_id) {
+	if (node.data.propertyClaimId) {
 		if (node.type === "evidence") {
 			const parent = nodes.find(
 				(n: ReactFlowNode) =>
-					n.data.id === (node.data.property_claim_id as number[])[0]
+					n.data.id === (node.data.propertyClaimId as number[])[0]
 			);
 			return parent ?? null;
 		}
 		// search for property claim
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.property_claim_id
+			(n: ReactFlowNode) => n.data.id === node.data.propertyClaimId
 		);
 		return parent ?? null;
 	}
-	if (node.data.strategy_id) {
+	if (node.data.strategyId) {
 		// search for strategy
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.strategy_id
+			(n: ReactFlowNode) => n.data.id === node.data.strategyId
 		);
 		return parent ?? null;
 	}
