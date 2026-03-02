@@ -20,7 +20,7 @@ describe("convert-case utilities", () => {
 			goals: [
 				{
 					id: 1,
-					type: "Goal",
+					type: "goal",
 					name: "Main Goal",
 					description: "Primary objective",
 
@@ -30,7 +30,7 @@ describe("convert-case utilities", () => {
 					propertyClaims: [
 						{
 							id: 2,
-							type: "PropertyClaim",
+							type: "property_claim",
 							name: "Property Claim",
 							description: "Supporting claim",
 
@@ -42,7 +42,7 @@ describe("convert-case utilities", () => {
 							evidence: [
 								{
 									id: 3,
-									type: "Evidence",
+									type: "evidence",
 									name: "Evidence Item",
 									description: "Supporting evidence",
 
@@ -56,7 +56,7 @@ describe("convert-case utilities", () => {
 					strategies: [
 						{
 							id: 4,
-							type: "Strategy",
+							type: "strategy",
 							name: "Strategy",
 							description: "Approach",
 
@@ -147,13 +147,13 @@ describe("convert-case utilities", () => {
 	describe("createNodesRecursively", () => {
 		const mockGoal: ConvertibleItem = {
 			id: 1,
-			type: "Goal",
+			type: "goal",
 			name: "Test Goal",
 			description: "Test description",
 			context: [
 				{
 					id: 5,
-					type: "Context",
+					type: "context",
 					name: "Context",
 					description: "Context description",
 				},
@@ -161,7 +161,7 @@ describe("convert-case utilities", () => {
 			propertyClaims: [
 				{
 					id: 2,
-					type: "PropertyClaim",
+					type: "property_claim",
 					name: "Child Claim",
 					description: "Child description",
 
@@ -173,7 +173,7 @@ describe("convert-case utilities", () => {
 					evidence: [
 						{
 							id: 3,
-							type: "Evidence",
+							type: "evidence",
 							name: "Evidence",
 							description: "Evidence description",
 
@@ -187,7 +187,7 @@ describe("convert-case utilities", () => {
 			strategies: [
 				{
 					id: 4,
-					type: "Strategy",
+					type: "strategy",
 					name: "Strategy",
 					description: "Strategy description",
 
@@ -240,17 +240,17 @@ describe("convert-case utilities", () => {
 				propertyClaims: [
 					{
 						id: 2,
-						type: "PropertyClaim",
+						type: "property_claim",
 						name: "Level 1",
 						propertyClaims: [
 							{
 								id: 3,
-								type: "PropertyClaim",
+								type: "property_claim",
 								name: "Level 2",
 								propertyClaims: [
 									{
 										id: 4,
-										type: "PropertyClaim",
+										type: "property_claim",
 										name: "Level 3",
 										propertyClaims: [],
 									},
@@ -351,7 +351,7 @@ describe("convert-case utilities", () => {
 		it("should handle items with missing properties", () => {
 			const incompleteGoal = {
 				id: 1,
-				type: "Goal",
+				type: "goal",
 				name: "Incomplete Goal",
 				// Missing short_description and nested arrays
 			};
@@ -514,7 +514,7 @@ describe("convert-case utilities", () => {
 				goals: [
 					{
 						id: 1,
-						type: "Goal",
+						type: "goal",
 						name: "Main Goal",
 						description: "Main goal description",
 
@@ -524,7 +524,7 @@ describe("convert-case utilities", () => {
 						propertyClaims: [
 							{
 								id: 2,
-								type: "PropertyClaim",
+								type: "property_claim",
 								name: "Claim 1",
 								description: "Claim description",
 
@@ -536,7 +536,7 @@ describe("convert-case utilities", () => {
 								propertyClaims: [
 									{
 										id: 3,
-										type: "PropertyClaim",
+										type: "property_claim",
 										name: "Sub-claim",
 										description: "Sub-claim description",
 
@@ -549,7 +549,7 @@ describe("convert-case utilities", () => {
 										evidence: [
 											{
 												id: 4,
-												type: "Evidence",
+												type: "evidence",
 												name: "Evidence 1",
 												description: "Evidence description",
 
@@ -565,7 +565,7 @@ describe("convert-case utilities", () => {
 						strategies: [
 							{
 								id: 5,
-								type: "Strategy",
+								type: "strategy",
 								name: "Strategy 1",
 								description: "Strategy description",
 
@@ -576,7 +576,7 @@ describe("convert-case utilities", () => {
 					},
 					{
 						id: 6,
-						type: "Goal",
+						type: "goal",
 						name: "Secondary Goal",
 						description: "Secondary goal description",
 
@@ -608,7 +608,7 @@ describe("convert-case utilities", () => {
 				name: "Large Case",
 				goals: Array.from({ length: 10 }, (_, i) => ({
 					id: i + 1,
-					type: "Goal",
+					type: "goal",
 					name: `Goal ${i + 1}`,
 					description: `Goal ${i + 1} description`,
 					keywords: `goal, ${i}`,
@@ -617,7 +617,7 @@ describe("convert-case utilities", () => {
 					strategies: [],
 					propertyClaims: Array.from({ length: 5 }, (_j, j) => ({
 						id: i * 5 + j + 100,
-						type: "PropertyClaim",
+						type: "property_claim",
 						name: `Claim ${i}-${j}`,
 						description: `Claim ${i}-${j} description`,
 						goalId: i + 1,
@@ -628,7 +628,7 @@ describe("convert-case utilities", () => {
 						propertyClaims: [],
 						evidence: Array.from({ length: 2 }, (_k, k) => ({
 							id: i * 10 + j * 2 + k + 1000,
-							type: "Evidence",
+							type: "evidence",
 							name: `Evidence ${i}-${j}-${k}`,
 							description: `Evidence ${i}-${j}-${k} description`,
 							URL: `https://example.com/evidence-${i}-${j}-${k}`,
@@ -653,7 +653,7 @@ describe("convert-case utilities", () => {
 				goals: [
 					{
 						id: 10,
-						type: "Goal",
+						type: "goal",
 						name: "Test Goal",
 						description: "Goal description",
 
@@ -664,7 +664,7 @@ describe("convert-case utilities", () => {
 						propertyClaims: [
 							{
 								id: 20,
-								type: "PropertyClaim",
+								type: "property_claim",
 								name: "Test Claim",
 								description: "Claim description",
 
@@ -701,7 +701,7 @@ describe("convert-case utilities", () => {
 				goals: [
 					{
 						id: 1,
-						type: "Goal",
+						type: "goal",
 						name: "Circular Goal",
 						description: "Circular goal description",
 
@@ -752,7 +752,7 @@ describe("convert-case utilities", () => {
 				goals: [
 					{
 						id: 1,
-						type: "Goal",
+						type: "goal",
 						name: "Root Goal",
 						description: "Root goal description",
 
@@ -770,7 +770,7 @@ describe("convert-case utilities", () => {
 			for (let i = 0; i < 20; i++) {
 				const claim: PropertyClaim = {
 					id: i + 2,
-					type: "PropertyClaim",
+					type: "property_claim",
 					name: `Claim Level ${i}`,
 					description: `Claim level ${i} description`,
 					goalId: 1,

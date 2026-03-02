@@ -39,13 +39,13 @@ type NodeOptionsMenuProps = {
 	nodeType: DiagramNodeType;
 };
 
-/** Map of React Flow node types to orphan element types */
+/** Map of React Flow node types to canonical element types */
 const TYPE_MAP: Record<string, string> = {
-	property: "PropertyClaim",
-	strategy: "Strategy",
-	evidence: "Evidence",
-	context: "Context",
-	goal: "Goal",
+	property: "property_claim",
+	strategy: "strategy",
+	evidence: "evidence",
+	context: "context",
+	goal: "goal",
 };
 
 /** Create orphan element from node data */

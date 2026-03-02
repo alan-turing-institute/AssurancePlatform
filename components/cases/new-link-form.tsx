@@ -85,7 +85,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			description,
 			goalId: assuranceCase?.goals?.[0]?.id || 0,
 			assuranceCaseId: assuranceCase?.id,
-			type: "Context",
+			type: "context",
 		};
 
 		const result = await createAssuranceCaseNode(
@@ -213,7 +213,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 			claimType: "Property Claim",
 			propertyClaims: [],
 			evidence: [],
-			type: "PropertyClaim",
+			type: "property_claim",
 			assuranceCaseId: assuranceCase?.id,
 		};
 
@@ -413,7 +413,7 @@ const NewLinkForm: React.FC<NewLinkFormProps> = ({
 		urls,
 		URL: urls[0] || "", // Backward compatibility
 		propertyClaimId: [node.data.id],
-		type: "Evidence",
+		type: "evidence",
 		assuranceCaseId: assuranceCase?.id,
 	});
 

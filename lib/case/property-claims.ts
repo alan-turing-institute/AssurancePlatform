@@ -147,11 +147,8 @@ const processClaimUpdate = (
 		return { claim, found: false };
 	}
 
-	// Direct match - check for both API format ("property_claim") and legacy format ("PropertyClaim")
-	if (
-		claim.id === id &&
-		(claim.type === "property_claim" || claim.type === "PropertyClaim")
-	) {
+	// Direct match
+	if (claim.id === id && claim.type === "property_claim") {
 		return { claim: { ...claim, ...newData }, found: true };
 	}
 
@@ -319,10 +316,7 @@ const searchPropertyClaimInItem = (
 	item: PropertyClaim,
 	id: number
 ): PropertyClaim | null => {
-	if (
-		item.id === id &&
-		(item.type === "property_claim" || item.type === "PropertyClaim")
-	) {
+	if (item.id === id && item.type === "property_claim") {
 		return item;
 	}
 	return null;
@@ -459,7 +453,7 @@ const addPropertyClaimToList = (
 	// Check if currentClaimName is actually an ID (numeric string)
 	const isIdComparison = NUMERIC_ID_PATTERN.test(currentClaimName);
 
-	if (item.type === "property_claim" || item.type === "PropertyClaim") {
+	if (item.type === "property_claim") {
 		if (isIdComparison) {
 			// Compare by ID if currentClaimName is a numeric string
 			if (item.id?.toString() !== currentClaimName) {

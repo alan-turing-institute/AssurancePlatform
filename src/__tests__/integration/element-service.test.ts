@@ -32,7 +32,7 @@ describe("element-service", () => {
 
 			expect(result.error).toBeUndefined();
 			expect(result.data).toBeDefined();
-			expect(result.data?.type).toBe("TopLevelNormativeGoal");
+			expect(result.data?.type).toBe("goal");
 			expect(result.data?.assuranceCaseId).toBe(testCase.id);
 			expect(result.data?.name).toMatch(GOAL_NAME_PATTERN);
 
@@ -61,7 +61,7 @@ describe("element-service", () => {
 			});
 
 			expect(strategy.error).toBeUndefined();
-			expect(strategy.data?.type).toBe("Strategy");
+			expect(strategy.data?.type).toBe("strategy");
 			expect(strategy.data?.goalId).toBe(goal.data!.id);
 			expect(strategy.data?.name).toMatch(STRATEGY_NAME_PATTERN);
 		});
@@ -86,7 +86,7 @@ describe("element-service", () => {
 			});
 
 			expect(claim.error).toBeUndefined();
-			expect(claim.data?.type).toBe("PropertyClaim");
+			expect(claim.data?.type).toBe("property_claim");
 			expect(claim.data?.strategyId).toBe(strategy.data!.id);
 		});
 
@@ -115,7 +115,7 @@ describe("element-service", () => {
 			});
 
 			expect(evidence.error).toBeUndefined();
-			expect(evidence.data?.type).toBe("Evidence");
+			expect(evidence.data?.type).toBe("evidence");
 			expect(evidence.data?.propertyClaimId).toContain(claim.data!.id);
 		});
 

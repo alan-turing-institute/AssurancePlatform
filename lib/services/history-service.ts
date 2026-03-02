@@ -122,21 +122,10 @@ export function generateOperationDescription(
  * Formats element type for display.
  */
 function formatElementType(elementType: string): string {
-	switch (elementType.toLowerCase()) {
-		case "goal":
-		case "toplevelgoal":
-		case "toplevelgoalnormative":
-			return "goal";
-		case "strategy":
-			return "strategy";
-		case "property_claim":
-		case "propertyclaim":
-			return "claim";
-		case "evidence":
-			return "evidence";
-		default:
-			return elementType.toLowerCase();
+	if (elementType === "property_claim") {
+		return "claim";
 	}
+	return elementType.toLowerCase();
 }
 
 /**

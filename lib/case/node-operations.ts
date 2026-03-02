@@ -41,14 +41,14 @@ type DetachNodeOptions = {
 };
 
 /**
- * Map of React Flow node types to orphan element types
+ * Map of React Flow node types to canonical element types
  */
 const TYPE_MAP: Record<string, string> = {
-	property: "PropertyClaim",
-	strategy: "Strategy",
-	evidence: "Evidence",
-	context: "Context",
-	goal: "Goal",
+	property: "property_claim",
+	strategy: "strategy",
+	evidence: "evidence",
+	context: "context",
+	goal: "goal",
 };
 
 /**
@@ -63,7 +63,7 @@ const createEvidenceOrphan = (
 	parentClaimId: number
 ): OrphanElementData => ({
 	id: ev.id,
-	type: TYPE_MAP.evidence ?? "Evidence",
+	type: TYPE_MAP.evidence ?? "evidence",
 	name: ev.name,
 	description: ev.description ?? "",
 	propertyClaimId: parentClaimId,
@@ -78,7 +78,7 @@ const collectOrphanElements = (claim: PropertyClaim): OrphanElementData[] => {
 	// Add the claim itself
 	elements.push({
 		id: claim.id,
-		type: TYPE_MAP.property ?? "PropertyClaim",
+		type: TYPE_MAP.property ?? "property_claim",
 		name: claim.name,
 		description: claim.description ?? "",
 		propertyClaimId: claim.propertyClaimId,

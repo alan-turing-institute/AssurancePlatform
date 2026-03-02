@@ -1,34 +1,9 @@
+import { toDisplayType, toPrefix, toPrismaType } from "@/lib/element-types";
 import { prisma } from "@/lib/prisma";
 import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
-
-// Element types mapping from frontend to Prisma enum
-const ELEMENT_TYPE_MAP: Record<string, string> = {
-	goal: "GOAL",
-	strategy: "STRATEGY",
-	property: "PROPERTY_CLAIM",
-	property_claim: "PROPERTY_CLAIM",
-	propertyclaim: "PROPERTY_CLAIM",
-	evidence: "EVIDENCE",
-} as const;
-
-// Reverse mapping for API responses
-const ELEMENT_TYPE_REVERSE_MAP: Record<string, string> = {
-	GOAL: "TopLevelNormativeGoal",
-	STRATEGY: "Strategy",
-	PROPERTY_CLAIM: "PropertyClaim",
-	EVIDENCE: "Evidence",
-} as const;
-
-// Element type prefixes for auto-generated names
-const TYPE_PREFIXES: Record<string, string> = {
-	GOAL: "G",
-	STRATEGY: "S",
-	PROPERTY_CLAIM: "P",
-	EVIDENCE: "E",
-};
 
 export type CreateElementInput = {
 	caseId: string;
@@ -113,14 +88,6 @@ function resolveParentId(
 }
 
 /**
- * Maps element type from frontend format to Prisma enum
- */
-function mapElementType(type: string): string {
-	const normalised = type.toLowerCase().replace(/\s+/g, "_");
-	return ELEMENT_TYPE_MAP[normalised] || type.toUpperCase();
-}
-
-/**
  * Resolves URLs from input, handling both legacy single URL and new array format.
  * Returns both the legacy url field and the urls array for backward compatibility.
  */
@@ -187,7 +154,7 @@ function addParentReference(
 }
 
 /**
- * Transforms Prisma element to Django-compatible response format
+ * Transforms Prisma element to API response format
  */
 function transformToResponse(element: {
 	id: string;
@@ -211,7 +178,7 @@ function transformToResponse(element: {
 }): ElementResponse {
 	const response: ElementResponse = {
 		id: element.id,
-		type: ELEMENT_TYPE_REVERSE_MAP[element.elementType] || element.elementType,
+		type: toDisplayType(element.elementType),
 		name: element.name || "",
 		description: element.description || "",
 		createdDate: element.createdAt.toISOString(),
@@ -220,7 +187,7 @@ function transformToResponse(element: {
 		comments: [],
 	};
 
-	// Add parent reference in Django format
+	// Add parent reference
 	if (element.parent) {
 		addParentReference(response, element.parent, element.elementType);
 	}
@@ -267,7 +234,7 @@ async function generateElementName(
 	parentId: string | null,
 	parentInfo: { name: string | null; elementType: string } | null
 ): Promise<string> {
-	const prefix = TYPE_PREFIXES[elementType] || "X";
+	const prefix = toPrefix(elementType);
 
 	// Property claims with a property claim parent get hierarchical names (P1.1, P1.1.1)
 	if (
@@ -451,7 +418,7 @@ export async function createElement(
 		return { error: "Permission denied" };
 	}
 
-	const elementType = mapElementType(input.elementType);
+	const elementType = toPrismaType(input.elementType);
 	const parentId = resolveParentId(input);
 
 	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {

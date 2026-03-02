@@ -358,7 +358,7 @@ export const GoalFactory = {
 
 		return {
 			id,
-			type: overrides.type ?? "Goal",
+			type: overrides.type ?? "goal",
 			name: overrides.name ?? `Goal ${id}`,
 			description: overrides.description ?? `Description for goal ${id}`,
 			keywords: overrides.keywords ?? "safety, reliability, testing",
@@ -398,7 +398,7 @@ export const StrategyFactory = {
 
 		return {
 			id,
-			type: overrides.type ?? "Strategy",
+			type: overrides.type ?? "strategy",
 			name: overrides.name ?? `Strategy ${id}`,
 			description: overrides.description ?? `Description for strategy ${id}`,
 			goalId: overrides.goalId ?? 1,
@@ -414,7 +414,7 @@ export const PropertyClaimFactory = {
 
 		return {
 			id,
-			type: overrides.type ?? "PropertyClaim",
+			type: overrides.type ?? "property_claim",
 			name: overrides.name ?? `Property Claim ${id}`,
 			description: overrides.description ?? `Description for claim ${id}`,
 			goalId: overrides.goalId ?? null,
@@ -452,7 +452,7 @@ export const EvidenceFactory = {
 
 		return {
 			id,
-			type: overrides.type ?? "Evidence",
+			type: overrides.type ?? "evidence",
 			name: overrides.name ?? `Evidence ${id}`,
 			description: overrides.description ?? `Description for evidence ${id}`,
 			URL: overrides.URL ?? `https://example.com/evidence/${id}`,

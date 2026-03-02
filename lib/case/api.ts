@@ -3,6 +3,7 @@
  * Handles CRUD operations and element attachment/detachment
  */
 
+import { fromCollectionName } from "@/lib/element-types";
 import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 import type { ReactFlowNode } from "./types";
 
@@ -44,18 +45,10 @@ export const createAssuranceCaseNode = async (
 		return { error: "Case ID is required" };
 	}
 
-	// Map entity to element type for unified API
-	const elementTypeMap: Record<string, string> = {
-		goals: "goal",
-		contexts: "context",
-		strategies: "strategy",
-		propertyclaims: "property_claim",
-		evidence: "evidence",
-	};
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/cases/${caseId}/elements`;
+		const resolvedType = fromCollectionName(entity);
 
 		const requestOptions: RequestInit = {
 			method: "POST",
@@ -64,8 +57,8 @@ export const createAssuranceCaseNode = async (
 			},
 			body: JSON.stringify({
 				...newItem,
-				elementType: elementTypeMap[entity] || entity,
-				type: elementTypeMap[entity] || entity,
+				elementType: resolvedType,
+				type: resolvedType,
 			}),
 		};
 		const response = await fetch(url, requestOptions);

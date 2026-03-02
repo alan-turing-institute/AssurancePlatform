@@ -42,14 +42,14 @@ export function OrphanElementItem({
 				onClick={() => onSelect(orphan)}
 				type="button"
 			>
-				{orphan.type === "Evidence" && (
+				{orphan.type === "evidence" && (
 					<Database className="h-5 w-5 shrink-0" />
 				)}
-				{orphan.type === "Strategy" && <Route className="h-5 w-5 shrink-0" />}
-				{orphan.type === "PropertyClaim" && (
+				{orphan.type === "strategy" && <Route className="h-5 w-5 shrink-0" />}
+				{orphan.type === "property_claim" && (
 					<FolderOpenDot className="h-5 w-5 shrink-0" />
 				)}
-				{orphan.type === "Context" && (
+				{orphan.type === "context" && (
 					<BookOpenText className="h-5 w-5 shrink-0" />
 				)}
 				{orphan.name && (

@@ -75,7 +75,7 @@ const CreateForm: React.FC<CreateFormProps> = ({
 			context: [],
 			propertyClaims: [],
 			strategies: [],
-			type: "TopLevelNormativeGoal",
+			type: "goal",
 		};
 
 		const result = await createAssuranceCaseNode("goals", newGoal, "");

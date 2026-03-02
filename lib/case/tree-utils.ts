@@ -13,18 +13,17 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 	if (caseNode.type === "AssuranceCase") {
 		return (caseNode.goals || []) as unknown as CaseNode[];
 	}
-	if (caseNode.type === "TopLevelNormativeGoal") {
+	if (caseNode.type === "goal") {
 		return ((caseNode.context || []) as unknown as CaseNode[]).concat(
 			(caseNode.propertyClaims || []) as unknown as CaseNode[],
 			(caseNode.strategies || []) as unknown as CaseNode[],
 			(caseNode.context || []) as unknown as CaseNode[]
 		);
 	}
-	if (caseNode.type === "Strategy") {
+	if (caseNode.type === "strategy") {
 		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
 	}
-	// Handle both "PropertyClaim" (from Django API) and "property_claim" (legacy format)
-	if (caseNode.type === "PropertyClaim" || caseNode.type === "property_claim") {
+	if (caseNode.type === "property_claim") {
 		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
 			(caseNode.evidence || []) as unknown as CaseNode[]
 		);

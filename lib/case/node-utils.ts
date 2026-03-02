@@ -393,7 +393,7 @@ const collectGoal = (
 		strategies: (Goal | PropertyClaim | Strategy)[];
 	}
 ): void => {
-	if (item.type === "TopLevelNormativeGoal" || item.type === "Goal") {
+	if (item.type === "goal") {
 		result.goal = item as Goal;
 	}
 };
@@ -407,8 +407,7 @@ const collectPropertyClaim = (
 		strategies: (Goal | PropertyClaim | Strategy)[];
 	}
 ): void => {
-	// Handle both "PropertyClaim" (from Django API) and "property_claim" (legacy format)
-	if (item.type === "PropertyClaim" || item.type === "property_claim") {
+	if (item.type === "property_claim") {
 		result.claims.push(item as PropertyClaim);
 	}
 };
@@ -422,7 +421,7 @@ const collectStrategy = (
 		strategies: (Goal | PropertyClaim | Strategy)[];
 	}
 ): void => {
-	if (item.type === "Goal" || item.type === "Strategy") {
+	if (item.type === "goal" || item.type === "strategy") {
 		result.strategies.push(item as Goal | Strategy);
 	}
 };

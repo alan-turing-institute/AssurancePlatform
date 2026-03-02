@@ -27,7 +27,7 @@ const updateStrategy = (
 ): AssuranceCase => {
 	const newStrategy = (assuranceCase.goals?.[0]?.strategies || []).map(
 		(strategy: Strategy) => {
-			if (strategy.id === id && strategy.type === "Strategy") {
+			if (strategy.id === id && strategy.type === "strategy") {
 				return {
 					...strategy,
 					...updatedItem,
