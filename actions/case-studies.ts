@@ -9,27 +9,10 @@ import {
 	updateCaseStudySchema,
 } from "@/lib/schemas/case-study";
 import {
-	createCaseStudyWithLinks,
-	deleteCaseStudy as deleteCaseStudyService,
-	getCaseStudiesByOwner,
-	getCaseStudyById,
-	getPublishedAssuranceCaseByCaseId,
-	getPublishedCaseStudies,
-	getPublishedCaseStudyById,
-	updateCaseStudyWithLinks,
-} from "@/lib/services/case-study-service";
-import {
-	transformCaseStudiesForApi,
-	transformCaseStudyForApi,
-	transformPublishedCaseForApi,
-} from "@/lib/services/case-study-transforms";
-import {
 	validateFormData,
 	validateInput,
 } from "@/lib/validation/input-validation";
 import type { ActionResult } from "@/types";
-
-type CaseStudyResponse = ReturnType<typeof transformCaseStudyForApi>;
 
 /**
  * Fetch all case studies owned by the current user
@@ -40,6 +23,13 @@ export const fetchCaseStudies = async () => {
 	if (!session) {
 		return null;
 	}
+
+	const { getCaseStudiesByOwner } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudiesForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
 	const result = await getCaseStudiesByOwner(session.userId);
 	if ("error" in result) {
@@ -52,6 +42,13 @@ export const fetchCaseStudies = async () => {
  * Fetch all published case studies (public access)
  */
 export const fetchPublishedCaseStudies = async () => {
+	const { getPublishedCaseStudies } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudiesForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
 	const result = await getPublishedCaseStudies();
 	if ("error" in result) {
 		return null;
@@ -68,6 +65,13 @@ export const fetchPublishedCaseStudyById = async (id: number) => {
 	if (!validation.success) {
 		notFound();
 	}
+
+	const { getPublishedCaseStudyById } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
 	const result = await getPublishedCaseStudyById(validation.data);
 
@@ -94,6 +98,13 @@ export const fetchCaseStudyById = async (id: number) => {
 		return null;
 	}
 
+	const { getCaseStudyById } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
 	const result = await getCaseStudyById(validation.data, session.userId);
 
 	if ("error" in result) {
@@ -108,7 +119,13 @@ export const fetchCaseStudyById = async (id: number) => {
  */
 export const createCaseStudy = async (
 	formData: FormData
-): Promise<ActionResult<CaseStudyResponse>> => {
+): Promise<
+	ActionResult<
+		ReturnType<
+			typeof import("@/lib/services/case-study-transforms").transformCaseStudyForApi
+		>
+	>
+> => {
 	// 1. Authenticate
 	const session = await validateSession();
 	if (!session) {
@@ -124,6 +141,13 @@ export const createCaseStudy = async (
 			fieldErrors: validation.fieldErrors,
 		};
 	}
+
+	const { createCaseStudyWithLinks } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
 	// 3. Business logic
 	try {
@@ -179,6 +203,10 @@ export const updateCaseStudy = async (
 		};
 	}
 
+	const { updateCaseStudyWithLinks } = await import(
+		"@/lib/services/case-study-service"
+	);
+
 	// 3. Business logic
 	try {
 		const { id, assurance_cases, ...updateData } = validation.data;
@@ -231,6 +259,10 @@ export const deleteCaseStudy = async (
 		return { success: false, error: validation.error };
 	}
 
+	const { deleteCaseStudy: deleteCaseStudyService } = await import(
+		"@/lib/services/case-study-service"
+	);
+
 	// 3. Business logic
 	try {
 		const result = await deleteCaseStudyService(
@@ -256,6 +288,13 @@ export const deleteCaseStudy = async (
 export const fetchPublishedAssuranceCaseId = async (
 	assuranceCaseId: string
 ) => {
+	const { getPublishedAssuranceCaseByCaseId } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformPublishedCaseForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
 	const result = await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
 
 	if ("error" in result) {

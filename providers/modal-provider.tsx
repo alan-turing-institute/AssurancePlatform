@@ -75,7 +75,13 @@ const InviteMemberDialog = dynamic(
 export const ModalProvider = (): JSX.Element => (
 	<>
 		<CaseCreateModal />
-		<ErrorBoundary fallback={null}>
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
 			<ImportModal />
 		</ErrorBoundary>
 		<MigrationModal />
@@ -87,7 +93,13 @@ export const ModalProvider = (): JSX.Element => (
 		<ResourcesModal />
 		<CreateTeamDialog />
 		<InviteMemberDialog />
-		<ErrorBoundary fallback={null}>
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
 			<CaseSharingDialog />
 		</ErrorBoundary>
 	</>

@@ -1,11 +1,14 @@
 "use client";
 
 export default function GlobalError({
+	error,
 	reset,
 }: {
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
+	console.error("Global error:", error);
+
 	return (
 		<html lang="en">
 			<head>
@@ -26,6 +29,17 @@ export default function GlobalError({
 					<button className="ge-b" onClick={reset} type="button">
 						Try again
 					</button>
+					<a
+						className="ge-b"
+						href="/"
+						style={{
+							display: "inline-block",
+							marginLeft: "0.5rem",
+							textDecoration: "none",
+						}}
+					>
+						Go to homepage
+					</a>
 				</div>
 			</body>
 		</html>

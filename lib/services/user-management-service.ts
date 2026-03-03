@@ -4,6 +4,12 @@ import {
 	verifyPassword,
 } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
+import {
+	validateEmail,
+	validatePassword,
+	validateUsername,
+} from "@/lib/validation/validators";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // Types
@@ -21,93 +27,6 @@ export type ChangePasswordInput = {
 	newPassword: string;
 };
 
-type ServiceResult<T = void> = Promise<{ data: T } | { error: string }>;
-
-// ============================================
-// Validation Helpers
-// ============================================
-
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
-const MIN_USERNAME_LENGTH = 3;
-const MAX_USERNAME_LENGTH = 50;
-
-// Standard email regex (RFC 5322 simplified)
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validateUsername(username: string): {
-	valid: boolean;
-	error?: string;
-} {
-	if (username.length < MIN_USERNAME_LENGTH) {
-		return {
-			valid: false,
-			error: `Username must be at least ${MIN_USERNAME_LENGTH} characters`,
-		};
-	}
-	if (username.length > MAX_USERNAME_LENGTH) {
-		return {
-			valid: false,
-			error: `Username must be at most ${MAX_USERNAME_LENGTH} characters`,
-		};
-	}
-	if (!USERNAME_REGEX.test(username)) {
-		return {
-			valid: false,
-			error: "Username can only contain letters, numbers, and underscores",
-		};
-	}
-	return { valid: true };
-}
-
-function validateEmail(email: string): {
-	valid: boolean;
-	error?: string;
-} {
-	if (!EMAIL_REGEX.test(email)) {
-		return {
-			valid: false,
-			error: "Please enter a valid email address",
-		};
-	}
-	return { valid: true };
-}
-
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_UPPERCASE_REGEX = /[A-Z]/;
-const PASSWORD_DIGIT_REGEX = /\d/;
-const PASSWORD_SPECIAL_REGEX = /[!@#$%^&*()_,.?":{}|<>]/;
-
-function validatePassword(password: string): {
-	valid: boolean;
-	error?: string;
-} {
-	if (password.length < PASSWORD_MIN_LENGTH) {
-		return {
-			valid: false,
-			error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
-		};
-	}
-	if (!PASSWORD_UPPERCASE_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one uppercase letter",
-		};
-	}
-	if (!PASSWORD_DIGIT_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one number",
-		};
-	}
-	if (!PASSWORD_SPECIAL_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one special character",
-		};
-	}
-	return { valid: true };
-}
-
 // ============================================
 // Profile Update
 // ============================================
@@ -123,7 +42,7 @@ async function validateAndCheckUsername(
 ): Promise<ValidationError | null> {
 	const validation = validateUsername(username);
 	if (!validation.valid) {
-		return { error: validation.error ?? "Invalid username" };
+		return { error: validation.error };
 	}
 
 	const existingUser = await prisma.user.findFirst({
@@ -150,7 +69,7 @@ async function validateAndCheckEmail(
 ): Promise<ValidationError | null> {
 	const validation = validateEmail(email);
 	if (!validation.valid) {
-		return { error: validation.error ?? "Invalid email" };
+		return { error: validation.error };
 	}
 
 	const existingUser = await prisma.user.findFirst({
@@ -281,7 +200,7 @@ export async function changePassword(
 		// Validate new password
 		const passwordValidation = validatePassword(input.newPassword);
 		if (!passwordValidation.valid) {
-			return { error: passwordValidation.error ?? "Invalid password" };
+			return { error: passwordValidation.error };
 		}
 
 		// Get user's current password hash
@@ -333,7 +252,7 @@ export async function changePassword(
 			},
 		});
 
-		return { data: undefined };
+		return { data: true };
 	} catch (error) {
 		console.error("Error changing password:", error);
 		return { error: "Failed to change password" };
@@ -477,7 +396,7 @@ export async function deleteAccount(
 			await tx.user.delete({ where: { id: userId } });
 		});
 
-		return { data: undefined };
+		return { data: true };
 	} catch (error) {
 		console.error("Error deleting account:", error);
 		return { error: "Failed to delete account" };

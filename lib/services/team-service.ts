@@ -1,5 +1,7 @@
+import { validateTeamAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { TeamRole } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -74,36 +76,6 @@ function generateSlug(name: string): string {
 }
 
 /**
- * Validates that a user has admin access to a team.
- */
-async function validateTeamAdmin(
-	userId: string,
-	teamId: string
-): Promise<{ valid: true } | { valid: false; error: string }> {
-	const { isTeamAdmin } = await import("@/lib/permissions");
-	const hasAccess = await isTeamAdmin(userId, teamId);
-	if (!hasAccess) {
-		return { valid: false, error: "Permission denied" };
-	}
-	return { valid: true };
-}
-
-/**
- * Validates that a user is a member of a team.
- */
-async function _validateTeamMember(
-	userId: string,
-	teamId: string
-): Promise<{ valid: true } | { valid: false; error: string }> {
-	const { isTeamMember } = await import("@/lib/permissions");
-	const isMember = await isTeamMember(userId, teamId);
-	if (!isMember) {
-		return { valid: false, error: "Team not found" };
-	}
-	return { valid: true };
-}
-
-/**
  * Transforms a Prisma team to the response format.
  */
 function transformToResponse(
@@ -166,7 +138,7 @@ function transformToResponse(
 export async function createTeam(
 	userId: string,
 	input: CreateTeamInput
-): Promise<{ data?: TeamResponse; error?: string }> {
+): ServiceResult<TeamResponse> {
 	if (!input.name || input.name.trim().length === 0) {
 		return { error: "Team name is required" };
 	}
@@ -221,7 +193,7 @@ export async function createTeam(
 export async function getTeam(
 	userId: string,
 	teamId: string
-): Promise<{ data?: TeamResponse; error?: string }> {
+): ServiceResult<TeamResponse> {
 	try {
 		// Get team with membership check
 		const team = await prisma.team.findUnique({
@@ -266,7 +238,7 @@ export async function getTeam(
  */
 export async function listUserTeams(
 	userId: string
-): Promise<{ data?: TeamListResponse[]; error?: string }> {
+): ServiceResult<TeamListResponse[]> {
 	try {
 		const memberships = await prisma.teamMember.findMany({
 			where: { userId },
@@ -304,7 +276,7 @@ export async function updateTeam(
 	userId: string,
 	teamId: string,
 	input: UpdateTeamInput
-): Promise<{ data?: TeamResponse; error?: string }> {
+): ServiceResult<TeamResponse> {
 	// Validate admin access
 	const validation = await validateTeamAdmin(userId, teamId);
 	if (!validation.valid) {
@@ -363,7 +335,7 @@ export async function updateTeam(
 export async function deleteTeam(
 	userId: string,
 	teamId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateTeamAdmin(userId, teamId);
 	if (!validation.valid) {
@@ -376,7 +348,7 @@ export async function deleteTeam(
 			where: { id: teamId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to delete team:", error);
 		return { error: "Failed to delete team" };
@@ -389,7 +361,7 @@ export async function deleteTeam(
 export async function getTeamBySlug(
 	userId: string,
 	slug: string
-): Promise<{ data?: TeamResponse; error?: string }> {
+): ServiceResult<TeamResponse> {
 	try {
 		const team = await prisma.team.findUnique({
 			where: { slug },

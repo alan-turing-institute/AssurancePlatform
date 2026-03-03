@@ -5,11 +5,6 @@ import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
-import {
-	createCase,
-	listSharedCases,
-	listUserCases,
-} from "@/lib/services/case-fetch-service";
 import { validateInput } from "@/lib/validation/input-validation";
 import type { ActionResult } from "@/types";
 
@@ -31,6 +26,7 @@ export const fetchAssuranceCases = async (): Promise<
 		return null;
 	}
 
+	const { listUserCases } = await import("@/lib/services/case-fetch-service");
 	const result = await listUserCases(validated.userId);
 	if ("error" in result) {
 		return null;
@@ -46,6 +42,7 @@ export const fetchSharedAssuranceCases = async (): Promise<
 		return null;
 	}
 
+	const { listSharedCases } = await import("@/lib/services/case-fetch-service");
 	const result = await listSharedCases(validated.userId);
 	if ("error" in result) {
 		return null;
@@ -70,6 +67,7 @@ export const createAssuranceCase = async (
 		};
 	}
 
+	const { createCase } = await import("@/lib/services/case-fetch-service");
 	const result = await createCase(validated.userId, {
 		name: validation.data.name,
 		description: validation.data.description,

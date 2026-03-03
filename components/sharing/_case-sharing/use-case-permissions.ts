@@ -2,6 +2,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { ShareByEmailSchemaInput } from "@/lib/schemas/permission";
+import { toastError } from "@/lib/toast";
 import type {
 	Team,
 	TeamPermission,
@@ -86,6 +87,8 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			console.error("Failed to fetch permissions:", err);
+			setError("Failed to load permissions");
+			toastError("Failed to load permissions");
 		} finally {
 			setLoading(false);
 		}
@@ -100,6 +103,8 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			console.error("Failed to fetch teams:", err);
+			setError("Failed to load teams");
+			toastError("Failed to load teams");
 		}
 	}, []);
 
@@ -175,6 +180,7 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			console.error("Failed to share with team:", err);
+			toastError("Failed to share with team");
 		}
 	};
 
@@ -203,6 +209,7 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			console.error("Failed to update permission:", err);
+			toastError("Failed to update permission");
 		}
 	};
 
@@ -226,6 +233,7 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			console.error("Failed to revoke permission:", err);
+			toastError("Failed to revoke permission");
 		}
 	};
 

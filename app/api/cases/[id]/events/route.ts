@@ -1,21 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/config";
+import { requireAuthSession } from "@/lib/api-response";
 import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
-
-/**
- * Validates the user session and returns the user ID.
- */
-async function validateSession(): Promise<
-	{ valid: true; userId: string } | { valid: false }
-> {
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return { valid: false };
-	}
-	return { valid: true, userId: session.user.id };
-}
 
 /**
  * Validates case access for the user.
@@ -47,20 +32,23 @@ export async function GET(
 ) {
 	const { id: caseId } = await params;
 
-	// Validate session
-	const sessionResult = await validateSession();
-	if (!sessionResult.valid) {
+	// Validate session — SSE uses plain JSON responses (not standard apiError)
+	// because clients consume this as a stream, not a JSON API.
+	let userId: string;
+	try {
+		const session = await requireAuthSession();
+		userId = session.userId;
+	} catch {
 		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 	}
 
 	// Validate case access
-	const hasAccess = await validateCaseAccess(sessionResult.userId, caseId);
+	const hasAccess = await validateCaseAccess(userId, caseId);
 	if (!hasAccess) {
 		return NextResponse.json({ error: "Not found" }, { status: 404 });
 	}
 
 	const connectionId = generateConnectionId();
-	const { userId } = sessionResult;
 
 	// Create the SSE stream
 	const stream = new ReadableStream({

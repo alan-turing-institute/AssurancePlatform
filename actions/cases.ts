@@ -1,6 +1,7 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import { uuidSchema } from "@/lib/schemas/base";
 import type { CommentResponse } from "@/lib/services/comment-service";
 import type { ActionResult } from "@/types";
 
@@ -16,11 +17,16 @@ export async function fetchCaseComments(
 		return null;
 	}
 
+	const idResult = uuidSchema.safeParse(caseId);
+	if (!idResult.success) {
+		return null;
+	}
+
 	try {
 		const { fetchCaseComments: fetchComments } = await import(
 			"@/lib/services/comment-service"
 		);
-		const result = await fetchComments(caseId, session.userId);
+		const result = await fetchComments(idResult.data, session.userId);
 		if ("error" in result) {
 			return null;
 		}
@@ -42,13 +48,18 @@ export async function deleteAssuranceCase(
 		return { success: false, error: "Unauthorised" };
 	}
 
+	const idResult = uuidSchema.safeParse(caseId);
+	if (!idResult.success) {
+		return { success: false, error: "Invalid case ID" };
+	}
+
 	try {
 		const { softDeleteCase } = await import(
 			"@/lib/services/case-trash-service"
 		);
-		const result = await softDeleteCase(session.userId, caseId);
+		const result = await softDeleteCase(session.userId, idResult.data);
 
-		if (result.error) {
+		if ("error" in result) {
 			return { success: false, error: result.error };
 		}
 
@@ -70,11 +81,16 @@ export async function updateCaseIdentifiers(
 		return { success: false, error: "Unauthorised" };
 	}
 
+	const idResult = uuidSchema.safeParse(caseId);
+	if (!idResult.success) {
+		return { success: false, error: "Invalid case ID" };
+	}
+
 	try {
 		const { resetIdentifiers } = await import(
 			"@/lib/services/identifier-service"
 		);
-		const result = await resetIdentifiers(caseId, session.userId);
+		const result = await resetIdentifiers(idResult.data, session.userId);
 
 		if ("error" in result) {
 			return { success: false, error: result.error };

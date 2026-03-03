@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiRateLimited,
 	apiSuccess,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
@@ -47,23 +47,10 @@ export async function POST(request: Request) {
 		);
 
 		if (!rateLimitResult.allowed) {
-			const response = new NextResponse(
-				JSON.stringify({
-					error: rateLimitResult.reason,
-					code: "RATE_LIMITED",
-				}),
-				{ status: 429 }
+			return apiRateLimited(
+				rateLimitResult.reason ?? "Too many requests",
+				rateLimitResult.retryAfterMs
 			);
-
-			// Add Retry-After header if available
-			if (rateLimitResult.retryAfterMs) {
-				response.headers.set(
-					"Retry-After",
-					String(Math.ceil(rateLimitResult.retryAfterMs / 1000))
-				);
-			}
-
-			return response;
 		}
 
 		const result = await registerUser({

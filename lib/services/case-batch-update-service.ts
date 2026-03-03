@@ -11,6 +11,7 @@ import type {
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
+import { getDescendantIds } from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
@@ -101,25 +102,6 @@ async function validateNoCircularReference(
 
 	const descendants = await getDescendantIds(elementId);
 	return !descendants.includes(newParentId);
-}
-
-/**
- * Gets all descendant IDs for an element
- */
-async function getDescendantIds(elementId: string): Promise<string[]> {
-	const children = await prisma.assuranceElement.findMany({
-		where: { parentId: elementId },
-		select: { id: true },
-	});
-
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDescendantIds(child.id);
-		descendantIds.push(...grandchildren);
-	}
-
-	return descendantIds;
 }
 
 /**

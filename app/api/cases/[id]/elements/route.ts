@@ -70,7 +70,7 @@ export async function POST(
 		);
 		const result = await createElement(session.userId, input);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

@@ -19,7 +19,7 @@ export async function GET() {
 		const userId = await requireAuth();
 		const result = await listUserTeams(userId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
 		const result = await createTeam(userId, parsed.data);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

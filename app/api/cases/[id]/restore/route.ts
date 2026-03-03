@@ -32,7 +32,7 @@ export async function POST(
 
 		const result = await restoreCase(userId, id);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

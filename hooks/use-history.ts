@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { toast } from "sonner";
 import { applyRedo, applyUndo } from "@/lib/services/history-service";
+import { toastError, toastSuccess } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 
@@ -76,10 +76,10 @@ export function useHistory() {
 			// Refetch case to update UI
 			await refetchCase();
 
-			toast.success(`Undid: ${entry.description}`);
+			toastSuccess(`Undid: ${entry.description}`);
 		} catch (error) {
 			console.error("Undo failed:", error);
-			toast.error("Undo failed - element may have been modified");
+			toastError("Undo failed - element may have been modified");
 		} finally {
 			setIsApplying(false);
 		}
@@ -113,10 +113,10 @@ export function useHistory() {
 			// Refetch case to update UI
 			await refetchCase();
 
-			toast.success(`Redid: ${entry.description}`);
+			toastSuccess(`Redid: ${entry.description}`);
 		} catch (error) {
 			console.error("Redo failed:", error);
-			toast.error("Redo failed - element may have been modified");
+			toastError("Redo failed - element may have been modified");
 		} finally {
 			setIsApplying(false);
 		}

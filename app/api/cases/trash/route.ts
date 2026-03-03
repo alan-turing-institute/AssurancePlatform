@@ -24,11 +24,11 @@ export async function GET() {
 		const userId = await requireAuth();
 		const result = await listTrashedCases(userId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess(result.data?.cases ?? []);
+		return apiSuccess(result.data.cases);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

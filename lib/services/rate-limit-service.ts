@@ -1,3 +1,4 @@
+import { logSecurityEvent } from "@/lib/audit/security-log";
 import { prisma } from "@/lib/prisma";
 
 // ============================================
@@ -23,14 +24,6 @@ export type RateLimitCheckResult = {
 	allowed: boolean;
 	reason?: string;
 	retryAfterMs?: number;
-};
-
-type SecurityEventParams = {
-	eventType: string;
-	userId: string | null;
-	ipAddress: string | null;
-	userAgent: string | null;
-	metadata?: Record<string, unknown>;
 };
 
 // ============================================
@@ -75,22 +68,6 @@ export const RATE_LIMIT_CONFIGS = {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-
-/**
- * Log a security event for audit purposes.
- */
-async function logSecurityEvent(params: SecurityEventParams): Promise<void> {
-	await prisma.securityAuditLog.create({
-		data: {
-			userId: params.userId,
-			eventType: params.eventType,
-			ipAddress: params.ipAddress,
-			userAgent: params.userAgent,
-			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-			metadata: (params.metadata ?? null) as any,
-		},
-	});
-}
 
 /**
  * Get the identifier value from the identifiers object based on type.
@@ -245,11 +222,9 @@ export async function checkAndRecordRateLimit(
 		await recordAttempt(config, identifiers, true);
 
 		// Log security event
-		await logSecurityEvent({
-			eventType: `${config.endpoint}_rate_limited`,
-			userId: securityContext?.userId ?? null,
-			ipAddress: securityContext?.ipAddress ?? null,
-			userAgent: securityContext?.userAgent ?? null,
+		logSecurityEvent({
+			event: `${config.endpoint}_rate_limited`,
+			severity: "medium",
 			metadata: {
 				reason: result.reason,
 				identifiers: {
@@ -257,6 +232,7 @@ export async function checkAndRecordRateLimit(
 					email: identifiers.email,
 					userId: identifiers.userId,
 				},
+				securityContext,
 			},
 		});
 

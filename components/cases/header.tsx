@@ -3,11 +3,11 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
-import { toast } from "sonner";
 import SearchNodes from "@/components/cases/search-nodes";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { type ReactFlowNode, toggleHiddenForParent } from "@/lib/case";
+import { toastError } from "@/lib/toast";
 import useStore from "@/store/store";
 import type { PublishStatusType } from "@/types/domain";
 import LogoutButton from "../auth/logout-button";
@@ -98,7 +98,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 				setAssuranceCase({ ...assuranceCase, name: newCaseName });
 			}
 		} catch (_error) {
-			toast.error("Failed to update case name");
+			toastError("Failed to update case name");
 			setEditName(false);
 		}
 	};

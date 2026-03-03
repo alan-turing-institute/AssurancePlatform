@@ -22,7 +22,7 @@ describe("case-trash-service", () => {
 
 			const result = await softDeleteCase(user.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -40,6 +40,10 @@ describe("case-trash-service", () => {
 
 			const result = await softDeleteCase(viewer.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -52,6 +56,10 @@ describe("case-trash-service", () => {
 
 			const result = await softDeleteCase(outsider.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -65,6 +73,10 @@ describe("case-trash-service", () => {
 
 			const second = await softDeleteCase(user.id, testCase.id);
 
+			expect("error" in second).toBe(true);
+			if (!("error" in second)) {
+				return;
+			}
 			expect(second.error).toBe("Case is already in trash");
 		});
 	});
@@ -81,9 +93,12 @@ describe("case-trash-service", () => {
 
 			const result = await listTrashedCases(userA.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.cases).toHaveLength(1);
-			expect(result.data?.cases[0].id).toBe(caseA.id);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.cases).toHaveLength(1);
+			expect(result.data.cases[0].id).toBe(caseA.id);
 		});
 
 		it("returns an empty list when no cases are trashed", async () => {
@@ -92,8 +107,11 @@ describe("case-trash-service", () => {
 
 			const result = await listTrashedCases(user.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.cases).toHaveLength(0);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.cases).toHaveLength(0);
 		});
 
 		it("includes daysRemaining in each trashed case entry", async () => {
@@ -106,8 +124,12 @@ describe("case-trash-service", () => {
 
 			const result = await listTrashedCases(user.id);
 
-			expect(typeof result.data?.cases[0].daysRemaining).toBe("number");
-			expect(result.data?.cases[0].daysRemaining).toBeGreaterThan(0);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(typeof result.data.cases[0].daysRemaining).toBe("number");
+			expect(result.data.cases[0].daysRemaining).toBeGreaterThan(0);
 		});
 	});
 
@@ -121,7 +143,7 @@ describe("case-trash-service", () => {
 
 			const result = await restoreCase(user.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -135,6 +157,10 @@ describe("case-trash-service", () => {
 
 			const result = await restoreCase(user.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Case is not in trash");
 		});
 
@@ -151,6 +177,10 @@ describe("case-trash-service", () => {
 
 			const result = await restoreCase(admin.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -163,7 +193,7 @@ describe("case-trash-service", () => {
 
 			const result = await purgeCase(user.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -179,6 +209,10 @@ describe("case-trash-service", () => {
 
 			const result = await purgeCase(user.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toContain("must be in trash");
 		});
 
@@ -192,6 +226,10 @@ describe("case-trash-service", () => {
 
 			const result = await purgeCase(otherUser.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -218,7 +256,7 @@ describe("case-trash-service", () => {
 			await softDeleteCase(owner.id, testCase.id);
 			const result = await purgeCase(owner.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
 
 			// Case is gone
 			const caseInDb = await prisma.assuranceCase.findUnique({

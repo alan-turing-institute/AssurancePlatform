@@ -21,7 +21,7 @@ export async function GET(
 
 		const result = await getSandboxElements(userId, caseId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

@@ -32,13 +32,15 @@ describe("listCasePermissions", () => {
 
 		const result = await listCasePermissions(owner.id, testCase.id);
 
-		expect(result.error).toBeUndefined();
-		expect(result.data).toBeDefined();
-		expect(result.data?.is_owner).toBe(true);
-		expect(result.data?.owner.id).toBe(owner.id);
-		expect(result.data?.user_permissions).toHaveLength(1);
-		expect(result.data?.user_permissions[0].user.id).toBe(viewer.id);
-		expect(result.data?.user_permissions[0].permission).toBe("VIEW");
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.is_owner).toBe(true);
+		expect(result.data.owner.id).toBe(owner.id);
+		expect(result.data.user_permissions).toHaveLength(1);
+		expect(result.data.user_permissions[0].user.id).toBe(viewer.id);
+		expect(result.data.user_permissions[0].permission).toBe("VIEW");
 	});
 
 	it("returns permissions list for user with explicit ADMIN permission", async () => {
@@ -49,9 +51,11 @@ describe("listCasePermissions", () => {
 
 		const result = await listCasePermissions(admin.id, testCase.id);
 
-		expect(result.error).toBeUndefined();
-		expect(result.data).toBeDefined();
-		expect(result.data?.is_owner).toBe(false);
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.is_owner).toBe(false);
 	});
 
 	it("returns error for user with EDIT permission (ADMIN required)", async () => {
@@ -62,8 +66,11 @@ describe("listCasePermissions", () => {
 
 		const result = await listCasePermissions(editor.id, testCase.id);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
-		expect(result.data).toBeUndefined();
 	});
 
 	it("returns error for user with no access", async () => {
@@ -73,6 +80,10 @@ describe("listCasePermissions", () => {
 
 		const result = await listCasePermissions(stranger.id, testCase.id);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 
@@ -85,9 +96,12 @@ describe("listCasePermissions", () => {
 
 		const result = await listCasePermissions(owner.id, testCase.id);
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.team_permissions).toHaveLength(1);
-		expect(result.data?.team_permissions[0].team.id).toBe(team.id);
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.team_permissions).toHaveLength(1);
+		expect(result.data.team_permissions[0].team.id).toBe(team.id);
 	});
 });
 
@@ -106,10 +120,13 @@ describe("shareByEmail", () => {
 			permission: "VIEW",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.permission).toBeDefined();
-		expect(result.data?.permission?.user.id).toBe(target.id);
-		expect(result.data?.permission?.permission).toBe("VIEW");
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.permission).toBeDefined();
+		expect(result.data.permission?.user.id).toBe(target.id);
+		expect(result.data.permission?.permission).toBe("VIEW");
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: target.id } },
@@ -128,8 +145,11 @@ describe("shareByEmail", () => {
 			permission: "EDIT",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.permission?.permission).toBe("EDIT");
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.permission?.permission).toBe("EDIT");
 	});
 
 	it("creates an invite when target email is not registered", async () => {
@@ -141,9 +161,12 @@ describe("shareByEmail", () => {
 			permission: "VIEW",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.invite_created).toBe(true);
-		expect(result.data?.invite_token).toBeDefined();
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.invite_created).toBe(true);
+		expect(result.data.invite_token).toBeDefined();
 
 		const invite = await prisma.caseInvite.findFirst({
 			where: { caseId: testCase.id, email: "notregistered@example.com" },
@@ -162,8 +185,11 @@ describe("shareByEmail", () => {
 			permission: "EDIT",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.already_shared).toBe(true);
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.already_shared).toBe(true);
 	});
 
 	it("returns already_shared when target is the case owner", async () => {
@@ -175,8 +201,11 @@ describe("shareByEmail", () => {
 			permission: "VIEW",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.already_shared).toBe(true);
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.already_shared).toBe(true);
 	});
 
 	it("returns error for invalid email address", async () => {
@@ -188,6 +217,10 @@ describe("shareByEmail", () => {
 			permission: "VIEW",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Valid email is required");
 	});
 
@@ -203,6 +236,10 @@ describe("shareByEmail", () => {
 			permission: "VIEW",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 
@@ -228,6 +265,11 @@ describe("shareByEmail", () => {
 		);
 
 		// Both should return the same error to prevent case enumeration
+		expect("error" in noAccessResult).toBe(true);
+		expect("error" in notFoundResult).toBe(true);
+		if (!("error" in noAccessResult && "error" in notFoundResult)) {
+			return;
+		}
 		expect(noAccessResult.error).toBe(notFoundResult.error);
 	});
 });
@@ -247,10 +289,13 @@ describe("shareWithTeam", () => {
 			permission: "VIEW",
 		});
 
-		expect(result.error).toBeUndefined();
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
 		expect(result.data).toBeDefined();
-		expect(result.data?.team.id).toBe(team.id);
-		expect(result.data?.permission).toBe("VIEW");
+		expect(result.data.team.id).toBe(team.id);
+		expect(result.data.permission).toBe("VIEW");
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { caseId_teamId: { caseId: testCase.id, teamId: team.id } },
@@ -269,6 +314,10 @@ describe("shareWithTeam", () => {
 			permission: "VIEW",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Team not found");
 	});
 
@@ -283,6 +332,10 @@ describe("shareWithTeam", () => {
 			permission: "EDIT",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Case already shared with this team");
 	});
 
@@ -299,6 +352,10 @@ describe("shareWithTeam", () => {
 			permission: "VIEW",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 });
@@ -323,8 +380,11 @@ describe("updateUserPermission", () => {
 			permission: "EDIT",
 		});
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.permission).toBe("EDIT");
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.permission).toBe("EDIT");
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { id: perm.id },
@@ -343,6 +403,10 @@ describe("updateUserPermission", () => {
 			{ permission: "EDIT" }
 		);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission not found");
 	});
 
@@ -363,6 +427,10 @@ describe("updateUserPermission", () => {
 			permission: "EDIT",
 		});
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 });
@@ -390,8 +458,11 @@ describe("updateTeamPermission", () => {
 			{ permission: "EDIT" }
 		);
 
-		expect(result.error).toBeUndefined();
-		expect(result.data?.permission).toBe("EDIT");
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
+		}
+		expect(result.data.permission).toBe("EDIT");
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { id: teamPerm.id },
@@ -410,6 +481,10 @@ describe("updateTeamPermission", () => {
 			{ permission: "EDIT" }
 		);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission not found");
 	});
 });
@@ -432,8 +507,7 @@ describe("revokeUserPermission", () => {
 
 		const result = await revokeUserPermission(owner.id, testCase.id, perm.id);
 
-		expect(result.error).toBeUndefined();
-		expect(result.success).toBe(true);
+		expect("error" in result).toBe(false);
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { id: perm.id },
@@ -451,6 +525,10 @@ describe("revokeUserPermission", () => {
 			"00000000-0000-0000-0000-000000000000"
 		);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission not found");
 	});
 
@@ -469,6 +547,10 @@ describe("revokeUserPermission", () => {
 
 		const result = await revokeUserPermission(editor.id, testCase.id, perm.id);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 });
@@ -495,8 +577,7 @@ describe("revokeTeamPermission", () => {
 			teamPerm.id
 		);
 
-		expect(result.error).toBeUndefined();
-		expect(result.success).toBe(true);
+		expect("error" in result).toBe(false);
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { id: teamPerm.id },
@@ -514,6 +595,10 @@ describe("revokeTeamPermission", () => {
 			"00000000-0000-0000-0000-000000000000"
 		);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission not found");
 	});
 
@@ -536,6 +621,10 @@ describe("revokeTeamPermission", () => {
 			teamPerm.id
 		);
 
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
+		}
 		expect(result.error).toBe("Permission denied");
 	});
 });
@@ -566,10 +655,11 @@ describe("acceptInvite", () => {
 
 		const result = await acceptInvite(invitee.id, invite.inviteToken);
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.case_id).toBe(testCase.id);
+		expect("error" in result).toBe(false);
+		if ("error" in result) {
+			return;
 		}
+		expect(result.data.caseId).toBe(testCase.id);
 
 		const perm = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: invitee.id } },
@@ -598,10 +688,11 @@ describe("acceptInvite", () => {
 
 		const result = await acceptInvite(invitee.id, "expired-token-xyz789");
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toBe("Invite has expired");
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
 		}
+		expect(result.error).toBe("Invite has expired");
 	});
 
 	it("returns error for an already-used invite", async () => {
@@ -626,10 +717,11 @@ describe("acceptInvite", () => {
 
 		const result = await acceptInvite(invitee.id, "used-token-def456");
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toBe("Invite has already been used");
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
 		}
+		expect(result.error).toBe("Invite has already been used");
 	});
 
 	it("returns error for an invalid (non-existent) invite token", async () => {
@@ -637,10 +729,11 @@ describe("acceptInvite", () => {
 
 		const result = await acceptInvite(invitee.id, "completely-fake-token");
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toBe("Invalid invite");
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
 		}
+		expect(result.error).toBe("Invalid invite");
 	});
 
 	it("returns error when the accepting user's email does not match the invite email", async () => {
@@ -663,10 +756,11 @@ describe("acceptInvite", () => {
 
 		const result = await acceptInvite(invitee.id, "mismatch-token-abc123");
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error).toBe("Invite was sent to a different email address");
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			return;
 		}
+		expect(result.error).toBe("Invite was sent to a different email address");
 	});
 });
 
@@ -690,6 +784,11 @@ describe("anti-enumeration: consistent error responses", () => {
 		);
 
 		// Both should return the same error
+		expect("error" in noAccessResult).toBe(true);
+		expect("error" in notFoundResult).toBe(true);
+		if (!("error" in noAccessResult && "error" in notFoundResult)) {
+			return;
+		}
 		expect(noAccessResult.error).toBe(notFoundResult.error);
 	});
 });
@@ -715,11 +814,19 @@ describe("team-based case access", () => {
 		// Verify team member can list permissions via ADMIN check on owner
 		// (The team member has VIEW — not ADMIN — so listCasePermissions should deny them)
 		const memberResult = await listCasePermissions(teamMember.id, testCase.id);
+		expect("error" in memberResult).toBe(true);
+		if (!("error" in memberResult)) {
+			return;
+		}
 		expect(memberResult.error).toBe("Permission denied");
 
 		// But the owner (with ADMIN) can see the team permission recorded
 		const ownerResult = await listCasePermissions(owner.id, testCase.id);
-		expect(ownerResult.data?.team_permissions).toHaveLength(1);
-		expect(ownerResult.data?.team_permissions[0].team.id).toBe(team.id);
+		expect("error" in ownerResult).toBe(false);
+		if ("error" in ownerResult) {
+			return;
+		}
+		expect(ownerResult.data.team_permissions).toHaveLength(1);
+		expect(ownerResult.data.team_permissions[0].team.id).toBe(team.id);
 	});
 });

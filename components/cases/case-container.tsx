@@ -5,11 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
-import { toast } from "sonner";
 import CheckTourClient from "@/components/tour/check-tour-client";
+import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
@@ -90,7 +91,7 @@ function buildToastMessage(event: SSEEvent): string | null {
 function showEventToast(event: SSEEvent): void {
 	const message = buildToastMessage(event);
 	if (message) {
-		toast.info(message, { duration: 4000 });
+		toastInfo(message, { duration: 4000 });
 	}
 }
 
@@ -136,7 +137,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				const result = await response.json();
 				return addHiddenProp(result) as AssuranceCase;
 			} catch (_error) {
-				toast.error("Failed to load case data");
+				toastError("Failed to load case data");
 				return null;
 			}
 		},
@@ -161,7 +162,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				const result = await response.json();
 				return result;
 			} catch (_error) {
-				toast.error("Failed to load sandbox elements");
+				toastError("Failed to load sandbox elements");
 				return [];
 			}
 		},
@@ -238,43 +239,47 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		loadOrphanedElementsData();
 	}, [loadOrphanedElementsData]);
 
-	return (
-		<>
-			{(() => {
-				if (loading) {
-					return (
-						<div className="flex min-h-screen items-center justify-center">
-							<div className="flex flex-col items-center justify-center gap-2">
-								<Loader2 className="h-8 w-8 animate-spin" />
-								<p className="text-muted-foreground">Rendering your chart...</p>
-							</div>
+	if (loading) {
+		return (
+			<div className="flex min-h-screen items-center justify-center">
+				<div className="flex flex-col items-center justify-center gap-2">
+					<Loader2 className="h-8 w-8 animate-spin" />
+					<p className="text-muted-foreground">Rendering your chart...</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (assuranceCase) {
+		return (
+			<ReactFlowProvider>
+				<CheckTourClient
+					enabled={!loading}
+					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
+				/>
+				<Header setOpen={setOpen} />
+				<ErrorBoundary
+					fallback={
+						<div className="flex min-h-screen items-center justify-center text-muted-foreground">
+							<p>Diagram failed to render. Try refreshing.</p>
 						</div>
-					);
-				}
-				if (assuranceCase) {
-					return (
-						<ReactFlowProvider>
-							<CheckTourClient
-								enabled={!loading}
-								tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
-							/>
-							<Header setOpen={setOpen} />
-							<ErrorBoundary
-								fallback={
-									<div className="flex min-h-screen items-center justify-center text-muted-foreground">
-										<p>Diagram failed to render. Try refreshing.</p>
-									</div>
-								}
-							>
-								<Flow />
-							</ErrorBoundary>
-							<CaseDetails isOpen={open} setOpen={setOpen} />
-						</ReactFlowProvider>
-					);
-				}
-				return <p>No Case Found</p>;
-			})()}
-		</>
+					}
+				>
+					<Flow />
+				</ErrorBoundary>
+				<CaseDetails isOpen={open} setOpen={setOpen} />
+			</ReactFlowProvider>
+		);
+	}
+
+	return (
+		<div className="flex min-h-[60vh] items-center justify-center px-4">
+			<ErrorCard
+				message="We couldn't find this case. It may have been deleted or you may not have permission to view it."
+				showDashboardLink
+				title="Case not found"
+			/>
+		</div>
 	);
 };
 

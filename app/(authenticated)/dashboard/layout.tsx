@@ -14,6 +14,7 @@ export default async function DashboardLayout({
 	}
 
 	const teamsResult = await listUserTeams(session.userId);
+	const teams = "error" in teamsResult ? [] : teamsResult.data;
 
-	return <Navbar teams={teamsResult.data ?? []}>{children}</Navbar>;
+	return <Navbar teams={teams}>{children}</Navbar>;
 }

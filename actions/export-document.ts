@@ -1,8 +1,8 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import { uuidSchema } from "@/lib/schemas/base";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
-import { exportCase } from "@/lib/services/case-export-service";
 
 type DocumentExportOptions = {
 	includeComments: boolean;
@@ -24,7 +24,13 @@ export async function getDocumentExportData(
 		return { error: "Not authenticated" };
 	}
 
-	const result = await exportCase(session.userId, caseId, {
+	const idResult = uuidSchema.safeParse(caseId);
+	if (!idResult.success) {
+		return { error: "Invalid case ID" };
+	}
+
+	const { exportCase } = await import("@/lib/services/case-export-service");
+	const result = await exportCase(session.userId, idResult.data, {
 		includeComments: options.includeComments,
 	});
 

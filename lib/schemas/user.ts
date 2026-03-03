@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { emailSchema, optionalString, requiredString } from "./base";
+import {
+	emailSchema,
+	optionalString,
+	requiredString,
+	usernameSchema,
+} from "./base";
 
 // ============================================
 // Password Primitives
@@ -8,6 +13,7 @@ import { emailSchema, optionalString, requiredString } from "./base";
 /**
  * Strong password — min 8 chars, uppercase, digit, special character.
  * Used across registration, reset, and change-password flows.
+ * Covers all printable ASCII special characters.
  */
 export const passwordSchema = z
 	.string()
@@ -15,7 +21,7 @@ export const passwordSchema = z
 	.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
 	.regex(/\d/, "Password must contain at least one number")
 	.regex(
-		/[!@#$%^&*()_,.?":{}|<>]/,
+		/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/,
 		"Password must contain at least one special character"
 	)
 	.describe("Strong password with uppercase, digit, and special character");
@@ -79,22 +85,10 @@ export type ChangePasswordFormOutput = z.output<
  * Stricter than `registerUserSchema` (which is the API-level schema).
  */
 export const registerFormSchema = z.object({
-	username: z
-		.string()
-		.min(2, "Username must be at least 2 characters")
-		.max(250, "Username must be less than 250 characters")
-		.regex(/^\S*$/, "Username cannot contain spaces"),
+	username: usernameSchema,
 	email: emailSchema,
 	password1: passwordSchema,
-	password2: z
-		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-		.regex(/\d/, "Password must contain at least one number")
-		.regex(
-			/[!@#$%^&*()_,.?":{}|<>]/,
-			"Password must contain at least one special character"
-		),
+	password2: passwordSchema,
 });
 
 export type RegisterFormInput = z.input<typeof registerFormSchema>;
@@ -119,12 +113,7 @@ export type ForgotPasswordFormOutput = z.output<
 export const personalInfoFormSchema = z.object({
 	firstName: z.string().optional(),
 	lastName: z.string().optional(),
-	username: z
-		.string()
-		.min(3, "Username must be at least 3 characters")
-		.regex(/^[a-zA-Z0-9_]+$/, {
-			message: "Username can only contain letters, numbers, and underscores",
-		}),
+	username: usernameSchema,
 	email: emailSchema,
 });
 
@@ -136,7 +125,7 @@ export type PersonalInfoFormOutput = z.output<typeof personalInfoFormSchema>;
  */
 export const registerUserSchema = z
 	.object({
-		username: requiredString("Username", 1, 150),
+		username: usernameSchema,
 		email: emailSchema,
 		password: z.string().min(1, "Password is required").optional(),
 		password1: z.string().min(1, "Password is required").optional(),

@@ -39,10 +39,13 @@ describe("team-member-service", () => {
 
 			const result = await getTeamMembers(admin.id, teamId);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toHaveLength(2);
 
-			const usernames = result.data?.map((m) => m.user.username);
+			const usernames = result.data.map((m) => m.user.username);
 			expect(usernames).toContain(admin.username);
 			expect(usernames).toContain(member.username);
 		});
@@ -54,8 +57,11 @@ describe("team-member-service", () => {
 
 			const result = await getTeamMembers(outsider.id, teamId);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team not found");
-			expect(result.data).toBeUndefined();
 		});
 	});
 
@@ -70,10 +76,13 @@ describe("team-member-service", () => {
 				role: "MEMBER",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.member).toBeDefined();
-			expect(result.data?.member?.user.email).toBe(newMember.email);
-			expect(result.data?.member?.role).toBe("MEMBER");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.member).toBeDefined();
+			expect(result.data.member?.user.email).toBe(newMember.email);
+			expect(result.data.member?.role).toBe("MEMBER");
 		});
 
 		it("adds an existing user as ADMIN when role is specified", async () => {
@@ -86,7 +95,11 @@ describe("team-member-service", () => {
 				role: "ADMIN",
 			});
 
-			expect(result.data?.member?.role).toBe("ADMIN");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.member?.role).toBe("ADMIN");
 		});
 
 		it("returns already_member when user is already on the team", async () => {
@@ -98,8 +111,11 @@ describe("team-member-service", () => {
 				email: admin.email,
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.already_member).toBe(true);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.already_member).toBe(true);
 		});
 
 		it("returns user_not_found when no user matches the email", async () => {
@@ -110,8 +126,11 @@ describe("team-member-service", () => {
 				email: "ghost@nowhere.example.com",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.user_not_found).toBe(true);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.user_not_found).toBe(true);
 		});
 
 		it("returns 'Permission denied' when a MEMBER tries to add someone", async () => {
@@ -128,6 +147,10 @@ describe("team-member-service", () => {
 				email: newUser.email,
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -146,8 +169,11 @@ describe("team-member-service", () => {
 				role: "ADMIN",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.role).toBe("ADMIN");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.role).toBe("ADMIN");
 
 			const inDb = await prisma.teamMember.findUnique({
 				where: { teamId_userId: { teamId, userId: member.id } },
@@ -163,6 +189,10 @@ describe("team-member-service", () => {
 				role: "MEMBER",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Cannot change your own role");
 		});
 
@@ -183,6 +213,10 @@ describe("team-member-service", () => {
 				role: "ADMIN",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -199,8 +233,7 @@ describe("team-member-service", () => {
 
 			const result = await removeMember(admin.id, teamId, member.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.teamMember.findUnique({
 				where: { teamId_userId: { teamId, userId: member.id } },
@@ -214,6 +247,10 @@ describe("team-member-service", () => {
 
 			const result = await removeMember(admin.id, teamId, admin.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe(
 				"Cannot remove yourself. Use leave team instead."
 			);
@@ -234,6 +271,10 @@ describe("team-member-service", () => {
 
 			const result = await removeMember(memberA.id, teamId, memberB.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -250,8 +291,7 @@ describe("team-member-service", () => {
 
 			const result = await leaveTeam(member.id, teamId);
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.teamMember.findUnique({
 				where: { teamId_userId: { teamId, userId: member.id } },
@@ -265,6 +305,10 @@ describe("team-member-service", () => {
 
 			const result = await leaveTeam(admin.id, teamId);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toContain("last admin");
 		});
 
@@ -275,6 +319,10 @@ describe("team-member-service", () => {
 
 			const result = await leaveTeam(outsider.id, teamId);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Not a member of this team");
 		});
 	});

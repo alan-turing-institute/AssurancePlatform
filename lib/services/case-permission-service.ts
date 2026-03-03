@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createCaseInvite } from "@/lib/services/case-invite-service";
 import type { PermissionLevel } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -107,7 +108,7 @@ function isValidPermission(permission: string): permission is PermissionLevel {
 export async function listCasePermissions(
 	userId: string,
 	caseId: string
-): Promise<{ data?: CasePermissionsListResponse; error?: string }> {
+): ServiceResult<CasePermissionsListResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -222,7 +223,7 @@ export async function shareByEmail(
 	userId: string,
 	caseId: string,
 	input: ShareByEmailInput
-): Promise<{ data?: ShareByEmailResult; error?: string }> {
+): ServiceResult<ShareByEmailResult> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -349,7 +350,7 @@ export async function shareWithTeam(
 	userId: string,
 	caseId: string,
 	input: ShareWithTeamInput
-): Promise<{ data?: TeamPermissionResponse; error?: string }> {
+): ServiceResult<TeamPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -427,7 +428,7 @@ export async function updateUserPermission(
 	caseId: string,
 	permissionId: string,
 	input: UpdatePermissionInput
-): Promise<{ data?: UserPermissionResponse; error?: string }> {
+): ServiceResult<UserPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -503,7 +504,7 @@ export async function updateTeamPermission(
 	caseId: string,
 	permissionId: string,
 	input: UpdatePermissionInput
-): Promise<{ data?: TeamPermissionResponse; error?: string }> {
+): ServiceResult<TeamPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -566,7 +567,7 @@ export async function revokeUserPermission(
 	userId: string,
 	caseId: string,
 	permissionId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -588,7 +589,7 @@ export async function revokeUserPermission(
 			where: { id: permissionId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to revoke permission:", error);
 		return { error: "Failed to revoke permission" };
@@ -602,7 +603,7 @@ export async function revokeTeamPermission(
 	userId: string,
 	caseId: string,
 	permissionId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -624,7 +625,7 @@ export async function revokeTeamPermission(
 			where: { id: permissionId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to revoke team permission:", error);
 		return { error: "Failed to revoke team permission" };

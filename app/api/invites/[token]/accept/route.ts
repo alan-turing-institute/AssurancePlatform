@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiRateLimited,
 	apiSuccess,
 	requireAuth,
 	serviceErrorToAppError,
@@ -42,22 +42,10 @@ export async function POST(
 		);
 
 		if (!rateLimitResult.allowed) {
-			const response = new NextResponse(
-				JSON.stringify({
-					error: rateLimitResult.reason,
-					code: "RATE_LIMITED",
-				}),
-				{ status: 429 }
+			return apiRateLimited(
+				rateLimitResult.reason ?? "Too many requests",
+				rateLimitResult.retryAfterMs
 			);
-
-			if (rateLimitResult.retryAfterMs) {
-				response.headers.set(
-					"Retry-After",
-					String(Math.ceil(rateLimitResult.retryAfterMs / 1000))
-				);
-			}
-
-			return response;
 		}
 
 		const result = await acceptInvite(userId, token, {
@@ -65,14 +53,14 @@ export async function POST(
 			userAgent,
 		});
 
-		if (!result.success) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({
 			success: true,
-			case_id: result.case_id,
-			redirect_url: `/cases/${result.case_id}`,
+			case_id: result.data.caseId,
+			redirect_url: `/cases/${result.data.caseId}`,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -23,7 +23,7 @@ export async function GET(
 
 		const result = await getTeam(userId, teamId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -56,7 +56,7 @@ export async function PATCH(
 
 		const result = await updateTeam(userId, teamId, parsed.data);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -80,7 +80,7 @@ export async function DELETE(
 
 		const result = await deleteTeam(userId, teamId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

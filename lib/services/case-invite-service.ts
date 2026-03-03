@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { logSecurityEvent } from "@/lib/audit/security-log";
 import { prisma } from "@/lib/prisma";
 import type { PermissionLevel } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // Types
@@ -11,9 +13,7 @@ export type SecurityContext = {
 	userAgent: string | null;
 };
 
-export type AcceptInviteResult =
-	| { success: true; case_id: string }
-	| { success: false; error: string };
+export type AcceptInviteResult = { caseId: string };
 
 type InviteTransactionError =
 	| { error: "invalid_token" }
@@ -36,28 +36,6 @@ type InviteTransactionResult =
  */
 export function generateInviteToken(): string {
 	return randomBytes(32).toString("hex");
-}
-
-/**
- * Logs a security event for invite acceptance audit purposes.
- */
-export async function logInviteSecurityEvent(params: {
-	eventType: string;
-	userId: string | null;
-	ipAddress: string | null;
-	userAgent: string | null;
-	metadata?: Record<string, unknown>;
-}): Promise<void> {
-	await prisma.securityAuditLog.create({
-		data: {
-			userId: params.userId,
-			eventType: params.eventType,
-			ipAddress: params.ipAddress,
-			userAgent: params.userAgent,
-			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-			metadata: (params.metadata ?? null) as any,
-		},
-	});
 }
 
 /**
@@ -103,7 +81,7 @@ export async function acceptInvite(
 	userId: string,
 	inviteToken: string,
 	securityContext: SecurityContext = { ipAddress: null, userAgent: null }
-): Promise<AcceptInviteResult> {
+): ServiceResult<AcceptInviteResult> {
 	const { ipAddress, userAgent } = securityContext;
 
 	try {
@@ -114,14 +92,17 @@ export async function acceptInvite(
 		});
 
 		if (user === null) {
-			await logInviteSecurityEvent({
-				eventType: "invite_acceptance_user_not_found",
-				userId,
-				ipAddress,
-				userAgent,
-				metadata: { inviteToken: `${inviteToken.substring(0, 8)}...` },
+			logSecurityEvent({
+				event: "invite_acceptance_user_not_found",
+				severity: "medium",
+				metadata: {
+					userId,
+					inviteToken: `${inviteToken.substring(0, 8)}...`,
+					ipAddress,
+					userAgent,
+				},
 			});
-			return { success: false, error: "User not found" };
+			return { error: "User not found" };
 		}
 
 		// Atomic transaction for invite acceptance (prevents race conditions)
@@ -204,46 +185,46 @@ export async function acceptInvite(
 				email_mismatch: "invite_acceptance_email_mismatch",
 			} as const;
 
-			await logInviteSecurityEvent({
-				eventType: eventTypeMap[errorKey],
-				userId,
-				ipAddress,
-				userAgent,
+			logSecurityEvent({
+				event: eventTypeMap[errorKey],
+				severity: "medium",
 				metadata: {
+					userId,
 					inviteToken: `${inviteToken.substring(0, 8)}...`,
 					...("inviteId" in result && { inviteId: result.inviteId }),
 					...("inviteEmail" in result && { inviteEmail: result.inviteEmail }),
 					userEmail: user.email,
+					ipAddress,
+					userAgent,
 				},
 			});
 
-			return { success: false, error: errorMap[errorKey] };
+			return { error: errorMap[errorKey] };
 		}
 
 		// Log successful acceptance
-		await logInviteSecurityEvent({
-			eventType: "invite_acceptance_completed",
-			userId,
-			ipAddress,
-			userAgent,
-			metadata: { caseId: result.caseId },
+		logSecurityEvent({
+			event: "invite_acceptance_completed",
+			severity: "low",
+			metadata: { userId, caseId: result.caseId, ipAddress, userAgent },
 		});
 
-		return { success: true, case_id: result.caseId };
+		return { data: { caseId: result.caseId } };
 	} catch (error) {
 		console.error("Failed to accept invite:", error);
 
-		await logInviteSecurityEvent({
-			eventType: "invite_acceptance_failed",
-			userId,
-			ipAddress,
-			userAgent,
+		logSecurityEvent({
+			event: "invite_acceptance_failed",
+			severity: "high",
 			metadata: {
+				userId,
 				error: error instanceof Error ? error.message : "Unknown error",
 				inviteToken: `${inviteToken.substring(0, 8)}...`,
+				ipAddress,
+				userAgent,
 			},
 		});
 
-		return { success: false, error: "Failed to accept invite" };
+		return { error: "Failed to accept invite" };
 	}
 }

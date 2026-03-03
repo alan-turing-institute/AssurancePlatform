@@ -9,6 +9,7 @@ import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 export type CreateElementInput = {
 	caseId: string;
@@ -272,7 +273,7 @@ async function createElementInDatabase(
 	level: number | undefined,
 	userId: string,
 	intendedParentId: string | null
-): Promise<{ data?: ElementResponse; error?: string }> {
+): Promise<{ data: ElementResponse } | { error: string }> {
 	const element = await prisma.assuranceElement.create({
 		data: {
 			caseId,
@@ -318,7 +319,7 @@ async function createElementInDatabase(
 export async function createElement(
 	userId: string,
 	input: CreateElementInput
-): Promise<{ data?: ElementResponse; error?: string }> {
+): ServiceResult<ElementResponse> {
 	const caseId = input.caseId;
 	if (!caseId) {
 		return { error: "Case ID is required" };
@@ -378,7 +379,7 @@ export async function createElement(
 export async function getElement(
 	userId: string,
 	elementId: string
-): Promise<{ data?: ElementResponse; error?: string }> {
+): ServiceResult<ElementResponse> {
 	try {
 		const element = await prisma.assuranceElement.findFirst({
 			where: { id: elementId, deletedAt: null },
@@ -484,7 +485,7 @@ export async function updateElement(
 	userId: string,
 	elementId: string,
 	input: UpdateElementInput
-): Promise<{ data?: ElementResponse; error?: string }> {
+): ServiceResult<ElementResponse> {
 	try {
 		// Get existing element to check permissions (include deleted to give proper error message)
 		const existing = await prisma.assuranceElement.findUnique({
@@ -555,7 +556,7 @@ export async function updateElement(
 export async function deleteElement(
 	userId: string,
 	elementId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	try {
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
@@ -587,7 +588,7 @@ export async function deleteElement(
 			});
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to delete element:", error);
 		return { error: "Failed to delete element" };
@@ -600,7 +601,7 @@ export async function deleteElement(
 export async function detachElement(
 	userId: string,
 	elementId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	try {
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
@@ -631,7 +632,7 @@ export async function detachElement(
 			},
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to detach element:", error);
 		return { error: "Failed to detach element" };
@@ -646,7 +647,7 @@ export async function attachElement(
 	userId: string,
 	elementId: string,
 	parentId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	try {
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
@@ -707,7 +708,7 @@ export async function attachElement(
 			}
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to attach element:", error);
 		return { error: "Failed to attach element" };
@@ -720,7 +721,7 @@ export async function attachElement(
 export async function getSandboxElements(
 	userId: string,
 	caseId: string
-): Promise<{ data?: ElementResponse[]; error?: string }> {
+): ServiceResult<ElementResponse[]> {
 	// Validate user has VIEW permission
 	const hasAccess = await validateCaseAccess(userId, caseId, "VIEW");
 	if (!hasAccess) {
@@ -755,7 +756,7 @@ export async function getSandboxElements(
 export async function restoreElement(
 	userId: string,
 	elementId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	try {
 		// Get the element (including deleted ones)
 		const element = await prisma.assuranceElement.findUnique({
@@ -798,7 +799,7 @@ export async function restoreElement(
 			});
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to restore element:", error);
 		return { error: "Failed to restore element" };

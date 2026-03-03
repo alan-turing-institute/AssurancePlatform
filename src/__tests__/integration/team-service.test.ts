@@ -19,12 +19,14 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: "My New Team" });
 
-			expect(result.error).toBeUndefined();
-			expect(result.data).toBeDefined();
-			expect(result.data?.name).toBe("My New Team");
-			expect(result.data!.slug).toMatch(TEAM_SLUG_PATTERN);
-			expect(result.data?.my_role).toBe("ADMIN");
-			expect(result.data?.member_count).toBe(1);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.name).toBe("My New Team");
+			expect(result.data.slug).toMatch(TEAM_SLUG_PATTERN);
+			expect(result.data.my_role).toBe("ADMIN");
+			expect(result.data.member_count).toBe(1);
 		});
 
 		it("returns an error when name is empty", async () => {
@@ -32,8 +34,11 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: "" });
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team name is required");
-			expect(result.data).toBeUndefined();
 		});
 
 		it("returns an error when name is whitespace only", async () => {
@@ -41,6 +46,10 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: "   " });
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team name is required");
 		});
 
@@ -50,6 +59,10 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: longName });
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team name must be less than 100 characters");
 		});
 
@@ -61,8 +74,11 @@ describe("team-service", () => {
 				description: "A team with a description",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.description).toBe("A team with a description");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.description).toBe("A team with a description");
 		});
 
 		it("persists the new team in the database", async () => {
@@ -70,9 +86,13 @@ describe("team-service", () => {
 
 			const result = await createTeam(user.id, { name: "Persisted Team" });
 
-			expect(result.data!.id).toBeDefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+			expect(result.data.id).toBeDefined();
 			const found = await prisma.team.findUnique({
-				where: { id: result.data!.id },
+				where: { id: result.data.id },
 			});
 			expect(found).not.toBeNull();
 			expect(found?.name).toBe("Persisted Team");
@@ -84,11 +104,19 @@ describe("team-service", () => {
 			const user = await createTestUser();
 			const created = await createTeam(user.id, { name: "Visible Team" });
 
-			const result = await getTeam(user.id, created.data!.id);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.name).toBe("Visible Team");
-			expect(result.data?.my_role).toBe("ADMIN");
+			const result = await getTeam(user.id, created.data.id);
+
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.name).toBe("Visible Team");
+			expect(result.data.my_role).toBe("ADMIN");
 		});
 
 		it("returns 'Team not found' for a non-member", async () => {
@@ -96,10 +124,18 @@ describe("team-service", () => {
 			const outsider = await createTestUser();
 			const created = await createTeam(owner.id, { name: "Private Team" });
 
-			const result = await getTeam(outsider.id, created.data!.id);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
+			const result = await getTeam(outsider.id, created.data.id);
+
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team not found");
-			expect(result.data).toBeUndefined();
 		});
 
 		it("returns 'Team not found' for a non-existent team ID", async () => {
@@ -110,6 +146,10 @@ describe("team-service", () => {
 				"00000000-0000-0000-0000-000000000000"
 			);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team not found");
 		});
 
@@ -117,10 +157,19 @@ describe("team-service", () => {
 			const user = await createTestUser();
 			const created = await createTeam(user.id, { name: "Team With Members" });
 
-			const result = await getTeam(user.id, created.data!.id);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
-			expect(result.data?.members).toHaveLength(1);
-			expect(result.data?.members?.[0].user.username).toBe(user.username);
+			const result = await getTeam(user.id, created.data.id);
+
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.members).toHaveLength(1);
+			expect(result.data.members?.[0].user.username).toBe(user.username);
 		});
 	});
 
@@ -129,10 +178,18 @@ describe("team-service", () => {
 			const user = await createTestUser();
 			const created = await createTeam(user.id, { name: "Slug Team" });
 
-			const result = await getTeamBySlug(user.id, created.data!.slug);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.name).toBe("Slug Team");
+			const result = await getTeamBySlug(user.id, created.data.slug);
+
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.name).toBe("Slug Team");
 		});
 
 		it("returns 'Team not found' for a non-member accessing by slug", async () => {
@@ -140,8 +197,17 @@ describe("team-service", () => {
 			const outsider = await createTestUser();
 			const created = await createTeam(owner.id, { name: "Slug Private" });
 
-			const result = await getTeamBySlug(outsider.id, created.data!.slug);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
+			const result = await getTeamBySlug(outsider.id, created.data.slug);
+
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team not found");
 		});
 
@@ -153,6 +219,10 @@ describe("team-service", () => {
 				"this-slug-does-not-exist-xyz"
 			);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Team not found");
 		});
 	});
@@ -166,9 +236,12 @@ describe("team-service", () => {
 
 			const result = await listUserTeams(userA.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data?.[0].name).toBe("Team Alpha");
+			expect(result.data[0].name).toBe("Team Alpha");
 		});
 
 		it("returns an empty array when the user has no teams", async () => {
@@ -176,7 +249,10 @@ describe("team-service", () => {
 
 			const result = await listUserTeams(user.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toEqual([]);
 		});
 
@@ -186,10 +262,15 @@ describe("team-service", () => {
 			await createTeam(admin.id, { name: "First Team" });
 			const secondTeam = await createTeam(admin.id, { name: "Second Team" });
 
+			expect("error" in secondTeam).toBe(false);
+			if ("error" in secondTeam) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
 			// Add member to second team via Prisma directly
 			await prisma.teamMember.create({
 				data: {
-					teamId: secondTeam.data!.id,
+					teamId: secondTeam.data.id,
 					userId: member.id,
 					role: "MEMBER",
 				},
@@ -197,9 +278,13 @@ describe("team-service", () => {
 
 			const result = await listUserTeams(member.id);
 
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data?.[0].name).toBe("Second Team");
-			expect(result.data?.[0].my_role).toBe("MEMBER");
+			expect(result.data[0].name).toBe("Second Team");
+			expect(result.data[0].my_role).toBe("MEMBER");
 		});
 	});
 
@@ -208,15 +293,23 @@ describe("team-service", () => {
 			const user = await createTestUser();
 			const created = await createTeam(user.id, { name: "Old Name" });
 
-			const result = await updateTeam(user.id, created.data!.id, {
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
+			const result = await updateTeam(user.id, created.data.id, {
 				name: "New Name",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.name).toBe("New Name");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.name).toBe("New Name");
 
 			const inDb = await prisma.team.findUnique({
-				where: { id: created.data!.id },
+				where: { id: created.data.id },
 			});
 			expect(inDb?.name).toBe("New Name");
 		});
@@ -226,14 +319,23 @@ describe("team-service", () => {
 			const member = await createTestUser();
 			const created = await createTeam(admin.id, { name: "Locked Team" });
 
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
 			await prisma.teamMember.create({
-				data: { teamId: created.data!.id, userId: member.id, role: "MEMBER" },
+				data: { teamId: created.data.id, userId: member.id, role: "MEMBER" },
 			});
 
-			const result = await updateTeam(member.id, created.data!.id, {
+			const result = await updateTeam(member.id, created.data.id, {
 				name: "Attempted Rename",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -242,10 +344,19 @@ describe("team-service", () => {
 			const outsider = await createTestUser();
 			const created = await createTeam(owner.id, { name: "Protected Team" });
 
-			const result = await updateTeam(outsider.id, created.data!.id, {
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
+			const result = await updateTeam(outsider.id, created.data.id, {
 				name: "Hacked Name",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -255,13 +366,17 @@ describe("team-service", () => {
 			const user = await createTestUser();
 			const created = await createTeam(user.id, { name: "Doomed Team" });
 
-			const result = await deleteTeam(user.id, created.data!.id);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			const result = await deleteTeam(user.id, created.data.id);
+
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.team.findUnique({
-				where: { id: created.data!.id },
+				where: { id: created.data.id },
 			});
 			expect(inDb).toBeNull();
 		});
@@ -270,14 +385,20 @@ describe("team-service", () => {
 			const admin = await createTestUser();
 			const member = await createTestUser();
 			const created = await createTeam(admin.id, { name: "Cascading Delete" });
+
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
 			await prisma.teamMember.create({
-				data: { teamId: created.data!.id, userId: member.id, role: "MEMBER" },
+				data: { teamId: created.data.id, userId: member.id, role: "MEMBER" },
 			});
 
-			await deleteTeam(admin.id, created.data!.id);
+			await deleteTeam(admin.id, created.data.id);
 
 			const members = await prisma.teamMember.findMany({
-				where: { teamId: created.data!.id },
+				where: { teamId: created.data.id },
 			});
 			expect(members).toHaveLength(0);
 		});
@@ -286,12 +407,22 @@ describe("team-service", () => {
 			const admin = await createTestUser();
 			const member = await createTestUser();
 			const created = await createTeam(admin.id, { name: "Safe Team" });
+
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
+
 			await prisma.teamMember.create({
-				data: { teamId: created.data!.id, userId: member.id, role: "MEMBER" },
+				data: { teamId: created.data.id, userId: member.id, role: "MEMBER" },
 			});
 
-			const result = await deleteTeam(member.id, created.data!.id);
+			const result = await deleteTeam(member.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -300,8 +431,17 @@ describe("team-service", () => {
 			const outsider = await createTestUser();
 			const created = await createTeam(owner.id, { name: "Intact Team" });
 
-			const result = await deleteTeam(outsider.id, created.data!.id);
+			expect("error" in created).toBe(false);
+			if ("error" in created) {
+				throw new Error("createTeam failed unexpectedly");
+			}
 
+			const result = await deleteTeam(outsider.id, created.data.id);
+
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});

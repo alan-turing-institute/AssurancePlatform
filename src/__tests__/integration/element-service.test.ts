@@ -30,15 +30,17 @@ describe("element-service", () => {
 				elementType: "goal",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data).toBeDefined();
-			expect(result.data?.type).toBe("goal");
-			expect(result.data?.assuranceCaseId).toBe(testCase.id);
-			expect(result.data?.name).toMatch(GOAL_NAME_PATTERN);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.type).toBe("goal");
+			expect(result.data.assuranceCaseId).toBe(testCase.id);
+			expect(result.data.name).toMatch(GOAL_NAME_PATTERN);
 
 			// Verify the record exists in the database
 			const inDb = await prisma.assuranceElement.findUnique({
-				where: { id: result.data!.id },
+				where: { id: result.data.id },
 			});
 			expect(inDb).not.toBeNull();
 			expect(inDb?.caseId).toBe(testCase.id);
@@ -53,17 +55,23 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
 
-			expect(strategy.error).toBeUndefined();
-			expect(strategy.data?.type).toBe("strategy");
-			expect(strategy.data?.goalId).toBe(goal.data!.id);
-			expect(strategy.data?.name).toMatch(STRATEGY_NAME_PATTERN);
+			expect("error" in strategy).toBe(false);
+			if ("error" in strategy) {
+				return;
+			}
+			expect(strategy.data.type).toBe("strategy");
+			expect(strategy.data.goalId).toBe(goal.data.id);
+			expect(strategy.data.name).toMatch(STRATEGY_NAME_PATTERN);
 		});
 
 		it("creates a PROPERTY_CLAIM under a STRATEGY", async () => {
@@ -74,20 +82,29 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 			const claim = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "property_claim",
-				parentId: strategy.data!.id,
+				parentId: strategy.data.id,
 			});
 
-			expect(claim.error).toBeUndefined();
-			expect(claim.data?.type).toBe("property_claim");
-			expect(claim.data?.strategyId).toBe(strategy.data!.id);
+			expect("error" in claim).toBe(false);
+			if ("error" in claim) {
+				return;
+			}
+			expect(claim.data.type).toBe("property_claim");
+			expect(claim.data.strategyId).toBe(strategy.data.id);
 		});
 
 		it("creates EVIDENCE under a PROPERTY_CLAIM (via evidence link)", async () => {
@@ -98,25 +115,37 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 			const claim = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "property_claim",
-				parentId: strategy.data!.id,
+				parentId: strategy.data.id,
 			});
+			if ("error" in claim) {
+				throw new Error("Claim creation failed");
+			}
 			const evidence = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "evidence",
-				parentId: claim.data!.id,
+				parentId: claim.data.id,
 			});
 
-			expect(evidence.error).toBeUndefined();
-			expect(evidence.data?.type).toBe("evidence");
-			expect(evidence.data?.propertyClaimId).toContain(claim.data!.id);
+			expect("error" in evidence).toBe(false);
+			if ("error" in evidence) {
+				return;
+			}
+			expect(evidence.data.type).toBe("evidence");
+			expect(evidence.data.propertyClaimId).toContain(claim.data.id);
 		});
 
 		it("returns an error when a case already has a GOAL", async () => {
@@ -133,6 +162,10 @@ describe("element-service", () => {
 				elementType: "goal",
 			});
 
+			expect("error" in second).toBe(true);
+			if (!("error" in second)) {
+				return;
+			}
 			expect(second.error).toBe("A case can only have one goal claim");
 		});
 
@@ -147,6 +180,10 @@ describe("element-service", () => {
 				elementType: "goal",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -159,11 +196,17 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await getElement(user.id, created.data!.id);
+			const result = await getElement(user.id, created.data.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.data!.id).toBe(created.data!.id);
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.id).toBe(created.data.id);
 		});
 
 		it("returns 'Permission denied' for a non-member", async () => {
@@ -174,9 +217,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await getElement(outsider.id, created.data!.id);
+			const result = await getElement(outsider.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 
@@ -187,11 +237,18 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			await deleteElement(user.id, created.data!.id);
+			await deleteElement(user.id, created.data.id);
 
-			const result = await getElement(user.id, created.data!.id);
+			const result = await getElement(user.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Element not found");
 		});
 	});
@@ -204,13 +261,19 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await updateElement(user.id, created.data!.id, {
+			const result = await updateElement(user.id, created.data.id, {
 				description: "Updated description",
 			});
 
-			expect(result.error).toBeUndefined();
-			expect(result.data?.description).toBe("Updated description");
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
+			expect(result.data.description).toBe("Updated description");
 		});
 
 		it("returns 'Permission denied' for a VIEW-only user", async () => {
@@ -223,11 +286,18 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await updateElement(viewer.id, created.data!.id, {
+			const result = await updateElement(viewer.id, created.data.id, {
 				description: "Should fail",
 			});
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -240,14 +310,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await deleteElement(user.id, created.data!.id);
+			const result = await deleteElement(user.id, created.data.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceElement.findUnique({
-				where: { id: created.data!.id },
+				where: { id: created.data.id },
 			});
 			expect(inDb?.deletedAt).not.toBeNull();
 		});
@@ -260,27 +332,36 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 			const claim = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "property_claim",
-				parentId: strategy.data!.id,
+				parentId: strategy.data.id,
 			});
+			if ("error" in claim) {
+				throw new Error("Claim creation failed");
+			}
 
 			// Deleting the root goal should cascade to strategy and claim
-			await deleteElement(user.id, goal.data!.id);
+			await deleteElement(user.id, goal.data.id);
 
 			const deletedStrategy = await prisma.assuranceElement.findUnique({
-				where: { id: strategy.data!.id },
+				where: { id: strategy.data.id },
 			});
 			expect(deletedStrategy?.deletedAt).not.toBeNull();
 
 			const deletedClaim = await prisma.assuranceElement.findUnique({
-				where: { id: claim.data!.id },
+				where: { id: claim.data.id },
 			});
 			expect(deletedClaim?.deletedAt).not.toBeNull();
 		});
@@ -295,9 +376,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await deleteElement(viewer.id, created.data!.id);
+			const result = await deleteElement(viewer.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -311,19 +399,24 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 
-			const result = await detachElement(user.id, strategy.data!.id);
+			const result = await detachElement(user.id, strategy.data.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceElement.findUnique({
-				where: { id: strategy.data!.id },
+				where: { id: strategy.data.id },
 			});
 			expect(inDb?.parentId).toBeNull();
 			expect(inDb?.inSandbox).toBe(true);
@@ -339,9 +432,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await detachElement(viewer.id, created.data!.id);
+			const result = await detachElement(viewer.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});
@@ -355,27 +455,32 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 
-			await detachElement(user.id, strategy.data!.id);
+			await detachElement(user.id, strategy.data.id);
 
 			const attachResult = await attachElement(
 				user.id,
-				strategy.data!.id,
-				goal.data!.id
+				strategy.data.id,
+				goal.data.id
 			);
 
-			expect(attachResult.error).toBeUndefined();
-			expect(attachResult.success).toBe(true);
+			expect("error" in attachResult).toBe(false);
 
 			const inDb = await prisma.assuranceElement.findUnique({
-				where: { id: strategy.data!.id },
+				where: { id: strategy.data.id },
 			});
-			expect(inDb?.parentId).toBe(goal.data!.id);
+			expect(inDb?.parentId).toBe(goal.data.id);
 			expect(inDb?.inSandbox).toBe(false);
 		});
 
@@ -387,9 +492,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 
-			const result = await attachElement(user.id, goal.data!.id, goal.data!.id);
+			const result = await attachElement(user.id, goal.data.id, goal.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Cannot set element as its own parent");
 		});
 	});
@@ -403,15 +515,17 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
-			await deleteElement(user.id, created.data!.id);
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
+			await deleteElement(user.id, created.data.id);
 
-			const result = await restoreElement(user.id, created.data!.id);
+			const result = await restoreElement(user.id, created.data.id);
 
-			expect(result.error).toBeUndefined();
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 
 			const inDb = await prisma.assuranceElement.findUnique({
-				where: { id: created.data!.id },
+				where: { id: created.data.id },
 			});
 			expect(inDb?.deletedAt).toBeNull();
 		});
@@ -424,18 +538,28 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 
 			// Delete parent — cascades to child
-			await deleteElement(user.id, goal.data!.id);
+			await deleteElement(user.id, goal.data.id);
 
 			// Attempt to restore only the child (parent still deleted)
-			const result = await restoreElement(user.id, strategy.data!.id);
+			const result = await restoreElement(user.id, strategy.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toContain("parent element is deleted");
 		});
 
@@ -447,9 +571,16 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in created) {
+				throw new Error("Element creation failed");
+			}
 
-			const result = await restoreElement(user.id, created.data!.id);
+			const result = await restoreElement(user.id, created.data.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Element is not deleted");
 		});
 	});
@@ -463,20 +594,29 @@ describe("element-service", () => {
 				caseId: testCase.id,
 				elementType: "goal",
 			});
+			if ("error" in goal) {
+				throw new Error("Goal creation failed");
+			}
 			const strategy = await createElement(user.id, {
 				caseId: testCase.id,
 				elementType: "strategy",
-				parentId: goal.data!.id,
+				parentId: goal.data.id,
 			});
+			if ("error" in strategy) {
+				throw new Error("Strategy creation failed");
+			}
 
-			await detachElement(user.id, strategy.data!.id);
+			await detachElement(user.id, strategy.data.id);
 
 			const result = await getSandboxElements(user.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data?.[0].id).toBe(strategy.data!.id);
-			expect(result.data?.[0].inSandbox).toBe(true);
+			expect(result.data[0].id).toBe(strategy.data.id);
+			expect(result.data[0].inSandbox).toBe(true);
 		});
 
 		it("returns an empty array when no elements are in the sandbox", async () => {
@@ -485,7 +625,10 @@ describe("element-service", () => {
 
 			const result = await getSandboxElements(user.id, testCase.id);
 
-			expect(result.error).toBeUndefined();
+			expect("error" in result).toBe(false);
+			if ("error" in result) {
+				return;
+			}
 			expect(result.data).toEqual([]);
 		});
 
@@ -496,6 +639,10 @@ describe("element-service", () => {
 
 			const result = await getSandboxElements(outsider.id, testCase.id);
 
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				return;
+			}
 			expect(result.error).toBe("Permission denied");
 		});
 	});

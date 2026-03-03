@@ -28,7 +28,7 @@ export async function POST(
 
 		const result = await detachElement(userId, elementId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

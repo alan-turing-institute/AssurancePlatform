@@ -29,7 +29,7 @@ export async function GET(
 		const { id: caseId } = await params;
 		const result = await listCasePermissions(userId, caseId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -71,7 +71,7 @@ export async function POST(
 				permission: parsed.data.permission,
 			});
 
-			if (result.error) {
+			if ("error" in result) {
 				return apiError(serviceErrorToAppError(result.error));
 			}
 
@@ -93,7 +93,7 @@ export async function POST(
 			permission: parsed.data.permission,
 		});
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
 		const result = await purgeExpiredCases(token);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(
 				new AppError({
 					code: result.error === "Unauthorised" ? "UNAUTHORISED" : "INTERNAL",

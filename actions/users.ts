@@ -2,7 +2,6 @@
 
 import { validateSession } from "@/lib/auth/validate-session";
 import type { CurrentUserData } from "@/lib/services/user-service";
-import { getCurrentUser } from "@/lib/services/user-service";
 
 export const fetchCurrentUser = async (): Promise<
 	CurrentUserData | null | undefined
@@ -12,6 +11,7 @@ export const fetchCurrentUser = async (): Promise<
 		return null;
 	}
 
+	const { getCurrentUser } = await import("@/lib/services/user-service");
 	const result = await getCurrentUser(validated.userId);
 	if ("error" in result) {
 		return null;

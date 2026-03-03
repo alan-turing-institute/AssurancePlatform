@@ -237,6 +237,36 @@ export async function canManageTeam(
 }
 
 /**
+ * Validates that a user has admin access to a team.
+ * Returns a typed result for use in service-layer permission guards.
+ */
+export async function validateTeamAdmin(
+	userId: string,
+	teamId: string
+): Promise<{ valid: true } | { valid: false; error: string }> {
+	const isAdmin = await isTeamAdmin(userId, teamId);
+	if (!isAdmin) {
+		return { valid: false, error: "Permission denied" };
+	}
+	return { valid: true };
+}
+
+/**
+ * Validates that a user is a member of a team.
+ * Returns a typed result for use in service-layer permission guards.
+ */
+export async function validateTeamMember(
+	userId: string,
+	teamId: string
+): Promise<{ valid: true } | { valid: false; error: string }> {
+	const isMember = await isTeamMember(userId, teamId);
+	if (!isMember) {
+		return { valid: false, error: "Permission denied" };
+	}
+	return { valid: true };
+}
+
+/**
  * Checks if a user is the last admin of a team.
  * Used to prevent removing the last admin.
  */

@@ -1,5 +1,11 @@
+import {
+	isLastTeamAdmin,
+	validateTeamAdmin,
+	validateTeamMember,
+} from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { TeamRole } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -42,36 +48,6 @@ export type AddMemberResult = {
 // ============================================
 
 /**
- * Validates that a user has admin access to a team.
- */
-async function validateTeamAdmin(
-	userId: string,
-	teamId: string
-): Promise<{ valid: true } | { valid: false; error: string }> {
-	const { isTeamAdmin } = await import("@/lib/permissions");
-	const hasAccess = await isTeamAdmin(userId, teamId);
-	if (!hasAccess) {
-		return { valid: false, error: "Permission denied" };
-	}
-	return { valid: true };
-}
-
-/**
- * Validates that a user is a member of a team.
- */
-async function validateTeamMember(
-	userId: string,
-	teamId: string
-): Promise<{ valid: true } | { valid: false; error: string }> {
-	const { isTeamMember } = await import("@/lib/permissions");
-	const isMember = await isTeamMember(userId, teamId);
-	if (!isMember) {
-		return { valid: false, error: "Team not found" };
-	}
-	return { valid: true };
-}
-
-/**
  * Transforms a Prisma team member to the response format.
  */
 function transformMemberToResponse(member: {
@@ -110,7 +86,7 @@ function transformMemberToResponse(member: {
 export async function getTeamMembers(
 	userId: string,
 	teamId: string
-): Promise<{ data?: TeamMemberResponse[]; error?: string }> {
+): ServiceResult<TeamMemberResponse[]> {
 	// Validate membership
 	const validation = await validateTeamMember(userId, teamId);
 	if (!validation.valid) {
@@ -149,7 +125,7 @@ export async function addTeamMember(
 	userId: string,
 	teamId: string,
 	input: AddTeamMemberInput
-): Promise<{ data?: AddMemberResult; error?: string }> {
+): ServiceResult<AddMemberResult> {
 	// Validate admin access
 	const validation = await validateTeamAdmin(userId, teamId);
 	if (!validation.valid) {
@@ -228,7 +204,7 @@ export async function updateMemberRole(
 	teamId: string,
 	targetUserId: string,
 	input: UpdateMemberRoleInput
-): Promise<{ data?: TeamMemberResponse; error?: string }> {
+): ServiceResult<TeamMemberResponse> {
 	// Validate admin access
 	const validation = await validateTeamAdmin(userId, teamId);
 	if (!validation.valid) {
@@ -290,7 +266,7 @@ export async function removeMember(
 	userId: string,
 	teamId: string,
 	targetUserId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateTeamAdmin(userId, teamId);
 	if (!validation.valid) {
@@ -321,7 +297,7 @@ export async function removeMember(
 			},
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to remove member:", error);
 		return { error: "Failed to remove member" };
@@ -332,10 +308,7 @@ export async function removeMember(
  * Allows a user to leave a team.
  * Cannot leave if last admin (must transfer admin first).
  */
-export async function leaveTeam(
-	userId: string,
-	teamId: string
-): Promise<{ success?: boolean; error?: string }> {
+export async function leaveTeam(userId: string, teamId: string): ServiceResult {
 	try {
 		// Check membership
 		const membership = await prisma.teamMember.findUnique({
@@ -349,7 +322,6 @@ export async function leaveTeam(
 		}
 
 		// Check if last admin
-		const { isLastTeamAdmin } = await import("@/lib/permissions");
 		const isLast = await isLastTeamAdmin(userId, teamId);
 		if (isLast) {
 			return {
@@ -365,7 +337,7 @@ export async function leaveTeam(
 			},
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to leave team:", error);
 		return { error: "Failed to leave team" };

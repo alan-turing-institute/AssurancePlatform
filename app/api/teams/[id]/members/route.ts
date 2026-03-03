@@ -26,7 +26,7 @@ export async function GET(
 
 		const result = await getTeamMembers(userId, teamId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -59,7 +59,7 @@ export async function POST(
 
 		const result = await addTeamMember(userId, teamId, parsed.data);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

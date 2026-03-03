@@ -33,7 +33,7 @@ export async function DELETE(
 
 		const result = await purgeCase(userId, id);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

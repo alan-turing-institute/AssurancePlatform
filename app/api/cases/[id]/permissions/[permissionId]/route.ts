@@ -50,7 +50,7 @@ export async function PATCH(
 					permission: parsed.data.permission,
 				});
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -82,7 +82,7 @@ export async function DELETE(
 			? await revokeTeamPermission(userId, caseId, permissionId)
 			: await revokeUserPermission(userId, caseId, permissionId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

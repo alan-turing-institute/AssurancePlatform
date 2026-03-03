@@ -44,3 +44,15 @@ function toast(options: ToastOptions) {
 }
 
 export { toast };
+
+export function toastError(message: string, description?: string) {
+	sonnerToast.error(message, { description });
+}
+
+export function toastSuccess(message: string, description?: string) {
+	sonnerToast.success(message, { description });
+}
+
+export function toastInfo(message: string, options?: { duration?: number }) {
+	sonnerToast.info(message, options);
+}

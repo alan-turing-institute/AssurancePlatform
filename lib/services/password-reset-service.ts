@@ -1,17 +1,14 @@
 import crypto from "node:crypto";
+import { logSecurityEvent } from "@/lib/audit/security-log";
 import { hashPassword } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
+import { validatePassword } from "@/lib/validation/validators";
 
 // Configuration
 const RESET_TOKEN_EXPIRY_MINUTES = 60;
 const MAX_ATTEMPTS_PER_EMAIL_PER_HOUR = 3;
 const MAX_ATTEMPTS_PER_IP_PER_HOUR = 10;
-
-// Password validation regex patterns (top-level for performance)
-const UPPERCASE_REGEX = /[A-Z]/;
-const DIGIT_REGEX = /\d/;
-const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_,.?":{}|<>]/;
 
 // Types
 type RequestResetResult =
@@ -23,14 +20,6 @@ type ValidateTokenResult =
 	| { error: string };
 
 type ResetPasswordResult = { data: null } | { error: string };
-
-type SecurityEventParams = {
-	eventType: string;
-	userId: string | null;
-	ipAddress: string | null;
-	userAgent: string | null;
-	metadata?: object;
-};
 
 /**
  * Generate a secure random token for password reset.
@@ -101,22 +90,6 @@ async function recordAttempt(
 }
 
 /**
- * Log a security event for audit purposes.
- */
-async function logSecurityEvent(params: SecurityEventParams): Promise<void> {
-	await prisma.securityAuditLog.create({
-		data: {
-			userId: params.userId,
-			eventType: params.eventType,
-			ipAddress: params.ipAddress,
-			userAgent: params.userAgent,
-			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-			metadata: (params.metadata ?? null) as any,
-		},
-	});
-}
-
-/**
  * Request a password reset for the given email.
  * This function is intentionally vague about whether the email exists
  * to prevent user enumeration attacks.
@@ -131,12 +104,15 @@ export async function requestPasswordReset(
 	// Check rate limit first
 	const rateLimitCheck = await checkRateLimit(normalizedEmail, ipAddress);
 	if (!rateLimitCheck.allowed) {
-		await logSecurityEvent({
-			eventType: "password_reset_rate_limited",
-			userId: null,
-			ipAddress,
-			userAgent: userAgent ?? null,
-			metadata: { email: normalizedEmail, reason: rateLimitCheck.reason },
+		logSecurityEvent({
+			event: "password_reset_rate_limited",
+			severity: "medium",
+			metadata: {
+				email: normalizedEmail,
+				ipAddress,
+				userAgent: userAgent ?? null,
+				reason: rateLimitCheck.reason,
+			},
 		});
 		return {
 			error: rateLimitCheck.reason ?? "Rate limit exceeded",
@@ -155,13 +131,13 @@ export async function requestPasswordReset(
 
 	// If user doesn't exist or uses OAuth, pretend success to prevent enumeration
 	if (!user || user.authProvider !== "LOCAL") {
-		await logSecurityEvent({
-			eventType: "password_reset_requested_invalid_user",
-			userId: null,
-			ipAddress,
-			userAgent: userAgent ?? null,
+		logSecurityEvent({
+			event: "password_reset_requested_invalid_user",
+			severity: "low",
 			metadata: {
 				email: normalizedEmail,
+				ipAddress,
+				userAgent: userAgent ?? null,
 				reason: user ? "oauth_user" : "user_not_found",
 			},
 		});
@@ -193,23 +169,29 @@ export async function requestPasswordReset(
 	});
 
 	if ("error" in emailResult) {
-		await logSecurityEvent({
-			eventType: "password_reset_email_failed",
-			userId: user.id,
-			ipAddress,
-			userAgent: userAgent ?? null,
-			metadata: { error: emailResult.error },
+		logSecurityEvent({
+			event: "password_reset_email_failed",
+			severity: "high",
+			metadata: {
+				userId: user.id,
+				ipAddress,
+				userAgent: userAgent ?? null,
+				error: emailResult.error,
+			},
 		});
 		// Still return success to prevent enumeration
 		return { data: null };
 	}
 
-	await logSecurityEvent({
-		eventType: "password_reset_requested",
-		userId: user.id,
-		ipAddress,
-		userAgent: userAgent ?? null,
-		metadata: { emailSent: true },
+	logSecurityEvent({
+		event: "password_reset_requested",
+		severity: "low",
+		metadata: {
+			userId: user.id,
+			ipAddress,
+			userAgent: userAgent ?? null,
+			emailSent: true,
+		},
 	});
 
 	return { data: null };
@@ -252,12 +234,14 @@ export async function resetPassword(
 	// Validate the token first
 	const validation = await validateResetToken(token);
 	if ("error" in validation) {
-		await logSecurityEvent({
-			eventType: "password_reset_invalid_token",
-			userId: null,
-			ipAddress,
-			userAgent: userAgent ?? null,
-			metadata: { tokenLength: token?.length },
+		logSecurityEvent({
+			event: "password_reset_invalid_token",
+			severity: "medium",
+			metadata: {
+				ipAddress,
+				userAgent: userAgent ?? null,
+				tokenLength: token?.length,
+			},
 		});
 		return { error: validation.error };
 	}
@@ -265,23 +249,9 @@ export async function resetPassword(
 	const { userId, email } = validation.data;
 
 	// Validate password strength
-	if (newPassword.length < 8) {
-		return { error: "Password must be at least 8 characters" };
-	}
-	if (!UPPERCASE_REGEX.test(newPassword)) {
-		return {
-			error: "Password must contain at least one uppercase letter",
-		};
-	}
-	if (!DIGIT_REGEX.test(newPassword)) {
-		return {
-			error: "Password must contain at least one number",
-		};
-	}
-	if (!SPECIAL_CHAR_REGEX.test(newPassword)) {
-		return {
-			error: "Password must contain at least one special character",
-		};
+	const passwordValidation = validatePassword(newPassword);
+	if (!passwordValidation.valid) {
+		return { error: passwordValidation.error };
 	}
 
 	// Hash the new password
@@ -309,11 +279,10 @@ export async function resetPassword(
 		},
 	});
 
-	await logSecurityEvent({
-		eventType: "password_reset_completed",
-		userId,
-		ipAddress,
-		userAgent: userAgent ?? null,
+	logSecurityEvent({
+		event: "password_reset_completed",
+		severity: "low",
+		metadata: { userId, ipAddress, userAgent: userAgent ?? null },
 	});
 
 	return { data: null };

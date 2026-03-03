@@ -1,6 +1,7 @@
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeCompare } from "@/lib/auth/timing-safe";
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // OUTPUT INTERFACES
@@ -56,23 +57,6 @@ async function validateCaseOwner(
 	return { valid: true, deletedAt: existingCase.deletedAt };
 }
 
-/**
- * Performs timing-safe comparison of two strings.
- * Prevents timing attacks on secret comparison.
- */
-function timingSafeCompare(a: string, b: string): boolean {
-	try {
-		const bufA = Buffer.from(a);
-		const bufB = Buffer.from(b);
-		if (bufA.length !== bufB.length) {
-			return false;
-		}
-		return timingSafeEqual(bufA, bufB);
-	} catch {
-		return false;
-	}
-}
-
 // ============================================
 // SERVICE FUNCTIONS
 // ============================================
@@ -83,7 +67,7 @@ function timingSafeCompare(a: string, b: string): boolean {
  */
 export async function listTrashedCases(
 	userId: string
-): Promise<{ data?: TrashListResponse; error?: string }> {
+): ServiceResult<TrashListResponse> {
 	try {
 		const trashedCases = await prisma.assuranceCase.findMany({
 			where: {
@@ -128,7 +112,7 @@ export async function listTrashedCases(
 export async function softDeleteCase(
 	userId: string,
 	caseId: string
-): Promise<{ error?: string }> {
+): ServiceResult {
 	const { canAccessCase } = await import("@/lib/permissions");
 
 	// Check permission - only ADMIN can delete
@@ -161,7 +145,7 @@ export async function softDeleteCase(
 			},
 		});
 
-		return {};
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to soft-delete case:", error);
 		return { error: "Failed to delete case" };
@@ -175,7 +159,7 @@ export async function softDeleteCase(
 export async function restoreCase(
 	userId: string,
 	caseId: string
-): Promise<{ error?: string }> {
+): ServiceResult {
 	const validation = await validateCaseOwner(userId, caseId);
 
 	if (!validation.valid) {
@@ -195,7 +179,7 @@ export async function restoreCase(
 			},
 		});
 
-		return {};
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to restore case:", error);
 		return { error: "Failed to restore case" };
@@ -206,10 +190,7 @@ export async function restoreCase(
  * Permanently deletes a case from trash.
  * Only the case owner can purge. Case must be in trash.
  */
-export async function purgeCase(
-	userId: string,
-	caseId: string
-): Promise<{ error?: string }> {
+export async function purgeCase(userId: string, caseId: string): ServiceResult {
 	const validation = await validateCaseOwner(userId, caseId);
 
 	if (!validation.valid) {
@@ -227,7 +208,7 @@ export async function purgeCase(
 			where: { id: caseId },
 		});
 
-		return {};
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to purge case:", error);
 		return { error: "Failed to purge case" };
@@ -240,7 +221,7 @@ export async function purgeCase(
  */
 export async function purgeExpiredCases(
 	authToken: string | null
-): Promise<{ data?: PurgeResult; error?: string }> {
+): ServiceResult<PurgeResult> {
 	const cronSecret = process.env.CRON_SECRET;
 
 	if (!cronSecret) {

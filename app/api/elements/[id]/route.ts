@@ -28,7 +28,7 @@ export async function GET(
 
 		const result = await getElement(session.userId, elementId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -82,7 +82,7 @@ export async function PUT(
 		);
 		const result = await updateElement(session.userId, elementId, input);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
@@ -132,7 +132,7 @@ export async function DELETE(
 
 		const result = await deleteElement(session.userId, elementId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

@@ -1,10 +1,9 @@
 "use server";
 
+import { z } from "zod";
 import { validateSession } from "@/lib/auth/validate-session";
-import {
-	getCompletedTours,
-	markTourCompleted as markTourCompletedService,
-} from "@/lib/services/tour-service";
+
+const tourIdSchema = z.string().min(1, "Tour ID is required").max(100);
 
 /**
  * Fetches the list of completed tour IDs for the current user.
@@ -16,6 +15,7 @@ export async function fetchCompletedTours(): Promise<string[]> {
 		return [];
 	}
 
+	const { getCompletedTours } = await import("@/lib/services/tour-service");
 	const result = await getCompletedTours(validated.userId);
 	if ("error" in result) {
 		return [];
@@ -36,7 +36,18 @@ export async function markTourCompleted(
 		return null;
 	}
 
-	const result = await markTourCompletedService(validated.userId, tourId);
+	const idResult = tourIdSchema.safeParse(tourId);
+	if (!idResult.success) {
+		return null;
+	}
+
+	const { markTourCompleted: markTourCompletedService } = await import(
+		"@/lib/services/tour-service"
+	);
+	const result = await markTourCompletedService(
+		validated.userId,
+		idResult.data
+	);
 	if ("error" in result) {
 		return null;
 	}

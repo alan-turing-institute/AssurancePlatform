@@ -42,7 +42,7 @@ export async function POST(
 
 		const result = await attachElement(userId, elementId, parentId);
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

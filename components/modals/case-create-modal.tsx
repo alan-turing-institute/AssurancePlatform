@@ -28,21 +28,17 @@ import { Button } from "../ui/button";
 export const CaseCreateModal = () => {
 	const createCaseModal = useCreateCaseModal();
 	const router = useRouter();
-	// const [token] = useLoginToken();
 	const { data: session } = useSession();
 
 	const [loading, setLoading] = useState(false);
 	const [_stage, _setStage] = useState(0);
-	// const [templates, setTemplates] = useState<any[]>([]);
-	// const [defaultValue, setDefaultValue] = useState(0);
-	const [_errors, setErrors] = useState<string[]>([]);
+	const [errors, setErrors] = useState<string[]>([]);
 
 	const form = useForm<CreateAssuranceCaseInput>({
 		resolver: zodResolver(createAssuranceCaseSchema),
 		defaultValues: {
 			name: "",
 			description: "",
-			// template: ""
 		},
 	});
 
@@ -89,19 +85,6 @@ export const CaseCreateModal = () => {
 	const onSubmit = (values: CreateAssuranceCaseInput) => {
 		CreateCase(values.name, values.description);
 	};
-
-	// const fetchTemplates = async () => {
-	//   const response = await fetch('/api/templates')
-	//   const result = await response.json()
-	//   return result
-	// }
-
-	// useEffect(() => {
-	//   fetchTemplates().then(result => {
-	//     setTemplates(result.newTemplates);
-	//     setDefaultValue(result.defaultCase);
-	//   })
-	// },[])
 
 	return (
 		<Modal
@@ -157,34 +140,13 @@ export const CaseCreateModal = () => {
 										</FormItem>
 									)}
 								/>
-								{/* <FormField
-                control={form.control}
-                name="template"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Select a template...</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        {templates.map((template, index) => (
-                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value={index.toString()} />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {template.name}
-                            </FormLabel>
-                          </FormItem>
-                        ))}
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              /> */}
+								{errors.length > 0 && (
+									<div className="text-destructive text-sm">
+										{errors.map((e) => (
+											<p key={e}>{e}</p>
+										))}
+									</div>
+								)}
 								<div className="flex w-full items-center justify-end space-x-2 pt-6">
 									<Button
 										disabled={loading}

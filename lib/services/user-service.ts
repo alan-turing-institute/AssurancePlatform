@@ -1,15 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import {
+	validateEmail,
+	validatePassword,
+	validateUsername,
+} from "@/lib/validation/validators";
 import type { ConnectedAccountsData } from "@/types/domain";
-
-// ============================================
-// VALIDATION REGEX PATTERNS (top-level for performance)
-// ============================================
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UPPERCASE_REGEX = /[A-Z]/;
-const DIGIT_REGEX = /\d/;
-const SPECIAL_CHAR_REGEX = /[\W_]/;
-const WHITESPACE_REGEX = /\s/;
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -33,62 +29,6 @@ export type UserResponse = {
 };
 
 // ============================================
-// VALIDATION HELPERS
-// ============================================
-
-/**
- * Validates email format.
- */
-function isValidEmail(email: string): boolean {
-	return EMAIL_REGEX.test(email);
-}
-
-/**
- * Validates password strength.
- * Requires: min 8 chars, 1 uppercase, 1 number, 1 special char.
- */
-function isValidPassword(password: string): { valid: boolean; error?: string } {
-	if (password.length < 8) {
-		return { valid: false, error: "Password must be at least 8 characters" };
-	}
-	if (!UPPERCASE_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one uppercase letter",
-		};
-	}
-	if (!DIGIT_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one number",
-		};
-	}
-	if (!SPECIAL_CHAR_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one special character",
-		};
-	}
-	return { valid: true };
-}
-
-/**
- * Validates username format.
- */
-function isValidUsername(username: string): { valid: boolean; error?: string } {
-	if (username.length < 2) {
-		return { valid: false, error: "Username must be at least 2 characters" };
-	}
-	if (username.length > 250) {
-		return { valid: false, error: "Username must be less than 250 characters" };
-	}
-	if (WHITESPACE_REGEX.test(username)) {
-		return { valid: false, error: "Username cannot contain spaces" };
-	}
-	return { valid: true };
-}
-
-// ============================================
 // SERVICE FUNCTIONS
 // ============================================
 
@@ -99,24 +39,25 @@ export async function registerUser(
 	input: RegisterUserInput
 ): Promise<{ data?: UserResponse; error?: string; field?: string }> {
 	// Validate username
-	const usernameValidation = isValidUsername(input.username);
+	const usernameValidation = validateUsername(input.username);
 	if (!usernameValidation.valid) {
 		return { error: usernameValidation.error, field: "username" };
 	}
 
 	// Validate email
-	if (!isValidEmail(input.email)) {
-		return { error: "Please enter a valid email address", field: "email" };
+	const emailValidation = validateEmail(input.email);
+	if (!emailValidation.valid) {
+		return { error: emailValidation.error, field: "email" };
 	}
 
 	// Validate password
-	const passwordValidation = isValidPassword(input.password);
+	const passwordValidation = validatePassword(input.password);
 	if (!passwordValidation.valid) {
 		return { error: passwordValidation.error, field: "password" };
 	}
 
-	const email = input.email.toLowerCase().trim();
-	const username = input.username.trim();
+	const email = emailValidation.value;
+	const username = usernameValidation.value;
 
 	try {
 		// Check if email already exists
@@ -182,7 +123,7 @@ export async function registerUser(
  */
 export async function dismissMigrationNotice(
 	userId: string
-): Promise<{ data: null } | { error: string }> {
+): ServiceResult<null> {
 	try {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
@@ -213,9 +154,7 @@ export async function dismissMigrationNotice(
 /**
  * Gets the current user by ID.
  */
-export async function getUserById(
-	userId: string
-): Promise<{ data?: UserResponse; error?: string }> {
+export async function getUserById(userId: string): ServiceResult<UserResponse> {
 	try {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
@@ -265,7 +204,7 @@ export type UserProfileData = {
  */
 export async function getUserProfile(
 	userId: string
-): Promise<{ data: UserProfileData } | { error: string }> {
+): ServiceResult<UserProfileData> {
 	try {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
@@ -335,7 +274,7 @@ export type CurrentUserData = {
  */
 export async function getCurrentUser(
 	userId: string
-): Promise<{ data: CurrentUserData } | { error: string }> {
+): ServiceResult<CurrentUserData> {
 	try {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
