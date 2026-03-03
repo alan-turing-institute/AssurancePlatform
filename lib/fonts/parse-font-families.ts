@@ -14,7 +14,7 @@ const FONT_VARIABLES = ["--font-sans", "--font-serif", "--font-mono"] as const;
  * extractPrimaryFontFamily('"Source Serif 4", serif') // "Source Serif 4"
  */
 export function extractPrimaryFontFamily(fontValue: string): string {
-	const first = fontValue.split(",")[0].trim();
+	const first = (fontValue.split(",")[0] ?? "").trim();
 	// Strip matching quotes
 	if (
 		(first.startsWith('"') && first.endsWith('"')) ||

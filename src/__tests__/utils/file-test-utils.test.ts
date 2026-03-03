@@ -61,8 +61,8 @@ describe("File Test Utilities", () => {
 			const fileList = createMockFileList(files);
 
 			expect(fileList.length).toBe(2);
-			expect(fileList[0].name).toBe("file1.txt");
-			expect(fileList[1].name).toBe("file2.txt");
+			expect(fileList[0]!.name).toBe("file1.txt");
+			expect(fileList[1]!.name).toBe("file2.txt");
 			expect(fileList.item(0)).toBe(files[0]);
 		});
 	});
@@ -95,9 +95,9 @@ describe("File Test Utilities", () => {
 			const files = TestFileFactory.createMultipleFiles(3);
 
 			expect(files).toHaveLength(3);
-			expect(files[0].name).toBe("file-1.txt");
-			expect(files[1].name).toBe("file-2.txt");
-			expect(files[2].name).toBe("file-3.txt");
+			expect(files[0]!.name).toBe("file-1.txt");
+			expect(files[1]!.name).toBe("file-2.txt");
+			expect(files[2]!.name).toBe("file-3.txt");
 		});
 
 		it("should create an oversized file", () => {
@@ -215,7 +215,7 @@ describe("File Test Utilities", () => {
 			await FileInputTestUtils.selectFiles(input, files);
 
 			expect(input.files?.length).toBe(1);
-			expect(input.files?.[0].name).toBe("screenshot.png");
+			expect(input.files![0]!.name).toBe("screenshot.png");
 		});
 	});
 

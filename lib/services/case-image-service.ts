@@ -121,7 +121,7 @@ export async function uploadCaseImage(
 
 		// Convert base64 to buffer
 		const base64Data = imageData.includes(",")
-			? imageData.split(",")[1]
+			? (imageData.split(",")[1] ?? imageData)
 			: imageData;
 		const buffer = Buffer.from(base64Data, "base64");
 

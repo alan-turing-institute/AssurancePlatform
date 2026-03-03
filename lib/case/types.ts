@@ -11,6 +11,7 @@ export type Map = {
 };
 
 // Extended CaseNode interface with proper typing
+// Dynamic property bag: legacy case tree operations pass arbitrary fields through nodes
 export type CaseNode = {
 	hidden: boolean;
 	id: number;
@@ -27,6 +28,7 @@ export type CaseNode = {
 };
 
 // Node type for React Flow integration
+// Dynamic property bag on data: legacy case tree operations spread arbitrary fields into node data
 export type ReactFlowNode = {
 	id: string;
 	type: string;
@@ -47,6 +49,7 @@ export type ReactFlowNode = {
 };
 
 // API Response types
+// Dynamic property bag: API responses include varying fields per element type
 export type ApiNodeResponse = {
 	id: number;
 	name: string;
@@ -65,7 +68,6 @@ export type DetachPayload = {
 // Comment type for API operations
 export type CommentPayload = {
 	content: string;
-	[key: string]: unknown;
 };
 
 // Type for node creation payloads

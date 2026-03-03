@@ -104,7 +104,7 @@ describe("useGoogleFonts", () => {
 		const secondHref = (links[0] as HTMLLinkElement).href;
 		expect(secondHref).not.toBe(firstHref);
 		expect(secondHref).toContain("Montserrat");
-		expect(links[0].getAttribute(LINK_ATTR)).toBe("catpuccin");
+		expect(links[0]!.getAttribute(LINK_ATTR)).toBe("catpuccin");
 	});
 
 	it("should remove the link when switching to a preset with no custom fonts", () => {

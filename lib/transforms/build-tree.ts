@@ -183,14 +183,19 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 	if (roots.length === 0) {
 		// Fallback: find any element with no parent
 		const anyRoots = childrenMap.get(null) ?? [];
-		if (anyRoots.length === 0) {
+		const firstAnyRoot = anyRoots[0];
+		if (!firstAnyRoot) {
 			throw new Error("No root element found (element with parentId = null)");
 		}
-		return buildNode(anyRoots[0], childrenMap);
+		return buildNode(firstAnyRoot, childrenMap);
 	}
 
 	// Use first root GOAL (cases typically have one)
-	return buildNode(roots[0], childrenMap);
+	const firstRoot = roots[0];
+	if (!firstRoot) {
+		throw new Error("No root element found");
+	}
+	return buildNode(firstRoot, childrenMap);
 }
 
 /**

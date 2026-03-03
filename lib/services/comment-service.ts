@@ -2,6 +2,7 @@ import type { ValidatedSession } from "@/lib/auth/validate-session";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
+import type { ServiceResult } from "@/types/service";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -128,7 +129,7 @@ export function buildCommentTree(comments: PrismaComment[]): CommentResponse[] {
 async function getCommentWithPermission(
 	commentId: string,
 	userId: string
-): Promise<{ data: CommentPermissionResult } | { error: string }> {
+): ServiceResult<CommentPermissionResult> {
 	const comment = await prisma.comment.findUnique({
 		where: { id: commentId },
 		include: {
@@ -169,7 +170,7 @@ async function getCommentWithPermission(
 export async function fetchCaseComments(
 	caseId: string,
 	userId: string
-): Promise<{ data: CommentResponse[] } | { error: string }> {
+): ServiceResult<CommentResponse[]> {
 	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
 	if (!hasAccess) {
 		return { error: "Permission denied" };
@@ -196,7 +197,7 @@ export async function createCaseComment(
 	content: string,
 	parentId: string | null,
 	userId: string
-): Promise<{ data: CommentResponse } | { error: string }> {
+): ServiceResult<CommentResponse> {
 	const hasAccess = await canAccessCase({ userId, caseId }, "COMMENT");
 	if (!hasAccess) {
 		return { error: "Permission denied" };
@@ -234,7 +235,7 @@ export async function createCaseComment(
 export async function fetchElementComments(
 	elementId: string,
 	userId: string
-): Promise<{ data: CommentResponse[] } | { error: string }> {
+): ServiceResult<CommentResponse[]> {
 	// Get the element to find its case (exclude deleted elements)
 	const element = await prisma.assuranceElement.findFirst({
 		where: { id: elementId, deletedAt: null },
@@ -278,7 +279,7 @@ export async function createElementComment(
 	content: string,
 	parentId: string | null,
 	session: { userId: string; username: string | null; email: string | null }
-): Promise<{ data: CommentResponse } | { error: string }> {
+): ServiceResult<CommentResponse> {
 	// Get the element to find its case and name (exclude deleted elements)
 	const element = await prisma.assuranceElement.findFirst({
 		where: { id: elementId, deletedAt: null },
@@ -355,7 +356,7 @@ export async function createElementComment(
 export async function deleteComment(
 	commentId: string,
 	session: ValidatedSession
-): Promise<{ data: null } | { error: string }> {
+): ServiceResult<null> {
 	const permissionResult = await getCommentWithPermission(
 		commentId,
 		session.userId
@@ -401,7 +402,7 @@ export async function updateComment(
 	commentId: string,
 	content: string,
 	session: ValidatedSession
-): Promise<{ data: UpdatedCommentData } | { error: string }> {
+): ServiceResult<UpdatedCommentData> {
 	const permissionResult = await getCommentWithPermission(
 		commentId,
 		session.userId
@@ -455,7 +456,7 @@ export async function resolveComment(
 	commentId: string,
 	resolved: boolean,
 	session: ValidatedSession
-): Promise<{ data: CommentResponse } | { error: string }> {
+): ServiceResult<CommentResponse> {
 	const permissionResult = await getCommentWithPermission(
 		commentId,
 		session.userId

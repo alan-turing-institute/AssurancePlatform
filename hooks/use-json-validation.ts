@@ -104,7 +104,7 @@ function parseJsonWithPosition(content: string): {
 		if (error instanceof SyntaxError) {
 			// Try to extract position from error message
 			const posMatch = error.message.match(POSITION_PATTERN);
-			const pos = posMatch ? Number.parseInt(posMatch[1], 10) : 0;
+			const pos = posMatch?.[1] ? Number.parseInt(posMatch[1], 10) : 0;
 
 			// Calculate line and column from position
 			const beforeError = content.slice(0, pos);

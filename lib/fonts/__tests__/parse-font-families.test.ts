@@ -76,7 +76,7 @@ describe("getRequiredGoogleFonts", () => {
 
 		const fonts = getRequiredGoogleFonts(variables);
 		expect(fonts).toHaveLength(1);
-		expect(fonts[0].family).toBe("JetBrains Mono");
+		expect(fonts[0]!.family).toBe("JetBrains Mono");
 	});
 
 	it("should return empty array for preset with no font variables", () => {

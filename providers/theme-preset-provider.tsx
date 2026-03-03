@@ -75,7 +75,11 @@ type ThemePresetContextValue = {
 const ThemePresetContext = createContext<ThemePresetContextValue | null>(null);
 
 function getDefaultPreset(): ThemePreset {
-	return themePresets[0];
+	const first = themePresets[0];
+	if (!first) {
+		throw new Error("themePresets must not be empty");
+	}
+	return first;
 }
 
 function findPreset(id: string): ThemePreset {

@@ -100,9 +100,9 @@ export function withReducedMotion(
 	if (prefersReducedMotion()) {
 		const reducedVariants: AnimationVariants = {};
 		for (const key of Object.keys(variants)) {
+			const variant = variants[key];
 			reducedVariants[key] = {
-				opacity:
-					variants[key].opacity !== undefined ? variants[key].opacity : 1,
+				opacity: variant?.opacity !== undefined ? variant.opacity : 1,
 				transition: {
 					duration: 0.01,
 				},

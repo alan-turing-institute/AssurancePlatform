@@ -169,7 +169,7 @@ function Flow() {
 		}
 	}, [assuranceCase, loading, markChanged]);
 
-	const showCreateGoal = !(nodes.length > 0 && nodes[0].type === "goal");
+	const showCreateGoal = !(nodes.length > 0 && nodes[0]?.type === "goal");
 
 	const notifyError = (message: string) => {
 		toast({

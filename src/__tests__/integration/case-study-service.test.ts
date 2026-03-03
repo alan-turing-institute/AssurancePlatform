@@ -381,3 +381,60 @@ describe("createCaseStudyWithLinks", () => {
 		expect(result.data.publishedCases).toHaveLength(0);
 	});
 });
+
+// ============================================
+// updateCaseStudyWithLinks
+// ============================================
+
+describe("updateCaseStudyWithLinks", () => {
+	it("returns error when updated by a non-owner", async () => {
+		const owner = await createTestUser();
+		const other = await createTestUser();
+		const { createCaseStudy, updateCaseStudyWithLinks } = await import(
+			"@/lib/services/case-study-service"
+		);
+
+		const created = await createCaseStudy(owner.id, {
+			title: "Original Title",
+		});
+
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
+
+		const result = await updateCaseStudyWithLinks(
+			created.data.id,
+			other.id,
+			{ title: "Hijacked" },
+			[]
+		);
+
+		expect("error" in result).toBe(true);
+		if ("error" in result) {
+			expect(result.error).toBe("Permission denied");
+		}
+
+		// Verify DB was not changed
+		const unchanged = await prisma.caseStudy.findUnique({
+			where: { id: created.data.id },
+		});
+		expect(unchanged?.title).toBe("Original Title");
+	});
+
+	it("returns error for a non-existent case study", async () => {
+		const owner = await createTestUser();
+		const { updateCaseStudyWithLinks } = await import(
+			"@/lib/services/case-study-service"
+		);
+
+		const result = await updateCaseStudyWithLinks(
+			999_999,
+			owner.id,
+			{ title: "Ghost" },
+			[]
+		);
+
+		expect("error" in result).toBe(true);
+	});
+});

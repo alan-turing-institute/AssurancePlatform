@@ -207,6 +207,9 @@ const ConceptCarousel = ({
 	}
 
 	const currentConcept = concepts[currentIndex];
+	if (!currentConcept) {
+		return null;
+	}
 	const Icon = getConceptIcon(currentConcept.type);
 	const canGoBack = currentIndex > 0;
 	const canGoForward = currentIndex < concepts.length - 1;

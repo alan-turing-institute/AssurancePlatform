@@ -125,9 +125,9 @@ export const PageTransition = ({
 		slideDown: ENTRY_ANIMATIONS.slideInDown,
 		scale: ENTRY_ANIMATIONS.scaleIn,
 		slideScale: ENTRY_ANIMATIONS.slideScaleIn,
-	};
+	} as const;
 
-	const variants = getVariants(animations[animationType] || animations.fade);
+	const variants = getVariants(animations[animationType]);
 
 	if (!shouldAnimate) {
 		return <div className={className}>{children}</div>;

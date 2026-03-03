@@ -33,30 +33,19 @@ export type QualityLevel = "high" | "medium" | "low";
 // ============================================
 
 /**
- * Element types in the new export schema.
- * Uses uppercase to match Prisma enum.
+ * Element types, roles, and module embed types — re-exported from Prisma as single source of truth.
  */
-export type ElementType =
-	| "GOAL"
-	| "CONTEXT"
-	| "STRATEGY"
-	| "PROPERTY_CLAIM"
-	| "EVIDENCE"
-	| "JUSTIFICATION"
-	| "ASSUMPTION"
-	| "MODULE"
-	| "AWAY_GOAL"
-	| "CONTRACT";
+export type {
+	ElementRole,
+	ElementType,
+	ModuleEmbedType,
+} from "@/src/generated/prisma";
 
-/**
- * Role for goal elements.
- */
-export type ElementRole = "TOP_LEVEL" | "SUPPORTING";
-
-/**
- * Module embed type for module elements.
- */
-export type ModuleEmbedType = "COPY" | "REFERENCE";
+import type {
+	ElementRole,
+	ElementType,
+	ModuleEmbedType,
+} from "@/src/generated/prisma";
 
 /**
  * Comment attached to an element in the export.

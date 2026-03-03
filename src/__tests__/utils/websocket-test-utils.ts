@@ -709,7 +709,7 @@ export class ConcurrentUserSimulator {
 		const users = Array.from(this.users.entries());
 
 		for (let i = 0; i < editCount; i++) {
-			const [userId, { ws }] = users[i % users.length];
+			const [userId, { ws }] = users[i % users.length]!;
 			const message = createAssuranceCaseUpdate(
 				{
 					id: "1",
@@ -1052,7 +1052,7 @@ export class ReconnectionTester {
 		const delays = this.attempts
 			.slice(1)
 			.map(
-				(attempt, index) => attempt.timestamp - this.attempts[index].timestamp
+				(attempt, index) => attempt.timestamp - this.attempts[index]!.timestamp
 			);
 		const averageDelay =
 			delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
@@ -1119,7 +1119,7 @@ export function createEventSequenceTester() {
 			}
 
 			const delay =
-				events[event2Index].timestamp - events[event1Index].timestamp;
+				events[event2Index]!.timestamp - events[event1Index]!.timestamp;
 			return delay <= maxDelay;
 		},
 

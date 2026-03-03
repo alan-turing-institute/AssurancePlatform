@@ -76,8 +76,8 @@ describe("layout-helper utilities", () => {
 				customProp: "preserved",
 			});
 			expect(result.nodes[0]).toHaveProperty("position");
-			expect(result.nodes[0].position).toHaveProperty("x");
-			expect(result.nodes[0].position).toHaveProperty("y");
+			expect(result.nodes[0]!.position).toHaveProperty("x");
+			expect(result.nodes[0]!.position).toHaveProperty("y");
 		});
 
 		it("should preserve edge structure", async () => {

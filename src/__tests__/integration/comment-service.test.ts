@@ -144,9 +144,9 @@ describe("comment-service", () => {
 			)) as unknown as CommentResponse[];
 
 			expect(result).toHaveLength(1);
-			expect(result[0].content).toBe("Thread root");
-			expect(result[0].replies).toHaveLength(1);
-			expect(result[0].replies?.[0].content).toBe("Child");
+			expect(result[0]!.content).toBe("Thread root");
+			expect(result[0]!.replies).toHaveLength(1);
+			expect(result[0]!.replies![0]!.content).toBe("Child");
 		});
 
 		it("throws NOT_FOUND when user has no VIEW access", async () => {
@@ -180,7 +180,7 @@ describe("comment-service", () => {
 			)) as unknown as CommentResponse[];
 
 			expect(result).toHaveLength(1);
-			expect(result[0].content).toBe("An element comment");
+			expect(result[0]!.content).toBe("An element comment");
 		});
 
 		it("throws NOT_FOUND when user has no access to the case", async () => {

@@ -238,7 +238,7 @@ const calculateIdentifierFromLastItem = (
 		const lastIdentifier = Number.parseFloat(
 			lastItem.name.substring(1)
 		).toString();
-		const subIdentifier = lastIdentifier.split(".")[1];
+		const subIdentifier = lastIdentifier.split(".")[1] ?? "0";
 		return Number.parseInt(subIdentifier, 10) + 1;
 	}
 

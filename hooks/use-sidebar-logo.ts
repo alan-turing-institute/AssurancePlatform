@@ -31,7 +31,7 @@ export function useSidebarLogo(): string {
 			// Extract lightness from oklch(L C H) — L is the first number
 			const match = raw.match(OKLCH_LIGHTNESS_RE);
 			if (match) {
-				const lightness = Number.parseFloat(match[1]);
+				const lightness = Number.parseFloat(match[1] ?? "0");
 				setLogo(lightness > 0.5 ? LIGHT_LOGO : DARK_LOGO);
 			}
 		}

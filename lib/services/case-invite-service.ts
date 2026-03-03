@@ -46,7 +46,7 @@ export async function createCaseInvite(params: {
 	email: string;
 	permission: PermissionLevel;
 	invitedById: string;
-}): Promise<{ data: { invite_token: string } } | { error: string }> {
+}): ServiceResult<{ invite_token: string }> {
 	try {
 		const token = generateInviteToken();
 		const expiresAt = new Date();

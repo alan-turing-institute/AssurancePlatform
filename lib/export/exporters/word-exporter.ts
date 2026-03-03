@@ -76,7 +76,9 @@ function detectImageType(data: string): "png" | "jpg" | "gif" | "bmp" {
  */
 function base64ToBuffer(base64: string): Buffer {
 	// Remove data URL prefix if present
-	const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
+	const base64Data = base64.includes(",")
+		? (base64.split(",")[1] ?? base64)
+		: base64;
 	return Buffer.from(base64Data, "base64");
 }
 

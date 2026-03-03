@@ -1,5 +1,9 @@
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { prisma } from "@/lib/prisma";
+import type {
+	CreateElementSchemaOutput,
+	UpdateElementSchemaOutput,
+} from "@/lib/schemas/element";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
 	getDeletedDescendantIds,
@@ -11,38 +15,21 @@ import type {
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
-export type CreateElementInput = {
+/**
+ * Create element input — extends the Zod schema output with API-layer fields
+ * that are not part of the validation schema (caseId, elementType, description aliases).
+ */
+export type CreateElementInput = CreateElementSchemaOutput & {
 	caseId: string;
 	elementType: string;
-	name?: string;
-	description?: string;
 	shortDescription?: string;
 	longDescription?: string;
-	parentId?: string | null;
-	// Evidence-specific
-	url?: string;
-	URL?: string;
-	urls?: string[];
-	// GSN-specific
-	assumption?: string;
-	justification?: string;
-	context?: string[];
 };
 
-export type UpdateElementInput = {
-	name?: string;
-	description?: string;
-	shortDescription?: string;
-	longDescription?: string;
-	parentId?: string | null;
-	url?: string;
-	URL?: string;
-	urls?: string[];
-	assumption?: string;
-	justification?: string;
-	context?: string[];
-	inSandbox?: boolean;
-};
+/**
+ * Update element input — derived directly from the Zod schema output.
+ */
+export type UpdateElementInput = UpdateElementSchemaOutput;
 
 export type ElementResponse = {
 	id: string;
@@ -104,7 +91,7 @@ function resolveUrls(input: CreateElementInput | UpdateElementInput): {
 	const legacyUrl = input.url || input.URL;
 
 	if (input.urls && input.urls.length > 0) {
-		return { url: input.urls[0], urls: input.urls };
+		return { url: input.urls[0] ?? null, urls: input.urls };
 	}
 	if (legacyUrl) {
 		return { url: legacyUrl, urls: [legacyUrl] };

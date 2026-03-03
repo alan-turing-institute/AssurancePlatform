@@ -93,11 +93,22 @@ async function main() {
 	const credentials = loadCredentials();
 
 	// Hash passwords outside the transaction (CPU-bound, not DB)
+	const chrisPw = credentials.chris;
+	const alicePw = credentials.alice;
+	const bobPw = credentials.bob;
+	const charliePw = credentials.charlie;
+
+	if (!(chrisPw && alicePw && bobPw && charliePw)) {
+		throw new Error(
+			"Missing credentials for one or more seed users (chris, alice, bob, charlie)"
+		);
+	}
+
 	const [chrisHash, aliceHash, bobHash, charlieHash] = await Promise.all([
-		hashPassword(credentials.chris),
-		hashPassword(credentials.alice),
-		hashPassword(credentials.bob),
-		hashPassword(credentials.charlie),
+		hashPassword(chrisPw),
+		hashPassword(alicePw),
+		hashPassword(bobPw),
+		hashPassword(charliePw),
 	]);
 
 	await prisma.$transaction(

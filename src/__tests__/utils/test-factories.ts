@@ -228,13 +228,13 @@ export const AssuranceCaseFactory = {
 
 		const propertyClaims = [
 			PropertyClaimFactory.create({
-				goalId: subGoals[0].id,
+				goalId: subGoals[0]!.id,
 				name: "Component A Reliability",
 				claimType: "claim",
 				level: 1,
 			}),
 			PropertyClaimFactory.create({
-				goalId: subGoals[1].id,
+				goalId: subGoals[1]!.id,
 				name: "Component B Performance",
 				claimType: "claim",
 				level: 1,
@@ -253,8 +253,8 @@ export const AssuranceCaseFactory = {
 		];
 
 		// Link evidence to property claims
-		evidence[0].propertyClaimId = [propertyClaims[0].id];
-		evidence[1].propertyClaimId = [propertyClaims[1].id];
+		evidence[0]!.propertyClaimId = [propertyClaims[0]!.id];
+		evidence[1]!.propertyClaimId = [propertyClaims[1]!.id];
 
 		// Update assurance case with top-level goals
 		assuranceCase.goals = [topGoal, ...subGoals];
@@ -488,7 +488,7 @@ export const CommentFactory = {
 		const users = UserFactory.createBatch(3);
 
 		return Array.from({ length: count }, (_, i) => {
-			const user = users[i % users.length];
+			const user = users[i % users.length]!;
 			return this.create({
 				author: `${user.first_name} ${user.last_name}`,
 				content: `Thread comment ${i + 1} from ${user.username}`,
@@ -623,8 +623,8 @@ export const BatchFactory = {
 		const case2 = AssuranceCaseFactory.createPublished();
 		const { assuranceCase: case3, permissions } =
 			AssuranceCaseFactory.createWithPermissions([
-				{ userId: users[1].id, type: "edit" },
-				{ teamId: teams[0].id, type: "view" },
+				{ userId: users[1]!.id, type: "edit" },
+				{ teamId: teams[0]!.id, type: "view" },
 			]);
 
 		const assuranceCases = [case1, case2, case3];
@@ -681,11 +681,11 @@ export const BatchFactory = {
 
 				const { assuranceCase, permissions } =
 					AssuranceCaseFactory.createWithPermissions([
-						{ userId: users[0].id, type: "manage" },
-						{ userId: users[1].id, type: "edit" },
-						{ userId: users[2].id, type: "view" },
-						{ teamId: teams[0].id, type: "review" },
-						{ teamId: teams[1].id, type: "view" },
+						{ userId: users[0]!.id, type: "manage" },
+						{ userId: users[1]!.id, type: "edit" },
+						{ userId: users[2]!.id, type: "view" },
+						{ teamId: teams[0]!.id, type: "review" },
+						{ teamId: teams[1]!.id, type: "view" },
 					]);
 
 				return { users, teams, assuranceCase, permissions };

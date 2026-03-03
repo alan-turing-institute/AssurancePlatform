@@ -258,53 +258,49 @@ export async function hasGitHubToken(userId: string): Promise<boolean> {
  * @param url - The GitHub URL or shorthand to parse
  * @returns Parsed components or null if the URL is invalid
  */
-export function parseGitHubUrl(url: string): {
+type ParsedGitHubUrl = {
 	owner: string;
 	repo: string;
 	path: string;
 	branch?: string;
-} | null {
+};
+
+/** Build a parsed result from a 4-group regex match (owner, repo, branch, path). */
+function buildParsedUrl(
+	match: RegExpMatchArray,
+	includeBranch: boolean
+): ParsedGitHubUrl {
+	return {
+		owner: match[1] ?? "",
+		repo: match[2] ?? "",
+		...(includeBranch ? { branch: match[3] } : {}),
+		path: decodeURIComponent(match[includeBranch ? 4 : 3] ?? ""),
+	};
+}
+
+export function parseGitHubUrl(url: string): ParsedGitHubUrl | null {
 	// Try raw.githubusercontent.com with refs/heads format first (more specific)
 	const rawRefsMatch = url.match(RAW_GITHUB_REFS_REGEX);
 	if (rawRefsMatch) {
-		return {
-			owner: rawRefsMatch[1],
-			repo: rawRefsMatch[2],
-			branch: rawRefsMatch[3],
-			path: decodeURIComponent(rawRefsMatch[4]),
-		};
+		return buildParsedUrl(rawRefsMatch, true);
 	}
 
 	// Try raw.githubusercontent.com simple format
 	const rawSimpleMatch = url.match(RAW_GITHUB_SIMPLE_REGEX);
 	if (rawSimpleMatch) {
-		return {
-			owner: rawSimpleMatch[1],
-			repo: rawSimpleMatch[2],
-			branch: rawSimpleMatch[3],
-			path: decodeURIComponent(rawSimpleMatch[4]),
-		};
+		return buildParsedUrl(rawSimpleMatch, true);
 	}
 
 	// Try github.com blob format
 	const blobMatch = url.match(BLOB_GITHUB_URL_REGEX);
 	if (blobMatch) {
-		return {
-			owner: blobMatch[1],
-			repo: blobMatch[2],
-			branch: blobMatch[3],
-			path: decodeURIComponent(blobMatch[4]),
-		};
+		return buildParsedUrl(blobMatch, true);
 	}
 
 	// Try shorthand format: owner/repo/path (assumes main branch)
 	const shorthandMatch = url.match(SHORTHAND_PATH_REGEX);
 	if (shorthandMatch && !url.includes("://")) {
-		return {
-			owner: shorthandMatch[1],
-			repo: shorthandMatch[2],
-			path: decodeURIComponent(shorthandMatch[3]),
-		};
+		return buildParsedUrl(shorthandMatch, false);
 	}
 
 	return null;

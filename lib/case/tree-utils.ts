@@ -116,7 +116,7 @@ export function toggleHiddenForParent(
 	const nodesToShow: CaseNode[] = [];
 	while (currentNode != null) {
 		nodesToShow.push(currentNode);
-		currentNode = parentMap[currentNode.id];
+		currentNode = parentMap[currentNode.id] ?? null;
 	}
 
 	for (const nodeToShow of nodesToShow) {

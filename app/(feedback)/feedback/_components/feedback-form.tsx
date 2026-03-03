@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { MoveLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -16,24 +15,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-const FormSchema = z.object({
-	name: z.string().min(2, {
-		message: "Name must be at least 2 characters.",
-	}),
-	email: z.string().min(2, {
-		message: "Email must be at least 2 characters.",
-	}),
-	feedback: z.string().min(2, {
-		message: "Feedback must be at least 2 characters.",
-	}),
-});
+import type { FeedbackFormInput } from "@/lib/schemas/feedback";
+import { feedbackFormSchema } from "@/lib/schemas/feedback";
 
 export function FeedbackForm() {
 	const router = useRouter();
 
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
+	const form = useForm<FeedbackFormInput>({
+		resolver: zodResolver(feedbackFormSchema),
 		mode: "onBlur",
 		reValidateMode: "onChange",
 		defaultValues: {
@@ -43,7 +32,7 @@ export function FeedbackForm() {
 		},
 	});
 
-	function onSubmit(_data: z.infer<typeof FormSchema>) {
+	function onSubmit(_data: FeedbackFormInput) {
 		// TODO: Implement feedback submission logic
 	}
 

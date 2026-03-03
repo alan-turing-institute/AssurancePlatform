@@ -366,7 +366,7 @@ export async function deleteAccount(
 					// Transfer ownership to first remaining member
 					await tx.team.update({
 						where: { id: team.id },
-						data: { createdById: team.members[0].userId },
+						data: { createdById: team.members[0]?.userId },
 					});
 				} else {
 					// No other members - delete the team

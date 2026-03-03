@@ -193,7 +193,7 @@ async function getOrCreateBackupFolder(
 		});
 
 		if (response.data.files && response.data.files.length > 0) {
-			return { folderId: response.data.files[0].id as string };
+			return { folderId: response.data.files[0]?.id as string };
 		}
 
 		// Create new folder

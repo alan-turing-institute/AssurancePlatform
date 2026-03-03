@@ -522,7 +522,7 @@ describe("Select", () => {
 		expect(triggers).toHaveLength(2);
 
 		// Test first select
-		await user.click(triggers[0]);
+		await user.click(triggers[0]!);
 		await user.click(
 			screen.getByRole("option", { name: FIRST_OPTION_TWO_REGEX })
 		);
@@ -530,7 +530,7 @@ describe("Select", () => {
 		expect(handleValueChange2).not.toHaveBeenCalled();
 
 		// Test second select
-		await user.click(triggers[1]);
+		await user.click(triggers[1]!);
 		await user.click(
 			screen.getByRole("option", { name: SECOND_OPTION_ONE_REGEX })
 		);

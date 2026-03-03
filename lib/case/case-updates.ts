@@ -25,7 +25,8 @@ const updateStrategy = (
 	id: number,
 	updatedItem: Partial<Strategy>
 ): AssuranceCase => {
-	const newStrategy = (assuranceCase.goals?.[0]?.strategies || []).map(
+	const firstGoal = assuranceCase.goals?.[0];
+	const newStrategy = (firstGoal?.strategies || []).map(
 		(strategy: Strategy) => {
 			if (strategy.id === id && strategy.type === "strategy") {
 				return {
@@ -39,10 +40,10 @@ const updateStrategy = (
 
 	return {
 		...assuranceCase,
-		goals: assuranceCase.goals
+		goals: firstGoal
 			? [
 					{
-						...assuranceCase.goals[0],
+						...firstGoal,
 						strategies: newStrategy,
 					},
 				]
@@ -69,6 +70,9 @@ const updatePropertyClaim = (
 	}
 
 	const goal = assuranceCase.goals[0];
+	if (!goal) {
+		return assuranceCase;
+	}
 
 	// Try updating in goal's direct property claims first
 	const directClaims = goal.propertyClaims || [];
@@ -141,6 +145,9 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 	}
 
 	const goal = assuranceCase.goals[0];
+	if (!goal) {
+		return assuranceCase;
+	}
 
 	// Try updating in goal's direct property claims first
 	const directClaims = goal.propertyClaims || [];
@@ -240,17 +247,19 @@ export const updateAssuranceCase = (
 				move,
 			});
 
-		default:
+		default: {
+			const defaultGoal = assuranceCase.goals?.[0];
 			return {
 				...assuranceCase,
-				goals: assuranceCase.goals
+				goals: defaultGoal
 					? [
 							{
-								...assuranceCase.goals[0],
+								...defaultGoal,
 								...updatedItem,
 							} as Goal,
 						]
 					: [],
 			};
+		}
 	}
 };

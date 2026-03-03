@@ -126,9 +126,9 @@ export const getDisplayName = (data: NodeData, nodeType: NodeType): string => {
 
 	// 3. Use first sentence of description if available and reasonable length
 	if (data.description) {
-		const firstSentence = data.description
-			.split(SENTENCE_SPLIT_PATTERN)[0]
-			.trim();
+		const firstSentence = (
+			data.description.split(SENTENCE_SPLIT_PATTERN)[0] ?? ""
+		).trim();
 		if (firstSentence.length > 0 && firstSentence.length < 80) {
 			return firstSentence;
 		}

@@ -145,7 +145,7 @@ describe("Template System", () => {
 			it("should collect all GOAL elements", () => {
 				const goals = collectElementsByType(tree, "GOAL");
 				expect(goals).toHaveLength(1);
-				expect(goals[0].node.name).toBe("G1");
+				expect(goals[0]!.node.name).toBe("G1");
 			});
 
 			it("should collect all PROPERTY_CLAIM elements", () => {
@@ -158,13 +158,13 @@ describe("Template System", () => {
 			it("should exclude sandbox elements by default", () => {
 				const claims = collectElementsByType(tree, "PROPERTY_CLAIM");
 				expect(claims).toHaveLength(1);
-				expect(claims[0].node.name).toBe("P1");
+				expect(claims[0]!.node.name).toBe("P1");
 			});
 
 			it("should include correct depth information", () => {
 				const evidence = collectElementsByType(tree, "EVIDENCE");
 				expect(evidence).toHaveLength(1);
-				expect(evidence[0].depth).toBe(3);
+				expect(evidence[0]!.depth).toBe(3);
 			});
 		});
 

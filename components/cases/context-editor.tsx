@@ -44,7 +44,7 @@ const ContextEditor: React.FC<ContextEditorProps> = ({ form, readOnly }) => {
 			itemIds.push(`${componentId}-${idCounter + itemIds.length}`);
 		}
 		return contextValues.map((value, i) => ({
-			id: itemIds[i],
+			id: itemIds[i] ?? `${componentId}-fallback-${i}`,
 			value,
 		}));
 	}, [contextValues, itemIds, componentId, idCounter]);

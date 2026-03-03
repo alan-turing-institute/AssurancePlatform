@@ -365,7 +365,7 @@ describe("convert-case utilities", () => {
 			);
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0].data.name).toBe("Incomplete Goal");
+			expect(nodes[0]!.data.name).toBe("Incomplete Goal");
 		});
 	});
 
@@ -715,8 +715,8 @@ describe("convert-case utilities", () => {
 			};
 
 			// Create circular reference
-			circularCase.goals[0].propertyClaims.push(
-				circularCase.goals[0] as unknown as PropertyClaim
+			circularCase.goals[0]!.propertyClaims.push(
+				circularCase.goals[0]! as unknown as PropertyClaim
 			);
 
 			// Should not hang or crash
@@ -766,7 +766,7 @@ describe("convert-case utilities", () => {
 			};
 
 			// Create 20 levels of nesting
-			let current: Goal | PropertyClaim = deepCase.goals[0];
+			let current: Goal | PropertyClaim = deepCase.goals[0]!;
 			for (let i = 0; i < 20; i++) {
 				const claim: PropertyClaim = {
 					id: i + 2,

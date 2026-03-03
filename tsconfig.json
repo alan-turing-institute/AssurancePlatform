@@ -22,6 +22,7 @@
     },
     "target": "ES2017",
     "strictNullChecks": true,
+    "noUncheckedIndexedAccess": true,
     "types": ["vitest/globals"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

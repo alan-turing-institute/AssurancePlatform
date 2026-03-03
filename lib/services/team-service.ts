@@ -1,21 +1,18 @@
 import { validateTeamAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import type {
+	CreateTeamSchemaOutput,
+	UpdateTeamSchemaOutput,
+} from "@/lib/schemas/team";
 import type { TeamRole } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 // ============================================
-// INPUT INTERFACES
+// INPUT INTERFACES — derived from Zod schemas
 // ============================================
 
-export type CreateTeamInput = {
-	name: string;
-	description?: string;
-};
-
-export type UpdateTeamInput = {
-	name?: string;
-	description?: string;
-};
+export type CreateTeamInput = CreateTeamSchemaOutput;
+export type UpdateTeamInput = UpdateTeamSchemaOutput;
 
 // ============================================
 // OUTPUT INTERFACES

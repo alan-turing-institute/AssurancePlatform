@@ -170,7 +170,7 @@ export abstract class BaseTemplate {
 	protected isSectionEnabled(sectionKey: keyof SectionsConfig): boolean {
 		// Check section overrides first (explicit user preference)
 		if (sectionKey in this.sectionOverrides) {
-			return this.sectionOverrides[sectionKey];
+			return this.sectionOverrides[sectionKey] ?? true;
 		}
 
 		// Fall back to template configuration

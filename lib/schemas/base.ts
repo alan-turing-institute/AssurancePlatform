@@ -71,6 +71,7 @@ export const stringIdSchema = z
 	.string()
 	.min(1, "ID is required")
 	.max(100, "ID must be less than 100 characters")
+	.transform((v) => v.trim())
 	.describe("Non-empty string identifier");
 
 // ============================================

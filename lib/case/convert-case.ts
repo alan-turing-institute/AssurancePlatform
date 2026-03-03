@@ -2,6 +2,7 @@ import type { Edge, Node } from "reactflow";
 import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
 
 // Define the structure of items that can be converted to nodes
+// Dynamic property bag: generic tree conversion spreads all fields into React Flow node data
 export type ConvertibleItem = {
 	id: number;
 	name: string;
@@ -16,6 +17,7 @@ export type ConvertibleItem = {
 };
 
 // Define the structure of the assurance case
+// Dynamic property bag: case objects include varying metadata fields (isDemo, permissions, etc.)
 export type AssuranceCaseWithGoals = {
 	goals: Goal[];
 	[key: string]: unknown;

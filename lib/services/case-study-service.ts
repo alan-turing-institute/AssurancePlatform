@@ -8,6 +8,7 @@ import type {
 	PublishStatus as PrismaPublishStatus,
 	PublishedAssuranceCase,
 } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // Types
@@ -49,7 +50,7 @@ export type CaseStudyUpdateInput = Partial<CaseStudyCreateInput> & {
  */
 export async function getCaseStudiesByOwner(
 	ownerId: string
-): Promise<{ data: CaseStudyWithRelations[] } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations[]> {
 	try {
 		const caseStudies = await prisma.caseStudy.findMany({
 			where: {
@@ -88,8 +89,8 @@ export async function getCaseStudiesByOwner(
 /**
  * Get all published case studies (public)
  */
-export async function getPublishedCaseStudies(): Promise<
-	{ data: CaseStudyWithRelations[] } | { error: string }
+export async function getPublishedCaseStudies(): ServiceResult<
+	CaseStudyWithRelations[]
 > {
 	try {
 		const caseStudies = await prisma.caseStudy.findMany({
@@ -123,7 +124,7 @@ export async function getPublishedCaseStudies(): Promise<
 export async function getCaseStudyById(
 	id: number,
 	userId: string
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		const caseStudy = await prisma.caseStudy.findUnique({
 			where: { id },
@@ -153,7 +154,7 @@ export async function getCaseStudyById(
  */
 export async function getPublishedCaseStudyById(
 	id: number
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		const caseStudy = await prisma.caseStudy.findFirst({
 			where: {
@@ -187,7 +188,7 @@ export async function getPublishedCaseStudyById(
 export async function createCaseStudy(
 	ownerId: string,
 	data: CaseStudyCreateInput
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		const now = new Date();
 
@@ -231,7 +232,7 @@ export async function updateCaseStudy(
 	id: number,
 	ownerId: string,
 	data: Partial<CaseStudyCreateInput>
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		// Verify ownership
 		const existing = await prisma.caseStudy.findUnique({
@@ -286,7 +287,7 @@ export async function updateCaseStudy(
 export async function deleteCaseStudy(
 	id: number,
 	ownerId: string
-): Promise<{ data: true } | { error: string }> {
+): ServiceResult {
 	try {
 		// Verify ownership and get feature image info
 		const existing = await prisma.caseStudy.findUnique({
@@ -331,7 +332,7 @@ export async function deleteCaseStudy(
  */
 export async function getPublishedAssuranceCaseById(
 	id: string
-): Promise<{ data: PublishedAssuranceCase } | { error: string }> {
+): ServiceResult<PublishedAssuranceCase> {
 	try {
 		const record = await prisma.publishedAssuranceCase.findUnique({
 			where: { id },
@@ -353,7 +354,7 @@ export async function getPublishedAssuranceCaseById(
  */
 export async function getPublishedAssuranceCaseByCaseId(
 	assuranceCaseId: string
-): Promise<{ data: PublishedAssuranceCase } | { error: string }> {
+): ServiceResult<PublishedAssuranceCase> {
 	try {
 		const record = await prisma.publishedAssuranceCase.findFirst({
 			where: { assuranceCaseId },
@@ -377,7 +378,7 @@ export async function getPublishedAssuranceCaseByCaseId(
 export async function linkPublishedCaseToCaseStudy(
 	caseStudyId: number,
 	publishedAssuranceCaseId: string
-): Promise<{ data: true } | { error: string }> {
+): ServiceResult {
 	try {
 		await prisma.caseStudyPublishedCase.create({
 			data: {
@@ -398,7 +399,7 @@ export async function linkPublishedCaseToCaseStudy(
 export async function unlinkPublishedCaseFromCaseStudy(
 	caseStudyId: number,
 	publishedAssuranceCaseId: string
-): Promise<{ data: true } | { error: string }> {
+): ServiceResult {
 	try {
 		const result = await prisma.caseStudyPublishedCase.deleteMany({
 			where: {
@@ -424,7 +425,7 @@ export async function unlinkPublishedCaseFromCaseStudy(
 export async function updateCaseStudyImage(
 	caseStudyId: number,
 	imagePath: string
-): Promise<{ data: true } | { error: string }> {
+): ServiceResult {
 	try {
 		await prisma.caseStudyImage.upsert({
 			where: { caseStudyId },
@@ -448,9 +449,7 @@ export async function updateCaseStudyImage(
 /**
  * Delete case study feature image
  */
-export async function deleteCaseStudyImage(
-	caseStudyId: number
-): Promise<{ data: true } | { error: string }> {
+export async function deleteCaseStudyImage(caseStudyId: number): ServiceResult {
 	try {
 		const result = await prisma.caseStudyImage.deleteMany({
 			where: { caseStudyId },
@@ -610,7 +609,7 @@ export async function createCaseStudyWithLinks(
 	ownerId: string,
 	data: CaseStudyCreateInput,
 	sourceCaseIds: string[]
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		const now = new Date();
 
@@ -690,7 +689,7 @@ export async function updateCaseStudyWithLinks(
 	ownerId: string,
 	data: Partial<CaseStudyCreateInput>,
 	sourceCaseIds?: string[]
-): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+): ServiceResult<CaseStudyWithRelations> {
 	try {
 		// Verify ownership
 		const existing = await prisma.caseStudy.findUnique({
@@ -798,7 +797,7 @@ export type CaseAvailableForStudy = {
  */
 export async function getCasesAvailableForCaseStudy(
 	userId: string
-): Promise<{ data: CaseAvailableForStudy[] } | { error: string }> {
+): ServiceResult<CaseAvailableForStudy[]> {
 	try {
 		// Query cases without publishedVersions to avoid legacy table issues
 		const cases = await prisma.assuranceCase.findMany({

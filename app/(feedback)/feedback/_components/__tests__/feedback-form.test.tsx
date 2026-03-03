@@ -101,13 +101,11 @@ describe("FeedbackForm", () => {
 			await user.tab(); // Trigger blur event
 
 			await waitFor(() => {
-				expect(
-					screen.getByText("Name must be at least 2 characters.")
-				).toBeInTheDocument();
+				expect(screen.getByText("Name is required")).toBeInTheDocument();
 			});
 		});
 
-		it("should show validation error for email field when less than 2 characters", async () => {
+		it("should show validation error for invalid email format", async () => {
 			const user = userEvent.setup();
 			render(<FeedbackForm />);
 
@@ -125,7 +123,7 @@ describe("FeedbackForm", () => {
 
 			await waitFor(() => {
 				expect(
-					screen.getByText("Email must be at least 2 characters.")
+					screen.getByText("Please enter a valid email address")
 				).toBeInTheDocument();
 			});
 		});
@@ -147,9 +145,7 @@ describe("FeedbackForm", () => {
 			await user.tab(); // This triggers blur which should activate validation
 
 			await waitFor(() => {
-				expect(
-					screen.getByText("Feedback must be at least 2 characters.")
-				).toBeInTheDocument();
+				expect(screen.getByText("Feedback is required")).toBeInTheDocument();
 			});
 		});
 
@@ -170,15 +166,9 @@ describe("FeedbackForm", () => {
 			await user.tab();
 
 			await waitFor(() => {
-				expect(
-					screen.getByText("Name must be at least 2 characters.")
-				).toBeInTheDocument();
-				expect(
-					screen.getByText("Email must be at least 2 characters.")
-				).toBeInTheDocument();
-				expect(
-					screen.getByText("Feedback must be at least 2 characters.")
-				).toBeInTheDocument();
+				expect(screen.getByText("Name is required")).toBeInTheDocument();
+				expect(screen.getByText("Email is required")).toBeInTheDocument();
+				expect(screen.getByText("Feedback is required")).toBeInTheDocument();
 			});
 		});
 
@@ -199,14 +189,10 @@ describe("FeedbackForm", () => {
 			await user.click(submitButton);
 
 			await waitFor(() => {
+				expect(screen.queryByText("Name is required")).not.toBeInTheDocument();
+				expect(screen.queryByText("Email is required")).not.toBeInTheDocument();
 				expect(
-					screen.queryByText("Name must be at least 2 characters.")
-				).not.toBeInTheDocument();
-				expect(
-					screen.queryByText("Email must be at least 2 characters.")
-				).not.toBeInTheDocument();
-				expect(
-					screen.queryByText("Feedback must be at least 2 characters.")
+					screen.queryByText("Feedback is required")
 				).not.toBeInTheDocument();
 			});
 		});
@@ -320,9 +306,7 @@ describe("FeedbackForm", () => {
 
 			// Since onSubmit is currently a TODO, we just verify no errors occur
 			await waitFor(() => {
-				expect(
-					screen.queryByText("Name must be at least 2 characters.")
-				).not.toBeInTheDocument();
+				expect(screen.queryByText("Name is required")).not.toBeInTheDocument();
 			});
 		});
 	});

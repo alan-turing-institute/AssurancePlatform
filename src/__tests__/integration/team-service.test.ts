@@ -169,7 +169,7 @@ describe("team-service", () => {
 				return;
 			}
 			expect(result.data.members).toHaveLength(1);
-			expect(result.data.members?.[0].user.username).toBe(user.username);
+			expect(result.data.members![0]!.user.username).toBe(user.username);
 		});
 	});
 
@@ -241,7 +241,7 @@ describe("team-service", () => {
 				return;
 			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data[0].name).toBe("Team Alpha");
+			expect(result.data[0]!.name).toBe("Team Alpha");
 		});
 
 		it("returns an empty array when the user has no teams", async () => {
@@ -283,8 +283,8 @@ describe("team-service", () => {
 				return;
 			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data[0].name).toBe("Second Team");
-			expect(result.data[0].my_role).toBe("MEMBER");
+			expect(result.data[0]!.name).toBe("Second Team");
+			expect(result.data[0]!.my_role).toBe("MEMBER");
 		});
 	});
 

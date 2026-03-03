@@ -3,6 +3,7 @@ import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
 import type { Prisma } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ---------------------------------------------------------------------------
 // Types (derived from Prisma query shape)
@@ -209,7 +210,7 @@ function buildCaseUpdateData(
 export async function fetchCaseFromPrisma(
 	caseId: string,
 	userId: string
-): Promise<{ data: Record<string, unknown> } | { error: string }> {
+): ServiceResult<Record<string, unknown>> {
 	// Check if user has access to this case (handles owner, direct, and team permissions)
 	const permissionResult = await getCasePermission({
 		userId,
@@ -300,7 +301,7 @@ export type AssuranceCaseSummary = {
  */
 export async function listUserCases(
 	userId: string
-): Promise<{ data: AssuranceCaseSummary[] } | { error: string }> {
+): ServiceResult<AssuranceCaseSummary[]> {
 	try {
 		const cases = await prisma.assuranceCase.findMany({
 			where: {
@@ -351,7 +352,7 @@ export async function listUserCases(
  */
 export async function listSharedCases(
 	userId: string
-): Promise<{ data: AssuranceCaseSummary[] } | { error: string }> {
+): ServiceResult<AssuranceCaseSummary[]> {
 	try {
 		const cases = await prisma.assuranceCase.findMany({
 			where: {
@@ -415,7 +416,7 @@ export async function listSharedCases(
 export async function createCase(
 	userId: string,
 	data: { name: string; description?: string; colourProfile?: string }
-): Promise<{ data: { id: string } } | { error: string }> {
+): ServiceResult<{ id: string }> {
 	try {
 		const newCase = await prisma.assuranceCase.create({
 			data: {
@@ -441,7 +442,7 @@ export async function updateCaseWithPrisma(
 	id: string,
 	userId: string,
 	body: UpdateAssuranceCaseInput
-): Promise<{ data: Record<string, unknown> } | { error: string }> {
+): ServiceResult<Record<string, unknown>> {
 	// Check permission
 	const hasAccess = await canAccessCase({ userId, caseId: id }, "EDIT");
 	if (!hasAccess) {

@@ -615,8 +615,8 @@ describe("element-service", () => {
 				return;
 			}
 			expect(result.data).toHaveLength(1);
-			expect(result.data[0].id).toBe(strategy.data.id);
-			expect(result.data[0].inSandbox).toBe(true);
+			expect(result.data[0]!.id).toBe(strategy.data.id);
+			expect(result.data[0]!.inSandbox).toBe(true);
 		});
 
 		it("returns an empty array when no elements are in the sandbox", async () => {

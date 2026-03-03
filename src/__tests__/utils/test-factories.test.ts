@@ -60,9 +60,9 @@ describe("Test Factories", () => {
 			const users = UserFactory.createBatch(3);
 
 			expect(users).toHaveLength(3);
-			expect(users[0].id).toBe(1);
-			expect(users[1].id).toBe(2);
-			expect(users[2].id).toBe(3);
+			expect(users[0]!.id).toBe(1);
+			expect(users[1]!.id).toBe(2);
+			expect(users[2]!.id).toBe(3);
 		});
 
 		it("creates a user with a specific role", () => {
@@ -82,10 +82,10 @@ describe("Test Factories", () => {
 			expect(members).toHaveLength(4);
 			expect(users).toHaveLength(4);
 
-			expect(members[0].role).toBe("owner");
-			expect(members[1].role).toBe("admin");
-			expect(members[2].role).toBe("member");
-			expect(members[3].role).toBe("member");
+			expect(members[0]!.role).toBe("owner");
+			expect(members[1]!.role).toBe("admin");
+			expect(members[2]!.role).toBe("member");
+			expect(members[3]!.role).toBe("member");
 		});
 	});
 
@@ -128,8 +128,8 @@ describe("Test Factories", () => {
 
 			expect(permissions).toHaveLength(2);
 			expect(users).toHaveLength(2);
-			expect(permissions[0].permission_type).toBe("edit");
-			expect(permissions[1].permission_type).toBe("view");
+			expect(permissions[0]!.permission_type).toBe("edit");
+			expect(permissions[1]!.permission_type).toBe("view");
 		});
 	});
 
@@ -148,12 +148,12 @@ describe("Test Factories", () => {
 			const claims = PropertyClaimFactory.createNested(3);
 
 			expect(claims).toHaveLength(3);
-			expect(claims[0].level).toBe(1);
-			expect(claims[1].level).toBe(2);
-			expect(claims[2].level).toBe(3);
+			expect(claims[0]!.level).toBe(1);
+			expect(claims[1]!.level).toBe(2);
+			expect(claims[2]!.level).toBe(3);
 
-			expect(claims[1].propertyClaimId).toBe(claims[0].id);
-			expect(claims[2].propertyClaimId).toBe(claims[1].id);
+			expect(claims[1]!.propertyClaimId).toBe(claims[0]!.id);
+			expect(claims[2]!.propertyClaimId).toBe(claims[1]!.id);
 		});
 	});
 
@@ -177,8 +177,8 @@ describe("Test Factories", () => {
 
 			// Comments should be in chronological order
 			for (let i = 1; i < thread.length; i++) {
-				const prevDate = new Date(thread[i - 1].createdAt);
-				const currDate = new Date(thread[i].createdAt);
+				const prevDate = new Date(thread[i - 1]!.createdAt);
+				const currDate = new Date(thread[i]!.createdAt);
 				expect(currDate.getTime()).toBeGreaterThan(prevDate.getTime());
 			}
 		});

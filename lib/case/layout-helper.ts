@@ -34,7 +34,9 @@ function getDefaultDimensions(nodeType: string | undefined): {
 	width: number;
 	height: number;
 } {
-	return NODE_DIMENSIONS[nodeType || "default"] || NODE_DIMENSIONS.default;
+	return (
+		NODE_DIMENSIONS[nodeType || "default"] ?? { width: NODE_WIDTH, height: 110 }
+	);
 }
 
 /**

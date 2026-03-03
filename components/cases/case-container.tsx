@@ -176,7 +176,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			return;
 		}
 
-		const idValue = Array.isArray(id) ? id[0] : id;
+		const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 		try {
 			const result = await fetchOrphanedElements(idValue);
 			setOrphanedElements(result || []);
@@ -221,7 +221,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			const id = caseId || paramsCaseId;
 			if (id) {
 				try {
-					const idValue = Array.isArray(id) ? id[0] : id;
+					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
 					setAssuranceCase((result as AssuranceCase) || null);
 					setLoading(false);

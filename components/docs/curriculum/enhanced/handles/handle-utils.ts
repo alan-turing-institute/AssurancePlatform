@@ -519,7 +519,7 @@ export const getHandleColors = (
 export const getHandleSizeClasses = (
 	size: "small" | "medium" | "large" = "medium"
 ): HandleSizeClasses => {
-	const sizeMap: Record<string, HandleSizeClasses> = {
+	const sizeMap: Record<"small" | "medium" | "large", HandleSizeClasses> = {
 		small: {
 			outer: "w-8 h-8",
 			inner: "w-6 h-6",
@@ -540,7 +540,7 @@ export const getHandleSizeClasses = (
 		},
 	};
 
-	return sizeMap[size] || sizeMap.medium;
+	return sizeMap[size];
 };
 
 /**
@@ -551,13 +551,13 @@ export const getHandleSizeClasses = (
 export const getHandleShapeClasses = (
 	shape: "circle" | "square" | "diamond" = "circle"
 ): string => {
-	const shapeMap: Record<string, string> = {
+	const shapeMap: Record<"circle" | "square" | "diamond", string> = {
 		circle: "rounded-full",
 		square: "rounded-md",
 		diamond: "rounded-sm rotate-45",
 	};
 
-	return shapeMap[shape] || shapeMap.circle;
+	return shapeMap[shape];
 };
 
 /**
@@ -575,7 +575,7 @@ export const getGradientClasses = (type = "default"): string => {
 		cyan: "bg-linear-to-br from-cyan-400 to-cyan-600",
 	};
 
-	return gradientMap[type] || gradientMap.default;
+	return gradientMap[type] ?? "bg-linear-to-br from-gray-200 to-gray-300";
 };
 
 /**
@@ -586,13 +586,13 @@ export const getGradientClasses = (type = "default"): string => {
 export const getShadowClasses = (
 	intensity: "subtle" | "medium" | "strong" = "medium"
 ): string => {
-	const shadowMap: Record<string, string> = {
+	const shadowMap: Record<"subtle" | "medium" | "strong", string> = {
 		subtle: "shadow-xs",
 		medium: "shadow-md",
 		strong: "shadow-lg",
 	};
 
-	return shadowMap[intensity] || shadowMap.medium;
+	return shadowMap[intensity];
 };
 
 // ========================================================================

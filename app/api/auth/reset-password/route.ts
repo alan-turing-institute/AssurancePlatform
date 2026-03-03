@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 		const headersList = await headers();
 		const forwarded = headersList.get("x-forwarded-for");
 		const ipAddress = forwarded
-			? forwarded.split(",")[0].trim()
+			? (forwarded.split(",")[0]?.trim() ?? "unknown")
 			: (headersList.get("x-real-ip") ?? "unknown");
 		const userAgent = headersList.get("user-agent") ?? undefined;
 

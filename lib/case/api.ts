@@ -4,30 +4,12 @@
  */
 
 import { fromCollectionName } from "@/lib/element-types";
-import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
-import type { ReactFlowNode } from "./types";
-
-// API Response types
-type ApiNodeResponse = {
-	id: number;
-	name: string;
-	description: string;
-	type: string;
-	[key: string]: unknown;
-};
-
-// Comment type for API operations
-type CommentPayload = {
-	content: string;
-	[key: string]: unknown;
-};
-
-// Type for node creation payloads
-type CreateNodePayload =
-	| Partial<Goal>
-	| Partial<Strategy>
-	| Partial<PropertyClaim>
-	| Partial<Evidence>;
+import type {
+	ApiNodeResponse,
+	CommentPayload,
+	CreateNodePayload,
+	ReactFlowNode,
+} from "./types";
 
 /**
  * Creates a new assurance case node by sending a POST request to the specified API endpoint.

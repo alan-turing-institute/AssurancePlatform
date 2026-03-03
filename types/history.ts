@@ -12,6 +12,7 @@ export type OperationType = "create" | "update" | "delete";
  * Snapshot of an element's state at a point in time.
  * Contains all the fields needed to restore the element.
  */
+// Captures arbitrary element fields for history snapshots (undo/redo)
 export type ElementSnapshot = {
 	id: string;
 	elementType: string;
@@ -25,7 +26,6 @@ export type ElementSnapshot = {
 	context?: string[];
 	inSandbox?: boolean;
 	level?: number | null;
-	// Store additional fields that may be needed
 	[key: string]: unknown;
 };
 

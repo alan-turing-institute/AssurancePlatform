@@ -282,12 +282,12 @@ function runCustomAccessibilityChecks(container: HTMLElement): string[] {
 	);
 	if (headings.length > 1) {
 		for (let i = 1; i < headings.length; i++) {
-			const current = Number.parseInt(headings[i].tagName.charAt(1), 10);
-			const previous = Number.parseInt(headings[i - 1].tagName.charAt(1), 10);
+			const current = Number.parseInt(headings[i]!.tagName.charAt(1), 10);
+			const previous = Number.parseInt(headings[i - 1]!.tagName.charAt(1), 10);
 
 			if (current > previous + 1) {
 				violations.push(
-					`Heading hierarchy skip: ${headings[i - 1].tagName} followed by ${headings[i].tagName}`
+					`Heading hierarchy skip: ${headings[i - 1]!.tagName} followed by ${headings[i]!.tagName}`
 				);
 			}
 		}
@@ -720,7 +720,7 @@ async function testFocusTrap(
 	const lastElement = focusableElements.at(-1);
 
 	// Focus first element and shift+tab - should go to last element
-	firstElement.focus();
+	firstElement!.focus();
 	await user.tab({ shift: true });
 
 	if (document.activeElement !== lastElement) {
@@ -999,8 +999,8 @@ function checkLogicalTabOrder(elements: HTMLElement[]): boolean {
 	}
 
 	for (let i = 1; i < elements.length; i++) {
-		const current = elements[i].getBoundingClientRect();
-		const previous = elements[i - 1].getBoundingClientRect();
+		const current = elements[i]!.getBoundingClientRect();
+		const previous = elements[i - 1]!.getBoundingClientRect();
 
 		// If current element is significantly higher than previous, order might be wrong
 		if (current.top < previous.top - 10) {

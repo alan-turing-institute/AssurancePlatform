@@ -39,8 +39,8 @@ describe("listCasePermissions", () => {
 		expect(result.data.is_owner).toBe(true);
 		expect(result.data.owner.id).toBe(owner.id);
 		expect(result.data.user_permissions).toHaveLength(1);
-		expect(result.data.user_permissions[0].user.id).toBe(viewer.id);
-		expect(result.data.user_permissions[0].permission).toBe("VIEW");
+		expect(result.data.user_permissions[0]!.user.id).toBe(viewer.id);
+		expect(result.data.user_permissions[0]!.permission).toBe("VIEW");
 	});
 
 	it("returns permissions list for user with explicit ADMIN permission", async () => {
@@ -101,7 +101,7 @@ describe("listCasePermissions", () => {
 			return;
 		}
 		expect(result.data.team_permissions).toHaveLength(1);
-		expect(result.data.team_permissions[0].team.id).toBe(team.id);
+		expect(result.data.team_permissions[0]!.team.id).toBe(team.id);
 	});
 });
 
@@ -827,6 +827,6 @@ describe("team-based case access", () => {
 			return;
 		}
 		expect(ownerResult.data.team_permissions).toHaveLength(1);
-		expect(ownerResult.data.team_permissions[0].team.id).toBe(team.id);
+		expect(ownerResult.data.team_permissions[0]!.team.id).toBe(team.id);
 	});
 });

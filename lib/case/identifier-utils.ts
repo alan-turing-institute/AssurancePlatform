@@ -38,8 +38,8 @@ export function parseIdentifier(name: string | null): ParsedIdentifier | null {
 		return null;
 	}
 	return {
-		prefix: match[1],
-		parts: match[2].split(".").map(Number),
+		prefix: match[1] ?? "",
+		parts: (match[2] ?? "").split(".").map(Number),
 	};
 }
 

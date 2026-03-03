@@ -98,7 +98,7 @@ describe("case-trash-service", () => {
 				return;
 			}
 			expect(result.data.cases).toHaveLength(1);
-			expect(result.data.cases[0].id).toBe(caseA.id);
+			expect(result.data.cases[0]!.id).toBe(caseA.id);
 		});
 
 		it("returns an empty list when no cases are trashed", async () => {
@@ -128,8 +128,8 @@ describe("case-trash-service", () => {
 			if ("error" in result) {
 				return;
 			}
-			expect(typeof result.data.cases[0].daysRemaining).toBe("number");
-			expect(result.data.cases[0].daysRemaining).toBeGreaterThan(0);
+			expect(typeof result.data.cases[0]!.daysRemaining).toBe("number");
+			expect(result.data.cases[0]!.daysRemaining).toBeGreaterThan(0);
 		});
 	});
 

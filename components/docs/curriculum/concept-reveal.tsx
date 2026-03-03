@@ -119,7 +119,11 @@ const ConceptReveal = ({
 			autoRevealIndex < concepts.length
 		) {
 			const timer = setTimeout(() => {
-				const conceptId = concepts[autoRevealIndex].id;
+				const concept = concepts[autoRevealIndex];
+				if (!concept) {
+					return;
+				}
+				const conceptId = concept.id;
 				setRevealedConcepts((prev) => new Set([...prev, conceptId]));
 				setAutoRevealIndex((prev) => prev + 1);
 

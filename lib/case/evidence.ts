@@ -390,7 +390,7 @@ export const updateEvidenceNestedMove = (
 	} as Evidence;
 
 	// Add evidence to the new location
-	const newClaimId = newEvidence.propertyClaimId[0];
+	const newClaimId = newEvidence.propertyClaimId[0] ?? 0;
 	const updatedArray = addEvidenceToNewLocation(
 		arrayWithoutOldEvidence,
 		updatedEvidence,
