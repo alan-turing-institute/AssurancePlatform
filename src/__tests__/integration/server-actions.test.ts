@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -10,6 +11,20 @@ import {
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
+
+/**
+ * SSE broadcasts are fire-and-forget in-process operations with no external I/O.
+ * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
+ */
+vi.mock("@/lib/services/sse-connection-manager", () => ({
+	getSSEConnectionManager: vi.fn().mockReturnValue({
+		broadcast: vi.fn(),
+		subscribe: vi.fn(),
+		unsubscribe: vi.fn(),
+	}),
+}));
+
+const FAILED_TO_LOAD_PATTERN = /Failed to load case data/;
 
 // Reset the auth mock to null before every test so tests start unauthenticated.
 beforeEach(async () => {
@@ -104,46 +119,35 @@ describe("fetchCaseComments", () => {
 describe("loadStaticCaseData", () => {
 	it("rejects a filename containing path traversal with ..", async () => {
 		const { loadStaticCaseData } = await import("@/actions/case-data");
-		const result = await loadStaticCaseData("../etc/passwd");
 
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invalid case file name");
+		expectError(
+			await loadStaticCaseData("../etc/passwd"),
+			"Invalid case file name"
+		);
 	});
 
 	it("rejects a filename containing a forward slash", async () => {
 		const { loadStaticCaseData } = await import("@/actions/case-data");
-		const result = await loadStaticCaseData("subdir/file.json");
 
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invalid case file name");
+		expectError(
+			await loadStaticCaseData("subdir/file.json"),
+			"Invalid case file name"
+		);
 	});
 
 	it("returns an error for a file that does not exist", async () => {
 		const { loadStaticCaseData } = await import("@/actions/case-data");
 		const result = await loadStaticCaseData("nonexistent-file-xyz.json");
 
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toContain("Failed to load case data");
+		expectError(result, FAILED_TO_LOAD_PATTERN);
 	});
 
 	it("loads a valid static JSON file from public/data", async () => {
 		const { loadStaticCaseData } = await import("@/actions/case-data");
 		// design-reference-case.json is known to exist in public/data
-		const result = await loadStaticCaseData("design-reference-case.json");
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data).not.toBeNull();
+		const data = expectSuccess(
+			await loadStaticCaseData("design-reference-case.json")
+		);
+		expect(data).not.toBeNull();
 	});
 });

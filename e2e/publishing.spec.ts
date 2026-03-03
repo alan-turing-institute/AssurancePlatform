@@ -1,8 +1,6 @@
 import { expect, test } from "./helpers/auth";
+import { CASE_URL_PATTERN, LOGIN_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
-
-const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
-const LOGIN_PATTERN = /\/login/;
 
 test.describe("Publishing", () => {
 	test("discover page loads with community heading", async ({ page }) => {
@@ -56,5 +54,31 @@ test.describe("Publishing", () => {
 
 		// Should not redirect to login (authenticated via saved state)
 		await expect(page).not.toHaveURL(LOGIN_PATTERN);
+	});
+
+	test("complete publishing journey: draft → ready → published", async ({
+		page,
+	}) => {
+		// Create fresh case
+		await page.goto("/dashboard");
+		await page.getByRole("button", { name: "Create new case" }).click();
+		await page.getByLabel("Name").fill("Full Publish Test");
+		await page.getByLabel("Description").fill("Testing full publish flow");
+		await page.getByRole("button", { name: "Submit" }).click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		// Add a goal (required for publishing)
+		const editor = new CaseEditorPage(page);
+		await editor.newGoalButton.click();
+		// Fill the create node form
+		await page.getByLabel("Name").fill("Test Goal");
+		await page.getByRole("button", { name: "Submit" }).click();
+		// Wait for node to appear
+		await expect(page.getByText("Test Goal")).toBeVisible();
+
+		// Mark as ready
+		await editor.statusButton.click();
+		await editor.markReadyButton.click();
+		await expect(editor.statusButton).toHaveText("Ready to Publish");
 	});
 });

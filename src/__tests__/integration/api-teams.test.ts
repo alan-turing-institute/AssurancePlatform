@@ -39,6 +39,8 @@ describe("GET /api/teams", () => {
 		const body = await response.json();
 		expect(Array.isArray(body)).toBe(true);
 		expect(body).toHaveLength(1);
+		expect(body[0]).toHaveProperty("name");
+		expect(body[0]).toHaveProperty("id");
 		expect(body[0].name).toBe("My Team");
 	});
 
@@ -81,6 +83,8 @@ describe("POST /api/teams", () => {
 
 		expect(response.status).toBe(201);
 		const body = await response.json();
+		expect(body).toHaveProperty("name");
+		expect(body).toHaveProperty("my_role");
 		expect(body.name).toBe("Brand New Team");
 		expect(body.my_role).toBe("ADMIN");
 	});
@@ -146,6 +150,8 @@ describe("GET /api/teams/[id]", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
+		expect(body).toHaveProperty("name");
+		expect(body).toHaveProperty("my_role");
 		expect(body.name).toBe("Visible Team");
 		// The createTestTeam factory assigns the founding user the OWNER role
 		expect(body.my_role).toBe("OWNER");
@@ -189,6 +195,46 @@ describe("GET /api/teams/[id]", () => {
 // ============================================
 
 describe("PATCH /api/teams/[id]", () => {
+	it("returns the same error status for a non-existent team as for an inaccessible team (anti-enumeration)", async () => {
+		const owner = await createTestUser();
+		const outsider = await createTestUser();
+		const team = await createTestTeam(owner.id, { name: "Secret Team" });
+		await mockAuth(outsider.id, outsider.username, outsider.email);
+
+		const { PATCH } = await import("@/app/api/teams/[id]/route");
+
+		// Outsider tries to update a team they are not a member of
+		const noAccessReq = new NextRequest(
+			`http://localhost:3000/api/teams/${team.id}`,
+			{
+				method: "PATCH",
+				body: JSON.stringify({ name: "Rename Attempt" }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const noAccessResponse = await PATCH(noAccessReq, {
+			params: Promise.resolve({ id: team.id }),
+		});
+
+		// Outsider tries to update a non-existent team
+		const notFoundReq = new NextRequest(
+			"http://localhost:3000/api/teams/00000000-0000-0000-0000-000000000000",
+			{
+				method: "PATCH",
+				body: JSON.stringify({ name: "Rename Attempt" }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const notFoundResponse = await PATCH(notFoundReq, {
+			params: Promise.resolve({
+				id: "00000000-0000-0000-0000-000000000000",
+			}),
+		});
+
+		// Both should return the same HTTP status to prevent team enumeration
+		expect(noAccessResponse.status).toBe(notFoundResponse.status);
+	});
+
 	it("returns 200 with updated team data when the ADMIN updates the name", async () => {
 		const user = await createTestUser();
 		const team = await createTestTeam(user.id, { name: "Original Name" });
@@ -206,6 +252,7 @@ describe("PATCH /api/teams/[id]", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
+		expect(body).toHaveProperty("name");
 		expect(body.name).toBe("Renamed Team");
 
 		// Verify DB state
@@ -309,7 +356,7 @@ describe("GET /api/teams/[id]/members", () => {
 		expect(body.length).toBeGreaterThanOrEqual(2);
 	});
 
-	it("returns 404 when the requester is not a team member", async () => {
+	it("returns 403 when the requester is not a team member (anti-enumeration via Permission denied)", async () => {
 		const owner = await createTestUser();
 		const outsider = await createTestUser();
 		const team = await createTestTeam(owner.id, { name: "Exclusive Team" });
@@ -323,7 +370,9 @@ describe("GET /api/teams/[id]/members", () => {
 			params: Promise.resolve({ id: team.id }),
 		});
 
-		expect(response.status).toBe(404);
+		// Service returns "Permission denied" for non-members —
+		// serviceErrorToAppError maps this to 403
+		expect(response.status).toBe(403);
 	});
 });
 
@@ -355,6 +404,8 @@ describe("POST /api/teams/[id]/members", () => {
 
 		expect(response.status).toBe(201);
 		const body = await response.json();
+		expect(body).toHaveProperty("user");
+		expect(body).toHaveProperty("role");
 		expect(body.user.id).toBe(newMember.id);
 		expect(body.role).toBe("MEMBER");
 	});
@@ -408,7 +459,7 @@ describe("POST /api/teams/[id]/members", () => {
 	it("returns 403 when a non-admin member attempts to add a member", async () => {
 		const admin = await createTestUser();
 		const member = await createTestUser();
-		const _target = await createTestUser({
+		await createTestUser({
 			email: "target-member@example.com",
 		});
 		const team = await createTestTeam(admin.id, { name: "Restricted Team" });

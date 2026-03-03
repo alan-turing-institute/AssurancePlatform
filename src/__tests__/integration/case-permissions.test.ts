@@ -11,6 +11,11 @@ import {
 	updateUserPermission,
 } from "@/lib/services/case-permission-service";
 import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
+import {
 	addTeamMember,
 	createTestCase,
 	createTestPermission,
@@ -30,17 +35,14 @@ describe("listCasePermissions", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await listCasePermissions(owner.id, testCase.id);
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.is_owner).toBe(true);
-		expect(result.data.owner.id).toBe(owner.id);
-		expect(result.data.user_permissions).toHaveLength(1);
-		expect(result.data.user_permissions[0]!.user.id).toBe(viewer.id);
-		expect(result.data.user_permissions[0]!.permission).toBe("VIEW");
+		const data = expectSuccess(
+			await listCasePermissions(owner.id, testCase.id)
+		);
+		expect(data.is_owner).toBe(true);
+		expect(data.owner.id).toBe(owner.id);
+		expect(data.user_permissions).toHaveLength(1);
+		expect(data.user_permissions[0]!.user.id).toBe(viewer.id);
+		expect(data.user_permissions[0]!.permission).toBe("VIEW");
 	});
 
 	it("returns permissions list for user with explicit ADMIN permission", async () => {
@@ -49,13 +51,10 @@ describe("listCasePermissions", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
 
-		const result = await listCasePermissions(admin.id, testCase.id);
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.is_owner).toBe(false);
+		const data = expectSuccess(
+			await listCasePermissions(admin.id, testCase.id)
+		);
+		expect(data.is_owner).toBe(false);
 	});
 
 	it("returns error for user with EDIT permission (ADMIN required)", async () => {
@@ -64,13 +63,10 @@ describe("listCasePermissions", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-		const result = await listCasePermissions(editor.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await listCasePermissions(editor.id, testCase.id),
+			"Permission denied"
+		);
 	});
 
 	it("returns error for user with no access", async () => {
@@ -78,13 +74,10 @@ describe("listCasePermissions", () => {
 		const stranger = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await listCasePermissions(stranger.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await listCasePermissions(stranger.id, testCase.id),
+			"Permission denied"
+		);
 	});
 
 	it("returns team permissions alongside user permissions", async () => {
@@ -94,14 +87,11 @@ describe("listCasePermissions", () => {
 		const team = await createTestTeam(teamMember.id);
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
 
-		const result = await listCasePermissions(owner.id, testCase.id);
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.team_permissions).toHaveLength(1);
-		expect(result.data.team_permissions[0]!.team.id).toBe(team.id);
+		const data = expectSuccess(
+			await listCasePermissions(owner.id, testCase.id)
+		);
+		expect(data.team_permissions).toHaveLength(1);
+		expect(data.team_permissions[0]!.team.id).toBe(team.id);
 	});
 });
 
@@ -115,18 +105,15 @@ describe("shareByEmail", () => {
 		const target = await createTestUser({ email: "target@example.com" });
 		const testCase = await createTestCase(owner.id);
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "target@example.com",
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.permission).toBeDefined();
-		expect(result.data.permission?.user.id).toBe(target.id);
-		expect(result.data.permission?.permission).toBe("VIEW");
+		const data = expectSuccess(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "target@example.com",
+				permission: "VIEW",
+			})
+		);
+		expect(data.permission).toBeDefined();
+		expect(data.permission?.user.id).toBe(target.id);
+		expect(data.permission?.permission).toBe("VIEW");
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: target.id } },
@@ -140,33 +127,27 @@ describe("shareByEmail", () => {
 		const _target = await createTestUser({ email: "editor@example.com" });
 		const testCase = await createTestCase(owner.id);
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "editor@example.com",
-			permission: "EDIT",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.permission?.permission).toBe("EDIT");
+		const data = expectSuccess(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "editor@example.com",
+				permission: "EDIT",
+			})
+		);
+		expect(data.permission?.permission).toBe("EDIT");
 	});
 
 	it("creates an invite when target email is not registered", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "notregistered@example.com",
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.invite_created).toBe(true);
-		expect(result.data.invite_token).toBeDefined();
+		const data = expectSuccess(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "notregistered@example.com",
+				permission: "VIEW",
+			})
+		);
+		expect(data.invite_created).toBe(true);
+		expect(data.invite_token).toBeDefined();
 
 		const invite = await prisma.caseInvite.findFirst({
 			where: { caseId: testCase.id, email: "notregistered@example.com" },
@@ -180,48 +161,39 @@ describe("shareByEmail", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, target.id, owner.id, "VIEW");
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "already@example.com",
-			permission: "EDIT",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.already_shared).toBe(true);
+		const data = expectSuccess(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "already@example.com",
+				permission: "EDIT",
+			})
+		);
+		expect(data.already_shared).toBe(true);
 	});
 
 	it("returns already_shared when target is the case owner", async () => {
 		const owner = await createTestUser({ email: "owner@example.com" });
 		const testCase = await createTestCase(owner.id);
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "owner@example.com",
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.already_shared).toBe(true);
+		const data = expectSuccess(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "owner@example.com",
+				permission: "VIEW",
+			})
+		);
+		expect(data.already_shared).toBe(true);
 	});
 
 	it("returns error for invalid email address", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await shareByEmail(owner.id, testCase.id, {
-			email: "not-an-email",
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Valid email is required");
+		expectError(
+			await shareByEmail(owner.id, testCase.id, {
+				email: "not-an-email",
+				permission: "VIEW",
+			}),
+			"Valid email is required"
+		);
 	});
 
 	it("returns error when caller has only VIEW access (ADMIN required)", async () => {
@@ -231,16 +203,13 @@ describe("shareByEmail", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await shareByEmail(viewer.id, testCase.id, {
-			email: target.email,
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await shareByEmail(viewer.id, testCase.id, {
+				email: target.email,
+				permission: "VIEW",
+			}),
+			"Permission denied"
+		);
 	});
 
 	it("returns the same error for a non-existent case as for a forbidden case (anti-enumeration)", async () => {
@@ -265,12 +234,7 @@ describe("shareByEmail", () => {
 		);
 
 		// Both should return the same error to prevent case enumeration
-		expect("error" in noAccessResult).toBe(true);
-		expect("error" in notFoundResult).toBe(true);
-		if (!("error" in noAccessResult && "error" in notFoundResult)) {
-			return;
-		}
-		expect(noAccessResult.error).toBe(notFoundResult.error);
+		expectSameError(noAccessResult, notFoundResult);
 	});
 });
 
@@ -284,18 +248,15 @@ describe("shareWithTeam", () => {
 		const testCase = await createTestCase(owner.id);
 		const team = await createTestTeam(owner.id);
 
-		const result = await shareWithTeam(owner.id, testCase.id, {
-			teamId: team.id,
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data).toBeDefined();
-		expect(result.data.team.id).toBe(team.id);
-		expect(result.data.permission).toBe("VIEW");
+		const data = expectSuccess(
+			await shareWithTeam(owner.id, testCase.id, {
+				teamId: team.id,
+				permission: "VIEW",
+			})
+		);
+		expect(data).toBeDefined();
+		expect(data.team.id).toBe(team.id);
+		expect(data.permission).toBe("VIEW");
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { caseId_teamId: { caseId: testCase.id, teamId: team.id } },
@@ -309,16 +270,13 @@ describe("shareWithTeam", () => {
 		const testCase = await createTestCase(owner.id);
 		const team = await createTestTeam(teamOwner.id);
 
-		const result = await shareWithTeam(owner.id, testCase.id, {
-			teamId: team.id,
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Team not found");
+		expectError(
+			await shareWithTeam(owner.id, testCase.id, {
+				teamId: team.id,
+				permission: "VIEW",
+			}),
+			"Team not found"
+		);
 	});
 
 	it("returns error when case is already shared with the team", async () => {
@@ -327,16 +285,13 @@ describe("shareWithTeam", () => {
 		const team = await createTestTeam(owner.id);
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
 
-		const result = await shareWithTeam(owner.id, testCase.id, {
-			teamId: team.id,
-			permission: "EDIT",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Case already shared with this team");
+		expectError(
+			await shareWithTeam(owner.id, testCase.id, {
+				teamId: team.id,
+				permission: "EDIT",
+			}),
+			"Case already shared with this team"
+		);
 	});
 
 	it("returns error when caller has EDIT access but not ADMIN", async () => {
@@ -347,16 +302,13 @@ describe("shareWithTeam", () => {
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 		await addTeamMember(team.id, editor.id);
 
-		const result = await shareWithTeam(editor.id, testCase.id, {
-			teamId: team.id,
-			permission: "VIEW",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await shareWithTeam(editor.id, testCase.id, {
+				teamId: team.id,
+				permission: "VIEW",
+			}),
+			"Permission denied"
+		);
 	});
 });
 
@@ -376,15 +328,12 @@ describe("updateUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await updateUserPermission(owner.id, testCase.id, perm.id, {
-			permission: "EDIT",
-		});
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.permission).toBe("EDIT");
+		const data = expectSuccess(
+			await updateUserPermission(owner.id, testCase.id, perm.id, {
+				permission: "EDIT",
+			})
+		);
+		expect(data.permission).toBe("EDIT");
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { id: perm.id },
@@ -396,18 +345,15 @@ describe("updateUserPermission", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await updateUserPermission(
-			owner.id,
-			testCase.id,
-			"00000000-0000-0000-0000-000000000000",
-			{ permission: "EDIT" }
+		expectError(
+			await updateUserPermission(
+				owner.id,
+				testCase.id,
+				"00000000-0000-0000-0000-000000000000",
+				{ permission: "EDIT" }
+			),
+			"Permission not found"
 		);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission not found");
 	});
 
 	it("returns error when caller has EDIT access but not ADMIN", async () => {
@@ -423,15 +369,12 @@ describe("updateUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await updateUserPermission(editor.id, testCase.id, perm.id, {
-			permission: "EDIT",
-		});
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await updateUserPermission(editor.id, testCase.id, perm.id, {
+				permission: "EDIT",
+			}),
+			"Permission denied"
+		);
 	});
 });
 
@@ -451,18 +394,12 @@ describe("updateTeamPermission", () => {
 			"VIEW"
 		);
 
-		const result = await updateTeamPermission(
-			owner.id,
-			testCase.id,
-			teamPerm.id,
-			{ permission: "EDIT" }
+		const data = expectSuccess(
+			await updateTeamPermission(owner.id, testCase.id, teamPerm.id, {
+				permission: "EDIT",
+			})
 		);
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.permission).toBe("EDIT");
+		expect(data.permission).toBe("EDIT");
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { id: teamPerm.id },
@@ -474,18 +411,15 @@ describe("updateTeamPermission", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await updateTeamPermission(
-			owner.id,
-			testCase.id,
-			"00000000-0000-0000-0000-000000000000",
-			{ permission: "EDIT" }
+		expectError(
+			await updateTeamPermission(
+				owner.id,
+				testCase.id,
+				"00000000-0000-0000-0000-000000000000",
+				{ permission: "EDIT" }
+			),
+			"Permission not found"
 		);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission not found");
 	});
 });
 
@@ -505,9 +439,7 @@ describe("revokeUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await revokeUserPermission(owner.id, testCase.id, perm.id);
-
-		expect("error" in result).toBe(false);
+		expectSuccess(await revokeUserPermission(owner.id, testCase.id, perm.id));
 
 		const dbPerm = await prisma.casePermission.findUnique({
 			where: { id: perm.id },
@@ -519,17 +451,14 @@ describe("revokeUserPermission", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await revokeUserPermission(
-			owner.id,
-			testCase.id,
-			"00000000-0000-0000-0000-000000000000"
+		expectError(
+			await revokeUserPermission(
+				owner.id,
+				testCase.id,
+				"00000000-0000-0000-0000-000000000000"
+			),
+			"Permission not found"
 		);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission not found");
 	});
 
 	it("returns error when caller has EDIT access but not ADMIN", async () => {
@@ -545,13 +474,10 @@ describe("revokeUserPermission", () => {
 			"VIEW"
 		);
 
-		const result = await revokeUserPermission(editor.id, testCase.id, perm.id);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await revokeUserPermission(editor.id, testCase.id, perm.id),
+			"Permission denied"
+		);
 	});
 });
 
@@ -571,13 +497,9 @@ describe("revokeTeamPermission", () => {
 			"VIEW"
 		);
 
-		const result = await revokeTeamPermission(
-			owner.id,
-			testCase.id,
-			teamPerm.id
+		expectSuccess(
+			await revokeTeamPermission(owner.id, testCase.id, teamPerm.id)
 		);
-
-		expect("error" in result).toBe(false);
 
 		const dbPerm = await prisma.caseTeamPermission.findUnique({
 			where: { id: teamPerm.id },
@@ -589,17 +511,14 @@ describe("revokeTeamPermission", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await revokeTeamPermission(
-			owner.id,
-			testCase.id,
-			"00000000-0000-0000-0000-000000000000"
+		expectError(
+			await revokeTeamPermission(
+				owner.id,
+				testCase.id,
+				"00000000-0000-0000-0000-000000000000"
+			),
+			"Permission not found"
 		);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission not found");
 	});
 
 	it("returns 'Permission denied' when caller has only EDIT access", async () => {
@@ -615,17 +534,10 @@ describe("revokeTeamPermission", () => {
 		);
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-		const result = await revokeTeamPermission(
-			editor.id,
-			testCase.id,
-			teamPerm.id
+		expectError(
+			await revokeTeamPermission(editor.id, testCase.id, teamPerm.id),
+			"Permission denied"
 		);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
 	});
 });
 
@@ -653,13 +565,10 @@ describe("acceptInvite", () => {
 			},
 		});
 
-		const result = await acceptInvite(invitee.id, invite.inviteToken);
-
-		expect("error" in result).toBe(false);
-		if ("error" in result) {
-			return;
-		}
-		expect(result.data.caseId).toBe(testCase.id);
+		const data = expectSuccess(
+			await acceptInvite(invitee.id, invite.inviteToken)
+		);
+		expect(data.caseId).toBe(testCase.id);
 
 		const perm = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: invitee.id } },
@@ -686,13 +595,10 @@ describe("acceptInvite", () => {
 			},
 		});
 
-		const result = await acceptInvite(invitee.id, "expired-token-xyz789");
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invite has expired");
+		expectError(
+			await acceptInvite(invitee.id, "expired-token-xyz789"),
+			"Invite has expired"
+		);
 	});
 
 	it("returns error for an already-used invite", async () => {
@@ -715,25 +621,19 @@ describe("acceptInvite", () => {
 			},
 		});
 
-		const result = await acceptInvite(invitee.id, "used-token-def456");
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invite has already been used");
+		expectError(
+			await acceptInvite(invitee.id, "used-token-def456"),
+			"Invite has already been used"
+		);
 	});
 
 	it("returns error for an invalid (non-existent) invite token", async () => {
 		const invitee = await createTestUser();
 
-		const result = await acceptInvite(invitee.id, "completely-fake-token");
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invalid invite");
+		expectError(
+			await acceptInvite(invitee.id, "completely-fake-token"),
+			"Invalid invite"
+		);
 	});
 
 	it("returns error when the accepting user's email does not match the invite email", async () => {
@@ -754,13 +654,10 @@ describe("acceptInvite", () => {
 			},
 		});
 
-		const result = await acceptInvite(invitee.id, "mismatch-token-abc123");
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Invite was sent to a different email address");
+		expectError(
+			await acceptInvite(invitee.id, "mismatch-token-abc123"),
+			"Invite was sent to a different email address"
+		);
 	});
 });
 
@@ -784,12 +681,7 @@ describe("anti-enumeration: consistent error responses", () => {
 		);
 
 		// Both should return the same error
-		expect("error" in noAccessResult).toBe(true);
-		expect("error" in notFoundResult).toBe(true);
-		if (!("error" in noAccessResult && "error" in notFoundResult)) {
-			return;
-		}
-		expect(noAccessResult.error).toBe(notFoundResult.error);
+		expectSameError(noAccessResult, notFoundResult);
 	});
 });
 
@@ -813,20 +705,16 @@ describe("team-based case access", () => {
 
 		// Verify team member can list permissions via ADMIN check on owner
 		// (The team member has VIEW — not ADMIN — so listCasePermissions should deny them)
-		const memberResult = await listCasePermissions(teamMember.id, testCase.id);
-		expect("error" in memberResult).toBe(true);
-		if (!("error" in memberResult)) {
-			return;
-		}
-		expect(memberResult.error).toBe("Permission denied");
+		expectError(
+			await listCasePermissions(teamMember.id, testCase.id),
+			"Permission denied"
+		);
 
 		// But the owner (with ADMIN) can see the team permission recorded
-		const ownerResult = await listCasePermissions(owner.id, testCase.id);
-		expect("error" in ownerResult).toBe(false);
-		if ("error" in ownerResult) {
-			return;
-		}
-		expect(ownerResult.data.team_permissions).toHaveLength(1);
-		expect(ownerResult.data.team_permissions[0]!.team.id).toBe(team.id);
+		const ownerData = expectSuccess(
+			await listCasePermissions(owner.id, testCase.id)
+		);
+		expect(ownerData.team_permissions).toHaveLength(1);
+		expect(ownerData.team_permissions[0]!.team.id).toBe(team.id);
 	});
 });

@@ -40,6 +40,9 @@ describe("GET /api/cases/[id]", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
+		expect(body).toHaveProperty("id");
+		expect(body).toHaveProperty("name");
+		expect(body).toHaveProperty("permissions");
 		expect(body.id).toBe(testCase.id);
 		expect(body.name).toBe("Owner's Case");
 		expect(body.permissions).toBe("manage");
@@ -59,7 +62,7 @@ describe("GET /api/cases/[id]", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns 404 for a non-existent case ID (anti-enumeration)", async () => {
+	it("returns 403 for a non-existent case ID (anti-enumeration via Permission denied)", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -73,10 +76,12 @@ describe("GET /api/cases/[id]", () => {
 			}),
 		});
 
-		expect(response.status).toBe(404);
+		// Service returns "Permission denied" for both not-found and no-access cases
+		// to prevent case existence enumeration — serviceErrorToAppError maps this to 403
+		expect(response.status).toBe(403);
 	});
 
-	it("returns 404 for a case the user has no permission on (anti-enumeration)", async () => {
+	it("returns 403 for a case the user has no permission on (anti-enumeration via Permission denied)", async () => {
 		const owner = await createTestUser();
 		const stranger = await createTestUser();
 		const testCase = await createTestCase(owner.id, { name: "Private Case" });
@@ -90,7 +95,8 @@ describe("GET /api/cases/[id]", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 
-		expect(response.status).toBe(404);
+		// Service returns "Permission denied" for inaccessible cases — maps to 403
+		expect(response.status).toBe(403);
 	});
 
 	it("returns 200 for a user with VIEW permission", async () => {
@@ -191,12 +197,12 @@ describe("PUT /api/cases/[id]", () => {
 		await mockAuth(user.id, user.username, user.email);
 
 		const { PUT } = await import("@/app/api/cases/[id]/route");
-		// layout_direction must be "TB" or "LR"
+		// layoutDirection must be "TB" or "LR" — "INVALID" fails enum validation
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}`,
 			{
 				method: "PUT",
-				body: JSON.stringify({ layout_direction: "INVALID" }),
+				body: JSON.stringify({ layoutDirection: "INVALID" }),
 				headers: { "Content-Type": "application/json" },
 			}
 		);

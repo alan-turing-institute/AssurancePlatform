@@ -10,6 +10,7 @@ import {
 	resolveComment,
 	updateComment,
 } from "@/lib/services/comment-service";
+import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
 	createTestElement,
@@ -17,7 +18,10 @@ import {
 	createTestUser,
 } from "../utils/prisma-factories";
 
-// SSE events are fire-and-forget in tests — mock to prevent side effects
+/**
+ * SSE broadcasts are fire-and-forget in-process operations with no external I/O.
+ * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
+ */
 vi.mock("@/lib/services/sse-connection-manager", () => ({
 	emitSSEEvent: vi.fn(),
 	sseConnectionManager: { broadcast: vi.fn() },
@@ -37,38 +41,49 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(user.id);
 
 			// Give user COMMENT permission (owner already has it)
-			const comment = (await createCaseComment(
+			const result = await createCaseComment(
 				testCase.id,
 				"Hello, case!",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
 
+			const comment = expectSuccess(result) as CommentResponse;
 			expect(comment.id).toBeDefined();
 			expect(comment.content).toBe("Hello, case!");
 			expect(comment.authorId).toBe(user.id);
 			expect(comment.replies).toEqual([]);
 		});
 
-		it("throws FORBIDDEN when user lacks COMMENT permission", async () => {
+		it("returns 'Permission denied' when user lacks COMMENT permission", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 
-			await expect(
-				createCaseComment(testCase.id, "Sneaky comment", null, outsider.id)
-			).rejects.toMatchObject({ code: "FORBIDDEN" });
+			const result = await createCaseComment(
+				testCase.id,
+				"Sneaky comment",
+				null,
+				outsider.id
+			);
+
+			expectError(result, "Permission denied");
 		});
 
-		it("throws FORBIDDEN when user only has VIEW permission (view < comment)", async () => {
+		it("returns 'Permission denied' when user only has VIEW permission (view < comment)", async () => {
 			const owner = await createTestUser();
 			const viewer = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			await expect(
-				createCaseComment(testCase.id, "Cannot comment", null, viewer.id)
-			).rejects.toMatchObject({ code: "FORBIDDEN" });
+			const result = await createCaseComment(
+				testCase.id,
+				"Cannot comment",
+				null,
+				viewer.id
+			);
+
+			expectError(result, "Permission denied");
 		});
 	});
 
@@ -79,27 +94,33 @@ describe("comment-service", () => {
 			const element = await createTestElement(testCase.id, user.id);
 
 			const session = makeSession(user.id, user.username);
-			const comment = (await createElementComment(
+			const result = await createElementComment(
 				element.id,
 				"Element note",
 				null,
 				session
-			)) as unknown as CommentResponse;
+			);
 
+			const comment = expectSuccess(result) as CommentResponse;
 			expect(comment.id).toBeDefined();
 			expect(comment.content).toBe("Element note");
 		});
 
-		it("throws NOT_FOUND when user has no access to the case", async () => {
+		it("returns 'Permission denied' when user has no access to the case", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 			const element = await createTestElement(testCase.id, owner.id);
 
 			const session = makeSession(outsider.id, outsider.username);
-			await expect(
-				createElementComment(element.id, "Sneaky", null, session)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await createElementComment(
+				element.id,
+				"Sneaky",
+				null,
+				session
+			);
+
+			expectError(result);
 		});
 	});
 
@@ -108,18 +129,21 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const parent = (await createCaseComment(
+			const parentResult = await createCaseComment(
 				testCase.id,
 				"Parent comment",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
-			const reply = (await createCaseComment(
+			);
+			const parent = expectSuccess(parentResult) as CommentResponse;
+
+			const replyResult = await createCaseComment(
 				testCase.id,
 				"Reply here",
 				parent.id,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const reply = expectSuccess(replyResult) as CommentResponse;
 
 			expect(reply.parentId).toBe(parent.id);
 		});
@@ -130,33 +154,32 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const parent = (await createCaseComment(
+			const parentResult = await createCaseComment(
 				testCase.id,
 				"Thread root",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const parent = expectSuccess(parentResult) as CommentResponse;
 			await createCaseComment(testCase.id, "Child", parent.id, user.id);
 
-			const result = (await fetchCaseComments(
-				testCase.id,
-				user.id
-			)) as unknown as CommentResponse[];
+			const result = await fetchCaseComments(testCase.id, user.id);
 
-			expect(result).toHaveLength(1);
-			expect(result[0]!.content).toBe("Thread root");
-			expect(result[0]!.replies).toHaveLength(1);
-			expect(result[0]!.replies![0]!.content).toBe("Child");
+			const comments = expectSuccess(result) as CommentResponse[];
+			expect(comments).toHaveLength(1);
+			expect(comments[0]!.content).toBe("Thread root");
+			expect(comments[0]!.replies).toHaveLength(1);
+			expect(comments[0]!.replies![0]!.content).toBe("Child");
 		});
 
-		it("throws NOT_FOUND when user has no VIEW access", async () => {
+		it("returns 'Permission denied' when user has no VIEW access", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 
-			await expect(
-				fetchCaseComments(testCase.id, outsider.id)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await fetchCaseComments(testCase.id, outsider.id);
+
+			expectError(result);
 		});
 	});
 
@@ -174,24 +197,22 @@ describe("comment-service", () => {
 				session
 			);
 
-			const result = (await fetchElementComments(
-				element.id,
-				user.id
-			)) as unknown as CommentResponse[];
+			const result = await fetchElementComments(element.id, user.id);
 
-			expect(result).toHaveLength(1);
-			expect(result[0]!.content).toBe("An element comment");
+			const comments = expectSuccess(result) as CommentResponse[];
+			expect(comments).toHaveLength(1);
+			expect(comments[0]!.content).toBe("An element comment");
 		});
 
-		it("throws NOT_FOUND when user has no access to the case", async () => {
+		it("returns 'Permission denied' when user has no access to the case", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 			const element = await createTestElement(testCase.id, owner.id);
 
-			await expect(
-				fetchElementComments(element.id, outsider.id)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await fetchElementComments(element.id, outsider.id);
+
+			expectError(result);
 		});
 	});
 
@@ -200,20 +221,22 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Original content",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const updated = (await updateComment(
+			const updatedResult = await updateComment(
 				comment.id,
 				"Edited content",
 				session
-			)) as unknown as CommentResponse;
+			);
 
+			const updated = expectSuccess(updatedResult);
 			expect(updated.content).toBe("Edited content");
 		});
 
@@ -223,41 +246,48 @@ describe("comment-service", () => {
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Owner comment",
 				null,
 				owner.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const editorSession = makeSession(editor.id, editor.username);
 
-			const updated = (await updateComment(
+			const updatedResult = await updateComment(
 				comment.id,
 				"Editor-modified",
 				editorSession
-			)) as unknown as CommentResponse;
+			);
 
+			const updated = expectSuccess(updatedResult);
 			expect(updated.content).toBe("Editor-modified");
 		});
 
-		it("throws NOT_FOUND when a non-author without EDIT permission tries to edit", async () => {
+		it("returns 'Permission denied' when a non-author without EDIT permission tries to edit", async () => {
 			const owner = await createTestUser();
 			const viewer = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, viewer.id, owner.id, "COMMENT");
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Owner only",
 				null,
 				owner.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const viewerSession = makeSession(viewer.id, viewer.username);
 
-			// NOT_FOUND is returned (not FORBIDDEN) to prevent comment enumeration
-			await expect(
-				updateComment(comment.id, "Forbidden edit", viewerSession)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			// "Permission denied" is returned (not a throw) to prevent comment enumeration
+			const result = await updateComment(
+				comment.id,
+				"Forbidden edit",
+				viewerSession
+			);
+
+			expectError(result);
 		});
 	});
 
@@ -266,28 +296,30 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Delete me",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const result = (await deleteComment(comment.id, session)) as unknown as {
-				success: boolean;
-			};
+			const result = await deleteComment(comment.id, session);
 
-			expect(result.success).toBe(true);
+			expect("error" in result).toBe(false);
 		});
 
-		it("throws NOT_FOUND when trying to delete a non-existent comment", async () => {
+		it("returns 'Permission denied' when trying to delete a non-existent comment", async () => {
 			const user = await createTestUser();
 			const session = makeSession(user.id, user.username);
 
-			await expect(
-				deleteComment("00000000-0000-0000-0000-000000000000", session)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await deleteComment(
+				"00000000-0000-0000-0000-000000000000",
+				session
+			);
+
+			expectError(result);
 		});
 	});
 
@@ -296,20 +328,18 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Resolve me",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
-			const resolved = (await resolveComment(
-				comment.id,
-				true,
-				session
-			)) as unknown as CommentResponse;
+			const resolvedResult = await resolveComment(comment.id, true, session);
 
+			const resolved = expectSuccess(resolvedResult) as CommentResponse;
 			expect(resolved.resolved).toBe(true);
 			expect(resolved.resolvedBy).toBe(user.username);
 			expect(resolved.resolvedAt).toBeDefined();
@@ -319,12 +349,13 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Verify DB state",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
 			await resolveComment(comment.id, true, session);
@@ -344,45 +375,44 @@ describe("comment-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Unresolve me",
 				null,
 				user.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const session = makeSession(user.id, user.username);
 
 			await resolveComment(comment.id, true, session);
-			const unresolved = (await resolveComment(
-				comment.id,
-				false,
-				session
-			)) as unknown as CommentResponse;
+			const unresolvedResult = await resolveComment(comment.id, false, session);
 
+			const unresolved = expectSuccess(unresolvedResult) as CommentResponse;
 			expect(unresolved.resolved).toBe(false);
 			expect(unresolved.resolvedBy).toBeNull();
 			expect(unresolved.resolvedAt).toBeNull();
 		});
 
-		it("throws NOT_FOUND when a VIEW-only user tries to resolve a comment", async () => {
+		it("returns 'Permission denied' when a VIEW-only user tries to resolve a comment", async () => {
 			const owner = await createTestUser();
 			const viewer = await createTestUser();
 			const testCase = await createTestCase(owner.id);
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			const comment = (await createCaseComment(
+			const commentResult = await createCaseComment(
 				testCase.id,
 				"Only editors can resolve",
 				null,
 				owner.id
-			)) as unknown as CommentResponse;
+			);
+			const comment = expectSuccess(commentResult) as CommentResponse;
 			const viewerSession = makeSession(viewer.id, viewer.username);
 
 			// A VIEW-only user is not the author and does not have EDIT access,
-			// so the service returns NOT_FOUND (anti-enumeration)
-			await expect(
-				resolveComment(comment.id, true, viewerSession)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			// so the service returns "Permission denied" (anti-enumeration)
+			const result = await resolveComment(comment.id, true, viewerSession);
+
+			expectError(result);
 		});
 	});
 });

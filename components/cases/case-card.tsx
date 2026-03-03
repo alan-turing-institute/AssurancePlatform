@@ -164,6 +164,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 				<button
 					aria-label="Delete case"
 					className="absolute top-4 right-4 z-50 hidden rounded-md bg-destructive p-2 text-destructive-foreground shadow-lg group-hover:block"
+					data-testid="delete-case-button"
 					disabled={loading}
 					onClick={() => setOpen(true)}
 					type="button"

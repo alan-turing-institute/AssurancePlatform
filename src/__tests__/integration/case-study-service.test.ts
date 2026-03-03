@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
 import { createTestUser } from "../utils/prisma-factories";
 
 // Note: CaseStudy uses Int IDs (autoincrement), NOT UUID.
@@ -15,18 +20,15 @@ describe("createCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await createCaseStudy(owner.id, {
-			title: "My Case Study",
-			description: "An in-depth study",
-		});
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.id).toBeDefined();
-		expect(result.data.title).toBe("My Case Study");
-		expect(result.data.description).toBe("An in-depth study");
+		const data = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "My Case Study",
+				description: "An in-depth study",
+			})
+		);
+		expect(data.id).toBeDefined();
+		expect(data.title).toBe("My Case Study");
+		expect(data.description).toBe("An in-depth study");
 	});
 
 	it("sets the ownerId to the creating user", async () => {
@@ -35,15 +37,12 @@ describe("createCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await createCaseStudy(owner.id, {
-			title: "Owner Test Case Study",
-		});
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.ownerId).toBe(owner.id);
+		const data = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Owner Test Case Study",
+			})
+		);
+		expect(data.ownerId).toBe(owner.id);
 	});
 });
 
@@ -58,27 +57,21 @@ describe("updateCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Original Title",
-			description: "Original description",
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Original Title",
+				description: "Original description",
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const updated = await updateCaseStudy(created.data.id, owner.id, {
-			title: "Updated Title",
-			description: "Updated description",
-		});
-
-		expect("data" in updated).toBe(true);
-		if (!("data" in updated)) {
-			return;
-		}
-		expect(updated.data.title).toBe("Updated Title");
-		expect(updated.data.description).toBe("Updated description");
+		const updated = expectSuccess(
+			await updateCaseStudy(created.id, owner.id, {
+				title: "Updated Title",
+				description: "Updated description",
+			})
+		);
+		expect(updated.title).toBe("Updated Title");
+		expect(updated.description).toBe("Updated description");
 	});
 
 	it("returns error when updated by a non-owner", async () => {
@@ -88,24 +81,21 @@ describe("updateCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Should Not Update",
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Should Not Update",
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await updateCaseStudy(created.data.id, other.id, {
-			title: "Hijacked Title",
-		});
-
-		expect("error" in result).toBe(true);
+		expectError(
+			await updateCaseStudy(created.id, other.id, {
+				title: "Hijacked Title",
+			})
+		);
 
 		// Verify DB was not changed
 		const unchanged = await prisma.caseStudy.findUnique({
-			where: { id: created.data.id },
+			where: { id: created.id },
 		});
 		expect(unchanged?.title).toBe("Should Not Update");
 	});
@@ -122,21 +112,16 @@ describe("deleteCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "To Delete",
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "To Delete",
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await deleteCaseStudy(created.data.id, owner.id);
-
-		expect("data" in result).toBe(true);
+		expectSuccess(await deleteCaseStudy(created.id, owner.id));
 
 		const deleted = await prisma.caseStudy.findUnique({
-			where: { id: created.data.id },
+			where: { id: created.id },
 		});
 		expect(deleted).toBeNull();
 	});
@@ -148,23 +133,72 @@ describe("deleteCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Should Survive",
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Should Survive",
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await deleteCaseStudy(created.data.id, other.id);
-
-		expect("error" in result).toBe(true);
+		expectError(await deleteCaseStudy(created.id, other.id));
 
 		const stillExists = await prisma.caseStudy.findUnique({
-			where: { id: created.data.id },
+			where: { id: created.id },
 		});
 		expect(stillExists).not.toBeNull();
+	});
+});
+
+// ============================================
+// Anti-enumeration: updateCaseStudy and deleteCaseStudy
+// ============================================
+
+describe("anti-enumeration: consistent error responses", () => {
+	it("updateCaseStudy returns the same error for a non-existent case study as for one the user does not own", async () => {
+		const owner = await createTestUser();
+		const other = await createTestUser();
+		const { createCaseStudy, updateCaseStudy } = await import(
+			"@/lib/services/case-study-service"
+		);
+
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Enumeration Test Study",
+			})
+		);
+
+		// Other user tries to update a case study they do not own
+		const noAccessResult = await updateCaseStudy(created.id, other.id, {
+			title: "Hijacked",
+		});
+
+		// Other user tries to update a non-existent case study
+		const notFoundResult = await updateCaseStudy(999_999, other.id, {
+			title: "Ghost",
+		});
+
+		expectSameError(noAccessResult, notFoundResult);
+	});
+
+	it("deleteCaseStudy returns the same error for a non-existent case study as for one the user does not own", async () => {
+		const owner = await createTestUser();
+		const other = await createTestUser();
+		const { createCaseStudy, deleteCaseStudy } = await import(
+			"@/lib/services/case-study-service"
+		);
+
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Delete Enumeration Study",
+			})
+		);
+
+		// Other user tries to delete a case study they do not own
+		const noAccessResult = await deleteCaseStudy(created.id, other.id);
+
+		// Other user tries to delete a non-existent case study
+		const notFoundResult = await deleteCaseStudy(999_999, other.id);
+
+		expectSameError(noAccessResult, notFoundResult);
 	});
 });
 
@@ -184,14 +218,9 @@ describe("getCaseStudiesByOwner", () => {
 		await createCaseStudy(owner.id, { title: "Study B" });
 		await createCaseStudy(other.id, { title: "Other's Study" });
 
-		const results = await getCaseStudiesByOwner(owner.id);
-
-		expect("data" in results).toBe(true);
-		if (!("data" in results)) {
-			return;
-		}
-		expect(results.data.length).toBe(2);
-		const titles = results.data.map((r: { title: string }) => r.title);
+		const data = expectSuccess(await getCaseStudiesByOwner(owner.id));
+		expect(data.length).toBe(2);
+		const titles = data.map((r: { title: string }) => r.title);
 		expect(titles).toContain("Study A");
 		expect(titles).toContain("Study B");
 		expect(titles).not.toContain("Other's Study");
@@ -215,13 +244,8 @@ describe("getPublishedCaseStudies", () => {
 			published: true,
 		});
 
-		const results = await getPublishedCaseStudies();
-
-		expect("data" in results).toBe(true);
-		if (!("data" in results)) {
-			return;
-		}
-		const titles = results.data.map((r: { title: string }) => r.title);
+		const data = expectSuccess(await getPublishedCaseStudies());
+		const titles = data.map((r: { title: string }) => r.title);
 		expect(titles).toContain("Published Study");
 		expect(titles).not.toContain("Draft Study");
 	});
@@ -238,23 +262,15 @@ describe("getCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Findable Study",
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Findable Study",
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await getCaseStudyById(created.data.id, owner.id);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.id).toBe(created.data.id);
-		expect(result.data.title).toBe("Findable Study");
+		const data = expectSuccess(await getCaseStudyById(created.id, owner.id));
+		expect(data.id).toBe(created.id);
+		expect(data.title).toBe("Findable Study");
 	});
 
 	it("returns error for a non-existent ID", async () => {
@@ -263,9 +279,7 @@ describe("getCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await getCaseStudyById(999_999, owner.id);
-
-		expect("error" in result).toBe(true);
+		expectError(await getCaseStudyById(999_999, owner.id));
 	});
 });
 
@@ -280,23 +294,15 @@ describe("getPublishedCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Public Study",
-			published: true,
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Public Study",
+				published: true,
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await getPublishedCaseStudyById(created.data.id);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.title).toBe("Public Study");
+		const data = expectSuccess(await getPublishedCaseStudyById(created.id));
+		expect(data.title).toBe("Public Study");
 	});
 
 	it("returns error for an unpublished case study", async () => {
@@ -305,19 +311,14 @@ describe("getPublishedCaseStudyById", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Private Study",
-			published: false,
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Private Study",
+				published: false,
+			})
+		);
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-
-		const result = await getPublishedCaseStudyById(created.data.id);
-
-		expect("error" in result).toBe(true);
+		expectError(await getPublishedCaseStudyById(created.id));
 	});
 });
 
@@ -332,26 +333,20 @@ describe("publish via updateCaseStudy", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Unpublished",
-			published: false,
-		});
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Unpublished",
+				published: false,
+			})
+		);
+		expect(created.publishedDate).toBeNull();
 
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
-		expect(created.data.publishedDate).toBeNull();
-
-		const updated = await updateCaseStudy(created.data.id, owner.id, {
-			published: true,
-		});
-
-		expect("data" in updated).toBe(true);
-		if (!("data" in updated)) {
-			return;
-		}
-		expect(updated.data.publishedDate).not.toBeNull();
+		const updated = expectSuccess(
+			await updateCaseStudy(created.id, owner.id, {
+				published: true,
+			})
+		);
+		expect(updated.publishedDate).not.toBeNull();
 	});
 });
 
@@ -366,19 +361,12 @@ describe("createCaseStudyWithLinks", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await createCaseStudyWithLinks(
-			owner.id,
-			{ title: "Linked Study" },
-			[]
+		const data = expectSuccess(
+			await createCaseStudyWithLinks(owner.id, { title: "Linked Study" }, [])
 		);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.id).toBeDefined();
-		expect(result.data.title).toBe("Linked Study");
-		expect(result.data.publishedCases).toHaveLength(0);
+		expect(data.id).toBeDefined();
+		expect(data.title).toBe("Linked Study");
+		expect(data.publishedCases).toHaveLength(0);
 	});
 });
 
@@ -394,30 +382,24 @@ describe("updateCaseStudyWithLinks", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const created = await createCaseStudy(owner.id, {
-			title: "Original Title",
-		});
-
-		expect("data" in created).toBe(true);
-		if (!("data" in created)) {
-			return;
-		}
+		const created = expectSuccess(
+			await createCaseStudy(owner.id, {
+				title: "Original Title",
+			})
+		);
 
 		const result = await updateCaseStudyWithLinks(
-			created.data.id,
+			created.id,
 			other.id,
 			{ title: "Hijacked" },
 			[]
 		);
 
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(result, "Permission denied");
 
 		// Verify DB was not changed
 		const unchanged = await prisma.caseStudy.findUnique({
-			where: { id: created.data.id },
+			where: { id: created.id },
 		});
 		expect(unchanged?.title).toBe("Original Title");
 	});
@@ -428,13 +410,8 @@ describe("updateCaseStudyWithLinks", () => {
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await updateCaseStudyWithLinks(
-			999_999,
-			owner.id,
-			{ title: "Ghost" },
-			[]
+		expectError(
+			await updateCaseStudyWithLinks(999_999, owner.id, { title: "Ghost" }, [])
 		);
-
-		expect("error" in result).toBe(true);
 	});
 });

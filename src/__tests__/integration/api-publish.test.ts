@@ -80,7 +80,7 @@ describe("GET /api/cases/[id]/publish", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns 404 when the case does not exist or the user has no access", async () => {
+	it("returns 403 when the case does not exist or the user has no access (anti-enumeration via Permission denied)", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -94,7 +94,9 @@ describe("GET /api/cases/[id]/publish", () => {
 			}),
 		});
 
-		expect(response.status).toBe(404);
+		// Service returns "Permission denied" for both not-found and no-access cases
+		// to prevent case existence enumeration — serviceErrorToAppError maps this to 403
+		expect(response.status).toBe(403);
 	});
 });
 

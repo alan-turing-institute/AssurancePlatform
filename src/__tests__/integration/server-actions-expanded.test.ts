@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -28,6 +33,18 @@ vi.mock("next/navigation", () => ({
 	}),
 	redirect: vi.fn((url: string) => {
 		throw new Error(`NEXT_REDIRECT:${url}`);
+	}),
+}));
+
+/**
+ * SSE broadcasts are fire-and-forget in-process operations with no external I/O.
+ * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
+ */
+vi.mock("@/lib/services/sse-connection-manager", () => ({
+	getSSEConnectionManager: vi.fn().mockReturnValue({
+		broadcast: vi.fn(),
+		subscribe: vi.fn(),
+		unsubscribe: vi.fn(),
 	}),
 }));
 
@@ -173,10 +190,12 @@ describe.sequential("createAssuranceCase", () => {
 // ============================================
 
 describe.sequential("fetchCaseStudies", () => {
-	it("throws an Unauthorised error when not authenticated", async () => {
+	it("returns null when not authenticated", async () => {
 		const { fetchCaseStudies } = await import("@/actions/case-studies");
 
-		await expect(fetchCaseStudies()).rejects.toThrow("Unauthorised");
+		const result = await fetchCaseStudies();
+
+		expect(result).toBeNull();
 	});
 
 	it("returns case studies owned by the authenticated user", async () => {
@@ -524,13 +543,8 @@ describe.sequential("unlinkProvider", () => {
 describe.sequential("exportCase", () => {
 	it("returns a not authenticated error when not logged in", async () => {
 		const { exportCase } = await import("@/actions/export-case");
-		const result = await exportCase("any-case-id");
 
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Not authenticated");
+		expectError(await exportCase("any-case-id"), "Not authenticated");
 	});
 
 	it("delegates to the export service and returns case data when authenticated", async () => {
@@ -549,14 +563,8 @@ describe.sequential("exportCase", () => {
 		await mockAuth(user.id, user.username, user.email);
 
 		const { exportCase } = await import("@/actions/export-case");
-		const result = await exportCase(testCase.id);
-
-		// Service returns { data } or { error }
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.case.name).toBe("Exportable Case");
+		const data = expectSuccess(await exportCase(testCase.id));
+		expect(data.case.name).toBe("Exportable Case");
 	});
 
 	it("returns an error when the user has no access to the case", async () => {
@@ -567,9 +575,28 @@ describe.sequential("exportCase", () => {
 		await mockAuth(stranger.id, stranger.username, stranger.email);
 
 		const { exportCase } = await import("@/actions/export-case");
-		const result = await exportCase(testCase.id);
 
-		expect("error" in result).toBe(true);
+		expectError(await exportCase(testCase.id));
+	});
+
+	it("returns the same error for a non-existent case as for an inaccessible case (anti-enumeration)", async () => {
+		const owner = await createTestUser();
+		const stranger = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		await mockAuth(stranger.id, stranger.username, stranger.email);
+
+		const { exportCase } = await import("@/actions/export-case");
+
+		// Stranger tries to export a case they have no access to
+		const noAccessResult = await exportCase(testCase.id);
+
+		// Stranger tries to export a non-existent case
+		const notFoundResult = await exportCase(
+			"00000000-0000-0000-0000-000000000000"
+		);
+
+		expectSameError(noAccessResult, notFoundResult);
 	});
 });
 

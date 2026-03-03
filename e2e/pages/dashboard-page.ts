@@ -31,6 +31,6 @@ export class DashboardPage {
 		return this.caseGrid
 			.locator("[href]", { has: this.page.getByText(name, { exact: true }) })
 			.locator("..")
-			.getByLabel("Delete case");
+			.getByTestId("delete-case-button");
 	}
 }

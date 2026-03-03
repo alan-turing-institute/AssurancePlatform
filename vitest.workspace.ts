@@ -14,7 +14,7 @@ export default defineConfig({
 	test: {
 		projects: [
 			{
-				// Unit tests — same config as vitest.config.ts but explicit
+				// Unit tests — extends main vitest.config.ts (which uses setup/index.ts)
 				extends: "./vitest.config.ts",
 				test: {
 					name: "unit",

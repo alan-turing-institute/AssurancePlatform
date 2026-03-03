@@ -125,6 +125,7 @@ const ActionButtons = ({
 							<ActionTooltip label="New Goal">
 								<Button
 									className="rounded-full p-3"
+									data-testid="toolbar-new-goal"
 									onClick={() => setOpen(true)}
 									size="icon"
 									type="button"
@@ -140,6 +141,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Focus">
 						<Button
 							className="rounded-full p-3 disabled:opacity-50"
+							data-testid="toolbar-focus"
 							data-tour="toolbar-focus"
 							disabled={isLayouting}
 							id="FocusBtn"
@@ -161,6 +163,7 @@ const ActionButtons = ({
 							<ActionTooltip label="Reset Identifiers">
 								<Button
 									className="rounded-full p-3"
+									data-testid="toolbar-reset-ids"
 									onClick={() => setAlertOpen(true)}
 									size="icon"
 									type="button"
@@ -173,6 +176,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Resources">
 						<Button
 							className="rounded-full p-3"
+							data-testid="toolbar-resources"
 							data-tour="toolbar-resources"
 							onClick={() => resourcesModal.onOpen()}
 							size="icon"
@@ -188,6 +192,7 @@ const ActionButtons = ({
 						<ActionTooltip label="Share">
 							<Button
 								className="rounded-full p-3"
+								data-testid="toolbar-share"
 								data-tour="toolbar-share"
 								onClick={() =>
 									caseSharingModal.onOpen(assuranceCase?.id?.toString() ?? "")
@@ -204,6 +209,7 @@ const ActionButtons = ({
 						<ActionTooltip label="Export">
 							<Button
 								className="rounded-full p-3"
+								data-testid="toolbar-export"
 								data-tour="toolbar-export"
 								onClick={() => exportModal.onOpen()}
 								size="icon"
@@ -217,6 +223,7 @@ const ActionButtons = ({
 					<ActionTooltip label="JSON View">
 						<Button
 							className="rounded-full p-3"
+							data-testid="toolbar-json"
 							data-tour="toolbar-json"
 							onClick={() => setJsonViewOpen(true)}
 							size="icon"
@@ -229,6 +236,7 @@ const ActionButtons = ({
 					<ActionTooltip label="Notes">
 						<Button
 							className="rounded-full p-3"
+							data-testid="toolbar-notes"
 							data-tour="toolbar-notes"
 							onClick={() => setNotesOpen(true)}
 							size="icon"
@@ -238,13 +246,14 @@ const ActionButtons = ({
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
-					<span data-tour="toolbar-settings">
+					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
 							<Button
 								className="rounded-full p-3"
+								data-testid="toolbar-delete"
 								onClick={() => setDeleteOpen(true)}
 								size="icon"
 								type="button"

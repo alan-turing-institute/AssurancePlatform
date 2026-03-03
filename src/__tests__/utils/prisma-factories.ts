@@ -247,6 +247,145 @@ export function createTestComment(
 }
 
 // ============================================
+// COMPOSITE FACTORIES
+// ============================================
+
+/**
+ * Creates a case with a top-level GOAL element so exportCase succeeds.
+ * publishAssuranceCase calls exportCase internally, which requires at least one element.
+ */
+export async function createTestCaseWithGoal(
+	ownerId: string,
+	name?: string
+): Promise<AssuranceCase> {
+	const testCase = await createTestCase(ownerId, { name });
+	await createTestElement(testCase.id, ownerId, {
+		elementType: "GOAL",
+		name: "Top-level goal",
+		role: "TOP_LEVEL",
+	});
+	return testCase;
+}
+
+/**
+ * Creates a team with the given user as ADMIN and returns the team ID.
+ */
+export async function createTestTeamWithAdmin(
+	adminId: string,
+	name = "Test Team"
+): Promise<string> {
+	const n = nextId();
+	const team = await prisma.team.create({
+		data: {
+			name,
+			slug: `${name.toLowerCase().replace(/\s+/g, "-")}-${n}`,
+			createdById: adminId,
+			members: {
+				create: { userId: adminId, role: "ADMIN" },
+			},
+		},
+	});
+	return team.id;
+}
+
+/**
+ * Queries the user record and returns the current passwordResetToken.
+ * Used after requestPasswordReset to retrieve the generated token.
+ */
+export async function getTestPasswordResetToken(
+	userId: string
+): Promise<string | null> {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { passwordResetToken: true },
+	});
+	return user?.passwordResetToken ?? null;
+}
+
+// ============================================
+// PLAIN-OBJECT FIXTURES (no DB calls)
+// ============================================
+
+/**
+ * Minimal valid nested-format case JSON for import testing.
+ * Does not touch the database — returns a plain JS object.
+ */
+export function createNestedCaseJSON(
+	overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+	return {
+		version: "1.0",
+		exportedAt: new Date().toISOString(),
+		case: {
+			name: "Test Import Case",
+			description: "A case created for import testing",
+		},
+		tree: {
+			id: "00000000-0000-0000-0000-000000000001",
+			type: "GOAL",
+			name: "Top-level Goal",
+			description: "The root goal",
+			inSandbox: false,
+			role: "TOP_LEVEL",
+			children: [],
+		},
+		...overrides,
+	};
+}
+
+/**
+ * Nested case with a goal → strategy → property_claim chain.
+ * Does not touch the database — returns a plain JS object.
+ */
+export function createNestedCaseWithChainJSON(): Record<string, unknown> {
+	return {
+		version: "1.0",
+		exportedAt: new Date().toISOString(),
+		case: {
+			name: "Chained Case",
+			description: "Case with strategy chain",
+		},
+		tree: {
+			id: "10000000-0000-0000-0000-000000000001",
+			type: "GOAL",
+			name: "Root Goal",
+			description: "Top-level goal",
+			inSandbox: false,
+			role: "TOP_LEVEL",
+			children: [
+				{
+					id: "10000000-0000-0000-0000-000000000002",
+					type: "STRATEGY",
+					name: "Strategy 1",
+					description: "A strategy",
+					inSandbox: false,
+					children: [
+						{
+							id: "10000000-0000-0000-0000-000000000003",
+							type: "PROPERTY_CLAIM",
+							name: "Claim 1",
+							description: "A property claim",
+							inSandbox: false,
+							children: [
+								{
+									id: "10000000-0000-0000-0000-000000000004",
+									type: "EVIDENCE",
+									name: "Evidence 1",
+									description: "Supporting evidence",
+									inSandbox: false,
+									url: "https://example.com/evidence",
+									children: [],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	};
+}
+
+// ============================================
 // CASE STUDY
 // ============================================
 

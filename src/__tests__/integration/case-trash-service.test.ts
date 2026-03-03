@@ -7,6 +7,11 @@ import {
 	softDeleteCase,
 } from "@/lib/services/case-trash-service";
 import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
+import {
 	createTestCase,
 	createTestComment,
 	createTestElement,
@@ -14,15 +19,15 @@ import {
 	createTestUser,
 } from "../utils/prisma-factories";
 
+const MUST_BE_IN_TRASH_PATTERN = /must be in trash/;
+
 describe("case-trash-service", () => {
 	describe("softDeleteCase", () => {
 		it("soft-deletes a case (sets deletedAt) for the owner", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "To Trash" });
 
-			const result = await softDeleteCase(user.id, testCase.id);
-
-			expect("error" in result).toBe(false);
+			expectSuccess(await softDeleteCase(user.id, testCase.id));
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -38,13 +43,10 @@ describe("case-trash-service", () => {
 			});
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			const result = await softDeleteCase(viewer.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toBe("Permission denied");
+			expectError(
+				await softDeleteCase(viewer.id, testCase.id),
+				"Permission denied"
+			);
 		});
 
 		it("returns 'Permission denied' for a non-member", async () => {
@@ -54,13 +56,10 @@ describe("case-trash-service", () => {
 				name: "Locked Case",
 			});
 
-			const result = await softDeleteCase(outsider.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toBe("Permission denied");
+			expectError(
+				await softDeleteCase(outsider.id, testCase.id),
+				"Permission denied"
+			);
 		});
 
 		it("returns an error when the case is already in trash", async () => {
@@ -71,13 +70,10 @@ describe("case-trash-service", () => {
 
 			await softDeleteCase(user.id, testCase.id);
 
-			const second = await softDeleteCase(user.id, testCase.id);
-
-			expect("error" in second).toBe(true);
-			if (!("error" in second)) {
-				return;
-			}
-			expect(second.error).toBe("Case is already in trash");
+			expectError(
+				await softDeleteCase(user.id, testCase.id),
+				"Case is already in trash"
+			);
 		});
 	});
 
@@ -91,27 +87,17 @@ describe("case-trash-service", () => {
 			await softDeleteCase(userA.id, caseA.id);
 			await softDeleteCase(userB.id, caseB.id);
 
-			const result = await listTrashedCases(userA.id);
-
-			expect("error" in result).toBe(false);
-			if ("error" in result) {
-				return;
-			}
-			expect(result.data.cases).toHaveLength(1);
-			expect(result.data.cases[0]!.id).toBe(caseA.id);
+			const data = expectSuccess(await listTrashedCases(userA.id));
+			expect(data.cases).toHaveLength(1);
+			expect(data.cases[0]!.id).toBe(caseA.id);
 		});
 
 		it("returns an empty list when no cases are trashed", async () => {
 			const user = await createTestUser();
 			await createTestCase(user.id, { name: "Active Case" });
 
-			const result = await listTrashedCases(user.id);
-
-			expect("error" in result).toBe(false);
-			if ("error" in result) {
-				return;
-			}
-			expect(result.data.cases).toHaveLength(0);
+			const data = expectSuccess(await listTrashedCases(user.id));
+			expect(data.cases).toHaveLength(0);
 		});
 
 		it("includes daysRemaining in each trashed case entry", async () => {
@@ -122,14 +108,9 @@ describe("case-trash-service", () => {
 
 			await softDeleteCase(user.id, testCase.id);
 
-			const result = await listTrashedCases(user.id);
-
-			expect("error" in result).toBe(false);
-			if ("error" in result) {
-				return;
-			}
-			expect(typeof result.data.cases[0]!.daysRemaining).toBe("number");
-			expect(result.data.cases[0]!.daysRemaining).toBeGreaterThan(0);
+			const data = expectSuccess(await listTrashedCases(user.id));
+			expect(typeof data.cases[0]!.daysRemaining).toBe("number");
+			expect(data.cases[0]!.daysRemaining).toBeGreaterThan(0);
 		});
 	});
 
@@ -141,9 +122,7 @@ describe("case-trash-service", () => {
 			});
 			await softDeleteCase(user.id, testCase.id);
 
-			const result = await restoreCase(user.id, testCase.id);
-
-			expect("error" in result).toBe(false);
+			expectSuccess(await restoreCase(user.id, testCase.id));
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -155,13 +134,10 @@ describe("case-trash-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Active" });
 
-			const result = await restoreCase(user.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toBe("Case is not in trash");
+			expectError(
+				await restoreCase(user.id, testCase.id),
+				"Case is not in trash"
+			);
 		});
 
 		it("returns 'Permission denied' when a non-owner tries to restore", async () => {
@@ -175,13 +151,10 @@ describe("case-trash-service", () => {
 			await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
 			await softDeleteCase(owner.id, testCase.id);
 
-			const result = await restoreCase(admin.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toBe("Permission denied");
+			expectError(
+				await restoreCase(admin.id, testCase.id),
+				"Permission denied"
+			);
 		});
 	});
 
@@ -191,9 +164,7 @@ describe("case-trash-service", () => {
 			const testCase = await createTestCase(user.id, { name: "Purge Me" });
 			await softDeleteCase(user.id, testCase.id);
 
-			const result = await purgeCase(user.id, testCase.id);
-
-			expect("error" in result).toBe(false);
+			expectSuccess(await purgeCase(user.id, testCase.id));
 
 			const inDb = await prisma.assuranceCase.findUnique({
 				where: { id: testCase.id },
@@ -208,12 +179,7 @@ describe("case-trash-service", () => {
 			});
 
 			const result = await purgeCase(user.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toContain("must be in trash");
+			expectError(result, MUST_BE_IN_TRASH_PATTERN);
 		});
 
 		it("returns 'Permission denied' when a non-owner tries to purge", async () => {
@@ -224,13 +190,10 @@ describe("case-trash-service", () => {
 			});
 			await softDeleteCase(owner.id, testCase.id);
 
-			const result = await purgeCase(otherUser.id, testCase.id);
-
-			expect("error" in result).toBe(true);
-			if (!("error" in result)) {
-				return;
-			}
-			expect(result.error).toBe("Permission denied");
+			expectError(
+				await purgeCase(otherUser.id, testCase.id),
+				"Permission denied"
+			);
 		});
 
 		it("cascades deletion to child elements, permissions, and comments", async () => {
@@ -254,9 +217,7 @@ describe("case-trash-service", () => {
 
 			// Soft-delete then purge
 			await softDeleteCase(owner.id, testCase.id);
-			const result = await purgeCase(owner.id, testCase.id);
-
-			expect("error" in result).toBe(false);
+			expectSuccess(await purgeCase(owner.id, testCase.id));
 
 			// Case is gone
 			const caseInDb = await prisma.assuranceCase.findUnique({
@@ -284,6 +245,48 @@ describe("case-trash-service", () => {
 		});
 	});
 
+	describe("anti-enumeration: consistent error responses", () => {
+		it("softDeleteCase returns the same error for a non-existent case as for an inaccessible case", async () => {
+			const owner = await createTestUser();
+			const outsider = await createTestUser();
+			const testCase = await createTestCase(owner.id, {
+				name: "Anti-Enum Case",
+			});
+
+			// Outsider tries to delete a case they have no access to
+			const noAccessResult = await softDeleteCase(outsider.id, testCase.id);
+
+			// Outsider tries to delete a non-existent case
+			const notFoundResult = await softDeleteCase(
+				outsider.id,
+				"00000000-0000-0000-0000-000000000000"
+			);
+
+			expectSameError(noAccessResult, notFoundResult);
+		});
+
+		it("restoreCase returns the same error for a non-existent case as for a case the user does not own", async () => {
+			const owner = await createTestUser();
+			const other = await createTestUser();
+			const testCase = await createTestCase(owner.id, {
+				name: "Restore Anti-Enum Case",
+			});
+			// Trash it so restoreCase does not fail on "not in trash" for owner's case
+			await softDeleteCase(owner.id, testCase.id);
+
+			// Other user tries to restore a case they do not own (it is in trash)
+			const noAccessResult = await restoreCase(other.id, testCase.id);
+
+			// Other user tries to restore a non-existent case
+			const notFoundResult = await restoreCase(
+				other.id,
+				"00000000-0000-0000-0000-000000000000"
+			);
+
+			expectSameError(noAccessResult, notFoundResult);
+		});
+	});
+
 	describe("cross-service behaviour", () => {
 		it("trashed cases are not returned by fetchCaseFromPrisma", async () => {
 			const user = await createTestUser();
@@ -292,14 +295,11 @@ describe("case-trash-service", () => {
 			});
 			await softDeleteCase(user.id, testCase.id);
 
-			const { AppError } = await import("@/lib/errors");
 			const { fetchCaseFromPrisma } = await import(
 				"@/lib/services/case-fetch-service"
 			);
 
-			await expect(
-				fetchCaseFromPrisma(testCase.id, user.id)
-			).rejects.toBeInstanceOf(AppError);
+			expectError(await fetchCaseFromPrisma(testCase.id, user.id));
 		});
 	});
 });

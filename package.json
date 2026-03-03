@@ -14,7 +14,6 @@
     "test:fast": "vitest run --config vitest.workspace.ts --project unit --reporter=dot",
     "test:coverage": "COVERAGE=true vitest --coverage",
     "test:coverage:check": "COVERAGE=true vitest run --coverage",
-    "test:perf": "vitest --config vitest.config.performance.ts --run",
     "test:quick": "COVERAGE=false vitest --run --reporter=dot",
     "test:integration": "vitest run --config vitest.workspace.ts --project integration",
     "test:integration:watch": "vitest --config vitest.workspace.ts --project integration",

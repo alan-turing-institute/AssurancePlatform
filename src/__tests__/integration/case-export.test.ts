@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
 	createTestComment,
@@ -24,18 +25,13 @@ describe("exportCase", () => {
 		});
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(owner.id, testCase.id);
+		const data = expectSuccess(await exportCase(owner.id, testCase.id));
 
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-
-		expect(result.data.version).toBe("1.0");
-		expect(result.data.case.name).toBe(testCase.name);
-		expect(result.data.tree).toBeDefined();
-		expect(result.data.tree.type).toBe("GOAL");
-		expect(result.data.tree.id).toBe(goal.id);
+		expect(data.version).toBe("1.0");
+		expect(data.case.name).toBe(testCase.name);
+		expect(data.tree).toBeDefined();
+		expect(data.tree.type).toBe("GOAL");
+		expect(data.tree.id).toBe(goal.id);
 	});
 
 	it("exports a case for a user with VIEW permission", async () => {
@@ -51,13 +47,9 @@ describe("exportCase", () => {
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(viewer.id, testCase.id);
+		const data = expectSuccess(await exportCase(viewer.id, testCase.id));
 
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.case.name).toBe(testCase.name);
+		expect(data.case.name).toBe(testCase.name);
 	});
 
 	it("returns Permission denied for a user without access", async () => {
@@ -71,13 +63,10 @@ describe("exportCase", () => {
 		});
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(stranger.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await exportCase(stranger.id, testCase.id),
+			"Permission denied"
+		);
 	});
 
 	it("returns Permission denied for a non-existent case (prevents enumeration)", async () => {
@@ -85,14 +74,8 @@ describe("exportCase", () => {
 		const fakeId = "99999999-0000-0000-0000-000000000001";
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(user.id, fakeId);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
 		// Should return the same permission-denied error
-		expect(result.error).toBe("Permission denied");
+		expectError(await exportCase(user.id, fakeId), "Permission denied");
 	});
 
 	it("returns an error when the case has no elements", async () => {
@@ -101,13 +84,10 @@ describe("exportCase", () => {
 		// No elements created
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Case has no elements to export");
+		expectError(
+			await exportCase(owner.id, testCase.id),
+			"Case has no elements to export"
+		);
 	});
 
 	it("exports nested goal → strategy → evidence hierarchy", async () => {
@@ -147,14 +127,9 @@ describe("exportCase", () => {
 		});
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(owner.id, testCase.id);
+		const data = expectSuccess(await exportCase(owner.id, testCase.id));
 
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-
-		const tree = result.data.tree;
+		const tree = data.tree;
 		expect(tree.type).toBe("GOAL");
 		expect(tree.children.length).toBeGreaterThanOrEqual(1);
 
@@ -181,16 +156,11 @@ describe("exportCase", () => {
 		});
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(owner.id, testCase.id, {
-			includeComments: true,
-		});
+		const data = expectSuccess(
+			await exportCase(owner.id, testCase.id, { includeComments: true })
+		);
 
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-
-		const rootNode = result.data.tree;
+		const rootNode = data.tree;
 		expect(rootNode.comments).toBeDefined();
 		expect(rootNode.comments?.length).toBeGreaterThanOrEqual(1);
 		expect(rootNode.comments?.[0].content).toBe("Important comment");
@@ -212,16 +182,11 @@ describe("exportCase", () => {
 		});
 
 		const { exportCase } = await import("@/lib/services/case-export-service");
-		const result = await exportCase(owner.id, testCase.id, {
-			includeComments: false,
-		});
+		const data = expectSuccess(
+			await exportCase(owner.id, testCase.id, { includeComments: false })
+		);
 
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-
-		const rootNode = result.data.tree;
+		const rootNode = data.tree;
 		// Comments should be undefined when not requested
 		expect(rootNode.comments).toBeUndefined();
 	});

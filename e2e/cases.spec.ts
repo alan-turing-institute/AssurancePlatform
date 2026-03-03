@@ -1,8 +1,6 @@
 import { expect, test } from "./helpers/auth";
+import { CASE_URL_PATTERN, STATUS_BUTTON_PATTERN } from "./helpers/constants";
 import { DashboardPage } from "./pages/dashboard-page";
-
-const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
-const STATUS_BUTTON_PATTERN = /Draft|Ready to Publish|Published/;
 
 test.describe("Case management", () => {
 	test("dashboard shows seeded cases", async ({ page }) => {

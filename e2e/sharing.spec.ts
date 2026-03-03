@@ -1,6 +1,5 @@
 import { expect, signIn, test } from "./helpers/auth";
-
-const CASE_URL_PATTERN = /\/case\/[a-f0-9-]+/;
+import { CASE_URL_PATTERN } from "./helpers/constants";
 
 // Sharing tests use different user sessions — no pre-saved state
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -70,7 +69,27 @@ test.describe("Sharing and permissions", () => {
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		// Click share button
-		await page.locator('[data-tour="toolbar-share"]').click();
+		await page.getByTestId("toolbar-share").click();
 		await expect(page.getByText("Share Case")).toBeVisible();
+	});
+
+	test("viewer can see shared case but cannot edit", async ({
+		page,
+		seedPassword,
+	}) => {
+		await signIn(page, "charlie", seedPassword);
+
+		// Navigate to Bob's shared case (charlie has VIEW permission)
+		await page.goto("/dashboard/shared");
+		const sharedGrid = page.getByTestId("case-list-grid");
+		await sharedGrid.getByRole("heading", { name: "Bob's Case" }).click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		// Assert: content visible but toolbar buttons for editing are not visible
+		await expect(page.getByTestId("action-buttons")).toBeVisible();
+		// Viewer should NOT see the new goal button (requires edit permission)
+		await expect(page.getByTestId("toolbar-new-goal")).not.toBeVisible();
+		// Viewer should NOT see the share button (requires manage permission)
+		await expect(page.getByTestId("toolbar-share")).not.toBeVisible();
 	});
 });

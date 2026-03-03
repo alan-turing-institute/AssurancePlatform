@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AppError } from "@/lib/errors";
 import {
 	fetchCaseFromPrisma,
 	updateCaseWithPrisma,
 } from "@/lib/services/case-fetch-service";
+import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
 	createTestPermission,
@@ -16,15 +16,13 @@ describe("case-fetch-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Owner Case" });
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				user.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
 
-			expect(result.id).toBe(testCase.id);
-			expect(result.name).toBe("Owner Case");
-			expect(result.owner).toBe(user.id);
-			expect(result.permissions).toBe("manage");
+			const data = expectSuccess(result);
+			expect(data.id).toBe(testCase.id);
+			expect(data.name).toBe("Owner Case");
+			expect(data.owner).toBe(user.id);
+			expect(data.permissions).toBe("manage");
 		});
 
 		it("returns case data for a user with VIEW permission", async () => {
@@ -35,13 +33,11 @@ describe("case-fetch-service", () => {
 			});
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				viewer.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, viewer.id);
 
-			expect(result.id).toBe(testCase.id);
-			expect(result.permissions).toBe("view");
+			const data = expectSuccess(result);
+			expect(data.id).toBe(testCase.id);
+			expect(data.permissions).toBe("view");
 		});
 
 		it("returns case data for a user with EDIT permission", async () => {
@@ -50,37 +46,34 @@ describe("case-fetch-service", () => {
 			const testCase = await createTestCase(owner.id, { name: "Edit Case" });
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				editor.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, editor.id);
 
-			expect(result.permissions).toBe("edit");
+			const data = expectSuccess(result);
+			expect(data.permissions).toBe("edit");
 		});
 
-		it("throws NOT_FOUND for a user with no access", async () => {
+		it("returns 'Permission denied' for a user with no access", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id, { name: "Private" });
 
-			await expect(
-				fetchCaseFromPrisma(testCase.id, outsider.id)
-			).rejects.toThrow(AppError);
+			const result = await fetchCaseFromPrisma(testCase.id, outsider.id);
 
-			await expect(
-				fetchCaseFromPrisma(testCase.id, outsider.id)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			expectError(result, "Permission denied");
 		});
 
-		it("throws NOT_FOUND for a non-existent case ID", async () => {
+		it("returns 'Permission denied' for a non-existent case ID (anti-enumeration)", async () => {
 			const user = await createTestUser();
 
-			await expect(
-				fetchCaseFromPrisma("00000000-0000-0000-0000-000000000000", user.id)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await fetchCaseFromPrisma(
+				"00000000-0000-0000-0000-000000000000",
+				user.id
+			);
+
+			expectError(result, "Permission denied");
 		});
 
-		it("throws NOT_FOUND for a soft-deleted (trashed) case", async () => {
+		it("returns 'Permission denied' for a soft-deleted (trashed) case", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Trashed Case" });
 
@@ -90,21 +83,19 @@ describe("case-fetch-service", () => {
 			);
 			await softDeleteCase(user.id, testCase.id);
 
-			await expect(
-				fetchCaseFromPrisma(testCase.id, user.id)
-			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+
+			expectError(result);
 		});
 
 		it("includes a goals array in the response", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Goals Case" });
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				user.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
 
-			expect(Array.isArray(result.goals)).toBe(true);
+			const data = expectSuccess(result);
+			expect(Array.isArray(data.goals)).toBe(true);
 		});
 
 		it("returns the correct permission level for a COMMENT user", async () => {
@@ -118,12 +109,10 @@ describe("case-fetch-service", () => {
 				"COMMENT"
 			);
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				commenter.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, commenter.id);
 
-			expect(result.permissions).toBe("comment");
+			const data = expectSuccess(result);
+			expect(data.permissions).toBe("comment");
 		});
 
 		it("returns 'manage' permission for a case ADMIN", async () => {
@@ -132,12 +121,10 @@ describe("case-fetch-service", () => {
 			const testCase = await createTestCase(owner.id, { name: "Admin Case" });
 			await createTestPermission(testCase.id, caseAdmin.id, owner.id, "ADMIN");
 
-			const result = (await fetchCaseFromPrisma(
-				testCase.id,
-				caseAdmin.id
-			)) as unknown as Record<string, unknown>;
+			const result = await fetchCaseFromPrisma(testCase.id, caseAdmin.id);
 
-			expect(result.permissions).toBe("manage");
+			const data = expectSuccess(result);
+			expect(data.permissions).toBe("manage");
 		});
 	});
 
@@ -146,11 +133,12 @@ describe("case-fetch-service", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id, { name: "Original Name" });
 
-			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = await updateCaseWithPrisma(testCase.id, user.id, {
 				name: "Updated Name",
-			})) as unknown as Record<string, unknown>;
+			});
 
-			expect(result.name).toBe("Updated Name");
+			const data = expectSuccess(result);
+			expect(data.name).toBe("Updated Name");
 		});
 
 		it("updates the case description for a user with EDIT permission", async () => {
@@ -161,14 +149,15 @@ describe("case-fetch-service", () => {
 			});
 			await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
-			const result = (await updateCaseWithPrisma(testCase.id, editor.id, {
+			const result = await updateCaseWithPrisma(testCase.id, editor.id, {
 				description: "New description",
-			})) as unknown as Record<string, unknown>;
+			});
 
-			expect(result.description).toBe("New description");
+			const data = expectSuccess(result);
+			expect(data.description).toBe("New description");
 		});
 
-		it("throws FORBIDDEN for a user without EDIT permission", async () => {
+		it("returns 'Permission denied' for a user without EDIT permission", async () => {
 			const owner = await createTestUser();
 			const viewer = await createTestUser();
 			const testCase = await createTestCase(owner.id, {
@@ -176,19 +165,23 @@ describe("case-fetch-service", () => {
 			});
 			await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-			await expect(
-				updateCaseWithPrisma(testCase.id, viewer.id, { name: "Forbidden" })
-			).rejects.toMatchObject({ code: "FORBIDDEN" });
+			const result = await updateCaseWithPrisma(testCase.id, viewer.id, {
+				name: "Forbidden",
+			});
+
+			expectError(result, "Permission denied");
 		});
 
-		it("throws FORBIDDEN for a non-member", async () => {
+		it("returns 'Permission denied' for a non-member", async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const testCase = await createTestCase(owner.id, { name: "Locked Case" });
 
-			await expect(
-				updateCaseWithPrisma(testCase.id, outsider.id, { name: "Hacked" })
-			).rejects.toMatchObject({ code: "FORBIDDEN" });
+			const result = await updateCaseWithPrisma(testCase.id, outsider.id, {
+				name: "Hacked",
+			});
+
+			expectError(result, "Permission denied");
 		});
 
 		it("updates the colour profile", async () => {
@@ -197,11 +190,12 @@ describe("case-fetch-service", () => {
 				name: "Colour Case",
 			});
 
-			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = await updateCaseWithPrisma(testCase.id, user.id, {
 				colourProfile: "dark",
-			})) as unknown as Record<string, unknown>;
+			});
 
-			expect(result.colourProfile).toBe("dark");
+			const data = expectSuccess(result);
+			expect(data.colourProfile).toBe("dark");
 		});
 
 		it("updates the layout direction", async () => {
@@ -210,11 +204,12 @@ describe("case-fetch-service", () => {
 				name: "Layout Case",
 			});
 
-			const result = (await updateCaseWithPrisma(testCase.id, user.id, {
+			const result = await updateCaseWithPrisma(testCase.id, user.id, {
 				layoutDirection: "LR",
-			})) as unknown as Record<string, unknown>;
+			});
 
-			expect(result.layoutDirection).toBe("LR");
+			const data = expectSuccess(result);
+			expect(data.layoutDirection).toBe("LR");
 		});
 	});
 });

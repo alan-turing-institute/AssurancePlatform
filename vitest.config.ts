@@ -9,7 +9,7 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "jsdom",
-		setupFiles: ["./src/__tests__/setup.tsx"],
+		setupFiles: ["./src/__tests__/setup/index.ts"],
 		globals: true,
 		css: true,
 		pool: "forks",

@@ -2,14 +2,21 @@ import { describe, expect, it, vi } from "vitest";
 import type { ElementChange } from "@/lib/case/tree-diff";
 import prisma from "@/lib/prisma";
 import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
+import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
-// SSE connection manager is an in-process side-effect with no external I/O;
-// mock it so tests never block on real SSE setup.
+/**
+ * SSE broadcasts are fire-and-forget in-process operations with no external I/O.
+ * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
+ */
 vi.mock("@/lib/services/sse-connection-manager", () => ({
 	getSSEConnectionManager: vi.fn().mockReturnValue({
 		broadcast: vi.fn(),
@@ -48,15 +55,12 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.summary.created).toBe(1);
-		expect(result.data.summary.updated).toBe(0);
-		expect(result.data.summary.deleted).toBe(0);
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, changes)
+		);
+		expect(data.summary.created).toBe(1);
+		expect(data.summary.updated).toBe(0);
+		expect(data.summary.deleted).toBe(0);
 
 		const created = await prisma.assuranceElement.findUnique({
 			where: { id: newId },
@@ -86,13 +90,10 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.summary.updated).toBe(1);
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, changes)
+		);
+		expect(data.summary.updated).toBe(1);
 
 		const updated = await prisma.assuranceElement.findUnique({
 			where: { id: element.id },
@@ -120,13 +121,10 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.summary.deleted).toBe(1);
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, changes)
+		);
+		expect(data.summary.deleted).toBe(1);
 
 		const found = await prisma.assuranceElement.findUnique({
 			where: { id: element.id },
@@ -184,15 +182,12 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.summary.created).toBe(1);
-		expect(result.data.summary.updated).toBe(1);
-		expect(result.data.summary.deleted).toBe(1);
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, changes)
+		);
+		expect(data.summary.created).toBe(1);
+		expect(data.summary.updated).toBe(1);
+		expect(data.summary.deleted).toBe(1);
 
 		// Verify DB state
 		const created = await prisma.assuranceElement.findUnique({
@@ -220,13 +215,10 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(stranger.id, testCase.id, []);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await applyBatchUpdate(stranger.id, testCase.id, []),
+			"Permission denied"
+		);
 	});
 
 	it("returns a permission denied error for a user with only VIEW access", async () => {
@@ -239,13 +231,10 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(viewer.id, testCase.id, []);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await applyBatchUpdate(viewer.id, testCase.id, []),
+			"Permission denied"
+		);
 	});
 
 	it("returns a permission denied error for a non-existent case", async () => {
@@ -255,14 +244,36 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(user.id, "non-existent-case-id", []);
-
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
 		// Same error as no-permission — prevents enumeration
-		expect(result.error).toBe("Permission denied");
+		expectError(
+			await applyBatchUpdate(user.id, "non-existent-case-id", []),
+			"Permission denied"
+		);
+	});
+
+	it("returns same error for not-found and no-access (anti-enumeration)", async () => {
+		const owner = await createTestUser();
+		const otherUser = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [];
+
+		const notFoundResult = await applyBatchUpdate(
+			otherUser.id,
+			"00000000-0000-0000-0000-000000000000",
+			changes
+		);
+		const noAccessResult = await applyBatchUpdate(
+			otherUser.id,
+			testCase.id,
+			changes
+		);
+
+		expectSameError(notFoundResult, noAccessResult);
 	});
 
 	it("detects a conflict when expectedVersion does not match", async () => {
@@ -279,12 +290,8 @@ describe("applyBatchUpdate", () => {
 			expectedVersion: staleVersion,
 		});
 
-		expect("error" in result).toBe(true);
-		if (!("error" in result)) {
-			return;
-		}
-		expect(result.error).toBe("Case has been modified by another user");
-		expect(result.conflictDetected).toBe(true);
+		expectError(result, "Case has been modified by another user");
+		expect("conflictDetected" in result && result.conflictDetected).toBe(true);
 	});
 
 	it("succeeds when expectedVersion matches the actual case version", async () => {
@@ -302,11 +309,11 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(user.id, testCase.id, [], {
-			expectedVersion,
-		});
-
-		expect("data" in result).toBe(true);
+		expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, [], {
+				expectedVersion,
+			})
+		);
 	});
 
 	it("succeeds with an empty changes array (no-op)", async () => {
@@ -317,15 +324,12 @@ describe("applyBatchUpdate", () => {
 			"@/lib/services/case-batch-update-service"
 		);
 
-		const result = await applyBatchUpdate(user.id, testCase.id, []);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.summary.created).toBe(0);
-		expect(result.data.summary.updated).toBe(0);
-		expect(result.data.summary.deleted).toBe(0);
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, [])
+		);
+		expect(data.summary.created).toBe(0);
+		expect(data.summary.updated).toBe(0);
+		expect(data.summary.deleted).toBe(0);
 	});
 
 	it("links evidence to a claim via a batch update", async () => {
@@ -358,9 +362,7 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
-		expect("data" in result).toBe(true);
+		expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
 
 		const link = await prisma.evidenceLink.findFirst({
 			where: { evidenceId: evidence.id, claimId: claim.id },
@@ -397,10 +399,8 @@ describe("applyBatchUpdate", () => {
 			},
 		];
 
-		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-
 		// The batch should fail
-		expect("error" in result).toBe(true);
+		expectError(await applyBatchUpdate(user.id, testCase.id, changes));
 
 		// The update should have been rolled back
 		const unchanged = await prisma.assuranceElement.findUnique({

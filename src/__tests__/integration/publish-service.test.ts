@@ -11,26 +11,25 @@ import {
 	updatePublishedCase,
 } from "@/lib/services/publish-service";
 import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
+import {
 	createTestCase,
 	createTestCaseStudy,
-	createTestElement,
+	createTestCaseWithGoal,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
-/**
- * Creates a case with a top-level GOAL element so exportCase succeeds.
- * publishAssuranceCase calls exportCase internally, which requires at least one element.
- */
-async function createPublishableCase(ownerId: string, name?: string) {
-	const testCase = await createTestCase(ownerId, { name });
-	await createTestElement(testCase.id, ownerId, {
-		elementType: "GOAL",
-		name: "Top-level goal",
-		role: "TOP_LEVEL",
-	});
-	return testCase;
-}
+// Top-level regex constants required by lint/performance/useTopLevelRegex
+const CANNOT_MARK_AS_READY = /Cannot mark as ready/;
+const STATUS_READY_TO_PUBLISH = /READY_TO_PUBLISH/;
+const STATUS_PUBLISHED = /PUBLISHED/;
+const CANNOT_UNMARK = /Cannot unmark/;
+const STATUS_DRAFT = /DRAFT/;
+const INVALID_STATUS_TRANSITION = /Invalid status transition/;
 
 // ============================================
 // markCaseAsReady
@@ -43,15 +42,8 @@ describe("markCaseAsReady", () => {
 			publishStatus: "DRAFT",
 		});
 
-		const result = (await markCaseAsReady(owner.id, testCase.id)) as {
-			data?: { markedReadyAt: Date };
-			error?: string;
-		};
-
-		expect(result.error).toBeUndefined();
-		if ("data" in result) {
-			expect(result.data?.markedReadyAt).toBeInstanceOf(Date);
-		}
+		const data = expectSuccess(await markCaseAsReady(owner.id, testCase.id));
+		expect(data.markedReadyAt).toBeInstanceOf(Date);
 
 		const updated = await prisma.assuranceCase.findUnique({
 			where: { id: testCase.id },
@@ -68,12 +60,8 @@ describe("markCaseAsReady", () => {
 		});
 
 		const result = await markCaseAsReady(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toContain("Cannot mark as ready");
-			expect(result.error).toContain("READY_TO_PUBLISH");
-		}
+		expectError(result, CANNOT_MARK_AS_READY);
+		expectError(result, STATUS_READY_TO_PUBLISH);
 	});
 
 	it("returns error when case is already PUBLISHED", async () => {
@@ -84,12 +72,8 @@ describe("markCaseAsReady", () => {
 		});
 
 		const result = await markCaseAsReady(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toContain("Cannot mark as ready");
-			expect(result.error).toContain("PUBLISHED");
-		}
+		expectError(result, CANNOT_MARK_AS_READY);
+		expectError(result, STATUS_PUBLISHED);
 	});
 
 	it("returns error when caller lacks EDIT permission", async () => {
@@ -98,12 +82,10 @@ describe("markCaseAsReady", () => {
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await markCaseAsReady(viewer.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(
+			await markCaseAsReady(viewer.id, testCase.id),
+			"Permission denied"
+		);
 	});
 });
 
@@ -118,15 +100,8 @@ describe("unmarkCaseAsReady", () => {
 			publishStatus: "READY_TO_PUBLISH",
 		});
 
-		const result = (await unmarkCaseAsReady(owner.id, testCase.id)) as {
-			data?: { success: true };
-			error?: string;
-		};
-
-		expect(result.error).toBeUndefined();
-		if ("data" in result) {
-			expect(result.data?.success).toBe(true);
-		}
+		const data = expectSuccess(await unmarkCaseAsReady(owner.id, testCase.id));
+		expect(data.success).toBe(true);
 
 		const updated = await prisma.assuranceCase.findUnique({
 			where: { id: testCase.id },
@@ -143,12 +118,8 @@ describe("unmarkCaseAsReady", () => {
 		});
 
 		const result = await unmarkCaseAsReady(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toContain("Cannot unmark");
-			expect(result.error).toContain("DRAFT");
-		}
+		expectError(result, CANNOT_UNMARK);
+		expectError(result, STATUS_DRAFT);
 	});
 
 	it("returns error when case is PUBLISHED (not READY_TO_PUBLISH)", async () => {
@@ -159,11 +130,7 @@ describe("unmarkCaseAsReady", () => {
 		});
 
 		const result = await unmarkCaseAsReady(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toContain("Cannot unmark");
-		}
+		expectError(result, CANNOT_UNMARK);
 	});
 });
 
@@ -174,15 +141,13 @@ describe("unmarkCaseAsReady", () => {
 describe("publishAssuranceCase", () => {
 	it("publishes a case and creates a PublishedAssuranceCase record", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
-		const result = await publishAssuranceCase(owner.id, testCase.id);
-
-		expect("error" in result).toBe(false);
-		if ("data" in result) {
-			expect(result.data.publishedId).toBeDefined();
-			expect(result.data.publishedAt).toBeInstanceOf(Date);
-		}
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		expect(data.publishedId).toBeDefined();
+		expect(data.publishedAt).toBeInstanceOf(Date);
 
 		const updated = await prisma.assuranceCase.findUnique({
 			where: { id: testCase.id },
@@ -195,51 +160,45 @@ describe("publishAssuranceCase", () => {
 
 	it("creates a PublishedAssuranceCase snapshot in the database", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id, "My Published Case");
-
-		const result = await publishAssuranceCase(
+		const testCase = await createTestCaseWithGoal(
 			owner.id,
-			testCase.id,
-			"Initial release"
+			"My Published Case"
 		);
 
-		expect("error" in result).toBe(false);
-		if ("data" in result) {
-			const published = await prisma.publishedAssuranceCase.findUnique({
-				where: { id: result.data.publishedId },
-			});
-			expect(published).not.toBeNull();
-			expect(published?.title).toBe("My Published Case");
-			expect(published?.description).toBe("Initial release");
-			expect(published?.assuranceCaseId).toBe(testCase.id);
-		}
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id, "Initial release")
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		expect(published).not.toBeNull();
+		expect(published?.title).toBe("My Published Case");
+		expect(published?.description).toBe("Initial release");
+		expect(published?.assuranceCaseId).toBe(testCase.id);
 	});
 
 	it("returns error when caller lacks EDIT permission", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await publishAssuranceCase(viewer.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(
+			await publishAssuranceCase(viewer.id, testCase.id),
+			"Permission denied"
+		);
 	});
 
 	it("returns error when caller has no access at all", async () => {
 		const owner = await createTestUser();
 		const stranger = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
-		const result = await publishAssuranceCase(stranger.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(
+			await publishAssuranceCase(stranger.id, testCase.id),
+			"Permission denied"
+		);
 	});
 });
 
@@ -250,17 +209,15 @@ describe("publishAssuranceCase", () => {
 describe("unpublishAssuranceCase", () => {
 	it("unpublishes a published case and resets status to DRAFT", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
 		// Publish first
 		await publishAssuranceCase(owner.id, testCase.id);
 
-		const result = await unpublishAssuranceCase(owner.id, testCase.id);
-
-		expect("error" in result).toBe(false);
-		if ("data" in result) {
-			expect(result.data.success).toBe(true);
-		}
+		const data = expectSuccess(
+			await unpublishAssuranceCase(owner.id, testCase.id)
+		);
+		expect(data.success).toBe(true);
 
 		const updated = await prisma.assuranceCase.findUnique({
 			where: { id: testCase.id },
@@ -278,90 +235,80 @@ describe("unpublishAssuranceCase", () => {
 			published: false,
 		});
 
-		const result = await unpublishAssuranceCase(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Case is not published");
-		}
+		expectError(
+			await unpublishAssuranceCase(owner.id, testCase.id),
+			"Case is not published"
+		);
 	});
 
 	it("returns error when case is linked to case studies and force is false", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
 		// Publish the case
-		const publishResult = await publishAssuranceCase(owner.id, testCase.id);
-		expect("data" in publishResult).toBe(true);
+		const publishData = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
 
-		if ("data" in publishResult) {
-			// Create a case study and link to the published version
-			const caseStudy = await createTestCaseStudy(owner.id, {
-				published: true,
-			});
-			await prisma.caseStudyPublishedCase.create({
-				data: {
-					caseStudyId: caseStudy.id,
-					publishedAssuranceCaseId: publishResult.data.publishedId,
-				},
-			});
+		// Create a case study and link to the published version
+		const caseStudy = await createTestCaseStudy(owner.id, {
+			published: true,
+		});
+		await prisma.caseStudyPublishedCase.create({
+			data: {
+				caseStudyId: caseStudy.id,
+				publishedAssuranceCaseId: publishData.publishedId,
+			},
+		});
 
-			const result = await unpublishAssuranceCase(owner.id, testCase.id, false);
-
-			expect("error" in result).toBe(true);
-			if ("error" in result) {
-				expect(result.error).toBe("Cannot unpublish: linked to case studies");
-			}
-		}
+		expectError(
+			await unpublishAssuranceCase(owner.id, testCase.id, false),
+			"Cannot unpublish: linked to case studies"
+		);
 	});
 
 	it("deletes case study links and unpublishes when force is true", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
 		// Publish the case
-		const publishResult = await publishAssuranceCase(owner.id, testCase.id);
-		expect("data" in publishResult).toBe(true);
+		const publishData = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
 
-		if ("data" in publishResult) {
-			const caseStudy = await createTestCaseStudy(owner.id, {
-				published: true,
-			});
-			await prisma.caseStudyPublishedCase.create({
-				data: {
-					caseStudyId: caseStudy.id,
-					publishedAssuranceCaseId: publishResult.data.publishedId,
-				},
-			});
+		const caseStudy = await createTestCaseStudy(owner.id, {
+			published: true,
+		});
+		await prisma.caseStudyPublishedCase.create({
+			data: {
+				caseStudyId: caseStudy.id,
+				publishedAssuranceCaseId: publishData.publishedId,
+			},
+		});
 
-			const result = await unpublishAssuranceCase(owner.id, testCase.id, true);
+		const data = expectSuccess(
+			await unpublishAssuranceCase(owner.id, testCase.id, true)
+		);
+		expect(data.success).toBe(true);
 
-			expect("error" in result).toBe(false);
-			if ("data" in result) {
-				expect(result.data.success).toBe(true);
-			}
-
-			// Published versions should be deleted
-			const remaining = await prisma.publishedAssuranceCase.findMany({
-				where: { assuranceCaseId: testCase.id },
-			});
-			expect(remaining).toHaveLength(0);
-		}
+		// Published versions should be deleted
+		const remaining = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(remaining).toHaveLength(0);
 	});
 
 	it("returns error when caller lacks EDIT permission", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 		await publishAssuranceCase(owner.id, testCase.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await unpublishAssuranceCase(viewer.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(
+			await unpublishAssuranceCase(viewer.id, testCase.id),
+			"Permission denied"
+		);
 	});
 });
 
@@ -372,38 +319,27 @@ describe("unpublishAssuranceCase", () => {
 describe("updatePublishedCase", () => {
 	it("creates a new published version snapshot for an already-published case", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
 		// Publish initially
-		const publishResult = await publishAssuranceCase(owner.id, testCase.id);
-		expect("data" in publishResult).toBe(true);
-
-		// Update published version
-		const updateResult = await updatePublishedCase(
-			owner.id,
-			testCase.id,
-			"Updated description"
+		const publishData = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
 		);
 
-		expect("error" in updateResult).toBe(false);
-		if ("data" in updateResult) {
-			expect(updateResult.data.publishedId).toBeDefined();
-			// Should be a different ID than the original
-			if ("data" in publishResult) {
-				expect(updateResult.data.publishedId).not.toBe(
-					publishResult.data.publishedId
-				);
-			}
-		}
+		// Update published version
+		const updateData = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id, "Updated description")
+		);
+		expect(updateData.publishedId).toBeDefined();
+		// Should be a different ID than the original
+		expect(updateData.publishedId).not.toBe(publishData.publishedId);
 
 		// New record exists in DB
-		if ("data" in updateResult) {
-			const newVersion = await prisma.publishedAssuranceCase.findUnique({
-				where: { id: updateResult.data.publishedId },
-			});
-			expect(newVersion).not.toBeNull();
-			expect(newVersion?.description).toBe("Updated description");
-		}
+		const newVersion = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: updateData.publishedId },
+		});
+		expect(newVersion).not.toBeNull();
+		expect(newVersion?.description).toBe("Updated description");
 	});
 
 	it("returns error when case is not published", async () => {
@@ -413,27 +349,23 @@ describe("updatePublishedCase", () => {
 			published: false,
 		});
 
-		const result = await updatePublishedCase(owner.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Case is not published");
-		}
+		expectError(
+			await updatePublishedCase(owner.id, testCase.id),
+			"Case is not published"
+		);
 	});
 
 	it("returns error when caller lacks EDIT permission", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 		await publishAssuranceCase(owner.id, testCase.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
-		const result = await updatePublishedCase(viewer.id, testCase.id);
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toBe("Permission denied");
-		}
+		expectError(
+			await updatePublishedCase(viewer.id, testCase.id),
+			"Permission denied"
+		);
 	});
 });
 
@@ -446,15 +378,10 @@ describe("getPublishStatus", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await getPublishStatus(owner.id, testCase.id);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.isPublished).toBe(false);
-		expect(result.data.publishedAt).toBeNull();
-		expect(result.data.linkedCaseStudyCount).toBe(0);
+		const data = expectSuccess(await getPublishStatus(owner.id, testCase.id));
+		expect(data.isPublished).toBe(false);
+		expect(data.publishedAt).toBeNull();
+		expect(data.linkedCaseStudyCount).toBe(0);
 	});
 
 	it("returns error when caller has no access", async () => {
@@ -462,24 +389,17 @@ describe("getPublishStatus", () => {
 		const stranger = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const result = await getPublishStatus(stranger.id, testCase.id);
-
-		expect("error" in result).toBe(true);
+		expectError(await getPublishStatus(stranger.id, testCase.id));
 	});
 
 	it("reflects published state after publishing", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 		await publishAssuranceCase(owner.id, testCase.id);
 
-		const result = await getPublishStatus(owner.id, testCase.id);
-
-		expect("data" in result).toBe(true);
-		if (!("data" in result)) {
-			return;
-		}
-		expect(result.data.isPublished).toBe(true);
-		expect(result.data.publishedAt).not.toBeNull();
+		const data = expectSuccess(await getPublishStatus(owner.id, testCase.id));
+		expect(data.isPublished).toBe(true);
+		expect(data.publishedAt).not.toBeNull();
 	});
 });
 
@@ -529,24 +449,58 @@ describe("getFullPublishStatus", () => {
 });
 
 // ============================================
+// Anti-enumeration: consistent error responses
+// ============================================
+
+describe("anti-enumeration: consistent error responses", () => {
+	it("publishAssuranceCase returns the same error for a non-existent case as for an inaccessible case", async () => {
+		const owner = await createTestUser();
+		const stranger = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+
+		// Stranger has no access to the existing case
+		const noAccessResult = await publishAssuranceCase(stranger.id, testCase.id);
+
+		// Stranger tries to publish a non-existent case
+		const notFoundResult = await publishAssuranceCase(
+			stranger.id,
+			"00000000-0000-0000-0000-000000000000"
+		);
+
+		expectSameError(noAccessResult, notFoundResult);
+	});
+
+	it("getPublishStatus returns the same error for a non-existent case as for an inaccessible case", async () => {
+		const owner = await createTestUser();
+		const stranger = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		// Stranger has no access to the existing case
+		const noAccessResult = await getPublishStatus(stranger.id, testCase.id);
+
+		// Stranger tries to get status of a non-existent case
+		const notFoundResult = await getPublishStatus(
+			stranger.id,
+			"00000000-0000-0000-0000-000000000000"
+		);
+
+		expectSameError(noAccessResult, notFoundResult);
+	});
+});
+
+// ============================================
 // transitionStatus
 // ============================================
 
 describe("transitionStatus", () => {
 	it("transitions DRAFT to READY_TO_PUBLISH", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
-		const result = await transitionStatus(
-			owner.id,
-			testCase.id,
-			"READY_TO_PUBLISH"
+		const data = expectSuccess(
+			await transitionStatus(owner.id, testCase.id, "READY_TO_PUBLISH")
 		);
-
-		expect("error" in result).toBe(false);
-		if ("data" in result) {
-			expect(result.data.newStatus).toBe("READY_TO_PUBLISH");
-		}
+		expect(data.newStatus).toBe("READY_TO_PUBLISH");
 
 		const updated = await prisma.assuranceCase.findUnique({
 			where: { id: testCase.id },
@@ -557,41 +511,31 @@ describe("transitionStatus", () => {
 
 	it("transitions READY_TO_PUBLISH to PUBLISHED", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 		await markCaseAsReady(owner.id, testCase.id);
 
-		const result = await transitionStatus(owner.id, testCase.id, "PUBLISHED");
-
-		expect("error" in result).toBe(false);
-		if ("data" in result) {
-			expect(result.data.newStatus).toBe("PUBLISHED");
-			expect(result.data.publishedId).toBeDefined();
-		}
+		const data = expectSuccess(
+			await transitionStatus(owner.id, testCase.id, "PUBLISHED")
+		);
+		expect(data.newStatus).toBe("PUBLISHED");
+		expect(data.publishedId).toBeDefined();
 	});
 
 	it("returns error for an invalid transition (DRAFT to PUBLISHED directly)", async () => {
 		const owner = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
 		const result = await transitionStatus(owner.id, testCase.id, "PUBLISHED");
-
-		expect("error" in result).toBe(true);
-		if ("error" in result) {
-			expect(result.error).toContain("Invalid status transition");
-		}
+		expectError(result, INVALID_STATUS_TRANSITION);
 	});
 
 	it("returns error when caller has no access to the case", async () => {
 		const owner = await createTestUser();
 		const stranger = await createTestUser();
-		const testCase = await createPublishableCase(owner.id);
+		const testCase = await createTestCaseWithGoal(owner.id);
 
-		const result = await transitionStatus(
-			stranger.id,
-			testCase.id,
-			"READY_TO_PUBLISH"
+		expectError(
+			await transitionStatus(stranger.id, testCase.id, "READY_TO_PUBLISH")
 		);
-
-		expect("error" in result).toBe(true);
 	});
 });
